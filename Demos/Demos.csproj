@@ -1,0 +1,68 @@
+﻿<Project>
+  <!--Note workaround for macro evaluation issue.-->
+  <Import Sdk="Microsoft.NET.Sdk" Project="Sdk.props" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
+    <!--<RuntimeFrameworkVersion>2.1.0-preview2-25616-02</RuntimeFrameworkVersion>-->
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <Configurations>Debug;Release;ReleaseStrip</Configurations>
+  </PropertyGroup>
+  <Import Sdk="Microsoft.NET.Sdk" Project="Sdk.targets" />
+  
+  <PropertyGroup>
+    <PreBuildEvent Condition="'$(Configuration)'=='Debug'">dotnet "$(SolutionDir)DemoContentBuilder\bin\x64\$(Configuration)\netcoreapp2.0\DemoContentBuilder.dll" "$(ProjectDir)$(ProjectName).content" -debug</PreBuildEvent>
+    <PreBuildEvent Condition="'$(Configuration)'=='Release'">dotnet "$(SolutionDir)DemoContentBuilder\bin\x64\Release\netcoreapp2.0\DemoContentBuilder.dll" "$(ProjectDir)$(ProjectName).content"</PreBuildEvent>
+    <PreBuildEvent Condition="'$(Configuration)'=='ReleaseStrip'">dotnet "$(SolutionDir)DemoContentBuilder\bin\x64\Release\netcoreapp2.0\DemoContentBuilder.dll" "$(ProjectDir)$(ProjectName).content"</PreBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PostBuildEvent Condition="'$(Configuration)'=='ReleaseStrip'">dotnet "$(SolutionDir)Dependencies\ilopt\ilopt.dll" "$(TargetPath)"</PostBuildEvent>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" />
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;RELEASE;NETCOREAPP2_0</DefineConstants>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseStrip|AnyCPU'">
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;RELEASE;NETCOREAPP2_0</DefineConstants>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BepuPhysics\BepuPhysics.csproj" />
+    <ProjectReference Include="..\BepuUtilities\BepuUtilities.csproj" />
+    <ProjectReference Include="..\DemoContentLoader\DemoContentLoader.csproj" />
+    <ProjectReference Include="..\DemoRenderer\DemoRenderer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
