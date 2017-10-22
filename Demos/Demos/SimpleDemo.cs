@@ -18,9 +18,9 @@ namespace Demos
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 8;
-            const int height = 8;
-            const int length = 8;
+            const int width = 18;
+            const int height = 48;
+            const int length = 18;
             SimulationSetup.BuildLattice(
                 new RegularGridWithKinematicBaseBuilder(new Vector3(1.1f, 1.0f, 1.1f), new Vector3(1, 1, 1), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
                 new ConstraintlessLatticeBuilder(),
@@ -38,7 +38,8 @@ namespace Demos
                     Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
                     Shape = staticShapeIndex,
                     SpeculativeMargin = 0.1f
-                }, Pose = new RigidPose { Position = new Vector3(0, -20, 0), Orientation = BepuUtilities.Quaternion.Identity }
+                },
+                Pose = new RigidPose { Position = new Vector3(0, -20, 0), Orientation = BepuUtilities.Quaternion.Identity }
             };
             Simulation.Add(ref staticDescription);
 

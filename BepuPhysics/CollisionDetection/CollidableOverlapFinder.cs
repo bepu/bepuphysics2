@@ -123,15 +123,7 @@ namespace BepuPhysics.CollisionDetection
                 selfTestContext.PrepareJobs(broadPhase.ActiveTree, selfHandlers, threadDispatcher.ThreadCount);
                 intertreeTestContext.PrepareJobs(broadPhase.ActiveTree, broadPhase.StaticTree, intertreeHandlers, threadDispatcher.ThreadCount);
                 nextJobIndex = -1;
-                //threadDispatcher.DispatchWorkers(workerAction);
-                for (int i = 0; i < selfTestContext.JobCount; ++i)
-                {
-                    selfTestContext.ExecuteJob(i, 0);
-                }
-                for (int i = 0; i < intertreeTestContext.JobCount; ++i)
-                {
-                    intertreeTestContext.ExecuteJob(i, 0);
-                }
+                threadDispatcher.DispatchWorkers(workerAction);
                 selfTestContext.CompleteSelfTest();
                 intertreeTestContext.CompleteTest();
             }
