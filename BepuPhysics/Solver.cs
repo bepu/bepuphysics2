@@ -241,6 +241,7 @@ namespace BepuPhysics
             description.ApplyDescription(constraintReference.TypeBatch, bundleIndex, innerIndex);
         }
 
+       
         /// <summary>
         /// Allocates a constraint slot and sets up a constraint with the specified description.
         /// </summary>

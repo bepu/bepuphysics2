@@ -146,7 +146,7 @@ namespace BepuPhysics.CollisionDetection
             //We indirectly pass the determinism state; it's used by the constraint remover bookkeeping.
             this.deterministic = deterministic;
             ConstraintRemover.CreateFlushJobs(ref flushJobs);
-
+            
             if (threadDispatcher == null)
             {
                 for (int i = 0; i < flushJobs.Count; ++i)
@@ -162,10 +162,10 @@ namespace BepuPhysics.CollisionDetection
             //var end = Stopwatch.GetTimestamp();
             //Console.WriteLine($"Flush stage 3 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
             flushJobs.Dispose(Pool.SpecializeFor<NarrowPhaseFlushJob>());
-
+            
             PairCache.Postflush();
             ConstraintRemover.Postflush();
-
+            
             OnPostflush(threadDispatcher);
         }
 

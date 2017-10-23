@@ -66,71 +66,43 @@ namespace BepuPhysics
             copyToCacheAndSortDelegate = CopyToCacheAndSort;
         }
 
-        bool WrapBatch(ref Optimization o)
+        void Wrap(ref Optimization o)
         {
-            Debug.Assert(solver.Batches.Count >= 0);
-            if (o.BatchIndex >= solver.Batches.Count)
+            Debug.Assert(solver.Batches.Count > 0, "Shouldn't be trying to optimize zero constraints.");
+            while (true)
             {
-                //Wrap around.
-                o = new Optimization();
-                return true;
-            }
-            return false;
-        }
-        bool WrapTypeBatch(ref Optimization o)
-        {
-            Debug.Assert(o.BatchIndex <= solver.Batches.Count, "Should only attempt to wrap type batch indices if the batch index is known to be valid.");
-            bool wrapped = false;
-            //Note that it's possible for a batch to contain zero type batches. This is a byproduct of only the last constraint batch ever being removed.
-            //Empty constraint batches before the last index stick around until batch compression finds them and shifts everything into a lower batch.
-            //So, here, we have to be ready to walk forward multiple batches.
-            while (o.TypeBatchIndex >= solver.Batches[o.BatchIndex].TypeBatches.Count)
-            {
-                ++o.BatchIndex;
-                if (!WrapBatch(ref o))
+                if (o.BatchIndex >= solver.Batches.Count)
                 {
+                    o = new Optimization();
+                }
+                else if (o.TypeBatchIndex >= solver.Batches[o.BatchIndex].TypeBatches.Count)
+                {
+                    //It's possible that batches prior to the last constraint batch lack constraints. In that case, try the next one.
+                    ++o.BatchIndex;
                     o.TypeBatchIndex = 0;
                     o.BundleIndex = 0;
                 }
-                wrapped = true;
-            }
-            return wrapped;
-        }
-
-        bool WrapBundle(ref Optimization o)
-        {
-            Debug.Assert(o.BatchIndex <= solver.Batches.Count && o.TypeBatchIndex <= solver.Batches[o.BatchIndex].TypeBatches.Count,
-                "Should only attempt to wrap constraint index if the type batch and batch indices are known to be valid.");
-            if (o.BundleIndex >= solver.Batches[o.BatchIndex].TypeBatches[o.TypeBatchIndex].BundleCount)
-            {
-                ++o.TypeBatchIndex;
-                if (!WrapTypeBatch(ref o))
+                else if (o.BundleIndex >= solver.Batches[o.BatchIndex].TypeBatches[o.TypeBatchIndex].BundleCount)
                 {
+                    ++o.TypeBatchIndex;
                     o.BundleIndex = 0;
                 }
-                return true;
-            }
-            return false;
-        }
-        void BoundsCheckOldTarget(ref Optimization o)
-        {
-            if (!WrapBatch(ref o))
-            {
-                if (!WrapTypeBatch(ref o))
+                else
                 {
-                    WrapBundle(ref o);
+                    break;
                 }
             }
         }
+
         Optimization FindOffsetFrameStart(Optimization o, int maximumRegionSizeInBundles)
         {
-            BoundsCheckOldTarget(ref o);
+            Wrap(ref o);
 
             var spaceRemaining = solver.Batches[o.BatchIndex].TypeBatches[o.TypeBatchIndex].BundleCount - o.BundleIndex;
             if (spaceRemaining <= maximumRegionSizeInBundles)
             {
                 ++o.TypeBatchIndex;
-                WrapTypeBatch(ref o);
+                Wrap(ref o);
             }
             //Note that the bundle count is not cached; the above type batch may differ.
             o.BundleIndex = Math.Max(0,
@@ -140,7 +112,6 @@ namespace BepuPhysics
 
             return o;
         }
-
 
         public void Update(BufferPool bufferPool, IThreadDispatcher threadDispatcher = null)
         {
@@ -165,12 +136,14 @@ namespace BepuPhysics
                 Debug.Assert(solver.Batches[target.BatchIndex].TypeBatches[target.TypeBatchIndex].BundleCount <= regionSizeInBundles || target.BundleIndex != 0,
                     "On offset frames, the only time a target bundle can be 0 is if the batch is too small for it to be anything else.");
                 //Console.WriteLine($"Offset frame targeting {target.BatchIndex}.{target.TypeBatchIndex}:{target.BundleIndex}");
+                Debug.Assert(solver.Batches[target.BatchIndex].TypeBatches.Count > target.TypeBatchIndex);
             }
             else
             {
                 //Since the constraint set could have changed arbitrarily since the previous execution, validate from batch down.
                 target = nextTarget;
-                BoundsCheckOldTarget(ref target);
+                Wrap(ref target);
+                Debug.Assert(solver.Batches[target.BatchIndex].TypeBatches.Count > target.TypeBatchIndex);
                 nextTarget = target;
                 nextTarget.BundleIndex += regionSizeInBundles;
                 //Console.WriteLine($"Normal frame targeting {target.BatchIndex}.{target.TypeBatchIndex}:{target.BundleIndex}");
@@ -311,7 +284,7 @@ namespace BepuPhysics
 
         }
 
-        
+
 
         void SortByBodyLocation(TypeBatch typeBatch, int bundleStartIndex, int constraintCount, Buffer<ConstraintLocation> handlesToConstraints, int bodyCount,
             BufferPool rawPool, IThreadDispatcher threadDispatcher)

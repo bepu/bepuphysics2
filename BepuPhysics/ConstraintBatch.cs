@@ -33,7 +33,25 @@ namespace BepuPhysics
                 TypeIndexToTypeBatchIndex[i] = -1;
             }
         }
-        
+
+        [Conditional("DEBUG")]
+        void ValidateTypeBatchMappings()
+        {
+            for (int i = 0; i < TypeIndexToTypeBatchIndex.Length; ++i)
+            {
+                var index = TypeIndexToTypeBatchIndex[i];
+                if(index >= 0)
+                {
+                    Debug.Assert(index < TypeBatches.Count);
+                    Debug.Assert(TypeBatches[index].TypeId == i);
+                }
+            }
+            for (int i = 0; i < TypeBatches.Count; ++i)
+            {
+                Debug.Assert(TypeIndexToTypeBatchIndex[TypeBatches[i].TypeId] == i);
+            }
+        }
+
         /// <summary>
         /// Gets a type batch in the batch matching the given type id.
         /// Requires that there exists at least one constraint in the type batch.
@@ -43,6 +61,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TypeBatch GetTypeBatch(int typeId)
         {
+            ValidateTypeBatchMappings();
             var typeBatchIndex = TypeIndexToTypeBatchIndex[typeId];
             return TypeBatches[typeBatchIndex];
         }
@@ -114,7 +133,7 @@ namespace BepuPhysics
                 referencesToBody += instancesInTypeBatch;
             }
             Debug.Assert(referencesToBody == expectedCount);
-        } 
+        }
 
         [Conditional("DEBUG")]
         internal void ValidateExistingHandles(Bodies bodies)
@@ -187,21 +206,22 @@ namespace BepuPhysics
 
         //Note that we have split the constraint batch removal for the sake of reuse by the multithreaded constraint remover.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void RemoveTypeBatchIfEmpty(TypeBatch typeBatch, int typeBatchIndex, TypeBatchAllocation typeBatchAllocation)
+        public void RemoveTypeBatchIfEmpty(TypeBatch typeBatch, int typeBatchIndexToRemove, TypeBatchAllocation typeBatchAllocation)
         {
             if (typeBatch.ConstraintCount == 0)
             {
                 var constraintTypeId = typeBatch.TypeId;
                 TypeIndexToTypeBatchIndex[constraintTypeId] = -1;
-                TypeBatches.FastRemoveAt(typeBatchIndex);
-                if (typeBatchIndex < TypeBatches.Count)
+                TypeBatches.FastRemoveAt(typeBatchIndexToRemove);
+                if (typeBatchIndexToRemove < TypeBatches.Count)
                 {
                     //If we swapped anything into the removed slot, we should update the type index to type batch mapping.
-                    TypeIndexToTypeBatchIndex[constraintTypeId] = typeBatchIndex;
+                    TypeIndexToTypeBatchIndex[TypeBatches[typeBatchIndexToRemove].TypeId] = typeBatchIndexToRemove;
                 }
                 typeBatchAllocation.Return(typeBatch, constraintTypeId);
 
             }
+            ValidateTypeBatchMappings();
         }
 
         public unsafe void Remove(int constraintTypeId, int indexInTypeBatch, Bodies bodies, ref Buffer<ConstraintLocation> handlesToConstraints, TypeBatchAllocation typeBatchAllocation)

@@ -55,7 +55,7 @@ namespace BepuPhysics.CollisionDetection
         unsafe void TestLeafAgainstNode<TOverlapHandler>(int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, Tree treeB, ref TOverlapHandler results)
             where TOverlapHandler : IOverlapHandler
         {
-            var node = nodes + nodeIndex;
+            var node = treeB.nodes + nodeIndex;
             ref var a = ref node->A;
             ref var b = ref node->B;
             //Despite recursion, leafBounds should remain in L1- it'll be used all the way down the recursion from here.

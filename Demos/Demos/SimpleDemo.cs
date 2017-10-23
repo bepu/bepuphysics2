@@ -18,9 +18,9 @@ namespace Demos
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 18;
-            const int height = 48;
-            const int length = 18;
+            const int width = 2;
+            const int height = 2;
+            const int length = 1;
             SimulationSetup.BuildLattice(
                 new RegularGridWithKinematicBaseBuilder(new Vector3(1.1f, 1.0f, 1.1f), new Vector3(1, 1, 1), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
                 new ConstraintlessLatticeBuilder(),
@@ -29,22 +29,28 @@ namespace Demos
             Simulation.Deterministic = true;
 
 
-            var staticShape = new Sphere(19);
+            var staticShape = new Sphere(4);
             var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
-            var staticDescription = new StaticDescription
+            for (int i = 0; i < 2; ++i)
             {
-                Collidable = new CollidableDescription
+                for (int j = 0; j < 1; ++j)
                 {
-                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                    Shape = staticShapeIndex,
-                    SpeculativeMargin = 0.1f
-                },
-                Pose = new RigidPose { Position = new Vector3(0, -20, 0), Orientation = BepuUtilities.Quaternion.Identity }
-            };
-            Simulation.Add(ref staticDescription);
+                    var staticDescription = new StaticDescription
+                    {
+                        Collidable = new CollidableDescription
+                        {
+                            Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
+                            Shape = staticShapeIndex,
+                            SpeculativeMargin = 0.1f
+                        },
+                        Pose = new RigidPose { Position = new Vector3(i * 3, -4, j * -3), Orientation = BepuUtilities.Quaternion.Identity }
+                    };
+                    Simulation.Add(ref staticDescription);
+                }
+            }
 
             ref var velocity = ref Simulation.Bodies.Velocities[Simulation.Bodies.HandleToIndex[bodyHandles[width]]];
-            velocity.Linear = new Vector3(0.1f, 0, 0.1f);
+            velocity.Linear = new Vector3(0.1f, 0, -0.1f);
             velocity.Angular = new Vector3();
 
             //Simulation.Solver.IterationCount = 100;
