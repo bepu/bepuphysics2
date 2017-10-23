@@ -94,7 +94,7 @@ namespace BepuPhysics.CollisionDetection
                 //convex vs nonconvex: 0x4
                 //1 body versus 2 body: 0x8
                 //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-                SequentialAddToSimulation<int, Contact1OneBody, ContactImpulses1>(ref pendingConstraintsByType[0 + 0 + 0], 8 + 0 + 0, simulation, ref pairCache);
+                SequentialAddToSimulation<int, Contact1OneBody, ContactImpulses1>(ref pendingConstraintsByType[0 + 0 + 0], 0 + 0 + 0, simulation, ref pairCache);
                 SequentialAddToSimulation<TwoBodyHandles, Contact1, ContactImpulses1>(ref pendingConstraintsByType[8 + 0 + 0], 8 + 0 + 0, simulation, ref pairCache);
                 SequentialAddToSimulation<TwoBodyHandles, Contact4, ContactImpulses4>(ref pendingConstraintsByType[8 + 0 + 3], 8 + 0 + 3, simulation, ref pairCache);
             }
@@ -180,7 +180,7 @@ namespace BepuPhysics.CollisionDetection
                 //convex vs nonconvex: 0x4
                 //1 body versus 2 body: 0x8
                 //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-                SequentialAddToSimulationSpeculative<int, Contact1OneBody, ContactImpulses1>(ref pendingConstraintsByType[0 + 0 + 0], 8 + 0 + 0, simulation, ref pairCache);
+                SequentialAddToSimulationSpeculative<int, Contact1OneBody, ContactImpulses1>(ref pendingConstraintsByType[0 + 0 + 0], 0 + 0 + 0, simulation, ref pairCache);
                 SequentialAddToSimulationSpeculative<TwoBodyHandles, Contact1, ContactImpulses1>(ref pendingConstraintsByType[8 + 0 + 0], 8 + 0 + 0, simulation, ref pairCache);
                 SequentialAddToSimulationSpeculative<TwoBodyHandles, Contact4, ContactImpulses4>(ref pendingConstraintsByType[8 + 0 + 3], 8 + 0 + 3, simulation, ref pairCache);
             }

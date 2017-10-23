@@ -82,7 +82,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 if (b.Index >= 0)
                 {
-                    GetOverlapsBetweenDifferentNodes(nodes + a.Index, treeB.nodes + b.Index, ref results);
+                    GetOverlapsBetweenDifferentNodes(nodes + a.Index, treeB.nodes + b.Index, treeB, ref results);
                 }
                 else
                 {
@@ -102,7 +102,7 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        private unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(Node* a, Node* b, Tree treeB, ref TOverlapHandler results) where TOverlapHandler : struct, IOverlapHandler
+        private unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(Node* a, Node* b, Tree treeB, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
             ref var aa = ref a->A;
             ref var ab = ref a->B;

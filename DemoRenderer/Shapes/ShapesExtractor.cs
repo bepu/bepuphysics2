@@ -38,7 +38,7 @@ namespace DemoRenderer.Shapes
                         instance.Position = pose.Position;
                         instance.Radius = simulation.Shapes.GetShape<Sphere>(shapeIndex.Index).Radius;
                         instance.Orientation = pose.Orientation;
-                        spheres.AddUnsafely(instance);
+                        spheres.Add(ref instance, new PassthroughArrayPool<SphereInstance>());
                     }
                     break;
             }
@@ -46,7 +46,6 @@ namespace DemoRenderer.Shapes
 
         public void AddInstances(Simulation simulation, IThreadDispatcher threadDispatcher = null)
         {
-            spheres.EnsureCapacity(simulation.Bodies.Count, new PassthroughArrayPool<SphereInstance>());
             for (int i = 0; i < simulation.Bodies.Count; ++i)
             {
                 AddShape(simulation, simulation.Bodies.Collidables[i].Shape, ref simulation.Bodies.Poses[i]);

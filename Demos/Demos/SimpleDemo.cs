@@ -18,22 +18,23 @@ namespace Demos
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 2;
-            const int height = 2;
-            const int length = 1;
+            const int width = 16;
+            const int height = 16;
+            const int length = 16;
             SimulationSetup.BuildLattice(
-                new RegularGridWithKinematicBaseBuilder(new Vector3(1.1f, 1.0f, 1.1f), new Vector3(1, 1, 1), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
+                new RegularGridBuilder(new Vector3(1.1f, 1.0f, 1.1f), new Vector3(1, 100, 1), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
             Simulation.Deterministic = true;
 
-
             var staticShape = new Sphere(4);
             var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
-            for (int i = 0; i < 2; ++i)
+            const int staticGridWidthInSpheres = 64;
+            const float staticSpacing = 6;
+            for (int i = 0; i < staticGridWidthInSpheres; ++i)
             {
-                for (int j = 0; j < 1; ++j)
+                for (int j = 0; j < staticGridWidthInSpheres; ++j)
                 {
                     var staticDescription = new StaticDescription
                     {
@@ -43,15 +44,22 @@ namespace Demos
                             Shape = staticShapeIndex,
                             SpeculativeMargin = 0.1f
                         },
-                        Pose = new RigidPose { Position = new Vector3(i * 3, -4, j * -3), Orientation = BepuUtilities.Quaternion.Identity }
+                        Pose = new RigidPose
+                        {
+                            Position = new Vector3(
+                            -staticGridWidthInSpheres * staticSpacing * 0.5f + i * staticSpacing,
+                            -4,
+                            -staticGridWidthInSpheres * staticSpacing * 0.5f + j * staticSpacing),
+                            Orientation = BepuUtilities.Quaternion.Identity
+                        }
                     };
                     Simulation.Add(ref staticDescription);
                 }
             }
 
-            ref var velocity = ref Simulation.Bodies.Velocities[Simulation.Bodies.HandleToIndex[bodyHandles[width]]];
-            velocity.Linear = new Vector3(0.1f, 0, -0.1f);
-            velocity.Angular = new Vector3();
+            //ref var velocity = ref Simulation.Bodies.Velocities[Simulation.Bodies.HandleToIndex[bodyHandles[width]]];
+            //velocity.Linear = new Vector3(0.1f, 0, 0.1f);
+            //velocity.Angular = new Vector3();
 
             //Simulation.Solver.IterationCount = 100;
 
@@ -68,14 +76,10 @@ namespace Demos
             //{
             //    Simulation.Bodies.ValidateExistingHandle(Simulation.Bodies.IndexToHandle[i]);
             //}
-            //if (input.WasPushed(OpenTK.Input.Key.P))
-            //{
-            //    unsafe { var accessViolationSuppressant = stackalloc int[0]; }
-            //    BodyVelocity velocity;
-            //    velocity.Linear = new Vector3(.1f, 0, 0.1f);
-            //    velocity.Angular = new Vector3();
-            //    Simulation.Bodies.SetVelocity(32, ref velocity);
-            //}
+            if (input.WasPushed(OpenTK.Input.Key.P))
+            {
+                Console.WriteLine("stoppls");
+            }
             base.Update(input, dt);
 
         }
