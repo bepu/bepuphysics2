@@ -1,5 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
-using static BepuPhysics.ConstraintConnectivityGraph;
+using static BepuPhysics.ConstraintGraph;
 using System;
 using System.Diagnostics;
 using BepuUtilities.Memory;
@@ -18,7 +18,7 @@ namespace BepuPhysics
         {
             public Bodies bodies;
             public BroadPhase broadPhase;
-            public ConstraintConnectivityGraph graph;
+            public ConstraintGraph graph;
             public Solver solver;
             //We effectively do a full traversal over multiple frames. We have to store the stack for this to work.
             public QuickList<int, Buffer<int>> traversalStack;

@@ -15,7 +15,7 @@ namespace BepuPhysics
     /// </summary>
     public partial class Simulation : IDisposable
     {
-        public ConstraintConnectivityGraph ConstraintGraph { get; private set; }
+        public ConstraintGraph ConstraintGraph { get; private set; }
         public Bodies Bodies { get; private set; }
         public Statics Statics { get; private set; }
         public Shapes Shapes { get; private set; }
@@ -50,7 +50,7 @@ namespace BepuPhysics
             Solver = new Solver(Bodies, BufferPool,
                 initialCapacity: initialAllocationSizes.Constraints,
                 minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
-            ConstraintGraph = new ConstraintConnectivityGraph(Solver, bufferPool, initialAllocationSizes.Bodies, initialAllocationSizes.ConstraintCountPerBodyEstimate);
+            ConstraintGraph = new ConstraintGraph(Solver, bufferPool, initialAllocationSizes.Bodies, initialAllocationSizes.ConstraintCountPerBodyEstimate);
 
             BroadPhase = new BroadPhase(bufferPool, initialAllocationSizes.Bodies, initialAllocationSizes.Bodies + initialAllocationSizes.Statics);
             PoseIntegrator = new PoseIntegrator(Bodies, Shapes, BroadPhase);

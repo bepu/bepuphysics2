@@ -6,7 +6,14 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics
 {
-    public class ConstraintConnectivityGraph
+    //You could bitpack these two into 4 bytes, but the value of that is pretty darn questionable.
+    public struct BodyConstraintReference
+    {
+        public int ConnectingConstraintHandle;
+        public int BodyIndexInConstraint;
+    }
+
+    public class ConstraintGraph
     {
         int constraintCountPerBodyEstimate;
 
@@ -31,12 +38,6 @@ namespace BepuPhysics
         BufferPool<BodyConstraintReference> bufferPool;
         Solver solver;
 
-        //You could bitpack these two into 4 bytes, but the value of that is pretty darn questionable.
-        public struct BodyConstraintReference
-        {
-            public int ConnectingConstraintHandle;
-            public int BodyIndexInConstraint;
-        }
 
 
         /// <summary>
@@ -48,7 +49,7 @@ namespace BepuPhysics
         /// If the number is exceeded, an internal buffer will resize and the old buffer will return to the pool.</param>
         /// <param name="initialConstraintCountPerBodyEstimate">Initial estimate for the number of constraints that will exist for each body.
         /// If the number is exceeded, the body list will be resized, but the old list will be returned to the pool for reuse.</param>
-        public ConstraintConnectivityGraph(Solver solver, BufferPool rawPool, int initialBodyCountEstimate, int initialConstraintCountPerBodyEstimate)
+        public ConstraintGraph(Solver solver, BufferPool rawPool, int initialBodyCountEstimate, int initialConstraintCountPerBodyEstimate)
         {
             this.solver = solver;
             constraintCountPerBodyEstimate = initialConstraintCountPerBodyEstimate;

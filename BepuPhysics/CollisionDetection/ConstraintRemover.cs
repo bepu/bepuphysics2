@@ -63,7 +63,7 @@ namespace BepuPhysics.CollisionDetection
     {
         Solver solver;
         Bodies bodies;
-        ConstraintConnectivityGraph constraintGraph;
+        ConstraintGraph constraintGraph;
         BufferPool pool;
 
         struct WorkerCache
@@ -202,7 +202,7 @@ namespace BepuPhysics.CollisionDetection
         WorkerCache[] workerCaches; //there is a reference within the worker cache for the pool, so this can't be a buffer.
         int threadCount;
 
-        public ConstraintRemover(BufferPool pool, Bodies bodies, Solver solver, ConstraintConnectivityGraph constraintGraph, int minimumTypeCapacity = 4, int minimumRemovalCapacity = 128, float previousCapacityMultiplier = 1.25f)
+        public ConstraintRemover(BufferPool pool, Bodies bodies, Solver solver, ConstraintGraph constraintGraph, int minimumTypeCapacity = 4, int minimumRemovalCapacity = 128, float previousCapacityMultiplier = 1.25f)
         {
             this.pool = pool;
             this.bodies = bodies;

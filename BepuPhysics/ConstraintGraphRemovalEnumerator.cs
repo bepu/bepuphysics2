@@ -7,7 +7,7 @@ namespace BepuPhysics
 {
     struct ConstraintGraphRemovalEnumerator : IForEach<int>
     {
-        internal ConstraintConnectivityGraph graph;
+        internal ConstraintGraph graph;
         internal int constraintHandle;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void LoopBody(int bodyIndex)

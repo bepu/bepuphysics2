@@ -1,5 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
-using static BepuPhysics.ConstraintConnectivityGraph;
+using static BepuPhysics.ConstraintGraph;
 using System;
 using System.Diagnostics;
 using BepuUtilities.Memory;
@@ -19,7 +19,7 @@ namespace BepuPhysics
     {
         Bodies bodies;
         BroadPhase broadPhase;
-        ConstraintConnectivityGraph graph;
+        ConstraintGraph graph;
         Solver solver;
 
         float optimizationFraction;
@@ -41,7 +41,7 @@ namespace BepuPhysics
         }
 
         Action<int> incrementalOptimizeWorkDelegate;
-        public BodyLayoutOptimizer(Bodies bodies, BroadPhase broadPhase, ConstraintConnectivityGraph graph, Solver solver, BufferPool pool, float optimizationFraction = 0.005f)
+        public BodyLayoutOptimizer(Bodies bodies, BroadPhase broadPhase, ConstraintGraph graph, Solver solver, BufferPool pool, float optimizationFraction = 0.005f)
         {
             this.bodies = bodies;
             this.broadPhase = broadPhase;
@@ -53,7 +53,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void UpdateForBodyMemoryMove(int bodyIndex, int newBodyIndex, Bodies bodies, ConstraintConnectivityGraph graph, Solver solver)
+        public static void UpdateForBodyMemoryMove(int bodyIndex, int newBodyIndex, Bodies bodies, ConstraintGraph graph, Solver solver)
         {
             ref var list = ref graph.GetConstraintList(bodyIndex);
             for (int i = 0; i < list.Count; ++i)
@@ -63,7 +63,7 @@ namespace BepuPhysics
             }
         }
 
-        public static void SwapBodyLocation(Bodies bodies, ConstraintConnectivityGraph graph, Solver solver, int a, int b)
+        public static void SwapBodyLocation(Bodies bodies, ConstraintGraph graph, Solver solver, int a, int b)
         {
             Debug.Assert(a != b, "Swapping a body with itself isn't meaningful. Whaddeyer doin?");
             //Enumerate the bodies' current set of constraints, changing the reference in each to the new location.
@@ -83,7 +83,7 @@ namespace BepuPhysics
         {
             public Bodies bodies;
             public BroadPhase broadPhase;
-            public ConstraintConnectivityGraph graph;
+            public ConstraintGraph graph;
             public Solver solver;
             public int slotIndex;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -184,7 +184,7 @@ namespace BepuPhysics
         struct ClaimConnectedBodiesEnumerator : IForEach<int>
         {
             public Bodies Bodies;
-            public ConstraintConnectivityGraph Graph;
+            public ConstraintGraph Graph;
             public Solver Solver;
             /// <summary>
             /// The claim states for every body in the simulation.

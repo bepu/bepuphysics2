@@ -53,7 +53,7 @@ namespace BepuPhysics
         /// </summary>
         public Buffer<BodyInertia> Inertias;
         public IdPool<Buffer<int>> HandlePool;
-        protected BufferPool pool;
+        protected internal BufferPool pool;
         public int Count;
 
         public unsafe Bodies(BufferPool pool, int initialCapacity = 4096)
