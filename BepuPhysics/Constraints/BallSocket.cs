@@ -1,4 +1,5 @@
 ﻿using BepuPhysics.CollisionDetection;
+using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -24,10 +25,10 @@ namespace BepuPhysics.Constraints
 
         public Type BatchType => typeof(BallSocketTypeBatch);
 
-        public void ApplyDescription(TypeBatch batch, int bundleIndex, int innerIndex)
+        public void ApplyDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex)
         {
-            Debug.Assert(batch is BallSocketTypeBatch, "The type batch passed to the description must match the description's expected type.");
-            ref var lane = ref GatherScatter.Get(ref Unsafe.As<BallSocketTypeBatch>(batch).PrestepData[bundleIndex].LocalOffsetA.X, innerIndex);
+            Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
+            ref var lane = ref GatherScatter.Get(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex).LocalOffsetA.X, innerIndex);
             lane = LocalOffsetA.X;
             Unsafe.Add(ref lane, Vector<float>.Count) = LocalOffsetA.Y;
             Unsafe.Add(ref lane, 2 * Vector<float>.Count) = LocalOffsetA.Z;
@@ -38,9 +39,9 @@ namespace BepuPhysics.Constraints
             Unsafe.Add(ref lane, 7 * Vector<float>.Count) = SpringSettings.DampingRatio;
         }
 
-        public void BuildDescription(TypeBatch batch, int bundleIndex, int innerIndex, out BallSocket description)
+        public void BuildDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex, out BallSocket description)
         {
-            Debug.Assert(batch is BallSocketTypeBatch, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var lane = ref GatherScatter.Get(ref Unsafe.As<BallSocketTypeBatch>(batch).PrestepData[bundleIndex].LocalOffsetA.X, innerIndex);
             description.LocalOffsetA.X = lane;
             description.LocalOffsetA.Y = Unsafe.Add(ref lane, Vector<float>.Count);

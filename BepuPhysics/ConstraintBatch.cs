@@ -160,7 +160,7 @@ namespace BepuPhysics
                 ValidateBodyIndex(bodies.HandleToIndex[Unsafe.Add(ref bodyHandles, i)], 0);
             }
         }
-        public unsafe void Allocate(int handle, ref int bodyHandles, int bodyCount, Bodies bodies, TypeBatchAllocation typeBatchAllocation, int typeId, out ConstraintReference reference)
+        public unsafe ref TypeBatchData Allocate(int handle, ref int bodyHandles, int bodyCount, Bodies bodies, TypeBatchAllocation typeBatchAllocation, int typeId, out int indexInTypeBatch)
         {
             Debug.Assert(CanFit(ref bodyHandles, bodyCount));
             //Add all the constraint's body handles to the batch we found (or created) to block future references to the same bodies.

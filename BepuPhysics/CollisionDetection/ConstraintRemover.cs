@@ -151,13 +151,14 @@ namespace BepuPhysics.CollisionDetection
                 //We have to perform the enumeration here rather than in the later flush. Removals from type batches make enumerating connected body indices a race condition there.
                 var typeBatch = constraintBatch.TypeBatches[typeBatchIndex.TypeBatch];
                 BodyIndexCollector enumerator;
-                var bodyIndices = stackalloc int[typeBatch.BodiesPerConstraint];
+                var bodiesPerConstraint = typeBatch.BodiesPerConstraint;
+                var bodyIndices = stackalloc int[bodiesPerConstraint];
                 enumerator.BodyIndices = bodyIndices;
                 enumerator.IndexInConstraint = 0;
                 typeBatch.EnumerateConnectedBodyIndices(constraint.IndexInTypeBatch, ref enumerator);
 
-                RemovalTargets.EnsureCapacity(RemovalTargets.Count + typeBatch.BodiesPerConstraint, pool.SpecializeFor<RemovalTarget>());
-                for (int i = 0; i < typeBatch.BodiesPerConstraint; ++i)
+                RemovalTargets.EnsureCapacity(RemovalTargets.Count + bodiesPerConstraint, pool.SpecializeFor<RemovalTarget>());
+                for (int i = 0; i < bodiesPerConstraint; ++i)
                 {
                     ref var target = ref RemovalTargets.AllocateUnsafely();
                     target.BodyIndex = bodyIndices[i];

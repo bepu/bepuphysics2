@@ -12,7 +12,8 @@ namespace BepuUtilities.Memory
     /// <typeparam name="T">Type of the memory exposed by the span.</typeparam>
     public unsafe struct Buffer<T> : ISpan<T> 
     {
-        public readonly byte* Memory;
+        //TODO: Once blittable exists, replace this.
+        public byte* Memory;
         int length;
         //We're primarily interested in x64, so memory + length is 12 bytes. This struct would/should get padded to 16 bytes for alignment reasons anyway, 
         //so making use of the last 4 bytes to speed up the case where the raw buffer is taken from a pool (which is basically always) is a good option.
@@ -30,6 +31,24 @@ namespace BepuUtilities.Memory
             Id = id;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ref T Get(byte* memory, int index)
+        {
+            return ref Unsafe.Add(ref Unsafe.As<byte, T>(ref *memory), index);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ref T Get(ref RawBuffer buffer, int index)
+        {
+            return ref Get(buffer.Memory, index);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ref T Get(ref Buffer<T> buffer, int index)
+        {
+            return ref Get(buffer.Memory, index);
+        }
+
         public ref T this[int index]
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -42,7 +61,7 @@ namespace BepuUtilities.Memory
                 //Specifically, they're using:
                 //return ref Unsafe.Add(ref _pointer.Value, index);
                 //where _pointer is a ByReference<T>, which we cannot use.
-                return ref Unsafe.Add(ref Unsafe.As<byte, T>(ref *Memory), index);
+                return ref Get(Memory, index);
             }
         }
 

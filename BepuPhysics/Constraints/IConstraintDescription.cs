@@ -22,7 +22,7 @@ namespace BepuPhysics.Constraints
         /// <param name="batch">Batch to modify.</param>
         /// <param name="bundleIndex">Index of the target constraint's bundle.</param>
         /// <param name="innerIndex">Index of the target constraint within its bundle.</param>
-        void ApplyDescription(TypeBatch batch, int bundleIndex, int innerIndex);
+        void ApplyDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex);
 
 
         /// <summary>
@@ -32,7 +32,7 @@ namespace BepuPhysics.Constraints
         /// <param name="bundleIndex">Index of the source constraint's bundle.</param>
         /// <param name="innerIndex">Index of the source constraint within its bundle.</param>
         /// <param name="description">Description of the constraint.</param>
-        void BuildDescription(TypeBatch batch, int bundleIndex, int innerIndex, out TDescription description);
+        void BuildDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex, out TDescription description);
 
         /// <summary>
         /// Gets the type id of the constraint that this is a description of.

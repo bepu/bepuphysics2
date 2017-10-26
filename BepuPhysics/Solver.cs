@@ -12,9 +12,9 @@ namespace BepuPhysics
     /// The index may be invalidated by removal of other constraints in the type batch. Removals can occur by user request or by batch compression.
     /// The user is responsible for guaranteeing safe usage. For long term references that potentially span removals, use the constraint's handle.
     /// </summary>
-    public struct ConstraintReference
+    public unsafe struct ConstraintReference
     {
-        public TypeBatch TypeBatch;
+        public TypeBatchData* TypeBatch;
         public int IndexInTypeBatch;
     }
 

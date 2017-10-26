@@ -348,6 +348,36 @@ namespace BepuUtilities.Memory
         }
 
         /// <summary>
+        /// Resizes a buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer.
+        /// </summary>
+        /// <param name="targetSize">Number of bytes to resize the buffer for.</param>
+        /// <param name="copyCount">Number of bytes to copy into the new buffer from the old buffer.</param>
+        /// <param name="pool">Pool to return the old buffer to, if it actually exists, and to pull the new buffer from.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void Resize(ref RawBuffer buffer, int targetSize, int copyCount)
+        {
+            //Only do anything if the new size is actually different from the current size.
+            targetSize = 1 << (SpanHelper.GetContainingPowerOf2(targetSize));
+            if (buffer.Length != targetSize) //Note that we don't check for allocated status- for buffers, a length of 0 is the same as being unallocated.
+            {
+                Take(targetSize, out var newBuffer);
+                if (buffer.Length > 0)
+                {
+                    //Don't bother copying from or re-pooling empty buffers. They're uninitialized.
+                    Debug.Assert(copyCount < targetSize);
+                    Unsafe.CopyBlockUnaligned(newBuffer.Memory, buffer.Memory, (uint)copyCount);
+                    ReturnUnsafely(ref buffer);
+                }
+                else
+                {
+                    Debug.Assert(copyCount == 0, "Should not be trying to copy elements from an empty span.");
+                }
+                buffer = newBuffer;
+            }
+
+        }
+
+        /// <summary>
         /// Creates a wrapper around the buffer pool that creates buffers of a particular type.
         /// </summary>
         /// <typeparam name="T">Type contained by the buffers returned by the specialized pool.</typeparam>
