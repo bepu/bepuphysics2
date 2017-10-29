@@ -42,7 +42,7 @@ namespace BepuPhysics.Constraints
         public void BuildDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex, out BallSocket description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var lane = ref GatherScatter.Get(ref Unsafe.As<BallSocketTypeBatch>(batch).PrestepData[bundleIndex].LocalOffsetA.X, innerIndex);
+            ref var lane = ref GatherScatter.Get(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex).LocalOffsetA.X, innerIndex);
             description.LocalOffsetA.X = lane;
             description.LocalOffsetA.Y = Unsafe.Add(ref lane, Vector<float>.Count);
             description.LocalOffsetA.Z = Unsafe.Add(ref lane, 2 * Vector<float>.Count);

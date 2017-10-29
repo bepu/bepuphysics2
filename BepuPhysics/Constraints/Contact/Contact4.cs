@@ -1,4 +1,5 @@
 ﻿using BepuPhysics.CollisionDetection;
+using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -31,7 +32,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(TypeBatch batch, int bundleIndex, int innerIndex)
+        public void ApplyDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex)
         {
             //We assume a contiguous block of Vector<T> types, where T is a 32 bit type. It is unlikely that future runtime changes will introduce
             //packing on the fields, since each of them are a Vector<T> in size- which will tend to be 16, 32, or in the future, 64 bytes.
@@ -44,9 +45,8 @@ namespace BepuPhysics.Constraints.Contact
             //At the end of the day, the important thing is that this mapping is kept localized so that not every system needs to be aware of it.
 
             //Note that we use an unsafe cast.
-            Debug.Assert(batch is Contact4TypeBatch, "The type batch passed to the description must match the description's expected type.");
-            var typedBatch = Unsafe.As<Contact4TypeBatch>(batch);
-            ref var lane = ref GatherScatter.Get(ref typedBatch.PrestepData[bundleIndex].OffsetA0.X, innerIndex);
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            ref var lane = ref GatherScatter.Get(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex).OffsetA0.X, innerIndex);
             lane = Contact0.OffsetA.X;
             Unsafe.Add(ref lane, Vector<float>.Count) = Contact0.OffsetA.Y;
             Unsafe.Add(ref lane, 2 * Vector<float>.Count) = Contact0.OffsetA.Z;
@@ -84,11 +84,10 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void BuildDescription(TypeBatch batch, int bundleIndex, int innerIndex, out Contact4 description)
+        public void BuildDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex, out Contact4 description)
         {
-            Debug.Assert(batch is Contact4TypeBatch, "The type batch passed to the description must match the description's expected type.");
-            var typedBatch = Unsafe.As<Contact4TypeBatch>(batch);
-            ref var lane = ref GatherScatter.Get(ref typedBatch.PrestepData[bundleIndex].OffsetA0.X, innerIndex);
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            ref var lane = ref GatherScatter.Get(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex).OffsetA0.X, innerIndex);
             description.Contact0.OffsetA.X = lane;
             description.Contact0.OffsetA.Y = Unsafe.Add(ref lane, Vector<float>.Count);
             description.Contact0.OffsetA.Z = Unsafe.Add(ref lane, 2 * Vector<float>.Count);

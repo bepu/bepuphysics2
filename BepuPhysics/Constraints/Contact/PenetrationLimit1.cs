@@ -25,7 +25,7 @@ namespace BepuPhysics.Constraints.Contact
     public static class PenetrationLimit1
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal, ref ContactManifold1PrestepData prestep, float dt, float inverseDt, 
+        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal, ref Contact1PrestepData prestep, float dt, float inverseDt, 
             out PenetrationLimit1Projection projection)
         {
             //We directly take the prestep data here since the jacobians and error don't undergo any processing.

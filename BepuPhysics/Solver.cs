@@ -7,17 +7,6 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics
 {
-    /// <summary>
-    /// Direct reference to a particular constraint in a type batch. 
-    /// The index may be invalidated by removal of other constraints in the type batch. Removals can occur by user request or by batch compression.
-    /// The user is responsible for guaranteeing safe usage. For long term references that potentially span removals, use the constraint's handle.
-    /// </summary>
-    public unsafe struct ConstraintReference
-    {
-        public TypeBatchData* TypeBatch;
-        public int IndexInTypeBatch;
-    }
-
     public struct ConstraintLocation
     {
         //Note that the type id is included, even though we can extract it from a type parameter.
@@ -241,7 +230,7 @@ namespace BepuPhysics
             description.ApplyDescription(constraintReference.TypeBatch, bundleIndex, innerIndex);
         }
 
-       
+
         /// <summary>
         /// Allocates a constraint slot and sets up a constraint with the specified description.
         /// </summary>

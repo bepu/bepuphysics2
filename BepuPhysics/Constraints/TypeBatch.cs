@@ -49,22 +49,26 @@ namespace BepuPhysics.Constraints
         internal abstract void GetBundleTypeSizes(out int bodyReferencesBundleSize, out int prestepBundleSize, out int accumulatedImpulseBundleSize);
 
         internal abstract void GenerateSortKeysAndCopyReferences(
+            ref TypeBatchData typeBatch,
             int bundleStart, int localBundleStart, int bundleCount,
             int constraintStart, int localConstraintStart, int constraintCount,
             ref int firstSortKey, ref int firstSourceIndex, ref RawBuffer bodyReferencesCache);
 
         internal abstract void CopyToCache(
+            ref TypeBatchData typeBatch,
             int bundleStart, int localBundleStart, int bundleCount,
             int constraintStart, int localConstraintStart, int constraintCount,
             ref Buffer<int> indexToHandleCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache);
 
-        internal abstract void Regather(int constraintStart, int constraintCount, ref int firstSourceIndex,
-           ref Buffer<int> indexToHandleCache, ref RawBuffer bodyReferencesCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache,
+        internal abstract void Regather(
+            ref TypeBatchData typeBatch,
+            int constraintStart, int constraintCount, ref int firstSourceIndex,
+            ref Buffer<int> indexToHandleCache, ref RawBuffer bodyReferencesCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache,
             ref Buffer<ConstraintLocation> handlesToConstraints);
 
         [Conditional("DEBUG")]
-        internal abstract void VerifySortRegion(int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices);
-        internal abstract int GetBodyIndexInstanceCount(int bodyIndex);
+        internal abstract void VerifySortRegion(ref TypeBatchData typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices);
+        internal abstract int GetBodyIndexInstanceCount(ref TypeBatchData typeBatch, int bodyIndex);
 
         public abstract void Initialize(ref TypeBatchData typeBatch, TypeBatchAllocation typeBatchAllocation, int typeId);
         public abstract void EnsureCapacity(ref TypeBatchData typeBatch, TypeBatchAllocation typeBatchAllocation);
@@ -92,6 +96,14 @@ namespace BepuPhysics.Constraints
             SolveIteration(ref typeBatch, ref bodyVelocities, 0, typeBatch.BundleCount);
         }
 
+    }
+
+    /// <summary>
+    /// Defines a function that creates a sort key from body references in a type batch. Used by constraint layout optimization.
+    /// </summary>
+    public interface ISortKeyGenerator<TBodyReferences>
+    {
+        int GetSortKey(int constraintIndex, ref Buffer<TBodyReferences> bodyReferences);
     }
 
     //Note that the only reason to have generics at the type level here is to avoid the need to specify them for each individual function. It's functionally equivalent, but this just
@@ -408,5 +420,124 @@ namespace BepuPhysics.Constraints
             ref var bundle = ref Unsafe.As<TBodyReferences, Vector<int>>(ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, constraintBundleIndex));
             GatherScatter.Get(ref bundle, constraintInnerIndex + bodyIndexInConstraint * Vector<int>.Count) = newBodyLocation;
         }
+
+        //Note that these next two sort key users require a generic sort key implementation; this avoids virtual dispatch on a per-object level while still sharing the bulk of the logic.
+        //Technically, we could force the TSortKeyGenerator to be defined at the generic type level, but this seems a little less... extreme.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void GenerateSortKeysAndCopyReferences<TSortKeyGenerator>(
+           ref TypeBatchData typeBatch,
+           int bundleStart, int localBundleStart, int bundleCount,
+           int constraintStart, int localConstraintStart, int constraintCount,
+           ref int firstSortKey, ref int firstSourceIndex, ref RawBuffer bodyReferencesCache)
+            where TSortKeyGenerator : struct, ISortKeyGenerator<TBodyReferences>
+        {
+            var sortKeyGenerator = default(TSortKeyGenerator);
+            var bodyReferences = typeBatch.BodyReferences.As<TBodyReferences>();
+            for (int i = 0; i < constraintCount; ++i)
+            {
+                Unsafe.Add(ref firstSourceIndex, i) = localConstraintStart + i;
+                Unsafe.Add(ref firstSortKey, i) = sortKeyGenerator.GetSortKey(constraintStart + i, ref bodyReferences);
+            }
+            var typedBodyReferencesCache = bodyReferencesCache.As<TBodyReferences>();
+            bodyReferences.CopyTo(bundleStart, ref typedBodyReferencesCache, localBundleStart, bundleCount);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void VerifySortRegion<TSortKeyGenerator>(ref TypeBatchData typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices)
+            where TSortKeyGenerator : struct, ISortKeyGenerator<TBodyReferences>
+        {
+            var sortKeyGenerator = default(TSortKeyGenerator);
+            var previousKey = -1;
+            var baseIndex = bundleStartIndex << BundleIndexing.VectorShift;
+            var bodyReferences = typeBatch.BodyReferences.As<TBodyReferences>();
+            for (int i = 0; i < constraintCount; ++i)
+            {
+                var sourceIndex = sortedSourceIndices[i];
+                var targetIndex = baseIndex + i;
+                var key = sortKeyGenerator.GetSortKey(baseIndex + i, ref bodyReferences);
+                Debug.Assert(key > previousKey, "After the sort and swap completes, all constraints should be in order.");
+                Debug.Assert(key == sortedKeys[i], "After the swap goes through, the rederived sort keys should match the previously sorted ones.");
+                previousKey = key;
+
+            }
+        }
+
+        internal unsafe sealed override void CopyToCache(
+            ref TypeBatchData typeBatch,
+            int bundleStart, int localBundleStart, int bundleCount,
+            int constraintStart, int localConstraintStart, int constraintCount,
+            ref Buffer<int> indexToHandleCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache)
+        {
+            typeBatch.IndexToHandle.CopyTo(constraintStart, ref indexToHandleCache, localConstraintStart, constraintCount);
+            var typedPrestepCache = prestepCache.As<TPrestepData>();
+            var typedAccumulatedImpulsesCache = accumulatedImpulsesCache.As<TAccumulatedImpulse>();
+            Unsafe.CopyBlockUnaligned(
+                prestepCache.Memory + Unsafe.SizeOf<TPrestepData>() * localBundleStart,
+                typeBatch.PrestepData.Memory + Unsafe.SizeOf<TPrestepData>() * bundleStart,
+                (uint)(Unsafe.SizeOf<TPrestepData>() * bundleCount));
+            Unsafe.CopyBlockUnaligned(
+                accumulatedImpulsesCache.Memory + Unsafe.SizeOf<TAccumulatedImpulse>() * localBundleStart,
+                typeBatch.AccumulatedImpulses.Memory + Unsafe.SizeOf<TAccumulatedImpulse>() * bundleStart,
+                (uint)(Unsafe.SizeOf<TAccumulatedImpulse>() * bundleCount));
+        }
+        internal sealed override void Regather(
+            ref TypeBatchData typeBatch,
+            int constraintStart, int constraintCount, ref int firstSourceIndex,
+            ref Buffer<int> indexToHandleCache, ref RawBuffer bodyReferencesCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache,
+            ref Buffer<ConstraintLocation> handlesToConstraints)
+        {
+            var typedBodyReferencesCache = bodyReferencesCache.As<TBodyReferences>();
+            var typedPrestepCache = prestepCache.As<TPrestepData>();
+            var typedAccumulatedImpulsesCache = accumulatedImpulsesCache.As<TAccumulatedImpulse>();
+
+            var typedBodyReferencesTarget = typeBatch.BodyReferences.As<TBodyReferences>();
+            var typedPrestepTarget = typeBatch.BodyReferences.As<TPrestepData>();
+            var typedAccumulatedImpulsesTarget = typeBatch.BodyReferences.As<TAccumulatedImpulse>();
+            for (int i = 0; i < constraintCount; ++i)
+            {
+                var sourceIndex = Unsafe.Add(ref firstSourceIndex, i);
+                var targetIndex = constraintStart + i;
+                //Note that we do not bother checking whether the source and target are the same.
+                //The cost of the branch is large enough in comparison to the frequency of its usefulness that it only helps in practically static situations.
+                //Also, its maximum benefit is quite small.
+                BundleIndexing.GetBundleIndices(sourceIndex, out var sourceBundle, out var sourceInner);
+                BundleIndexing.GetBundleIndices(targetIndex, out var targetBundle, out var targetInner);
+
+                Move(
+                    ref typedBodyReferencesCache[sourceBundle], ref typedPrestepCache[sourceBundle], ref typedAccumulatedImpulsesCache[sourceBundle],
+                    indexToHandleCache[sourceIndex], sourceInner,
+                    ref typedBodyReferencesTarget[targetBundle], ref typedPrestepTarget[targetBundle], ref typedAccumulatedImpulsesTarget[targetBundle],
+                    ref typeBatch.IndexToHandle[targetIndex], targetInner, targetIndex, ref handlesToConstraints);
+
+            }
+        }
+
+
+        internal override int GetBodyIndexInstanceCount(ref TypeBatchData typeBatch, int bodyIndexToFind)
+        {
+            //This is a pure debug function; performance does not matter.
+            var bundleCount = typeBatch.BundleCount;
+            var bodyReferences = typeBatch.BodyReferences.As<TBodyReferences>();
+            int count = 0;
+            var bodiesPerConstraint = BodiesPerConstraint;
+            for (int bundleIndex = 0; bundleIndex < bundleCount; ++bundleIndex)
+            {
+                var bundleSize = Math.Min(Vector<float>.Count, typeBatch.ConstraintCount - (bundleIndex << BundleIndexing.VectorShift));
+                ref var bundleBase = ref Unsafe.As<TBodyReferences, Vector<int>>(ref bodyReferences[bundleIndex]);
+                for (int constraintBodyIndex = 0; constraintBodyIndex < bodiesPerConstraint; ++constraintBodyIndex)
+                {
+                    ref var bodyVectorBase = ref Unsafe.As<Vector<int>, int>(ref Unsafe.Add(ref bundleBase, constraintBodyIndex));
+                    for (int innerIndex = 0; innerIndex < bundleSize; ++innerIndex)
+                    {
+                        if (Unsafe.Add(ref bodyVectorBase, innerIndex) == bodyIndexToFind)
+                            ++count;
+                        Debug.Assert(count <= 1);
+                    }
+                }
+            }
+            return count;
+        }
     }
+
+
 }

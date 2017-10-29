@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 namespace BepuPhysics.Constraints.Contact
 {
 
-    public struct ContactManifold1PrestepData
+    public struct Contact1PrestepData
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold1Constraint.
@@ -23,13 +23,13 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PenetrationDepth0;
     }
 
-    public struct ContactManifold1AccumulatedImpulses
+    public struct Contact1AccumulatedImpulses
     {
         public Vector2Wide Tangent;
         public Vector<float> Penetration0;
     }
 
-    public struct ContactManifold1Projection
+    public struct Contact1Projection
     {
         public BodyInertias InertiaA;
         public BodyInertias InertiaB;
@@ -40,11 +40,11 @@ namespace BepuPhysics.Constraints.Contact
     }
 
     public struct ContactManifold1Functions :
-        IConstraintFunctions<ContactManifold1PrestepData, ContactManifold1Projection, ContactManifold1AccumulatedImpulses>
+        IConstraintFunctions<Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
-            float dt, float inverseDt, ref ContactManifold1PrestepData prestep, out ContactManifold1Projection projection)
+            float dt, float inverseDt, ref Contact1PrestepData prestep, out Contact1Projection projection)
         {
             bodies.GatherInertia(ref bodyReferences, count, out projection.InertiaA, out projection.InertiaB);
             Vector3Wide.Subtract(ref prestep.OffsetA0, ref prestep.OffsetB, out var offsetToManifoldCenterB);
@@ -56,7 +56,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref ContactManifold1Projection projection, ref ContactManifold1AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(ref projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -66,7 +66,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref ContactManifold1Projection projection, ref ContactManifold1AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(ref projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient * accumulatedImpulses.Penetration0;
@@ -84,8 +84,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 4-contact convex manifold constraints.
     /// </summary>
     public class Contact1TypeBatch :
-        //UnposedTwoBodyTypeBatch<ContactManifold4PrestepData, ContactManifold4Projection, ContactManifold4AccumulatedImpulses, ContactManifold4>
-        TwoBodyTypeBatch<ContactManifold1PrestepData, ContactManifold1Projection, ContactManifold1AccumulatedImpulses, ContactManifold1Functions>
+        TwoBodyTypeBatch<Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses, ContactManifold1Functions>
     {
         public const int BatchTypeId = 8;
     }
