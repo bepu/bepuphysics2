@@ -8,7 +8,7 @@ namespace BepuPhysics
     /// <summary>
     /// Contains the set of body handles referenced by a constraint batch.
     /// </summary>
-    struct BatchReferencedHandles
+    public struct BatchReferencedHandles
     {
         /// <summary>
         /// Since we only ever need to support add, remove and contains checks, and because body handles are guaranteed unique,
@@ -58,6 +58,26 @@ namespace BepuPhysics
         {
             var packedIndex = handle >> shift;
             return packedIndex < packedHandles.Length && (packedHandles[packedIndex] & (1ul << (handle & mask))) > 0;
+        }
+
+        /// <summary>
+        /// Gets whether the batch could hold the specified body handles.
+        /// </summary>
+        /// <param name="constraintBodyHandles">List of body handles to check for in the batch.</param>
+        /// <param name="constraintBodyHandleCount">Number of bodies referenced by the constraint.</param>
+        /// <returns>True if the body handles are not already present in the batch, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe bool CanFit(ref int constraintBodyHandles, int constraintBodyHandleCount)
+        {
+            for (int i = 0; i < constraintBodyHandleCount; ++i)
+            {
+                var bodyHandle = Unsafe.Add(ref constraintBodyHandles, i);
+                if (Contains(bodyHandle))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -161,7 +161,7 @@ namespace BepuPhysics
 
         }
 
-        TypeBatch typeBatch;
+        TypeProcessor typeBatch;
         IThreadDispatcher threadDispatcher;
         Buffer<ConstraintLocation> handlesToConstraints;
         struct MultithreadingContext
@@ -286,7 +286,7 @@ namespace BepuPhysics
 
 
 
-        void SortByBodyLocation(TypeBatch typeBatch, int bundleStartIndex, int constraintCount, Buffer<ConstraintLocation> handlesToConstraints, int bodyCount,
+        void SortByBodyLocation(TypeProcessor typeBatch, int bundleStartIndex, int constraintCount, Buffer<ConstraintLocation> handlesToConstraints, int bodyCount,
             BufferPool rawPool, IThreadDispatcher threadDispatcher)
         {
             int bundleCount = (constraintCount >> BundleIndexing.VectorShift);

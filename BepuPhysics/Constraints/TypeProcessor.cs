@@ -6,7 +6,18 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Constraints
 {
-    public abstract class TypeBatch
+    /// <summary>
+    /// Superclass of constraint type batch processors. Responsible for interpreting raw type batches for the purposes of bookkeeping and solving.
+    /// </summary>
+    /// <remarks>
+    /// <para>This class holds no actual state of its own. A solver creates a unique type processor for each registered constraint type, and all instances are held in untyped memory.
+    /// Splitting the functionality from the data allows for far fewer GC-tracked instances and allows the raw data layout to be shared more easily.</para>
+    /// <para>For example, deactivated simulation islands store type batches, but they are created and used differently- and for convenience, they are stored on a per-island basis.
+    /// Using the same system but with reference type TypeBatches, tens of thousands of inactive islands would imply tens of thousands of GC-tracked objects.</para>
+    /// That's not acceptable, so here we are. 
+    /// <para>Conceptually, you can think of the solver's array of TypeProcessors like C function pointers.</para>
+    /// </remarks>
+    public abstract class TypeProcessor
     {
         //TODO: Having this in the base class actually complicates the implementation of some special constraint types. Consider an 'articulation' subsolver that involves
         //N bodies, for N > Vector<float>.Count * 2. You may want to do SIMD internally in such a case, so there would be no 'bundles' at this level. Worry about that later.
@@ -26,9 +37,9 @@ namespace BepuPhysics.Constraints
         /// <param name="typeBatch">Type batch to allocate in.</param>
         /// <param name="handle">Handle of the constraint to allocate. Establishes a link from the allocated constraint to its handle.</param>
         /// <param name="bodyIndices">Pointer to a list of body indices (not handles!) with count equal to the type batch's expected number of involved bodies.</param>
-        /// <param name="typeBatchAllocation">Type batch allocation provider to use if the type batch has to be resized.</param>
+        /// <param name="pool">Allocation provider to use if the type batch has to be resized.</param>
         /// <returns>Index of the slot in the batch.</returns>
-        public unsafe abstract int Allocate(ref TypeBatchData typeBatch, int handle, int* bodyIndices, TypeBatchAllocation typeBatchAllocation);
+        public unsafe abstract int Allocate(ref TypeBatchData typeBatch, int handle, int* bodyIndices, BufferPool pool);
         public abstract void Remove(ref TypeBatchData typeBatch, int index, ref Buffer<ConstraintLocation> handlesToConstraints);
 
         /// <summary>
@@ -70,10 +81,8 @@ namespace BepuPhysics.Constraints
         internal abstract void VerifySortRegion(ref TypeBatchData typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices);
         internal abstract int GetBodyIndexInstanceCount(ref TypeBatchData typeBatch, int bodyIndex);
 
-        public abstract void Initialize(ref TypeBatchData typeBatch, TypeBatchAllocation typeBatchAllocation, int typeId);
-        public abstract void EnsureCapacity(ref TypeBatchData typeBatch, TypeBatchAllocation typeBatchAllocation);
-        public abstract void Compact(ref TypeBatchData typeBatch, TypeBatchAllocation typeBatchAllocation);
-        public abstract void Resize(ref TypeBatchData typeBatch, TypeBatchAllocation typeBatchAllocation);
+        public abstract void Initialize(ref TypeBatchData typeBatch, int initialCapacity, BufferPool pool);
+        public abstract void Resize(ref TypeBatchData typeBatch, int newCapacity, BufferPool pool);
 
         public abstract void Prestep(ref TypeBatchData typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
         public abstract void WarmStart(ref TypeBatchData typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle);
@@ -109,7 +118,7 @@ namespace BepuPhysics.Constraints
     //Note that the only reason to have generics at the type level here is to avoid the need to specify them for each individual function. It's functionally equivalent, but this just
     //cuts down on the syntax noise a little bit. 
     //Really, you could use a bunch of composed static generic helpers.
-    public abstract class TypeBatch<TBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse> : TypeBatch
+    public abstract class TypeProcessor<TBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse> : TypeProcessor
     {
 
         static void IncreaseSize<T>(BufferPool rawPool, ref Buffer<T> buffer)
@@ -174,12 +183,12 @@ namespace BepuPhysics.Constraints
         }
 
 
-        public unsafe sealed override int Allocate(ref TypeBatchData typeBatch, int handle, int* bodyIndices, TypeBatchAllocation typeBatchAllocation)
+        public unsafe sealed override int Allocate(ref TypeBatchData typeBatch, int handle, int* bodyIndices, BufferPool pool)
         {
             Debug.Assert(typeBatch.BodyReferences.Allocated, "Should initialize the batch before allocating anything from it.");
             if (typeBatch.ConstraintCount == typeBatch.IndexToHandle.Length)
             {
-                InternalResize(ref typeBatch, typeBatchAllocation, typeBatch.ConstraintCount * 2);
+                InternalResize(ref typeBatch, pool, typeBatch.ConstraintCount * 2);
             }
             var index = typeBatch.ConstraintCount++;
             typeBatch.IndexToHandle[index] = handle;
@@ -323,7 +332,9 @@ namespace BepuPhysics.Constraints
             var targetBatch = solver.Batches[targetBatchIndex];
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
             var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
-            ref var targetTypeBatch = ref targetBatch.Allocate(constraintHandle, ref bodyHandles[0], bodiesPerConstraint, bodies, solver.TypeBatchAllocation, typeId, out var targetIndexInTypeBatch);
+            ref var targetTypeBatch = ref targetBatch.Allocate(constraintHandle, ref bodyHandles[0], bodiesPerConstraint,
+                ref solver.batchReferencedHandles[sourceBatchIndex], bodies, typeId, solver.TypeProcessors[typeId],
+                solver.GetMinimumCapacityForType(typeId), solver.bufferPool, out var targetIndexInTypeBatch);
 
             BundleIndexing.GetBundleIndices(targetIndexInTypeBatch, out var targetBundle, out var targetInner);
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var sourceBundle, out var sourceInner);
@@ -359,48 +370,33 @@ namespace BepuPhysics.Constraints
 
         }
 
-        public override void Initialize(ref TypeBatchData typeBatch, TypeBatchAllocation typeBatchAllocation, int typeId)
+        void InternalResize(ref TypeBatchData typeBatch, BufferPool pool, int constraintCapacity)
         {
-            typeBatch.TypeId = TypeId;
-            InternalResize(ref typeBatch, typeBatchAllocation, typeBatchAllocation[typeId]);
-        }
-
-        void InternalResize(ref TypeBatchData typeBatch, TypeBatchAllocation typeBatchAllocation, int constraintCapacity)
-        {
-            Debug.Assert(constraintCapacity >= typeBatchAllocation[typeId], "The constraint capacity should have already been validated.");
-            typeBatchAllocation.BufferPool.SpecializeFor<int>().Resize(ref typeBatch.IndexToHandle, constraintCapacity, typeBatch.ConstraintCount);
+            Debug.Assert(constraintCapacity >= 0, "The constraint capacity should have already been validated.");
+            pool.SpecializeFor<int>().Resize(ref typeBatch.IndexToHandle, constraintCapacity, typeBatch.ConstraintCount);
             //Note that we construct the bundle capacity from the resized constraint capacity. This means we only have to check the IndexToHandle capacity
             //before allocating, which simplifies things a little bit at the cost of some memory. Could revisit this if memory use is actually a concern.
             var bundleCapacity = BundleIndexing.GetBundleCount(typeBatch.IndexToHandle.Length);
             //Note that the projection is not copied over. It is ephemeral data. (In the same vein as above, if memory is an issue, we could just allocate projections on demand.)
             var bundleCount = typeBatch.BundleCount;
-            typeBatchAllocation.BufferPool.Resize(ref typeBatch.Projection, bundleCapacity * Unsafe.SizeOf<TProjection>(), 0);
-            typeBatchAllocation.BufferPool.Resize(ref typeBatch.BodyReferences, bundleCapacity * Unsafe.SizeOf<TBodyReferences>(), bundleCount);
-            typeBatchAllocation.BufferPool.Resize(ref typeBatch.PrestepData, bundleCapacity * Unsafe.SizeOf<TPrestepData>(), bundleCount);
-            typeBatchAllocation.BufferPool.Resize(ref typeBatch.AccumulatedImpulses, bundleCapacity * Unsafe.SizeOf<TAccumulatedImpulse>(), bundleCount);
+            pool.Resize(ref typeBatch.Projection, bundleCapacity * Unsafe.SizeOf<TProjection>(), 0);
+            pool.Resize(ref typeBatch.BodyReferences, bundleCapacity * Unsafe.SizeOf<TBodyReferences>(), bundleCount);
+            pool.Resize(ref typeBatch.PrestepData, bundleCapacity * Unsafe.SizeOf<TPrestepData>(), bundleCount);
+            pool.Resize(ref typeBatch.AccumulatedImpulses, bundleCapacity * Unsafe.SizeOf<TAccumulatedImpulse>(), bundleCount);
         }
-        public override void EnsureCapacity(ref TypeBatchData typeBatch, TypeBatchAllocation typeBatchAllocation)
+
+        public override void Initialize(ref TypeBatchData typeBatch, int initialCapacity, BufferPool pool)
         {
-            var desiredConstraintCapacity = Math.Max(typeBatch.ConstraintCount, typeBatchAllocation[typeId]);
-            if (desiredConstraintCapacity > typeBatch.IndexToHandle.Length)
-            {
-                InternalResize(ref typeBatch, typeBatchAllocation, desiredConstraintCapacity);
-            }
+            typeBatch.TypeId = TypeId;
+            InternalResize(ref typeBatch, pool, initialCapacity);
         }
-        public override void Compact(ref TypeBatchData typeBatch, TypeBatchAllocation typeBatchAllocation)
+
+        public override void Resize(ref TypeBatchData typeBatch, int desiredCapacity, BufferPool pool)
         {
-            var desiredConstraintCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(typeBatch.ConstraintCount, typeBatchAllocation[typeId]));
-            if (desiredConstraintCapacity < typeBatch.IndexToHandle.Length)
-            {
-                InternalResize(ref typeBatch, typeBatchAllocation, desiredConstraintCapacity);
-            }
-        }
-        public override void Resize(ref TypeBatchData typeBatch, TypeBatchAllocation typeBatchAllocation)
-        {
-            var desiredConstraintCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(typeBatch.ConstraintCount, typeBatchAllocation[typeId]));
+            var desiredConstraintCapacity = BufferPool<int>.GetLowestContainingElementCount(desiredCapacity);
             if (desiredConstraintCapacity != typeBatch.IndexToHandle.Length)
             {
-                InternalResize(ref typeBatch, typeBatchAllocation, desiredConstraintCapacity);
+                InternalResize(ref typeBatch, pool, desiredConstraintCapacity);
             }
         }
 

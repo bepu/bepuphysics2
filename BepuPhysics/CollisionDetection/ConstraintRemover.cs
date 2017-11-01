@@ -441,7 +441,7 @@ namespace BepuPhysics.CollisionDetection
                     var batchIndices = removedTypeBatches[i];
                     var batch = solver.Batches[batchIndices.Batch];
                     var typeBatch = batch.TypeBatches[batchIndices.TypeBatch];
-                    batch.RemoveTypeBatchIfEmpty(typeBatch, batchIndices.TypeBatch, solver.TypeBatchAllocation);
+                    batch.RemoveTypeBatchIfEmpty(typeBatch, batchIndices.TypeBatch, solver.TypeBatchCapacities);
                     solver.RemoveBatchIfEmpty(batch, batchIndices.Batch);
                 }
             }

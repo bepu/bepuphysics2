@@ -275,14 +275,14 @@ namespace BepuPhysics
         }
         interface IStageFunction
         {
-            void Execute(TypeBatch typeBatch, int start, int end);
+            void Execute(TypeProcessor typeBatch, int start, int end);
         }
         struct PrestepStageFunction : IStageFunction
         {
             public float Dt;
             public Bodies Bodies;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(TypeBatch typeBatch, int start, int end)
+            public void Execute(TypeProcessor typeBatch, int start, int end)
             {
                 typeBatch.Prestep(Bodies, Dt, 1 / Dt, start, end);
             }
@@ -292,7 +292,7 @@ namespace BepuPhysics
         {
             public Buffer<BodyVelocity> Velocities;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(TypeBatch typeBatch, int start, int end)
+            public void Execute(TypeProcessor typeBatch, int start, int end)
             {
                 typeBatch.WarmStart(ref Velocities, start, end);
             }
@@ -301,7 +301,7 @@ namespace BepuPhysics
         {
             public Buffer<BodyVelocity> Velocities;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(TypeBatch typeBatch, int start, int end)
+            public void Execute(TypeProcessor typeBatch, int start, int end)
             {
                 typeBatch.SolveIteration(ref Velocities, start, end);
             }

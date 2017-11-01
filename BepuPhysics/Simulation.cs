@@ -86,7 +86,7 @@ namespace BepuPhysics
             }
 
             var simulation = new Simulation(bufferPool, initialAllocationSizes.Value);
-            DefaultTypes.Register(simulation.Solver.TypeBatchAllocation, out var defaultTaskRegistry);
+            DefaultTypes.Register(simulation.Solver.TypeBatchCapacities, out var defaultTaskRegistry);
             var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation, defaultTaskRegistry, narrowPhaseCallbacks);
             simulation.NarrowPhase = narrowPhase;
             simulation.BroadPhaseOverlapFinder = new CollidableOverlapFinder<TNarrowPhaseCallbacks>(narrowPhase, simulation.BroadPhase);

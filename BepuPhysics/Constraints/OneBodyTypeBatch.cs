@@ -27,7 +27,7 @@ namespace BepuPhysics.Constraints
     /// Shared implementation across all two body constraints.
     /// </summary>
     public abstract class OneBodyTypeBatch<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
-        : TypeBatch<Vector<int>, TPrestepData, TProjection, TAccumulatedImpulse>
+        : TypeProcessor<Vector<int>, TPrestepData, TProjection, TAccumulatedImpulse>
         where TConstraintFunctions : struct, IOneBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         public sealed override int BodiesPerConstraint => 1;

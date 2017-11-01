@@ -19,15 +19,15 @@ namespace DemoRenderer.Constraints
     abstract class TypeLineExtractor
     {
         public abstract int LinesPerConstraint { get; }
-        public abstract void ExtractLines(Bodies bodies, TypeBatch typeBatch, int constraintStart, int constraintCount, ref QuickList<LineInstance, Array<LineInstance>> lines);
+        public abstract void ExtractLines(Bodies bodies, TypeProcessor typeBatch, int constraintStart, int constraintCount, ref QuickList<LineInstance, Array<LineInstance>> lines);
     }
 
     class TypeLineExtractor<T, TTypeBatch, TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses> : TypeLineExtractor
         where T : struct, IConstraintLineExtractor<TBodyReferences, TPrestep>
-        where TTypeBatch : TypeBatch<TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses>
+        where TTypeBatch : TypeProcessor<TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses>
     {
         public override int LinesPerConstraint => default(T).LinesPerConstraint;
-        public override void ExtractLines(Bodies bodies, TypeBatch typeBatch, int constraintStart, int constraintCount,
+        public override void ExtractLines(Bodies bodies, TypeProcessor typeBatch, int constraintStart, int constraintCount,
             ref QuickList<LineInstance, Array<LineInstance>> lines)
         {
             var batch = (TTypeBatch)typeBatch;
@@ -93,7 +93,7 @@ namespace DemoRenderer.Constraints
             lineExtractors[typeBatch.TypeId].ExtractLines(bodies, typeBatch, job.ConstraintStart, job.ConstraintCount, ref job.jobLines);
         }
 
-        bool IsContactBatch(TypeBatch typeBatch)
+        bool IsContactBatch(TypeProcessor typeBatch)
         {
             //TODO: If the nonconvex contact count expands to 8, this will have to change.
             return typeBatch.TypeId < 16;
