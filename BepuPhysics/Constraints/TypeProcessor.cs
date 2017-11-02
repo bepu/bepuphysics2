@@ -333,7 +333,7 @@ namespace BepuPhysics.Constraints
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
             var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
             targetBatch.Allocate(constraintHandle, ref bodyHandles[0], bodiesPerConstraint,
-                ref solver.batchReferencedHandles[sourceBatchIndex], bodies, typeId, solver.TypeProcessors[typeId],
+                ref solver.batchReferencedHandles[targetBatchIndex], bodies, typeId, solver.TypeProcessors[typeId],
                 solver.GetMinimumCapacityForType(typeId), solver.bufferPool, out var targetReference);
 
             BundleIndexing.GetBundleIndices(targetReference.IndexInTypeBatch, out var targetBundle, out var targetInner);
