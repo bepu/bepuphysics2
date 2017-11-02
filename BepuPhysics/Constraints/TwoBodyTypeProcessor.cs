@@ -36,7 +36,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Shared implementation across all two body constraints.
     /// </summary>
-    public abstract class TwoBodyTypeBatch<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
+    public abstract class TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
         : TypeProcessor<TwoBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
         where TConstraintFunctions : struct, IConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {

@@ -175,13 +175,13 @@ namespace BepuPhysics
             {
                 var constraintTypeId = typeBatch.TypeId;
                 TypeIndexToTypeBatchIndex[constraintTypeId] = -1;
+                typeBatch.Dispose(pool); //Note that the disposal must occur BEFORE the removal, or else we'll end up disposing whatever type batch moves to occupy the newly empty slot.
                 TypeBatches.FastRemoveAt(typeBatchIndexToRemove);
                 if (typeBatchIndexToRemove < TypeBatches.Count)
                 {
                     //If we swapped anything into the removed slot, we should update the type index to type batch mapping.
                     TypeIndexToTypeBatchIndex[TypeBatches[typeBatchIndexToRemove].TypeId] = typeBatchIndexToRemove;
                 }
-                typeBatch.Dispose(pool);
             }
             ValidateTypeBatchMappings();
         }

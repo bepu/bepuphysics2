@@ -202,7 +202,7 @@ namespace BepuPhysics.Constraints
             Debug.Assert(typeBatch.Projection.Length >= bundleCount * Unsafe.SizeOf<TProjection>());
             Debug.Assert(typeBatch.BodyReferences.Length >= bundleCount * Unsafe.SizeOf<TBodyReferences>());
             Debug.Assert(typeBatch.AccumulatedImpulses.Length >= bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
-            Debug.Assert(typeBatch.IndexToHandle.Length >= typeBatch.ConstraintCount * Unsafe.SizeOf<int>());
+            Debug.Assert(typeBatch.IndexToHandle.Length >= typeBatch.ConstraintCount);
             return index;
         }
 
@@ -294,7 +294,7 @@ namespace BepuPhysics.Constraints
                     ref Unsafe.Add(ref bodyReferences, sourceBundleIndex), ref Unsafe.Add(ref prestepData, sourceBundleIndex), ref Unsafe.Add(ref accumulatedImpulses, sourceBundleIndex),
                     typeBatch.IndexToHandle[lastIndex], sourceInnerIndex,
                     ref Unsafe.Add(ref bodyReferences, targetBundleIndex), ref Unsafe.Add(ref prestepData, targetBundleIndex), ref Unsafe.Add(ref accumulatedImpulses, targetBundleIndex),
-                    ref typeBatch.IndexToHandle[lastIndex], targetInnerIndex, lastIndex,
+                    ref typeBatch.IndexToHandle[index], targetInnerIndex, index,
                     ref handlesToConstraints);
             }
             //TODO: Is clearing the body references even required anymore? Pretty sure it's not, but we need to confirm. 
@@ -377,9 +377,9 @@ namespace BepuPhysics.Constraints
             //Note that the projection is not copied over. It is ephemeral data. (In the same vein as above, if memory is an issue, we could just allocate projections on demand.)
             var bundleCount = typeBatch.BundleCount;
             pool.Resize(ref typeBatch.Projection, bundleCapacity * Unsafe.SizeOf<TProjection>(), 0);
-            pool.Resize(ref typeBatch.BodyReferences, bundleCapacity * Unsafe.SizeOf<TBodyReferences>(), bundleCount);
-            pool.Resize(ref typeBatch.PrestepData, bundleCapacity * Unsafe.SizeOf<TPrestepData>(), bundleCount);
-            pool.Resize(ref typeBatch.AccumulatedImpulses, bundleCapacity * Unsafe.SizeOf<TAccumulatedImpulse>(), bundleCount);
+            pool.Resize(ref typeBatch.BodyReferences, bundleCapacity * Unsafe.SizeOf<TBodyReferences>(), bundleCount * Unsafe.SizeOf<TBodyReferences>());
+            pool.Resize(ref typeBatch.PrestepData, bundleCapacity * Unsafe.SizeOf<TPrestepData>(), bundleCount * Unsafe.SizeOf<TPrestepData>());
+            pool.Resize(ref typeBatch.AccumulatedImpulses, bundleCapacity * Unsafe.SizeOf<TAccumulatedImpulse>(), bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
         }
 
         public override void Initialize(ref TypeBatchData typeBatch, int initialCapacity, BufferPool pool)

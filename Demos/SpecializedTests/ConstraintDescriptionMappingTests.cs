@@ -62,13 +62,12 @@ namespace Demos.SpecializedTests
                 simulation.Solver.GetDescription(constraintHandles[constraintTestIndex], out T description);
                 var aValue = (ValueType)description;
                 var bValue = (ValueType)sources[constraintTestIndex];
-                if (!Equals(typeof(T).Name, typeof(T), aValue, bValue))
-                    break;
+                CheckEquality(typeof(T).Name, typeof(T), aValue, bValue);
                 simulation.RemoveConstraint(constraintHandles[constraintTestIndex]);
             }
         }
 
-        static bool Equals(string parentString, Type type, ValueType a, ValueType b)
+        static bool CheckEquality(string parentString, Type type, ValueType a, ValueType b)
         {
             if (type.IsPrimitive)
             {
@@ -85,7 +84,7 @@ namespace Demos.SpecializedTests
                 var aValue = (ValueType)field.GetValue(a);
                 var bValue = (ValueType)field.GetValue(b);
                 var nameString = $"{parentString}.{field.Name}";
-                if (!Equals(nameString, field.FieldType, aValue, bValue))
+                if (!CheckEquality(nameString, field.FieldType, aValue, bValue))
                     equals = false;
             }
             return equals;
@@ -104,6 +103,7 @@ namespace Demos.SpecializedTests
                 simulation.Add(ref bodyDescription);
             }
             var random = new Random(5);
+            Test<Contact1OneBody>(simulation, random, 1);
             Test<Contact1>(simulation, random, 2);
             Test<Contact4>(simulation, random, 2);
             Test<BallSocket>(simulation, random, 2);

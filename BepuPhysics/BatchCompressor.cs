@@ -233,7 +233,7 @@ namespace BepuPhysics
             //Console.WriteLine($"start: batch {nextBatchIndex}, type batch {nextTarget.TypeBatchIndex}, index {nextTarget.StartIndexInTypeBatch}");
 
             //Build the analysis regions.
-            var batch = Solver.Batches[nextBatchIndex];
+            ref var batch = ref Solver.Batches[nextBatchIndex];
 
             var regionPool = rawPool.SpecializeFor<AnalysisRegion>();
             //Just make a generous estimate as to the number of jobs we'll need. 512 is huge in context, but trivial in terms of ephemeral memory required.
@@ -247,7 +247,7 @@ namespace BepuPhysics
             int totalConstraintsScheduled = 0;
             for (; nextTypeBatchIndex < batch.TypeBatches.Count && totalConstraintsScheduled < targetCandidateCount; ++nextTypeBatchIndex)
             {
-                var typeBatch = batch.TypeBatches[nextTypeBatchIndex];
+                ref var typeBatch = ref batch.TypeBatches[nextTypeBatchIndex];
                 var jobCount = 1 + typeBatch.ConstraintCount / targetConstraintsPerJob;
                 var baseConstraintsPerJob = typeBatch.ConstraintCount / jobCount;
                 var remainder = typeBatch.ConstraintCount - baseConstraintsPerJob * jobCount;

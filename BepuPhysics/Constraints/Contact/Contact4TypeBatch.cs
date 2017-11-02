@@ -148,7 +148,7 @@ namespace BepuPhysics.Constraints.Contact
     /// </summary>
     public class Contact4TypeBatch :
         //UnposedTwoBodyTypeBatch<ContactManifold4PrestepData, ContactManifold4Projection, ContactManifold4AccumulatedImpulses, ContactManifold4>
-        TwoBodyTypeBatch<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses, Contact4Functions>
+        TwoBodyTypeProcessor<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses, Contact4Functions>
     {
         public const int BatchTypeId = 11;
     }

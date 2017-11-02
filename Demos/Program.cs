@@ -2,6 +2,7 @@
 using DemoContentLoader;
 using DemoRenderer.UI;
 using Demos.Properties;
+using Demos.SpecializedTests;
 using DemoUtilities;
 using OpenTK;
 using System.IO;
@@ -12,7 +13,7 @@ namespace Demos
     {
         static void Main(string[] args)
         {
-            //ConstraintDescriptionMappingTests.Test();
+            ConstraintDescriptionMappingTests.Test();
             //CollidablePairComparerTests.Test();
             //HeadlessDemo.Simple();
             //BatchedCollisionTests.Test();

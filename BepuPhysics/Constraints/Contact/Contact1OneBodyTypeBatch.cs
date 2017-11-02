@@ -75,7 +75,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 4-contact convex manifold constraints.
     /// </summary>
     public class Contact1OneBodyTypeBatch :
-        OneBodyTypeBatch<Contact1OneBodyPrestepData, ContactManifold1OneBodyProjection, Contact1AccumulatedImpulses, Contact1OneBodyFunctions>
+        OneBodyTypeProcessor<Contact1OneBodyPrestepData, ContactManifold1OneBodyProjection, Contact1AccumulatedImpulses, Contact1OneBodyFunctions>
     {
         public const int BatchTypeId = 0;
     }

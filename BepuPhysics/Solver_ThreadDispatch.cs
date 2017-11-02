@@ -104,7 +104,7 @@ namespace BepuPhysics
             QuickList<int, Buffer<int>>.Create(bufferPool.SpecializeFor<int>(), Batches.Count, out context.BatchBoundaries);
             for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
             {
-                var batch = Batches[batchIndex];
+                ref var batch = ref Batches[batchIndex];
                 var bundleCount = 0;
                 for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                 {
@@ -120,7 +120,7 @@ namespace BepuPhysics
                 //Walk through the type batches in order. Avoid tiny 'remainder' batches by spreading any remainder over all previous batches.
                 for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                 {
-                    var typeBatch = batch.TypeBatches[typeBatchIndex];
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
                     var typeBatchBlockCount = typeBatch.BundleCount / targetBlockSizeInBundles;
                     if (typeBatchBlockCount == 0)
                         typeBatchBlockCount = 1;

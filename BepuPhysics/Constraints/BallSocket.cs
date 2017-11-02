@@ -203,7 +203,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket constraints.
     /// </summary>
-    public class BallSocketTypeBatch : TwoBodyTypeBatch<BallSocketPrestepData, BallSocketProjection, Vector3Wide, BallSocketFunctions>
+    public class BallSocketTypeBatch : TwoBodyTypeProcessor<BallSocketPrestepData, BallSocketProjection, Vector3Wide, BallSocketFunctions>
     {
         public const int BatchTypeId = 16;
     }

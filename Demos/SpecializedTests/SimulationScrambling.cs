@@ -256,13 +256,13 @@ namespace Demos.SpecializedTests
         {
             //Remove a constraint.
             var batchIndex = random.Next(simulation.Solver.Batches.Count);
-            var batch = simulation.Solver.Batches[batchIndex];
+            ref var batch = ref simulation.Solver.Batches[batchIndex];
             Debug.Assert(batchIndex < simulation.Solver.Batches.Count - 1 || batch.TypeBatches.Count > 0,
                 "While a lower index batch may end up empty due to a lack of active batch compression, " +
                 "the last batch should get removed if it becomes empty since there is no danger of pointer invaldiation.");
             if (batch.TypeBatches.Count > 0)
             {
-                var typeBatch = batch.TypeBatches[random.Next(batch.TypeBatches.Count)];
+                ref var typeBatch = ref batch.TypeBatches[random.Next(batch.TypeBatches.Count)];
                 Debug.Assert(typeBatch.ConstraintCount > 0, "If a type batch exists, it should have constraints in it.");
                 var indexInTypeBatch = random.Next(typeBatch.ConstraintCount);
                 var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
@@ -285,14 +285,7 @@ namespace Demos.SpecializedTests
             var bodyDescriptions = new BodyDescription[bodyHandles.Length];
             var constraintDescriptions = new CachedConstraint<T>[constraintHandles.Length];
             Debug.Assert(simulation.Bodies.Count == bodyHandles.Length);
-            int originalConstraintCount = 0;
-            foreach (var batch in simulation.Solver.Batches)
-            {
-                foreach (var typeBatch in batch.TypeBatches)
-                {
-                    originalConstraintCount += typeBatch.ConstraintCount;
-                }
-            }
+            int originalConstraintCount = simulation.Solver.ConstraintCount;
             Debug.Assert(constraintHandles.Length == originalConstraintCount);
 
             //We'll need a mapping from the current handles back to the identity.
@@ -384,14 +377,7 @@ namespace Demos.SpecializedTests
                 Debug.Assert(description.Equals(constraintDescriptions[i].Description), "Moving constraints around should not affect their descriptions.");
             }
 
-            var newConstraintCount = 0;
-            foreach (var batch in simulation.Solver.Batches)
-            {
-                foreach (var typeBatch in batch.TypeBatches)
-                {
-                    newConstraintCount += typeBatch.ConstraintCount;
-                }
-            }
+            var newConstraintCount = simulation.Solver.ConstraintCount;
             Debug.Assert(newConstraintCount == originalConstraintCount, "Best have the same number of constraints if we actually added them all back!");
             Debug.Assert(bodyHandles.Length == simulation.Bodies.Count, "And bodies, too!");
 
