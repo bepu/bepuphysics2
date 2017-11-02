@@ -18,11 +18,11 @@ namespace Demos
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 16;
-            const int height = 16;
-            const int length = 16;
+            const int width = 8;
+            const int height = 8;
+            const int length = 8;
             SimulationSetup.BuildLattice(
-                new RegularGridBuilder(new Vector3(1.1f, 1.0f, 1.1f), new Vector3(1, 100, 1), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
+                new RegularGridBuilder(new Vector3(1.1f, 1.0f, 1.1f), new Vector3(1, 10, 1), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);

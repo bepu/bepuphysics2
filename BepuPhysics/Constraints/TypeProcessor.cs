@@ -465,8 +465,6 @@ namespace BepuPhysics.Constraints
             ref Buffer<int> indexToHandleCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache)
         {
             typeBatch.IndexToHandle.CopyTo(constraintStart, ref indexToHandleCache, localConstraintStart, constraintCount);
-            var typedPrestepCache = prestepCache.As<TPrestepData>();
-            var typedAccumulatedImpulsesCache = accumulatedImpulsesCache.As<TAccumulatedImpulse>();
             Unsafe.CopyBlockUnaligned(
                 prestepCache.Memory + Unsafe.SizeOf<TPrestepData>() * localBundleStart,
                 typeBatch.PrestepData.Memory + Unsafe.SizeOf<TPrestepData>() * bundleStart,
@@ -487,8 +485,8 @@ namespace BepuPhysics.Constraints
             var typedAccumulatedImpulsesCache = accumulatedImpulsesCache.As<TAccumulatedImpulse>();
 
             var typedBodyReferencesTarget = typeBatch.BodyReferences.As<TBodyReferences>();
-            var typedPrestepTarget = typeBatch.BodyReferences.As<TPrestepData>();
-            var typedAccumulatedImpulsesTarget = typeBatch.BodyReferences.As<TAccumulatedImpulse>();
+            var typedPrestepTarget = typeBatch.PrestepData.As<TPrestepData>();
+            var typedAccumulatedImpulsesTarget = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
             for (int i = 0; i < constraintCount; ++i)
             {
                 var sourceIndex = Unsafe.Add(ref firstSourceIndex, i);
