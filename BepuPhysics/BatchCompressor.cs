@@ -127,12 +127,13 @@ namespace BepuPhysics
         unsafe void DoJob(ref AnalysisRegion region, int workerIndex, BufferPool pool)
         {
             ref var compressions = ref this.workerCompressions[workerIndex];
-            var batch = Solver.Batches[nextBatchIndex];
+            ref var batch = ref Solver.Batches[nextBatchIndex];
             var typeBatchIndex = region.TypeBatchIndex;
-            var typeBatch = batch.TypeBatches[typeBatchIndex];
+            ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+            var typeProcessor = Solver.TypeProcessors[typeBatch.TypeId];
 
             //Each job only works on a subset of a single type batch.
-            var bodiesPerConstraint = typeBatch.BodiesPerConstraint;
+            var bodiesPerConstraint = typeProcessor.BodiesPerConstraint;
             var bodyHandles = stackalloc int[bodiesPerConstraint];
             ConstraintBodyHandleCollector indexAccumulator;
             indexAccumulator.Bodies = Bodies;
@@ -141,10 +142,10 @@ namespace BepuPhysics
             {
                 //Check if this constraint can be removed.
                 indexAccumulator.Index = 0;
-                typeBatch.EnumerateConnectedBodyIndices(i, ref indexAccumulator);
+                typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, i, ref indexAccumulator);
                 for (int batchIndex = 0; batchIndex < nextBatchIndex; ++batchIndex)
                 {
-                    if (Solver.Batches[batchIndex].CanFit(ref bodyHandles[0], bodiesPerConstraint))
+                    if (Solver.batchReferencedHandles[batchIndex].CanFit(ref bodyHandles[0], bodiesPerConstraint))
                     {
                         compressions.Add(new Compression { ConstraintHandle = typeBatch.IndexToHandle[i], TargetBatch = batchIndex }, pool.SpecializeFor<Compression>());
                         break;
@@ -169,7 +170,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ApplyCompression(ConstraintBatch sourceBatch, ref Compression compression)
+        private void ApplyCompression(ref ConstraintBatch sourceBatch, ref Compression compression)
         {
             //Note that we do not simply remove and re-add the constraint; while that would work, it would redo a lot of work that isn't necessary.
             //Instead, since we already know exactly where the constraint is and what constraint batch it should go to, we can avoid a lot of abstractions
@@ -177,8 +178,8 @@ namespace BepuPhysics
             //Careful here: this is a reference for the sake of not doing pointless copies, but you cannot rely on it having the same values after the completion of the transfer.
             ref var constraintLocation = ref Solver.HandleToConstraint[compression.ConstraintHandle];
             //Console.WriteLine($"Compressing: {compression.ConstraintHandle} moving from {Solver.Batches.IndexOf(sourceBatch)} to {compression.TargetBatch}");
-            sourceBatch.TypeBatches[sourceBatch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]].TransferConstraint(
-                nextBatchIndex, constraintLocation.IndexInTypeBatch, Solver, Bodies, compression.TargetBatch);
+            Solver.TypeProcessors[constraintLocation.TypeId].TransferConstraint(
+                ref sourceBatch.GetTypeBatch(constraintLocation.TypeId), nextBatchIndex, constraintLocation.IndexInTypeBatch, Solver, Bodies, compression.TargetBatch);
         }
 
         /// <summary>
@@ -285,7 +286,7 @@ namespace BepuPhysics
 
             analysisJobs.Dispose(regionPool);
 
-            var sourceBatch = Solver.Batches[nextBatchIndex];
+            ref var sourceBatch = ref Solver.Batches[nextBatchIndex];
             int compressionsApplied = 0;
 
             //var applyStart = Stopwatch.GetTimestamp();
@@ -327,7 +328,7 @@ namespace BepuPhysics
                     for (int i = 0; i < compressionsToSort.Count && i < maximumCompressionCount; ++i)
                     {
                         ref var target = ref compressionsToSort[i];
-                        ApplyCompression(sourceBatch, ref workerCompressions[target.WorkerIndex][target.Index]);
+                        ApplyCompression(ref sourceBatch, ref workerCompressions[target.WorkerIndex][target.Index]);
                     }
 
                     compressionsToSort.Dispose(targetPool);
@@ -342,7 +343,7 @@ namespace BepuPhysics
                     ref var compressions = ref workerCompressions[i];
                     for (int j = compressions.Count - 1; j >= 0 && compressionsApplied < maximumCompressionCount; --j)
                     {
-                        ApplyCompression(sourceBatch, ref compressions[j]);
+                        ApplyCompression(ref sourceBatch, ref compressions[j]);
                         ++compressionsApplied;
                     }
 

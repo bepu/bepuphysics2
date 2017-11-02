@@ -253,27 +253,6 @@ namespace BepuPhysics
         }
 
 
-
-        public void EnsureCapacity(int bodyCapacity)
-        {
-            if (IndexToHandle.Length < bodyCapacity)
-            {
-                InternalResize(bodyCapacity);
-            }
-            //When ensuring capacity, we assume the user wants to avoid all related resizes.
-            //So we bump up the idpool's capacity, too. This is likely a massive overestimate, but it doesn't cost that much, and it does provide the necessary guarantee.
-            HandlePool.EnsureCapacity(bodyCapacity, pool.SpecializeFor<int>());
-        }
-        public void Compact(int bodyCapacity)
-        {
-            var targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(bodyCapacity, Count));
-            if (IndexToHandle.Length > targetBodyCapacity)
-            {
-                InternalResize(targetBodyCapacity);
-            }
-            HandlePool.Compact(bodyCapacity, pool.SpecializeFor<int>());
-        }
-
         public void Resize(int bodyCapacity)
         {
             var targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(bodyCapacity, Count));

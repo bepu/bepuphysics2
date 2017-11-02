@@ -21,7 +21,8 @@ namespace BepuPhysics
             while ((blockIndex = Interlocked.Increment(ref manualNaiveBlockIndex)) <= manualNaiveExclusiveEndIndex)
             {
                 ref var block = ref context.WorkBlocks[blockIndex - 1];
-                Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex].Prestep(bodies, context.Dt, inverseDt, block.StartBundle, block.End);
+                ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                TypeProcessors[typeBatch.TypeId].Prestep(ref typeBatch, bodies, context.Dt, inverseDt, block.StartBundle, block.End);
             }
         }
         void ManualNaiveWarmStart(int workBlockIndex)
@@ -30,7 +31,8 @@ namespace BepuPhysics
             while ((blockIndex = Interlocked.Increment(ref manualNaiveBlockIndex)) <= manualNaiveExclusiveEndIndex)
             {
                 ref var block = ref context.WorkBlocks[blockIndex - 1];
-                Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex].WarmStart(ref bodies.Velocities, block.StartBundle, block.End);
+                ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.Velocities, block.StartBundle, block.End);
             }
         }
 
@@ -40,7 +42,8 @@ namespace BepuPhysics
             while ((blockIndex = Interlocked.Increment(ref manualNaiveBlockIndex)) <= manualNaiveExclusiveEndIndex)
             {
                 ref var block = ref context.WorkBlocks[blockIndex - 1];
-                Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex].SolveIteration(ref bodies.Velocities, block.StartBundle, block.End);
+                ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.Velocities, block.StartBundle, block.End);
             }
         }
 

@@ -13,12 +13,12 @@ namespace BepuPhysics
         /// <summary>
         /// Registers the set of shapes constraints that are packaged in the engine.
         /// </summary>
-        public static void Register(TypeBatchCapacities typeBatchAllocation, out CollisionTaskRegistry defaultTaskRegistry)
+        public static void Register(Solver solver, out CollisionTaskRegistry defaultTaskRegistry)
         {
-            typeBatchAllocation.Register<BallSocket>();
-            typeBatchAllocation.Register<Contact1OneBody>();
-            typeBatchAllocation.Register<Contact1>();
-            typeBatchAllocation.Register<Contact4>();
+            solver.Register<BallSocket>();
+            solver.Register<Contact1OneBody>();
+            solver.Register<Contact1>();
+            solver.Register<Contact4>();
 
             defaultTaskRegistry = new CollisionTaskRegistry();
             defaultTaskRegistry.Register(new SpherePairCollisionTask());

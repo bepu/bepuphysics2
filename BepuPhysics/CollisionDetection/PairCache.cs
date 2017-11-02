@@ -354,8 +354,7 @@ namespace BepuPhysics.CollisionDetection
                 case 0:
                     {
                         //1 contact
-                        var batch = Unsafe.As<TypeProcessor, Contact1OneBodyTypeBatch>(ref constraintReference.TypeBatch);
-                        ref var bundle = ref batch.AccumulatedImpulses[bundleIndex];
+                        ref var bundle = ref Buffer<Contact1AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
                         GatherScatter.GetLane(ref bundle.Penetration0, inner, ref *oldImpulses, 1);
                     }
                     break;
@@ -400,8 +399,7 @@ namespace BepuPhysics.CollisionDetection
                 case 8 + 0:
                     {
                         //1 contact
-                        var batch = Unsafe.As<TypeProcessor, Contact1TypeBatch>(ref constraintReference.TypeBatch);
-                        ref var bundle = ref batch.AccumulatedImpulses[bundleIndex];
+                        ref var bundle = ref Buffer<Contact1AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
                         GatherScatter.GetLane(ref bundle.Penetration0, inner, ref *oldImpulses, 1);
                     }
                     break;
@@ -418,8 +416,7 @@ namespace BepuPhysics.CollisionDetection
                 case 8 + 3:
                     {
                         //4 contacts
-                        var batch = Unsafe.As<TypeProcessor, Contact4TypeBatch>(ref constraintReference.TypeBatch);
-                        ref var bundle = ref batch.AccumulatedImpulses[bundleIndex];
+                        ref var bundle = ref Buffer<Contact4AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
                         GatherScatter.GetLane(ref bundle.Penetration0, inner, ref *oldImpulses, 4);
                     }
                     break;
@@ -446,7 +443,7 @@ namespace BepuPhysics.CollisionDetection
                     break;
             }
         }
-        
+
         internal void ScatterNewImpulses<TContactImpulses>(int constraintType, ref ConstraintReference constraintReference, ref TContactImpulses contactImpulses)
         {
             //Constraints cover 16 possible cases:
@@ -465,8 +462,7 @@ namespace BepuPhysics.CollisionDetection
                 case 0:
                     {
                         //1 contact
-                        var batch = Unsafe.As<TypeProcessor, Contact1OneBodyTypeBatch>(ref constraintReference.TypeBatch);
-                        ref var bundle = ref batch.AccumulatedImpulses[bundleIndex];
+                        ref var bundle = ref Buffer<Contact1AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
                         GatherScatter.SetLane(ref bundle.Penetration0, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), 1);
                     }
                     break;
@@ -511,8 +507,7 @@ namespace BepuPhysics.CollisionDetection
                 case 8 + 0:
                     {
                         //1 contact
-                        var batch = Unsafe.As<TypeProcessor, Contact1TypeBatch>(ref constraintReference.TypeBatch);
-                        ref var bundle = ref batch.AccumulatedImpulses[bundleIndex];
+                        ref var bundle = ref Buffer<Contact1AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
                         GatherScatter.SetLane(ref bundle.Penetration0, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), 1);
                     }
                     break;
@@ -529,8 +524,7 @@ namespace BepuPhysics.CollisionDetection
                 case 8 + 3:
                     {
                         //4 contacts
-                        var batch = Unsafe.As<TypeProcessor, Contact4TypeBatch>(ref constraintReference.TypeBatch);
-                        ref var bundle = ref batch.AccumulatedImpulses[bundleIndex];
+                        ref var bundle = ref Buffer<Contact4AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
                         GatherScatter.SetLane(ref bundle.Penetration0, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), 4);
                     }
                     break;

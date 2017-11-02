@@ -19,20 +19,18 @@ namespace DemoRenderer.Constraints
     abstract class TypeLineExtractor
     {
         public abstract int LinesPerConstraint { get; }
-        public abstract void ExtractLines(Bodies bodies, TypeProcessor typeBatch, int constraintStart, int constraintCount, ref QuickList<LineInstance, Array<LineInstance>> lines);
+        public abstract void ExtractLines(Bodies bodies, ref TypeBatchData typeBatch, int constraintStart, int constraintCount, ref QuickList<LineInstance, Array<LineInstance>> lines);
     }
 
-    class TypeLineExtractor<T, TTypeBatch, TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses> : TypeLineExtractor
+    class TypeLineExtractor<T, TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses> : TypeLineExtractor
         where T : struct, IConstraintLineExtractor<TBodyReferences, TPrestep>
-        where TTypeBatch : TypeProcessor<TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses>
     {
         public override int LinesPerConstraint => default(T).LinesPerConstraint;
-        public override void ExtractLines(Bodies bodies, TypeProcessor typeBatch, int constraintStart, int constraintCount,
+        public override void ExtractLines(Bodies bodies, ref TypeBatchData typeBatch, int constraintStart, int constraintCount,
             ref QuickList<LineInstance, Array<LineInstance>> lines)
         {
-            var batch = (TTypeBatch)typeBatch;
-            ref var prestepStart = ref batch.PrestepData[0];
-            ref var referencesStart = ref batch.BodyReferences[0];
+            ref var prestepStart = ref Buffer<TPrestep>.Get(ref typeBatch.PrestepData, 0);
+            ref var referencesStart = ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, 0);
             var extractor = default(T);
 
             var constraintEnd = constraintStart + constraintCount;
@@ -77,7 +75,7 @@ namespace DemoRenderer.Constraints
         {
             lineExtractors = new TypeLineExtractor[32];
             AllocateSlot(BallSocketTypeBatch.BatchTypeId) =
-                new TypeLineExtractor<BallSocketLineExtractor, BallSocketTypeBatch, TwoBodyReferences, BallSocketPrestepData, BallSocketProjection, Vector3Wide>();
+                new TypeLineExtractor<BallSocketLineExtractor, TwoBodyReferences, BallSocketPrestepData, BallSocketProjection, Vector3Wide>();
             QuickList<ThreadJob, Array<ThreadJob>>.Create(new PassthroughArrayPool<ThreadJob>(), Environment.ProcessorCount * (jobsPerThread + 1), out jobs);
 
             executeJobDelegate = ExecuteJob;
@@ -88,15 +86,15 @@ namespace DemoRenderer.Constraints
         private void ExecuteJob(int jobIndex)
         {
             ref var job = ref jobs[jobIndex];
-            var typeBatch = solver.Batches[job.BatchIndex].TypeBatches[job.TypeBatchIndex];
+            ref var typeBatch = ref solver.Batches[job.BatchIndex].TypeBatches[job.TypeBatchIndex];
             Debug.Assert(lineExtractors[typeBatch.TypeId] != null, "Jobs should only be created for types which are available and active.");
-            lineExtractors[typeBatch.TypeId].ExtractLines(bodies, typeBatch, job.ConstraintStart, job.ConstraintCount, ref job.jobLines);
+            lineExtractors[typeBatch.TypeId].ExtractLines(bodies, ref typeBatch, job.ConstraintStart, job.ConstraintCount, ref job.jobLines);
         }
 
-        bool IsContactBatch(TypeProcessor typeBatch)
+        bool IsContactBatch(int typeId)
         {
             //TODO: If the nonconvex contact count expands to 8, this will have to change.
-            return typeBatch.TypeId < 16;
+            return typeId < 16;
         }
 
         internal void AddInstances(Bodies bodies, Solver solver, bool showConstraints, bool showContacts, ref QuickList<LineInstance, Array<LineInstance>> lines, ParallelLooper looper)
@@ -106,12 +104,12 @@ namespace DemoRenderer.Constraints
             var jobPool = new PassthroughArrayPool<ThreadJob>();
             for (int batchIndex = 0; batchIndex < solver.Batches.Count; ++batchIndex)
             {
-                var batch = solver.Batches[batchIndex];
+                ref var batch = ref solver.Batches[batchIndex];
                 for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                 {
-                    var typeBatch = batch.TypeBatches[typeBatchIndex];
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
                     var extractor = lineExtractors[typeBatch.TypeId];
-                    var isContactBatch = IsContactBatch(typeBatch);
+                    var isContactBatch = IsContactBatch(typeBatch.TypeId);
                     if (extractor != null && ((isContactBatch && showContacts) || (!isContactBatch && showConstraints)))
                     {
                         jobs.Add(new ThreadJob

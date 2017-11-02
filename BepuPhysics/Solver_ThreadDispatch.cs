@@ -225,7 +225,8 @@ namespace BepuPhysics
                     bounds.Max = blockIndex + 1; //Exclusive bound.
                     Debug.Assert(blockIndex < batchEnd);
                     ref var block = ref context.WorkBlocks[blockIndex];
-                    stageFunction.Execute(Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex], block.StartBundle, block.End);
+                    ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                    stageFunction.Execute(ref typeBatch, block.StartBundle, block.End, TypeProcessors[typeBatch.TypeId]);
                     //Increment or exit.
                     if (++blockIndex == batchEnd)
                         break;
@@ -257,7 +258,8 @@ namespace BepuPhysics
                     bounds.Min = blockIndex;
                     Debug.Assert(blockIndex >= batchStart);
                     ref var block = ref context.WorkBlocks[blockIndex];
-                    stageFunction.Execute(Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex], block.StartBundle, block.End);
+                    ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                    stageFunction.Execute(ref typeBatch, block.StartBundle, block.End, TypeProcessors[typeBatch.TypeId]);
                     //Decrement or exit.
                     if (blockIndex == batchStart)
                         break;
@@ -275,16 +277,16 @@ namespace BepuPhysics
         }
         interface IStageFunction
         {
-            void Execute(TypeProcessor typeBatch, int start, int end);
+            void Execute(ref TypeBatchData typeBatch, int start, int end, TypeProcessor typeProcessor);
         }
         struct PrestepStageFunction : IStageFunction
         {
             public float Dt;
             public Bodies Bodies;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(TypeProcessor typeBatch, int start, int end)
+            public void Execute(ref TypeBatchData typeBatch,  int start, int end, TypeProcessor typeProcessor)
             {
-                typeBatch.Prestep(Bodies, Dt, 1 / Dt, start, end);
+                typeProcessor.Prestep(ref typeBatch, Bodies, Dt, 1 / Dt, start, end);
             }
         }
 
@@ -292,18 +294,18 @@ namespace BepuPhysics
         {
             public Buffer<BodyVelocity> Velocities;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(TypeProcessor typeBatch, int start, int end)
+            public void Execute(ref TypeBatchData typeBatch, int start, int end, TypeProcessor typeProcessor)
             {
-                typeBatch.WarmStart(ref Velocities, start, end);
+                typeProcessor.WarmStart(ref typeBatch, ref Velocities, start, end);
             }
         }
         struct SolveStageFunction : IStageFunction
         {
             public Buffer<BodyVelocity> Velocities;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Execute(TypeProcessor typeBatch, int start, int end)
+            public void Execute(ref TypeBatchData typeBatch, int start, int end, TypeProcessor typeProcessor)
             {
-                typeBatch.SolveIteration(ref Velocities, start, end);
+                typeProcessor.SolveIteration(ref typeBatch, ref Velocities, start, end);
             }
         }
 

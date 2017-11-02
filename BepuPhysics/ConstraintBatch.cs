@@ -40,7 +40,7 @@ namespace BepuPhysics
         public Buffer<int> TypeIndexToTypeBatchIndex;
         public QuickList<TypeBatchData, Buffer<TypeBatchData>> TypeBatches;
 
-        public ConstraintBatch(BufferPool pool, int initialReferencedHandlesEstimate = 128 * 64, int initialTypeCountEstimate = 32)
+        public ConstraintBatch(BufferPool pool, int initialTypeCountEstimate = 32)
             : this()
         {
             ResizeTypeMap(pool, initialTypeCountEstimate);
@@ -135,8 +135,7 @@ namespace BepuPhysics
                 bodyIndices[j] = bodies.HandleToIndex[bodyHandle];
             }
             ref var typeBatch = ref GetOrCreateTypeBatch(typeId, typeProcessor, initialCapacity, pool);
-            reference.IndexInTypeBatch = typeProcessor.Allocate(ref typeBatch, handle, bodyIndices, pool);
-            reference.TypeBatch = Unsafe.AsPointer(ref typeBatch);
+            reference = new ConstraintReference(ref typeBatch, typeProcessor.Allocate(ref typeBatch, handle, bodyIndices, pool));
             //TODO: We could adjust the typeBatchAllocation capacities in response to the allocated index.
             //If it exceeds the current capacity, we could ensure the new size is still included.
             //The idea here would be to avoid resizes later by ensuring that the historically encountered size is always used to initialize.
@@ -228,21 +227,21 @@ namespace BepuPhysics
             TypeBatches.Clear();
         }
 
-        public void Resize(Solver solver, BufferPool pool, int bodiesCount, int constraintTypeCount)
+        public void Resize(Solver solver, int bodiesCount, int constraintTypeCount)
         {
             for (int i = 0; i < TypeBatches.Count; ++i)
             {
                 ref var typeBatch = ref TypeBatches[i];
-                solver.TypeProcessors[TypeBatches[i].TypeId].Resize(ref TypeBatches[i], Math.Max(typeBatch.ConstraintCount, solver.GetMinimumCapacityForType(typeBatch.TypeId)), pool);
+                solver.TypeProcessors[TypeBatches[i].TypeId].Resize(ref TypeBatches[i], Math.Max(typeBatch.ConstraintCount, solver.GetMinimumCapacityForType(typeBatch.TypeId)), solver.bufferPool);
             }
             //For now this is mostly just for rehydration. Note that it's actually an EnsureCapacity. For simplicity, we just don't permit the compaction of the type batch arrays.
             if (TypeIndexToTypeBatchIndex.Length < constraintTypeCount)
             {
-                ResizeTypeMap(pool, constraintTypeCount);
+                ResizeTypeMap(solver.bufferPool, constraintTypeCount);
                 if (!TypeBatches.Span.Allocated)
-                    QuickList<TypeBatchData, Buffer<TypeBatchData>>.Create(pool.SpecializeFor<TypeBatchData>(), constraintTypeCount, out TypeBatches);
+                    QuickList<TypeBatchData, Buffer<TypeBatchData>>.Create(solver.bufferPool.SpecializeFor<TypeBatchData>(), constraintTypeCount, out TypeBatches);
                 else
-                    TypeBatches.Resize(constraintTypeCount, pool.SpecializeFor<TypeBatchData>());
+                    TypeBatches.Resize(constraintTypeCount, solver.bufferPool.SpecializeFor<TypeBatchData>());
             }
         }
         /// <summary>

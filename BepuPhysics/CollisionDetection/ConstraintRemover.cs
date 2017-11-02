@@ -103,7 +103,7 @@ namespace BepuPhysics.CollisionDetection
                 //Parallel removes are guaranteed to not change the constraint indices until all removes complete, so we can precache the type batch index here.
                 //This allows us to collect the constraints to remove by type batch. Removes in different type batches can proceed in parallel.
                 typeBatchIndex.Batch = (short)constraint.BatchIndex;
-                var constraintBatch = solver.Batches[constraint.BatchIndex];
+                ref var constraintBatch = ref solver.Batches[constraint.BatchIndex];
                 typeBatchIndex.TypeBatch = (short)constraintBatch.TypeIndexToTypeBatchIndex[constraint.TypeId];
 
                 int index = -1;
@@ -149,13 +149,14 @@ namespace BepuPhysics.CollisionDetection
 
                 //Now extract and enqueue the body list constraint removal targets and the constraint batch body handle removal targets.
                 //We have to perform the enumeration here rather than in the later flush. Removals from type batches make enumerating connected body indices a race condition there.
-                var typeBatch = constraintBatch.TypeBatches[typeBatchIndex.TypeBatch];
+                ref var typeBatch = ref constraintBatch.TypeBatches[typeBatchIndex.TypeBatch];
                 BodyIndexCollector enumerator;
-                var bodiesPerConstraint = typeBatch.BodiesPerConstraint;
+                var typeProcessor = solver.TypeProcessors[constraint.TypeId];
+                var bodiesPerConstraint = typeProcessor.BodiesPerConstraint;
                 var bodyIndices = stackalloc int[bodiesPerConstraint];
                 enumerator.BodyIndices = bodyIndices;
                 enumerator.IndexInConstraint = 0;
-                typeBatch.EnumerateConnectedBodyIndices(constraint.IndexInTypeBatch, ref enumerator);
+                typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, constraint.IndexInTypeBatch, ref enumerator);
 
                 RemovalTargets.EnsureCapacity(RemovalTargets.Count + bodiesPerConstraint, pool.SpecializeFor<RemovalTarget>());
                 for (int i = 0; i < bodiesPerConstraint; ++i)
@@ -318,7 +319,7 @@ namespace BepuPhysics.CollisionDetection
                 {
                     ref var target = ref workerCache.RemovalTargets[removalTargetIndex];
                     constraintGraph.RemoveConstraint(target.BodyIndex, target.ConstraintHandle);
-                    solver.Batches[target.BatchIndex].BodyHandles.Remove(target.BodyHandle);
+                    solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle);
                 }
             }
             var intPool = pool.SpecializeFor<int>();
@@ -388,8 +389,9 @@ namespace BepuPhysics.CollisionDetection
         public void RemoveConstraintsFromTypeBatch(int index)
         {
             var batch = batches.Keys[index];
-            var constraintBatch = solver.Batches[batch.Batch];
-            var typeBatch = constraintBatch.TypeBatches[batch.TypeBatch];
+            ref var constraintBatch = ref solver.Batches[batch.Batch];
+            ref var typeBatch = ref constraintBatch.TypeBatches[batch.TypeBatch];
+            var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
             ref var batchReferences = ref batches.Values[index];
             bool lockTaken = false;
             for (int i = 0; i < batchReferences.Count; ++i)
@@ -404,7 +406,7 @@ namespace BepuPhysics.CollisionDetection
                     //That's because removals can change the index, so caching indices would require sorting the indices for each type batch before removing.
                     //That's very much doable, but not doing it is simpler, and the performance difference is likely trivial.
                     //TODO: Likely worth testing.
-                    typeBatch.Remove(solver.HandleToConstraint[handle].IndexInTypeBatch, ref solver.HandleToConstraint);
+                    typeProcessor.Remove(ref typeBatch, solver.HandleToConstraint[handle].IndexInTypeBatch, ref solver.HandleToConstraint);
                     if (typeBatch.ConstraintCount == 0)
                     {
                         //This batch-typebatch needs to be removed.
@@ -439,10 +441,10 @@ namespace BepuPhysics.CollisionDetection
                 for (int i = 0; i < removedTypeBatches.Count; ++i)
                 {
                     var batchIndices = removedTypeBatches[i];
-                    var batch = solver.Batches[batchIndices.Batch];
-                    var typeBatch = batch.TypeBatches[batchIndices.TypeBatch];
-                    batch.RemoveTypeBatchIfEmpty(typeBatch, batchIndices.TypeBatch, solver.TypeBatchCapacities);
-                    solver.RemoveBatchIfEmpty(batch, batchIndices.Batch);
+                    ref var batch = ref solver.Batches[batchIndices.Batch];
+                    ref var typeBatch = ref batch.TypeBatches[batchIndices.TypeBatch];
+                    batch.RemoveTypeBatchIfEmpty(ref typeBatch, batchIndices.TypeBatch, solver.bufferPool);
+                    solver.RemoveBatchIfEmpty(ref batch, batchIndices.Batch);
                 }
             }
             removedTypeBatches.Dispose(pool.SpecializeFor<TypeBatchIndex>());

@@ -196,29 +196,7 @@ namespace BepuPhysics
             Unsafe.InitBlock(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
             HandlePool.Clear();
         }
-
-
-
-        public void EnsureCapacity(int capacity)
-        {
-            if (IndexToHandle.Length < capacity)
-            {
-                InternalResize(capacity);
-            }
-            //When ensuring capacity, we assume the user wants to avoid all related resizes.
-            //So we bump up the idpool's capacity, too. This is likely a massive overestimate, but it doesn't cost that much, and it does provide the necessary guarantee.
-            HandlePool.EnsureCapacity(capacity, pool.SpecializeFor<int>());
-        }
-        public void Compact(int capacity)
-        {
-            var targetCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, Count));
-            if (IndexToHandle.Length > targetCapacity)
-            {
-                InternalResize(targetCapacity);
-            }
-            HandlePool.Compact(capacity, pool.SpecializeFor<int>());
-        }
-
+                
         public void Resize(int capacity)
         {
             var targetCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, Count));

@@ -45,30 +45,7 @@ namespace Demos.SpecializedTests
             timer.Stop();
             Console.WriteLine($"Finished constraint optimizations, time (ms): {timer.Elapsed.TotalMilliseconds}" +
                 $", per iteration (us): {timer.Elapsed.TotalSeconds * 1e6 / constraintOptimizationIterations}");
-            
-            for (int batchIndex = 0; batchIndex < simulation.Solver.Batches.Count; ++batchIndex)
-            {
-                var batch = simulation.Solver.Batches[batchIndex];
-                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
-                {
-                    var typeBatch = (Contact4TypeBatch)batch.TypeBatches[typeBatchIndex];
-                    int[] sortKeys = new int[typeBatch.ConstraintCount];
-                    int previous = -1;
-                    //Console.WriteLine($"Batch {batchIndex}, type batch {typeBatchIndex}: ");
-                    for (int i = 0; i < sortKeys.Length; ++i)
-                    {
-                        sortKeys[i] = Contact4TypeBatch.GetSortKey(i, ref typeBatch.BodyReferences);
-                        if (sortKeys[i] <= previous)
-                        {
-                            Console.WriteLine("Not sorted!");
-                        }
-                        previous = sortKeys[i];
-                        //Console.Write($"{sortKeys[i]}, ");
-                    }
-                    //Console.WriteLine();
-                }
-            }
-
+        
             //threadDispatcher.Dispose();
             simulation.BufferPool.Clear();
 

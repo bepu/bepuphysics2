@@ -86,7 +86,7 @@ namespace BepuPhysics
             }
 
             var simulation = new Simulation(bufferPool, initialAllocationSizes.Value);
-            DefaultTypes.Register(simulation.Solver.TypeBatchCapacities, out var defaultTaskRegistry);
+            DefaultTypes.Register(simulation.Solver, out var defaultTaskRegistry);
             var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation, defaultTaskRegistry, narrowPhaseCallbacks);
             simulation.NarrowPhase = narrowPhase;
             simulation.BroadPhaseOverlapFinder = new CollidableOverlapFinder<TNarrowPhaseCallbacks>(narrowPhase, simulation.BroadPhase);
@@ -404,41 +404,7 @@ namespace BepuPhysics
             Statics.Clear();
             //TODO: shapes/broadphase
         }
-        /// <summary>
-        /// Increases the allocation size of any buffers too small to hold the allocation target.
-        /// </summary>
-        /// <remarks>
-        /// The final size of the allocated buffers are constrained by the allocator. It is not guaranteed to be exactly equal to the target, but it is guaranteed to be at least as large.
-        /// </remarks>
-        /// <param name="allocationTarget">Allocation sizes to guarantee sufficient size for.</param>
-        public void EnsureCapacity(SimulationAllocationSizes allocationTarget)
-        {
-            Solver.EnsureCapacity(allocationTarget.Bodies, allocationTarget.Constraints, allocationTarget.ConstraintsPerTypeBatch);
-            //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
-            Bodies.EnsureCapacity(allocationTarget.Bodies);
-            Statics.EnsureCapacity(allocationTarget.Statics);
-            ConstraintGraph.EnsureCapacity(Bodies, allocationTarget.Bodies, allocationTarget.ConstraintCountPerBodyEstimate);
-            BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
-            //TODO: shapes/broadphase
-
-        }
-        /// <summary>
-        /// Decreases the size of buffers to the smallest value that still contains the allocation target and any existing objects.
-        /// </summary>
-        /// <remarks>
-        /// The final size of the allocated buffers are constrained by the allocator. It is not guaranteed to be exactly equal to the target, but it is guaranteed to be at least as large.
-        /// </remarks>
-        /// <param name="allocationTarget">Target size to compact to. Buffers may be larger to guarantee sufficient room for existing simulation objects.</param>
-        public void Compact(SimulationAllocationSizes allocationTarget)
-        {
-            Solver.Compact(allocationTarget.Bodies, allocationTarget.Constraints, allocationTarget.ConstraintsPerTypeBatch);
-            //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
-            Bodies.Compact(allocationTarget.Bodies);
-            Statics.Compact(allocationTarget.Statics);
-            ConstraintGraph.Compact(Bodies, allocationTarget.Bodies, allocationTarget.ConstraintCountPerBodyEstimate);
-            BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
-            //TODO: shapes/broadphase
-        }
+      
         /// <summary>
         /// Increases the allocation size of any buffers too small to hold the allocation target, and decreases the allocation size of any buffers that are unnecessarily large.
         /// </summary>

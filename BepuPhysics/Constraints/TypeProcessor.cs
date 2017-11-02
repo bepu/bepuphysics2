@@ -329,29 +329,26 @@ namespace BepuPhysics.Constraints
             var bodyHandles = stackalloc int[bodiesPerConstraint];
             var bodyHandleCollector = new ConstraintBodyHandleCollector(bodies, bodyHandles);
             EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref bodyHandleCollector);
-            var targetBatch = solver.Batches[targetBatchIndex];
+            ref var targetBatch = ref solver.Batches[targetBatchIndex];
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
             var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
-            ref var targetTypeBatch = ref targetBatch.Allocate(constraintHandle, ref bodyHandles[0], bodiesPerConstraint,
+            targetBatch.Allocate(constraintHandle, ref bodyHandles[0], bodiesPerConstraint,
                 ref solver.batchReferencedHandles[sourceBatchIndex], bodies, typeId, solver.TypeProcessors[typeId],
-                solver.GetMinimumCapacityForType(typeId), solver.bufferPool, out var targetIndexInTypeBatch);
+                solver.GetMinimumCapacityForType(typeId), solver.bufferPool, out var targetReference);
 
-            BundleIndexing.GetBundleIndices(targetIndexInTypeBatch, out var targetBundle, out var targetInner);
+            BundleIndexing.GetBundleIndices(targetReference.IndexInTypeBatch, out var targetBundle, out var targetInner);
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var sourceBundle, out var sourceInner);
             //We don't pull a description or anything from the old constraint. That would require having a unique mapping from constraint to 'full description'. 
             //Instead, we just directly copy from lane to lane.
             //Note that we leave out the runtime generated bits- they'll just get regenerated.
-            ref var bodyReferences = ref Unsafe.As<byte, TBodyReferences>(ref *typeBatch.BodyReferences.Memory);
-            ref var prestepData = ref Unsafe.As<byte, TPrestepData>(ref *typeBatch.PrestepData.Memory);
-            ref var accumulatedImpulses = ref Unsafe.As<byte, TAccumulatedImpulse>(ref *typeBatch.AccumulatedImpulses.Memory);
             CopyConstraintData(
                 ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, sourceBundle),
                 ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, sourceBundle),
                 ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, sourceBundle),
                 sourceInner,
-                ref Buffer<TBodyReferences>.Get(ref targetTypeBatch.BodyReferences, targetBundle),
-                ref Buffer<TPrestepData>.Get(ref targetTypeBatch.PrestepData, targetBundle),
-                ref Buffer<TAccumulatedImpulse>.Get(ref targetTypeBatch.AccumulatedImpulses, targetBundle),
+                ref Buffer<TBodyReferences>.Get(ref targetReference.TypeBatch.BodyReferences, targetBundle),
+                ref Buffer<TPrestepData>.Get(ref targetReference.TypeBatch.PrestepData, targetBundle),
+                ref Buffer<TAccumulatedImpulse>.Get(ref targetReference.TypeBatch.AccumulatedImpulses, targetBundle),
                 targetInner);
 
             //Now we can get rid of the old allocation.
@@ -365,7 +362,7 @@ namespace BepuPhysics.Constraints
             //Don't forget to keep the solver's pointers consistent! We bypassed the usual add procedure, so the solver hasn't been notified yet.
             ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle];
             constraintLocation.BatchIndex = targetBatchIndex;
-            constraintLocation.IndexInTypeBatch = targetIndexInTypeBatch;
+            constraintLocation.IndexInTypeBatch = targetReference.IndexInTypeBatch;
             constraintLocation.TypeId = typeId;
 
         }
@@ -387,6 +384,9 @@ namespace BepuPhysics.Constraints
 
         public override void Initialize(ref TypeBatchData typeBatch, int initialCapacity, BufferPool pool)
         {
+            //We default-initialize the type batch because the resize checks existing allocation status when deciding how much to copy over. 
+            //Technically we could use an initialization-specific version, but it doesn't matter.
+            typeBatch = new TypeBatchData();
             typeBatch.TypeId = TypeId;
             InternalResize(ref typeBatch, pool, initialCapacity);
         }

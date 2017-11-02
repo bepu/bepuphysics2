@@ -103,25 +103,25 @@ namespace Demos.SpecializedTests
                 for (int i = 0; i < constraintHandles.Length; ++i)
                 {
                     simulation.Solver.GetConstraintReference(constraintHandles[i], out var constraint);
-                    var typeBatch = constraint.TypeBatch as Contact4TypeBatch;
 
                     BundleIndexing.GetBundleIndices(constraint.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
-                    ref var bodyReferences = ref typeBatch.BodyReferences[bundleIndex];
-                    var indexA = GatherScatter.Get(ref bodyReferences.IndexA, innerIndex);
-                    var indexB = GatherScatter.Get(ref bodyReferences.IndexB, innerIndex);
+                    ref var bodyReferencesBundle = ref Buffer<TwoBodyReferences>.Get(ref constraint.TypeBatch.BodyReferences, bundleIndex);
+                    var indexA = GatherScatter.Get(ref bodyReferencesBundle.IndexA, innerIndex);
+                    var indexB = GatherScatter.Get(ref bodyReferencesBundle.IndexB, innerIndex);
 
                     var velocityA = simulation.Bodies.Velocities[indexA].Linear;
                     var velocityB = simulation.Bodies.Velocities[indexB].Linear;
                     var relativeVelocity = velocityA - velocityB;
                     Vector3 normal;
                     unsafe { var mmhmm = &normal; }
-                    GatherScatter.GetLane(ref typeBatch.PrestepData[bundleIndex].Normal.X, innerIndex, ref normal.X, 3);
+                    ref var prestepBundle = ref Buffer<Contact4PrestepData>.Get(ref constraint.TypeBatch.PrestepData, bundleIndex);
+                    GatherScatter.GetLane(ref prestepBundle.Normal.X, innerIndex, ref normal.X, 3);
                     var penetrationChange = -dt * Vector3.Dot(relativeVelocity, normal);
-                    ref var penetrationDepth = ref GatherScatter.Get(ref typeBatch.PrestepData[bundleIndex].PenetrationDepth0, innerIndex);
+                    ref var penetrationDepth = ref GatherScatter.Get(ref prestepBundle.PenetrationDepth0, innerIndex);
                     penetrationDepth += penetrationChange;
-                    GatherScatter.Get(ref typeBatch.PrestepData[bundleIndex].PenetrationDepth1, innerIndex) += penetrationChange;
-                    GatherScatter.Get(ref typeBatch.PrestepData[bundleIndex].PenetrationDepth2, innerIndex) += penetrationChange;
-                    GatherScatter.Get(ref typeBatch.PrestepData[bundleIndex].PenetrationDepth3, innerIndex) += penetrationChange;
+                    GatherScatter.Get(ref prestepBundle.PenetrationDepth1, innerIndex) += penetrationChange;
+                    GatherScatter.Get(ref prestepBundle.PenetrationDepth2, innerIndex) += penetrationChange;
+                    GatherScatter.Get(ref prestepBundle.PenetrationDepth3, innerIndex) += penetrationChange;
 
                     if (i == 0)
                         //if (penetrationDepth > 0.2)

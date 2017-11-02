@@ -36,7 +36,8 @@ namespace Demos.SpecializedTests
             {
                 for (int j = 0; j < solver.Batches[i].TypeBatches.Count; ++j)
                 {
-                    solver.Batches[i].TypeBatches[j].Scramble(random, ref solver.HandleToConstraint);
+                    ref var typeBatch = ref solver.Batches[i].TypeBatches[j];
+                    solver.TypeProcessors[typeBatch.TypeId].Scramble(ref typeBatch, random, ref solver.HandleToConstraint);
                 }
             }
         }
@@ -130,7 +131,7 @@ namespace Demos.SpecializedTests
         {
             for (int batchIndex = 0; batchIndex < simulation.Solver.Batches.Count; ++batchIndex)
             {
-                var batch = simulation.Solver.Batches[batchIndex];
+                ref var batch = ref simulation.Solver.Batches[batchIndex];
                 if (batchIndex == simulation.Solver.Batches.Count - 1)
                 {
                     Debug.Assert(batch.TypeBatches.Count > 0, "While a lower indexed batch may have zero elements (especially while batch compression isn't active), " +
@@ -138,7 +139,8 @@ namespace Demos.SpecializedTests
                 }
                 for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                 {
-                    var typeBatch = batch.TypeBatches[typeBatchIndex];
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    var typeProcessor = simulation.Solver.TypeProcessors[typeBatch.TypeId];
                     Debug.Assert(typeBatch.ConstraintCount > 0, "If a type batch exists, there should be constraints in it.");
                     for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
                     {
@@ -151,7 +153,7 @@ namespace Demos.SpecializedTests
                         ConstraintBodyValidationEnumerator enumerator;
                         enumerator.ConstraintHandle = constraintHandle;
                         enumerator.Simulation = simulation;
-                        typeBatch.EnumerateConnectedBodyIndices(indexInTypeBatch, ref enumerator);
+                        typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref enumerator);
                     }
                 }
             }
@@ -317,7 +319,7 @@ namespace Demos.SpecializedTests
                 simulation.Solver.GetConstraintReference(constraintHandle, out var reference);
 
                 var bodyIdentityEnumerator = new BodyEnumerator(simulation.Bodies, bodyHandlesToIdentity);
-                reference.TypeBatch.EnumerateConnectedBodyIndices(reference.IndexInTypeBatch, ref bodyIdentityEnumerator);
+                simulation.Solver.TypeProcessors[reference.TypeBatch.TypeId].EnumerateConnectedBodyIndices(ref reference.TypeBatch, reference.IndexInTypeBatch, ref bodyIdentityEnumerator);
                 constraintDescriptions[i].BodyA = bodyIdentityEnumerator.IdentityA;
                 constraintDescriptions[i].BodyB = bodyIdentityEnumerator.IdentityB;
             }
