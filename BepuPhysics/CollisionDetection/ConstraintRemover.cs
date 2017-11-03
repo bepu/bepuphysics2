@@ -360,7 +360,7 @@ namespace BepuPhysics.CollisionDetection
                     QuickSort.Sort(ref sortedHandles[0], 0, count - 1, ref comparer);
                     for (int i = 0; i < count; ++i)
                     {
-                        solver.handlePool.Return(sortedHandles[i], intPool);
+                        solver.HandlePool.Return(sortedHandles[i], intPool);
                     }
                     intPool.Return(ref sortedHandles);
                 }
@@ -376,7 +376,7 @@ namespace BepuPhysics.CollisionDetection
                         ref var handles = ref workerCache.BatchHandles[batchIndex];
                         for (int handleIndex = 0; handleIndex < handles.Count; ++handleIndex)
                         {
-                            solver.handlePool.Return(handles[handleIndex], intPool);
+                            solver.HandlePool.Return(handles[handleIndex], intPool);
                         }
                     }
                 }

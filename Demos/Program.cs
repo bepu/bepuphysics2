@@ -32,7 +32,7 @@ namespace Demos
             //AutoTester.Test();
             //ContactManifoldConvergenceTests.Test();
             //BallSocketConvergenceTests.Test();
-            //MemoryResizeTests.Test();
+            MemoryResizeTests.Test();
             //ConstraintCacheOptimizationTests.Test();
             //SortTest.Test();
             //SpanCodegenTests.Test();

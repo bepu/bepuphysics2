@@ -149,7 +149,6 @@ namespace Demos
                 {
                     Bodies = bodyCount,
                     ShapesPerType = 128,
-                    CollidablesPerType = bodyCount,
                     Constraints = bodyCount * 3,
                     ConstraintsPerTypeBatch = (bodyCount * 3) / 6,
                     ConstraintCountPerBodyEstimate = 6

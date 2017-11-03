@@ -434,7 +434,6 @@ namespace BepuPhysics
             if (claims.Length > 0)
             {
                 pool.SpecializeFor<int>().Return(ref claims);
-                claims = new Buffer<int>();
             }
         }
 
@@ -451,8 +450,7 @@ namespace BepuPhysics
             if (claims.Length != BufferPool<int>.GetLowestContainingElementCount(bodiesCapacity))
             {
                 //We need a new claims buffer. Get rid of the old one.
-                Dispose(pool);
-                pool.SpecializeFor<int>().Take(bodiesCapacity, out claims);
+                pool.SpecializeFor<int>().Resize(ref claims, bodiesCapacity, 0);
                 //Claims need to be zeroed so that workers can claim by identity.
                 //Go ahead and clear the full buffer so we don't have to worry about later body additions resulting in accesses to uncleared memory.
                 //Easier to clear upfront than track every single add.

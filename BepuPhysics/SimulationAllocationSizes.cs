@@ -18,10 +18,6 @@
         /// </summary>
         public int ShapesPerType;
         /// <summary>
-        /// Minimum number of collidable descriptions to allocate space for in each collidable type batch.
-        /// </summary>
-        public int CollidablesPerType;
-        /// <summary>
         /// The number of constraints to allocate bookkeeping space for. This does not affect actual type batch allocation sizes, only the solver-level constraint handle storage.
         /// </summary>
         public int Constraints;

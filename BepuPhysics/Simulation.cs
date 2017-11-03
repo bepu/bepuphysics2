@@ -78,7 +78,6 @@ namespace BepuPhysics
                     Bodies = 4096,
                     Statics = 4096,
                     ShapesPerType = 128,
-                    CollidablesPerType = 4096,
                     ConstraintCountPerBodyEstimate = 8,
                     Constraints = 16384,
                     ConstraintsPerTypeBatch = 256
@@ -402,30 +401,70 @@ namespace BepuPhysics
             Solver.Clear();
             Bodies.Clear();
             Statics.Clear();
-            //TODO: shapes/broadphase
+            Shapes.Clear();
+            BroadPhase.Clear();
         }
-      
+
+        /// <summary>
+        /// Increases the allocation size of any buffers too small to hold the allocation target.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The final size of the allocated buffers are constrained by the allocator. It is not guaranteed to be exactly equal to the target, but it is guaranteed to be at least as large.
+        /// </para>
+        /// <para>
+        /// This is primarily a convenience function. Everything it does internally can be done externally.
+        /// For example, if only type batches need to be resized, the solver's own functions can be used directly.
+        /// </para>
+        /// </remarks>
+        /// <param name="allocationTarget">Allocation sizes to guarantee sufficient size for.</param>
+        public void EnsureCapacity(SimulationAllocationSizes allocationTarget)
+        {
+            Solver.EnsureSolverCapacities(allocationTarget.Bodies, allocationTarget.Constraints);
+            Solver.MinimumCapacityPerTypeBatch = Math.Max(allocationTarget.ConstraintsPerTypeBatch, Solver.MinimumCapacityPerTypeBatch);
+            Solver.EnsureTypeBatchCapacities();
+            //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
+            Bodies.EnsureCapacity(allocationTarget.Bodies);
+            Statics.EnsureCapacity(allocationTarget.Statics);
+            ConstraintGraph.EnsureCapacity(Bodies, allocationTarget.Bodies, allocationTarget.ConstraintCountPerBodyEstimate);
+            //Note that the body layout optimizer is slaved to the Bodies capacity, so it must come after the bodies resize to be meaningful.
+            BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
+            Shapes.EnsureBatchCapacities(allocationTarget.ShapesPerType);
+            BroadPhase.EnsureCapacity(allocationTarget.Bodies, allocationTarget.Bodies + allocationTarget.Statics);
+        }
+
+
         /// <summary>
         /// Increases the allocation size of any buffers too small to hold the allocation target, and decreases the allocation size of any buffers that are unnecessarily large.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// The final size of the allocated buffers are constrained by the allocator. It is not guaranteed to be exactly equal to the target, but it is guaranteed to be at least as large.
+        /// </para>
+        /// <para>
+        /// This is primarily a convenience function. Everything it does internally can be done externally.
+        /// For example, if only type batches need to be resized, the solver's own functions can be used directly.
+        /// </para>
         /// </remarks>
         /// <param name="allocationTarget">Allocation sizes to guarantee sufficient size for.</param>
         public void Resize(SimulationAllocationSizes allocationTarget)
         {
-            Solver.Resize(allocationTarget.Bodies, allocationTarget.Constraints, allocationTarget.ConstraintsPerTypeBatch);
+            Solver.ResizeSolverCapacities(allocationTarget.Bodies, allocationTarget.Constraints);
+            Solver.MinimumCapacityPerTypeBatch = allocationTarget.ConstraintsPerTypeBatch;
+            Solver.ResizeTypeBatchCapacities();
             //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
             Bodies.Resize(allocationTarget.Bodies);
             Statics.Resize(allocationTarget.Statics);
             ConstraintGraph.Resize(Bodies, allocationTarget.Bodies, allocationTarget.ConstraintCountPerBodyEstimate);
+            //Note that the body layout optimizer is slaved to the Bodies capacity, so it must come after the bodies resize to be meaningful.
             BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
-            //TODO: shapes/broadphase
+            Shapes.ResizeBatches(allocationTarget.ShapesPerType);
+            BroadPhase.Resize(allocationTarget.Bodies, allocationTarget.Bodies + allocationTarget.Statics);
         }
+
         /// <summary>
-        /// Clears the simulation of every object and returns all pooled memory to the buffer pool.
+        /// Clears the simulation of every object and returns all pooled memory to the buffer pool. Leaves the simulation in an unusable state.
         /// </summary>
-        /// <remarks>After disposal, the simulation cannot be used until rehydrated by calling EnsureCapacity or Resize to allocate buffers.</remarks>
         public void Dispose()
         {
             Clear();
@@ -436,7 +475,7 @@ namespace BepuPhysics
             Statics.Dispose();
             BodyLayoutOptimizer.Dispose(BufferPool);
             ConstraintGraph.Dispose();
-            //TODO: shapes/broadphase
+            Shapes.Dispose();
         }
     }
 }

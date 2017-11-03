@@ -50,6 +50,7 @@ namespace BepuPhysics
         void ResizeTypeMap(BufferPool pool, int newSize)
         {
             var oldLength = TypeIndexToTypeBatchIndex.Length;
+            Debug.Assert(oldLength != BufferPool<int>.GetLowestContainingElementCount(newSize), "Shouldn't resize if nothing changes.");
             pool.SpecializeFor<int>().Resize(ref TypeIndexToTypeBatchIndex, newSize, oldLength);
             for (int i = oldLength; i < TypeIndexToTypeBatchIndex.Length; ++i)
             {
@@ -227,27 +228,42 @@ namespace BepuPhysics
             TypeBatches.Clear();
         }
 
-        public void Resize(Solver solver, int bodiesCount, int constraintTypeCount)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int GetTargetCapacity(ref TypeBatchData typeBatch, Solver solver)
+        {
+            return Math.Max(typeBatch.ConstraintCount, solver.GetMinimumCapacityForType(typeBatch.TypeId));
+        }
+
+        /// <summary>
+        /// Ensures that all type batches within this constraint batch meet or exceed the size requirements of the per-type capacities defined by the solver.
+        /// </summary>
+        /// <param name="solver">Solver to pull minimum capacities from.</param>
+        public void EnsureTypeBatchCapacities(Solver solver)
         {
             for (int i = 0; i < TypeBatches.Count; ++i)
             {
                 ref var typeBatch = ref TypeBatches[i];
-                solver.TypeProcessors[TypeBatches[i].TypeId].Resize(ref TypeBatches[i], Math.Max(typeBatch.ConstraintCount, solver.GetMinimumCapacityForType(typeBatch.TypeId)), solver.bufferPool);
+                var targetCapacity = GetTargetCapacity(ref typeBatch, solver);
+                if (targetCapacity > typeBatch.IndexToHandle.Length)
+                    solver.TypeProcessors[TypeBatches[i].TypeId].Resize(ref typeBatch, targetCapacity, solver.bufferPool);
             }
-            //For now this is mostly just for rehydration. Note that it's actually an EnsureCapacity. For simplicity, we just don't permit the compaction of the type batch arrays.
-            if (TypeIndexToTypeBatchIndex.Length < constraintTypeCount)
+        }
+
+        /// <summary>
+        /// Applies the solver-defined minimum capacities to existing type batches.
+        /// </summary>
+        /// <param name="solver">Solver to pull minimum capacities from.</param>
+        public void ResizeTypeBatchCapacities(Solver solver)
+        {
+            for (int i = 0; i < TypeBatches.Count; ++i)
             {
-                ResizeTypeMap(solver.bufferPool, constraintTypeCount);
-                if (!TypeBatches.Span.Allocated)
-                    QuickList<TypeBatchData, Buffer<TypeBatchData>>.Create(solver.bufferPool.SpecializeFor<TypeBatchData>(), constraintTypeCount, out TypeBatches);
-                else
-                    TypeBatches.Resize(constraintTypeCount, solver.bufferPool.SpecializeFor<TypeBatchData>());
+                ref var typeBatch = ref TypeBatches[i];
+                solver.TypeProcessors[TypeBatches[i].TypeId].Resize(ref typeBatch, GetTargetCapacity(ref typeBatch, solver), solver.bufferPool);
             }
         }
         /// <summary>
-        /// Disposes the unmanaged resources used by the batch and drops all pooled managed resources.
+        /// Releases all memory used by the batch.
         /// </summary>
-        /// <remarks>Calling Resize will make the batch usable again after disposal.</remarks>
         public void Dispose(BufferPool pool)
         {
             for (int i = 0; i < TypeBatches.Count; ++i)

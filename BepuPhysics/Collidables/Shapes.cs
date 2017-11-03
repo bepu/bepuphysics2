@@ -108,12 +108,23 @@ namespace BepuPhysics.Collidables
     {
         protected RawBuffer shapesData;
         protected int shapeDataSize;
+        /// <summary>
+        /// Gets the number of shapes that the batch can currently hold without resizing.
+        /// </summary>
+        public int Capacity { get { return shapesData.Length / shapeDataSize; } }
         protected BufferPool pool;
+        protected IdPool<Buffer<int>> idPool;
         public abstract void ComputeBounds<TBundleSource>(ref TBundleSource source, float dt) where TBundleSource : ICollidableBundleSource;
-        public abstract void RemoveAt(int index);
+        [Conditional("DEBUG")]
+        protected abstract void ValidateRemoval(int index);
+
+        public void RemoveAt(int index)
+        {
+            ValidateRemoval(index);
+            idPool.Return(index, pool.SpecializeFor<int>());
+        }
 
         public abstract void ComputeBounds(int shapeIndex, ref RigidPose pose, out Vector3 min, out Vector3 max);
-        //TODO: Clear/EnsureCapacity/Resize/Compact/Dispose
 
         /// <summary>
         /// Gets a raw untyped pointer to a shape's data.
@@ -127,13 +138,67 @@ namespace BepuPhysics.Collidables
             shapePointer = shapesData.Memory + shapeDataSize * shapeIndex;
             shapeSize = shapeDataSize;
         }
+
+        /// <summary>
+        /// Frees all shape slots without returning any resources to the pool.
+        /// </summary>
+        public void Clear()
+        {
+            idPool.Clear();
+        }
+
+        /// <summary>
+        /// Increases the size of the type batch if necessary to hold the target capacity.
+        /// </summary>
+        /// <param name="shapeCapacity">Target capacity.</param>
+        public void EnsureCapacity(int shapeCapacity)
+        {
+            var targetCapacity = shapeCapacity * shapeDataSize;
+            if (targetCapacity > shapesData.Length)
+            {
+                pool.Resize(ref shapesData, targetCapacity, idPool.HighestPossiblyClaimedId + 1);
+            }
+        }
+
+        /// <summary>
+        /// Changes the size of the type batch if the target capacity is different than the current capacity. Note that shrinking allocations is conservative; resizing will
+        /// never allow an existing shape to point to unallocated memory.
+        /// </summary>
+        /// <param name="shapeCapacity">Target capacity.</param>
+        public void Resize(int shapeCapacity)
+        {
+            var targetCapacity = SpanHelper.GetContainingPowerOf2(Math.Max(idPool.HighestPossiblyClaimedId + 1, shapeCapacity) * shapeDataSize);
+            if (targetCapacity != shapesData.Length)
+            {
+                pool.Resize(ref shapesData, targetCapacity, idPool.HighestPossiblyClaimedId + 1);
+            }
+        }
+
+        /// <summary>
+        /// Shrinks or expands the allocation of the batch's id pool. Note that shrinking allocations is conservative; resizing will never allow any pending ids to be lost.
+        /// </summary>
+        /// <param name="targetIdCapacity">Number of slots to allocate space for in the id pool.</param>
+        public void ResizeIdPool(int targetIdCapacity)
+        {
+            idPool.Resize(targetIdCapacity, pool.SpecializeFor<int>());
+        }
+
+
+        /// <summary>
+        /// Returns all backing resources to the pool, leaving the batch in an unusable state.
+        /// </summary>
+        public void Dispose()
+        {
+            pool.Return(ref shapesData);
+            idPool.Dispose(pool.SpecializeFor<int>());
+        }
+
     }
 
     public class ShapeBatch<TShape> : ShapeBatch where TShape : struct, IShape//TODO: When blittable is supported, shapes should be made blittable. We store them in buffers.
     {
 
         internal Buffer<TShape> shapes;
-        protected IdPool<Buffer<int>> idPool;
 
         void Resize(int shapeCount, int oldCopyLength)
         {
@@ -172,8 +237,13 @@ namespace BepuPhysics.Collidables
         /// <returns>Reference to the shape at the given index.</returns>
         public ref TShape this[int shapeIndex] { get { return ref shapes[shapeIndex]; } }
 
-
-
+        protected override void ValidateRemoval(int index)
+        {
+            Debug.Assert(!SpanHelper.IsZeroed(ref shapes[index]),
+                "Either a shape was default constructed (which is almost certainly invalid), or this is attempting to remove a shape that was already removed.");
+            //Don't have to actually clear out the shape set since everything is blittable. For debug purposes, we do, just to catch invalid usages.
+            shapes[index] = default(TShape);
+        }
 
 
         //Note that shapes cannot be moved; there is no reference to the collidables using them, so we can't correct their indices.
@@ -189,17 +259,6 @@ namespace BepuPhysics.Collidables
             Debug.Assert(SpanHelper.IsZeroed(ref shapes[shapeIndex]), "In debug mode, the slot a shape is stuck into should be cleared. If it's not, it is already in use.");
             shapes[shapeIndex] = shape;
             return shapeIndex;
-        }
-
-        public sealed override void RemoveAt(int index)
-        {
-#if DEBUG
-            Debug.Assert(!SpanHelper.IsZeroed(ref shapes[index]),
-                "Either a shape was default constructed (which is almost certainly invalid), or this is attempting to remove a shape that was already removed.");
-            //Don't have to actually clear out the shape set since everything is blittable. For debug purposes, we do, just to catch invalid usages.
-            shapes[index] = default(TShape);
-#endif
-            idPool.Return(index, pool.SpecializeFor<int>());
         }
 
         public override void ComputeBounds<TBundleSource>(ref TBundleSource source, float dt)
@@ -227,8 +286,6 @@ namespace BepuPhysics.Collidables
             min += pose.Position;
             max += pose.Position;
         }
-
-        //TODO: Clear/EnsureCapacity/Resize/Compact/Dispose
     }
     public class Shapes
     {
@@ -295,7 +352,54 @@ namespace BepuPhysics.Collidables
             batches[shapeIndex.Type].RemoveAt(shapeIndex.Index);
         }
 
+        /// <summary>
+        /// Clears all shapes from existing batches. Does not release any memory.
+        /// </summary>
+        public void Clear()
+        {
+            for (int i = 0; i < batches.Count; ++i)
+            {
+                batches[i].Clear();
+            }
+        }
 
-        //TODO: Clear/EnsureCapacity/Resize/Compact/Dispose
+        //Technically we're missing some degrees of freedom here, but these are primarily convenience functions. The underlying batches have the remaining (much more rarely used) functionality.
+        //You may also note that we don't have any form of per-type minimum capacities like we do in the solver. The solver benefits from tighter 'dynamic' control over allocations
+        //because type batches are expected to be created and destroyed pretty frequently- sometimes multiple times a frame. Contact constraints come and go regardless of user input.
+        //Shapes, on the other hand, only get added or removed by the user.
+        /// <summary>
+        /// Ensures a minimum capacity for all existing shape batches.
+        /// </summary>
+        /// <param name="shapeCapacity">Capacity to ensure for all existing shape batches.</param>
+        public void EnsureBatchCapacities(int shapeCapacity)
+        {
+            for (int i = 0; i < batches.Count; ++i)
+            {
+                batches[i].EnsureCapacity(shapeCapacity);
+            }
+        }
+
+        /// <summary>
+        /// Resizes all existing batches for a target capacity. Note that this is conservative; it will never orphan an existing shape.
+        /// </summary>
+        /// <param name="shapeCapacity">Capacity to target for all existing shape batches.</param>
+        public void ResizeBatches(int shapeCapacity)
+        {
+            for (int i = 0; i < batches.Count; ++i)
+            {
+                batches[i].Resize(shapeCapacity);
+            }
+        }
+
+        /// <summary>
+        /// Releases all memory from existing batches. Leaves shapes set in an unusable state.
+        /// </summary>
+        public void Dispose()
+        {
+            for (int i = 0; i < batches.Count; ++i)
+            {
+                batches[i].Dispose();
+            }
+        }
     }
 }

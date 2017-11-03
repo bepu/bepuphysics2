@@ -364,7 +364,7 @@ namespace BepuUtilities.Memory
                 if (buffer.Length > 0)
                 {
                     //Don't bother copying from or re-pooling empty buffers. They're uninitialized.
-                    Debug.Assert(copyCount < targetSize);
+                    Debug.Assert(copyCount <= targetSize);
                     Unsafe.CopyBlockUnaligned(newBuffer.Memory, buffer.Memory, (uint)copyCount);
                     ReturnUnsafely(ref buffer);
                 }

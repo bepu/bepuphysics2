@@ -76,9 +76,6 @@ namespace BepuPhysics.CollisionDetection
             return -1 - index;
         }
 
-
-        //TODO: EnsureCapacity and Compact
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void InitializeRoot()
         {
@@ -86,6 +83,7 @@ namespace BepuPhysics.CollisionDetection
             nodeCount = 1;
             nodes->Parent = -1;
             nodes->IndexInParent = -1;
+            nodes->ChildCount = 0;
         }
 
         /// <summary>

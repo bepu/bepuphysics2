@@ -42,7 +42,7 @@ namespace BepuPhysics
         public unsafe Statics(BufferPool pool, int initialCapacity = 4096)
         {
             this.pool = pool;
-            InternalResize(initialCapacity);
+            InternalResize(Math.Max(1, initialCapacity));
 
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCapacity, out HandlePool);
         }
@@ -196,7 +196,11 @@ namespace BepuPhysics
             Unsafe.InitBlock(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
             HandlePool.Clear();
         }
-                
+
+        /// <summary>
+        /// Resizes the allocated spans for static data. Note that this is conservative; it will never orphan existing objects.
+        /// </summary>
+        /// <param name="capacity">Target static data capacity.</param>
         public void Resize(int capacity)
         {
             var targetCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, Count));
@@ -204,7 +208,18 @@ namespace BepuPhysics
             {
                 InternalResize(targetCapacity);
             }
-            HandlePool.Resize(capacity, pool.SpecializeFor<int>());
+        }
+              
+        /// <summary>
+        /// Increases the size of buffers if needed to hold the target capacity.
+        /// </summary>
+        /// <param name="capacity">Target data capacity.</param>
+        public void EnsureCapacity(int capacity)
+        {
+            if (IndexToHandle.Length < capacity)
+            {
+                InternalResize(capacity);
+            }
         }
 
         /// <summary>

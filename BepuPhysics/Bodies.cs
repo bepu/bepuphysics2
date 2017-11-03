@@ -59,7 +59,7 @@ namespace BepuPhysics
         public unsafe Bodies(BufferPool pool, int initialCapacity = 4096)
         {
             this.pool = pool;
-            InternalResize(initialCapacity);
+            InternalResize(Math.Max(1, initialCapacity));
 
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCapacity, out HandlePool);
         }
@@ -253,14 +253,29 @@ namespace BepuPhysics
         }
 
 
-        public void Resize(int bodyCapacity)
+        /// <summary>
+        /// Resizes the allocated spans for active body data. Note that this is conservative; it will never orphan existing objects.
+        /// </summary>
+        /// <param name="capacity">Target body data capacity.</param>
+        public void Resize(int capacity)
         {
-            var targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(bodyCapacity, Count));
+            var targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, Count));
             if (IndexToHandle.Length != targetBodyCapacity)
             {
                 InternalResize(targetBodyCapacity);
             }
-            HandlePool.Resize(bodyCapacity, pool.SpecializeFor<int>());
+        }
+
+        /// <summary>
+        /// Increases the size of buffers if needed to hold the target capacity.
+        /// </summary>
+        /// <param name="capacity">Target data capacity.</param>
+        public void EnsureCapacity(int capacity)
+        {
+            if (IndexToHandle.Length < capacity)
+            {
+                InternalResize(capacity);
+            }
         }
 
         /// <summary>

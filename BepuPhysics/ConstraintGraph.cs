@@ -52,8 +52,7 @@ namespace BepuPhysics
         public ConstraintGraph(Solver solver, BufferPool rawPool, int initialBodyCountEstimate, int initialConstraintCountPerBodyEstimate)
         {
             this.solver = solver;
-            constraintCountPerBodyEstimate = initialConstraintCountPerBodyEstimate;
-            var capacityInBytes = initialBodyCountEstimate * initialConstraintCountPerBodyEstimate * sizeof(int);
+            constraintCountPerBodyEstimate = BufferPool<BodyConstraintReference>.GetLowestContainingElementCount(initialConstraintCountPerBodyEstimate);
             bufferPool = rawPool.SpecializeFor<BodyConstraintReference>();
 
             rawPool.SpecializeFor<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>>().Take(initialBodyCountEstimate, out constraintLists);
@@ -246,26 +245,46 @@ namespace BepuPhysics
 #endif
             }
         }
+
         /// <summary>
-        /// Returns the graph's backing buffer to the pool. Does not make any changes to the constraint lists held within it.
+        /// Ensures that the graph's structures can hold the given number of bodies and constraints per body.
         /// </summary>
-        /// <remarks><para>This does not track the state necessary to protect against redundant clears. It is assumed that the graph contains as many bodies as are in the given body set.</para>
-        /// <para>The graph can be reused after disposal, though it is a good idea to use EnsureCapacity or Resize to avoid a bunch of unnecessary resizes.</para></remarks>
-        internal void Dispose()
+        /// <param name="bodies">Current body set.</param>
+        /// <param name="bodyCapacity">Number of bodies to allocate space for.</param>
+        /// <param name="constraintsPerBody">Minimum number of constraints to allocate space for per body.</param>
+        public void EnsureCapacity(Bodies bodies, int bodyCapacity, int constraintsPerBody)
         {
-            Debug.Assert(!constraintLists[0].Span.Allocated, "The graph should be cleared before it is disposed.");
-            Debug.Assert(constraintLists.Length > 0, "The graph should not be redundantly disposed.");
-            bufferPool.Raw.SpecializeFor<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>>().Return(ref constraintLists);
-            constraintLists = new Buffer<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>>();
+            var targetBodyCapacity = Math.Max(bodies.Count, bodyCapacity);
+            if (constraintLists.Length < targetBodyCapacity)
+                bufferPool.Raw.SpecializeFor<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>>().Resize(ref constraintLists, targetBodyCapacity, bodies.Count);
+            constraintsPerBody = BufferPool<BodyConstraintReference>.GetLowestContainingElementCount(Math.Max(1, constraintsPerBody));
+            if (constraintCountPerBodyEstimate < constraintsPerBody)
+            {
+                this.constraintCountPerBodyEstimate = constraintsPerBody;
+                for (int i = 0; i < bodies.Count; ++i)
+                {
+                    ref var list = ref constraintLists[i];
+                    //Don't resize below the current constraint count.
+                    var targetListCapacity = constraintsPerBody < list.Count ? list.Count : constraintsPerBody;
+                    if (targetListCapacity > list.Span.Length)
+                        bufferPool.Resize(ref list.Span, targetListCapacity, list.Count);
+                }
+            }
         }
 
-        internal void Resize(Bodies bodies, int bodyCount, int constraintsPerBody)
+        /// <summary>
+        /// Resizes the graph's structures to hold the given number of bodies and constraints per body. Note that this is conservative; resizes cannot orphan existing bodies or constraints.
+        /// </summary>
+        /// <param name="bodies">Current body set.</param>
+        /// <param name="bodyCapacity">Number of bodies to allocate space for.</param>
+        /// <param name="constraintsPerBody">Minimum number of constraints to allocate space for per body.</param>
+        public void Resize(Bodies bodies, int bodyCount, int constraintsPerBody)
         {
             var targetBodyCapacity = BufferPool<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>>.GetLowestContainingElementCount(Math.Max(bodies.Count, bodyCount));
             if (constraintLists.Length != targetBodyCapacity)
                 bufferPool.Raw.SpecializeFor<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>>().Resize(ref constraintLists, targetBodyCapacity, bodies.Count);
-            constraintsPerBody = Math.Max(1, constraintsPerBody);
-            if (constraintsPerBody < constraintCountPerBodyEstimate)
+            constraintsPerBody = BufferPool<BodyConstraintReference>.GetLowestContainingElementCount(Math.Max(1, constraintsPerBody));
+            if (constraintsPerBody != constraintCountPerBodyEstimate)
             {
                 //Note that we still compact per body lists, even though the constraint removal trim is aggressive. The user may have changed the 
                 //minimum size per body list. Performance is assumed to not really matter here- resizing stuff is not a fast operation.
@@ -279,6 +298,19 @@ namespace BepuPhysics
                         bufferPool.Resize(ref list.Span, targetListCapacity, list.Count);
                 }
             }
+        }
+
+        /// <summary>
+        /// Returns the graph's backing buffer to the pool. Does not make any changes to the constraint lists held within it.
+        /// </summary>
+        /// <remarks><para>This does not track the state necessary to protect against redundant clears. It is assumed that the graph contains as many bodies as are in the given body set.</para>
+        /// <para>The graph can be reused after disposal, though it is a good idea to use EnsureCapacity or Resize to avoid a bunch of unnecessary resizes.</para></remarks>
+        internal void Dispose()
+        {
+            Debug.Assert(!constraintLists[0].Span.Allocated, "The graph should be cleared before it is disposed.");
+            Debug.Assert(constraintLists.Length > 0, "The graph should not be redundantly disposed.");
+            bufferPool.Raw.SpecializeFor<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>>().Return(ref constraintLists);
+            constraintLists = new Buffer<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>>();
         }
 
     }

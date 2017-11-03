@@ -124,14 +124,64 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
+        /// <summary>
+        /// Clears out the broad phase's structures without releasing any resources.
+        /// </summary>
+        public void Clear()
+        {
+            ActiveTree.Clear();
+            StaticTree.Clear();
+        }
 
+        void EnsureCapacity(Tree tree, ref Buffer<CollidableReference> leaves, int capacity)
+        {
+            if (tree.Leaves.Length < capacity)
+                tree.Resize(capacity);
+            if (leaves.Length < capacity)
+                tree.Pool.SpecializeFor<CollidableReference>().Resize(ref leaves, capacity, tree.LeafCount);
+        }
+        void ResizeCapacity(Tree tree, ref Buffer<CollidableReference> leaves, int capacity)
+        {
+            capacity = Math.Max(capacity, tree.LeafCount);
+            if (tree.Leaves.Length != BufferPool<Leaf>.GetLowestContainingElementCount(capacity))
+                tree.Resize(capacity);
+            if (leaves.Length != BufferPool<CollidableReference>.GetLowestContainingElementCount(capacity))
+                tree.Pool.SpecializeFor<CollidableReference>().Resize(ref leaves, capacity, tree.LeafCount);
+        }
+        void Dispose(Tree tree, ref Buffer<CollidableReference> leaves)
+        {
+            tree.Pool.SpecializeFor<CollidableReference>().Return(ref leaves);
+            tree.Dispose();
+        }
+        /// <summary>
+        /// Ensures that the broad phase structures can hold at least the given number of leaves.
+        /// </summary>
+        /// <param name="activeCapacity">Number of leaves to allocate space for in the active tree.</param>
+        /// <param name="staticCapacity">Number of leaves to allocate space for in the static tree.</param>
+        public void EnsureCapacity(int activeCapacity, int staticCapacity)
+        {
+            EnsureCapacity(ActiveTree, ref activeLeaves, activeCapacity);
+            EnsureCapacity(StaticTree, ref staticLeaves, staticCapacity);
+        }
 
-        //TODO: EnsureCapacity and so on. Need them for the broadphase's own leaves sets. We COULD expose the underlying trees and let their sizes be managed separately,
-        //or we can handle them at the level of the broadphase too. 
+        /// <summary>
+        /// Resizes the broad phase structures to hold the given number of leaves. Note that this is conservative; it will never orphan any existing leaves.
+        /// </summary>
+        /// <param name="activeCapacity">Number of leaves to allocate space for in the active tree.</param>
+        /// <param name="staticCapacity">Number of leaves to allocate space for in the static tree.</param>
+        public void Resize(int activeCapacity, int staticCapacity)
+        {
+            ResizeCapacity(ActiveTree, ref activeLeaves, activeCapacity);
+            ResizeCapacity(StaticTree, ref staticLeaves, staticCapacity);
+        }
 
+        /// <summary>
+        /// Releases memory used by the broad phase. Leaves the broad phase unusable.
+        /// </summary>
         public void Dispose()
         {
-            ActiveTree.Dispose();
+            Dispose(ActiveTree, ref activeLeaves);
+            Dispose(StaticTree, ref staticLeaves);
         }
 
     }

@@ -52,7 +52,10 @@ namespace BepuPhysics
 
         internal Bodies bodies;
 
-        internal IdPool<Buffer<int>> handlePool;
+        /// <summary>
+        /// Pool to retrieve constraint handles from when creating new constraints.
+        /// </summary>
+        public IdPool<Buffer<int>> HandlePool;
         internal BufferPool bufferPool;
         public Buffer<ConstraintLocation> HandleToConstraint;
 
@@ -83,12 +86,10 @@ namespace BepuPhysics
             get { return minimumCapacityPerTypeBatch; }
             set
             {
-                if (value <= 0)
-                    throw new ArgumentException("Minimum capacity must be positive.");
-                minimumCapacityPerTypeBatch = value;
+                minimumCapacityPerTypeBatch = Math.Max(1, value);
             }
         }
-        int[] minimumInitialCapacityPerTypeBatch = new int[TypeCountEstimate];
+        int[] minimumInitialCapacityPerTypeBatch = new int[0];
 
         /// <summary>
         /// Sets the minimum capacity initially allocated to a new type batch of the given type.
@@ -117,7 +118,7 @@ namespace BepuPhysics
         {
             //Note that performance is slightly more important here, hence the use of inlining and an assert over exceptions.
             Debug.Assert(typeId >= 0, "Type ids must be nonnegative.");
-            if (typeId > minimumInitialCapacityPerTypeBatch.Length)
+            if (typeId >= minimumInitialCapacityPerTypeBatch.Length)
                 return minimumCapacityPerTypeBatch;
             return Math.Max(minimumInitialCapacityPerTypeBatch[typeId], minimumCapacityPerTypeBatch);
         }
@@ -169,7 +170,7 @@ namespace BepuPhysics
         }
 
         Action<int> workDelegate;
-        const int TypeCountEstimate = 32;
+        //TODO: While 32 batches will likely cover most simulations, this will likely change when the jacobi-hybrid fallback is implemented in favor of a user configurable threshold.
         const int BatchCountEstimate = 32;
         public Solver(Bodies bodies, BufferPool bufferPool, int iterationCount = 5,
             int initialCapacity = 1024,
@@ -179,7 +180,7 @@ namespace BepuPhysics
             this.minimumCapacityPerTypeBatch = minimumCapacityPerTypeBatch;
             this.bodies = bodies;
             this.bufferPool = bufferPool;
-            IdPool<Buffer<int>>.Create(bufferPool.SpecializeFor<int>(), 128, out handlePool);
+            IdPool<Buffer<int>>.Create(bufferPool.SpecializeFor<int>(), 128, out HandlePool);
             //Note that managed arrays must be used to hold the reference types. It's technically possible to bypass this by completely abandoning inheritance in the typebatches, but
             //that would make a variety of things more annoying to handle. We can make use of just a tiny amount of idiomatic C#-ness. This won't be many references anyway.
             //We also don't bother pooling this stuff, and we don't have an API for preallocating it- because we're talking about a very, very small amount of data.
@@ -188,16 +189,16 @@ namespace BepuPhysics
             QuickList<BatchReferencedHandles, Buffer<BatchReferencedHandles>>.Create(bufferPool.SpecializeFor<BatchReferencedHandles>(), BatchCountEstimate, out batchReferencedHandles);
             bufferPool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
             workDelegate = Work;
-            TypeProcessors = new TypeProcessor[TypeCountEstimate];
         }
 
         public void Register<TDescription>() where TDescription : struct, IConstraintDescription<TDescription>
         {
             var description = default(TDescription);
             Debug.Assert(description.ConstraintTypeId >= 0, "Constraint type ids should never be negative. They're used for array indexing.");
-            if (description.ConstraintTypeId >= TypeProcessors.Length)
+            if (TypeProcessors == null || description.ConstraintTypeId >= TypeProcessors.Length)
             {
-                //This may result in some unnecessary resizes, but it hardly matters. It only happens once on registration time.
+                //This will result in some unnecessary resizes, but it hardly matters. It only happens once on registration time.
+                //This also means we can just take the current type processors length as an accurate measure of type capacity for constraint batches.
                 Array.Resize(ref TypeProcessors, description.ConstraintTypeId + 1);
             }
             if (TypeProcessors[description.ConstraintTypeId] != null)
@@ -322,7 +323,7 @@ namespace BepuPhysics
                     Batches.Resize(Batches.Count + 1, bufferPool.SpecializeFor<ConstraintBatch>());
                 if (Batches.Count == batchReferencedHandles.Span.Length)
                     batchReferencedHandles.Resize(Batches.Count + 1, bufferPool.SpecializeFor<BatchReferencedHandles>());
-                Batches.AllocateUnsafely() = new ConstraintBatch(bufferPool, TypeCountEstimate);
+                Batches.AllocateUnsafely() = new ConstraintBatch(bufferPool, TypeProcessors.Length);
                 batchReferencedHandles.AllocateUnsafely() = new BatchReferencedHandles(bufferPool, bodies.Count);
                 //Note that if there is no constraint batch for the given index, there is no way for the constraint add to be blocked. It's guaranteed success.
             }
@@ -337,7 +338,7 @@ namespace BepuPhysics
                     return false;
                 }
             }
-            constraintHandle = handlePool.Take();
+            constraintHandle = HandlePool.Take();
             Batches[targetBatchIndex].Allocate(constraintHandle, ref bodyHandles, bodyCount, ref batchReferencedHandles[targetBatchIndex],
                 bodies, typeId, TypeProcessors[typeId], GetMinimumCapacityForType(typeId), bufferPool, out reference);
 
@@ -475,7 +476,7 @@ namespace BepuPhysics
             //(Could cache the batch index, but that's splitting some very fine hairs.)
             ref var constraintLocation = ref HandleToConstraint[handle];
             RemoveFromBatch(constraintLocation.BatchIndex, constraintLocation.TypeId, constraintLocation.IndexInTypeBatch);
-            handlePool.Return(handle, bufferPool.SpecializeFor<int>());
+            HandlePool.Return(handle, bufferPool.SpecializeFor<int>());
         }
 
         public void GetDescription<TConstraintDescription, TTypeBatch>(ref ConstraintReference constraintReference, out TConstraintDescription description)
@@ -597,37 +598,79 @@ namespace BepuPhysics
                 batchReferencedHandles[batchIndex].Dispose(bufferPool);
                 Batches[batchIndex].Dispose(bufferPool);
             }
+            batchReferencedHandles.Clear();
             Batches.Clear();
-            handlePool.Clear();
-        }
-
-        public void Resize(int bodiesCount, int constraintCount, int constraintsPerTypeBatch)
-        {
-            if (!Batches.Span.Allocated)
-            {
-                //This solver instance was disposed, so we need to explicitly reconstruct the batches array.
-                QuickList<ConstraintBatch, Buffer<ConstraintBatch>>.Create(bufferPool.SpecializeFor<ConstraintBatch>(), BatchCountEstimate, out Batches);
-            }
-            var targetConstraintCount = BufferPool<ConstraintLocation>.GetLowestContainingElementCount(Math.Max(constraintCount, handlePool.HighestPossiblyClaimedId + 1));
-            if (HandleToConstraint.Length != targetConstraintCount)
-            {
-                bufferPool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, targetConstraintCount, handlePool.HighestPossiblyClaimedId + 1);
-            }
-            //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
-            var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodiesCount);
-            for (int i = 0; i < Batches.Count; ++i)
-            {
-                Batches[i].Resize(this, bodiesCount, TypeCountEstimate);
-                batchReferencedHandles[i].Resize(targetBatchReferencedHandleSize, bufferPool);
-            }
-            handlePool.Resize(constraintCount, bufferPool.SpecializeFor<int>());
-
+            HandlePool.Clear();
         }
 
         /// <summary>
-        /// Disposes all resources in the solver, returning unmanaged resources to the pool and dropping all pooled managed resource references.
+        /// Adjusts the size of the the solvers non-typebatch data structures. An allocation will grow if the given capacity exceeds the currently allocated capacity.
         /// </summary>
-        /// <remarks>The solver object can be reused if EnsureCapacity or Resize is called to rehydrate the resources.</remarks>
+        /// <param name="bodyHandleCapacity">Size of the span of body handles to allocate space for. Applies to batch referenced handle sets.</param>
+        /// <param name="constraintHandleCapacity">Number of constraint handles to allocate space for. Applies to the handle->constraint mapping table.</param>
+        public void EnsureSolverCapacities(int bodyHandleCapacity, int constraintHandleCapacity)
+        {
+            if (HandleToConstraint.Length < constraintHandleCapacity)
+            {
+                bufferPool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1);
+            }
+            //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
+            var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
+            for (int i = 0; i < Batches.Count; ++i)
+            {
+                batchReferencedHandles[i].EnsureCapacity(targetBatchReferencedHandleSize, bufferPool);
+            }
+        }
+
+        /// <summary>
+        /// Adjusts the size of the the solvers non-typebatch data structures. An allocation is allowed to shrink if it fits both all existing entries and the given capacity.
+        /// An allocation will grow if the given capacity exceeds the currently allocated capacity.
+        /// </summary>
+        /// <param name="bodyHandleCapacity">Size of the span of body handles to allocate space for. Applies to batch referenced handle sets.</param>
+        /// <param name="constraintHandleCapacity">Number of constraint handles to allocate space for. Applies to the handle->constraint mapping table.</param>
+        public void ResizeSolverCapacities(int bodyHandleCapacity, int constraintHandleCapacity)
+        {          
+            var targetConstraintCount = BufferPool<ConstraintLocation>.GetLowestContainingElementCount(Math.Max(constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1));
+            if (HandleToConstraint.Length != targetConstraintCount)
+            {
+                bufferPool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, targetConstraintCount, HandlePool.HighestPossiblyClaimedId + 1);
+            }
+            //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
+            var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
+            for (int i = 0; i < Batches.Count; ++i)
+            {
+                batchReferencedHandles[i].Resize(targetBatchReferencedHandleSize, bufferPool);
+            }
+        }
+
+        /// <summary>
+        /// Ensures all existing type batches meet or exceed the current solver-defined minimum capacities. Type batches with capacities smaller than the minimums will be enlarged.
+        /// </summary>
+        public void EnsureTypeBatchCapacities()
+        {
+            for (int i = 0; i < Batches.Count; ++i)
+            {
+                Batches[i].EnsureTypeBatchCapacities(this);
+            }
+        }
+        /// <summary>
+        /// Applies the current solver-defined minimum capacities to existing type batches. Type batches with capacities larger than the minimums and counts less than the minimums may be shrunk.
+        /// Type batches with capacities smaller than the minimums will be enlarged.
+        /// </summary>
+        public void ResizeTypeBatchCapacities()
+        {
+            for (int i = 0; i < Batches.Count; ++i)
+            {
+                Batches[i].ResizeTypeBatchCapacities(this);
+            }
+        }
+
+        /// <summary>
+        /// Returns all pool-retrieved resources to the pool.
+        /// </summary>
+        /// <remarks>
+        /// The solver cannot be 'rehydrated' for reuse after a disposal. If you want to return bulk data to the pool while leaving the solver in a usable state, consider using Clear instead.
+        /// </remarks>
         public void Dispose()
         {
             for (int i = 0; i < Batches.Count; ++i)
@@ -636,7 +679,7 @@ namespace BepuPhysics
             }
             bufferPool.SpecializeFor<ConstraintLocation>().Return(ref HandleToConstraint);
             HandleToConstraint = new Buffer<ConstraintLocation>();
-            handlePool.Dispose(bufferPool.SpecializeFor<int>());
+            HandlePool.Dispose(bufferPool.SpecializeFor<int>());
             Batches.Dispose(bufferPool.SpecializeFor<ConstraintBatch>());
             Batches = new QuickList<ConstraintBatch, Buffer<ConstraintBatch>>();
         }
