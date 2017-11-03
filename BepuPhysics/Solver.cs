@@ -439,7 +439,9 @@ namespace BepuPhysics
                         {
                             lastBatch.Dispose(bufferPool);
                             batchReferencedHandles[lastBatchIndex].Dispose(bufferPool);
+                            --batchReferencedHandles.Count; 
                             --Batches.Count;
+                            Debug.Assert(Batches.Count == batchReferencedHandles.Count);
                         }
                         else
                         {
