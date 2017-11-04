@@ -102,9 +102,9 @@ namespace BepuUtilities.Memory
             /// </summary>
             public IdPool<Array<int>> Slots;
 #if DEBUG
-            HashSet<int> outstandingIds;
+            internal HashSet<int> outstandingIds;
 #if LEAKDEBUG
-            Dictionary<string, HashSet<int>> outstandingAllocators;
+            internal Dictionary<string, HashSet<int>> outstandingAllocators;
 #endif
 #endif
 
@@ -400,6 +400,28 @@ namespace BepuUtilities.Memory
                     Debug.Assert(pool.Blocks[j].Pinned == pinned, $"For this operation, all blocks must share the same pinned state of {pinned}.");
                 }
             }
+        }
+
+        [Conditional("DEBUG")]
+        public void AssertEmpty()
+        {
+#if DEBUG
+            for (int i = 0; i < pools.Length; ++i)
+            {
+                var pool = pools[i];
+                if (pool.outstandingIds.Count > 0)
+                {
+                    Debug.WriteLine($"Power pool {i} contains allocations.");
+#if LEAKDEBUG
+                    foreach (var allocator in pool.outstandingAllocators)
+                    {
+                        Debug.WriteLine($"{allocator.Key}   ALLOCATION COUNT: {allocator.Value.Count}");
+                    }
+#endif
+                    Debug.Assert(pool.outstandingIds.Count == 0);
+                }
+            }
+#endif
         }
 
         /// <summary>

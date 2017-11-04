@@ -676,12 +676,15 @@ namespace BepuPhysics
             for (int i = 0; i < Batches.Count; ++i)
             {
                 Batches[i].Dispose(bufferPool);
+                batchReferencedHandles[i].Dispose(bufferPool);
             }
+            Batches.Dispose(bufferPool.SpecializeFor<ConstraintBatch>());
+            Batches = new QuickList<ConstraintBatch, Buffer<ConstraintBatch>>();
+            batchReferencedHandles.Dispose(bufferPool.SpecializeFor<BatchReferencedHandles>());
+            batchReferencedHandles = new QuickList<BatchReferencedHandles, Buffer<BatchReferencedHandles>>();
             bufferPool.SpecializeFor<ConstraintLocation>().Return(ref HandleToConstraint);
             HandleToConstraint = new Buffer<ConstraintLocation>();
             HandlePool.Dispose(bufferPool.SpecializeFor<int>());
-            Batches.Dispose(bufferPool.SpecializeFor<ConstraintBatch>());
-            Batches = new QuickList<ConstraintBatch, Buffer<ConstraintBatch>>();
         }
 
 
