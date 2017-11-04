@@ -97,7 +97,7 @@ namespace Demos.SpecializedTests
             double solveTime = 0;
             for (int frameIndex = 0; frameIndex < frameCount; ++frameIndex)
             {
-                var energyBefore = simulation.Bodies.GetBodyEnergyHeuristic();
+                var energyBefore = TestHelpers.GetBodyEnergyHeuristic(simulation.Bodies);
                 //Update the penetration depths associated with the constraints.
                 //This simulates actual position integration and repeated contact detection, allowing the constraints to properly spring.
                 for (int i = 0; i < constraintHandles.Length; ++i)
@@ -141,7 +141,7 @@ namespace Demos.SpecializedTests
                 simulation.Solver.Update(dt);
                 //simulation.Solver.MultithreadedUpdate(threadDispatcher, simulation.BufferPool, dt, inverseDt);
                 timer.Stop();
-                var energyAfter = simulation.Bodies.GetBodyEnergyHeuristic();
+                var energyAfter = TestHelpers.GetBodyEnergyHeuristic(simulation.Bodies);
                 Console.WriteLine($"Body energy {frameIndex}: {energyAfter}, delta: {energyAfter - energyBefore}");
             }
 

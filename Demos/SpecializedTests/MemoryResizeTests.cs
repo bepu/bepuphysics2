@@ -53,7 +53,7 @@ namespace Demos.SpecializedTests
             SimulationSetup.BuildLattice(bodyBuilder, constraintBuilder, width, height, length, simulation, out var bodyHandles, out var constraintHandles);
 
             var random = new Random(5);
-            for (int i = 0; i < 30; ++i)
+            for (int i = 0; i < 3000; ++i)
             {
                 var sample = random.NextDouble();
                 if (sample < 0.1)
@@ -66,45 +66,18 @@ namespace Demos.SpecializedTests
                 {
                     //Try to change size.
                     Resize(simulation, random, bodyHandles, constraintHandles);
-
                 }
+                if (i % 100 == 0)
+                    Console.WriteLine($"Iteration {i} completed...");
             }
 
             //SimulationScrambling.ScrambleBodies(simulation);
             //SimulationScrambling.ScrambleConstraints(simulation.Solver);
             //SimulationScrambling.ScrambleBodyConstraintLists(simulation);
-            //SimulationScrambling.AddRemoveChurn<Contact4>(simulation, 1000, bodyHandles, constraintHandles);
+            //SimulationScrambling.AddRemoveChurn<BallSocket>(simulation, 1000, bodyHandles, constraintHandles);
 
             var threadDispatcher = new SimpleThreadDispatcher(8);
 
-            const int iterations = 10;
-            //const int internalCompressionIterations = 10;
-            //for (int i = 0; i < iterations; ++i)
-            //{
-            //    SimulationScrambling.AddRemoveChurn<Contact4>(simulation, 10, bodyHandles, constraintHandles);
-            //    GC.Collect(3, GCCollectionMode.Forced, true);
-            //    var start = Stopwatch.GetTimestamp();
-            //    for (int j = 0; j < internalCompressionIterations; ++j)
-            //    {
-            //        simulation.SolverBatchCompressor.Compress(simulation.BufferPool, threadDispatcher);
-            //    }
-            //}
-
-            ////Attempt cache optimization.
-            //int bodyOptimizationIterations = bodyHandles.Length * 1;
-            //simulation.BodyLayoutOptimizer.OptimizationFraction = 0.004f;
-            //for (int i = 0; i < bodyOptimizationIterations; ++i)
-            //{
-            //    simulation.BodyLayoutOptimizer.IncrementalOptimize(simulation.BufferPool, threadDispatcher);
-            //}
-            ////Note that constraint optimization should be performed after body optimization, since body optimization moves the bodies- and so affects the optimal constraint position.
-            //simulation.ConstraintLayoutOptimizer.OptimizationFraction = 0.044f;
-            //int constraintOptimizationIterations = 8192;
-            //for (int i = 0; i < constraintOptimizationIterations; ++i)
-            //{
-            //    simulation.ConstraintLayoutOptimizer.Update(simulation.BufferPool, threadDispatcher);
-
-            //}
 
             const float inverseDt = 60f;
             const float dt = 1 / inverseDt;
@@ -114,13 +87,11 @@ namespace Demos.SpecializedTests
 
             for (int frameIndex = 0; frameIndex < frameCount; ++frameIndex)
             {
-                var energyBefore = simulation.Bodies.GetBodyEnergyHeuristic();
+                var energyBefore = TestHelpers.GetBodyEnergyHeuristic(simulation.Bodies);
 
                 simulation.Timestep(dt);
 
-                var energyAfter = simulation.Bodies.GetBodyEnergyHeuristic();
-                //var velocityChange = solver.GetVelocityChangeHeuristic();
-                //Console.WriteLine($"Constraint velocity change after frame {frameIndex}: {velocityChange}");
+                var energyAfter = TestHelpers.GetBodyEnergyHeuristic(simulation.Bodies);
                 Console.WriteLine($"Body energy {frameIndex}: {energyAfter}, delta: {energyAfter - energyBefore}");
 
                 for (int resizeIndex = 0; resizeIndex < 100; ++resizeIndex)

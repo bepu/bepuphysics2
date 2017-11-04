@@ -67,8 +67,10 @@ namespace BepuPhysics
         unsafe void InternalResize(int targetBodyCapacity)
         {
             Debug.Assert(targetBodyCapacity > 0, "Resize is not meant to be used as Dispose. If you want to return everything to the pool, use Dispose instead.");
-            //Note that we base the bundle capacities on the body capacity. This simplifies the conditions on allocation
+            //Note that we base the bundle capacities on post-resize capacity of the HandleToIndex array. This simplifies the conditions on allocation, but increases memory use.
+            //You may want to change this in the future if memory use is concerning.
             targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(targetBodyCapacity);
+            Debug.Assert(targetBodyCapacity >= HandlePool.HighestPossiblyClaimedId + 1, "A resize should never attempt to shrink allocations below the size necessary to hold extant handles.");
             Debug.Assert(Poses.Length != BufferPool<RigidPoses>.GetLowestContainingElementCount(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
             pool.SpecializeFor<RigidPose>().Resize(ref Poses, targetBodyCapacity, Count);
             pool.SpecializeFor<BodyVelocity>().Resize(ref Velocities, targetBodyCapacity, Count);
@@ -91,7 +93,7 @@ namespace BepuPhysics
         {
             if (Count == HandleToIndex.Length)
             {
-                Debug.Assert(HandleToIndex.Allocated, "The backing memory of the bodies set should be initialized before use. Did you dispose and then not call EnsureCapacity/Resize?");
+                Debug.Assert(HandleToIndex.Allocated, "The backing memory of the bodies set should be initialized before use.");
                 //Out of room; need to resize.
                 var newSize = HandleToIndex.Length << 1;
                 InternalResize(newSize);
@@ -228,7 +230,7 @@ namespace BepuPhysics
         /// <param name="slotA">Memory slot of the first body to swap.</param>
         /// <param name="slotB">Memory slot of the second body to swap.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Swap(int slotA, int slotB)
+        internal void Swap(int slotA, int slotB)
         {
             HandleToIndex[IndexToHandle[slotA]] = slotB;
             HandleToIndex[IndexToHandle[slotB]] = slotA;
@@ -239,60 +241,6 @@ namespace BepuPhysics
             Swap(ref LocalInertias[slotA], ref LocalInertias[slotB]);
         }
 
-
-        /// <summary>
-        /// Clears all bodies from the set without returning any memory to the pool.
-        /// </summary>
-        public unsafe void Clear()
-        {
-            Count = 0;
-            //Empty out all the index-handle mappings.
-            Unsafe.InitBlock(HandleToIndex.Memory, 0xFF, (uint)(sizeof(int) * HandleToIndex.Length));
-            Unsafe.InitBlock(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
-            HandlePool.Clear();
-        }
-
-
-        /// <summary>
-        /// Resizes the allocated spans for active body data. Note that this is conservative; it will never orphan existing objects.
-        /// </summary>
-        /// <param name="capacity">Target body data capacity.</param>
-        public void Resize(int capacity)
-        {
-            var targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, Count));
-            if (IndexToHandle.Length != targetBodyCapacity)
-            {
-                InternalResize(targetBodyCapacity);
-            }
-        }
-
-        /// <summary>
-        /// Increases the size of buffers if needed to hold the target capacity.
-        /// </summary>
-        /// <param name="capacity">Target data capacity.</param>
-        public void EnsureCapacity(int capacity)
-        {
-            if (IndexToHandle.Length < capacity)
-            {
-                InternalResize(capacity);
-            }
-        }
-
-        /// <summary>
-        /// Returns all body resources to the pool used to create them.
-        /// </summary>
-        /// <remarks>The object can be reused if it is reinitialized by using EnsureCapacity or Resize.</remarks>
-        public void Dispose()
-        {
-            pool.SpecializeFor<RigidPose>().Return(ref Poses);
-            pool.SpecializeFor<BodyVelocity>().Return(ref Velocities);
-            pool.SpecializeFor<BodyInertia>().Return(ref LocalInertias);
-            pool.SpecializeFor<BodyInertia>().Return(ref Inertias);
-            pool.SpecializeFor<int>().Return(ref HandleToIndex);
-            pool.SpecializeFor<int>().Return(ref IndexToHandle);
-            pool.SpecializeFor<Collidable>().Return(ref Collidables);
-            HandlePool.Dispose(pool.SpecializeFor<int>());
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void GatherInertiaForBody(ref float targetInertiaBase, int targetLaneIndex, int index)
@@ -444,20 +392,60 @@ namespace BepuPhysics
             }
         }
 
+
         /// <summary>
-        /// Gets a value roughly representing the amount of energy in the simulation. This is occasionally handy for debug purposes.
+        /// Clears all bodies from the set without returning any memory to the pool.
         /// </summary>
-        public float GetBodyEnergyHeuristic()
+        public unsafe void Clear()
         {
-            float accumulated = 0;
-            for (int index = 0; index <= Count; ++index)
-            {
-                accumulated += Vector3.Dot(Velocities[index].Linear, Velocities[index].Linear);
-                accumulated += Vector3.Dot(Velocities[index].Angular, Velocities[index].Angular);
-            }
-            return accumulated;
+            Count = 0;
+            //Empty out all the index-handle mappings.
+            Unsafe.InitBlock(HandleToIndex.Memory, 0xFF, (uint)(sizeof(int) * HandleToIndex.Length));
+            Unsafe.InitBlock(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
+            HandlePool.Clear();
         }
 
+
+        /// <summary>
+        /// Resizes the allocated spans for active body data. Note that this is conservative; it will never orphan existing objects.
+        /// </summary>
+        /// <param name="capacity">Target body data capacity.</param>
+        public void Resize(int capacity)
+        {
+            var targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, Count));
+            if (HandleToIndex.Length != targetBodyCapacity)
+            {
+                InternalResize(targetBodyCapacity);
+            }
+        }
+
+        /// <summary>
+        /// Increases the size of buffers if needed to hold the target capacity.
+        /// </summary>
+        /// <param name="capacity">Target data capacity.</param>
+        public void EnsureCapacity(int capacity)
+        {
+            if (HandleToIndex.Length < capacity)
+            {
+                InternalResize(capacity);
+            }
+        }
+
+        /// <summary>
+        /// Returns all body resources to the pool used to create them.
+        /// </summary>
+        /// <remarks>The object can be reused if it is reinitialized by using EnsureCapacity or Resize.</remarks>
+        public void Dispose()
+        {
+            pool.SpecializeFor<RigidPose>().Return(ref Poses);
+            pool.SpecializeFor<BodyVelocity>().Return(ref Velocities);
+            pool.SpecializeFor<BodyInertia>().Return(ref LocalInertias);
+            pool.SpecializeFor<BodyInertia>().Return(ref Inertias);
+            pool.SpecializeFor<int>().Return(ref HandleToIndex);
+            pool.SpecializeFor<int>().Return(ref IndexToHandle);
+            pool.SpecializeFor<Collidable>().Return(ref Collidables);
+            HandlePool.Dispose(pool.SpecializeFor<int>());
+        }
 
     }
 }

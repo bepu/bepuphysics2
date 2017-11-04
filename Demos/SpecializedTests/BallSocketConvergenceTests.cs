@@ -29,14 +29,14 @@ namespace Demos.SpecializedTests
             var samples = new SimulationTimeSamples(frameCount);
             for (int frameIndex = 0; frameIndex < frameCount; ++frameIndex)
             {
-                var energyBefore = simulation.Bodies.GetBodyEnergyHeuristic();
+                var energyBefore = TestHelpers.GetBodyEnergyHeuristic(simulation.Bodies);
 
                 //simulation.Timestep(dt);
                 simulation.Timestep(dt, threadDispatcher);
 
                 samples.RecordFrame(simulation);
 
-                var energyAfter = simulation.Bodies.GetBodyEnergyHeuristic();
+                var energyAfter = TestHelpers.GetBodyEnergyHeuristic(simulation.Bodies);
                 int sampledBodyIndex = width;
                 var samplePose = simulation.Bodies.Poses[sampledBodyIndex];
                 var sampleVelocity = simulation.Bodies.Velocities[sampledBodyIndex];

@@ -425,10 +425,9 @@ namespace BepuPhysics
             Solver.EnsureTypeBatchCapacities();
             //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
             Bodies.EnsureCapacity(allocationTarget.Bodies);
+            BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.EnsureCapacity(allocationTarget.Statics);
             ConstraintGraph.EnsureCapacity(Bodies, allocationTarget.Bodies, allocationTarget.ConstraintCountPerBodyEstimate);
-            //Note that the body layout optimizer is slaved to the Bodies capacity, so it must come after the bodies resize to be meaningful.
-            BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Shapes.EnsureBatchCapacities(allocationTarget.ShapesPerType);
             BroadPhase.EnsureCapacity(allocationTarget.Bodies, allocationTarget.Bodies + allocationTarget.Statics);
         }
@@ -454,10 +453,9 @@ namespace BepuPhysics
             Solver.ResizeTypeBatchCapacities();
             //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
             Bodies.Resize(allocationTarget.Bodies);
+            BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.Resize(allocationTarget.Statics);
             ConstraintGraph.Resize(Bodies, allocationTarget.Bodies, allocationTarget.ConstraintCountPerBodyEstimate);
-            //Note that the body layout optimizer is slaved to the Bodies capacity, so it must come after the bodies resize to be meaningful.
-            BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Shapes.ResizeBatches(allocationTarget.ShapesPerType);
             BroadPhase.Resize(allocationTarget.Bodies, allocationTarget.Bodies + allocationTarget.Statics);
         }
