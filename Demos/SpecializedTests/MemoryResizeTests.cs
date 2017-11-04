@@ -11,6 +11,7 @@ using System.Threading;
 using static BepuPhysics.Solver;
 using Quaternion = BepuUtilities.Quaternion;
 using BepuPhysics.Collidables;
+using BepuUtilities.Collections;
 
 namespace Demos.SpecializedTests
 {
@@ -37,7 +38,27 @@ namespace Demos.SpecializedTests
             {
                 simulation.Resize(sizes);
             }
+        }
 
+        static void FillTrashBuffers(Simulation simulation, Random random)
+        {
+            var pool = simulation.BufferPool.SpecializeFor<int>();
+            var bufferPool = simulation.BufferPool.SpecializeFor<Buffer<int>>();
+            const int bufferCount = 50;
+            QuickList<Buffer<int>, Buffer<Buffer<int>>>.Create(bufferPool, bufferCount, out var bufferList);
+            for (int trashBufferIndex = 0; trashBufferIndex < bufferCount; ++trashBufferIndex)
+            {
+                //Pull a buffer from the pool, fill it with trash data, and return it. 
+                ref var buffer = ref bufferList.AllocateUnsafely();
+                pool.Take(1 << random.Next(18), out buffer);
+                for (int k = 0; k < buffer.Length; ++k)
+                    buffer[k] = random.Next(int.MinValue, int.MaxValue);
+            }
+            for (int i = 0; i < bufferCount; ++i)
+            {
+                pool.Return(ref bufferList[i]);
+            }
+            bufferList.Dispose(bufferPool);
         }
         public static void Test()
         {
@@ -53,13 +74,14 @@ namespace Demos.SpecializedTests
             SimulationSetup.BuildLattice(bodyBuilder, constraintBuilder, width, height, length, simulation, out var bodyHandles, out var constraintHandles);
 
             var random = new Random(5);
-            for (int i = 0; i < 30; ++i)
+            for (int i = 0; i < 1000; ++i)
             {
                 var sample = random.NextDouble();
                 if (sample < 0.1)
                 {
                     //Clear and recreate.
                     simulation.Clear();
+                    shapeIndex = simulation.Shapes.Add(ref sphere);
                     SimulationSetup.BuildLattice(bodyBuilder, constraintBuilder, width, height, length, simulation, out bodyHandles, out constraintHandles);
                 }
                 else
@@ -67,14 +89,16 @@ namespace Demos.SpecializedTests
                     //Try to change size.
                     Resize(simulation, random, bodyHandles, constraintHandles);
                 }
+                FillTrashBuffers(simulation, random);
+
                 if (i % 100 == 0)
                     Console.WriteLine($"Iteration {i} completed...");
             }
 
-            //SimulationScrambling.ScrambleBodies(simulation);
-            //SimulationScrambling.ScrambleConstraints(simulation.Solver);
-            //SimulationScrambling.ScrambleBodyConstraintLists(simulation);
-            //SimulationScrambling.AddRemoveChurn<BallSocket>(simulation, 1000, bodyHandles, constraintHandles);
+            SimulationScrambling.ScrambleBodies(simulation);
+            SimulationScrambling.ScrambleConstraints(simulation.Solver);
+            SimulationScrambling.ScrambleBodyConstraintLists(simulation);
+            SimulationScrambling.AddRemoveChurn<BallSocket>(simulation, 1000, bodyHandles, constraintHandles);
 
             var threadDispatcher = new SimpleThreadDispatcher(8);
 
@@ -98,6 +122,7 @@ namespace Demos.SpecializedTests
                 {
                     Resize(simulation, random, bodyHandles, constraintHandles);
                 }
+                FillTrashBuffers(simulation, random);
             }
 
 

@@ -139,15 +139,11 @@ namespace BepuPhysics.Collidables
             shapeSize = shapeDataSize;
         }
 
+
         /// <summary>
         /// Frees all shape slots without returning any resources to the pool.
         /// </summary>
-        public void Clear()
-        {
-            idPool.Clear();
-        }
-
-
+        public abstract void Clear();
         /// <summary>
         /// Increases the size of the type batch if necessary to hold the target capacity.
         /// </summary>
@@ -271,6 +267,13 @@ namespace BepuPhysics.Collidables
             shapesData = newShapesData;
         }
 
+        public override void Clear()
+        {
+#if DEBUG
+            shapes.Clear(0, idPool.HighestPossiblyClaimedId + 1);
+#endif
+            idPool.Clear();
+        }
         public override void EnsureCapacity(int shapeCapacity)
         {
             if (shapes.Length < shapeCapacity)
