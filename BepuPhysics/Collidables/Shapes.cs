@@ -147,32 +147,22 @@ namespace BepuPhysics.Collidables
             idPool.Clear();
         }
 
+
         /// <summary>
         /// Increases the size of the type batch if necessary to hold the target capacity.
         /// </summary>
         /// <param name="shapeCapacity">Target capacity.</param>
-        public void EnsureCapacity(int shapeCapacity)
-        {
-            var targetCapacity = shapeCapacity * shapeDataSize;
-            if (targetCapacity > shapesData.Length)
-            {
-                pool.Resize(ref shapesData, targetCapacity, idPool.HighestPossiblyClaimedId + 1);
-            }
-        }
-
+        public abstract void EnsureCapacity(int shapeCapacity);
         /// <summary>
         /// Changes the size of the type batch if the target capacity is different than the current capacity. Note that shrinking allocations is conservative; resizing will
         /// never allow an existing shape to point to unallocated memory.
         /// </summary>
         /// <param name="shapeCapacity">Target capacity.</param>
-        public void Resize(int shapeCapacity)
-        {
-            var targetCapacity = SpanHelper.GetContainingPowerOf2(Math.Max(idPool.HighestPossiblyClaimedId + 1, shapeCapacity) * shapeDataSize);
-            if (targetCapacity != shapesData.Length)
-            {
-                pool.Resize(ref shapesData, targetCapacity, idPool.HighestPossiblyClaimedId + 1);
-            }
-        }
+        public abstract void Resize(int shapeCapacity);
+        /// <summary>
+        /// Returns all backing resources to the pool, leaving the batch in an unusable state.
+        /// </summary>
+        public abstract void Dispose();
 
         /// <summary>
         /// Shrinks or expands the allocation of the batch's id pool. Note that shrinking allocations is conservative; resizing will never allow any pending ids to be lost.
@@ -184,14 +174,6 @@ namespace BepuPhysics.Collidables
         }
 
 
-        /// <summary>
-        /// Returns all backing resources to the pool, leaving the batch in an unusable state.
-        /// </summary>
-        public void Dispose()
-        {
-            pool.Return(ref shapesData);
-            idPool.Dispose(pool.SpecializeFor<int>());
-        }
 
     }
 
@@ -200,42 +182,19 @@ namespace BepuPhysics.Collidables
 
         internal Buffer<TShape> shapes;
 
-        void Resize(int shapeCount, int oldCopyLength)
-        {
-            shapeDataSize = Unsafe.SizeOf<TShape>();
-            var requiredSizeInBytes = shapeCount * Unsafe.SizeOf<TShape>();
-            pool.Take(requiredSizeInBytes, out var newShapesData);
-            var newShapes = newShapesData.As<TShape>();
-#if DEBUG
-            //In debug mode, unused slots are kept at the default value. This helps catch misuse.
-            newShapes.Clear(shapes.Length, newShapes.Length - shapes.Length);
-#endif
-            if (shapesData.Allocated)
-            {
-                shapes.CopyTo(0, ref newShapes, 0, oldCopyLength);
-                pool.Return(ref shapesData);
-            }
-            else
-            {
-                Debug.Assert(oldCopyLength == 0);
-            }
-            shapes = newShapes;
-            shapesData = newShapesData;
-        }
-
-        public ShapeBatch(BufferPool pool, int initialShapeCount)
-        {
-            this.pool = pool;
-            Resize(initialShapeCount, 0);
-            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialShapeCount, out idPool);
-        }
-
         /// <summary>
         /// Gets a reference to the shape associated with an index.
         /// </summary>
         /// <param name="shapeIndex">Index of the shape reference to retrieve.</param>
         /// <returns>Reference to the shape at the given index.</returns>
         public ref TShape this[int shapeIndex] { get { return ref shapes[shapeIndex]; } }
+
+        public ShapeBatch(BufferPool pool, int initialShapeCount)
+        {
+            this.pool = pool;
+            InternalResize(initialShapeCount, 0);
+            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialShapeCount, out idPool);
+        }
 
         protected override void ValidateRemoval(int index)
         {
@@ -254,7 +213,7 @@ namespace BepuPhysics.Collidables
             var shapeIndex = idPool.Take();
             if (shapes.Length <= shapeIndex)
             {
-                Resize(shapeIndex + 1, shapes.Length);
+                InternalResize(shapeIndex + 1, shapes.Length);
             }
             Debug.Assert(SpanHelper.IsZeroed(ref shapes[shapeIndex]), "In debug mode, the slot a shape is stuck into should be cleared. If it's not, it is already in use.");
             shapes[shapeIndex] = shape;
@@ -285,6 +244,54 @@ namespace BepuPhysics.Collidables
             shapes[shapeIndex].GetBounds(ref pose.Orientation, out min, out max);
             min += pose.Position;
             max += pose.Position;
+        }
+
+
+        void InternalResize(int shapeCount, int oldCopyLength)
+        {
+            shapeDataSize = Unsafe.SizeOf<TShape>();
+            var requiredSizeInBytes = shapeCount * Unsafe.SizeOf<TShape>();
+            pool.Take(requiredSizeInBytes, out var newShapesData);
+            var newShapes = newShapesData.As<TShape>();
+#if DEBUG
+            //In debug mode, unused slots are kept at the default value. This helps catch misuse.
+            if(newShapes.Length > shapes.Length)
+                newShapes.Clear(shapes.Length, newShapes.Length - shapes.Length);
+#endif
+            if (shapesData.Allocated)
+            {
+                shapes.CopyTo(0, ref newShapes, 0, oldCopyLength);
+                pool.Return(ref shapesData);
+            }
+            else
+            {
+                Debug.Assert(oldCopyLength == 0);
+            }
+            shapes = newShapes;
+            shapesData = newShapesData;
+        }
+
+        public override void EnsureCapacity(int shapeCapacity)
+        {
+            if (shapes.Length < shapeCapacity)
+            {
+                InternalResize(shapeCapacity, idPool.HighestPossiblyClaimedId + 1);
+            }
+        }
+
+        public override void Resize(int shapeCapacity)
+        {
+            shapeCapacity = BufferPool<TShape>.GetLowestContainingElementCount(Math.Max(idPool.HighestPossiblyClaimedId + 1, shapeCapacity));
+            if (shapeCapacity != shapes.Length)
+            {
+                InternalResize(shapeCapacity, idPool.HighestPossiblyClaimedId + 1);
+            }
+        }
+        public override void Dispose()
+        {
+            Debug.Assert(shapesData.Id == shapes.Id, "If the buffer ids don't match, there was some form of failed resize.");
+            pool.Return(ref shapesData);
+            idPool.Dispose(pool.SpecializeFor<int>());
         }
     }
     public class Shapes

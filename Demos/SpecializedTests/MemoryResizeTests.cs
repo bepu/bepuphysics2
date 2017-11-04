@@ -53,7 +53,7 @@ namespace Demos.SpecializedTests
             SimulationSetup.BuildLattice(bodyBuilder, constraintBuilder, width, height, length, simulation, out var bodyHandles, out var constraintHandles);
 
             var random = new Random(5);
-            for (int i = 0; i < 3000; ++i)
+            for (int i = 0; i < 30; ++i)
             {
                 var sample = random.NextDouble();
                 if (sample < 0.1)

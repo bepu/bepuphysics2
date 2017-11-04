@@ -345,7 +345,7 @@ namespace BepuPhysics
             //Note that the reason why the pose integrator comes first instead of, say, the solver, is that the solver relies on world space inertias calculated by the pose integration.
             //If the pose integrator doesn't run first, we either need 
             //1) complicated on demand updates of world inertia when objects are added or local inertias are changed or 
-            //2) local->world inertia calculation before the solver.                
+            //2) local->world inertia calculation before the solver.        
 
             ProfilerStart(PoseIntegrator);
             PoseIntegrator.Update(dt, BufferPool, threadDispatcher);

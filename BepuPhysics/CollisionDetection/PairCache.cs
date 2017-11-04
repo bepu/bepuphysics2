@@ -122,6 +122,9 @@ namespace BepuPhysics.CollisionDetection
             }
             QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), maximumConstraintTypeCount, out var minimumSizesPerConstraintType);
             QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), maximumCollisionTypeCount, out var minimumSizesPerCollisionType);
+            //Since the minimum size accumulation builds the minimum size incrementally, bad data within the array can corrupt the result- we must clear it.
+            minimumSizesPerConstraintType.Span.Clear(0, minimumSizesPerConstraintType.Span.Length);
+            minimumSizesPerCollisionType.Span.Clear(0, minimumSizesPerCollisionType.Span.Length);
             for (int i = 0; i < workerCaches.Count; ++i)
             {
                 workerCaches[i].AccumulateMinimumSizes(ref minimumSizesPerConstraintType, ref minimumSizesPerCollisionType);
