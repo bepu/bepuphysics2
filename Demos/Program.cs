@@ -33,7 +33,7 @@ namespace Demos
             //ContactManifoldConvergenceTests.Test();
             //BallSocketConvergenceTests.Test();
             //MemoryResizeTests.Test();
-            DisposeTests.Test();
+            //DisposeTests.Test();
             //ConstraintCacheOptimizationTests.Test();
             //SortTest.Test();
             //SpanCodegenTests.Test();

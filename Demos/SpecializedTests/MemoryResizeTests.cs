@@ -100,8 +100,9 @@ namespace Demos.SpecializedTests
             SimulationScrambling.ScrambleBodyConstraintLists(simulation);
             SimulationScrambling.AddRemoveChurn<BallSocket>(simulation, 1000, bodyHandles, constraintHandles);
 
-            var threadDispatcher = new SimpleThreadDispatcher(8);
 
+            simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            simulation.Bodies.Velocities[simulation.Bodies.HandleToIndex[bodyHandles[width]]].Linear = new Vector3(0.1f, 0, 0.1f);
 
             const float inverseDt = 60f;
             const float dt = 1 / inverseDt;
@@ -126,8 +127,7 @@ namespace Demos.SpecializedTests
             }
 
 
-
-            threadDispatcher.Dispose();
+            
             simulation.BufferPool.Clear();
 
         }
