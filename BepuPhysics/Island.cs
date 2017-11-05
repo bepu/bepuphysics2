@@ -119,6 +119,11 @@ namespace BepuPhysics
         public Buffer<BodyVelocity> Velocities;
         public Buffer<BodyInertia> LocalInertias;
 
+        /// <summary>
+        /// Gets whether this island instance is actually allocated.
+        /// </summary>
+        public bool Allocated { get { return Handles.Allocated; } }
+
         //Removals from islands aren't ideal- they scramble the order of objects. But they should be extremely rare for the most part.
         public void RemoveBodyAt(int bodyIndex, Bodies bodies, BroadPhase broadPhase)
         {

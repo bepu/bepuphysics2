@@ -10,34 +10,38 @@ using BepuUtilities.Collections;
 
 namespace BepuPhysics
 {
+    public struct BodyLocation
+    {
+        /// <summary>
+        /// Index of the set owning the body reference. If the island index is 0, the body is active.
+        /// </summary>
+        public int SetIndex;
+        /// <summary>
+        /// Index of the body within its owning set. If the body is active (and so the Island index is -1), this is an index into the Bodies data arrays. 
+        /// If it is nonnegative, it is an index into the inactive island 
+        /// </summary>
+        public int Index;
+    }
 
     /// <summary>
-    /// Collection of allocated bodies.
+    /// Stores a group of bodies- either the set of active bodies, or the bodies involve in an inactive simulation island.
     /// </summary>
-    public class Bodies
+    public struct BodySet
     {
         //Note that all body information is stored in AOS format.
         //While the pose integrator would technically benefit from (AO)SOA, it would only help in a magical infinite bandwidth scenario.
         //In practice, the pose integrator's actual AOSOA-benefitting chunk can't even scale to 2 threads, even with only 4-wide SIMD.
         //On top of that, the narrow phase and solver both need to access the body's information in a noncontiguous way. While the layout optimizer stages can help here to a degree,
         //the simple fact is that the scattered loads will likely waste a lot of cache line space- the majority, even, for wider SIMD bundles.
-        //(Consider: noncontiguously sampling position.X on an AVX512 AOSOA layout would load a 64 byte cache line and use only 4 bytes of it!)
+        //(Consider: noncontiguously sampling velocities.Linear.X on an AVX512 AOSOA layout would load a 64 byte cache line and use only 4 bytes of it!)
 
         //Plus, no one wants to deal with AOSOA layouts when writing game logic. Realistically, body data will be the most frequently accessed property in the engine, 
         //and not having to do a transpose to pull it into AOS is much less painful.
 
-
-        /// <summary>
-        /// Remaps a body handle to the actual array index of the body.
-        /// The backing array index may change in response to cache optimization.
-        /// </summary>
-        public Buffer<int> HandleToIndex;
         /// <summary>
         /// Remaps a body index to its handle.
         /// </summary>
         public Buffer<int> IndexToHandle;
-
-
         /// <summary>
         /// The set of collidables owned by each body. Speculative margins, continuity settings, and shape indices can be changed directly.
         /// Shape indices cannot transition between pointing at a shape and pointing at nothing or vice versa without notifying the broad phase of the collidable addition or removal.
@@ -47,21 +51,112 @@ namespace BepuPhysics
         public Buffer<RigidPose> Poses;
         public Buffer<BodyVelocity> Velocities;
         public Buffer<BodyInertia> LocalInertias;
+
+        public int Count;
         /// <summary>
-        /// The world transformed inertias of bodies as of the last update. Note that this is not automatically updated for direct orientation changes or for body memory moves.
+        /// Gets whether this instance is backed by allocated memory.
+        /// </summary>
+        public bool Allocated { get { return IndexToHandle.Allocated; } }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void Swap<T>(ref T a, ref T b)
+        {
+            var temp = a;
+            a = b;
+            b = temp;
+        }
+
+        /// <summary>
+        /// Swaps the memory of two bodies. Indexed by memory slot, not by handle index.
+        /// </summary>
+        /// <param name="slotA">Memory slot of the first body to swap.</param>
+        /// <param name="slotB">Memory slot of the second body to swap.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void Swap(int slotA, int slotB, ref Buffer<BodyLocation> handleToIndex)
+        {
+            handleToIndex[IndexToHandle[slotA]].Index = slotB;
+            handleToIndex[IndexToHandle[slotB]].Index = slotA;
+            Swap(ref IndexToHandle[slotA], ref IndexToHandle[slotB]);
+            Swap(ref Collidables[slotA], ref Collidables[slotB]);
+            Swap(ref Poses[slotA], ref Poses[slotB]);
+            Swap(ref Velocities[slotA], ref Velocities[slotB]);
+            Swap(ref LocalInertias[slotA], ref LocalInertias[slotB]);
+        }
+        
+        internal unsafe void InternalResize(int targetBodyCapacity, BufferPool pool)
+        {
+            Debug.Assert(targetBodyCapacity > 0, "Resize is not meant to be used as Dispose. If you want to return everything to the pool, use Dispose instead.");
+            //Note that we base the bundle capacities on post-resize capacity of the IndexToHandle array. This simplifies the conditions on allocation, but increases memory use.
+            //You may want to change this in the future if memory use is concerning.
+            targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(targetBodyCapacity);
+            Debug.Assert(Poses.Length != BufferPool<RigidPoses>.GetLowestContainingElementCount(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
+            pool.SpecializeFor<RigidPose>().Resize(ref Poses, targetBodyCapacity, Count);
+            pool.SpecializeFor<BodyVelocity>().Resize(ref Velocities, targetBodyCapacity, Count);
+            pool.SpecializeFor<BodyInertia>().Resize(ref LocalInertias, targetBodyCapacity, Count);
+            pool.SpecializeFor<int>().Resize(ref IndexToHandle, targetBodyCapacity, Count);
+            pool.SpecializeFor<Collidable>().Resize(ref Collidables, targetBodyCapacity, Count);
+            //TODO: You should probably examine whether these protective initializations are still needed.
+            //Initialize all the indices beyond the copied region to -1.
+            Unsafe.InitBlockUnaligned(((int*)IndexToHandle.Memory) + Count, 0xFF, (uint)(sizeof(int) * (IndexToHandle.Length - Count)));
+            //Collidables beyond the body count should all point to nothing, which corresponds to zero.
+            Collidables.Clear(Count, Collidables.Length - Count);
+        }
+
+        public unsafe void Clear()
+        {
+            Count = 0;
+            //TODO: Should confirm that these inits are still needed. They are for Handle->Location, but this is the opposite direction.
+            Unsafe.InitBlockUnaligned(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
+        }
+
+
+        public void Dispose(BufferPool pool)
+        {
+            pool.SpecializeFor<RigidPose>().Return(ref Poses);
+            pool.SpecializeFor<BodyVelocity>().Return(ref Velocities);
+            pool.SpecializeFor<BodyInertia>().Return(ref LocalInertias);
+            pool.SpecializeFor<int>().Return(ref IndexToHandle);
+            pool.SpecializeFor<Collidable>().Return(ref Collidables);
+        }
+    }
+
+    /// <summary>
+    /// Collection of all allocated bodies.
+    /// </summary>
+    public class Bodies
+    {
+
+        /// <summary>
+        /// Remaps a body handle to the actual array index of the body.
+        /// The backing array index may change in response to cache optimization.
+        /// </summary>
+        public Buffer<BodyLocation> HandleToIndex;
+        public IdPool<Buffer<int>> HandlePool;
+        /// <summary>
+        /// The set of existing bodies. The slot at index 0 contains all active bodies. Later slots, if allocated, contain the bodies associated with inactive islands.
+        /// Note that this buffer does not necessarily contain contiguous elements. When a set is removed, a gap remains.
+        /// </summary>
+        public Buffer<BodySet> Sets;
+        /// <summary>
+        /// Gets a reference to the active set, stored in the index 0 of the Sets buffer.
+        /// </summary>
+        /// <returns>Reference to the active body set.</returns>
+        public unsafe ref BodySet ActiveSet { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return ref Unsafe.As<byte, BodySet>(ref *Sets.Memory); } }
+
+        /// <summary>
+        /// The world transformed inertias of active bodies as of the last update. Note that this is not automatically updated for direct orientation changes or for body memory moves.
         /// It is only updated once during the frame. It should be treated as ephemeral information.
         /// </summary>
         public Buffer<BodyInertia> Inertias;
-        public IdPool<Buffer<int>> HandlePool;
         protected internal BufferPool pool;
-        public int Count;
 
-        public unsafe Bodies(BufferPool pool, int initialCapacity = 4096)
+        public unsafe Bodies(BufferPool pool, int initialCapacity, int initialSetCapacity)
         {
             this.pool = pool;
             InternalResize(Math.Max(1, initialCapacity));
 
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCapacity, out HandlePool);
+            pool.SpecializeFor<BodySet>().Take(initialSetCapacity, out var Sets);
         }
 
         unsafe void InternalResize(int targetBodyCapacity)
@@ -77,10 +172,10 @@ namespace BepuPhysics
             pool.SpecializeFor<BodyInertia>().Resize(ref LocalInertias, targetBodyCapacity, Count);
             pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, targetBodyCapacity, Count);
             pool.SpecializeFor<int>().Resize(ref IndexToHandle, targetBodyCapacity, Count);
-            pool.SpecializeFor<int>().Resize(ref HandleToIndex, targetBodyCapacity, Count);
+            pool.SpecializeFor<BodyLocation>().Resize(ref HandleToIndex, targetBodyCapacity, Count);
             pool.SpecializeFor<Collidable>().Resize(ref Collidables, targetBodyCapacity, Count);
             //Initialize all the indices beyond the copied region to -1.
-            Unsafe.InitBlockUnaligned(((int*)HandleToIndex.Memory) + Count, 0xFF, (uint)(sizeof(int) * (HandleToIndex.Length - Count)));
+            Unsafe.InitBlockUnaligned(((int*)HandleToIndex.Memory) + Count, 0xFF, (uint)(sizeof(BodyLocation) * (HandleToIndex.Length - Count)));
             Unsafe.InitBlockUnaligned(((int*)IndexToHandle.Memory) + Count, 0xFF, (uint)(sizeof(int) * (IndexToHandle.Length - Count)));
             //Collidables beyond the body count should all point to nothing, which corresponds to zero.
             Collidables.Clear(Count, Collidables.Length - Count);
@@ -101,7 +196,7 @@ namespace BepuPhysics
             Debug.Assert(Math.Abs(bodyDescription.Pose.Orientation.Length() - 1) < 1e-6f, "Orientation should be initialized to a unit length quaternion.");
             var handle = HandlePool.Take();
             var index = Count++;
-            HandleToIndex[handle] = index;
+            HandleToIndex[handle] = new BodyLocation { Island = -1, Index = index };
             IndexToHandle[index] = handle;
             ref var collidable = ref Collidables[index];
             collidable.Shape = bodyDescription.Collidable.Shape;
@@ -143,7 +238,8 @@ namespace BepuPhysics
                 Collidables[bodyIndex] = Collidables[movedBodyOriginalIndex];
                 //Point the body handles at the new location.
                 var lastHandle = IndexToHandle[movedBodyOriginalIndex];
-                HandleToIndex[lastHandle] = bodyIndex;
+                Debug.Assert(HandleToIndex[lastHandle].Island == -1 && HandleToIndex[lastHandle].Index == movedBodyOriginalIndex);
+                HandleToIndex[lastHandle].Index = bodyIndex;
                 IndexToHandle[bodyIndex] = lastHandle;
 
             }
@@ -156,7 +252,7 @@ namespace BepuPhysics
             //The indices should also be set to all -1's beyond the body count.
             IndexToHandle[Count] = -1;
             HandlePool.Return(handle, pool.SpecializeFor<int>());
-            HandleToIndex[handle] = -1;
+            HandleToIndex[handle].Index = -1;
             return bodyMoved;
         }
 
@@ -164,7 +260,22 @@ namespace BepuPhysics
         internal void ValidateHandle(int handle)
         {
             Debug.Assert(handle >= 0, "Handles must be nonnegative.");
-            Debug.Assert(handle >= HandleToIndex.Length || HandleToIndex[handle] < 0 || IndexToHandle[HandleToIndex[handle]] == handle,
+            Debug.Assert(handle <= HandlePool.HighestPossiblyClaimedId && HandlePool.HighestPossiblyClaimedId < HandleToIndex.Length,
+                "Existing handles must fit within the body handle->index mapping.");
+            ref var location = ref HandleToIndex[handle];
+            Debug.Assert(location.Island >= -1, "Island indices must be -1 or higher.");
+            if (location.Island == -1)
+            {
+                //This is an active body.
+                Debug.Assert(IndexToHandle[location.Index] == handle, "The index->handle and handle->index mappings must agree.");
+            }
+            else
+            {
+                //This is an inactive body.
+                Debug.Assert(location.Island >= 0 && location.Island < Deactivator.Islands.Length && Deactivator.Islands[location.Island].Allocated, "Island index must be valid.");
+                Deactivator.Islands[location.Island]
+            }
+            Debug.Assert(handle >= HandleToIndex.Length || HandleToIndex[handle].Index < 0 || HandleToIndex[handle].Island >= 0 || IndexToHandle[HandleToIndex[handle].Index] == handle,
                 "If a handle exists, both directions should match.");
         }
         [Conditional("DEBUG")]
@@ -216,36 +327,11 @@ namespace BepuPhysics
             collidable.Shape = description.Collidable.Shape;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Swap<T>(ref T a, ref T b)
-        {
-            var temp = a;
-            a = b;
-            b = temp;
-        }
-
-        /// <summary>
-        /// Swaps the memory of two bodies. Indexed by memory slot, not by handle index.
-        /// </summary>
-        /// <param name="slotA">Memory slot of the first body to swap.</param>
-        /// <param name="slotB">Memory slot of the second body to swap.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Swap(int slotA, int slotB)
-        {
-            HandleToIndex[IndexToHandle[slotA]] = slotB;
-            HandleToIndex[IndexToHandle[slotB]] = slotA;
-            Swap(ref IndexToHandle[slotA], ref IndexToHandle[slotB]);
-            Swap(ref Collidables[slotA], ref Collidables[slotB]);
-            Swap(ref Poses[slotA], ref Poses[slotB]);
-            Swap(ref Velocities[slotA], ref Velocities[slotB]);
-            Swap(ref LocalInertias[slotA], ref LocalInertias[slotB]);
-        }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void GatherInertiaForBody(ref float targetInertiaBase, int targetLaneIndex, int index)
+        private void GatherInertiaForBody(ref BodyInertia source, ref float targetInertiaBase, int targetLaneIndex)
         {
-            ref var source = ref Inertias[index];
             ref var targetSlot = ref Unsafe.Add(ref targetInertiaBase, targetLaneIndex);
             targetSlot = source.InverseInertiaTensor.M11;
             Unsafe.Add(ref targetSlot, Vector<float>.Count) = source.InverseInertiaTensor.M21;
@@ -257,9 +343,8 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void GatherPoseForBody(ref float targetPositionBase, ref float targetOrientationBase, int targetLaneIndex, int index)
+        private void GatherPoseForBody(ref RigidPose source, ref float targetPositionBase, ref float targetOrientationBase, int targetLaneIndex)
         {
-            ref var source = ref Poses[index];
             ref var targetPositionSlot = ref Unsafe.Add(ref targetPositionBase, targetLaneIndex);
             ref var targetOrientationSlot = ref Unsafe.Add(ref targetOrientationBase, targetLaneIndex);
             targetPositionSlot = source.Position.X;
@@ -272,9 +357,8 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void GatherVelocityForBody(ref float targetLinearVelocityBase, ref float targetAngularVelocityBase, int targetLaneIndex, int index)
+        private void GatherVelocityForBody(ref BodyVelocity source, ref float targetLinearVelocityBase, ref float targetAngularVelocityBase, int targetLaneIndex)
         {
-            ref var source = ref Velocities[index];
             ref var targetLinearSlot = ref Unsafe.Add(ref targetLinearVelocityBase, targetLaneIndex);
             ref var targetAngularSlot = ref Unsafe.Add(ref targetAngularVelocityBase, targetLaneIndex);
             targetLinearSlot = source.Linear.X;
@@ -322,14 +406,15 @@ namespace BepuPhysics
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
 
+            ref var poses = ref ActiveSet.Poses;
             for (int i = 0; i < count; ++i)
             {
                 ref var indexA = ref Unsafe.Add(ref baseIndexA, i);
-                GatherInertiaForBody(ref targetInertiaBaseA, i, indexA);
-                GatherPoseForBody(ref targetPositionBaseA, ref targetOrientationBaseA, i, indexA);
+                GatherInertiaForBody(ref Inertias[indexA], ref targetInertiaBaseA, i);
+                GatherPoseForBody(ref poses[indexA], ref targetPositionBaseA, ref targetOrientationBaseA, i);
                 var indexB = Unsafe.Add(ref indexA, Vector<float>.Count);
-                GatherInertiaForBody(ref targetInertiaBaseB, i, indexB);
-                GatherPoseForBody(ref targetPositionBaseB, ref targetOrientationBaseB, i, indexB);
+                GatherInertiaForBody(ref Inertias[indexB], ref targetInertiaBaseB, i);
+                GatherPoseForBody(ref poses[indexB], ref targetPositionBaseB, ref targetOrientationBaseB, i);
             }
             Vector3Wide.Subtract(ref positionB, ref positionA, out localPositionB);
         }
@@ -348,9 +433,9 @@ namespace BepuPhysics
             for (int i = 0; i < count; ++i)
             {
                 ref var indexA = ref Unsafe.Add(ref baseIndexA, i);
-                GatherInertiaForBody(ref targetInertiaBaseA, i, indexA);
+                GatherInertiaForBody(ref Inertias[indexA], ref targetInertiaBaseA, i);
                 var indexB = Unsafe.Add(ref indexA, Vector<float>.Count);
-                GatherInertiaForBody(ref targetInertiaBaseB, i, indexB);
+                GatherInertiaForBody(ref Inertias[indexB], ref targetInertiaBaseB, i);
             }
         }
 
@@ -365,7 +450,7 @@ namespace BepuPhysics
 
             for (int i = 0; i < count; ++i)
             {
-                GatherInertiaForBody(ref targetInertiaBaseA, i, Unsafe.Add(ref baseIndexA, i));
+                GatherInertiaForBody(ref Inertias[Unsafe.Add(ref baseIndexA, i)], ref targetInertiaBaseA, i);
             }
         }
 
@@ -380,12 +465,13 @@ namespace BepuPhysics
             ref var targetAngularBase = ref Unsafe.As<Vector<float>, float>(ref velocities.AngularVelocity.X);
             ref var targetShapeBase = ref Unsafe.As<Vector<int>, int>(ref shapeIndices);
             ref var targetExpansionBase = ref Unsafe.As<Vector<float>, float>(ref maximumExpansion);
+            ref var activeSet = ref ActiveSet;
             for (int i = 0; i < count; ++i)
             {
                 var index = Unsafe.Add(ref start, i);
-                GatherPoseForBody(ref targetPositionBase, ref targetOrientationBase, i, index);
-                GatherVelocityForBody(ref targetLinearBase, ref targetAngularBase, i, index);
-                ref var collidable = ref Collidables[index];
+                GatherPoseForBody(ref activeSet.Poses[index], ref targetPositionBase, ref targetOrientationBase, i);
+                GatherVelocityForBody(ref activeSet.Velocities[index], ref targetLinearBase, ref targetAngularBase, i);
+                ref var collidable = ref activeSet.Collidables[index];
                 Unsafe.Add(ref targetShapeBase, i) = collidable.Shape.Index;
                 //Not entirely pleased with the fact that this pulls in some logic from bounds calculation.
                 Unsafe.Add(ref targetExpansionBase, i) = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : collidable.SpeculativeMargin;
@@ -394,42 +480,74 @@ namespace BepuPhysics
 
 
         /// <summary>
-        /// Clears all bodies from the set without returning any memory to the pool.
+        /// Clears all bodies from all sets without releasing any memory that wouldn't be released by a sequence of regular removals.
         /// </summary>
         public unsafe void Clear()
         {
-            Count = 0;
-            //Empty out all the index-handle mappings.
-            Unsafe.InitBlockUnaligned(HandleToIndex.Memory, 0xFF, (uint)(sizeof(int) * HandleToIndex.Length));
-            Unsafe.InitBlockUnaligned(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
+            ActiveSet.Clear();
+            //While the top level pool represents active bodies and will persist (as it would after a series of removals),
+            //subsequent sets represent inactive bodies. When they are not present, the backing memory is released.
+            for (int i = 1; i < Sets.Length; ++i)
+            {
+                ref var set = ref Sets[i];
+                if (set.Allocated)
+                    set.Dispose(pool);
+            }
+            Unsafe.InitBlockUnaligned(HandleToIndex.Memory, 0xFF, (uint)(sizeof(BodyLocation) * HandleToIndex.Length));
             HandlePool.Clear();
         }
 
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe void ResizeHandles(int newCapacity)
+        {
+            newCapacity = BufferPool<BodyLocation>.GetLowestContainingElementCount(newCapacity);
+            if (newCapacity != HandleToIndex.Length)
+            {
+                var highestPotentialHandle = HandlePool.HighestPossiblyClaimedId + 1;
+                pool.SpecializeFor<BodyLocation>().Resize(ref HandleToIndex, newCapacity, highestPotentialHandle);
+                if (HandleToIndex.Length > highestPotentialHandle)
+                {
+                    Unsafe.InitBlockUnaligned(
+                      ((BodyLocation*)HandleToIndex.Memory) + highestPotentialHandle, 0xFF,
+                      (uint)(sizeof(BodyLocation) * (HandleToIndex.Length - highestPotentialHandle)));
+                }
+            }
+        }
         /// <summary>
         /// Resizes the allocated spans for active body data. Note that this is conservative; it will never orphan existing objects.
         /// </summary>
         /// <param name="capacity">Target body data capacity.</param>
         public void Resize(int capacity)
         {
-            var targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, Count));
-            if (HandleToIndex.Length != targetBodyCapacity)
+            var targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, ActiveSet.Count));
+            if (ActiveSet.IndexToHandle.Length != targetBodyCapacity)
             {
-                InternalResize(targetBodyCapacity);
+                ActiveSet.InternalResize(targetBodyCapacity, pool);
+            }
+            var targetHandleCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, HandlePool.HighestPossiblyClaimedId + 1));
+            if (HandleToIndex.Length != targetHandleCapacity)
+            {
+                ResizeHandles(targetHandleCapacity);
             }
         }
 
         /// <summary>
-        /// Increases the size of buffers if needed to hold the target capacity.
+        /// Increases the size of active body buffers if needed to hold the target capacity.
         /// </summary>
         /// <param name="capacity">Target data capacity.</param>
         public void EnsureCapacity(int capacity)
         {
+            if (ActiveSet.IndexToHandle.Length < capacity)
+            {
+                ActiveSet.InternalResize(capacity, pool);
+            }
             if (HandleToIndex.Length < capacity)
             {
-                InternalResize(capacity);
+                ResizeHandles(capacity);
             }
         }
+
 
         /// <summary>
         /// Returns all body resources to the pool used to create them.
@@ -437,13 +555,17 @@ namespace BepuPhysics
         /// <remarks>The object can be reused if it is reinitialized by using EnsureCapacity or Resize.</remarks>
         public void Dispose()
         {
-            pool.SpecializeFor<RigidPose>().Return(ref Poses);
-            pool.SpecializeFor<BodyVelocity>().Return(ref Velocities);
-            pool.SpecializeFor<BodyInertia>().Return(ref LocalInertias);
+            for (int i = 0; i < Sets.Length; ++i)
+            {
+                ref var set = ref Sets[i];
+                if (set.Allocated)
+                {
+                    set.Dispose(pool);
+                }
+            }
+            pool.SpecializeFor<BodySet>().Return(ref Sets);
             pool.SpecializeFor<BodyInertia>().Return(ref Inertias);
-            pool.SpecializeFor<int>().Return(ref HandleToIndex);
-            pool.SpecializeFor<int>().Return(ref IndexToHandle);
-            pool.SpecializeFor<Collidable>().Return(ref Collidables);
+            pool.SpecializeFor<BodyLocation>().Return(ref HandleToIndex);
             HandlePool.Dispose(pool.SpecializeFor<int>());
         }
 

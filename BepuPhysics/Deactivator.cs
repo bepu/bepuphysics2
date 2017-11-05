@@ -43,8 +43,8 @@ namespace BepuPhysics
         {
             //TODO: This heuristic is really poor and must be improved. Most likely, we'll end up with something in the pose integrator (or its descendants) which checks the velocity state
             //over the course of multiple frames. Decent heuristics include nonincreasing energy over some number of frames, combined with a likely per-body deactivation threshold.
-            //(We already have some degree of per-body deactivation state- things like 'isalwaysactive'- so we might as well generalize that to custom thresholds.
-            //IsAlwaysActive is simply a special case of DeactivationVelocityThreshold < 0 or something along those lines.)
+            //May want to just use sub-threshold for a framecount- simpler to track, and more aggressive.
+            //(Note that things like 'isalwaysactive' can be expressed as a speical case of more general tuning, like a DeactivationVelocityThreshold < 0.)
             ref var bodyVelocity = ref bodies.Velocities[bodyIndex];
             return bodyVelocity.Linear.LengthSquared() + bodyVelocity.Angular.LengthSquared() < 0.1f;
         }
