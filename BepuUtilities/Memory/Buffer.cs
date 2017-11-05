@@ -91,7 +91,7 @@ namespace BepuUtilities.Memory
         public void Clear(int start, int count)
         {
             ValidateRegion(start, count);
-            Unsafe.InitBlock(Memory + Unsafe.SizeOf<T>() * start, 0, (uint)(count * Unsafe.SizeOf<T>()));
+            Unsafe.InitBlockUnaligned(Memory + Unsafe.SizeOf<T>() * start, 0, (uint)(count * Unsafe.SizeOf<T>()));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

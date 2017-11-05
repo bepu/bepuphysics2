@@ -19,14 +19,14 @@ namespace DemoRenderer.Constraints
     abstract class TypeLineExtractor
     {
         public abstract int LinesPerConstraint { get; }
-        public abstract void ExtractLines(Bodies bodies, ref TypeBatchData typeBatch, int constraintStart, int constraintCount, ref QuickList<LineInstance, Array<LineInstance>> lines);
+        public abstract void ExtractLines(Bodies bodies, ref TypeBatch typeBatch, int constraintStart, int constraintCount, ref QuickList<LineInstance, Array<LineInstance>> lines);
     }
 
     class TypeLineExtractor<T, TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses> : TypeLineExtractor
         where T : struct, IConstraintLineExtractor<TBodyReferences, TPrestep>
     {
         public override int LinesPerConstraint => default(T).LinesPerConstraint;
-        public override void ExtractLines(Bodies bodies, ref TypeBatchData typeBatch, int constraintStart, int constraintCount,
+        public override void ExtractLines(Bodies bodies, ref TypeBatch typeBatch, int constraintStart, int constraintCount,
             ref QuickList<LineInstance, Array<LineInstance>> lines)
         {
             ref var prestepStart = ref Buffer<TPrestep>.Get(ref typeBatch.PrestepData, 0);

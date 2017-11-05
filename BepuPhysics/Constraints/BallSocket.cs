@@ -25,7 +25,7 @@ namespace BepuPhysics.Constraints
 
         public Type BatchType => typeof(BallSocketTypeBatch);
 
-        public void ApplyDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex)
+        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var lane = ref GatherScatter.Get(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex).LocalOffsetA.X, innerIndex);
@@ -39,7 +39,7 @@ namespace BepuPhysics.Constraints
             Unsafe.Add(ref lane, 7 * Vector<float>.Count) = SpringSettings.DampingRatio;
         }
 
-        public void BuildDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex, out BallSocket description)
+        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out BallSocket description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var lane = ref GatherScatter.Get(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex).LocalOffsetA.X, innerIndex);

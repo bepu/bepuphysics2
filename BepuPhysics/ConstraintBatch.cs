@@ -38,13 +38,13 @@ namespace BepuPhysics
         //2) Storing the referenced handles separately in the solver doesn't really change anything. We just have to pass them as parameters here and there; no significant complication.
 
         public Buffer<int> TypeIndexToTypeBatchIndex;
-        public QuickList<TypeBatchData, Buffer<TypeBatchData>> TypeBatches;
+        public QuickList<TypeBatch, Buffer<TypeBatch>> TypeBatches;
 
         public ConstraintBatch(BufferPool pool, int initialTypeCountEstimate = 32)
             : this()
         {
             ResizeTypeMap(pool, initialTypeCountEstimate);
-            QuickList<TypeBatchData, Buffer<TypeBatchData>>.Create(pool.SpecializeFor<TypeBatchData>(), initialTypeCountEstimate, out TypeBatches);
+            QuickList<TypeBatch, Buffer<TypeBatch>>.Create(pool.SpecializeFor<TypeBatch>(), initialTypeCountEstimate, out TypeBatches);
         }
 
         void ResizeTypeMap(BufferPool pool, int newSize)
@@ -83,17 +83,17 @@ namespace BepuPhysics
         /// <param name="typeId">Id of the TypeBatch's type to retrieve.</param>
         /// <returns>TypeBatch instance associated with the given type.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TypeBatchData GetTypeBatch(int typeId)
+        public ref TypeBatch GetTypeBatch(int typeId)
         {
             ValidateTypeBatchMappings();
             var typeBatchIndex = TypeIndexToTypeBatchIndex[typeId];
             return ref TypeBatches[typeBatchIndex];
         }
 
-        ref TypeBatchData CreateNewTypeBatch(int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool)
+        ref TypeBatch CreateNewTypeBatch(int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool)
         {
             var newIndex = TypeBatches.Count;
-            TypeBatches.EnsureCapacity(TypeBatches.Count + 1, pool.SpecializeFor<TypeBatchData>());
+            TypeBatches.EnsureCapacity(TypeBatches.Count + 1, pool.SpecializeFor<TypeBatch>());
             TypeIndexToTypeBatchIndex[typeId] = newIndex;
             ref var typeBatch = ref TypeBatches.AllocateUnsafely();
             typeProcessor.Initialize(ref typeBatch, initialCapacity, pool);
@@ -101,7 +101,7 @@ namespace BepuPhysics
         }
 
 
-        internal ref TypeBatchData GetOrCreateTypeBatch(int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool)
+        internal ref TypeBatch GetOrCreateTypeBatch(int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool)
         {
             if (typeId >= TypeIndexToTypeBatchIndex.Length)
             {
@@ -123,7 +123,7 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe void Allocate(int handle, ref int constraintBodyHandles, int bodyCount, ref BatchReferencedHandles existingHandles, Bodies bodies,
+        public unsafe void Allocate(int handle, ref int constraintBodyHandles, int bodyCount, ref HandleSet existingHandles, Bodies bodies,
             int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool, out ConstraintReference reference)
         {
             //Add all the constraint's body handles to the batch we found (or created) to block future references to the same bodies.
@@ -155,7 +155,7 @@ namespace BepuPhysics
             public void* Handles;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public BodyHandleRemover(Bodies bodies, ref BatchReferencedHandles handles)
+            public BodyHandleRemover(Bodies bodies, ref HandleSet handles)
             {
                 Bodies = bodies;
                 Handles = Unsafe.AsPointer(ref handles);
@@ -164,13 +164,13 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void LoopBody(int bodyIndex)
             {
-                Unsafe.AsRef<BatchReferencedHandles>(Handles).Remove(Bodies.IndexToHandle[bodyIndex]);
+                Unsafe.AsRef<HandleSet>(Handles).Remove(Bodies.IndexToHandle[bodyIndex]);
             }
         }
 
         //Note that we have split the constraint batch removal for the sake of reuse by the multithreaded constraint remover.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void RemoveTypeBatchIfEmpty(ref TypeBatchData typeBatch, int typeBatchIndexToRemove, BufferPool pool)
+        public void RemoveTypeBatchIfEmpty(ref TypeBatch typeBatch, int typeBatchIndexToRemove, BufferPool pool)
         {
             if (typeBatch.ConstraintCount == 0)
             {
@@ -187,7 +187,7 @@ namespace BepuPhysics
             ValidateTypeBatchMappings();
         }
 
-        public unsafe void RemoveWithHandles(int constraintTypeId, int indexInTypeBatch, ref BatchReferencedHandles handles, Solver solver)
+        public unsafe void RemoveWithHandles(int constraintTypeId, int indexInTypeBatch, ref HandleSet handles, Solver solver)
         {
             Debug.Assert(TypeIndexToTypeBatchIndex[constraintTypeId] >= 0, "Type index must actually exist within this batch.");
 
@@ -208,7 +208,7 @@ namespace BepuPhysics
             Remove(ref TypeBatches[typeBatchIndex], typeBatchIndex, indexInTypeBatch, solver.TypeProcessors[constraintTypeId], ref solver.HandleToConstraint, solver.bufferPool);
         }
 
-        unsafe void Remove(ref TypeBatchData typeBatch, int typeBatchIndex, int indexInTypeBatch, TypeProcessor typeProcessor, ref Buffer<ConstraintLocation> handleToConstraint, BufferPool pool)
+        unsafe void Remove(ref TypeBatch typeBatch, int typeBatchIndex, int indexInTypeBatch, TypeProcessor typeProcessor, ref Buffer<ConstraintLocation> handleToConstraint, BufferPool pool)
         {
             typeProcessor.Remove(ref typeBatch, indexInTypeBatch, ref handleToConstraint);
             RemoveTypeBatchIfEmpty(ref typeBatch, typeBatchIndex, pool);
@@ -229,7 +229,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int GetTargetCapacity(ref TypeBatchData typeBatch, Solver solver)
+        static int GetTargetCapacity(ref TypeBatch typeBatch, Solver solver)
         {
             return Math.Max(typeBatch.ConstraintCount, solver.GetMinimumCapacityForType(typeBatch.TypeId));
         }
@@ -273,8 +273,8 @@ namespace BepuPhysics
             TypeBatches.Clear();
             pool.SpecializeFor<int>().Return(ref TypeIndexToTypeBatchIndex);
             TypeIndexToTypeBatchIndex = new Buffer<int>();
-            TypeBatches.Dispose(pool.SpecializeFor<TypeBatchData>());
-            TypeBatches = new QuickList<TypeBatchData, Buffer<TypeBatchData>>();
+            TypeBatches.Dispose(pool.SpecializeFor<TypeBatch>());
+            TypeBatches = new QuickList<TypeBatch, Buffer<TypeBatch>>();
         }
     }
 }

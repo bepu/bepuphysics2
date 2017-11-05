@@ -12,18 +12,18 @@ namespace BepuPhysics
         //TODO: Once blittable exists, we can give this a proper type. Blocked by generics interference in TypeBatch.
         //May want to just treat this as opaque.
         internal void* typeBatchPointer;
-        public ref TypeBatchData TypeBatch
+        public ref TypeBatch TypeBatch
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return ref Unsafe.AsRef<TypeBatchData>(typeBatchPointer);
+                return ref Unsafe.AsRef<TypeBatch>(typeBatchPointer);
             }
         }
         public readonly int IndexInTypeBatch;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ConstraintReference(ref TypeBatchData typeBatch, int indexInTypeBatch)
+        public ConstraintReference(ref TypeBatch typeBatch, int indexInTypeBatch)
         {
             typeBatchPointer = Unsafe.AsPointer(ref typeBatch);
             IndexInTypeBatch = indexInTypeBatch;
@@ -46,7 +46,7 @@ namespace BepuPhysics
     {
 
         public QuickList<ConstraintBatch, Buffer<ConstraintBatch>> Batches;
-        internal QuickList<BatchReferencedHandles, Buffer<BatchReferencedHandles>> batchReferencedHandles;
+        internal QuickList<HandleSet, Buffer<HandleSet>> batchReferencedHandles;
 
         public TypeProcessor[] TypeProcessors;
 
@@ -186,7 +186,7 @@ namespace BepuPhysics
             //We also don't bother pooling this stuff, and we don't have an API for preallocating it- because we're talking about a very, very small amount of data.
             //It's not worth the introduced API complexity.
             QuickList<ConstraintBatch, Buffer<ConstraintBatch>>.Create(bufferPool.SpecializeFor<ConstraintBatch>(), BatchCountEstimate, out Batches);
-            QuickList<BatchReferencedHandles, Buffer<BatchReferencedHandles>>.Create(bufferPool.SpecializeFor<BatchReferencedHandles>(), BatchCountEstimate, out batchReferencedHandles);
+            QuickList<HandleSet, Buffer<HandleSet>>.Create(bufferPool.SpecializeFor<HandleSet>(), BatchCountEstimate, out batchReferencedHandles);
             bufferPool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
             workDelegate = Work;
         }
@@ -322,9 +322,9 @@ namespace BepuPhysics
                 if (Batches.Count == Batches.Span.Length)
                     Batches.Resize(Batches.Count + 1, bufferPool.SpecializeFor<ConstraintBatch>());
                 if (Batches.Count == batchReferencedHandles.Span.Length)
-                    batchReferencedHandles.Resize(Batches.Count + 1, bufferPool.SpecializeFor<BatchReferencedHandles>());
+                    batchReferencedHandles.Resize(Batches.Count + 1, bufferPool.SpecializeFor<HandleSet>());
                 Batches.AllocateUnsafely() = new ConstraintBatch(bufferPool, TypeProcessors.Length);
-                batchReferencedHandles.AllocateUnsafely() = new BatchReferencedHandles(bufferPool, bodies.Count);
+                batchReferencedHandles.AllocateUnsafely() = new HandleSet(bufferPool, bodies.Count);
                 //Note that if there is no constraint batch for the given index, there is no way for the constraint add to be blocked. It's guaranteed success.
             }
             else
@@ -680,8 +680,8 @@ namespace BepuPhysics
             }
             Batches.Dispose(bufferPool.SpecializeFor<ConstraintBatch>());
             Batches = new QuickList<ConstraintBatch, Buffer<ConstraintBatch>>();
-            batchReferencedHandles.Dispose(bufferPool.SpecializeFor<BatchReferencedHandles>());
-            batchReferencedHandles = new QuickList<BatchReferencedHandles, Buffer<BatchReferencedHandles>>();
+            batchReferencedHandles.Dispose(bufferPool.SpecializeFor<HandleSet>());
+            batchReferencedHandles = new QuickList<HandleSet, Buffer<HandleSet>>();
             bufferPool.SpecializeFor<ConstraintLocation>().Return(ref HandleToConstraint);
             HandleToConstraint = new Buffer<ConstraintLocation>();
             HandlePool.Dispose(bufferPool.SpecializeFor<int>());

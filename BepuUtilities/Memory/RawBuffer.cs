@@ -95,7 +95,7 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear(int start, int count)
         {
-            Unsafe.InitBlock(Memory + start, 0, (uint)count);
+            Unsafe.InitBlockUnaligned(Memory + start, 0, (uint)count);
         }
 
         //TODO: Some copies could be helpful, but let's wait until we actually need them.

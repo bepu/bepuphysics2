@@ -40,9 +40,9 @@ namespace BepuPhysics.Constraints
         : TypeProcessor<TwoBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
         where TConstraintFunctions : struct, IConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
-        public sealed override int BodiesPerConstraint => 2;
+        protected sealed override int InternalBodiesPerConstraint => 2;
 
-        public sealed override void EnumerateConnectedBodyIndices<TEnumerator>(ref TypeBatchData typeBatch, int indexInTypeBatch, ref TEnumerator enumerator)
+        public sealed override void EnumerateConnectedBodyIndices<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator)
         {
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var constraintBundleIndex, out var constraintInnerIndex);
 
@@ -89,7 +89,7 @@ namespace BepuPhysics.Constraints
         
 
         internal sealed override void GenerateSortKeysAndCopyReferences(
-            ref TypeBatchData typeBatch,
+            ref TypeBatch typeBatch,
             int bundleStart, int localBundleStart, int bundleCount,
             int constraintStart, int localConstraintStart, int constraintCount,
             ref int firstSortKey, ref int firstSourceIndex, ref RawBuffer bodyReferencesCache)
@@ -101,7 +101,7 @@ namespace BepuPhysics.Constraints
                 ref firstSortKey, ref firstSourceIndex, ref bodyReferencesCache);
         }
 
-        internal sealed override void VerifySortRegion(ref TypeBatchData typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices)
+        internal sealed override void VerifySortRegion(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices)
         {
             VerifySortRegion<TwoBodySortKeyGenerator>(ref typeBatch, bundleStartIndex, constraintCount, ref sortedKeys, ref sortedSourceIndices);
         }
@@ -116,7 +116,7 @@ namespace BepuPhysics.Constraints
         //and minimizes per-type duplication.
 
 
-        public unsafe override void Prestep(ref TypeBatchData typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public unsafe override void Prestep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
@@ -130,7 +130,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public unsafe override void WarmStart(ref TypeBatchData typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle)
+        public unsafe override void WarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
@@ -148,7 +148,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public unsafe override void SolveIteration(ref TypeBatchData typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle)
+        public unsafe override void SolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);

@@ -202,7 +202,7 @@ namespace BepuPhysics
                 return; //No work remains.
             var localWorkerConstraintStart = localWorkerBundleStart << BundleIndexing.VectorShift;
 
-            ref var typeBatch = ref Unsafe.AsRef<TypeBatchData>(typeBatchPointer);
+            ref var typeBatch = ref Unsafe.AsRef<TypeBatch>(typeBatchPointer);
             solver.TypeProcessors[typeBatch.TypeId].GenerateSortKeysAndCopyReferences(ref typeBatch,
                 workerBundleStart, localWorkerBundleStart, workerBundleCount,
                 workerConstraintStart, localWorkerConstraintStart, workerConstraintCount,
@@ -239,7 +239,7 @@ namespace BepuPhysics
                     return; //No work remains.
                 var localWorkerConstraintStart = localWorkerBundleStart << BundleIndexing.VectorShift;
 
-                ref var typeBatch = ref Unsafe.AsRef<TypeBatchData>(typeBatchPointer);
+                ref var typeBatch = ref Unsafe.AsRef<TypeBatch>(typeBatchPointer);
                 solver.TypeProcessors[typeBatch.TypeId].CopyToCache(ref typeBatch,
                     workerBundleStart, localWorkerBundleStart, workerBundleCount,
                     workerConstraintStart, localWorkerConstraintStart, workerConstraintCount,
@@ -263,7 +263,7 @@ namespace BepuPhysics
             if (workerConstraintCount <= 0)
                 return; //No work remains.
 
-            ref var typeBatch = ref Unsafe.AsRef<TypeBatchData>(typeBatchPointer);
+            ref var typeBatch = ref Unsafe.AsRef<TypeBatch>(typeBatchPointer);
             solver.TypeProcessors[typeBatch.TypeId].CopyToCache(ref typeBatch,
                 workerBundleStart, 0, workerBundleCount,
                 workerConstraintStart, 0, workerConstraintCount,
@@ -283,7 +283,7 @@ namespace BepuPhysics
             var localWorkerConstraintStart = localWorkerBundleStart << BundleIndexing.VectorShift;
             ref var firstSourceIndex = ref context.SortedSourceIndices[localWorkerConstraintStart];
 
-            ref var typeBatch = ref Unsafe.AsRef<TypeBatchData>(typeBatchPointer);
+            ref var typeBatch = ref Unsafe.AsRef<TypeBatch>(typeBatchPointer);
             solver.TypeProcessors[typeBatch.TypeId].Regather(ref typeBatch, workerConstraintStart, workerConstraintCount, ref firstSourceIndex,
                 ref context.IndexToHandleCache, ref context.BodyReferencesCache, ref context.PrestepDataCache, ref context.AccumulatesImpulsesCache, ref handlesToConstraints);
 
@@ -291,7 +291,7 @@ namespace BepuPhysics
 
 
 
-        unsafe void SortByBodyLocation(ref TypeBatchData typeBatch, int bundleStartIndex, int constraintCount, Buffer<ConstraintLocation> handlesToConstraints, int bodyCount,
+        unsafe void SortByBodyLocation(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, Buffer<ConstraintLocation> handlesToConstraints, int bodyCount,
             BufferPool rawPool, IThreadDispatcher threadDispatcher)
         {
             int bundleCount = (constraintCount >> BundleIndexing.VectorShift);

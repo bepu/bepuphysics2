@@ -204,7 +204,7 @@ namespace BepuUtilities.Collections
             unsafe
             {
                 //The bucket counts will be added to, so they need to be zeroed.
-                Unsafe.InitBlock(bucketCounts.Memory, 0, (uint)(sizeof(int) * 256 * bucketSetCount));
+                Unsafe.InitBlockUnaligned(bucketCounts.Memory, 0, (uint)(sizeof(int) * 256 * bucketSetCount));
             }
 
             switch (bucketSetCount)

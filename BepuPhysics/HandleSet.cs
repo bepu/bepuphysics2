@@ -8,14 +8,14 @@ namespace BepuPhysics
     /// <summary>
     /// Contains the set of body handles referenced by a constraint batch.
     /// </summary>
-    public struct BatchReferencedHandles
+    public struct HandleSet
     {
         /// <summary>
-        /// Since we only ever need to support add, remove and contains checks, and because body handles are guaranteed unique,
-        /// we can just use packed bitfields. Each bit represents one body handle's containment state.
+        /// Since we only ever need to support add, remove and contains checks, and because handles are guaranteed unique,
+        /// we can just use packed bitfields. Each bit represents one handle's containment state.
         /// </summary>
         /// <remarks> 
-        /// This can grow up to the number of (bodies / 8) bytes in the worst case, but that is much, much smaller than using a dictionary or set.
+        /// This can grow up to the number of (handleCount / 8) bytes in the worst case, but that is much, much smaller than using a dictionary or set.
         /// 16384 bodies would only take 2KB. Even if you have 1000 batches all at that size, it's a pretty unconcerning amount of storage.
         /// (And to be clear, 1000 batches is a crazy pathological number. Most simulations will have less than 20 batches.)
         /// </remarks>
@@ -30,9 +30,9 @@ namespace BepuPhysics
             return (count >> shift) + ((count & mask) > 0 ? 1 : 0);
         }
 
-        public BatchReferencedHandles(BufferPool pool, int initialHandleCapacity)
+        public HandleSet(BufferPool pool, int initialHandleCapacity)
         {
-            //Remember; the bundles are 64 bodies wide. A default of 128 supports up to 8192 handles without needing resizing...
+            //Remember; the bundles are 64 handles wide. A default of 128 supports up to 8192 handles without needing resizing...
             packedHandles = new Buffer<ulong>();
             InternalResize(pool, initialHandleCapacity);
         }
@@ -61,25 +61,33 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Gets whether the batch could hold the specified body handles.
+        /// Gets whether the batch could hold the specified handles.
         /// </summary>
-        /// <param name="constraintBodyHandles">List of body handles to check for in the batch.</param>
-        /// <param name="constraintBodyHandleCount">Number of bodies referenced by the constraint.</param>
-        /// <returns>True if the body handles are not already present in the batch, false otherwise.</returns>
+        /// <param name="handleList">List of handles to check for in the batch.</param>
+        /// <param name="handleCount">Number of referenced handles.</param>
+        /// <returns>True if none of the handles are present in the set, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool CanFit(ref int constraintBodyHandles, int constraintBodyHandleCount)
+        public unsafe bool CanFit(ref int handleList, int handleCount)
         {
-            for (int i = 0; i < constraintBodyHandleCount; ++i)
+            for (int i = 0; i < handleCount; ++i)
             {
-                var bodyHandle = Unsafe.Add(ref constraintBodyHandles, i);
-                if (Contains(bodyHandle))
+                var handle = Unsafe.Add(ref handleList, i);
+                if (Contains(handle))
                 {
                     return false;
                 }
             }
             return true;
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void AddUnsafely(int handle, int bundleIndex)
+        {
+            ref var bundle = ref packedHandles[bundleIndex];
+            var slot = 1ul << (handle & mask);
+            Debug.Assert((bundle & slot) == 0, "Cannot add if it's already present!");
+            //Not much point in branching to stop a single instruction that doesn't change the result.
+            bundle |= slot;
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Add(int handle, BufferPool pool)
         {
@@ -89,11 +97,13 @@ namespace BepuPhysics
                 //Note that the bundle index may be larger than two times the current capacity, since handles are not guaranteed to be appended.
                 InternalResizeForBundleCount(pool, 1 << SpanHelper.GetContainingPowerOf2(bundleIndex + 1));
             }
-            ref var bundle = ref packedHandles[bundleIndex];
-            var slot = 1ul << (handle & mask);
-            Debug.Assert((bundle & slot) == 0, "Cannot add if it's already present!");
-            //Not much point in branching to stop a single instruction that doesn't change the result.
-            bundle |= slot;
+            AddUnsafely(handle, bundleIndex);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddUnsafely(int handle)
+        {
+            AddUnsafely(handle, handle >> shift);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

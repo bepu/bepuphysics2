@@ -80,8 +80,8 @@ namespace BepuPhysics
             pool.SpecializeFor<int>().Resize(ref HandleToIndex, targetBodyCapacity, Count);
             pool.SpecializeFor<Collidable>().Resize(ref Collidables, targetBodyCapacity, Count);
             //Initialize all the indices beyond the copied region to -1.
-            Unsafe.InitBlock(((int*)HandleToIndex.Memory) + Count, 0xFF, (uint)(sizeof(int) * (HandleToIndex.Length - Count)));
-            Unsafe.InitBlock(((int*)IndexToHandle.Memory) + Count, 0xFF, (uint)(sizeof(int) * (IndexToHandle.Length - Count)));
+            Unsafe.InitBlockUnaligned(((int*)HandleToIndex.Memory) + Count, 0xFF, (uint)(sizeof(int) * (HandleToIndex.Length - Count)));
+            Unsafe.InitBlockUnaligned(((int*)IndexToHandle.Memory) + Count, 0xFF, (uint)(sizeof(int) * (IndexToHandle.Length - Count)));
             //Collidables beyond the body count should all point to nothing, which corresponds to zero.
             Collidables.Clear(Count, Collidables.Length - Count);
             //Note that we do NOT modify the idpool's internal queue size here. We lazily handle that during adds, and during explicit calls to EnsureCapacity, Compact, and Resize.
@@ -400,8 +400,8 @@ namespace BepuPhysics
         {
             Count = 0;
             //Empty out all the index-handle mappings.
-            Unsafe.InitBlock(HandleToIndex.Memory, 0xFF, (uint)(sizeof(int) * HandleToIndex.Length));
-            Unsafe.InitBlock(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
+            Unsafe.InitBlockUnaligned(HandleToIndex.Memory, 0xFF, (uint)(sizeof(int) * HandleToIndex.Length));
+            Unsafe.InitBlockUnaligned(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
             HandlePool.Clear();
         }
 

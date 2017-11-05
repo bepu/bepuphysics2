@@ -14,7 +14,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex)
+        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var lane = ref GatherScatter.Get(ref Buffer<Contact1OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex).OffsetA0.X, innerIndex);
@@ -36,7 +36,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void BuildDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex, out Contact1OneBody description)
+        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact1OneBody description)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var lane = ref GatherScatter.Get(ref Buffer<Contact1OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex).OffsetA0.X, innerIndex);

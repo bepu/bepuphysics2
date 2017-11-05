@@ -32,7 +32,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
-        public void ApplyDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex)
+        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             //We assume a contiguous block of Vector<T> types, where T is a 32 bit type. It is unlikely that future runtime changes will introduce
             //packing on the fields, since each of them are a Vector<T> in size- which will tend to be 16, 32, or in the future, 64 bytes.
@@ -84,7 +84,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void BuildDescription(ref TypeBatchData batch, int bundleIndex, int innerIndex, out Contact4 description)
+        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact4 description)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var lane = ref GatherScatter.Get(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex).OffsetA0.X, innerIndex);

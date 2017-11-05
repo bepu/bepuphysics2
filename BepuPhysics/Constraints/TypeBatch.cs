@@ -10,7 +10,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Stores the raw AOSOA formatted data associated with constraints in a type batch.
     /// </summary>
-    public struct TypeBatchData
+    public struct TypeBatch
     {
         //Note the constraint data is all stored untyped. It is up to the user to read from these pointers correctly.
         public RawBuffer BodyReferences;
