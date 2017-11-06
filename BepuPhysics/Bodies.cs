@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using BepuPhysics.Constraints;
-using BepuPhysics.Collidables;
 using BepuUtilities.Collections;
 
 namespace BepuPhysics
@@ -21,103 +20,6 @@ namespace BepuPhysics
         /// If it is nonnegative, it is an index into the inactive island 
         /// </summary>
         public int Index;
-    }
-
-    /// <summary>
-    /// Stores a group of bodies- either the set of active bodies, or the bodies involve in an inactive simulation island.
-    /// </summary>
-    public struct BodySet
-    {
-        //Note that all body information is stored in AOS format.
-        //While the pose integrator would technically benefit from (AO)SOA, it would only help in a magical infinite bandwidth scenario.
-        //In practice, the pose integrator's actual AOSOA-benefitting chunk can't even scale to 2 threads, even with only 4-wide SIMD.
-        //On top of that, the narrow phase and solver both need to access the body's information in a noncontiguous way. While the layout optimizer stages can help here to a degree,
-        //the simple fact is that the scattered loads will likely waste a lot of cache line space- the majority, even, for wider SIMD bundles.
-        //(Consider: noncontiguously sampling velocities.Linear.X on an AVX512 AOSOA layout would load a 64 byte cache line and use only 4 bytes of it!)
-
-        //Plus, no one wants to deal with AOSOA layouts when writing game logic. Realistically, body data will be the most frequently accessed property in the engine, 
-        //and not having to do a transpose to pull it into AOS is much less painful.
-
-        /// <summary>
-        /// Remaps a body index to its handle.
-        /// </summary>
-        public Buffer<int> IndexToHandle;
-        /// <summary>
-        /// The set of collidables owned by each body. Speculative margins, continuity settings, and shape indices can be changed directly.
-        /// Shape indices cannot transition between pointing at a shape and pointing at nothing or vice versa without notifying the broad phase of the collidable addition or removal.
-        /// </summary>
-        public Buffer<Collidable> Collidables;
-
-        public Buffer<RigidPose> Poses;
-        public Buffer<BodyVelocity> Velocities;
-        public Buffer<BodyInertia> LocalInertias;
-
-        public int Count;
-        /// <summary>
-        /// Gets whether this instance is backed by allocated memory.
-        /// </summary>
-        public bool Allocated { get { return IndexToHandle.Allocated; } }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Swap<T>(ref T a, ref T b)
-        {
-            var temp = a;
-            a = b;
-            b = temp;
-        }
-
-        /// <summary>
-        /// Swaps the memory of two bodies. Indexed by memory slot, not by handle index.
-        /// </summary>
-        /// <param name="slotA">Memory slot of the first body to swap.</param>
-        /// <param name="slotB">Memory slot of the second body to swap.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Swap(int slotA, int slotB, ref Buffer<BodyLocation> handleToIndex)
-        {
-            handleToIndex[IndexToHandle[slotA]].Index = slotB;
-            handleToIndex[IndexToHandle[slotB]].Index = slotA;
-            Swap(ref IndexToHandle[slotA], ref IndexToHandle[slotB]);
-            Swap(ref Collidables[slotA], ref Collidables[slotB]);
-            Swap(ref Poses[slotA], ref Poses[slotB]);
-            Swap(ref Velocities[slotA], ref Velocities[slotB]);
-            Swap(ref LocalInertias[slotA], ref LocalInertias[slotB]);
-        }
-        
-        internal unsafe void InternalResize(int targetBodyCapacity, BufferPool pool)
-        {
-            Debug.Assert(targetBodyCapacity > 0, "Resize is not meant to be used as Dispose. If you want to return everything to the pool, use Dispose instead.");
-            //Note that we base the bundle capacities on post-resize capacity of the IndexToHandle array. This simplifies the conditions on allocation, but increases memory use.
-            //You may want to change this in the future if memory use is concerning.
-            targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(targetBodyCapacity);
-            Debug.Assert(Poses.Length != BufferPool<RigidPoses>.GetLowestContainingElementCount(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
-            pool.SpecializeFor<RigidPose>().Resize(ref Poses, targetBodyCapacity, Count);
-            pool.SpecializeFor<BodyVelocity>().Resize(ref Velocities, targetBodyCapacity, Count);
-            pool.SpecializeFor<BodyInertia>().Resize(ref LocalInertias, targetBodyCapacity, Count);
-            pool.SpecializeFor<int>().Resize(ref IndexToHandle, targetBodyCapacity, Count);
-            pool.SpecializeFor<Collidable>().Resize(ref Collidables, targetBodyCapacity, Count);
-            //TODO: You should probably examine whether these protective initializations are still needed.
-            //Initialize all the indices beyond the copied region to -1.
-            Unsafe.InitBlockUnaligned(((int*)IndexToHandle.Memory) + Count, 0xFF, (uint)(sizeof(int) * (IndexToHandle.Length - Count)));
-            //Collidables beyond the body count should all point to nothing, which corresponds to zero.
-            Collidables.Clear(Count, Collidables.Length - Count);
-        }
-
-        public unsafe void Clear()
-        {
-            Count = 0;
-            //TODO: Should confirm that these inits are still needed. They are for Handle->Location, but this is the opposite direction.
-            Unsafe.InitBlockUnaligned(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
-        }
-
-
-        public void Dispose(BufferPool pool)
-        {
-            pool.SpecializeFor<RigidPose>().Return(ref Poses);
-            pool.SpecializeFor<BodyVelocity>().Return(ref Velocities);
-            pool.SpecializeFor<BodyInertia>().Return(ref LocalInertias);
-            pool.SpecializeFor<int>().Return(ref IndexToHandle);
-            pool.SpecializeFor<Collidable>().Return(ref Collidables);
-        }
     }
 
     /// <summary>
@@ -150,140 +52,70 @@ namespace BepuPhysics
         public Buffer<BodyInertia> Inertias;
         protected internal BufferPool pool;
 
-        public unsafe Bodies(BufferPool pool, int initialCapacity, int initialSetCapacity)
+        public unsafe Bodies(BufferPool pool, int initialBodyCapacity, int initialSetCapacity)
         {
             this.pool = pool;
-            InternalResize(Math.Max(1, initialCapacity));
 
-            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCapacity, out HandlePool);
+            //Note that the id pool only grows upon removal, so this is just a heuristic initialization.
+            //You could get by with something a lot less aggressive, but it does tend to avoid resizes in the case of extreme churn.
+            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialBodyCapacity, out HandlePool);
             pool.SpecializeFor<BodySet>().Take(initialSetCapacity, out var Sets);
-        }
-
-        unsafe void InternalResize(int targetBodyCapacity)
-        {
-            Debug.Assert(targetBodyCapacity > 0, "Resize is not meant to be used as Dispose. If you want to return everything to the pool, use Dispose instead.");
-            //Note that we base the bundle capacities on post-resize capacity of the HandleToIndex array. This simplifies the conditions on allocation, but increases memory use.
-            //You may want to change this in the future if memory use is concerning.
-            targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(targetBodyCapacity);
-            Debug.Assert(targetBodyCapacity >= HandlePool.HighestPossiblyClaimedId + 1, "A resize should never attempt to shrink allocations below the size necessary to hold extant handles.");
-            Debug.Assert(Poses.Length != BufferPool<RigidPoses>.GetLowestContainingElementCount(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
-            pool.SpecializeFor<RigidPose>().Resize(ref Poses, targetBodyCapacity, Count);
-            pool.SpecializeFor<BodyVelocity>().Resize(ref Velocities, targetBodyCapacity, Count);
-            pool.SpecializeFor<BodyInertia>().Resize(ref LocalInertias, targetBodyCapacity, Count);
-            pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, targetBodyCapacity, Count);
-            pool.SpecializeFor<int>().Resize(ref IndexToHandle, targetBodyCapacity, Count);
-            pool.SpecializeFor<BodyLocation>().Resize(ref HandleToIndex, targetBodyCapacity, Count);
-            pool.SpecializeFor<Collidable>().Resize(ref Collidables, targetBodyCapacity, Count);
-            //Initialize all the indices beyond the copied region to -1.
-            Unsafe.InitBlockUnaligned(((int*)HandleToIndex.Memory) + Count, 0xFF, (uint)(sizeof(BodyLocation) * (HandleToIndex.Length - Count)));
-            Unsafe.InitBlockUnaligned(((int*)IndexToHandle.Memory) + Count, 0xFF, (uint)(sizeof(int) * (IndexToHandle.Length - Count)));
-            //Collidables beyond the body count should all point to nothing, which corresponds to zero.
-            Collidables.Clear(Count, Collidables.Length - Count);
-            //Note that we do NOT modify the idpool's internal queue size here. We lazily handle that during adds, and during explicit calls to EnsureCapacity, Compact, and Resize.
-            //The idpool's internal queue will often be nowhere near as large as the actual body size except in corner cases, so in the usual case, being lazy saves a little space.
-            //If the user wants to guarantee zero resizes, EnsureCapacity provides them the option to do so.
+            ActiveSet = new BodySet(initialBodyCapacity, pool);
         }
 
         public unsafe int Add(ref BodyDescription bodyDescription)
         {
-            if (Count == HandleToIndex.Length)
+            Debug.Assert(HandleToIndex.Allocated, "The backing memory of the bodies set should be initialized before use.");
+            var handle = HandlePool.Take();
+            Debug.Assert(handle <= HandleToIndex.Length, "It should be impossible for a new handle to end up more than one slot beyond the current handle to index array. " +
+                "This would imply some form of resize or compaction bug.");
+            if (handle == HandleToIndex.Length)
             {
-                Debug.Assert(HandleToIndex.Allocated, "The backing memory of the bodies set should be initialized before use.");
                 //Out of room; need to resize.
-                var newSize = HandleToIndex.Length << 1;
-                InternalResize(newSize);
+                ResizeHandles(HandleToIndex.Length << 1);
             }
             Debug.Assert(Math.Abs(bodyDescription.Pose.Orientation.Length() - 1) < 1e-6f, "Orientation should be initialized to a unit length quaternion.");
-            var handle = HandlePool.Take();
-            var index = Count++;
-            HandleToIndex[handle] = new BodyLocation { Island = -1, Index = index };
-            IndexToHandle[index] = handle;
-            ref var collidable = ref Collidables[index];
-            collidable.Shape = bodyDescription.Collidable.Shape;
-            collidable.Continuity = bodyDescription.Collidable.Continuity;
-            collidable.SpeculativeMargin = bodyDescription.Collidable.SpeculativeMargin;
-            //Collidable's broad phase index is left unset. The simulation is responsible for attaching that data.
 
-            Poses[index] = bodyDescription.Pose;
-            Velocities[index] = bodyDescription.Velocity;
-            LocalInertias[index] = bodyDescription.LocalInertia;
-            //TODO: Should the world inertias be updated on add? That would suggest a convention of also updating world inertias on any orientation change, which might not be wise given the API.
+            var index = ActiveSet.Add(ref bodyDescription, handle);
+            HandleToIndex[handle] = new BodyLocation { SetIndex = -1, Index = index };
             return handle;
         }
 
         /// <summary>
         /// Removes a body from the set by index and returns whether a move occurred. If another body took its place, the move is output.
         /// </summary>
+        /// <param name="setIndex">Index of the set that contains the body to remove.</param>
         /// <param name="bodyIndex">Index of the body to remove.</param>
-        /// <param name="movedBodyOriginalIndex">Original index of the body that was moved into the removed body's slot. -1 if no body had to be moved.</param>
+        /// <param name="movedBodyIndex">Original index of the body that was moved into the removed body's slot. -1 if no body had to be moved.</param>
         /// <returns>True if a body was moved, false otherwise.</returns>
-        public bool RemoveAt(int bodyIndex, out int movedBodyOriginalIndex)
+        public bool RemoveAt(int setIndex, int bodyIndex, out int movedBodyIndex)
         {
-            Debug.Assert(bodyIndex >= 0 && bodyIndex < Count);
-            var handle = IndexToHandle[bodyIndex];
-            //Move the last body into the removed slot.
-            //This does introduce disorder- there may be value in a second overload that preserves order, but it would require large copies.
-            //In the event that so many adds and removals are performed at once that they destroy contiguity, it may be better to just
-            //explicitly sort after the fact rather than attempt to retain contiguity incrementally. Handle it as a batch, in other words.
-            --Count;
-            bool bodyMoved = bodyIndex < Count;
-            if (bodyMoved)
-            {
-                movedBodyOriginalIndex = Count;
-                //Copy the memory state of the last element down.
-                Poses[bodyIndex] = Poses[movedBodyOriginalIndex];
-                Velocities[bodyIndex] = Velocities[movedBodyOriginalIndex];
-                LocalInertias[bodyIndex] = LocalInertias[movedBodyOriginalIndex];
-                //Note that if you ever treat the world inertias as 'always updated', it would need to be copied here.
-                Collidables[bodyIndex] = Collidables[movedBodyOriginalIndex];
-                //Point the body handles at the new location.
-                var lastHandle = IndexToHandle[movedBodyOriginalIndex];
-                Debug.Assert(HandleToIndex[lastHandle].Island == -1 && HandleToIndex[lastHandle].Index == movedBodyOriginalIndex);
-                HandleToIndex[lastHandle].Index = bodyIndex;
-                IndexToHandle[bodyIndex] = lastHandle;
-
-            }
-            else
-            {
-                movedBodyOriginalIndex = -1;
-            }
-            //We rely on the collidable references being nonexistent beyond the body count.
-            Collidables[Count] = new Collidable();
-            //The indices should also be set to all -1's beyond the body count.
-            IndexToHandle[Count] = -1;
+            Debug.Assert(setIndex >= 0 && setIndex < Sets.Length && Sets[setIndex].Allocated, "Target removal must exist.");
+            ref var set = ref Sets[setIndex];
+            Debug.Assert(bodyIndex >= 0 && bodyIndex < set.Count);
+            var bodyMoved = set.RemoveAt(bodyIndex, out var handle, out movedBodyIndex, out var movedBodyHandle);
+            Debug.Assert(HandleToIndex[movedBodyHandle].SetIndex == -1 && HandleToIndex[movedBodyHandle].Index == movedBodyIndex);
+            HandleToIndex[movedBodyHandle].Index = bodyIndex;
             HandlePool.Return(handle, pool.SpecializeFor<int>());
-            HandleToIndex[handle].Index = -1;
+            ref var bodyLocation = ref HandleToIndex[handle];
+            bodyLocation.SetIndex = -1;
+            bodyLocation.Index = -1;
             return bodyMoved;
         }
 
         [Conditional("DEBUG")]
-        internal void ValidateHandle(int handle)
+        internal void ValidateExistingHandle(int handle)
         {
             Debug.Assert(handle >= 0, "Handles must be nonnegative.");
             Debug.Assert(handle <= HandlePool.HighestPossiblyClaimedId && HandlePool.HighestPossiblyClaimedId < HandleToIndex.Length,
                 "Existing handles must fit within the body handle->index mapping.");
             ref var location = ref HandleToIndex[handle];
-            Debug.Assert(location.Island >= -1, "Island indices must be -1 or higher.");
-            if (location.Island == -1)
-            {
-                //This is an active body.
-                Debug.Assert(IndexToHandle[location.Index] == handle, "The index->handle and handle->index mappings must agree.");
-            }
-            else
-            {
-                //This is an inactive body.
-                Debug.Assert(location.Island >= 0 && location.Island < Deactivator.Islands.Length && Deactivator.Islands[location.Island].Allocated, "Island index must be valid.");
-                Deactivator.Islands[location.Island]
-            }
-            Debug.Assert(handle >= HandleToIndex.Length || HandleToIndex[handle].Index < 0 || HandleToIndex[handle].Island >= 0 || IndexToHandle[HandleToIndex[handle].Index] == handle,
-                "If a handle exists, both directions should match.");
-        }
-        [Conditional("DEBUG")]
-        public void ValidateExistingHandle(int handle)
-        {
-            Debug.Assert(handle >= 0, "Handles must be nonnegative.");
-            Debug.Assert(handle < HandleToIndex.Length && HandleToIndex[handle] >= 0 && IndexToHandle[HandleToIndex[handle]] == handle,
-                "This body handle doesn't seem to exist, or the mappings are out of sync. If a handle exists, both directions should match.");
+            Debug.Assert(location.SetIndex >= 0 && location.SetIndex < Sets.Length);
+            ref var set = ref Sets[location.SetIndex];
+            Debug.Assert(set.Allocated);
+            Debug.Assert(set.Count <= set.IndexToHandle.Length);
+            Debug.Assert(location.Index >= 0 && location.Index < set.Count, "Body index must fall within the existing body set.");
+            Debug.Assert(set.IndexToHandle[location.Index] == handle, "Handle->index must match index->handle map.");
         }
 
         /// <summary>
