@@ -33,6 +33,5 @@
         /// New bodies will be given enough memory for this number of constraints, and any compaction will not reduce the allocations below it.
         /// </summary>
         public int ConstraintCountPerBodyEstimate;
-
     }
 }

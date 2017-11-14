@@ -59,14 +59,14 @@ namespace BepuPhysics
         protected internal BroadPhase broadPhase;
         protected internal Solver solver;
 
-        public unsafe Bodies(BufferPool pool, Statics statics, Shapes shapes, BroadPhase broadPhase, Solver solver, int initialBodyCapacity, int initialSetCapacity)
+        public unsafe Bodies(BufferPool pool, Statics statics, Shapes shapes, BroadPhase broadPhase, Solver solver, int initialBodyCapacity, int initialIslandCapacity)
         {
             this.pool = pool;
 
             //Note that the id pool only grows upon removal, so this is just a heuristic initialization.
             //You could get by with something a lot less aggressive, but it does tend to avoid resizes in the case of extreme churn.
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialBodyCapacity, out HandlePool);
-            pool.SpecializeFor<BodySet>().Take(initialSetCapacity, out var Sets);
+            pool.SpecializeFor<BodySet>().Take(initialIslandCapacity + 1, out var Sets);
             ActiveSet = new BodySet(initialBodyCapacity, pool);
             this.statics = statics;
             this.shapes = shapes;
@@ -175,7 +175,7 @@ namespace BepuPhysics
                 RemoveCollidableFromBroadPhase(ref location, ref collidable);
             }
 
-            var bodyMoved = set.RemoveAt(location.Index, out var handle, out var movedBodyIndex, out var movedBodyHandle);
+            var bodyMoved = set.RemoveAt(location.Index, pool, out var handle, out var movedBodyIndex, out var movedBodyHandle);
             //Note that constraints in inactive islands reference bodies by handle only, so we only need to notify the solver about changes to active bodies.
             if (bodyMoved && location.SetIndex == 0)
             {
@@ -260,9 +260,9 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void UpdateForShapeChange(int handle, ref BodyLocation location, ref BodySet set, TypedIndex oldShape, TypedIndex newShape)
         {
-            if(oldShape.Exists != newShape.Exists)
+            if (oldShape.Exists != newShape.Exists)
             {
-                if(newShape.Exists)
+                if (newShape.Exists)
                 {
                     //Add a collidable to the simulation for the new shape.
                     AddCollidableToBroadPhase(handle, ref set.Poses[location.Index], ref set.LocalInertias[location.Index], ref set.Collidables[location.Index]);
@@ -302,7 +302,7 @@ namespace BepuPhysics
             ref var collidable = ref set.Collidables[location.Index];
             var oldShape = collidable.Shape;
             set.ApplyDescriptionByIndex(location.Index, ref description);
-            UpdateForShapeChange(handle, ref location, ref set, oldShape, description.Collidable.Shape);           
+            UpdateForShapeChange(handle, ref location, ref set, oldShape, description.Collidable.Shape);
             UpdateKinematicState(handle, ref location, ref set);
         }
 
@@ -490,7 +490,7 @@ namespace BepuPhysics
         /// </summary>
         public unsafe void Clear()
         {
-            ActiveSet.Clear();
+            ActiveSet.Clear(pool);
             //While the top level pool represents active bodies and will persist (as it would after a series of removals),
             //subsequent sets represent inactive bodies. When they are not present, the backing memory is released.
             for (int i = 1; i < Sets.Length; ++i)

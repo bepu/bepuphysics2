@@ -15,7 +15,6 @@ namespace BepuPhysics
     /// </summary>
     public partial class Simulation : IDisposable
     {
-        public ConstraintGraph ConstraintGraph { get; private set; }
         public Bodies Bodies { get; private set; }
         public Statics Statics { get; private set; }
         public Shapes Shapes { get; private set; }
@@ -44,19 +43,19 @@ namespace BepuPhysics
         protected Simulation(BufferPool bufferPool, SimulationAllocationSizes initialAllocationSizes)
         {
             BufferPool = bufferPool;
-            Bodies = new Bodies(bufferPool, initialAllocationSizes.Bodies);
             Statics = new Statics(bufferPool, initialAllocationSizes.Statics);
             Shapes = new Shapes(bufferPool, initialAllocationSizes.ShapesPerType);
             Solver = new Solver(Bodies, BufferPool,
                 initialCapacity: initialAllocationSizes.Constraints,
                 minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
-            ConstraintGraph = new ConstraintGraph(Solver, bufferPool, initialAllocationSizes.Bodies, initialAllocationSizes.ConstraintCountPerBodyEstimate);
-
             BroadPhase = new BroadPhase(bufferPool, initialAllocationSizes.Bodies, initialAllocationSizes.Bodies + initialAllocationSizes.Statics);
+            Bodies = new Bodies(bufferPool, Statics, Shapes, BroadPhase, Solver, initialAllocationSizes.Bodies);
+
+
             PoseIntegrator = new PoseIntegrator(Bodies, Shapes, BroadPhase);
 
             SolverBatchCompressor = new BatchCompressor(Solver, Bodies);
-            BodyLayoutOptimizer = new BodyLayoutOptimizer(Bodies, BroadPhase, ConstraintGraph, Solver, bufferPool);
+            BodyLayoutOptimizer = new BodyLayoutOptimizer(Bodies, BroadPhase, Solver, bufferPool);
             ConstraintLayoutOptimizer = new ConstraintLayoutOptimizer(Bodies, Solver);
         }
 
