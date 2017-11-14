@@ -251,8 +251,8 @@ namespace BepuPhysics.CollisionDetection
             if (aMobility != CollidableMobility.Static && bMobility != CollidableMobility.Static)
             {
                 //Both references are bodies.
-                var bodyIndexA = Bodies.HandleToIndex[a.Handle];
-                var bodyIndexB = Bodies.HandleToIndex[b.Handle];
+                var bodyIndexA = Bodies.HandleToLocation[a.Handle];
+                var bodyIndexB = Bodies.HandleToLocation[b.Handle];
                 AddBatchEntries(ref overlapWorker, ref pair,
                     ref Bodies.Collidables[bodyIndexA], ref Bodies.Collidables[bodyIndexB],
                     ref Bodies.Poses[bodyIndexA], ref Bodies.Poses[bodyIndexB],
@@ -263,7 +263,7 @@ namespace BepuPhysics.CollisionDetection
                 //Since we disallow 2-static pairs and we guarantee the second slot holds the static if it exists, we know that A is a body and B is a static.
                 Debug.Assert(aMobility != CollidableMobility.Static && bMobility == CollidableMobility.Static);
                 
-                var bodyIndex = Bodies.HandleToIndex[a.Handle];
+                var bodyIndex = Bodies.HandleToLocation[a.Handle];
                 var staticIndex = Statics.HandleToIndex[b.Handle];
                 //TODO: Ideally, the compiler would see this and optimize away the relevant math in AddBatchEntries. That's a longshot, though. May want to abuse some generics to force it.
                 var zeroVelocity = default(BodyVelocity);

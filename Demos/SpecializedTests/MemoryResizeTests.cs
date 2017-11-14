@@ -102,7 +102,7 @@ namespace Demos.SpecializedTests
 
 
             simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
-            simulation.Bodies.Velocities[simulation.Bodies.HandleToIndex[bodyHandles[width]]].Linear = new Vector3(0.1f, 0, 0.1f);
+            simulation.Bodies.Velocities[simulation.Bodies.HandleToLocation[bodyHandles[width]]].Linear = new Vector3(0.1f, 0, 0.1f);
 
             const float inverseDt = 60f;
             const float dt = 1 / inverseDt;

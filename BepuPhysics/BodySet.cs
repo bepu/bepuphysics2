@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using BepuPhysics.Collidables;
+using BepuUtilities.Collections;
 
 namespace BepuPhysics
 {
@@ -24,15 +25,24 @@ namespace BepuPhysics
         /// Remaps a body index to its handle.
         /// </summary>
         public Buffer<int> IndexToHandle;
-        /// <summary>
-        /// The set of collidables owned by each body. Speculative margins, continuity settings, and shape indices can be changed directly.
-        /// Shape indices cannot transition between pointing at a shape and pointing at nothing or vice versa without notifying the broad phase of the collidable addition or removal.
-        /// </summary>
-        public Buffer<Collidable> Collidables;
 
         public Buffer<RigidPose> Poses;
         public Buffer<BodyVelocity> Velocities;
         public Buffer<BodyInertia> LocalInertias;
+
+        /// <summary>
+        /// The collidables owned by each body in the set. Speculative margins, continuity settings, and shape indices can be changed directly.
+        /// Shape indices cannot transition between pointing at a shape and pointing at nothing or vice versa without notifying the broad phase of the collidable addition or removal.
+        /// </summary>
+        public Buffer<Collidable> Collidables;
+        /// <summary>
+        /// Activity states of bodies in the set.
+        /// </summary>
+        public Buffer<BodyActivity> Activity;
+        /// <summary>
+        /// List of constraints associated with each body in the set.
+        /// </summary>
+        public Buffer<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>> Constraints;
 
         public int Count;
         /// <summary>
@@ -43,6 +53,90 @@ namespace BepuPhysics
         public BodySet(int initialCapacity, BufferPool pool) : this()
         {
             InternalResize(initialCapacity, pool);
+        }
+
+        internal int Add(ref BodyDescription bodyDescription, int handle)
+        {
+            var index = Count++;
+            IndexToHandle[index] = handle;
+            ref var collidable = ref Collidables[index];
+            collidable.Shape = bodyDescription.Collidable.Shape;
+            collidable.Continuity = bodyDescription.Collidable.Continuity;
+            collidable.SpeculativeMargin = bodyDescription.Collidable.SpeculativeMargin;
+            //Collidable's broad phase index is left unset. The simulation is responsible for attaching that data.
+
+            Poses[index] = bodyDescription.Pose;
+            Velocities[index] = bodyDescription.Velocity;
+            LocalInertias[index] = bodyDescription.LocalInertia;
+            return index;
+        }
+
+        internal bool RemoveAt(int bodyIndex, out int handle, out int movedBodyIndex, out int movedBodyHandle)
+        {
+            handle = IndexToHandle[bodyIndex];
+            //Move the last body into the removed slot.
+            //This does introduce disorder- there may be value in a second overload that preserves order, but it would require large copies.
+            //In the event that so many adds and removals are performed at once that they destroy contiguity, it may be better to just
+            //explicitly sort after the fact rather than attempt to retain contiguity incrementally. Handle it as a batch, in other words.
+            --Count;
+            bool bodyMoved = bodyIndex < Count;
+            if (bodyMoved)
+            {
+                movedBodyIndex = Count;
+                //Copy the memory state of the last element down.
+                Poses[bodyIndex] = Poses[movedBodyIndex];
+                Velocities[bodyIndex] = Velocities[movedBodyIndex];
+                LocalInertias[bodyIndex] = LocalInertias[movedBodyIndex];
+                //Note that if you ever treat the world inertias as 'always updated', it would need to be copied here.
+                Collidables[bodyIndex] = Collidables[movedBodyIndex];
+                //Point the body handles at the new location.
+                movedBodyHandle = IndexToHandle[movedBodyIndex];
+                IndexToHandle[bodyIndex] = movedBodyHandle;
+                Debug.Assert(constraintListWasEmpty, "Removing a body without first removing its constraints results in orphaned constraints that will break stuff. Don't do it!");
+
+            }
+            else
+            {
+                movedBodyIndex = -1;
+                movedBodyHandle = -1;
+            }
+            //We rely on the collidable references being nonexistent beyond the body count.
+            //TODO: is this still true? Are these inits required?
+            Collidables[Count] = new Collidable();
+            //The indices should also be set to all -1's beyond the body count.
+            IndexToHandle[Count] = -1;
+            return bodyMoved;
+        }
+
+        internal void ApplyDescriptionByIndex(int index, ref BodyDescription description)
+        {
+            BundleIndexing.GetBundleIndices(index, out var bundleIndex, out var innerIndex);
+            Poses[index] = description.Pose;
+            Velocities[index] = description.Velocity;
+            LocalInertias[index] = description.LocalInertia;
+            ref var collidable = ref Collidables[index];
+            collidable.Continuity = description.Collidable.Continuity;
+            collidable.SpeculativeMargin = description.Collidable.SpeculativeMargin;
+            //Note that we change the shape here. If the collidable transitions from shapeless->shapeful or shapeful->shapeless, the broad phase has to be notified 
+            //so that it can create/remove an entry. That's why this function isn't public.
+            collidable.Shape = description.Collidable.Shape;
+            ref var activity = ref Activity[index];
+            activity.DeactivationThreshold = description.Activity.DeactivationThreshold;
+            activity.MinimumTimestepsUnderThreshold = description.Activity.MinimumTimestepCountUnderThreshold;
+        }
+
+        public void GetDescription(int index, out BodyDescription description)
+        {
+            description.Pose = Poses[index];
+            description.Velocity = Velocities[index];
+            description.LocalInertia = LocalInertias[index];
+            ref var collidable = ref Collidables[index];
+            description.Collidable.Continuity = collidable.Continuity;
+            description.Collidable.Shape = collidable.Shape;
+            description.Collidable.SpeculativeMargin = collidable.SpeculativeMargin;
+            ref var activity = ref Activity[index];
+            description.Activity.DeactivationThreshold = activity.DeactivationThreshold;
+            description.Activity.MinimumTimestepCountUnderThreshold = activity.MinimumTimestepsUnderThreshold;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -104,58 +198,6 @@ namespace BepuPhysics
             pool.SpecializeFor<BodyInertia>().Return(ref LocalInertias);
             pool.SpecializeFor<int>().Return(ref IndexToHandle);
             pool.SpecializeFor<Collidable>().Return(ref Collidables);
-        }
-
-        internal int Add(ref BodyDescription bodyDescription, int handle)
-        {
-            var index = Count++;
-            IndexToHandle[index] = handle;
-            ref var collidable = ref Collidables[index];
-            collidable.Shape = bodyDescription.Collidable.Shape;
-            collidable.Continuity = bodyDescription.Collidable.Continuity;
-            collidable.SpeculativeMargin = bodyDescription.Collidable.SpeculativeMargin;
-            //Collidable's broad phase index is left unset. The simulation is responsible for attaching that data.
-
-            Poses[index] = bodyDescription.Pose;
-            Velocities[index] = bodyDescription.Velocity;
-            LocalInertias[index] = bodyDescription.LocalInertia;
-            return index;
-        }
-
-        internal bool RemoveAt(int bodyIndex, out int handle, out int movedBodyIndex, out int movedBodyHandle)
-        {
-            handle = IndexToHandle[bodyIndex];
-            //Move the last body into the removed slot.
-            //This does introduce disorder- there may be value in a second overload that preserves order, but it would require large copies.
-            //In the event that so many adds and removals are performed at once that they destroy contiguity, it may be better to just
-            //explicitly sort after the fact rather than attempt to retain contiguity incrementally. Handle it as a batch, in other words.
-            --Count;
-            bool bodyMoved = bodyIndex < Count;
-            if (bodyMoved)
-            {
-                movedBodyIndex = Count;
-                //Copy the memory state of the last element down.
-                Poses[bodyIndex] = Poses[movedBodyIndex];
-                Velocities[bodyIndex] = Velocities[movedBodyIndex];
-                LocalInertias[bodyIndex] = LocalInertias[movedBodyIndex];
-                //Note that if you ever treat the world inertias as 'always updated', it would need to be copied here.
-                Collidables[bodyIndex] = Collidables[movedBodyIndex];
-                //Point the body handles at the new location.
-                movedBodyHandle = IndexToHandle[movedBodyIndex];
-                IndexToHandle[bodyIndex] = movedBodyHandle;
-
-            }
-            else
-            {
-                movedBodyIndex = -1;
-                movedBodyHandle = -1;
-            }
-            //We rely on the collidable references being nonexistent beyond the body count.
-            //TODO: is this still true? Are these inits required?
-            Collidables[Count] = new Collidable();
-            //The indices should also be set to all -1's beyond the body count.
-            IndexToHandle[Count] = -1;
-            return bodyMoved;
         }
     }
 }

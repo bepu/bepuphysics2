@@ -115,7 +115,7 @@ namespace BepuPhysics
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
             Shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, ref pose, out bodyBounds.Min, out bodyBounds.Max);
         }
-        
+
         //    STATICS 
         public int Add(ref StaticDescription description)
         {
@@ -168,7 +168,7 @@ namespace BepuPhysics
                 else
                 {
                     //This is an inactive body.
-                    Bodies.Collidables[Bodies.HandleToIndex[movedLeaf.Handle]].BroadPhaseIndex = removedBroadPhaseIndex;
+                    Bodies.Collidables[Bodies.HandleToLocation[movedLeaf.Handle]].BroadPhaseIndex = removedBroadPhaseIndex;
                 }
             }
 
@@ -176,95 +176,6 @@ namespace BepuPhysics
         }
 
 
-        //     BODIES
-        void AddCollidableToBroadPhase(int bodyHandle, ref BodyDescription bodyDescription, ref Collidable collidable)
-        {
-            //This body has a collidable; stick it in the broadphase.
-            //Note that we have to calculate an initial bounding box for the broad phase to be able to insert it efficiently.
-            //(In the event of batch adds, you'll want to use batched AABB calculations or just use cached values.)
-            //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
-            UpdateBounds(ref bodyDescription.Pose, ref collidable.Shape, out var bodyBounds);
-            //Note that new body collidables are always assumed to be active.
-            collidable.BroadPhaseIndex =
-                BroadPhase.AddActive(new CollidableReference(bodyDescription.Mobility, bodyHandle), ref bodyBounds);
-
-        }
-        public int Add(ref BodyDescription description)
-        {
-            var handle = Bodies.Add(ref description);
-            var bodyIndex = Bodies.HandleToIndex[handle];
-            ConstraintGraph.AddBodyList(bodyIndex);
-            if (description.Collidable.Shape.Exists)
-            {
-                AddCollidableToBroadPhase(handle, ref description, ref Bodies.Collidables[bodyIndex]);
-            }
-            return handle;
-        }
-
-        void RemoveActiveCollidableFromBroadPhase(ref Collidable collidable)
-        {
-            var removedBroadPhaseIndex = collidable.BroadPhaseIndex;
-            if (BroadPhase.RemoveActiveAt(removedBroadPhaseIndex, out var movedLeaf))
-            {
-                //When a leaf is removed from the broad phase, another leaf will move to take its place in the leaf set.
-                //We must update the collidable->leaf index pointer to match the new position of the leaf in the broadphase.
-                //Since the removed collidable is an active body, we know that the moved leaf is also an active body.
-                Bodies.Collidables[Bodies.HandleToIndex[movedLeaf.Handle]].BroadPhaseIndex = removedBroadPhaseIndex;
-            }
-        }
-
-        public void ApplyDescription(int handle, ref BodyDescription description)
-        {
-            Bodies.ValidateExistingHandle(handle);
-            var bodyIndex = Bodies.HandleToIndex[handle];
-            ref var collidable = ref Bodies.Collidables[bodyIndex];
-            var broadPhaseUpdateRequired = collidable.Shape.Exists != description.Collidable.Shape.Exists;
-            Bodies.SetDescriptionByIndex(bodyIndex, ref description);
-            if (broadPhaseUpdateRequired)
-            {
-                //A collidable has been added or removed by this description change. Which is it?
-                if (description.Collidable.Shape.Exists)
-                {
-                    //Adding!               
-                    AddCollidableToBroadPhase(handle, ref description, ref collidable);
-                }
-                else
-                {
-                    //Removing!
-                    RemoveActiveCollidableFromBroadPhase(ref collidable);
-                }
-            }
-            else
-            {
-                //While we aren't adding or removing a collidable, we may be changing the mobility.
-                if (description.Collidable.Shape.Exists)
-                    BroadPhase.activeLeaves[collidable.BroadPhaseIndex] = new CollidableReference(description.Mobility, handle);
-            }
-        }
-
-        public void RemoveBody(int bodyHandle)
-        {
-            Bodies.ValidateExistingHandle(bodyHandle);
-
-            var bodyIndex = Bodies.HandleToIndex[bodyHandle];
-            ref var collidable = ref Bodies.Collidables[bodyIndex];
-            if (collidable.Shape.Exists)
-            {
-                //The collidable exists, so it should be removed from the broadphase.
-                RemoveActiveCollidableFromBroadPhase(ref collidable);
-            }
-            if (Bodies.RemoveAt(bodyIndex, out var movedBodyOriginalIndex))
-            {
-                //While the removed body doesn't have any constraints associated with it, the body that gets moved to fill its slot might!
-                //We're borrowing the body optimizer's logic here. You could share a bit more- the body layout optimizer has to deal with the same stuff, though it's optimized for swaps.
-                BodyLayoutOptimizer.UpdateForBodyMemoryMove(movedBodyOriginalIndex, bodyIndex, Bodies, ConstraintGraph, Solver);
-            }
-
-            var constraintListWasEmpty = ConstraintGraph.RemoveBodyList(bodyIndex, movedBodyOriginalIndex);
-            Debug.Assert(constraintListWasEmpty, "Removing a body without first removing its constraints results in orphaned constraints that will break stuff. Don't do it!");
-
-
-        }
 
         //     CONSTRAINTS
 
@@ -282,7 +193,7 @@ namespace BepuPhysics
             for (int i = 0; i < bodyCount; ++i)
             {
                 Bodies.ValidateExistingHandle(Unsafe.Add(ref bodyHandles, i));
-                ConstraintGraph.AddConstraint(Bodies.HandleToIndex[Unsafe.Add(ref bodyHandles, i)], constraintHandle, i);
+                ConstraintGraph.AddConstraint(Bodies.HandleToLocation[Unsafe.Add(ref bodyHandles, i)], constraintHandle, i);
             }
             return constraintHandle;
         }

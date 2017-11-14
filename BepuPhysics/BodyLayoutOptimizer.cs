@@ -53,9 +53,9 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void UpdateForBodyMemoryMove(int bodyIndex, int newBodyIndex, Bodies bodies, ConstraintGraph graph, Solver solver)
+        public static void UpdateForBodyMemoryMove(int originalBodyIndex, int newBodyIndex, Bodies bodies, Solver solver)
         {
-            ref var list = ref graph.GetConstraintList(bodyIndex);
+            ref var list = ref bodies.graph.GetConstraintList(originalBodyIndex);
             for (int i = 0; i < list.Count; ++i)
             {
                 ref var constraint = ref list[i];

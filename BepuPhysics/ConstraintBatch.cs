@@ -133,7 +133,7 @@ namespace BepuPhysics
             {
                 var bodyHandle = Unsafe.Add(ref constraintBodyHandles, j);
                 existingHandles.Add(bodyHandle, pool);
-                bodyIndices[j] = bodies.HandleToIndex[bodyHandle];
+                bodyIndices[j] = bodies.HandleToLocation[bodyHandle];
             }
             ref var typeBatch = ref GetOrCreateTypeBatch(typeId, typeProcessor, initialCapacity, pool);
             reference = new ConstraintReference(ref typeBatch, typeProcessor.Allocate(ref typeBatch, handle, bodyIndices, pool));

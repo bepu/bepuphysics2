@@ -133,7 +133,7 @@ namespace BepuPhysics
 
             //A little bit annoying- we duplicate a little bit of the bookkeeping associated with body removal. TODO: see if you can nicely unify this.
             var handle = Handles[bodyIndex];
-            ref var bodiesMap = ref bodies.HandleToIndex[handle];
+            ref var bodiesMap = ref bodies.HandleToLocation[handle];
             bodiesMap.Island = -1;
             bodiesMap.Index = -1;
             bodies.HandlePool.Return(handle, bodies.pool.SpecializeFor<int>());

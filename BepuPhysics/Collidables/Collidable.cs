@@ -112,7 +112,8 @@ namespace BepuPhysics.Collidables
         //(Splitting this structure would stop the narrow phase from loading the unnecessary broad phase index, but that's a pretty small benefit for redundant memory.)
 
         /// <summary>
-        /// Index of the shape used by the body.
+        /// Index of the shape used by the body. While this can be changed, any transition from shapeless->shapeful or shapeful->shapeless must be reported to the broad phase. 
+        /// If you need to perform such a transition, consider using Bodies.ChangeShape or Bodies.ApplyDescription; those functions update the relevant state.
         /// </summary>
         public TypedIndex Shape;
         /// <summary>
@@ -123,7 +124,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public float SpeculativeMargin;
         /// <summary>
-        /// Index of the collidable in the broad phase. Used to look up the target location for bounding box scatters.
+        /// Index of the collidable in the broad phase. Used to look up the target location for bounding box scatters. Under normal circumstances, this should not be set externally.
         /// </summary>
         public int BroadPhaseIndex;
 

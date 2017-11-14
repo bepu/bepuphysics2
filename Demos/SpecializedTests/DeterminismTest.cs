@@ -26,7 +26,7 @@ namespace Demos.SpecializedTests
             simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
             simulation.Deterministic = true;
 
-            ref var velocity = ref simulation.Bodies.Velocities[simulation.Bodies.HandleToIndex[bodyHandles[width]]];
+            ref var velocity = ref simulation.Bodies.Velocities[simulation.Bodies.HandleToLocation[bodyHandles[width]]];
             velocity.Linear = new Vector3(.1f, 0, 0.1f);
             velocity.Angular = new Vector3();
 
@@ -43,7 +43,7 @@ namespace Demos.SpecializedTests
             var poses = new RigidPose[simulation.Bodies.Count];
             for (int i = 0; i < simulation.Bodies.Count; ++i)
             {
-                poses[i] = simulation.Bodies.Poses[simulation.Bodies.HandleToIndex[bodyHandles[i]]];
+                poses[i] = simulation.Bodies.Poses[simulation.Bodies.HandleToLocation[bodyHandles[i]]];
             }
             simulation.Dispose();
             return poses;

@@ -268,7 +268,7 @@ namespace BepuPhysics
             Debug.Assert(batchReferencedHandles[batchIndex].CanFit(ref bodyHandles, bodyCount));
             for (int i = 0; i < bodyCount; ++i)
             {
-                ValidateBodyIndex(bodies.HandleToIndex[Unsafe.Add(ref bodyHandles, i)], 0, ref Batches[batchIndex]);
+                ValidateBodyIndex(bodies.HandleToLocation[Unsafe.Add(ref bodyHandles, i)], 0, ref Batches[batchIndex]);
             }
         }
 
@@ -506,7 +506,7 @@ namespace BepuPhysics
 
 
         /// <summary>
-        /// Changes the body reference of a constraint in response to a body memory move.
+        /// Changes the body reference of a constraint in response to an active body memory move.
         /// </summary>
         /// <param name="constraintHandle">Handle of the constraint to modify.</param> 
         /// <param name="bodyIndexInConstraint">Index of the moved body in the constraint.</param>

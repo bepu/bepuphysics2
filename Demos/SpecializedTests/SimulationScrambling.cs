@@ -289,7 +289,7 @@ namespace Demos.SpecializedTests
             Debug.Assert(constraintHandles.Length == originalConstraintCount);
 
             //We'll need a mapping from the current handles back to the identity.
-            var bodyHandlesToIdentity = new int[simulation.Bodies.HandleToIndex.Length];
+            var bodyHandlesToIdentity = new int[simulation.Bodies.HandleToLocation.Length];
             for (int i = 0; i < bodyHandlesToIdentity.Length; ++i)
                 bodyHandlesToIdentity[i] = -1;
             var constraintHandlesToIdentity = new int[simulation.Solver.HandleToConstraint.Length];

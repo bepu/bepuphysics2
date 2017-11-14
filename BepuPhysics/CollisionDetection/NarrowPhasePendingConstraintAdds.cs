@@ -137,10 +137,10 @@ namespace BepuPhysics.CollisionDetection
                     ++batchIndex;
                 }
                 simulation.Solver.ApplyDescription(ref reference, ref constraint.ConstraintDescription);
-                simulation.ConstraintGraph.AddConstraint(simulation.Bodies.HandleToIndex[handles], constraintHandle, 0);
+                simulation.ConstraintGraph.AddConstraint(simulation.Bodies.HandleToLocation[handles], constraintHandle, 0);
                 if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
                 {
-                    simulation.ConstraintGraph.AddConstraint(simulation.Bodies.HandleToIndex[Unsafe.Add(ref handles, 1)], constraintHandle, 1);
+                    simulation.ConstraintGraph.AddConstraint(simulation.Bodies.HandleToLocation[Unsafe.Add(ref handles, 1)], constraintHandle, 1);
                 }
                 pairCache.CompleteConstraintAdd(simulation.Solver, ref constraint.Impulses, constraint.ConstraintCacheIndex, constraintHandle);
             }

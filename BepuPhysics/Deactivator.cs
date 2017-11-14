@@ -58,7 +58,7 @@ namespace BepuPhysics
             ref ConstraintBodyEnumerator bodyEnumerator,
             ref BufferPool<int> intPool)
         {
-            var bodyIndex = bodies.HandleToIndex[bodyHandle];
+            var bodyIndex = bodies.HandleToLocation[bodyHandle];
             bodyEnumerator.SourceIndex = bodyIndex;
             ref var list = ref graph.GetConstraintList(bodyIndex);
             for (int i = 0; i < list.Count; ++i)
@@ -111,7 +111,7 @@ namespace BepuPhysics
 
 
 
-            var bodyIndex = bodies.HandleToIndex[startingBodyHandle];
+            var bodyIndex = bodies.HandleToLocation[startingBodyHandle];
             ref var constraintHandleList = ref graph.GetConstraintList(bodyIndex);
 
         }
