@@ -191,8 +191,9 @@ namespace BepuPhysics
             Solver.Add(ref bodyHandles, bodyCount, ref description, out int constraintHandle);
             for (int i = 0; i < bodyCount; ++i)
             {
-                Bodies.ValidateExistingHandle(Unsafe.Add(ref bodyHandles, i));
-                ConstraintGraph.AddConstraint(Bodies.HandleToLocation[Unsafe.Add(ref bodyHandles, i)], constraintHandle, i);
+                var bodyHandle = Unsafe.Add(ref bodyHandles, i);
+                Bodies.ValidateExistingHandle(bodyHandle);
+                Bodies.ActiveSet.AddConstraint(Bodies.HandleToLocation[bodyHandle].Index, constraintHandle, i, BufferPool);
             }
             return constraintHandle;
         }
@@ -217,8 +218,8 @@ namespace BepuPhysics
 
         public void RemoveConstraint(int constraintHandle)
         {
-            ConstraintGraphRemovalEnumerator enumerator;
-            enumerator.graph = ConstraintGraph;
+            ActiveConstraintReferenceRemovalEnumerator enumerator;
+            enumerator.bodies = Bodies;
             enumerator.constraintHandle = constraintHandle;
             Solver.EnumerateConnectedBodyIndices(constraintHandle, ref enumerator);
             Solver.Remove(constraintHandle);

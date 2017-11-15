@@ -26,7 +26,8 @@ namespace Demos.SpecializedTests
             simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
             simulation.Deterministic = true;
 
-            ref var velocity = ref simulation.Bodies.Velocities[simulation.Bodies.HandleToLocation[bodyHandles[width]]];
+            //All bodies are definitely active, so we can pull directly from the active set.
+            ref var velocity = ref simulation.Bodies.ActiveSet.Velocities[simulation.Bodies.HandleToLocation[bodyHandles[width]].Index];
             velocity.Linear = new Vector3(.1f, 0, 0.1f);
             velocity.Angular = new Vector3();
 
@@ -40,10 +41,11 @@ namespace Demos.SpecializedTests
                 //SimulationScrambling.AddRemoveChurn(simulation, 100, bodyHandles, constraintHandles);
             }
 
-            var poses = new RigidPose[simulation.Bodies.Count];
-            for (int i = 0; i < simulation.Bodies.Count; ++i)
+            var poses = new RigidPose[bodyHandles.Length];
+            for (int i = 0; i < poses.Length; ++i)
             {
-                poses[i] = simulation.Bodies.Poses[simulation.Bodies.HandleToLocation[bodyHandles[i]]];
+                ref var location = ref simulation.Bodies.HandleToLocation[bodyHandles[i]];
+                poses[i] = simulation.Bodies.Sets[location.SetIndex].Poses[location.Index];
             }
             simulation.Dispose();
             return poses;

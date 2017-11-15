@@ -8,6 +8,8 @@ You can keep an eye on incremental progress in the [issues](issues).
 
 Check the [roadmap](Documentation/roadmap.md) for a high level look at where things are going.
 
+Visit the [forums](https://forum.bepuentertainment.com) for discussion and questions.
+
 There exists some sparse proto-documentation:
 
 [Q&A](Documentation/QuestionsAndAnswers.md)
