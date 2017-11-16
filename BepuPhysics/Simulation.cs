@@ -218,7 +218,7 @@ namespace BepuPhysics
 
         public void RemoveConstraint(int constraintHandle)
         {
-            ActiveConstraintReferenceRemovalEnumerator enumerator;
+            ConstraintGraphRemovalEnumerator enumerator;
             enumerator.bodies = Bodies;
             enumerator.constraintHandle = constraintHandle;
             Solver.EnumerateConnectedBodyIndices(constraintHandle, ref enumerator);
@@ -308,7 +308,6 @@ namespace BepuPhysics
         /// </summary>
         public void Clear()
         {
-            ConstraintGraph.Clear(Bodies);
             Solver.Clear();
             Bodies.Clear();
             Statics.Clear();
@@ -336,9 +335,9 @@ namespace BepuPhysics
             Solver.EnsureTypeBatchCapacities();
             //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
             Bodies.EnsureCapacity(allocationTarget.Bodies);
+            Bodies.EnsureConstraintListCapacities(allocationTarget.ConstraintCountPerBodyEstimate);
             BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.EnsureCapacity(allocationTarget.Statics);
-            ConstraintGraph.EnsureCapacity(Bodies, allocationTarget.Bodies, allocationTarget.ConstraintCountPerBodyEstimate);
             Shapes.EnsureBatchCapacities(allocationTarget.ShapesPerType);
             BroadPhase.EnsureCapacity(allocationTarget.Bodies, allocationTarget.Bodies + allocationTarget.Statics);
         }
@@ -364,9 +363,9 @@ namespace BepuPhysics
             Solver.ResizeTypeBatchCapacities();
             //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
             Bodies.Resize(allocationTarget.Bodies);
+            Bodies.ResizeConstraintListCapacities(allocationTarget.ConstraintCountPerBodyEstimate);
             BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.Resize(allocationTarget.Statics);
-            ConstraintGraph.Resize(Bodies, allocationTarget.Bodies, allocationTarget.ConstraintCountPerBodyEstimate);
             Shapes.ResizeBatches(allocationTarget.ShapesPerType);
             BroadPhase.Resize(allocationTarget.Bodies, allocationTarget.Bodies + allocationTarget.Statics);
         }
@@ -383,7 +382,6 @@ namespace BepuPhysics
             Bodies.Dispose();
             Statics.Dispose();
             BodyLayoutOptimizer.Dispose(BufferPool);
-            ConstraintGraph.Dispose();
             Shapes.Dispose();
         }
     }

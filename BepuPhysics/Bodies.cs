@@ -375,6 +375,8 @@ namespace BepuPhysics
             Unsafe.Add(ref targetAngularSlot, 2 * Vector<float>.Count) = source.Angular.Z;
         }
 
+
+
         //TODO: In future versions, we will likely store the body position in different forms to allow for extremely large worlds.
         //That will be an opt-in feature. The default implementation will use the FP32 representation, but the user could choose to swap it out for a int64 based representation.
         //This affects other systems- AABB calculation, pose integration, solving, and in extreme (64 bit) cases, the broadphase.
@@ -520,6 +522,8 @@ namespace BepuPhysics
                 }
             }
         }
+        //Note that these resize and ensure capacity functions affect only the active set.
+        //Inactive islands are created with minimal allocations. Since you cannot add to or remove from inactive islands, it is pointless to try to modify their allocation sizes.
         /// <summary>
         /// Resizes the allocated spans for active body data. Note that this is conservative; it will never orphan existing objects.
         /// </summary>
@@ -539,6 +543,23 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Resizes all active body constraint lists. Inactive bodies are untouched. Resizes are guaranteed to never shrink a list below the current count.
+        /// </summary>
+        /// <param name="constraintCapacityPerBody">Target number of constraints per body to allocate space for.</param>
+        public void ResizeConstraintListCapacities(int constraintCapacityPerBody)
+        {
+            var bodyReferencePool = this.pool.SpecializeFor<BodyConstraintReference>();
+            for (int i = 0; i < ActiveSet.Count; ++i)
+            {
+                ref var list = ref ActiveSet.Constraints[i];
+                var targetCapacity = BufferPool<BodyConstraintReference>.GetLowestContainingElementCount(list.Count > constraintCapacityPerBody ? list.Count : constraintCapacityPerBody);
+
+                if (list.Span.Length != targetCapacity)
+                    list.Resize(targetCapacity, bodyReferencePool);
+            }
+        }
+
+        /// <summary>
         /// Increases the size of active body buffers if needed to hold the target capacity.
         /// </summary>
         /// <param name="capacity">Target data capacity.</param>
@@ -554,6 +575,20 @@ namespace BepuPhysics
             }
         }
 
+        /// <summary>
+        /// Increases the size of each active body's constraint list if needed to hold the target capacity.
+        /// </summary>
+        /// <param name="constraintCapacityPerBody">Minimum number of constraints per body to allocate space for.</param>
+        public void EnsureConstraintListCapacities(int constraintCapacityPerBody)
+        {
+            var bodyReferencePool = this.pool.SpecializeFor<BodyConstraintReference>();
+            for (int i = 0; i < ActiveSet.Count; ++i)
+            {
+                ref var list = ref ActiveSet.Constraints[i];
+                if (list.Span.Length < constraintCapacityPerBody)
+                    list.Resize(constraintCapacityPerBody, bodyReferencePool);
+            }
+        }
 
         /// <summary>
         /// Returns all body resources to the pool used to create them.
