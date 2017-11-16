@@ -59,7 +59,15 @@ namespace BepuPhysics
         protected internal BroadPhase broadPhase;
         protected internal Solver solver;
 
-        public unsafe Bodies(BufferPool pool, Statics statics, Shapes shapes, BroadPhase broadPhase, Solver solver, int initialBodyCapacity, int initialIslandCapacity)
+        /// <summary>
+        /// Gets or sets the minimum constraint capacity for each body. Future resizes or allocations will obey this minimum, but changing this does not immediately resize existing lists.
+        /// </summary>
+        public int MinimumConstraintCapacityPerBody { get; set; }
+
+
+
+        public unsafe Bodies(BufferPool pool, Statics statics, Shapes shapes, BroadPhase broadPhase, Solver solver,
+            int initialBodyCapacity, int initialIslandCapacity, int initialConstraintCapacityPerBody)
         {
             this.pool = pool;
 
@@ -72,6 +80,7 @@ namespace BepuPhysics
             this.shapes = shapes;
             this.broadPhase = broadPhase;
             this.solver = solver;
+            MinimumConstraintCapacityPerBody = initialConstraintCapacityPerBody;
         }
 
 
@@ -543,17 +552,16 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Resizes all active body constraint lists. Inactive bodies are untouched. Resizes are guaranteed to never shrink a list below the current count.
+        /// Resizes all active body constraint lists to meet the MinimumConstraintCapacityPerBody. Inactive bodies are untouched.
+        /// Resizes are guaranteed to never shrink a list below the current count.
         /// </summary>
-        /// <param name="constraintCapacityPerBody">Target number of constraints per body to allocate space for.</param>
-        public void ResizeConstraintListCapacities(int constraintCapacityPerBody)
+        public void ResizeConstraintListCapacities()
         {
             var bodyReferencePool = this.pool.SpecializeFor<BodyConstraintReference>();
             for (int i = 0; i < ActiveSet.Count; ++i)
             {
                 ref var list = ref ActiveSet.Constraints[i];
-                var targetCapacity = BufferPool<BodyConstraintReference>.GetLowestContainingElementCount(list.Count > constraintCapacityPerBody ? list.Count : constraintCapacityPerBody);
-
+                var targetCapacity = BufferPool<BodyConstraintReference>.GetLowestContainingElementCount(list.Count > MinimumConstraintCapacityPerBody ? list.Count : MinimumConstraintCapacityPerBody);
                 if (list.Span.Length != targetCapacity)
                     list.Resize(targetCapacity, bodyReferencePool);
             }
@@ -575,21 +583,7 @@ namespace BepuPhysics
             }
         }
 
-        /// <summary>
-        /// Increases the size of each active body's constraint list if needed to hold the target capacity.
-        /// </summary>
-        /// <param name="constraintCapacityPerBody">Minimum number of constraints per body to allocate space for.</param>
-        public void EnsureConstraintListCapacities(int constraintCapacityPerBody)
-        {
-            var bodyReferencePool = this.pool.SpecializeFor<BodyConstraintReference>();
-            for (int i = 0; i < ActiveSet.Count; ++i)
-            {
-                ref var list = ref ActiveSet.Constraints[i];
-                if (list.Span.Length < constraintCapacityPerBody)
-                    list.Resize(constraintCapacityPerBody, bodyReferencePool);
-            }
-        }
-
+       
         /// <summary>
         /// Returns all body resources to the pool used to create them.
         /// </summary>

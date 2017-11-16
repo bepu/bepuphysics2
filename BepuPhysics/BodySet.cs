@@ -6,7 +6,7 @@ using BepuUtilities.Collections;
 using System;
 
 namespace BepuPhysics
-{   
+{
     //You could bitpack these two into 4 bytes, but the value of that is pretty darn questionable.
     public struct BodyConstraintReference
     {
@@ -284,27 +284,6 @@ namespace BepuPhysics
             Count = 0;
             //TODO: Should confirm that these inits are still needed. They are for Handle->Location, but this is the opposite direction.
             Unsafe.InitBlockUnaligned(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
-        }
-
-        public void EnsureConstraintListCapacities(int minimumConstraintCapacityPerBody, BufferPool pool)
-        {
-            var constraintPool = pool.SpecializeFor<BodyConstraintReference>();
-            for (int i = 0; i < Count; ++i)
-            {
-                Constraints[i].EnsureCapacity(minimumConstraintCapacityPerBody, constraintPool);
-            }
-        }
-
-        public void ResizeConstraintListCapacities(int targetConstraintCapacityPerBody, BufferPool pool)
-        {
-            var constraintPool = pool.SpecializeFor<BodyConstraintReference>();
-            for (int i = 0; i < Count; ++i)
-            {
-                ref var list = ref Constraints[i];
-                var targetCapacityForBody = BufferPool<BodyConstraintReference>.GetLowestContainingElementCount(Math.Max(list.Count, targetConstraintCapacityPerBody));
-                if (targetCapacityForBody != list.Span.Length)
-                    list.Resize(targetCapacityForBody, constraintPool);
-            }
         }
 
         /// <summary>
