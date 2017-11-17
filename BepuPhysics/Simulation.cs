@@ -49,7 +49,10 @@ namespace BepuPhysics
                 initialCapacity: initialAllocationSizes.Constraints,
                 minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
             BroadPhase = new BroadPhase(bufferPool, initialAllocationSizes.Bodies, initialAllocationSizes.Bodies + initialAllocationSizes.Statics);
-            Bodies = new Bodies(bufferPool, Statics, Shapes, BroadPhase, Solver, initialAllocationSizes.Bodies);
+            Bodies = new Bodies(bufferPool, Statics, Shapes, BroadPhase, Solver,
+                initialAllocationSizes.Bodies,
+                initialAllocationSizes.Islands, 
+                initialAllocationSizes.ConstraintCountPerBodyEstimate);
 
 
             PoseIntegrator = new PoseIntegrator(Bodies, Shapes, BroadPhase);
@@ -167,7 +170,8 @@ namespace BepuPhysics
                 else
                 {
                     //This is an inactive body.
-                    Bodies.Collidables[Bodies.HandleToLocation[movedLeaf.Handle]].BroadPhaseIndex = removedBroadPhaseIndex;
+                    ref var location = ref Bodies.HandleToLocation[movedLeaf.Handle];
+                    Bodies.Sets[location.SetIndex].Collidables[location.Index].BroadPhaseIndex = removedBroadPhaseIndex;
                 }
             }
 
@@ -193,7 +197,7 @@ namespace BepuPhysics
             {
                 var bodyHandle = Unsafe.Add(ref bodyHandles, i);
                 Bodies.ValidateExistingHandle(bodyHandle);
-                Bodies.ActiveSet.AddConstraint(Bodies.HandleToLocation[bodyHandle].Index, constraintHandle, i, BufferPool);
+                Bodies.AddConstraint(Bodies.HandleToLocation[bodyHandle].Index, constraintHandle, i);
             }
             return constraintHandle;
         }
@@ -335,7 +339,8 @@ namespace BepuPhysics
             Solver.EnsureTypeBatchCapacities();
             //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
             Bodies.EnsureCapacity(allocationTarget.Bodies);
-            Bodies.EnsureConstraintListCapacities(allocationTarget.ConstraintCountPerBodyEstimate);
+            Bodies.MinimumConstraintCapacityPerBody = allocationTarget.ConstraintCountPerBodyEstimate;
+            Bodies.EnsureConstraintListCapacities();
             BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.EnsureCapacity(allocationTarget.Statics);
             Shapes.EnsureBatchCapacities(allocationTarget.ShapesPerType);
@@ -363,7 +368,8 @@ namespace BepuPhysics
             Solver.ResizeTypeBatchCapacities();
             //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
             Bodies.Resize(allocationTarget.Bodies);
-            Bodies.ResizeConstraintListCapacities(allocationTarget.ConstraintCountPerBodyEstimate);
+            Bodies.MinimumConstraintCapacityPerBody = allocationTarget.ConstraintCountPerBodyEstimate;
+            Bodies.ResizeConstraintListCapacities();
             BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.Resize(allocationTarget.Statics);
             Shapes.ResizeBatches(allocationTarget.ShapesPerType);

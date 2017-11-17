@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace BepuPhysics
 {
     /// <summary>
-    /// Collects body handles associated with a constraint.
+    /// Collects body handles associated with an active constraint.
     /// </summary>
     public unsafe struct ConstraintBodyHandleCollector : IForEach<int> 
     {
@@ -25,7 +25,7 @@ namespace BepuPhysics
 
         public void LoopBody(int bodyIndex)
         {
-            Handles[Index++] = Bodies.IndexToHandle[bodyIndex];
+            Handles[Index++] = Bodies.ActiveSet.IndexToHandle[bodyIndex];
         }
     }
 

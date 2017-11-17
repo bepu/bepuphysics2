@@ -147,7 +147,7 @@ namespace BepuPhysics.Collidables
         {
             //For convenience, this function handles the case where the collidable reference points to nothing.
             //Note that this touches the memory associated with the full collidable. That's okay- we'll be reading the rest of it shortly if it has a collidable.
-            ref var collidable = ref bundleSource.Bodies.Collidables[bodyIndex];
+            ref var collidable = ref bundleSource.Bodies.ActiveSet.Collidables[bodyIndex];
             //Technically, you could make a second pass that only processes collidables, rather than iterating over all bodies and doing last second branches.
             //But then you'd be evicting everything from cache L1/L2. And, 99.99% of the time, bodies are going to have shapes, so this isn't going to be a difficult branch to predict.
             //Even if it was 50%, the cache benefit of executing alongside the just-touched data source would outweigh the misprediction.

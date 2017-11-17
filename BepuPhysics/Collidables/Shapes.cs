@@ -92,7 +92,7 @@ namespace BepuPhysics.Collidables
                 //Note that we're hardcoding a relationship between the broadphase implementation and AABB calculation. This increases coupling and makes it harder to swap
                 //broadphases, but in practice, I don't think a single person besides me ever created a broad phase for v1, and there was only ever a single broad phase implementation 
                 //that was worth using at any given time. Abstraction for the sake of abstraction at the cost of virtual calls everywhere isn't worth it.
-                BroadPhase.GetActiveBoundsPointers(Bodies.Collidables[BodyIndices[startIndex + i]].BroadPhaseIndex, out var minPointer, out var maxPointer);
+                BroadPhase.GetActiveBoundsPointers(Bodies.ActiveSet.Collidables[BodyIndices[startIndex + i]].BroadPhaseIndex, out var minPointer, out var maxPointer);
                 //TODO: Check codegen.
                 *minPointer = Unsafe.Add(ref minBase, i);
                 *(minPointer + 1) = Unsafe.Add(ref minBase, i + Vector<float>.Count);

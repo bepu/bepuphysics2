@@ -14,6 +14,10 @@
         /// </summary>
         public int Statics;
         /// <summary>
+        /// The number of inactive islands to allocate space for.
+        /// </summary>
+        public int Islands;
+        /// <summary>
         /// Minimum number of shapes to allocate space for in each shape type batch.
         /// </summary>
         public int ShapesPerType;
@@ -33,5 +37,6 @@
         /// New bodies will be given enough memory for this number of constraints, and any compaction will not reduce the allocations below it.
         /// </summary>
         public int ConstraintCountPerBodyEstimate;
+
     }
 }

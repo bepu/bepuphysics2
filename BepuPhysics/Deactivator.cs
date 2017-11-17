@@ -11,14 +11,12 @@ namespace BepuPhysics
         IdPool<Buffer<int>> islandIdPool;
         Bodies bodies;
         Solver solver;
-        ConstraintGraph graph;
         BufferPool pool;
         public int InitialIslandBodyCapacity = 1024;
         public int InitialIslandConstraintCapacity = 1024;
-        public Deactivator(Bodies bodies, ConstraintGraph graph, Solver solver, BufferPool pool)
+        public Deactivator(Bodies bodies, Solver solver, BufferPool pool)
         {
             this.bodies = bodies;
-            this.graph = graph;
             this.solver = solver;
             this.pool = pool;
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out var islandIdPool);
@@ -45,7 +43,7 @@ namespace BepuPhysics
             //over the course of multiple frames. Decent heuristics include nonincreasing energy over some number of frames, combined with a likely per-body deactivation threshold.
             //May want to just use sub-threshold for a framecount- simpler to track, and more aggressive.
             //(Note that things like 'isalwaysactive' can be expressed as a speical case of more general tuning, like a DeactivationVelocityThreshold < 0.)
-            ref var bodyVelocity = ref bodies.Velocities[bodyIndex];
+            ref var bodyVelocity = ref bodies.ActiveSet.Velocities[bodyIndex];
             return bodyVelocity.Linear.LengthSquared() + bodyVelocity.Angular.LengthSquared() < 0.1f;
         }
 
@@ -58,9 +56,9 @@ namespace BepuPhysics
             ref ConstraintBodyEnumerator bodyEnumerator,
             ref BufferPool<int> intPool)
         {
-            var bodyIndex = bodies.HandleToLocation[bodyHandle];
+            var bodyIndex = bodies.HandleToLocation[bodyHandle].Index;
             bodyEnumerator.SourceIndex = bodyIndex;
-            ref var list = ref graph.GetConstraintList(bodyIndex);
+            ref var list = ref bodies.ActiveSet.Constraints[bodyIndex];
             for (int i = 0; i < list.Count; ++i)
             {
                 ref var entry = ref list[i];
@@ -72,7 +70,7 @@ namespace BepuPhysics
                     solver.EnumerateConnectedBodyIndices(entry.ConnectingConstraintHandle, ref bodyEnumerator);
                     for (int j = 0; j < bodyEnumerator.ConstraintBodyIndices.Count; ++j)
                     {
-                        var connectedBodyHandle = bodies.IndexToHandle[bodyEnumerator.ConstraintBodyIndices[j]];
+                        var connectedBodyHandle = bodies.ActiveSet.IndexToHandle[bodyEnumerator.ConstraintBodyIndices[j]];
                         if(!consideredBodies.Contains(connectedBodyHandle))
                         {
                             //This body has not yet been traversed. Push it onto the stack.
@@ -97,7 +95,7 @@ namespace BepuPhysics
             //Despite being DFS, there is no guarantee that the visitation stack will be any smaller than the island itself, and we have no way of knowing how big the island is 
             //ahead of time- except that it can't be larger than the entire active simulation.
             var intPool = threadPool.SpecializeFor<int>();
-            var initialBodyCapacity = Math.Min(InitialIslandBodyCapacity, bodies.Count);
+            var initialBodyCapacity = Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count);
             QuickList<int, Buffer<int>>.Create(intPool, initialBodyCapacity, out var bodyHandles);
             QuickList<int, Buffer<int>>.Create(intPool, Math.Min(InitialIslandBodyCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), out var constraintHandles);
             //Note that we track all considered bodies AND constraints. 
@@ -111,8 +109,8 @@ namespace BepuPhysics
 
 
 
-            var bodyIndex = bodies.HandleToLocation[startingBodyHandle];
-            ref var constraintHandleList = ref graph.GetConstraintList(bodyIndex);
+            var bodyIndex = bodies.HandleToLocation[startingBodyHandle].Index;
+            ref var constraintHandleList = ref bodies.ActiveSet.Constraints[bodyIndex];
 
         }
 

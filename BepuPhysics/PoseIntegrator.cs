@@ -47,9 +47,9 @@ namespace BepuPhysics
 
         unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, ref BoundingBoxUpdater boundingBoxUpdater)
         {
-            ref var basePoses = ref bodies.Poses[0];
-            ref var baseVelocities = ref bodies.Velocities[0];
-            ref var baseLocalInertias = ref bodies.LocalInertias[0];
+            ref var basePoses = ref bodies.ActiveSet.Poses[0];
+            ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
+            ref var baseLocalInertias = ref bodies.ActiveSet.LocalInertias[0];
             ref var baseInertias = ref bodies.Inertias[0];
             var halfDt = dt * 0.5f;
             for (int i = startIndex; i < endIndex; ++i)
@@ -148,6 +148,7 @@ namespace BepuPhysics
         void Worker(int workerIndex)
         {
             var boundingBoxUpdater = new BoundingBoxUpdater(bodies, shapes, broadPhase, threadDispatcher.GetThreadMemoryPool(workerIndex), cachedDt);
+            var bodyCount = bodies.ActiveSet.Count;
             while (true)
             {
                 var jobIndex = Interlocked.Decrement(ref availableJobCount);
@@ -155,8 +156,8 @@ namespace BepuPhysics
                     break;
                 var start = jobIndex * bodiesPerJob;
                 var exclusiveEnd = start + bodiesPerJob;
-                if (exclusiveEnd > bodies.Count)
-                    exclusiveEnd = bodies.Count;
+                if (exclusiveEnd > bodyCount)
+                    exclusiveEnd = bodyCount;
                 Debug.Assert(exclusiveEnd > start, "Jobs that would involve bundles beyond the body count should not be created.");
 
                 IntegrateBodies(start, exclusiveEnd, cachedDt, ref boundingBoxUpdater);
@@ -183,11 +184,11 @@ namespace BepuPhysics
                 cachedDt = dt;
                 const int jobsPerWorker = 4;
                 var targetJobCount = workerCount * jobsPerWorker;
-                bodiesPerJob = bodies.Count / targetJobCount;
+                bodiesPerJob = bodies.ActiveSet.Count / targetJobCount;
                 if (bodiesPerJob == 0)
                     bodiesPerJob = 1;
-                availableJobCount = bodies.Count / bodiesPerJob;
-                if (bodiesPerJob * availableJobCount < bodies.Count)
+                availableJobCount = bodies.ActiveSet.Count / bodiesPerJob;
+                if (bodiesPerJob * availableJobCount < bodies.ActiveSet.Count)
                     ++availableJobCount;
                 this.threadDispatcher = threadDispatcher;
                 threadDispatcher.DispatchWorkers(workerDelegate);
@@ -196,7 +197,7 @@ namespace BepuPhysics
             else
             {
                 var boundingBoxUpdater = new BoundingBoxUpdater(bodies, shapes, broadPhase, pool, dt);
-                IntegrateBodies(0, bodies.Count, dt, ref boundingBoxUpdater);
+                IntegrateBodies(0, bodies.ActiveSet.Count, dt, ref boundingBoxUpdater);
                 boundingBoxUpdater.FlushAndDispose();
             }
 

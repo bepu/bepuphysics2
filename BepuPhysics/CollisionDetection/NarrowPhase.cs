@@ -248,29 +248,33 @@ namespace BepuPhysics.CollisionDetection
                 return;
             ref var overlapWorker = ref overlapWorkers[workerIndex];
             var pair = new CollidablePair(a, b);
+            ref var bodySet = ref Bodies.ActiveSet;
             if (aMobility != CollidableMobility.Static && bMobility != CollidableMobility.Static)
             {
                 //Both references are bodies.
-                var bodyIndexA = Bodies.HandleToLocation[a.Handle];
-                var bodyIndexB = Bodies.HandleToLocation[b.Handle];
+                Debug.Assert(Bodies.HandleToLocation[a.Handle].SetIndex == 0 && Bodies.HandleToLocation[b.Handle].SetIndex == 0, "This needs to be updated when deactivation is fully implemented.");
+                var bodyIndexA = Bodies.HandleToLocation[a.Handle].Index;
+                var bodyIndexB = Bodies.HandleToLocation[b.Handle].Index;
                 AddBatchEntries(ref overlapWorker, ref pair,
-                    ref Bodies.Collidables[bodyIndexA], ref Bodies.Collidables[bodyIndexB],
-                    ref Bodies.Poses[bodyIndexA], ref Bodies.Poses[bodyIndexB],
-                    ref Bodies.Velocities[bodyIndexA], ref Bodies.Velocities[bodyIndexB]);
+                    ref bodySet.Collidables[bodyIndexA], ref bodySet.Collidables[bodyIndexB],
+                    ref bodySet.Poses[bodyIndexA], ref bodySet.Poses[bodyIndexB],
+                    ref bodySet.Velocities[bodyIndexA], ref bodySet.Velocities[bodyIndexB]);
             }
             else
             {
                 //Since we disallow 2-static pairs and we guarantee the second slot holds the static if it exists, we know that A is a body and B is a static.
                 Debug.Assert(aMobility != CollidableMobility.Static && bMobility == CollidableMobility.Static);
                 
-                var bodyIndex = Bodies.HandleToLocation[a.Handle];
+                var bodyIndex = Bodies.HandleToLocation[a.Handle].Index;
                 var staticIndex = Statics.HandleToIndex[b.Handle];
+                Debug.Assert(Bodies.HandleToLocation[a.Handle].SetIndex == 0, "Static-body pairs should only exist if the body involved is active.");
+
                 //TODO: Ideally, the compiler would see this and optimize away the relevant math in AddBatchEntries. That's a longshot, though. May want to abuse some generics to force it.
                 var zeroVelocity = default(BodyVelocity);
                 AddBatchEntries(ref overlapWorker, ref pair, 
-                    ref Bodies.Collidables[bodyIndex], ref Statics.Collidables[staticIndex], 
-                    ref Bodies.Poses[bodyIndex], ref Statics.Poses[staticIndex], 
-                    ref Bodies.Velocities[bodyIndex], ref zeroVelocity);
+                    ref bodySet.Collidables[bodyIndex], ref Statics.Collidables[staticIndex], 
+                    ref bodySet.Poses[bodyIndex], ref Statics.Poses[staticIndex], 
+                    ref bodySet.Velocities[bodyIndex], ref zeroVelocity);
             }
 
         }

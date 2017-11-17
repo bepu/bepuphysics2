@@ -63,7 +63,6 @@ namespace BepuPhysics.CollisionDetection
     {
         Solver solver;
         Bodies bodies;
-        ConstraintGraph constraintGraph;
         BufferPool pool;
 
         struct WorkerCache
@@ -166,7 +165,7 @@ namespace BepuPhysics.CollisionDetection
                     target.ConstraintHandle = constraintHandle;
 
                     target.BatchIndex = typeBatchIndex.Batch;
-                    target.BodyHandle = bodies.IndexToHandle[bodyIndices[i]];
+                    target.BodyHandle = bodies.ActiveSet.IndexToHandle[bodyIndices[i]];
                 }
             }
 
@@ -209,7 +208,6 @@ namespace BepuPhysics.CollisionDetection
             this.pool = pool;
             this.bodies = bodies;
             this.solver = solver;
-            this.constraintGraph = constraintGraph;
             this.minimumConstraintCapacity = minimumRemovalCapacity;
             this.minimumTypeCapacity = minimumTypeCapacity;
             this.previousCapacityMultiplier = previousCapacityMultiplier;
@@ -318,7 +316,7 @@ namespace BepuPhysics.CollisionDetection
                 for (int removalTargetIndex = 0; removalTargetIndex < workerCache.RemovalTargets.Count; ++removalTargetIndex)
                 {
                     ref var target = ref workerCache.RemovalTargets[removalTargetIndex];
-                    constraintGraph.RemoveConstraint(target.BodyIndex, target.ConstraintHandle);
+                    bodies.RemoveConstraint(target.BodyIndex, target.ConstraintHandle);
                     solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle);
                 }
             }

@@ -54,7 +54,7 @@ namespace BepuPhysics
         public Buffer<BodyInertia> Inertias;
         protected internal BufferPool pool;
 
-        protected internal Statics statics;
+        protected internal IslandActivator activator;
         protected internal Shapes shapes;
         protected internal BroadPhase broadPhase;
         protected internal Solver solver;
@@ -66,7 +66,7 @@ namespace BepuPhysics
 
 
 
-        public unsafe Bodies(BufferPool pool, Statics statics, Shapes shapes, BroadPhase broadPhase, Solver solver,
+        public unsafe Bodies(BufferPool pool, IslandActivator activator, Shapes shapes, BroadPhase broadPhase, Solver solver,
             int initialBodyCapacity, int initialIslandCapacity, int initialConstraintCapacityPerBody)
         {
             this.pool = pool;
@@ -76,7 +76,7 @@ namespace BepuPhysics
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialBodyCapacity, out HandlePool);
             pool.SpecializeFor<BodySet>().Take(initialIslandCapacity + 1, out var Sets);
             ActiveSet = new BodySet(initialBodyCapacity, pool);
-            this.statics = statics;
+            this.activator = activator;
             this.shapes = shapes;
             this.broadPhase = broadPhase;
             this.solver = solver;
@@ -103,39 +103,17 @@ namespace BepuPhysics
             ref var movedOriginalLocation = ref HandleToLocation[handle];
             Sets[movedOriginalLocation.SetIndex].Collidables[movedOriginalLocation.Index].BroadPhaseIndex = newBroadPhaseIndex;
         }
-        void RemoveCollidableFromBroadPhase(ref BodyLocation location, ref Collidable collidable)
+        void RemoveCollidableFromBroadPhase(int activeBodyIndex, ref Collidable collidable)
         {
             var removedBroadPhaseIndex = collidable.BroadPhaseIndex;
             //The below removes a body's collidable from the broad phase and adjusts the broad phase index of any moved leaf.
-            if (location.SetIndex == 0)
+            if (broadPhase.RemoveActiveAt(removedBroadPhaseIndex, out var movedLeaf))
             {
-                //This is an active body. Remove it from the active broad phase structure.
-                if (broadPhase.RemoveActiveAt(removedBroadPhaseIndex, out var movedLeaf))
-                {
-                    //Since we removed an active body, we know that the thing that moved in the broad phase is also an active body.
-                    //There is no such thing as an 'active' static object.
-                    Debug.Assert(movedLeaf.Mobility != CollidableMobility.Static);
-                    UpdateCollidableBroadPhaseIndex(movedLeaf.Handle, removedBroadPhaseIndex);
-                }
+                //Note that this is always an active body, so we know that whatever takes the body's place in the broad phase is also an active body.
+                //All statics and inactive bodies exist in the static tree.
+                Debug.Assert(movedLeaf.Mobility != CollidableMobility.Static);
+                UpdateCollidableBroadPhaseIndex(movedLeaf.Handle, removedBroadPhaseIndex);
             }
-            else
-            {
-                Debug.Assert(location.SetIndex > 0 && location.SetIndex < Sets.Length, "All inactive islands should have positive indices.");
-                //This is an inactive body. Remove it from the inactive broad phase structure.
-                if (broadPhase.RemoveStaticAt(removedBroadPhaseIndex, out var movedLeaf))
-                {
-                    //When removing an inactive body, the collidable that moves may not be another inactive body. It may be a static.
-                    if (movedLeaf.Mobility == CollidableMobility.Static)
-                    {
-                        statics.UpdateCollidableBroadPhaseIndex(movedLeaf.Handle, removedBroadPhaseIndex);
-                    }
-                    else
-                    {
-                        UpdateCollidableBroadPhaseIndex(movedLeaf.Handle, removedBroadPhaseIndex);
-                    }
-                }
-            }
-
         }
         /// <summary>
         /// Adds a new active body to the simulation.
@@ -168,49 +146,69 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Removes a body from the set by its location. Assumes that the input location is valid.
+        /// Removes an active body by its index. Assumes that the input location is valid.
         /// </summary>
-        /// <param name="location">Location of the body to remove.</param>
-        public void RemoveAt(BodyLocation location)
+        /// <param name="activeBodyIndex">Index of the active body.</param>
+        public void RemoveAt(int activeBodyIndex)
         {
-            Debug.Assert(location.SetIndex >= 0 && location.SetIndex < Sets.Length && Sets[location.SetIndex].Allocated, "Target removal must exist.");
-            ref var set = ref Sets[location.SetIndex];
-            Debug.Assert(location.Index >= 0 && location.Index < set.Count);
-            ValidateExistingHandle(set.IndexToHandle[location.Index]);
-            ref var collidable = ref set.Collidables[location.Index];
+            ref var set = ref ActiveSet;
+            Debug.Assert(activeBodyIndex >= 0 && activeBodyIndex < set.Count);
+            ValidateExistingHandle(set.IndexToHandle[activeBodyIndex]);
+            ref var collidable = ref set.Collidables[activeBodyIndex];
             if (collidable.Shape.Exists)
             {
                 //The collidable exists, so it should be removed from the broadphase.
-                RemoveCollidableFromBroadPhase(ref location, ref collidable);
+                RemoveCollidableFromBroadPhase(activeBodyIndex, ref collidable);
             }
 
-            var bodyMoved = set.RemoveAt(location.Index, pool, out var handle, out var movedBodyIndex, out var movedBodyHandle);
-            //Note that constraints in inactive islands reference bodies by handle only, so we only need to notify the solver about changes to active bodies.
-            if (bodyMoved && location.SetIndex == 0)
+            var bodyMoved = set.RemoveAt(activeBodyIndex, pool, out var handle, out var movedBodyIndex, out var movedBodyHandle);
+            if (bodyMoved)
             {
                 //While the removed body doesn't have any constraints associated with it, the body that gets moved to fill its slot might!
                 //We're borrowing the body optimizer's logic here. You could share a bit more- the body layout optimizer has to deal with the same stuff, though it's optimized for swaps.
                 //TODO: the logic behind the body memory move really should be moved in here with the more recent designs.
-                BodyLayoutOptimizer.UpdateForBodyMemoryMove(movedBodyIndex, location.Index, this, solver);
+                BodyLayoutOptimizer.UpdateForBodyMemoryMove(movedBodyIndex, activeBodyIndex, this, solver);
             }
 
-            Debug.Assert(HandleToLocation[movedBodyHandle].SetIndex == -1 && HandleToLocation[movedBodyHandle].Index == movedBodyIndex);
-            HandleToLocation[movedBodyHandle].Index = location.Index;
+            Debug.Assert(HandleToLocation[movedBodyHandle].SetIndex == 0 && HandleToLocation[movedBodyHandle].Index == movedBodyIndex);
+            HandleToLocation[movedBodyHandle].Index = activeBodyIndex;
             HandlePool.Return(handle, pool.SpecializeFor<int>());
-            ref var bodyLocation = ref HandleToLocation[handle];
-            bodyLocation.SetIndex = -1;
-            bodyLocation.Index = -1;
+            ref var removedBodyLocation = ref HandleToLocation[handle];
+            removedBodyLocation.SetIndex = -1;
+            removedBodyLocation.Index = -1;
         }
 
         /// <summary>
-        /// Removes a body from the set by its handle.
+        /// Removes a body from the set by its handle. If the body is inactive, all bodies in its island will be forced active.
         /// </summary>
         /// <param name="handle">Handle of the body to remove.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Remove(int handle)
         {
             ValidateExistingHandle(handle);
-            RemoveAt(HandleToLocation[handle]);
+            activator.ActivateBody(handle);
+            RemoveAt(HandleToLocation[handle].Index);
+        }
+
+        /// <summary>
+        /// Adds a constraint to an active body's constraint list.
+        /// </summary>
+        /// <param name="bodyIndex">Index of the body to add the constraint to.</param>
+        /// <param name="constraintHandle">Handle of the constraint to add.</param>
+        /// <param name="indexInConstraint">Index of the body in the constraint.</param>
+        internal void AddConstraint(int bodyIndex, int constraintHandle, int indexInConstraint)
+        {
+            ActiveSet.AddConstraint(bodyIndex, constraintHandle, indexInConstraint, pool);
+        }
+
+        /// <summary>
+        /// Removes a constraint from an active body's constraint list.
+        /// </summary>
+        /// <param name="bodyIndex">Index of the active body.</param>
+        /// <param name="constraintHandle">Handle of the constraint to remove.</param>
+        internal void RemoveConstraint(int bodyIndex, int constraintHandle)
+        {
+            ActiveSet.RemoveConstraint(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, pool);
         }
 
         /// <summary>
@@ -261,45 +259,59 @@ namespace BepuPhysics
         public void ChangeLocalInertia(int handle, ref BodyInertia inertia)
         {
             ref var location = ref HandleToLocation[handle];
+            if (location.SetIndex > 0)
+            {
+                //The body is inactive. Wake it up.
+                activator.ActivateBody(handle);
+            }
+            //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
             set.LocalInertias[location.Index] = inertia;
             UpdateKinematicState(handle, ref location, ref set);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void UpdateForShapeChange(int handle, ref BodyLocation location, ref BodySet set, TypedIndex oldShape, TypedIndex newShape)
+        void UpdateForShapeChange(int handle, int activeBodyIndex, TypedIndex oldShape, TypedIndex newShape)
         {
             if (oldShape.Exists != newShape.Exists)
             {
+                ref var set = ref ActiveSet;
                 if (newShape.Exists)
                 {
                     //Add a collidable to the simulation for the new shape.
-                    AddCollidableToBroadPhase(handle, ref set.Poses[location.Index], ref set.LocalInertias[location.Index], ref set.Collidables[location.Index]);
+                    AddCollidableToBroadPhase(handle, ref set.Poses[activeBodyIndex], ref set.LocalInertias[activeBodyIndex], ref set.Collidables[activeBodyIndex]);
                 }
                 else
                 {
                     //Remove the now-unused collidable from the simulation.
-                    RemoveCollidableFromBroadPhase(ref location, ref set.Collidables[location.Index]);
+                    RemoveCollidableFromBroadPhase(activeBodyIndex, ref set.Collidables[activeBodyIndex]);
                 }
             }
         }
         /// <summary>
-        /// Changes the shape of a body. Properly handles the transition between shapeless and shapeful.
+        /// Changes the shape of a body. Properly handles the transition between shapeless and shapeful. If the body is inactive, it will be forced awake.
         /// </summary>
         /// <param name="handle">Handle of the body to change the shape of.</param>
         /// <param name="newShape">Index of the new shape to use for the body.</param>
         public void ChangeShape(int handle, TypedIndex newShape)
         {
             ref var location = ref HandleToLocation[handle];
-            ref var set = ref Sets[location.SetIndex];
+            if (location.SetIndex > 0)
+            {
+                //The body is inactive. Wake it up.
+                activator.ActivateBody(handle);
+            }
+            //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
+            Debug.Assert(location.SetIndex == 0, "We should be working with an active shape.");
+            ref var set = ref ActiveSet;
             ref var collidable = ref set.Collidables[location.Index];
             var oldShape = collidable.Shape;
             collidable.Shape = newShape;
-            UpdateForShapeChange(handle, ref location, ref set, oldShape, newShape);
+            UpdateForShapeChange(handle, location.Index, oldShape, newShape);
         }
 
         /// <summary>
-        /// Applies a description to a body. Properly handles any transitions between dynamic and kinematic and between shapeless and shapeful.
+        /// Applies a description to a body. Properly handles any transitions between dynamic and kinematic and between shapeless and shapeful. If the body is inactive, it will be forced awake.
         /// </summary>
         /// <param name="handle">Handle of the body to receive the description.</param>
         /// <param name="description">Description to apply to the body.</param>
@@ -307,11 +319,17 @@ namespace BepuPhysics
         {
             ValidateExistingHandle(handle);
             ref var location = ref HandleToLocation[handle];
+            if (location.SetIndex > 0)
+            {
+                //The body is inactive. Wake it up.
+                activator.ActivateBody(handle);
+            }
+            //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
             ref var collidable = ref set.Collidables[location.Index];
             var oldShape = collidable.Shape;
             set.ApplyDescriptionByIndex(location.Index, ref description);
-            UpdateForShapeChange(handle, ref location, ref set, oldShape, description.Collidable.Shape);
+            UpdateForShapeChange(handle, location.Index, oldShape, description.Collidable.Shape);
             UpdateKinematicState(handle, ref location, ref set);
         }
 
@@ -557,7 +575,7 @@ namespace BepuPhysics
         /// </summary>
         public void ResizeConstraintListCapacities()
         {
-            var bodyReferencePool = this.pool.SpecializeFor<BodyConstraintReference>();
+            var bodyReferencePool = pool.SpecializeFor<BodyConstraintReference>();
             for (int i = 0; i < ActiveSet.Count; ++i)
             {
                 ref var list = ref ActiveSet.Constraints[i];
@@ -583,7 +601,20 @@ namespace BepuPhysics
             }
         }
 
-       
+        /// <summary>
+        /// Ensures all active body constraint lists can hold at least MinimumConstraintCapacityPerBody constraints. Inactive bodies are untouched.
+        /// </summary>
+        public void EnsureConstraintListCapacities()
+        {
+            var bodyReferencePool = pool.SpecializeFor<BodyConstraintReference>();
+            for (int i = 0; i < ActiveSet.Count; ++i)
+            {
+                ref var list = ref ActiveSet.Constraints[i];
+                if (list.Span.Length < MinimumConstraintCapacityPerBody)
+                    list.Resize(MinimumConstraintCapacityPerBody, bodyReferencePool);
+            }
+        }
+
         /// <summary>
         /// Returns all body resources to the pool used to create them.
         /// </summary>
