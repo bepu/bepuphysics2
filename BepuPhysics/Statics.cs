@@ -70,21 +70,11 @@ namespace BepuPhysics
             pool.SpecializeFor<Collidable>().Resize(ref Collidables, targetCapacity, Count);
             //Initialize all the indices beyond the copied region to -1.
             Unsafe.InitBlockUnaligned(((int*)HandleToIndex.Memory) + Count, 0xFF, (uint)(sizeof(int) * (HandleToIndex.Length - Count)));
-            Unsafe.InitBlockUnaligned(((int*)IndexToHandle.Memory) + Count, 0xFF, (uint)(sizeof(int) * (IndexToHandle.Length - Count)));
-            //Collidables beyond the static count should all point to nothing, which corresponds to zero.
-            Collidables.Clear(Count, Collidables.Length - Count);
             //Note that we do NOT modify the idpool's internal queue size here. We lazily handle that during adds, and during explicit calls to EnsureCapacity, Compact, and Resize.
             //The idpool's internal queue will often be nowhere near as large as the actual static size except in corner cases, so in the usual case, being lazy saves a little space.
             //If the user wants to guarantee zero resizes, EnsureCapacity provides them the option to do so.
         }
-
-        [Conditional("DEBUG")]
-        internal void ValidateHandle(int handle)
-        {
-            Debug.Assert(handle >= 0, "Handles must be nonnegative.");
-            Debug.Assert(handle >= HandleToIndex.Length || HandleToIndex[handle] < 0 || IndexToHandle[HandleToIndex[handle]] == handle,
-                "If a handle exists, both directions should match.");
-        }
+        
         [Conditional("DEBUG")]
         public void ValidateExistingHandle(int handle)
         {
@@ -160,31 +150,8 @@ namespace BepuPhysics
         public void RemoveAt(int index)
         {
             Debug.Assert(index >= 0 && index < Count);
+            ValidateExistingHandle(IndexToHandle[index]);
             var handle = IndexToHandle[index];
-            //Move the last static into the removed slot.
-            //This does introduce disorder- there may be value in a second overload that preserves order, but it would require large copies.
-            //In the event that so many adds and removals are performed at once that they destroy contiguity, it may be better to just
-            //explicitly sort after the fact rather than attempt to retain contiguity incrementally. Handle it as a batch, in other words.
-            --Count;
-            bool staticMoved = index < Count;
-            if (staticMoved)
-            {
-                var movedStaticOriginalIndex = Count;
-                //Copy the memory state of the last element down.
-                Poses[index] = Poses[movedStaticOriginalIndex];
-                //Note that if you ever treat the world inertias as 'always updated', it would need to be copied here.
-                Collidables[index] = Collidables[movedStaticOriginalIndex];
-                //Point the static handles at the new location.
-                var lastHandle = IndexToHandle[movedStaticOriginalIndex];
-                HandleToIndex[lastHandle] = index;
-                IndexToHandle[index] = lastHandle;
-            }
-            //We rely on the collidable references being nonexistent beyond the static count.
-            Collidables[Count] = new Collidable();
-            //The indices should also be set to all -1's beyond the static count.
-            IndexToHandle[Count] = -1;
-            HandlePool.Return(handle, pool.SpecializeFor<int>());
-            HandleToIndex[handle] = -1;
 
             ref var collidable = ref Collidables[index];
             Debug.Assert(collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
@@ -210,6 +177,28 @@ namespace BepuPhysics
                     bodies.UpdateCollidableBroadPhaseIndex(movedLeaf.Handle, removedBroadPhaseIndex);
                 }
             }
+
+            //Move the last static into the removed slot.
+            //This does introduce disorder- there may be value in a second overload that preserves order, but it would require large copies.
+            //In the event that so many adds and removals are performed at once that they destroy contiguity, it may be better to just
+            //explicitly sort after the fact rather than attempt to retain contiguity incrementally. Handle it as a batch, in other words.
+            --Count;
+            bool staticMoved = index < Count;
+            if (staticMoved)
+            {
+                var movedStaticOriginalIndex = Count;
+                //Copy the memory state of the last element down.
+                Poses[index] = Poses[movedStaticOriginalIndex];
+                //Note that if you ever treat the world inertias as 'always updated', it would need to be copied here.
+                Collidables[index] = Collidables[movedStaticOriginalIndex];
+                //Point the static handles at the new location.
+                var lastHandle = IndexToHandle[movedStaticOriginalIndex];
+                HandleToIndex[lastHandle] = index;
+                IndexToHandle[index] = lastHandle;
+            }
+            HandlePool.Return(handle, pool.SpecializeFor<int>());
+            HandleToIndex[handle] = -1;
+
         }
         /// <summary>
         /// Removes a static from the set. Any inactive bodies with bounding boxes overlapping the removed static's bounding box will be forced active.
@@ -306,7 +295,6 @@ namespace BepuPhysics
             Count = 0;
             //Empty out all the index-handle mappings.
             Unsafe.InitBlockUnaligned(HandleToIndex.Memory, 0xFF, (uint)(sizeof(int) * HandleToIndex.Length));
-            Unsafe.InitBlockUnaligned(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
             HandlePool.Clear();
         }
 

@@ -18,9 +18,9 @@ namespace Demos
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 16;
-            const int height = 128;
-            const int length = 16;
+            const int width = 8;
+            const int height = 8;
+            const int length = 8;
             var latticeSpacing = 1.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
@@ -32,7 +32,7 @@ namespace Demos
 
             var staticShape = new Sphere(4);
             var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
-            const int staticGridWidthInSpheres = 256;
+            const int staticGridWidthInSpheres = 64;
             const float staticSpacing = 6;
             for (int i = 0; i < staticGridWidthInSpheres; ++i)
             {

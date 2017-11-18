@@ -66,7 +66,7 @@ namespace BepuPhysics
         internal int Add(ref BodyDescription bodyDescription, int handle, int minimumConstraintCapacity, BufferPool pool)
         {
             var index = Count;
-            if(index == IndexToHandle.Length)
+            if (index == IndexToHandle.Length)
             {
                 InternalResize(IndexToHandle.Length * 2, pool);
             }
@@ -106,11 +106,6 @@ namespace BepuPhysics
                 movedBodyIndex = -1;
                 movedBodyHandle = -1;
             }
-            //We rely on the collidable references being nonexistent beyond the body count.
-            //TODO: is this still true? Are these inits required?
-            Collidables[Count] = new Collidable();
-            //The indices should also be set to all -1's beyond the body count.
-            IndexToHandle[Count] = -1;
             return bodyMoved;
         }
 
@@ -236,11 +231,6 @@ namespace BepuPhysics
             pool.SpecializeFor<Collidable>().Resize(ref Collidables, targetBodyCapacity, Count);
             pool.SpecializeFor<BodyActivity>().Resize(ref Activity, targetBodyCapacity, Count);
             pool.SpecializeFor<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>>().Resize(ref Constraints, targetBodyCapacity, Count);
-            //TODO: You should probably examine whether these protective initializations are still needed.
-            //Initialize all the indices beyond the copied region to -1.
-            Unsafe.InitBlockUnaligned(((int*)IndexToHandle.Memory) + Count, 0xFF, (uint)(sizeof(int) * (IndexToHandle.Length - Count)));
-            //Collidables beyond the body count should all point to nothing, which corresponds to zero.
-            Collidables.Clear(Count, Collidables.Length - Count);
         }
 
         public unsafe void Clear(BufferPool pool)
@@ -251,8 +241,6 @@ namespace BepuPhysics
                 Constraints[i].Dispose(constraintReferencePool);
             }
             Count = 0;
-            //TODO: Should confirm that these inits are still needed. They are for Handle->Location, but this is the opposite direction.
-            Unsafe.InitBlockUnaligned(IndexToHandle.Memory, 0xFF, (uint)(sizeof(int) * IndexToHandle.Length));
         }
 
         /// <summary>
