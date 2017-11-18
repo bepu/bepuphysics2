@@ -16,7 +16,7 @@ namespace BepuPhysics
         public void LoopBody(int bodyIndex)
         {
             //Note that this only looks in the active set. Directly removing inactive objects is unsupported- removals and adds activate all involved islands.
-            bodies.ActiveSet.RemoveConstraint(bodyIndex, constraintHandle, bodies.minimumConstraintCapacityPerBody, bodies.pool);
+            bodies.RemoveConstraint(bodyIndex, constraintHandle);
         }
     }
 

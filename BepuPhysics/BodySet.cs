@@ -114,7 +114,7 @@ namespace BepuPhysics
             IndexToHandle[Count] = -1;
             return bodyMoved;
         }
-
+    
         internal void ApplyDescriptionByIndex(int index, ref BodyDescription description)
         {
             BundleIndexing.GetBundleIndices(index, out var bundleIndex, out var innerIndex);
@@ -179,6 +179,19 @@ namespace BepuPhysics
                 var targetCapacity = list.Count > minimumConstraintCapacityPerBody ? list.Count : minimumConstraintCapacityPerBody;
                 list.Resize(targetCapacity, pool.SpecializeFor<BodyConstraintReference>());
             }
+        }
+
+        public bool BodyIsConstrainedBy(int bodyIndex, int constraintHandle)
+        {
+            ref var list = ref Constraints[bodyIndex];
+            for (int i = 0; i < list.Count; ++i)
+            {
+                if (list[i].ConnectingConstraintHandle == constraintHandle)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         struct ConstraintBodiesEnumerator<TInnerEnumerator> : IForEach<int> where TInnerEnumerator : IForEach<int>

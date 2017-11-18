@@ -46,9 +46,19 @@ namespace DemoRenderer.Shapes
 
         public void AddInstances(Simulation simulation, IThreadDispatcher threadDispatcher = null)
         {
-            for (int i = 0; i < simulation.Bodies.Count; ++i)
+            for (int i = 0; i < simulation.Bodies.Sets.Length; ++i)
             {
-                AddShape(simulation, simulation.Bodies.Collidables[i].Shape, ref simulation.Bodies.Poses[i]);
+                ref var set = ref simulation.Bodies.Sets[i];
+                if (set.Allocated) //Islands are stored noncontiguously; skip those which have been deallocated.
+                {
+                    //TODO: Would be nice to graphically distinguish inactive bodies from active bodies. All nonzero index sets are inactive, so it would be pretty easy.
+                    //Just requires that the shader-provided shape information includes color data. Easy to do; 4 bytes sufficient, would be shared with handle-based per-body
+                    //color variation.
+                    for (int bodyIndex = 0; bodyIndex < set.Count; ++bodyIndex)
+                    {
+                        AddShape(simulation, set.Collidables[bodyIndex].Shape, ref set.Poses[bodyIndex]);
+                    }
+                }
             }
             for (int i = 0; i < simulation.Statics.Count; ++i)
             {

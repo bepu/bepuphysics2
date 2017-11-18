@@ -7,7 +7,6 @@ namespace BepuPhysics
 {
     public class Deactivator
     {
-        public Buffer<Island> Islands;
         IdPool<Buffer<int>> islandIdPool;
         Bodies bodies;
         Solver solver;
@@ -113,6 +112,51 @@ namespace BepuPhysics
             ref var constraintHandleList = ref bodies.ActiveSet.Constraints[bodyIndex];
 
         }
+
+
+        //public void Create(ref QuickList<int, Buffer<int>> bodyHandles, ref QuickList<int, Buffer<int>> constraintHandles,
+        //    BufferPool mainPool, BufferPool threadPool)
+        //{
+        //    //Note that, while we did encounter the indices associated with the island bodies handles and *could* have cached them, we opted to store the handles instead.
+        //    //This does incur additional (warm) indirections, but we would like to also use the handles again- to remove from the active set.
+        //    //Creating this island does not modify anything about the existing active set. All of that is deferred.
+
+        //    //Note that, while we have already traversed the constraint's connected bodies to collect the island, we did not cache all required data during the traversal.
+        //    //Doing so would be *usually* wasteful- the vast majority of traversals result in no deactivation.
+        //    //Further, the traversal does not otherwise need to touch the prestep data and accumulated impulses. Those are quite large, so avoiding needless accesses
+        //    //are important for keeping the traversal reasonably speedy.
+        //    //Given that we have to grab that additional information anyway, and given that it is likely in L1 (or failing that, L2) cache, we re-enumerate the constraint body 
+        //    //handles here.
+
+        //    //We have a bit of an annoyance to deal with:
+        //    //1) By convention, we never hold information in per-thread buffer pools between frames.
+        //    //2) We'd like to be able to run island creation on multiple threads.
+        //    //3) Island creation requires allocating space for all the body and constraint data.
+        //    //Implication:
+        //    //We must synchronize access to the main pool when retrieving persisted buffers. All ephemeral data comes from the thread pool.
+        //    //While this isn't too problematic (time spent retrieving island resources is going to be extremely brief), 
+        //    //the main pool access does restrict job scheduling with other main pool users that are unaware of the synchronization requirement.
+
+        //    //Unless we perform constraint batching during traversal, the numbers of constraint batches, type batches, and constraints within individual type batches are unknown.
+        //    //We cannot just lock once and allocate a minimally sufficient set of buffers.
+        //    //An option:
+        //    //1) Enumerate each constraint's bodies. Convert them to handles and perform batching, locally creating constraintbatches and type batches, but only fill the body references.
+        //    //2) As you go, store the new handle->island location mapping.
+        //    //3) Using the capacities detected by 
+
+        //    var batchReferencedHandlesPool = threadPool.SpecializeFor<HandleSet>();
+        //    var intPool = threadPool.SpecializeFor<int>();
+        //    constraintHandles.
+        //    batchReferencedHandlesPool.Take(16, out var batchReferencedHandles);
+
+        //    for (int i = 0; i < ConstraintBatches.Count; ++i)
+        //    {
+        //        batchReferencedHandles[i].Dispose(threadPool);
+        //    }
+        //    batchReferencedHandlesPool.Return(ref batchReferencedHandles);
+
+        //}
+
 
         public void Dispose()
         {

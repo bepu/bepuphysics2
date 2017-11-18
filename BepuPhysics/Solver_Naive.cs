@@ -32,7 +32,7 @@ namespace BepuPhysics
             {
                 ref var block = ref context.WorkBlocks[blockIndex - 1];
                 ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
-                TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.Velocities, block.StartBundle, block.End);
+                TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, block.StartBundle, block.End);
             }
         }
 
@@ -43,7 +43,7 @@ namespace BepuPhysics
             {
                 ref var block = ref context.WorkBlocks[blockIndex - 1];
                 ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
-                TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.Velocities, block.StartBundle, block.End);
+                TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, block.StartBundle, block.End);
             }
         }
 

@@ -157,7 +157,7 @@ namespace BepuPhysics
 
             ref var typeBatch = ref solver.Batches[target.BatchIndex].TypeBatches[target.TypeBatchIndex];
             SortByBodyLocation(ref typeBatch, target.BundleIndex, Math.Min(typeBatch.ConstraintCount - target.BundleIndex * Vector<int>.Count, maximumRegionSizeInConstraints),
-                solver.HandleToConstraint, bodies.Count, bufferPool, threadDispatcher);
+                solver.HandleToConstraint, bodies.ActiveSet.Count, bufferPool, threadDispatcher);
 
         }
 

@@ -7,39 +7,72 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using BepuUtilities;
+using System.Numerics;
 
 namespace DemoRenderer.Constraints
 {
-    interface IConstraintLineExtractor<TBodyReferences, TPrestep>
+    unsafe interface IConstraintLineExtractor<TPrestep>
     {
         int LinesPerConstraint { get; }
 
-        void ExtractLines(ref TPrestep prestepBundle, ref TBodyReferences referencesBundle, int innerIndex, Bodies bodies, ref QuickList<LineInstance, Array<LineInstance>> lines);
+        void ExtractLines(ref TPrestep prestepBundle, int innerIndex, BodyLocation* bodyLocations, Bodies bodies, ref QuickList<LineInstance, Array<LineInstance>> lines);
     }
     abstract class TypeLineExtractor
     {
         public abstract int LinesPerConstraint { get; }
-        public abstract void ExtractLines(Bodies bodies, ref TypeBatch typeBatch, int constraintStart, int constraintCount, ref QuickList<LineInstance, Array<LineInstance>> lines);
+        public abstract void ExtractLines(Bodies bodies, ref TypeBatch typeBatch, int constraintStart, int constraintCount, bool active, ref QuickList<LineInstance, Array<LineInstance>> lines);
     }
 
     class TypeLineExtractor<T, TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses> : TypeLineExtractor
-        where T : struct, IConstraintLineExtractor<TBodyReferences, TPrestep>
+        where T : struct, IConstraintLineExtractor<TPrestep>
     {
         public override int LinesPerConstraint => default(T).LinesPerConstraint;
-        public override void ExtractLines(Bodies bodies, ref TypeBatch typeBatch, int constraintStart, int constraintCount,
+        public unsafe override void ExtractLines(Bodies bodies, ref TypeBatch typeBatch, int constraintStart, int constraintCount, bool active,
             ref QuickList<LineInstance, Array<LineInstance>> lines)
         {
             ref var prestepStart = ref Buffer<TPrestep>.Get(ref typeBatch.PrestepData, 0);
             ref var referencesStart = ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, 0);
+            //For now, we assume that TBodyReferences is always a series of contiguous Vector<int> values.
+            //We can extract each body by abusing the memory layout.
+            var bodyCount = Unsafe.SizeOf<TBodyReferences>() / Unsafe.SizeOf<Vector<int>>();
+            Debug.Assert(bodyCount * Unsafe.SizeOf<Vector<int>>() == Unsafe.SizeOf<TBodyReferences>());
+            var bodyLocations = stackalloc BodyLocation[bodyCount];
             var extractor = default(T);
 
             var constraintEnd = constraintStart + constraintCount;
-            for (int i = constraintStart; i < constraintEnd; ++i)
+            if (active)
             {
-                BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
-                ref var prestepBundle = ref Unsafe.Add(ref prestepStart, bundleIndex);
-                ref var referencesBundle = ref Unsafe.Add(ref referencesStart, bundleIndex);
-                extractor.ExtractLines(ref prestepBundle, ref referencesBundle, innerIndex, bodies, ref lines);
+                for (int i = constraintStart; i < constraintEnd; ++i)
+                {
+                    BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
+                    ref var prestepBundle = ref Unsafe.Add(ref prestepStart, bundleIndex);
+                    ref var referencesBundle = ref Unsafe.Add(ref referencesStart, bundleIndex);
+                    ref var firstReference = ref Unsafe.As<TBodyReferences, Vector<int>>(ref referencesBundle);
+                    for (int j = 0; j < bodyCount; ++j)
+                    {
+                        ref var location = ref bodyLocations[j];
+                        location.SetIndex = 0;
+                        location.Index = GatherScatter.Get(ref Unsafe.Add(ref firstReference, j), innerIndex);
+                    }
+                    extractor.ExtractLines(ref prestepBundle, innerIndex, bodyLocations, bodies, ref lines);
+                }
+            }
+            else
+            {
+                for (int i = constraintStart; i < constraintEnd; ++i)
+                {
+                    BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
+                    ref var prestepBundle = ref Unsafe.Add(ref prestepStart, bundleIndex);
+                    ref var referencesBundle = ref Unsafe.Add(ref referencesStart, bundleIndex);
+                    ref var firstReference = ref Unsafe.As<TBodyReferences, Vector<int>>(ref referencesBundle);
+                    for (int j = 0; j < bodyCount; ++j)
+                    {
+                        //Inactive constraints store body references in the form of handles, so we have to follow the indirection.
+                        ref var location = ref bodyLocations[j];
+                        bodyLocations[j] = bodies.HandleToLocation[GatherScatter.Get(ref Unsafe.Add(ref firstReference, j), innerIndex)];
+                    }
+                    extractor.ExtractLines(ref prestepBundle, innerIndex, bodyLocations, bodies, ref lines);
+                }
             }
         }
     }
@@ -87,8 +120,8 @@ namespace DemoRenderer.Constraints
         {
             ref var job = ref jobs[jobIndex];
             ref var typeBatch = ref solver.Batches[job.BatchIndex].TypeBatches[job.TypeBatchIndex];
-            Debug.Assert(lineExtractors[typeBatch.TypeId] != null, "Jobs should only be created for types which are available and active.");
-            lineExtractors[typeBatch.TypeId].ExtractLines(bodies, ref typeBatch, job.ConstraintStart, job.ConstraintCount, ref job.jobLines);
+            Debug.Assert(lineExtractors[typeBatch.TypeId] != null, "Jobs should only be created for types which are registered and used.");
+            lineExtractors[typeBatch.TypeId].ExtractLines(bodies, ref typeBatch, job.ConstraintStart, job.ConstraintCount, true, ref job.jobLines);
         }
 
         bool IsContactBatch(int typeId)

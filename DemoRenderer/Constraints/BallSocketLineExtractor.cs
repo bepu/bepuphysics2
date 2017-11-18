@@ -7,18 +7,16 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace DemoRenderer.Constraints
 {
-    struct BallSocketLineExtractor : IConstraintLineExtractor<TwoBodyReferences, BallSocketPrestepData>
+    struct BallSocketLineExtractor : IConstraintLineExtractor<BallSocketPrestepData>
     {
         public int LinesPerConstraint => 3;
 
-        public void ExtractLines(ref BallSocketPrestepData prestepBundle, ref TwoBodyReferences referencesBundle, int innerIndex,
+        public unsafe void ExtractLines(ref BallSocketPrestepData prestepBundle, int innerIndex, BodyLocation* bodyLocations,
             Bodies bodies, ref QuickList<LineInstance, Array<LineInstance>> lines)
         {
             //Could do bundles of constraints at a time, but eh.
-            var indexA = GatherScatter.Get(ref referencesBundle.IndexA, innerIndex);
-            var indexB = GatherScatter.Get(ref referencesBundle.IndexB, innerIndex);
-            var poseA = bodies.Poses[indexA];
-            var poseB = bodies.Poses[indexB];
+            var poseA = bodies.Sets[bodyLocations[0].SetIndex].Poses[bodyLocations[0].Index];
+            var poseB = bodies.Sets[bodyLocations[1].SetIndex].Poses[bodyLocations[1].Index];
             Vector3Wide.GetLane(ref prestepBundle.LocalOffsetA, innerIndex, out var localOffsetA);
             Vector3Wide.GetLane(ref prestepBundle.LocalOffsetB, innerIndex, out var localOffsetB);
             Quaternion.Transform(ref localOffsetA, ref poseA.Orientation, out var worldOffsetA);

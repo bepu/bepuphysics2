@@ -38,8 +38,8 @@ namespace Demos.SpecializedTests
 
                 var energyAfter = TestHelpers.GetBodyEnergyHeuristic(simulation.Bodies);
                 int sampledBodyIndex = width;
-                var samplePose = simulation.Bodies.Poses[sampledBodyIndex];
-                var sampleVelocity = simulation.Bodies.Velocities[sampledBodyIndex];
+                var samplePose = simulation.Bodies.ActiveSet.Poses[sampledBodyIndex];
+                var sampleVelocity = simulation.Bodies.ActiveSet.Velocities[sampledBodyIndex];
                 //for (int i =0; i < simulation.Bodies.BodyCount; ++i)
                 //{
                 //    simulation.Bodies.GetPose(simulation.Bodies.IndexToHandle[i], out var pose);

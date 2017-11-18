@@ -102,7 +102,9 @@ namespace Demos.SpecializedTests
 
 
             simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
-            simulation.Bodies.Velocities[simulation.Bodies.HandleToLocation[bodyHandles[width]]].Linear = new Vector3(0.1f, 0, 0.1f);
+            ref var location = ref simulation.Bodies.HandleToLocation[bodyHandles[width]];
+            Debug.Assert(location.SetIndex == 0, "Nothing above should result in inactive objects.");
+            simulation.Bodies.ActiveSet.Velocities[location.Index].Linear = new Vector3(0.1f, 0, 0.1f);
 
             const float inverseDt = 60f;
             const float dt = 1 / inverseDt;

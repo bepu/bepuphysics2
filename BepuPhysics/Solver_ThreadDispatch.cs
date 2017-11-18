@@ -528,7 +528,7 @@ namespace BepuPhysics
 
             claimedState = 0;
             unclaimedState = 1;
-            var warmStartStage = new WarmStartStageFunction { Velocities = bodies.Velocities };
+            var warmStartStage = new WarmStartStageFunction { Velocities = bodies.ActiveSet.Velocities };
             for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
             {
                 var batchStart = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
@@ -540,7 +540,7 @@ namespace BepuPhysics
             claimedState = 1;
             unclaimedState = 0;
 
-            var solveStage = new SolveStageFunction { Velocities = bodies.Velocities };
+            var solveStage = new SolveStageFunction { Velocities = bodies.ActiveSet.Velocities };
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
             {
                 for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)

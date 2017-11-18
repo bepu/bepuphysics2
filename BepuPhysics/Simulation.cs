@@ -15,6 +15,8 @@ namespace BepuPhysics
     /// </summary>
     public partial class Simulation : IDisposable
     {
+        public IslandActivator Activator { get; private set; }
+        public Deactivator Deactivator { get; private set; }
         public Bodies Bodies { get; private set; }
         public Statics Statics { get; private set; }
         public Shapes Shapes { get; private set; }
@@ -49,7 +51,7 @@ namespace BepuPhysics
                 initialCapacity: initialAllocationSizes.Constraints,
                 minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
             BroadPhase = new BroadPhase(bufferPool, initialAllocationSizes.Bodies, initialAllocationSizes.Bodies + initialAllocationSizes.Statics);
-            Bodies = new Bodies(bufferPool, Statics, Shapes, BroadPhase, Solver,
+            Bodies = new Bodies(bufferPool, Activator, Shapes, BroadPhase, Solver,
                 initialAllocationSizes.Bodies,
                 initialAllocationSizes.Islands, 
                 initialAllocationSizes.ConstraintCountPerBodyEstimate);

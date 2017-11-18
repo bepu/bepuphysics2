@@ -137,10 +137,14 @@ namespace BepuPhysics.CollisionDetection
                     ++batchIndex;
                 }
                 simulation.Solver.ApplyDescription(ref reference, ref constraint.ConstraintDescription);
-                simulation.ConstraintGraph.AddConstraint(simulation.Bodies.HandleToLocation[handles], constraintHandle, 0);
+                ref var aLocation = ref simulation.Bodies.HandleToLocation[handles];
+                Debug.Assert(aLocation.SetIndex == 0, "By the time we flush new constraints into the solver, all associated islands should have been activated.");
+                simulation.Bodies.AddConstraint(aLocation.Index, constraintHandle, 0);
                 if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
                 {
-                    simulation.ConstraintGraph.AddConstraint(simulation.Bodies.HandleToLocation[Unsafe.Add(ref handles, 1)], constraintHandle, 1);
+                    ref var bLocation = ref simulation.Bodies.HandleToLocation[Unsafe.Add(ref handles, 1)];
+                    Debug.Assert(bLocation.SetIndex == 0, "By the time we flush new constraints into the solver, all associated islands should have been activated.");
+                    simulation.Bodies.AddConstraint(bLocation.Index, constraintHandle, 1);
                 }
                 pairCache.CompleteConstraintAdd(simulation.Solver, ref constraint.Impulses, constraint.ConstraintCacheIndex, constraintHandle);
             }

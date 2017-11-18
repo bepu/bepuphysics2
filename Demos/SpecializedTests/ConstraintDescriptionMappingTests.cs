@@ -46,7 +46,7 @@ namespace Demos.SpecializedTests
                     int bodyHandleForConstraint;
                     do
                     {
-                        bodyHandleForConstraint = simulation.Bodies.IndexToHandle[random.Next(simulation.Bodies.Count)];
+                        bodyHandleForConstraint = simulation.Bodies.ActiveSet.IndexToHandle[random.Next(simulation.Bodies.ActiveSet.Count)];
                     } while (Array.IndexOf(constraintBodyHandles, bodyHandleForConstraint, 0, indexInConstraint) >= 0);
 
                     constraintBodyHandles[indexInConstraint] = bodyHandleForConstraint;
@@ -100,7 +100,7 @@ namespace Demos.SpecializedTests
             for (int i = 0; i < bodyCount; ++i)
             {
                 var bodyDescription = new BodyDescription { LocalInertia = new BodyInertia { InverseMass = 1 }, Pose = new RigidPose { Orientation = BepuUtilities.Quaternion.Identity } };
-                simulation.Add(ref bodyDescription);
+                simulation.Bodies.Add(ref bodyDescription);
             }
             var random = new Random(5);
             Test<Contact1OneBody>(simulation, random, 1);

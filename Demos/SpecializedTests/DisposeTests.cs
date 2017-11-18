@@ -23,7 +23,7 @@ namespace Demos.SpecializedTests
             SimulationSetup.BuildLattice(bodyBuilder, constraintBuilder, width, height, length, simulation, out var bodyHandles, out var constraintHandles);
 
             simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
-            simulation.Bodies.Velocities[width].Linear = new Vector3(0.1f, 0, 0.1f);
+            simulation.Bodies.ActiveSet.Velocities[width].Linear = new Vector3(0.1f, 0, 0.1f);
 
             for (int i = 0; i < 16; ++i)
             {
