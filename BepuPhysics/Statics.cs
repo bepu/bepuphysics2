@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using BepuPhysics.Constraints;
 using BepuPhysics.Collidables;
 using BepuUtilities.Collections;
+using BepuPhysics.CollisionDetection;
 
 namespace BepuPhysics
 {
@@ -39,10 +40,20 @@ namespace BepuPhysics
         protected BufferPool pool;
         public int Count;
 
-        public unsafe Statics(BufferPool pool, int initialCapacity = 4096)
+        Shapes shapes;
+        Bodies bodies;
+        BroadPhase broadPhase;
+        IslandActivator activator;
+
+        public unsafe Statics(BufferPool pool, Shapes shapes, Bodies bodies, BroadPhase broadPhase, IslandActivator activator, int initialCapacity = 4096)
         {
             this.pool = pool;
             InternalResize(Math.Max(1, initialCapacity));
+
+            this.shapes = shapes;
+            this.bodies = bodies;
+            this.broadPhase = broadPhase;
+            this.activator = activator;
 
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCapacity, out HandlePool);
         }
@@ -67,71 +78,6 @@ namespace BepuPhysics
             //If the user wants to guarantee zero resizes, EnsureCapacity provides them the option to do so.
         }
 
-        public unsafe int Add(ref StaticDescription description)
-        {
-            if (Count == HandleToIndex.Length)
-            {
-                Debug.Assert(HandleToIndex.Allocated, "The backing memory of the bodies set should be initialized before use. Did you dispose and then not call EnsureCapacity/Resize?");
-                //Out of room; need to resize.
-                var newSize = HandleToIndex.Length << 1;
-                InternalResize(newSize);
-            }
-            Debug.Assert(Math.Abs(description.Pose.Orientation.Length() - 1) < 1e-6f, "Orientation should be initialized to a unit length quaternion.");
-            var handle = HandlePool.Take();
-            var index = Count++;
-            HandleToIndex[handle] = index;
-            IndexToHandle[index] = handle;
-            ref var collidable = ref Collidables[index];
-            collidable.Shape = description.Collidable.Shape;
-            collidable.Continuity = description.Collidable.Continuity;
-            collidable.SpeculativeMargin = description.Collidable.SpeculativeMargin;
-            //Collidable's broad phase index is left unset. The simulation is responsible for attaching that data.
-            Poses[index] = description.Pose;
-            return handle;
-        }
-
-        /// <summary>
-        /// Removes a static from the set by index and returns whether a move occurred. If another static took its place, the move is output.
-        /// </summary>
-        /// <param name="staticIndex">Index of the static to remove.</param>
-        /// <param name="movedStaticOriginalIndex">Original index of the static that was moved into the removed static's slot. -1 if no static had to be moved.</param>
-        /// <returns>True if a static was moved, false otherwise.</returns>
-        public bool RemoveAt(int staticIndex, out int movedStaticOriginalIndex)
-        {
-            Debug.Assert(staticIndex >= 0 && staticIndex < Count);
-            var handle = IndexToHandle[staticIndex];
-            //Move the last static into the removed slot.
-            //This does introduce disorder- there may be value in a second overload that preserves order, but it would require large copies.
-            //In the event that so many adds and removals are performed at once that they destroy contiguity, it may be better to just
-            //explicitly sort after the fact rather than attempt to retain contiguity incrementally. Handle it as a batch, in other words.
-            --Count;
-            bool staticMoved = staticIndex < Count;
-            if (staticMoved)
-            {
-                movedStaticOriginalIndex = Count;
-                //Copy the memory state of the last element down.
-                Poses[staticIndex] = Poses[movedStaticOriginalIndex];
-                //Note that if you ever treat the world inertias as 'always updated', it would need to be copied here.
-                Collidables[staticIndex] = Collidables[movedStaticOriginalIndex];
-                //Point the static handles at the new location.
-                var lastHandle = IndexToHandle[movedStaticOriginalIndex];
-                HandleToIndex[lastHandle] = staticIndex;
-                IndexToHandle[staticIndex] = lastHandle;
-
-            }
-            else
-            {
-                movedStaticOriginalIndex = -1;
-            }
-            //We rely on the collidable references being nonexistent beyond the static count.
-            Collidables[Count] = new Collidable();
-            //The indices should also be set to all -1's beyond the static count.
-            IndexToHandle[Count] = -1;
-            HandlePool.Return(handle, pool.SpecializeFor<int>());
-            HandleToIndex[handle] = -1;
-            return staticMoved;
-        }
-
         [Conditional("DEBUG")]
         internal void ValidateHandle(int handle)
         {
@@ -147,20 +93,198 @@ namespace BepuPhysics
                 "This static handle doesn't seem to exist, or the mappings are out of sync. If a handle exists, both directions should match.");
         }
 
-        /// <summary>
-        /// Removes a static from the set and returns whether a move occurred. If another static took its place, the move is output.
-        /// </summary>
-        /// <param name="handle">Handle of the static to remove.</param>
-        /// <param name="removedIndex">Former index of the static that was removed.</param>
-        /// <param name="movedStaticOriginalIndex">Original index of the static that was moved into the removed static's slot. -1 if no static had to be moved.</param>
-        /// <returns>True if a static was moved, false otherwise.</returns>
-        public bool Remove(int handle, out int removedIndex, out int movedStaticOriginalIndex)
+        struct InactiveBodyCollector : IForEach<int>
         {
-            ValidateExistingHandle(handle);
-            removedIndex = HandleToIndex[handle];
-            return RemoveAt(removedIndex, out movedStaticOriginalIndex);
+            BroadPhase broadPhase;
+            BufferPool<int> pool;
+            public QuickList<int, Buffer<int>> InactiveBodyHandles;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public InactiveBodyCollector(BroadPhase broadPhase, BufferPool pool)
+            {
+                this.pool = pool.SpecializeFor<int>();
+                this.broadPhase = broadPhase;
+                QuickList<int, Buffer<int>>.Create(this.pool, 32, out InactiveBodyHandles);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Dispose()
+            {
+                InactiveBodyHandles.Dispose(this.pool);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void LoopBody(int leafIndex)
+            {
+                ref var leaf = ref broadPhase.staticLeaves[leafIndex];
+                if (leaf.Mobility != CollidableMobility.Static)
+                {
+                    InactiveBodyHandles.Add(leaf.Handle, pool);
+                }
+            }
         }
 
+        void ActivateBodiesInBounds(ref BoundingBox bounds)
+        {
+            var collector = new InactiveBodyCollector(broadPhase, pool);
+            broadPhase.StaticTree.GetOverlaps(ref bounds, ref collector);
+            for (int i = 0; i < collector.InactiveBodyHandles.Count; ++i)
+            {
+                activator.ActivateBody(collector.InactiveBodyHandles[i]);
+            }
+            collector.Dispose();
+        }
+
+        unsafe void ActivateBodiesInExistingBounds(ref Collidable collidable)
+        {
+            Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < broadPhase.StaticTree.LeafCount);
+            broadPhase.GetStaticBoundsPointers(collidable.BroadPhaseIndex, out var minPointer, out var maxPointer);
+            BoundingBox oldBounds;
+            oldBounds.Min = *(Vector3*)minPointer;
+            oldBounds.Max = *(Vector3*)maxPointer;
+            ActivateBodiesInBounds(ref oldBounds);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void UpdateBounds(ref RigidPose pose, ref TypedIndex shapeIndex, out BoundingBox bounds)
+        {
+            //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
+            shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, ref pose, out bounds.Min, out bounds.Max);
+            ActivateBodiesInBounds(ref bounds);
+        }
+
+        /// <summary>
+        /// Removes a static from the set by index. Any inactive bodies with bounding boxes overlapping the removed static's bounding box will be forced active.
+        /// </summary>
+        /// <param name="index">Index of the static to remove.</param>
+        public void RemoveAt(int index)
+        {
+            Debug.Assert(index >= 0 && index < Count);
+            var handle = IndexToHandle[index];
+            //Move the last static into the removed slot.
+            //This does introduce disorder- there may be value in a second overload that preserves order, but it would require large copies.
+            //In the event that so many adds and removals are performed at once that they destroy contiguity, it may be better to just
+            //explicitly sort after the fact rather than attempt to retain contiguity incrementally. Handle it as a batch, in other words.
+            --Count;
+            bool staticMoved = index < Count;
+            if (staticMoved)
+            {
+                var movedStaticOriginalIndex = Count;
+                //Copy the memory state of the last element down.
+                Poses[index] = Poses[movedStaticOriginalIndex];
+                //Note that if you ever treat the world inertias as 'always updated', it would need to be copied here.
+                Collidables[index] = Collidables[movedStaticOriginalIndex];
+                //Point the static handles at the new location.
+                var lastHandle = IndexToHandle[movedStaticOriginalIndex];
+                HandleToIndex[lastHandle] = index;
+                IndexToHandle[index] = lastHandle;
+            }
+            //We rely on the collidable references being nonexistent beyond the static count.
+            Collidables[Count] = new Collidable();
+            //The indices should also be set to all -1's beyond the static count.
+            IndexToHandle[Count] = -1;
+            HandlePool.Return(handle, pool.SpecializeFor<int>());
+            HandleToIndex[handle] = -1;
+
+            ref var collidable = ref Collidables[index];
+            Debug.Assert(collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
+            ActivateBodiesInExistingBounds(ref collidable);
+
+            var removedBroadPhaseIndex = collidable.BroadPhaseIndex;
+            if (broadPhase.RemoveStaticAt(removedBroadPhaseIndex, out var movedLeaf))
+            {
+                //When a leaf is removed from the broad phase, another leaf will move to take its place in the leaf set.
+                //We must update the collidable->leaf index pointer to match the new position of the leaf in the broadphase.
+                //There are two possible cases for the moved leaf:
+                //1) it is an inactive body collidable,
+                //2) it is a static collidable.
+                //The collidable reference we retrieved tells us whether it's a body or a static.
+                if (movedLeaf.Mobility == CollidableMobility.Static)
+                {
+                    //This is a static collidable, not a body.
+                    Collidables[HandleToIndex[movedLeaf.Handle]].BroadPhaseIndex = removedBroadPhaseIndex;
+                }
+                else
+                {
+                    //This is an inactive body.
+                    bodies.UpdateCollidableBroadPhaseIndex(movedLeaf.Handle, removedBroadPhaseIndex);
+                }
+            }
+        }
+        /// <summary>
+        /// Removes a static from the set. Any inactive bodies with bounding boxes overlapping the removed static's bounding box will be forced active.
+        /// </summary>
+        /// <param name="handle">Handle of the static to remove.</param>
+        public void Remove(int handle)
+        {
+            ValidateExistingHandle(handle);
+            var removedIndex = HandleToIndex[handle];
+            RemoveAt(removedIndex);
+        }
+
+
+        internal void ApplyDescriptionByIndex(int index, int handle, ref StaticDescription description)
+        {
+            BundleIndexing.GetBundleIndices(index, out var bundleIndex, out var innerIndex);
+            Poses[index] = description.Pose;
+            ref var collidable = ref Collidables[index];
+            Debug.Assert(description.Collidable.Shape.Exists, "Static collidables must have a shape. Their only purpose is colliding.");
+            collidable.Continuity = description.Collidable.Continuity;
+            collidable.SpeculativeMargin = description.Collidable.SpeculativeMargin;
+            collidable.Shape = description.Collidable.Shape;
+
+            //Note that we have to calculate an initial bounding box for the broad phase to be able to insert it efficiently.
+            //(In the event of batch adds, you'll want to use batched AABB calculations or just use cached values.)
+            //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
+            UpdateBounds(ref description.Pose, ref description.Collidable.Shape, out var bounds);
+            Collidables[index].BroadPhaseIndex =
+                broadPhase.AddStatic(new CollidableReference(CollidableMobility.Static, handle), ref bounds);
+        }
+
+        /// <summary>
+        /// Adds a new static body to the simulation. All inactive bodies whose bounding boxes overlap the new static are forced active.
+        /// </summary>
+        /// <param name="description">Description of the static to add.</param>
+        /// <returns>Handle of the new static.</returns>
+        public int Add(ref StaticDescription description)
+        {
+            if (Count == HandleToIndex.Length)
+            {
+                Debug.Assert(HandleToIndex.Allocated, "The backing memory of the bodies set should be initialized before use. Did you dispose and then not call EnsureCapacity/Resize?");
+                //Out of room; need to resize.
+                var newSize = HandleToIndex.Length << 1;
+                InternalResize(newSize);
+            }
+            Debug.Assert(Math.Abs(description.Pose.Orientation.Length() - 1) < 1e-6f, "Orientation should be initialized to a unit length quaternion.");
+            var handle = HandlePool.Take();
+            var index = Count++;
+            HandleToIndex[handle] = index;
+            IndexToHandle[index] = handle;
+            ApplyDescriptionByIndex(index, handle, ref description);
+            return handle;
+        }
+
+        /// <summary>
+        /// Applies a new description to an existing static object. All inactive bodies with bounding boxes overlapping the old or new static collidable are forced active.
+        /// </summary>
+        /// <param name="handle">Handle of the static to apply the description to.</param>
+        /// <param name="description">Description to apply to the static.</param>
+        public void ApplyDescription(int handle, ref StaticDescription description)
+        {
+            ValidateExistingHandle(handle);
+            var index = HandleToIndex[handle];
+            Debug.Assert(description.Collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
+            //Wake all bodies up in the old bounds AND the new bounds. Inactive bodies that may have been resting on the old static need to be aware of the new environment.
+            ActivateBodiesInExistingBounds(ref Collidables[index]);
+            ApplyDescriptionByIndex(index, handle, ref description);
+
+        }
+
+        /// <summary>
+        /// Gets the current description of the static referred to by a given handle.
+        /// </summary>
+        /// <param name="handle">Handle of the static to look up the description of.</param>
+        /// <param name="description">Gathered description of the handle-referenced static.</param>
         public void GetDescription(int handle, out StaticDescription description)
         {
             ValidateExistingHandle(handle);
@@ -171,17 +295,6 @@ namespace BepuPhysics
             description.Collidable.Continuity = collidable.Continuity;
             description.Collidable.Shape = collidable.Shape;
             description.Collidable.SpeculativeMargin = collidable.SpeculativeMargin;
-        }
-        internal void SetDescriptionByIndex(int index, ref StaticDescription description)
-        {
-            BundleIndexing.GetBundleIndices(index, out var bundleIndex, out var innerIndex);
-            Poses[index] = description.Pose;
-            ref var collidable = ref Collidables[index];
-            collidable.Continuity = description.Collidable.Continuity;
-            collidable.SpeculativeMargin = description.Collidable.SpeculativeMargin;
-            //Note that we change the shape here. If the collidable transitions from shapeless->shapeful or shapeful->shapeless, the broad phase has to be notified 
-            //so that it can create/remove an entry. That's why this function isn't public.
-            collidable.Shape = description.Collidable.Shape;
         }
 
 
@@ -209,7 +322,7 @@ namespace BepuPhysics
                 InternalResize(targetCapacity);
             }
         }
-              
+
         /// <summary>
         /// Increases the size of buffers if needed to hold the target capacity.
         /// </summary>

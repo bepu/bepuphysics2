@@ -130,7 +130,7 @@ namespace BepuPhysics
             {
                 //Note that this is always an active body, so we know that whatever takes the body's place in the broad phase is also an active body.
                 //All statics and inactive bodies exist in the static tree.
-                Debug.Assert(movedLeaf.Mobility != CollidableMobility.Static);
+                Debug.Assert(movedLeaf.Mobility == CollidableMobility.Dynamic);
                 UpdateCollidableBroadPhaseIndex(movedLeaf.Handle, removedBroadPhaseIndex);
             }
         }
