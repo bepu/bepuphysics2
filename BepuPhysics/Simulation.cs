@@ -47,18 +47,19 @@ namespace BepuPhysics
             BufferPool = bufferPool;
             Statics = new Statics(bufferPool, initialAllocationSizes.Statics);
             Shapes = new Shapes(bufferPool, initialAllocationSizes.ShapesPerType);
-            Solver = new Solver(Bodies, BufferPool,
-                initialCapacity: initialAllocationSizes.Constraints,
-                minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
             BroadPhase = new BroadPhase(bufferPool, initialAllocationSizes.Bodies, initialAllocationSizes.Bodies + initialAllocationSizes.Statics);
-            Bodies = new Bodies(bufferPool, Activator, Shapes, BroadPhase, Solver,
+            Activator = new IslandActivator();
+            Bodies = new Bodies(bufferPool, Activator, Shapes, BroadPhase,
                 initialAllocationSizes.Bodies,
                 initialAllocationSizes.Islands, 
                 initialAllocationSizes.ConstraintCountPerBodyEstimate);
-
-
+            
+            Solver = new Solver(Bodies, BufferPool,
+                initialCapacity: initialAllocationSizes.Constraints,
+                minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
+            Bodies.Initialize(Solver);
+            Deactivator = new Deactivator(Bodies, Solver, BufferPool);
             PoseIntegrator = new PoseIntegrator(Bodies, Shapes, BroadPhase);
-
             SolverBatchCompressor = new BatchCompressor(Solver, Bodies);
             BodyLayoutOptimizer = new BodyLayoutOptimizer(Bodies, BroadPhase, Solver, bufferPool);
             ConstraintLayoutOptimizer = new ConstraintLayoutOptimizer(Bodies, Solver);
@@ -227,7 +228,7 @@ namespace BepuPhysics
             ConstraintGraphRemovalEnumerator enumerator;
             enumerator.bodies = Bodies;
             enumerator.constraintHandle = constraintHandle;
-            Solver.EnumerateConnectedBodyIndices(constraintHandle, ref enumerator);
+            Solver.EnumerateConnectedBodies(constraintHandle, ref enumerator);
             Solver.Remove(constraintHandle);
         }
 

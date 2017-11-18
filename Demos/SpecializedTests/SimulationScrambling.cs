@@ -24,7 +24,7 @@ namespace Demos.SpecializedTests
             for (int i = simulation.Bodies.ActiveSet.Count - 1; i >= 1; --i)
             {
                 //This helper function handles the updates that have to be performed across all body-sensitive systems.
-                BodyLayoutOptimizer.SwapBodyLocation(simulation.Bodies, simulation.Solver, i, random.Next(i));
+                BodyLayoutOptimizer.SwapBodyLocation(simulation.Bodies, i, random.Next(i));
             }
 
         }

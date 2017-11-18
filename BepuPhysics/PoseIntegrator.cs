@@ -168,6 +168,10 @@ namespace BepuPhysics
         }
         public void Update(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
+            //For now, the pose integrator (as the first stage that references them in any way) is responsible for ensuring that the bodies have a reasonable size inertias buffer.
+            //Note that ownership (for purposes of final disposal) still belongs to the Bodies set.
+            bodies.ResizeIneritas();
+
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
             gravityDt = Gravity * dt;
             if (threadDispatcher != null)

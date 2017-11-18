@@ -66,7 +66,7 @@ namespace BepuPhysics
                     //This constraint has not yet been traversed. Follow the constraint to every other connected body.
                     constraintHandles.Add(entry.ConnectingConstraintHandle, intPool);
                     consideredConstraints.AddUnsafely(entry.ConnectingConstraintHandle);
-                    solver.EnumerateConnectedBodyIndices(entry.ConnectingConstraintHandle, ref bodyEnumerator);
+                    solver.EnumerateConnectedBodies(entry.ConnectingConstraintHandle, ref bodyEnumerator);
                     for (int j = 0; j < bodyEnumerator.ConstraintBodyIndices.Count; ++j)
                     {
                         var connectedBodyHandle = bodies.ActiveSet.IndexToHandle[bodyEnumerator.ConstraintBodyIndices[j]];

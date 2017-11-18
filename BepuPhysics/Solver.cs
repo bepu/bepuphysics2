@@ -535,11 +535,11 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Enumerates the set of body indices associated with a constraint in order of their references within the constraint.
+        /// Enumerates the set of bodies associated with a constraint in order of their references within the constraint.
         /// </summary>
         /// <param name="constraintHandle">Constraint to enumerate.</param>
         /// <param name="enumerator">Enumerator to use.</param>
-        internal void EnumerateConnectedBodyIndices<TEnumerator>(int constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        internal void EnumerateConnectedBodies<TEnumerator>(int constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
         {
             ref var constraintLocation = ref HandleToConstraint[constraintHandle];
             //This does require a virtual call, but memory swaps should not be an ultra-frequent thing.

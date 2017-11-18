@@ -47,6 +47,8 @@ namespace BepuPhysics
         /// <returns>Reference to the active body set.</returns>
         public unsafe ref BodySet ActiveSet { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return ref Unsafe.As<byte, BodySet>(ref *Sets.Memory); } }
 
+        //TODO: Having Inertias publicly exposed seems like a recipe for confusion, given its ephemeral nature. We may want to explicitly delete it after frame execution and
+        //never expose it. If the user really wants an up to date world space inertia, it's pretty easy for them to build it from the local inertia and orientation anyway.
         /// <summary>
         /// The world transformed inertias of active bodies as of the last update. Note that this is not automatically updated for direct orientation changes or for body memory moves.
         /// It is only updated once during the frame. It should be treated as ephemeral information.
@@ -65,8 +67,17 @@ namespace BepuPhysics
         public int MinimumConstraintCapacityPerBody { get; set; }
 
 
-
-        public unsafe Bodies(BufferPool pool, IslandActivator activator, Shapes shapes, BroadPhase broadPhase, Solver solver,
+        /// <summary>
+        /// Constructs a new bodies collection. Initialize must be called for the instance to be ready for use.
+        /// </summary>
+        /// <param name="pool">Pool for the collection to pull persistent allocations from.</param>
+        /// <param name="activator">Island activator to use when bodies undergo transitions requiring that they exist in the active set.</param>
+        /// <param name="shapes">Shapes referenced by the collection's bodies.</param>
+        /// <param name="broadPhase">Broad phase containing the body collidables.</param>
+        /// <param name="initialBodyCapacity">Initial number of bodies to allocate space for in the active set.</param>
+        /// <param name="initialIslandCapacity">Initial number of islands to allocate space for in the Sets buffer.</param>
+        /// <param name="initialConstraintCapacityPerBody">Expected number of constraint references per body to allocate space for.</param>
+        public unsafe Bodies(BufferPool pool, IslandActivator activator, Shapes shapes, BroadPhase broadPhase,
             int initialBodyCapacity, int initialIslandCapacity, int initialConstraintCapacityPerBody)
         {
             this.pool = pool;
@@ -74,15 +85,23 @@ namespace BepuPhysics
             //Note that the id pool only grows upon removal, so this is just a heuristic initialization.
             //You could get by with something a lot less aggressive, but it does tend to avoid resizes in the case of extreme churn.
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialBodyCapacity, out HandlePool);
-            pool.SpecializeFor<BodySet>().Take(initialIslandCapacity + 1, out var Sets);
+            ResizeHandles(initialBodyCapacity);
+            pool.SpecializeFor<BodySet>().Take(initialIslandCapacity + 1, out Sets);
             ActiveSet = new BodySet(initialBodyCapacity, pool);
             this.activator = activator;
             this.shapes = shapes;
             this.broadPhase = broadPhase;
-            this.solver = solver;
             MinimumConstraintCapacityPerBody = initialConstraintCapacityPerBody;
         }
 
+        /// <summary>
+        /// Initializes the bodies set. Used to complete bidirectional dependencies.
+        /// </summary>
+        /// <param name="solver">Solver responsible for the constraints connected to the collection's bodies.</param>
+        public void Initialize(Solver solver)
+        {
+            this.solver = solver;
+        }
 
         void AddCollidableToBroadPhase(int bodyHandle, ref RigidPose pose, ref BodyInertia localInertia, ref Collidable collidable)
         {
@@ -135,14 +154,25 @@ namespace BepuPhysics
 
             //All new bodies are active for simplicity. Someday, it may be worth offering an optimized path for inactives, but it adds complexity.
             //(Directly adding inactive bodies can be helpful in some networked open world scenarios.)
-            var index = ActiveSet.Add(ref description, handle);
-            HandleToLocation[handle] = new BodyLocation { SetIndex = -1, Index = index };
+            var index = ActiveSet.Add(ref description, handle, MinimumConstraintCapacityPerBody, pool);
+            HandleToLocation[handle] = new BodyLocation { SetIndex = 0, Index = index };
 
             if (description.Collidable.Shape.Exists)
             {
                 AddCollidableToBroadPhase(handle, ref description.Pose, ref description.LocalInertia, ref ActiveSet.Collidables[index]);
             }
             return handle;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void UpdateForBodyMemoryMove(int originalBodyIndex, int newBodyIndex)
+        {
+            ref var list = ref ActiveSet.Constraints[originalBodyIndex];
+            for (int i = 0; i < list.Count; ++i)
+            {
+                ref var constraint = ref list[i];
+                solver.UpdateForBodyMemoryMove(constraint.ConnectingConstraintHandle, constraint.BodyIndexInConstraint, newBodyIndex);
+            }
         }
 
         /// <summary>
@@ -167,7 +197,7 @@ namespace BepuPhysics
                 //While the removed body doesn't have any constraints associated with it, the body that gets moved to fill its slot might!
                 //We're borrowing the body optimizer's logic here. You could share a bit more- the body layout optimizer has to deal with the same stuff, though it's optimized for swaps.
                 //TODO: the logic behind the body memory move really should be moved in here with the more recent designs.
-                BodyLayoutOptimizer.UpdateForBodyMemoryMove(movedBodyIndex, activeBodyIndex, this, solver);
+                UpdateForBodyMemoryMove(movedBodyIndex, activeBodyIndex);
             }
 
             Debug.Assert(HandleToLocation[movedBodyHandle].SetIndex == 0 && HandleToLocation[movedBodyHandle].Index == movedBodyIndex);
@@ -513,7 +543,131 @@ namespace BepuPhysics
             }
         }
 
+        struct ActiveConstraintBodyIndicesEnumerator<TInnerEnumerator> : IForEach<int> where TInnerEnumerator : IForEach<int>
+        {
+            public TInnerEnumerator InnerEnumerator;
+            public int SourceBodyIndex;
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void LoopBody(int connectedBodyIndex)
+            {
+                if (SourceBodyIndex != connectedBodyIndex)
+                {
+                    //Note that this may report the same body multiple times if it is connected multiple times! That's fine and potentially useful; let the user deal with it.
+                    InnerEnumerator.LoopBody(connectedBodyIndex);
+                }
+            }
+
+        }
+        struct ActiveConstraintBodyHandleEnumerator<TInnerEnumerator> : IForEach<int> where TInnerEnumerator : IForEach<int>
+        {
+            public Bodies bodies;
+            public TInnerEnumerator InnerEnumerator;
+            public int SourceBodyIndex;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void LoopBody(int connectedBodyIndex)
+            {
+                if (SourceBodyIndex != connectedBodyIndex)
+                {
+                    //This enumerator is associated with the public connected bodies enumerator function. The user supplies a handle and expects handles in return, so we 
+                    //must convert the solver-provided indices to handles.
+                    InnerEnumerator.LoopBody(bodies.ActiveSet.IndexToHandle[connectedBodyIndex]);
+                }
+            }
+
+        }
+        //Note that inactive constraints reference bodies by handles rather than indices.
+        struct InactiveConstraintBodyHandleEnumerator<TInnerEnumerator> : IForEach<int> where TInnerEnumerator : IForEach<int>
+        {
+            public TInnerEnumerator InnerEnumerator;
+            public int SourceBodyHandle;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void LoopBody(int connectedBodyHandle)
+            {
+                if (SourceBodyHandle != connectedBodyHandle)
+                {
+                    //Since this enumerator is associated with inactive constraints, which directly store body handles rather than body indices, 
+                    //we can directly pass the solver-provided handle.
+                    InnerEnumerator.LoopBody(connectedBodyHandle);
+                }
+            }
+
+        }
+
+        /// <summary>
+        /// Enumerates all the bodies connected to a given active body.
+        /// Bodies which are connected by more than one constraint will be reported multiple times.
+        /// </summary>
+        /// <typeparam name="TEnumerator">Type of the enumerator to execute on each connected body.</typeparam>
+        /// <param name="activeBodyIndex">Index of the active body to enumerate the connections of. This body will not appear in the set of enumerated bodies, even if it is connected to itself somehow.</param>
+        /// <param name="enumerator">Enumerator instance to run on each connected body.</param>
+        /// <param name="solver">Solver from which to pull constraint body references.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void EnumerateConnectedBodyIndices<TEnumerator>(int activeBodyIndex, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        {
+            ref var list = ref ActiveSet.Constraints[activeBodyIndex];
+            ActiveConstraintBodyIndicesEnumerator<TEnumerator> constraintBodiesEnumerator;
+            constraintBodiesEnumerator.InnerEnumerator = enumerator;
+            constraintBodiesEnumerator.SourceBodyIndex = activeBodyIndex;
+
+            //Note reverse iteration. This is useful when performing O(1) removals where the last element is put into the position of the removed element.
+            //Non-reversed iteration would result in skipped elements if the loop body removed anything. This relies on convention; any remover should be aware of this order.
+            for (int i = list.Count - 1; i >= 0; --i)
+            {
+                solver.EnumerateConnectedBodies(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
+            }
+            //Note that we have to assume the enumerator contains state mutated by the internal loop bodies.
+            //If it's a value type, those mutations won't be reflected in the original reference. 
+            //Copy them back in.
+            enumerator = constraintBodiesEnumerator.InnerEnumerator;
+        }
+        /// <summary>
+        /// Enumerates all the bodies connected to a given body.
+        /// Bodies which are connected by more than one constraint will be reported multiple times.
+        /// </summary>
+        /// <typeparam name="TEnumerator">Type of the enumerator to execute on each connected body.</typeparam>
+        /// <param name="bodyHandle">Handle of the body to enumerate the connections of. This body will not appear in the set of enumerated bodies, even if it is connected to itself somehow.</param>
+        /// <param name="enumerator">Enumerator instance to run on each connected body.</param>
+        /// <param name="solver">Solver from which to pull constraint body references.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void EnumerateConnectedBodies<TEnumerator>(int bodyHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
+        {
+            ref var bodyLocation = ref HandleToLocation[bodyHandle];
+            ref var set = ref Sets[bodyLocation.SetIndex];
+            ref var list = ref set.Constraints[bodyLocation.Index];
+            //In the loops below, we still make use of the reversed iteration. Removing from within the context of an enumerator is a dangerous move, but it is permitted if the user 
+            //is careful. By maintaining the same convention across all of these enumerations, it makes it a little easier to do reliably.
+            if (bodyLocation.SetIndex == 0)
+            {
+                //The body is active. Use the active enumerator.
+                ActiveConstraintBodyHandleEnumerator<TEnumerator> constraintBodiesEnumerator;
+                constraintBodiesEnumerator.InnerEnumerator = enumerator;
+                constraintBodiesEnumerator.SourceBodyIndex = bodyHandle;
+                constraintBodiesEnumerator.bodies = this;
+
+                for (int i = list.Count - 1; i >= 0; --i)
+                {
+                    solver.EnumerateConnectedBodies(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
+                }
+                enumerator = constraintBodiesEnumerator.InnerEnumerator;
+            }
+            else
+            {
+                //The body is inactive. Use the inactive enumerator.
+                InactiveConstraintBodyHandleEnumerator<TEnumerator> constraintBodiesEnumerator;
+                constraintBodiesEnumerator.InnerEnumerator = enumerator;
+                constraintBodiesEnumerator.SourceBodyHandle = bodyHandle;
+
+                for (int i = list.Count - 1; i >= 0; --i)
+                {
+                    solver.EnumerateConnectedBodies(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
+                }
+                enumerator = constraintBodiesEnumerator.InnerEnumerator;
+            }
+
+        }
         /// <summary>
         /// Clears all bodies from all sets without releasing any memory that wouldn't be released by a sequence of regular removals.
         /// </summary>
@@ -539,18 +693,30 @@ namespace BepuPhysics
             newCapacity = BufferPool<BodyLocation>.GetLowestContainingElementCount(newCapacity);
             if (newCapacity != HandleToLocation.Length)
             {
-                var highestPotentialHandle = HandlePool.HighestPossiblyClaimedId + 1;
-                pool.SpecializeFor<BodyLocation>().Resize(ref HandleToLocation, newCapacity, highestPotentialHandle);
-                if (HandleToLocation.Length > highestPotentialHandle)
+                var oldCapacity = HandleToLocation.Length;
+                pool.SpecializeFor<BodyLocation>().Resize(ref HandleToLocation, newCapacity, Math.Min(oldCapacity, newCapacity));
+                if (HandleToLocation.Length > oldCapacity)
                 {
                     Unsafe.InitBlockUnaligned(
-                      ((BodyLocation*)HandleToLocation.Memory) + highestPotentialHandle, 0xFF,
-                      (uint)(sizeof(BodyLocation) * (HandleToLocation.Length - highestPotentialHandle)));
+                      ((BodyLocation*)HandleToLocation.Memory) + oldCapacity, 0xFF,
+                      (uint)(sizeof(BodyLocation) * (HandleToLocation.Length - oldCapacity)));
                 }
             }
         }
         //Note that these resize and ensure capacity functions affect only the active set.
         //Inactive islands are created with minimal allocations. Since you cannot add to or remove from inactive islands, it is pointless to try to modify their allocation sizes.
+        /// <summary>
+        /// Reallocates the inertias buffer to the smallest size that can hold all active bodies.
+        /// </summary>
+        internal void ResizeIneritas()
+        {
+            var targetInertiaCapacity = BufferPool<BodyInertia>.GetLowestContainingElementCount(ActiveSet.Count);
+            if (Inertias.Length != targetInertiaCapacity)
+            {
+                pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, targetInertiaCapacity, 0);
+            }
+        }
+
         /// <summary>
         /// Resizes the allocated spans for active body data. Note that this is conservative; it will never orphan existing objects.
         /// </summary>
@@ -630,7 +796,8 @@ namespace BepuPhysics
                 }
             }
             pool.SpecializeFor<BodySet>().Return(ref Sets);
-            pool.SpecializeFor<BodyInertia>().Return(ref Inertias);
+            if (Inertias.Allocated)
+                pool.SpecializeFor<BodyInertia>().Return(ref Inertias);
             pool.SpecializeFor<BodyLocation>().Return(ref HandleToLocation);
             HandlePool.Dispose(pool.SpecializeFor<int>());
         }

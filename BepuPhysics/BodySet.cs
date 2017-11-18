@@ -63,19 +63,18 @@ namespace BepuPhysics
             InternalResize(initialCapacity, pool);
         }
 
-        internal int Add(ref BodyDescription bodyDescription, int handle)
+        internal int Add(ref BodyDescription bodyDescription, int handle, int minimumConstraintCapacity, BufferPool pool)
         {
-            var index = Count++;
+            var index = Count;
+            if(index == IndexToHandle.Length)
+            {
+                InternalResize(IndexToHandle.Length * 2, pool);
+            }
+            ++Count;
             IndexToHandle[index] = handle;
-            ref var collidable = ref Collidables[index];
-            collidable.Shape = bodyDescription.Collidable.Shape;
-            collidable.Continuity = bodyDescription.Collidable.Continuity;
-            collidable.SpeculativeMargin = bodyDescription.Collidable.SpeculativeMargin;
-            //Collidable's broad phase index is left unset. The simulation is responsible for attaching that data.
-
-            Poses[index] = bodyDescription.Pose;
-            Velocities[index] = bodyDescription.Velocity;
-            LocalInertias[index] = bodyDescription.LocalInertia;
+            //Collidable's broad phase index is left unset. The Bodies collection is responsible for attaching that data.
+            QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>.Create(pool.SpecializeFor<BodyConstraintReference>(), minimumConstraintCapacity, out Constraints[index]);
+            ApplyDescriptionByIndex(index, ref bodyDescription);
             return index;
         }
 
@@ -85,6 +84,9 @@ namespace BepuPhysics
             //Move the last body into the removed slot.
             --Count;
             bool bodyMoved = bodyIndex < Count;
+            ref var constraintsSlot = ref Constraints[bodyIndex];
+            constraintsSlot.Dispose(pool.SpecializeFor<BodyConstraintReference>());
+            Debug.Assert(constraintsSlot.Count == 0, "Removing a body without first removing its constraints results in orphaned constraints that will break stuff. Don't do it!");
             if (bodyMoved)
             {
                 movedBodyIndex = Count;
@@ -94,9 +96,6 @@ namespace BepuPhysics
                 LocalInertias[bodyIndex] = LocalInertias[movedBodyIndex];
                 Activity[bodyIndex] = Activity[movedBodyIndex];
                 Collidables[bodyIndex] = Collidables[movedBodyIndex];
-                ref var constraintsSlot = ref Constraints[bodyIndex];
-                Debug.Assert(constraintsSlot.Count == 0, "Removing a body without first removing its constraints results in orphaned constraints that will break stuff. Don't do it!");
-                constraintsSlot.Dispose(pool.SpecializeFor<BodyConstraintReference>());
                 constraintsSlot = Constraints[movedBodyIndex];
                 //Point the body handles at the new location.
                 movedBodyHandle = IndexToHandle[movedBodyIndex];
@@ -114,7 +113,7 @@ namespace BepuPhysics
             IndexToHandle[Count] = -1;
             return bodyMoved;
         }
-    
+
         internal void ApplyDescriptionByIndex(int index, ref BodyDescription description)
         {
             BundleIndexing.GetBundleIndices(index, out var bundleIndex, out var innerIndex);
@@ -153,6 +152,7 @@ namespace BepuPhysics
             constraint.ConnectingConstraintHandle = constraintHandle;
             constraint.BodyIndexInConstraint = bodyIndexInConstraint;
             ref var constraints = ref Constraints[bodyIndex];
+            Debug.Assert(constraints.Span.Allocated, "Any time a body is created, a list should be built to support it.");
             if (constraints.Span.Length == constraints.Count)
                 constraints.Resize(constraints.Span.Length * 2, pool.SpecializeFor<BodyConstraintReference>());
             constraints.AllocateUnsafely() = constraint;
@@ -173,7 +173,7 @@ namespace BepuPhysics
                     break;
                 }
             }
-            if (list.Count <= list.Span.Length / 2 && list.Span.Length >= minimumConstraintCapacityPerBody)
+            if (list.Count <= list.Span.Length / 2 && list.Span.Length > minimumConstraintCapacityPerBody)
             {
                 //The list has shrunk quite a bit, and it's above the maximum size. Might as well try to trim a little.
                 var targetCapacity = list.Count > minimumConstraintCapacityPerBody ? list.Count : minimumConstraintCapacityPerBody;
@@ -194,50 +194,6 @@ namespace BepuPhysics
             return false;
         }
 
-        struct ConstraintBodiesEnumerator<TInnerEnumerator> : IForEach<int> where TInnerEnumerator : IForEach<int>
-        {
-            public TInnerEnumerator InnerEnumerator;
-            public int SourceBodyIndex;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void LoopBody(int connectedBodyIndex)
-            {
-                if (SourceBodyIndex != connectedBodyIndex)
-                {
-                    //Note that this may report the same body multiple times if it is connected multiple times! That's fine and potentially useful; let the user deal with it.
-                    InnerEnumerator.LoopBody(connectedBodyIndex);
-                }
-            }
-
-        }
-
-        /// <summary>
-        /// Enumerates all the bodies connected to a given body.
-        /// Bodies which are connected by more than one constraint will be reported multiple times.
-        /// </summary>
-        /// <typeparam name="TEnumerator">Type of the enumerator to execute on each connected body.</typeparam>
-        /// <param name="bodyIndex">Index of the body to enumerate the connections of. This body will not appear in the set of enumerated bodies, even if it is connected to itself somehow.</param>
-        /// <param name="enumerator">Enumerator instance to run on each connected body.</param>
-        /// <param name="solver">Solver from which to pull constraint body references.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnumerateConnectedBodies<TEnumerator>(int bodyIndex, ref TEnumerator enumerator, Solver solver) where TEnumerator : IForEach<int>
-        {
-            ref var list = ref Constraints[bodyIndex];
-            ConstraintBodiesEnumerator<TEnumerator> constraintBodiesEnumerator;
-            constraintBodiesEnumerator.InnerEnumerator = enumerator;
-            constraintBodiesEnumerator.SourceBodyIndex = bodyIndex;
-
-            //Note reverse iteration. This is useful when performing O(1) removals where the last element is put into the position of the removed element.
-            //Non-reversed iteration would result in skipped elements if the loop body removed anything. This relies on convention; any remover should be aware of this order.
-            for (int i = list.Count - 1; i >= 0; --i)
-            {
-                solver.EnumerateConnectedBodyIndices(list[i].ConnectingConstraintHandle, ref constraintBodiesEnumerator);
-            }
-            //Note that we have to assume the enumerator contains state mutated by the internal loop bodies.
-            //If it's a value type, those mutations won't be reflected in the original reference. 
-            //Copy them back in.
-            enumerator = constraintBodiesEnumerator.InnerEnumerator;
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Swap<T>(ref T a, ref T b)

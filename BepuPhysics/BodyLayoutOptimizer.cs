@@ -49,25 +49,16 @@ namespace BepuPhysics
             incrementalOptimizeWorkDelegate = IncrementalOptimizeWork;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void UpdateForBodyMemoryMove(int originalBodyIndex, int newBodyIndex, Bodies bodies, Solver solver)
-        {
-            ref var list = ref bodies.ActiveSet.Constraints[originalBodyIndex];
-            for (int i = 0; i < list.Count; ++i)
-            {
-                ref var constraint = ref list[i];
-                solver.UpdateForBodyMemoryMove(constraint.ConnectingConstraintHandle, constraint.BodyIndexInConstraint, newBodyIndex);
-            }
-        }
+        
 
-        public static void SwapBodyLocation(Bodies bodies, Solver solver, int a, int b)
+        public static void SwapBodyLocation(Bodies bodies, int a, int b)
         {
             Debug.Assert(a != b, "Swapping a body with itself isn't meaningful. Whaddeyer doin?");
             //Enumerate the bodies' current set of constraints, changing the reference in each to the new location.
             //Note that references to both bodies must be changed- both bodies moved!
             //This function does not update the actual position of the list in the graph, so we can modify both without worrying about invalidating indices.
-            UpdateForBodyMemoryMove(a, b, bodies, solver);
-            UpdateForBodyMemoryMove(b, a, bodies, solver);
+            bodies.UpdateForBodyMemoryMove(a, b);
+            bodies.UpdateForBodyMemoryMove(b, a);
 
             //Update the body locations.
             bodies.ActiveSet.Swap(a, b, ref bodies.HandleToLocation);
@@ -101,7 +92,7 @@ namespace BepuPhysics
                     //Note that graph.EnumerateConnectedBodies explicitly excludes the body whose constraints we are enumerating, 
                     //so we don't have to worry about having the rug pulled by this list swap.
                     //(Also, !(x > x) for many values of x.)
-                    SwapBodyLocation(bodies, solver, connectedBodyIndex, newLocation);
+                    SwapBodyLocation(bodies, connectedBodyIndex, newLocation);
                 }
             }
         }
@@ -128,7 +119,7 @@ namespace BepuPhysics
                 enumerator.broadPhase = broadPhase;
                 enumerator.solver = solver;
                 enumerator.slotIndex = nextBodyIndex + 1;
-                bodies.ActiveSet.EnumerateConnectedBodies(nextBodyIndex, ref enumerator, solver);
+                bodies.EnumerateConnectedBodyIndices(nextBodyIndex, ref enumerator);
 
                 ++nextBodyIndex;
             }
@@ -178,7 +169,6 @@ namespace BepuPhysics
         struct ClaimConnectedBodiesEnumerator : IForEach<int>
         {
             public Bodies Bodies;
-            public Solver Solver;
             /// <summary>
             /// The claim states for every body in the simulation.
             /// </summary>
@@ -275,13 +265,13 @@ namespace BepuPhysics
                         return;
                     }
                     ClaimEnumerator.AllClaimsSucceededSoFar = true;
-                    ClaimEnumerator.Bodies.ActiveSet.EnumerateConnectedBodies(connectedBodyIndex, ref ClaimEnumerator, ClaimEnumerator.Solver);
+                    ClaimEnumerator.Bodies.EnumerateConnectedBodyIndices(connectedBodyIndex, ref ClaimEnumerator);
                     if (!ClaimEnumerator.AllClaimsSucceededSoFar)
                     {
                         ClaimEnumerator.Unclaim(ClaimEnumerator.WorkerClaims.Count - previousClaimCount);
                         return;
                     }
-                    ClaimEnumerator.Bodies.ActiveSet.EnumerateConnectedBodies(newLocation, ref ClaimEnumerator, ClaimEnumerator.Solver);
+                    ClaimEnumerator.Bodies.EnumerateConnectedBodyIndices(newLocation, ref ClaimEnumerator);
                     if (!ClaimEnumerator.AllClaimsSucceededSoFar)
                     {
                         ClaimEnumerator.Unclaim(ClaimEnumerator.WorkerClaims.Count - previousClaimCount);
@@ -292,7 +282,7 @@ namespace BepuPhysics
 
                     //Note that we update the memory location immediately. This could affect the next loop iteration.
                     //But this is fine; the next iteration will load from that modified data and everything will remain consistent.
-                    SwapBodyLocation(ClaimEnumerator.Bodies, ClaimEnumerator.Solver, connectedBodyIndex, newLocation);
+                    SwapBodyLocation(ClaimEnumerator.Bodies, connectedBodyIndex, newLocation);
 
                     //Unclaim all the bodies associated with this swap pair. Don't relinquish the claim origin.
                     ClaimEnumerator.Unclaim(ClaimEnumerator.WorkerClaims.Count - previousClaimCount);
@@ -309,7 +299,6 @@ namespace BepuPhysics
             enumerator.ClaimEnumerator = new ClaimConnectedBodiesEnumerator
             {
                 Bodies = bodies,
-                Solver = solver,
                 ClaimStates = claims,
                 WorkerClaims = worker.WorkerClaims,
                 ClaimIdentity = workerIndex + 1,
@@ -329,7 +318,7 @@ namespace BepuPhysics
                 //We don't want to let other threads yank the claim origin away from us while we're enumerating over its connections. That would be complicated to deal with.
                 if (!enumerator.ClaimEnumerator.TryClaim(optimizationTarget))
                     continue; //Couldn't grab the origin; just move on.
-                bodies.ActiveSet.EnumerateConnectedBodies(optimizationTarget, ref enumerator, solver);
+                bodies.EnumerateConnectedBodyIndices(optimizationTarget, ref enumerator);
 
                 //The optimization for this object is complete. We should relinquish all existing claims.
                 Debug.Assert(enumerator.ClaimEnumerator.WorkerClaims.Count == 1 && enumerator.ClaimEnumerator.WorkerClaims[0] == optimizationTarget,
