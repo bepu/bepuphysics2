@@ -54,8 +54,9 @@ namespace BepuPhysics
                 initialAllocationSizes.ConstraintCountPerBodyEstimate);
             Statics = new Statics(bufferPool, Shapes, Bodies, BroadPhase, Activator, initialAllocationSizes.Statics);
             
-            Solver = new Solver(Bodies, BufferPool,
+            Solver = new Solver(Bodies, BufferPool, 8,
                 initialCapacity: initialAllocationSizes.Constraints,
+                initialIslandCapacity: initialAllocationSizes.Islands,
                 minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
             Bodies.Initialize(Solver);
             Deactivator = new Deactivator(Bodies, Solver, BufferPool);

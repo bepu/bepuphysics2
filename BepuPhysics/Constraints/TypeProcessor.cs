@@ -83,7 +83,7 @@ namespace BepuPhysics.Constraints
 
         [Conditional("DEBUG")]
         internal abstract void VerifySortRegion(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices);
-        internal abstract int GetBodyIndexInstanceCount(ref TypeBatch typeBatch, int bodyIndex);
+        internal abstract int GetBodyReferenceCount(ref TypeBatch typeBatch, int body);
 
         public abstract void Initialize(ref TypeBatch typeBatch, int initialCapacity, BufferPool pool);
         public abstract void Resize(ref TypeBatch typeBatch, int newCapacity, BufferPool pool);
@@ -331,9 +331,9 @@ namespace BepuPhysics.Constraints
             //So instead, given that compressions should generally be extremely rare (relatively speaking) and highly deferrable, we'll accept some minor overhead.
             int bodiesPerConstraint = InternalBodiesPerConstraint;
             var bodyHandles = stackalloc int[bodiesPerConstraint];
-            var bodyHandleCollector = new ConstraintBodyHandleCollector(bodies, bodyHandles);
+            var bodyHandleCollector = new ActiveConstraintBodyHandleCollector(bodies, bodyHandles);
             EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref bodyHandleCollector);
-            ref var targetBatch = ref solver.Batches[targetBatchIndex];
+            ref var targetBatch = ref solver.ActiveSet.Batches[targetBatchIndex];
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
             var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
             targetBatch.Allocate(constraintHandle, ref bodyHandles[0], bodiesPerConstraint,
@@ -511,9 +511,11 @@ namespace BepuPhysics.Constraints
         }
 
 
-        internal override int GetBodyIndexInstanceCount(ref TypeBatch typeBatch, int bodyIndexToFind)
+        internal override int GetBodyReferenceCount(ref TypeBatch typeBatch, int bodyToFind)
         {
             //This is a pure debug function; performance does not matter.
+            //Note that this function is used across both active and inactive sets. In the active set, the body references refer to *indices* in the Bodies.ActiveSet.
+            //For inactive constraint sets, the body references are instead body *handles*. The user of this function is expected to appreciate the difference.
             var bundleCount = typeBatch.BundleCount;
             var bodyReferences = typeBatch.BodyReferences.As<TBodyReferences>();
             int count = 0;
@@ -527,7 +529,7 @@ namespace BepuPhysics.Constraints
                     ref var bodyVectorBase = ref Unsafe.As<Vector<int>, int>(ref Unsafe.Add(ref bundleBase, constraintBodyIndex));
                     for (int innerIndex = 0; innerIndex < bundleSize; ++innerIndex)
                     {
-                        if (Unsafe.Add(ref bodyVectorBase, innerIndex) == bodyIndexToFind)
+                        if (Unsafe.Add(ref bodyVectorBase, innerIndex) == bodyToFind)
                             ++count;
                         Debug.Assert(count <= 1);
                     }

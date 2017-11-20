@@ -68,21 +68,22 @@ namespace BepuPhysics
 
         void Wrap(ref Optimization o)
         {
-            Debug.Assert(solver.Batches.Count > 0, "Shouldn't be trying to optimize zero constraints.");
+            ref var activeSet = ref solver.ActiveSet;
+            Debug.Assert(activeSet.Batches.Count > 0, "Shouldn't be trying to optimize zero constraints.");
             while (true)
             {
-                if (o.BatchIndex >= solver.Batches.Count)
+                if (o.BatchIndex >= activeSet.Batches.Count)
                 {
                     o = new Optimization();
                 }
-                else if (o.TypeBatchIndex >= solver.Batches[o.BatchIndex].TypeBatches.Count)
+                else if (o.TypeBatchIndex >= activeSet.Batches[o.BatchIndex].TypeBatches.Count)
                 {
                     //It's possible that batches prior to the last constraint batch lack constraints. In that case, try the next one.
                     ++o.BatchIndex;
                     o.TypeBatchIndex = 0;
                     o.BundleIndex = 0;
                 }
-                else if (o.BundleIndex >= solver.Batches[o.BatchIndex].TypeBatches[o.TypeBatchIndex].BundleCount)
+                else if (o.BundleIndex >= activeSet.Batches[o.BatchIndex].TypeBatches[o.TypeBatchIndex].BundleCount)
                 {
                     ++o.TypeBatchIndex;
                     o.BundleIndex = 0;
@@ -98,7 +99,8 @@ namespace BepuPhysics
         {
             Wrap(ref o);
 
-            var spaceRemaining = solver.Batches[o.BatchIndex].TypeBatches[o.TypeBatchIndex].BundleCount - o.BundleIndex;
+            ref var activeSet = ref solver.ActiveSet;
+            var spaceRemaining = activeSet.Batches[o.BatchIndex].TypeBatches[o.TypeBatchIndex].BundleCount - o.BundleIndex;
             if (spaceRemaining <= maximumRegionSizeInBundles)
             {
                 ++o.TypeBatchIndex;
@@ -108,7 +110,7 @@ namespace BepuPhysics
             o.BundleIndex = Math.Max(0,
                 Math.Min(
                     o.BundleIndex + maximumRegionSizeInBundles / 2,
-                    solver.Batches[o.BatchIndex].TypeBatches[o.TypeBatchIndex].BundleCount - maximumRegionSizeInBundles));
+                    activeSet.Batches[o.BatchIndex].TypeBatches[o.TypeBatchIndex].BundleCount - maximumRegionSizeInBundles));
 
             return o;
         }
@@ -117,11 +119,11 @@ namespace BepuPhysics
         {
             //TODO: It's possible that the cost associated with setting up multithreading exceeds the cost of the actual optimization for smaller simulations.
             //You might want to fall back to single threaded based on some empirical testing.
-
             //No point in optimizing if there are no constraints- this is a necessary test since we assume that 0 is a valid batch index later.
-            if (solver.Batches.Count == 0)
+            ref var activeSet = ref solver.ActiveSet;
+            if (activeSet.Batches.Count == 0)
                 return;
-            var regionSizeInBundles = (int)Math.Max(2, Math.Round(solver.BundleCount * optimizationFraction));
+            var regionSizeInBundles = (int)Math.Max(2, Math.Round(activeSet.BundleCount * optimizationFraction));
             //The region size in bundles should be divisible by two so that it can be offset by half.
             if ((regionSizeInBundles & 1) == 1)
                 ++regionSizeInBundles;
@@ -133,17 +135,17 @@ namespace BepuPhysics
             {
                 //Use the previous frame's start to create the new target.
                 target = FindOffsetFrameStart(nextTarget, regionSizeInBundles);
-                Debug.Assert(solver.Batches[target.BatchIndex].TypeBatches[target.TypeBatchIndex].BundleCount <= regionSizeInBundles || target.BundleIndex != 0,
+                Debug.Assert(activeSet.Batches[target.BatchIndex].TypeBatches[target.TypeBatchIndex].BundleCount <= regionSizeInBundles || target.BundleIndex != 0,
                     "On offset frames, the only time a target bundle can be 0 is if the batch is too small for it to be anything else.");
                 //Console.WriteLine($"Offset frame targeting {target.BatchIndex}.{target.TypeBatchIndex}:{target.BundleIndex}");
-                Debug.Assert(solver.Batches[target.BatchIndex].TypeBatches.Count > target.TypeBatchIndex);
+                Debug.Assert(activeSet.Batches[target.BatchIndex].TypeBatches.Count > target.TypeBatchIndex);
             }
             else
             {
                 //Since the constraint set could have changed arbitrarily since the previous execution, validate from batch down.
                 target = nextTarget;
                 Wrap(ref target);
-                Debug.Assert(solver.Batches[target.BatchIndex].TypeBatches.Count > target.TypeBatchIndex);
+                Debug.Assert(activeSet.Batches[target.BatchIndex].TypeBatches.Count > target.TypeBatchIndex);
                 nextTarget = target;
                 nextTarget.BundleIndex += regionSizeInBundles;
                 //Console.WriteLine($"Normal frame targeting {target.BatchIndex}.{target.TypeBatchIndex}:{target.BundleIndex}");
@@ -155,7 +157,7 @@ namespace BepuPhysics
 
             var maximumRegionSizeInConstraints = regionSizeInBundles * Vector<int>.Count;
 
-            ref var typeBatch = ref solver.Batches[target.BatchIndex].TypeBatches[target.TypeBatchIndex];
+            ref var typeBatch = ref activeSet.Batches[target.BatchIndex].TypeBatches[target.TypeBatchIndex];
             SortByBodyLocation(ref typeBatch, target.BundleIndex, Math.Min(typeBatch.ConstraintCount - target.BundleIndex * Vector<int>.Count, maximumRegionSizeInConstraints),
                 solver.HandleToConstraint, bodies.ActiveSet.Count, bufferPool, threadDispatcher);
 

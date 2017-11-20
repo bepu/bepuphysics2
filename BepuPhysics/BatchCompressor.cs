@@ -127,7 +127,7 @@ namespace BepuPhysics
         unsafe void DoJob(ref AnalysisRegion region, int workerIndex, BufferPool pool)
         {
             ref var compressions = ref this.workerCompressions[workerIndex];
-            ref var batch = ref Solver.Batches[nextBatchIndex];
+            ref var batch = ref Solver.ActiveSet.Batches[nextBatchIndex];
             var typeBatchIndex = region.TypeBatchIndex;
             ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
             var typeProcessor = Solver.TypeProcessors[typeBatch.TypeId];
@@ -135,14 +135,14 @@ namespace BepuPhysics
             //Each job only works on a subset of a single type batch.
             var bodiesPerConstraint = typeProcessor.BodiesPerConstraint;
             var bodyHandles = stackalloc int[bodiesPerConstraint];
-            ConstraintBodyHandleCollector indexAccumulator;
-            indexAccumulator.Bodies = Bodies;
-            indexAccumulator.Handles = bodyHandles;
+            ActiveConstraintBodyHandleCollector handleAccumulator;
+            handleAccumulator.Bodies = Bodies;
+            handleAccumulator.Handles = bodyHandles;
             for (int i = region.StartIndexInTypeBatch; i < region.EndIndexInTypeBatch; ++i)
             {
                 //Check if this constraint can be removed.
-                indexAccumulator.Index = 0;
-                typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, i, ref indexAccumulator);
+                handleAccumulator.Index = 0;
+                typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, i, ref handleAccumulator);
                 for (int batchIndex = 0; batchIndex < nextBatchIndex; ++batchIndex)
                 {
                     if (Solver.batchReferencedHandles[batchIndex].CanFit(ref bodyHandles[0], bodiesPerConstraint))
@@ -189,7 +189,7 @@ namespace BepuPhysics
         public void Compress(BufferPool rawPool, IThreadDispatcher threadDispatcher = null, bool deterministic = false)
         {
             var workerCount = threadDispatcher != null ? threadDispatcher.ThreadCount : 1;
-            var constraintCount = Solver.ConstraintCount;
+            var constraintCount = Solver.ActiveSet.ConstraintCount;
             //Early out if there are no constraints to compress. The existence of constraints is assumed in some of the subsequent stages, so this is not merely an optimization.
             if (constraintCount == 0)
                 return;
@@ -214,26 +214,26 @@ namespace BepuPhysics
             //only the candidate analysis is actually multithreaded. That's fine- actual compressions are actually pretty rare in nonpathological cases!
 
             //Since the constraint set could have changed arbitrarily since the previous execution, validate from batch down.
-            Debug.Assert(Solver.Batches.Count > 0);
-            if (nextBatchIndex >= Solver.Batches.Count)
+            Debug.Assert(Solver.ActiveSet.Batches.Count > 0);
+            if (nextBatchIndex >= Solver.ActiveSet.Batches.Count)
             {
                 //Invalid batch; wrap to the first one.
                 nextBatchIndex = 0;
                 nextTypeBatchIndex = 0;
             }
             //Note that we must handle the case where a batch has zero type batches (because we haven't compressed it yet!).
-            while (nextTypeBatchIndex >= Solver.Batches[nextBatchIndex].TypeBatches.Count)
+            while (nextTypeBatchIndex >= Solver.ActiveSet.Batches[nextBatchIndex].TypeBatches.Count)
             {
                 //Invalid type batch; move to the next batch.
                 ++nextBatchIndex;
-                if (nextBatchIndex >= Solver.Batches.Count)
+                if (nextBatchIndex >= Solver.ActiveSet.Batches.Count)
                     nextBatchIndex = 0;
                 nextTypeBatchIndex = 0;
             }
             //Console.WriteLine($"start: batch {nextBatchIndex}, type batch {nextTarget.TypeBatchIndex}, index {nextTarget.StartIndexInTypeBatch}");
 
             //Build the analysis regions.
-            ref var batch = ref Solver.Batches[nextBatchIndex];
+            ref var batch = ref Solver.ActiveSet.Batches[nextBatchIndex];
 
             var regionPool = rawPool.SpecializeFor<AnalysisRegion>();
             //Just make a generous estimate as to the number of jobs we'll need. 512 is huge in context, but trivial in terms of ephemeral memory required.
@@ -286,7 +286,7 @@ namespace BepuPhysics
 
             analysisJobs.Dispose(regionPool);
 
-            ref var sourceBatch = ref Solver.Batches[nextBatchIndex];
+            ref var sourceBatch = ref Solver.ActiveSet.Batches[nextBatchIndex];
             int compressionsApplied = 0;
 
             //var applyStart = Stopwatch.GetTimestamp();

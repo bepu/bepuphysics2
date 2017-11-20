@@ -95,16 +95,17 @@ namespace BepuPhysics
             var blockPool = bufferPool.SpecializeFor<WorkBlock>();
 
             var maximumBlockCount = 0;
-            for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+            ref var activeSet = ref ActiveSet;
+            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
-                var typeBatchCount = Batches[batchIndex].TypeBatches.Count;
+                var typeBatchCount = activeSet.Batches[batchIndex].TypeBatches.Count;
                 maximumBlockCount += typeBatchCount > targetBlocksPerBatch ? typeBatchCount : targetBlocksPerBatch;
             }
             QuickList<WorkBlock, Buffer<WorkBlock>>.Create(blockPool, maximumBlockCount, out context.WorkBlocks);
-            QuickList<int, Buffer<int>>.Create(bufferPool.SpecializeFor<int>(), Batches.Count, out context.BatchBoundaries);
-            for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+            QuickList<int, Buffer<int>>.Create(bufferPool.SpecializeFor<int>(), activeSet.Batches.Count, out context.BatchBoundaries);
+            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
-                ref var batch = ref Batches[batchIndex];
+                ref var batch = ref activeSet.Batches[batchIndex];
                 var bundleCount = 0;
                 for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                 {
@@ -217,6 +218,7 @@ namespace BepuPhysics
         {
             //If no claim is made, this defaults to an invalid interval endpoint.
             int highestLocallyClaimedIndex = -1;
+            ref var activeSet = ref ActiveSet;
             while (true)
             {
                 if (Interlocked.CompareExchange(ref context.BlockClaims[blockIndex], claimedState, unclaimedState) == unclaimedState)
@@ -225,7 +227,7 @@ namespace BepuPhysics
                     bounds.Max = blockIndex + 1; //Exclusive bound.
                     Debug.Assert(blockIndex < batchEnd);
                     ref var block = ref context.WorkBlocks[blockIndex];
-                    ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                    ref var typeBatch = ref activeSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                     stageFunction.Execute(ref typeBatch, block.StartBundle, block.End, TypeProcessors[typeBatch.TypeId]);
                     //Increment or exit.
                     if (++blockIndex == batchEnd)
@@ -250,6 +252,7 @@ namespace BepuPhysics
         {
             //If no claim is made, this defaults to an invalid interval endpoint.
             int lowestLocallyClaimedIndex = context.WorkBlocks.Count;
+            ref var activeSet = ref ActiveSet;
             while (true)
             {
                 if (Interlocked.CompareExchange(ref context.BlockClaims[blockIndex], claimedState, unclaimedState) == unclaimedState)
@@ -258,7 +261,7 @@ namespace BepuPhysics
                     bounds.Min = blockIndex;
                     Debug.Assert(blockIndex >= batchStart);
                     ref var block = ref context.WorkBlocks[blockIndex];
-                    ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                    ref var typeBatch = ref activeSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                     stageFunction.Execute(ref typeBatch, block.StartBundle, block.End, TypeProcessors[typeBatch.TypeId]);
                     //Decrement or exit.
                     if (blockIndex == batchStart)
@@ -485,16 +488,17 @@ namespace BepuPhysics
                 prestepStart = blocksPerWorker * workerIndex + Math.Min(remainder, workerIndex);
             }
             Buffer<int> batchStarts;
+            ref var activeSet = ref ActiveSet;
             unsafe
             {
                 //stackalloc is actually a little bit slow since the localsinit behavior forces a zeroing.
                 //Fortunately, this executes once per thread per frame. With 32 batches, it would add... a few nanoseconds per frame. We can accept that overhead.
                 //This is preferred over preallocating on the heap- we might write to these values and we don't want to risk false sharing for no reason. 
                 //A single instance of false sharing would cost far more than the overhead of zeroing out the array.
-                var data = stackalloc int[Batches.Count];
-                batchStarts = new Buffer<int>(data, Batches.Count, Batches.Count);
+                var data = stackalloc int[activeSet.Batches.Count];
+                batchStarts = new Buffer<int>(data, activeSet.Batches.Count, activeSet.Batches.Count);
             }
-            for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
                 var batchStart = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
                 var batchCount = context.BatchBoundaries[batchIndex] - batchStart;
@@ -521,7 +525,7 @@ namespace BepuPhysics
             //Note that every batch has a different start position. Each covers a different subset of constraints, so they require different start locations.
             //The same concept applies to the prestep- the prestep covers all constraints at once, rather than batch by batch.
             var prestepStage = new PrestepStageFunction { Dt = context.Dt, Bodies = bodies };
-            Debug.Assert(Batches.Count > 0, "Don't dispatch if there are no constraints.");
+            Debug.Assert(activeSet.Batches.Count > 0, "Don't dispatch if there are no constraints.");
             //Technically this could mutate prestep starts, but at the moment we rebuild starts every frame anyway so it doesn't matter oen way or the other.
             ExecuteStage(ref prestepStage, ref bounds, ref boundsBackBuffer, workerIndex, 0, context.WorkBlocks.Count,
                 ref prestepStart, ref syncStage, claimedState, unclaimedState);
@@ -529,7 +533,7 @@ namespace BepuPhysics
             claimedState = 0;
             unclaimedState = 1;
             var warmStartStage = new WarmStartStageFunction { Velocities = bodies.ActiveSet.Velocities };
-            for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
                 var batchStart = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
                 //Don't use the warm start to guess at the solve iteration work distribution.
@@ -543,7 +547,7 @@ namespace BepuPhysics
             var solveStage = new SolveStageFunction { Velocities = bodies.ActiveSet.Velocities };
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
             {
-                for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+                for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
                 {
                     var batchStart = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
                     ExecuteStage(ref solveStage, ref bounds, ref boundsBackBuffer, workerIndex, batchStart, context.BatchBoundaries[batchIndex],
@@ -557,13 +561,14 @@ namespace BepuPhysics
         [Conditional("DEBUG")]
         void ValidateWorkBlocks()
         {
-            int[][][] batches = new int[Batches.Count][][];
-            for (int i = 0; i < Batches.Count; ++i)
+            ref var activeSet = ref ActiveSet;
+            int[][][] batches = new int[activeSet.Batches.Count][][];
+            for (int i = 0; i < activeSet.Batches.Count; ++i)
             {
-                var typeBatches = batches[i] = new int[Batches[i].TypeBatches.Count][];
+                var typeBatches = batches[i] = new int[activeSet.Batches[i].TypeBatches.Count][];
                 for (int j = 0; j < typeBatches.Length; ++j)
                 {
-                    typeBatches[j] = new int[Batches[i].TypeBatches[j].BundleCount];
+                    typeBatches[j] = new int[activeSet.Batches[i].TypeBatches[j].BundleCount];
                 }
             }
 
@@ -621,7 +626,7 @@ namespace BepuPhysics
             }
 
             //While we could be a little more aggressive about culling work with this condition, it doesn't matter much. Have to do it for correctness; worker relies on it.
-            if (Batches.Count > 0)
+            if (ActiveSet.Batches.Count > 0)
                 threadPool.DispatchWorkers(workDelegate);
 
             context.WorkBlocks.Dispose(bufferPool.SpecializeFor<WorkBlock>());

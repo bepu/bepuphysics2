@@ -19,22 +19,23 @@ namespace BepuPhysics
             int blockIndex;
             var endIndex = context.WorkBlocks.Count;
             var inverseDt = 1f / context.Dt;
+            ref var activeSet = ref ActiveSet;
             while ((blockIndex = Interlocked.Increment(ref StageIndices[syncStage])) <= endIndex)
             {
                 ref var block = ref context.WorkBlocks[blockIndex - 1];
-                ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                ref var typeBatch = ref activeSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                TypeProcessors[typeBatch.TypeId].Prestep(ref typeBatch, bodies, context.Dt, inverseDt, block.StartBundle, block.End);
             }
 
             InterstageSync(ref syncStage);
             
-            for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
                 endIndex = context.BatchBoundaries[batchIndex];
                 while ((blockIndex = Interlocked.Increment(ref StageIndices[syncStage])) <= endIndex)
                 {
                     ref var block = ref context.WorkBlocks[blockIndex - 1];
-                    ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                    ref var typeBatch = ref activeSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                     TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, block.StartBundle, block.End);
                 }
                 InterstageSync(ref syncStage);
@@ -42,13 +43,13 @@ namespace BepuPhysics
 
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
             {
-                for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+                for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
                 {
                     endIndex = context.BatchBoundaries[batchIndex];
                     while ((blockIndex = Interlocked.Increment(ref StageIndices[syncStage])) <= endIndex)
                     {
                         ref var block = ref context.WorkBlocks[blockIndex - 1];
-                        ref var typeBatch = ref Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
+                        ref var typeBatch = ref activeSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
                         TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, block.StartBundle, block.End);
                     }
                     InterstageSync(ref syncStage);
@@ -77,14 +78,15 @@ namespace BepuPhysics
             BuildWorkBlocks(bufferPool, minimumBlockSizeInBundles, maximumBlocksPerBatch);
             ValidateWorkBlocks();
 
-            var stageCount = 1 + Batches.Count * (iterationCount + 1);
+            ref var activeSet = ref ActiveSet;
+            var stageCount = 1 + activeSet.Batches.Count * (iterationCount + 1);
             bufferPool.SpecializeFor<int>().Take(stageCount, out StageIndices);
 
             StageIndices[0] = 0;
             int stageIndex = 1;
             for (int i = 0; i < iterationCount + 1; ++i)
             {
-                for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+                for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
                 {
                     StageIndices[stageIndex++] = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
                 }

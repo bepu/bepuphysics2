@@ -37,6 +37,7 @@ namespace BepuPhysics
         //so instead we keep a type id cached.
         //(You could pack these a bit- it's pretty reasonable to say you can't have more than 2^24 constraints of a given type and 2^8 constraint types...
         //It's just not that valuable, until proven otherwise.)
+        public int SetIndex;
         public int BatchIndex;
         public int TypeId;
         public int IndexInTypeBatch;
@@ -45,7 +46,18 @@ namespace BepuPhysics
     public partial class Solver
     {
 
-        public QuickList<ConstraintBatch, Buffer<ConstraintBatch>> Batches;
+        /// <summary>
+        /// Buffer containing all constraint sets. The first slot is dedicated to the active set; subsequent slots may be occupied by the constraints associated with inactive islands.
+        /// </summary>
+        public Buffer<ConstraintSet> Sets;
+
+        /// <summary>
+        /// Gets a reference to the active set of constraints, stored in the first set slot.
+        /// </summary>
+        public ref ConstraintSet ActiveSet { get { return ref Sets[0]; } }
+
+        //Note that the referenced handles for the active set are stored outside the constraint set;
+        //inactive islands do not store the referenced handles since no new constraints are ever added.
         internal QuickList<HandleSet, Buffer<HandleSet>> batchReferencedHandles;
 
         public TypeProcessor[] TypeProcessors;
@@ -131,50 +143,38 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Gets the total number of constraints across all types and batches.
+        /// Gets the total number of constraints across all sets, batches, and types. Requires enumerating
+        /// all type batches; this can be expensive.
         /// </summary>
-        public int ConstraintCount
+        public int CountConstraints()
         {
-            get
+            int count = 0;
+            for (int setIndex = 0; setIndex < Sets.Length; ++setIndex)
             {
-                int count = 0;
-                for (int i = 0; i < Batches.Count; ++i)
+                ref var set = ref Sets[setIndex];
+                if (set.Allocated)
                 {
-                    ref var batch = ref Batches[i];
-                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                    for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
                     {
-                        count += batch.TypeBatches[j].ConstraintCount;
+                        ref var batch = ref set.Batches[batchIndex];
+                        for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                        {
+                            count += batch.TypeBatches[typeBatchIndex].ConstraintCount;
+                        }
                     }
                 }
-                return count;
             }
+            return count;
         }
-        /// <summary>
-        /// Gets the total number of bundles across all types and batches.
-        /// </summary>
-        public int BundleCount
-        {
-            get
-            {
-                int count = 0;
-                for (int i = 0; i < Batches.Count; ++i)
-                {
-                    ref var batch = ref Batches[i];
-                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
-                    {
-                        count += batch.TypeBatches[j].BundleCount;
-                    }
-                }
-                return count;
-            }
-        }
+
 
         Action<int> workDelegate;
         //TODO: While 32 batches will likely cover most simulations, this will likely change when the jacobi-hybrid fallback is implemented in favor of a user configurable threshold.
         const int BatchCountEstimate = 32;
-        public Solver(Bodies bodies, BufferPool bufferPool, int iterationCount = 5,
-            int initialCapacity = 1024,
-            int minimumCapacityPerTypeBatch = 64)
+        public Solver(Bodies bodies, BufferPool bufferPool, int iterationCount,
+            int initialCapacity,
+            int initialIslandCapacity,
+            int minimumCapacityPerTypeBatch)
         {
             this.iterationCount = iterationCount;
             this.minimumCapacityPerTypeBatch = minimumCapacityPerTypeBatch;
@@ -185,7 +185,8 @@ namespace BepuPhysics
             //that would make a variety of things more annoying to handle. We can make use of just a tiny amount of idiomatic C#-ness. This won't be many references anyway.
             //We also don't bother pooling this stuff, and we don't have an API for preallocating it- because we're talking about a very, very small amount of data.
             //It's not worth the introduced API complexity.
-            QuickList<ConstraintBatch, Buffer<ConstraintBatch>>.Create(bufferPool.SpecializeFor<ConstraintBatch>(), BatchCountEstimate, out Batches);
+            bufferPool.SpecializeFor<ConstraintSet>().Take(initialIslandCapacity + 1, out Sets);
+            ActiveSet = new ConstraintSet(bufferPool, BatchCountEstimate);
             QuickList<HandleSet, Buffer<HandleSet>>.Create(bufferPool.SpecializeFor<HandleSet>(), BatchCountEstimate, out batchReferencedHandles);
             bufferPool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
             workDelegate = Work;
@@ -223,16 +224,16 @@ namespace BepuPhysics
         public void GetConstraintReference(int handle, out ConstraintReference reference)
         {
             ref var constraintLocation = ref HandleToConstraint[handle];
-            reference = new ConstraintReference(ref Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId), constraintLocation.IndexInTypeBatch);
+            reference = new ConstraintReference(ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId), constraintLocation.IndexInTypeBatch);
         }
 
         [Conditional("DEBUG")]
-        private void ValidateBodyIndex(int bodyIndex, int expectedCount, ref ConstraintBatch batch)
+        private void ValidateBodyReference(int body, int expectedCount, ref ConstraintBatch batch)
         {
             int referencesToBody = 0;
             for (int i = 0; i < batch.TypeBatches.Count; ++i)
             {
-                var instancesInTypeBatch = TypeProcessors[batch.TypeBatches[i].TypeId].GetBodyIndexInstanceCount(ref batch.TypeBatches[i], bodyIndex);
+                var instancesInTypeBatch = TypeProcessors[batch.TypeBatches[i].TypeId].GetBodyReferenceCount(ref batch.TypeBatches[i], body);
                 Debug.Assert(instancesInTypeBatch + referencesToBody <= expectedCount,
                     "Found an instance of a body index that wasn't expected. Possible upstream bug or memory corruption.");
                 referencesToBody += instancesInTypeBatch;
@@ -241,7 +242,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        internal void ValidateExistingHandles()
+        internal unsafe void ValidateExistingHandles()
         {
             for (int i = 0; i < bodies.Sets.Length; ++i)
             {
@@ -251,52 +252,122 @@ namespace BepuPhysics
                     bodies.ValidateExistingHandle(set.IndexToHandle[j]);
                 }
             }
-            for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+            //Validate the bodies referenced in the active batchReferencedHandles collections. 
+            //Note that this only applies to the active set; inactive sets do not explicitly track referenced handles.
+            for (int batchIndex = 0; batchIndex < ActiveSet.Batches.Count; ++batchIndex)
             {
                 ref var handles = ref batchReferencedHandles[batchIndex];
-                ref var batch = ref Batches[batchIndex];
+                ref var batch = ref ActiveSet.Batches[batchIndex];
                 for (int i = 0; i < bodies.ActiveSet.Count; ++i)
                 {
                     var handle = bodies.ActiveSet.IndexToHandle[i];
                     if (handles.Contains(handle))
-                        ValidateBodyIndex(i, 1, ref batch);
+                        ValidateBodyReference(i, 1, ref batch);
                     else
-                        ValidateBodyIndex(i, 0, ref batch);
+                        ValidateBodyReference(i, 0, ref batch);
                 }
             }
-            //Note that inactive constraints store body references by handle instead of index, and inactive islands do not contain any batch referenced handles. 
-            //They must be validated independently.
-            //TODO: Inactive constraints. No batch references to validate, so just go from IndexToHandle to HandleToConstraint, and validate the set of 
-        }
-
-        [Conditional("DEBUG")]
-        internal void ValidateNewHandles(int batchIndex, ref int bodyHandles, int bodyCount, Bodies bodies)
-        {
-            Debug.Assert(batchReferencedHandles[batchIndex].CanFit(ref bodyHandles, bodyCount));
-            for (int i = 0; i < bodyCount; ++i)
+            //Now, for all sets, validate that constraint and body references to each other are consistent and complete.
+            ConstraintReferenceCollector enumerator;
+            int maximumBodiesPerConstraint = 0;
+            for (int i = 0; i < TypeProcessors.Length; ++i)
             {
-                ValidateBodyIndex(bodies.HandleToLocation[Unsafe.Add(ref bodyHandles, i)].Index, 0, ref Batches[batchIndex]);
+                if (TypeProcessors[i].BodiesPerConstraint > maximumBodiesPerConstraint)
+                    maximumBodiesPerConstraint = TypeProcessors[i].BodiesPerConstraint;
+            }
+            var constraintBodyReferences = stackalloc int[maximumBodiesPerConstraint];
+            enumerator.References = constraintBodyReferences;
+            for (int setIndex = 0; setIndex < Sets.Length; ++setIndex)
+            {
+                ref var set = ref Sets[setIndex];
+                Debug.Assert(bodies.Sets.Length > setIndex);
+                if (set.Allocated)
+                {
+                    //We are going to test this in both directions:
+                    //For each constraint, for each body within that constraint, confirm that the referenced body includes the constraint in its constraint list.
+                    //For each body, for each constraint referenced by that body, confirm that the referenced constraint includes the body in its body list.
+                    ref var bodySet = ref bodies.Sets[setIndex];
+                    Debug.Assert(bodySet.Allocated, "For any existing constraint set, there must be an aligned existing body set. Constraints don't exist by themselves.");
+                    for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
+                    {
+                        ref var batch = ref set.Batches[batchIndex];
+                        for (int typebatchIndex = 0; typebatchIndex < batch.TypeBatches.Count; ++typebatchIndex)
+                        {
+                            ref var typeBatch = ref batch.TypeBatches[typebatchIndex];
+                            var processor = TypeProcessors[typeBatch.TypeId];
+                            for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
+                            {
+                                enumerator.Index = 0;
+                                processor.EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref enumerator);
+
+                                for (int i = 0; i < processor.BodiesPerConstraint; ++i)
+                                {
+                                    //Active constraints refer to bodies with an index. Inactive constraints use a handle.
+                                    int bodyIndex;
+                                    if (setIndex == 0)
+                                    {
+                                        bodyIndex = constraintBodyReferences[i];
+                                    }
+                                    else
+                                    {
+                                        ref var referencedBodyLocation = ref bodies.HandleToLocation[constraintBodyReferences[i]];
+                                        Debug.Assert(referencedBodyLocation.SetIndex == setIndex, "Any body involved with a constraint should be in the same set.");
+                                        bodyIndex = referencedBodyLocation.Index;
+                                    }
+                                    Debug.Assert(bodySet.BodyIsConstrainedBy(bodyIndex, typeBatch.IndexToHandle[indexInTypeBatch]),
+                                        "If a constraint refers to a body, the body should refer to the constraint.");
+                                }
+                            }
+                        }
+                    }
+                    //Now for the body->constraint direction.
+                    for (int bodyIndex = 0; bodyIndex < bodySet.Count; ++bodyIndex)
+                    {
+                        ref var constraintList = ref bodySet.Constraints[bodyIndex];
+                        for (int constraintIndex = 0; constraintIndex < constraintList.Count; ++constraintIndex)
+                        {
+                            ref var constraintLocation = ref HandleToConstraint[constraintList[constraintIndex].ConnectingConstraintHandle];
+                            Debug.Assert(constraintLocation.SetIndex == setIndex, "Any constraint involved with a body should be in the same set.");
+                            ref var batch = ref set.Batches[constraintLocation.BatchIndex];
+                            ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
+                            var processor = TypeProcessors[typeBatch.TypeId];
+                            enumerator.Index = 0;
+                            processor.EnumerateConnectedBodyIndices(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
+                            //Active constraints refer to bodies by index; inactive constraints use handles.
+                            int bodyReference = setIndex == 0 ? bodyIndex : bodySet.IndexToHandle[bodyIndex];
+                            Debug.Assert(constraintBodyReferences[constraintList[constraintIndex].BodyIndexInConstraint] == bodyReference,
+                                "If a body refers to a constraint, the constraint should refer to the body.");
+                        }
+                    }
+                }
             }
         }
 
         [Conditional("DEBUG")]
         internal void ValidateConstraintMaps()
         {
-            for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+            for (int setIndex = 0; setIndex < Sets.Length; ++setIndex)
             {
-                ref var handles = ref batchReferencedHandles[batchIndex];
-                ref var batch = ref Batches[batchIndex];
-                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                ref var set = ref Sets[setIndex];
+                if (set.Allocated)
                 {
-                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
-                    for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
+                    for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
                     {
-                        var handle = typeBatch.IndexToHandle[indexInTypeBatch];
-                        ref var constraintLocation = ref HandleToConstraint[handle];
-                        Debug.Assert(constraintLocation.BatchIndex == batchIndex);
-                        Debug.Assert(constraintLocation.IndexInTypeBatch == indexInTypeBatch);
-                        Debug.Assert(constraintLocation.TypeId == typeBatch.TypeId);
-                        Debug.Assert(batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId] == typeBatchIndex);
+                        ref var handles = ref batchReferencedHandles[batchIndex];
+                        ref var batch = ref set.Batches[batchIndex];
+                        for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                        {
+                            ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                            for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
+                            {
+                                var handle = typeBatch.IndexToHandle[indexInTypeBatch];
+                                ref var constraintLocation = ref HandleToConstraint[handle];
+                                Debug.Assert(constraintLocation.BatchIndex == batchIndex);
+                                Debug.Assert(constraintLocation.IndexInTypeBatch == indexInTypeBatch);
+                                Debug.Assert(constraintLocation.TypeId == typeBatch.TypeId);
+                                Debug.Assert(batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId] == typeBatchIndex);
+                            }
+                        }
                     }
                 }
             }
@@ -311,26 +382,28 @@ namespace BepuPhysics
         /// do those systems attempt an actual claim, limiting the duration of locks and increasing potential parallelism.</remarks>
         internal unsafe int FindCandidateBatch(int batchStartIndex, ref int bodyHandles, int bodyCount)
         {
-            for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+            ref var set = ref ActiveSet;
+            for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
             {
                 if (batchReferencedHandles[batchIndex].CanFit(ref bodyHandles, bodyCount))
                     return batchIndex;
             }
-            return Batches.Count;
+            return set.Batches.Count;
         }
 
         internal unsafe bool TryAllocateInBatch(int typeId, int targetBatchIndex, ref int bodyHandles, int bodyCount, out int constraintHandle, out ConstraintReference reference)
         {
-            Debug.Assert(targetBatchIndex <= Batches.Count,
+            ref var set = ref ActiveSet;
+            Debug.Assert(targetBatchIndex <= set.Batches.Count,
                 "It should be impossible for a target batch to be generated which is more than one slot beyond the end of the batch list. Possible misuse of FindCandidateBatch.");
-            if (targetBatchIndex == Batches.Count)
+            if (targetBatchIndex == set.Batches.Count)
             {
                 //No batch available. Have to create a new one.
-                if (Batches.Count == Batches.Span.Length)
-                    Batches.Resize(Batches.Count + 1, bufferPool.SpecializeFor<ConstraintBatch>());
-                if (Batches.Count == batchReferencedHandles.Span.Length)
-                    batchReferencedHandles.Resize(Batches.Count + 1, bufferPool.SpecializeFor<HandleSet>());
-                Batches.AllocateUnsafely() = new ConstraintBatch(bufferPool, TypeProcessors.Length);
+                if (set.Batches.Count == set.Batches.Span.Length)
+                    set.Batches.Resize(set.Batches.Count + 1, bufferPool.SpecializeFor<ConstraintBatch>());
+                if (set.Batches.Count == batchReferencedHandles.Span.Length)
+                    batchReferencedHandles.Resize(set.Batches.Count + 1, bufferPool.SpecializeFor<HandleSet>());
+                set.Batches.AllocateUnsafely() = new ConstraintBatch(bufferPool, TypeProcessors.Length);
                 batchReferencedHandles.AllocateUnsafely() = new HandleSet(bufferPool, bodies.ActiveSet.Count);
                 //Note that if there is no constraint batch for the given index, there is no way for the constraint add to be blocked. It's guaranteed success.
             }
@@ -346,7 +419,7 @@ namespace BepuPhysics
                 }
             }
             constraintHandle = HandlePool.Take();
-            Batches[targetBatchIndex].Allocate(constraintHandle, ref bodyHandles, bodyCount, ref batchReferencedHandles[targetBatchIndex],
+            set.Batches[targetBatchIndex].Allocate(constraintHandle, ref bodyHandles, bodyCount, ref batchReferencedHandles[targetBatchIndex],
                 bodies, typeId, TypeProcessors[typeId], GetMinimumCapacityForType(typeId), bufferPool, out reference);
 
             if (constraintHandle >= HandleToConstraint.Length)
@@ -355,6 +428,13 @@ namespace BepuPhysics
                 Debug.Assert(constraintHandle < HandleToConstraint.Length, "Handle indices should never jump by more than 1 slot, so doubling should always be sufficient.");
             }
             ref var constraintLocation = ref HandleToConstraint[constraintHandle];
+            //Note that new constraints are always active. It is assumed at this point that all connected bodies have been forced active.
+            for (int i = 0; i < bodyCount; ++i)
+            {
+                ref var bodyLocation = ref bodies.HandleToLocation[Unsafe.Add(ref bodyHandles, i)];
+                Debug.Assert(bodyLocation.SetIndex == 0, "New constraints should only be created involving already-activated bodies.");
+            }
+            constraintLocation.SetIndex = 0;
             constraintLocation.IndexInTypeBatch = reference.IndexInTypeBatch;
             constraintLocation.TypeId = typeId;
             constraintLocation.BatchIndex = targetBatchIndex;
@@ -403,7 +483,8 @@ namespace BepuPhysics
         public void Add<TDescription>(ref int bodyHandles, int bodyCount, ref TDescription description, out int handle)
             where TDescription : IConstraintDescription<TDescription>
         {
-            for (int i = 0; i <= Batches.Count; ++i)
+            ref var set = ref ActiveSet;
+            for (int i = 0; i <= set.Batches.Count; ++i)
             {
                 if (TryAllocateInBatch(description.ConstraintTypeId, i, ref bodyHandles, bodyCount, out handle, out var reference))
                 {
@@ -436,20 +517,21 @@ namespace BepuPhysics
                 //In fact, almost every instance where a batch goes empty will involve the highest index batch. If it isn't, it's going to be very high, and there won't be 
                 //many constraints above it. Deferred compression will handle it easily.
                 //Note the use of the cached batch index rather than the ref.
-                if (batchIndex == Batches.Count - 1)
+                ref var set = ref ActiveSet;
+                if (batchIndex == set.Batches.Count - 1)
                 {
                     //Note that when we remove an empty batch, it may reveal another empty batch. If that happens, remove the revealed batch(es) too.
-                    while (Batches.Count > 0)
+                    while (set.Batches.Count > 0)
                     {
-                        var lastBatchIndex = Batches.Count - 1;
-                        ref var lastBatch = ref Batches[lastBatchIndex];
+                        var lastBatchIndex = set.Batches.Count - 1;
+                        ref var lastBatch = ref set.Batches[lastBatchIndex];
                         if (lastBatch.TypeBatches.Count == 0)
                         {
                             lastBatch.Dispose(bufferPool);
                             batchReferencedHandles[lastBatchIndex].Dispose(bufferPool);
                             --batchReferencedHandles.Count;
-                            --Batches.Count;
-                            Debug.Assert(Batches.Count == batchReferencedHandles.Count);
+                            --set.Batches.Count;
+                            Debug.Assert(set.Batches.Count == batchReferencedHandles.Count);
                         }
                         else
                         {
@@ -468,7 +550,7 @@ namespace BepuPhysics
         /// <param name="indexInTypeBatch">Index of the constraint to remove within its type batch.</param>
         internal void RemoveFromBatch(int batchIndex, int typeId, int indexInTypeBatch)
         {
-            ref var batch = ref Batches[batchIndex];
+            ref var batch = ref ActiveSet.Batches[batchIndex];
             batch.RemoveWithHandles(typeId, indexInTypeBatch, ref batchReferencedHandles[batchIndex], this);
             RemoveBatchIfEmpty(ref batch, batchIndex);
         }
@@ -505,7 +587,7 @@ namespace BepuPhysics
             //The BuildDescription and ConstraintTypeId members are basically static. It would be nice if C# could express that a little more cleanly with no overhead.
             ref var location = ref HandleToConstraint[handle];
             var dummy = default(TConstraintDescription);
-            ref var typeBatch = ref Batches[location.BatchIndex].GetTypeBatch(dummy.ConstraintTypeId);
+            ref var typeBatch = ref Sets[location.SetIndex].Batches[location.BatchIndex].GetTypeBatch(dummy.ConstraintTypeId);
             BundleIndexing.GetBundleIndices(location.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
             dummy.BuildDescription(ref typeBatch, bundleIndex, innerIndex, out description);
         }
@@ -518,7 +600,7 @@ namespace BepuPhysics
         /// <param name="constraintHandle">Handle of the constraint to modify.</param> 
         /// <param name="bodyIndexInConstraint">Index of the moved body in the constraint.</param>
         /// <param name="newBodyLocation">Memory index that the moved body now inhabits.</param>
-        public void UpdateForBodyMemoryMove(int constraintHandle, int bodyIndexInConstraint, int newBodyLocation)
+        internal void UpdateForBodyMemoryMove(int constraintHandle, int bodyIndexInConstraint, int newBodyLocation)
         {
             //Note that this function requires scanning the bodies in the constraint. This will tend to be fine since the vast majority of constraints have no more than 2 bodies.
             //While it's possible to store the index of the body in the constraint to avoid this scan, storing that information requires collecting that information on add.
@@ -530,7 +612,7 @@ namespace BepuPhysics
             //(A few hundred calls per frame in a simulation of 10000 active objects would probably be overkill.)
             //(Also, there's a sufficient number of cache-missy indirections here that a virtual call is pretty irrelevant.)
             TypeProcessors[constraintLocation.TypeId].UpdateForBodyMemoryMove(
-                ref Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId),
+                ref ActiveSet.Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId),
                 constraintLocation.IndexInTypeBatch, bodyIndexInConstraint, newBodyLocation);
         }
 
@@ -542,10 +624,7 @@ namespace BepuPhysics
         internal void EnumerateConnectedBodies<TEnumerator>(int constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<int>
         {
             ref var constraintLocation = ref HandleToConstraint[constraintHandle];
-            //This does require a virtual call, but memory swaps should not be an ultra-frequent thing.
-            //(A few hundred calls per frame in a simulation of 10000 active objects would probably be overkill.)
-            //(Also, there's a sufficient number of cache-missy indirections here that a virtual call is pretty irrelevant.)
-            ref var typeBatch = ref Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
+            ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
             Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
             TypeProcessors[constraintLocation.TypeId].EnumerateConnectedBodyIndices(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
         }
@@ -554,9 +633,10 @@ namespace BepuPhysics
         public void Update(float dt)
         {
             var inverseDt = 1f / dt;
-            for (int i = 0; i < Batches.Count; ++i)
+            ref var activeSet = ref ActiveSet;
+            for (int i = 0; i < activeSet.Batches.Count; ++i)
             {
-                ref var batch = ref Batches[i];
+                ref var batch = ref activeSet.Batches[i];
                 for (int j = 0; j < batch.TypeBatches.Count; ++j)
                 {
                     ref var typeBatch = ref batch.TypeBatches[j];
@@ -565,9 +645,9 @@ namespace BepuPhysics
             }
             //TODO: May want to consider executing warmstart immediately following the prestep. Multithreading can't do that, so there could be some bitwise differences introduced.
             //On the upside, it would make use of cached data.
-            for (int i = 0; i < Batches.Count; ++i)
+            for (int i = 0; i < activeSet.Batches.Count; ++i)
             {
-                ref var batch = ref Batches[i];
+                ref var batch = ref activeSet.Batches[i];
                 for (int j = 0; j < batch.TypeBatches.Count; ++j)
                 {
                     ref var typeBatch = ref batch.TypeBatches[j];
@@ -576,9 +656,9 @@ namespace BepuPhysics
             }
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
             {
-                for (int i = 0; i < Batches.Count; ++i)
+                for (int i = 0; i < activeSet.Batches.Count; ++i)
                 {
-                    ref var batch = ref Batches[i];
+                    ref var batch = ref activeSet.Batches[i];
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];
@@ -600,13 +680,17 @@ namespace BepuPhysics
         /// </summary>
         public void Clear()
         {
-            for (int batchIndex = 0; batchIndex < Batches.Count; ++batchIndex)
+            ref var activeSet = ref ActiveSet;
+            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
                 batchReferencedHandles[batchIndex].Dispose(bufferPool);
-                Batches[batchIndex].Dispose(bufferPool);
             }
             batchReferencedHandles.Clear();
-            Batches.Clear();
+            for (int i = 0; i < Sets.Length; ++i)
+            {
+                if (Sets[i].Allocated)
+                    Sets[i].Clear(bufferPool);
+            }
             HandlePool.Clear();
         }
 
@@ -623,7 +707,7 @@ namespace BepuPhysics
             }
             //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
             var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
-            for (int i = 0; i < Batches.Count; ++i)
+            for (int i = 0; i < ActiveSet.Batches.Count; ++i)
             {
                 batchReferencedHandles[i].EnsureCapacity(targetBatchReferencedHandleSize, bufferPool);
             }
@@ -644,20 +728,23 @@ namespace BepuPhysics
             }
             //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
             var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
-            for (int i = 0; i < Batches.Count; ++i)
+            for (int i = 0; i < ActiveSet.Batches.Count; ++i)
             {
                 batchReferencedHandles[i].Resize(targetBatchReferencedHandleSize, bufferPool);
             }
         }
 
+        //Note that the following do not force resizes on inactive sets. Inactive sets are allocated with just enough space to cover what is in the island.
+        //Since inactive islands never undergo incremental adds or removes, there is never any point to resizing their allocations.
         /// <summary>
-        /// Ensures all existing type batches meet or exceed the current solver-defined minimum capacities. Type batches with capacities smaller than the minimums will be enlarged.
+        /// Ensures all existing active type batches meet or exceed the current solver-defined minimum capacities. Type batches with capacities smaller than the minimums will be enlarged.
         /// </summary>
         public void EnsureTypeBatchCapacities()
         {
-            for (int i = 0; i < Batches.Count; ++i)
+            ref var activeSet = ref ActiveSet;
+            for (int i = 0; i < activeSet.Batches.Count; ++i)
             {
-                Batches[i].EnsureTypeBatchCapacities(this);
+                activeSet.Batches[i].EnsureTypeBatchCapacities(this);
             }
         }
         /// <summary>
@@ -666,9 +753,10 @@ namespace BepuPhysics
         /// </summary>
         public void ResizeTypeBatchCapacities()
         {
-            for (int i = 0; i < Batches.Count; ++i)
+            ref var activeSet = ref ActiveSet;
+            for (int i = 0; i < activeSet.Batches.Count; ++i)
             {
-                Batches[i].ResizeTypeBatchCapacities(this);
+                activeSet.Batches[i].ResizeTypeBatchCapacities(this);
             }
         }
 
@@ -680,17 +768,18 @@ namespace BepuPhysics
         /// </remarks>
         public void Dispose()
         {
-            for (int i = 0; i < Batches.Count; ++i)
+            for (int i = 0; i < ActiveSet.Batches.Count; ++i)
             {
-                Batches[i].Dispose(bufferPool);
                 batchReferencedHandles[i].Dispose(bufferPool);
             }
-            Batches.Dispose(bufferPool.SpecializeFor<ConstraintBatch>());
-            Batches = new QuickList<ConstraintBatch, Buffer<ConstraintBatch>>();
             batchReferencedHandles.Dispose(bufferPool.SpecializeFor<HandleSet>());
-            batchReferencedHandles = new QuickList<HandleSet, Buffer<HandleSet>>();
+            for (int i = 0; i < Sets.Length; ++i)
+            {
+                if (Sets[i].Allocated)
+                    Sets[i].Dispose(bufferPool);
+            }
+            bufferPool.SpecializeFor<ConstraintSet>().Return(ref Sets);
             bufferPool.SpecializeFor<ConstraintLocation>().Return(ref HandleToConstraint);
-            HandleToConstraint = new Buffer<ConstraintLocation>();
             HandlePool.Dispose(bufferPool.SpecializeFor<int>());
         }
 

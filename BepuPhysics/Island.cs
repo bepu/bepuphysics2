@@ -51,7 +51,7 @@ namespace BepuPhysics
             ConstraintHandleEnumerator enumerator;
             enumerator.Indices = bodies;
             enumerator.IndexInConstraint = 0;
-            typeProcessor.EnumerateConnectedBodyIndices(ref solver.Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId), constraintLocation.IndexInTypeBatch, ref enumerator);
+            typeProcessor.EnumerateConnectedBodyIndices(ref solver.ActiveSet.Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId), constraintLocation.IndexInTypeBatch, ref enumerator);
             solver.EnumerateConnectedBodies(constraintHandle, ref enumerator);
             //for (int i =0)
             return true;

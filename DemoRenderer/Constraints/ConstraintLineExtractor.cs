@@ -85,6 +85,7 @@ namespace DemoRenderer.Constraints
 
         struct ThreadJob
         {
+            public int SetIndex;
             public int BatchIndex;
             public int TypeBatchIndex;
             public int ConstraintStart;
@@ -119,7 +120,7 @@ namespace DemoRenderer.Constraints
         private void ExecuteJob(int jobIndex)
         {
             ref var job = ref jobs[jobIndex];
-            ref var typeBatch = ref solver.Batches[job.BatchIndex].TypeBatches[job.TypeBatchIndex];
+            ref var typeBatch = ref solver.Sets[job.SetIndex].Batches[job.BatchIndex].TypeBatches[job.TypeBatchIndex];
             Debug.Assert(lineExtractors[typeBatch.TypeId] != null, "Jobs should only be created for types which are registered and used.");
             lineExtractors[typeBatch.TypeId].ExtractLines(bodies, ref typeBatch, job.ConstraintStart, job.ConstraintCount, true, ref job.jobLines);
         }
@@ -135,26 +136,33 @@ namespace DemoRenderer.Constraints
             int neededLineCapacity = lines.Count;
             jobs.Count = 0;
             var jobPool = new PassthroughArrayPool<ThreadJob>();
-            for (int batchIndex = 0; batchIndex < solver.Batches.Count; ++batchIndex)
+            for (int setIndex = 0; setIndex < solver.Sets.Length; ++setIndex)
             {
-                ref var batch = ref solver.Batches[batchIndex];
-                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                ref var set = ref solver.Sets[setIndex];
+                if (set.Allocated)
                 {
-                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
-                    var extractor = lineExtractors[typeBatch.TypeId];
-                    var isContactBatch = IsContactBatch(typeBatch.TypeId);
-                    if (extractor != null && ((isContactBatch && showContacts) || (!isContactBatch && showConstraints)))
+                    for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
                     {
-                        jobs.Add(new ThreadJob
+                        ref var batch = ref set.Batches[batchIndex];
+                        for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                         {
-                            BatchIndex = batchIndex,
-                            TypeBatchIndex = typeBatchIndex,
-                            ConstraintStart = 0,
-                            ConstraintCount = typeBatch.ConstraintCount,
-                            LineStart = neededLineCapacity,
-                            LinesPerConstraint = extractor.LinesPerConstraint
-                        }, jobPool);
-                        neededLineCapacity += extractor.LinesPerConstraint * typeBatch.ConstraintCount;
+                            ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                            var extractor = lineExtractors[typeBatch.TypeId];
+                            var isContactBatch = IsContactBatch(typeBatch.TypeId);
+                            if (extractor != null && ((isContactBatch && showContacts) || (!isContactBatch && showConstraints)))
+                            {
+                                jobs.Add(new ThreadJob
+                                {
+                                    BatchIndex = batchIndex,
+                                    TypeBatchIndex = typeBatchIndex,
+                                    ConstraintStart = 0,
+                                    ConstraintCount = typeBatch.ConstraintCount,
+                                    LineStart = neededLineCapacity,
+                                    LinesPerConstraint = extractor.LinesPerConstraint
+                                }, jobPool);
+                                neededLineCapacity += extractor.LinesPerConstraint * typeBatch.ConstraintCount;
+                            }
+                        }
                     }
                 }
             }

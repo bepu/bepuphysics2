@@ -65,7 +65,7 @@ namespace Demos
 
             //Simulation.Solver.IterationCount = 100;
 
-            Console.WriteLine(Simulation.Solver.ConstraintCount);
+            Console.WriteLine(Simulation.Solver.CountConstraints());
 
         }
 
