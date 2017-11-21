@@ -176,12 +176,18 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Removes an active body by its index. Assumes that the input location is valid.
+        /// Removes an active body by its index. Any constraints connected to this body will be removed. Assumes that the input location is valid.
         /// </summary>
         /// <param name="activeBodyIndex">Index of the active body.</param>
         public void RemoveAt(int activeBodyIndex)
         {
             ref var set = ref ActiveSet;
+            //Constraints must be removed; we cannot leave 'orphans' in the solver because they will access invalid data.
+            ref var constraints = ref set.Constraints[activeBodyIndex];
+            for (int i = constraints.Count - 1; i >= 0; --i)
+            {
+                solver.Remove(constraints[i].ConnectingConstraintHandle);
+            }
             Debug.Assert(activeBodyIndex >= 0 && activeBodyIndex < set.Count);
             ValidateExistingHandle(set.IndexToHandle[activeBodyIndex]);
             ref var collidable = ref set.Collidables[activeBodyIndex];
