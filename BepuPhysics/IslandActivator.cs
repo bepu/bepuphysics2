@@ -27,5 +27,9 @@ namespace BepuPhysics
         {
 
         }
+
+        internal void Dispose()
+        {
+        }
     }
 }

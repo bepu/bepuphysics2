@@ -57,8 +57,8 @@ namespace BepuPhysics
             //Enumerate the bodies' current set of constraints, changing the reference in each to the new location.
             //Note that references to both bodies must be changed- both bodies moved!
             //This function does not update the actual position of the list in the graph, so we can modify both without worrying about invalidating indices.
-            bodies.UpdateForBodyMemoryMove(a, b);
-            bodies.UpdateForBodyMemoryMove(b, a);
+            bodies.UpdateAttachedConstraintsForBodyMemoryMove(a, b);
+            bodies.UpdateAttachedConstraintsForBodyMemoryMove(b, a);
 
             //Update the body locations.
             bodies.ActiveSet.Swap(a, b, ref bodies.HandleToLocation);

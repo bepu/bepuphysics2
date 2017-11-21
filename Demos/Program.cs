@@ -18,8 +18,8 @@ namespace Demos
             //HeadlessDemo.Simple();
             //BatchedCollisionTests.Test();
             //TypeIdCodeGenTests.Test();
-            DeterminismTest.Test();
-            return;
+            //DeterminismTest.Test();
+            //return;
             //ScalarWideTests.Test();
             //DenseFlagTests.Test();
             //VirtualOverheadTest.Test();

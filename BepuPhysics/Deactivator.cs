@@ -18,7 +18,7 @@ namespace BepuPhysics
             this.bodies = bodies;
             this.solver = solver;
             this.pool = pool;
-            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out var islandIdPool);
+            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out islandIdPool);
         }
 
         struct ConstraintBodyEnumerator : IForEach<int>

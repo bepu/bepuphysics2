@@ -168,10 +168,15 @@ namespace BepuPhysics
                     break;
                 }
             }
-            if (list.Count <= list.Span.Length / 2 && list.Span.Length > minimumConstraintCapacityPerBody)
+            //Note the conservative resizing threshold. If the current capacity is 8, the minimum capacity is 4, and the current count is 4, it COULD resize,
+            //but this will not do so. Instead, it will wait for another halving- the current count would need to be 2 before the capacity is allowed to drop to 4.
+            //This helps avoid excessive resizing when constraints are churning rapidly.
+            var conservativeCount = 2 * list.Count;
+            var targetCapacity = conservativeCount > minimumConstraintCapacityPerBody ? conservativeCount : minimumConstraintCapacityPerBody;
+            //Don't bother trying to resize if it would end up just being the same power of 2.
+            if (list.Span.Length >= 2 * targetCapacity)
             {
-                //The list has shrunk quite a bit, and it's above the maximum size. Might as well try to trim a little.
-                var targetCapacity = list.Count > minimumConstraintCapacityPerBody ? list.Count : minimumConstraintCapacityPerBody;
+                //The list can be trimmed down a bit while still holding all existing constraints and obeying the minimum capacity.
                 list.Resize(targetCapacity, pool.SpecializeFor<BodyConstraintReference>());
             }
         }

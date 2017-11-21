@@ -130,7 +130,7 @@ namespace BepuPhysics
             {
                 //Note that this is always an active body, so we know that whatever takes the body's place in the broad phase is also an active body.
                 //All statics and inactive bodies exist in the static tree.
-                Debug.Assert(movedLeaf.Mobility == CollidableMobility.Dynamic);
+                Debug.Assert(movedLeaf.Mobility != CollidableMobility.Static);
                 UpdateCollidableBroadPhaseIndex(movedLeaf.Handle, removedBroadPhaseIndex);
             }
         }
@@ -165,7 +165,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void UpdateForBodyMemoryMove(int originalBodyIndex, int newBodyIndex)
+        internal void UpdateAttachedConstraintsForBodyMemoryMove(int originalBodyIndex, int newBodyIndex)
         {
             ref var list = ref ActiveSet.Constraints[originalBodyIndex];
             for (int i = 0; i < list.Count; ++i)
@@ -195,13 +195,11 @@ namespace BepuPhysics
             if (bodyMoved)
             {
                 //While the removed body doesn't have any constraints associated with it, the body that gets moved to fill its slot might!
-                //We're borrowing the body optimizer's logic here. You could share a bit more- the body layout optimizer has to deal with the same stuff, though it's optimized for swaps.
-                //TODO: the logic behind the body memory move really should be moved in here with the more recent designs.
-                UpdateForBodyMemoryMove(movedBodyIndex, activeBodyIndex);
+                UpdateAttachedConstraintsForBodyMemoryMove(movedBodyIndex, activeBodyIndex);
+                Debug.Assert(HandleToLocation[movedBodyHandle].SetIndex == 0 && HandleToLocation[movedBodyHandle].Index == movedBodyIndex);
+                HandleToLocation[movedBodyHandle].Index = activeBodyIndex;
             }
 
-            Debug.Assert(HandleToLocation[movedBodyHandle].SetIndex == 0 && HandleToLocation[movedBodyHandle].Index == movedBodyIndex);
-            HandleToLocation[movedBodyHandle].Index = activeBodyIndex;
             HandlePool.Return(handle, pool.SpecializeFor<int>());
             ref var removedBodyLocation = ref HandleToLocation[handle];
             removedBodyLocation.SetIndex = -1;
