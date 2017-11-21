@@ -272,7 +272,7 @@ namespace BepuPhysics
             int maximumBodiesPerConstraint = 0;
             for (int i = 0; i < TypeProcessors.Length; ++i)
             {
-                if (TypeProcessors[i].BodiesPerConstraint > maximumBodiesPerConstraint)
+                if (TypeProcessors[i] != null && TypeProcessors[i].BodiesPerConstraint > maximumBodiesPerConstraint)
                     maximumBodiesPerConstraint = TypeProcessors[i].BodiesPerConstraint;
             }
             var constraintBodyReferences = stackalloc int[maximumBodiesPerConstraint];
