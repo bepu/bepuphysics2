@@ -1,6 +1,7 @@
 ﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics
@@ -35,25 +36,60 @@ namespace BepuPhysics
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        bool IsDeactivationCandidate(int bodyIndex)
+
+
+        struct ForcedDeactivationPredicate : IPredicate<int>
         {
-            //TODO: This heuristic is really poor and must be improved. Most likely, we'll end up with something in the pose integrator (or its descendants) which checks the velocity state
-            //over the course of multiple frames. Decent heuristics include nonincreasing energy over some number of frames, combined with a likely per-body deactivation threshold.
-            //May want to just use sub-threshold for a framecount- simpler to track, and more aggressive.
-            //(Note that things like 'isalwaysactive' can be expressed as a speical case of more general tuning, like a DeactivationVelocityThreshold < 0.)
-            ref var bodyVelocity = ref bodies.ActiveSet.Velocities[bodyIndex];
-            return bodyVelocity.Linear.LengthSquared() + bodyVelocity.Angular.LengthSquared() < 0.1f;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Matches(ref int bodyIndex)
+            {
+                return true;
+            }
+        }
+        struct DeactivationPredicate : IPredicate<int>
+        {
+            public Bodies Bodies;
+            public HandleSet PreviouslyTraversedBodies;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Matches(ref int bodyIndex)
+            {
+                //Note that we block traversals on a single thread from retreading old ground.
+                if (PreviouslyTraversedBodies.Contains(bodyIndex))
+                    return false;
+                PreviouslyTraversedBodies.AddUnsafely(bodyIndex);
+                return Bodies.ActiveSet.Activity[bodyIndex].DeactivationCandidate;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void EnqueueUnvisitedNeighbors(int bodyHandle,
+        bool PushBody<TTraversalPredicate>(int bodyIndex, ref HandleSet consideredBodies, ref QuickList<int, Buffer<int>> bodyIndices, ref QuickList<int, Buffer<int>> visitationStack,
+            ref BufferPool<int> intPool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
+        {
+            if (predicate.Matches(ref bodyIndex))
+            {
+                if (!consideredBodies.Contains(bodyIndex))
+                {
+                    //This body has not yet been traversed. Push it onto the stack.
+                    bodyIndices.Add(bodyIndex, intPool);
+                    consideredBodies.AddUnsafely(bodyIndex);
+                    visitationStack.Add(bodyIndex, intPool);
+
+                }
+                return true;
+            }
+            return false;
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        bool EnqueueUnvisitedNeighbors<TTraversalPredicate>(int bodyHandle,
             ref QuickList<int, Buffer<int>> bodyHandles,
             ref QuickList<int, Buffer<int>> constraintHandles,
             ref HandleSet consideredBodies, ref HandleSet consideredConstraints,
             ref QuickList<int, Buffer<int>> visitationStack,
             ref ConstraintBodyEnumerator bodyEnumerator,
-            ref BufferPool<int> intPool)
+            ref BufferPool<int> intPool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
         {
             var bodyIndex = bodies.HandleToLocation[bodyHandle].Index;
             bodyEnumerator.SourceIndex = bodyIndex;
@@ -69,21 +105,40 @@ namespace BepuPhysics
                     solver.EnumerateConnectedBodies(entry.ConnectingConstraintHandle, ref bodyEnumerator);
                     for (int j = 0; j < bodyEnumerator.ConstraintBodyIndices.Count; ++j)
                     {
-                        var connectedBodyHandle = bodies.ActiveSet.IndexToHandle[bodyEnumerator.ConstraintBodyIndices[j]];
-                        if(!consideredBodies.Contains(connectedBodyHandle))
-                        {
-                            //This body has not yet been traversed. Push it onto the stack.
-                            bodyHandles.Add(connectedBodyHandle, intPool);
-                            consideredBodies.AddUnsafely(connectedBodyHandle);
-                            visitationStack.Add(connectedBodyHandle, intPool);
-
-                        }
+                        var connectedBodyIndex = bodyEnumerator.ConstraintBodyIndices[j];
+                        if (!PushBody(connectedBodyIndex, ref consideredBodies, ref bodyHandles, ref visitationStack, ref intPool, ref predicate))
+                            return false;
                     }
+                    bodyEnumerator.ConstraintBodyIndices.Count = 0;
                 }
             }
+            return true;
         }
 
-        void Traverse(int workerIndex, BufferPool threadPool, int startingBodyHandle)
+        void CleanUpTraversal(
+            BufferPool pool,
+            ref HandleSet consideredBodies, ref HandleSet consideredConstraints,
+            ref QuickList<int, Buffer<int>> visitationStack)
+        {
+            var intPool = pool.SpecializeFor<int>();
+            consideredBodies.Dispose(pool);
+            consideredConstraints.Dispose(pool);
+            visitationStack.Dispose(intPool);
+        }
+
+        /// <summary>
+        /// Traverses the active constraint graph collecting bodies that match a predicate. If any body visited during the traversal fails to match the predicate, the traversal terminates.
+        /// </summary>
+        /// <typeparam name="TTraversalPredicate">Type of the predicate to test each body index with.</typeparam>
+        /// <param name="pool">Pool to allocate temporary collections from.</param>
+        /// <param name="startingActiveBodyIndex">Index of the active body to start the traversal at.</param>
+        /// <param name="predicate">Predicate to test each traversed body with. If any body results in the predicate returning false, the traversal stops and the function returns false.</param>
+        /// <param name="bodyIndices">List to fill with body indices traversed during island collection. Bodies failing the predicate will not be included.</param>
+        /// <param name="constraintHandles">List to fill with constraint handles traversed during island collection.</param>
+        /// <returns>True if the simulation graph was traversed without ever finding a body that made the predicate return false. False if any body failed the predicate.
+        /// The bodyIndices and constraintHandles lists will contain all traversed predicate-passing bodies and constraints.</returns>
+        public bool CollectIsland<TTraversalPredicate>(BufferPool pool, int startingActiveBodyIndex, ref TTraversalPredicate predicate,
+            ref QuickList<int, Buffer<int>> bodyIndices, ref QuickList<int, Buffer<int>> constraintHandles) where TTraversalPredicate : IPredicate<int>
         {
             //We'll build the island by working depth-first. This means the bodies and constraints we accumulate will be stored in any inactive island by depth-first order,
             //which happens to be a pretty decent layout for cache purposes. In other words, when we wake these islands back up, bodies near each other in the graph will have 
@@ -91,28 +146,95 @@ namespace BepuPhysics
             //(assuming they share a cache line).
             //The DFS order for constraints is not quite as helpful as the constraint optimizer's sort, but it's not terrible.
 
-            //Despite being DFS, there is no guarantee that the visitation stack will be any smaller than the island itself, and we have no way of knowing how big the island is 
+            //Despite being DFS, there is no guarantee that the visitation stack will be any smaller than the final island itself, and we have no way of knowing how big the island is 
             //ahead of time- except that it can't be larger than the entire active simulation.
-            var intPool = threadPool.SpecializeFor<int>();
+            var intPool = pool.SpecializeFor<int>();
             var initialBodyCapacity = Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count);
-            QuickList<int, Buffer<int>>.Create(intPool, initialBodyCapacity, out var bodyHandles);
-            QuickList<int, Buffer<int>>.Create(intPool, Math.Min(InitialIslandBodyCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), out var constraintHandles);
             //Note that we track all considered bodies AND constraints. 
             //While we only need to track one of them for the purposes of traversal, tracking both allows low-overhead collection of unique bodies and constraints.
-            //Note that the handle sets are initialized to cover the entire handle span. That's actually fine- every single object occupies only a single bit, so 131072 objects only use 16KB.
-            var consideredBodies = new HandleSet(threadPool, bodies.HandlePool.HighestPossiblyClaimedId + 1);
-            var consideredConstraints = new HandleSet(threadPool, solver.HandlePool.HighestPossiblyClaimedId + 1);
-            //The stack will store bodies.
-            consideredBodies.AddUnsafely(startingBodyHandle);
+            //Note that the constraint handle set is initialized to cover the entire handle span. 
+            //That's actually fine- every single object occupies only a single bit, so 131072 objects only use 16KB.
+            var consideredBodies = new HandleSet(pool, bodies.ActiveSet.Count);
+            var consideredConstraints = new HandleSet(pool, solver.HandlePool.HighestPossiblyClaimedId + 1);
+            //The stack will store body indices.
             QuickList<int, Buffer<int>>.Create(intPool, initialBodyCapacity, out var visitationStack);
 
+            //Start the traversal by pushing the initial body conditionally.
+            if (!PushBody(startingActiveBodyIndex, ref consideredBodies, ref bodyIndices, ref visitationStack, ref intPool, ref predicate))
+            {
+                CleanUpTraversal(pool, ref consideredBodies, ref consideredConstraints, ref visitationStack);
+                return false;
+            }
+            var enumerator = new ConstraintBodyEnumerator();
+            enumerator.IntPool = intPool;
 
-
-            var bodyIndex = bodies.HandleToLocation[startingBodyHandle].Index;
-            ref var constraintHandleList = ref bodies.ActiveSet.Constraints[bodyIndex];
-
+            while (visitationStack.TryPop(out var nextIndexToVisit))
+            {
+                QuickList<int, Buffer<int>>.Create(intPool, 4, out enumerator.ConstraintBodyIndices);
+                if (!EnqueueUnvisitedNeighbors(nextIndexToVisit, ref bodyIndices, ref constraintHandles, ref consideredBodies, ref consideredConstraints, ref visitationStack,
+                    ref enumerator, ref intPool, ref predicate))
+                {
+                    CleanUpTraversal(pool, ref consideredBodies, ref consideredConstraints, ref visitationStack);
+                    return false;
+                }
+            }
+            //The visitation stack was emptied without finding any traversal disqualifying bodies.
+            return true;
         }
 
+        struct Job
+        {
+            public QuickList<int, Buffer<int>> TargetBodyIndices;
+            public int TargetTraversedBodyCount;
+            public int TargetDeactivatedBodyCount;
+        }
+
+
+
+        void Collect(int workerIndex, BufferPool threadPool, ref Job job)
+        {
+            var initialBodyCapacity = Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count);
+            var intPool = pool.SpecializeFor<int>();
+            QuickList<int, Buffer<int>>.Create(intPool, initialBodyCapacity, out var bodyIndices);
+            QuickList<int, Buffer<int>>.Create(intPool, Math.Min(InitialIslandBodyCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), out var constraintHandles);
+
+            DeactivationPredicate predicate;
+            predicate.Bodies = bodies;
+            predicate.PreviouslyTraversedBodies = new HandleSet(threadPool, bodies.ActiveSet.Count);
+            var traversedBodies = 0;
+            var deactivatedBodies = 0;
+            int targetIndex = 0;
+            
+            while (traversedBodies < job.TargetTraversedBodyCount && deactivatedBodies < job.TargetDeactivatedBodyCount && targetIndex < job.TargetBodyIndices.Count)
+            {
+                //This thread still has some deactivation budget, so do another traversal.
+                var bodyIndex = job.TargetBodyIndices[targetIndex++];
+                if (CollectIsland(threadPool, bodyIndex, ref predicate, ref bodyIndices, ref constraintHandles))
+                {
+                    //Found an island to deactivate!
+                    traversedBodies += bodyIndices.Count;
+                    deactivatedBodies += bodyIndices.Count;
+
+                    //Note that the deactivation predicate refuses to visit any body that was visited in any previous traversal on this thread. 
+                    //From that we know that any newly discovered island is unique *on this thread*. It's very possible that a different thread has found the same
+                    //island, but we let that happen in favor of avoiding tons of sync overhead.
+                    //When the main thread is actually applying deactivations sequentially, it will be working with body handles- it can look up
+                    //the current location of a body. If it's already been deactivated, the island has already been handled and is ignored.
+
+                    //TODO: CREATE PROTO-ISLAND 
+                    bodyIndices.Count = 0;
+                    constraintHandles.Count = 0;
+                }
+                else
+                {
+                    //This island failed the predicate, so it can't deactivate. But it did cost something.
+                    traversedBodies += bodyIndices.Count;
+                }
+            }
+            predicate.PreviouslyTraversedBodies.Dispose(threadPool);
+            bodyIndices.Dispose(intPool);
+            constraintHandles.Dispose(intPool);
+        }
 
         //public void Create(ref QuickList<int, Buffer<int>> bodyHandles, ref QuickList<int, Buffer<int>> constraintHandles,
         //    BufferPool mainPool, BufferPool threadPool)
