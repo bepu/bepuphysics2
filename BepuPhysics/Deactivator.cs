@@ -1,8 +1,10 @@
-﻿using BepuUtilities.Collections;
+﻿using BepuUtilities;
+using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace BepuPhysics
 {
@@ -12,14 +14,31 @@ namespace BepuPhysics
         Bodies bodies;
         Solver solver;
         BufferPool pool;
-        public int InitialIslandBodyCapacity = 1024;
-        public int InitialIslandConstraintCapacity = 1024;
+        public int InitialIslandBodyCapacity { get; set; } = 1024;
+        public int InitialIslandConstraintCapacity { get; set; } = 1024;
+
+        /// <summary>
+        /// Gets or sets the multiplier applied to the active body count used to calculate the number of deactivation traversals in a given timestep.
+        /// </summary>
+        public float TestedFractionPerFrame { get; set; } = 0.01f;
+        /// <summary>
+        /// Gets or sets the fraction of the active set to target as the number of bodies deactivated in a given frame.
+        /// This is only a goal; the actual number of deactivated bodies may be more or less.
+        /// </summary>
+        public float TargetDeactivatedFraction { get; set; } = 0.005f;
+        /// <summary>
+        /// Gets or sets the fraction of the active set to target as the number of bodies traversed for deactivation in a given frame.
+        /// This is only a goal; the actual number of traversed bodies may be more or less.
+        /// </summary>
+        public float TargetTraversedFraction { get; set; } = 0.02f;
+
         public Deactivator(Bodies bodies, Solver solver, BufferPool pool)
         {
             this.bodies = bodies;
             this.solver = solver;
             this.pool = pool;
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out islandIdPool);
+            workDelegate = Work;
         }
 
         struct ConstraintBodyEnumerator : IForEach<int>
@@ -182,16 +201,13 @@ namespace BepuPhysics
             return true;
         }
 
-        struct Job
-        {
-            public QuickList<int, Buffer<int>> TargetBodyIndices;
-            public int TargetTraversedBodyCount;
-            public int TargetDeactivatedBodyCount;
-        }
+        int targetTraversedBodyCountPerThread;
+        int targetDeactivatedBodyCountPerThread;
+        QuickList<int, Buffer<int>> targetBodyIndices;
+        IThreadDispatcher threadDispatcher;
+        int jobIndex;
 
-
-
-        void Collect(int workerIndex, BufferPool threadPool, ref Job job)
+        void Collect(int workerIndex, BufferPool threadPool)
         {
             var initialBodyCapacity = Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count);
             var intPool = pool.SpecializeFor<int>();
@@ -203,12 +219,15 @@ namespace BepuPhysics
             predicate.PreviouslyTraversedBodies = new HandleSet(threadPool, bodies.ActiveSet.Count);
             var traversedBodies = 0;
             var deactivatedBodies = 0;
-            int targetIndex = 0;
-            
-            while (traversedBodies < job.TargetTraversedBodyCount && deactivatedBodies < job.TargetDeactivatedBodyCount && targetIndex < job.TargetBodyIndices.Count)
+
+            while (traversedBodies < targetTraversedBodyCountPerThread && deactivatedBodies < targetDeactivatedBodyCountPerThread)
             {
-                //This thread still has some deactivation budget, so do another traversal.
-                var bodyIndex = job.TargetBodyIndices[targetIndex++];
+                //This thread still has some deactivation budget, so try another traversal.
+                var targetIndex = Interlocked.Increment(ref jobIndex);
+                if (targetIndex >= targetBodyIndices.Count)
+                    break;
+
+                var bodyIndex = targetBodyIndices[targetIndex];
                 if (CollectIsland(threadPool, bodyIndex, ref predicate, ref bodyIndices, ref constraintHandles))
                 {
                     //Found an island to deactivate!
@@ -235,6 +254,98 @@ namespace BepuPhysics
             bodyIndices.Dispose(intPool);
             constraintHandles.Dispose(intPool);
         }
+
+        Action<int> workDelegate;
+        void Work(int workerIndex)
+        {
+            Collect(workerIndex, threadDispatcher.GetThreadMemoryPool(workerIndex));
+        }
+
+        struct HandleComparer : IComparerRef<int>
+        {
+            public Buffer<int> Handles;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(ref int a, ref int b)
+            {
+                return Handles[a].CompareTo(Handles[b]);
+            }
+        }
+
+        int scheduleOffset;
+
+        public void Update(IThreadDispatcher threadDispatcher, bool deterministic)
+        {
+            if (bodies.ActiveSet.Count == 0)
+                return;
+
+            int candidateCount = (int)Math.Max(1, bodies.ActiveSet.Count * TestedFractionPerFrame);
+
+            QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), candidateCount, out targetBodyIndices);
+
+            //Uniformly distribute targets across the active set. Each frame, the targets are pushed up by one slot.
+            int spacing = bodies.ActiveSet.Count / candidateCount;
+
+            //The schedule offset will gradually walk off into the sunset, and there's also a possibility that changes to the size of the active set (by, say, deactivation)
+            //will put the offset so far out that a single subtraction by the active set count would be insufficient. So instead we just wrap it to zero.
+            if (scheduleOffset > bodies.ActiveSet.Count)
+            {
+                scheduleOffset = 0;
+            }
+
+            var index = scheduleOffset;
+            for (int i = 0; i < candidateCount; ++i)
+            {
+                if (index > bodies.ActiveSet.Count)
+                {
+                    index -= bodies.ActiveSet.Count;
+                }
+                targetBodyIndices.AllocateUnsafely() = index;
+                index += spacing;
+            }
+            ++scheduleOffset;
+
+
+            if (deterministic)
+            {
+                //The order in which deactivations occurs affects the result of the simulation. To ensure determinism, we need to pin the deactivation order to something
+                //which is deterministic. We will use the handle associated with each active body as the order provider.
+                pool.SpecializeFor<int>().Take(bodies.ActiveSet.Count, out var sortedIndices);
+                for (int i = 0; i < bodies.ActiveSet.Count; ++i)
+                {
+                    sortedIndices[i] = i;
+                }
+                //Handles are guaranteed to be unique; no need for three way partitioning.
+                HandleComparer comparer;
+                comparer.Handles = bodies.ActiveSet.IndexToHandle;
+                //TODO: This sort might end up being fairly expensive. On a very large simulation, it might even amount to 5% of the simulation time.
+                //It would be nice to come up with a better solution here. Some options include other sources of determinism, hiding the sort, and possibly enumerating directly over handles.
+                QuickSort.Sort(ref sortedIndices[0], 0, bodies.ActiveSet.Count - 1, ref comparer);
+
+                //Now that we have a sorted set of indices, we have eliminated nondeterminism related to memory layout. The initial target body indices can be remapped onto the sorted list.
+                for (int i = 0; i < targetBodyIndices.Count; ++i)
+                {
+                    targetBodyIndices[i] = sortedIndices[targetBodyIndices[i]];
+                }
+            }
+
+            int threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
+            targetDeactivatedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetDeactivatedFraction / threadCount);
+            targetTraversedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetTraversedFraction / threadCount);
+
+            this.threadDispatcher = threadDispatcher;
+            if (threadCount > 1)
+            {
+                threadDispatcher.DispatchWorkers(workDelegate);
+            }
+            else
+            {
+                Collect(0, pool);
+            }
+            this.threadDispatcher = null;
+
+            targetBodyIndices.Dispose(pool.SpecializeFor<int>());
+        }
+
 
         //public void Create(ref QuickList<int, Buffer<int>> bodyHandles, ref QuickList<int, Buffer<int>> constraintHandles,
         //    BufferPool mainPool, BufferPool threadPool)
