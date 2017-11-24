@@ -58,7 +58,7 @@ namespace BepuPhysics
 
         //Note that the referenced handles for the active set are stored outside the constraint set;
         //inactive islands do not store the referenced handles since no new constraints are ever added.
-        internal QuickList<HandleSet, Buffer<HandleSet>> batchReferencedHandles;
+        internal QuickList<IndexSet, Buffer<IndexSet>> batchReferencedHandles;
 
         public TypeProcessor[] TypeProcessors;
 
@@ -187,7 +187,7 @@ namespace BepuPhysics
             //It's not worth the introduced API complexity.
             bufferPool.SpecializeFor<ConstraintSet>().Take(initialIslandCapacity + 1, out Sets);
             ActiveSet = new ConstraintSet(bufferPool, BatchCountEstimate);
-            QuickList<HandleSet, Buffer<HandleSet>>.Create(bufferPool.SpecializeFor<HandleSet>(), BatchCountEstimate, out batchReferencedHandles);
+            QuickList<IndexSet, Buffer<IndexSet>>.Create(bufferPool.SpecializeFor<IndexSet>(), BatchCountEstimate, out batchReferencedHandles);
             bufferPool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
             workDelegate = Work;
         }
@@ -402,9 +402,9 @@ namespace BepuPhysics
                 if (set.Batches.Count == set.Batches.Span.Length)
                     set.Batches.Resize(set.Batches.Count + 1, bufferPool.SpecializeFor<ConstraintBatch>());
                 if (set.Batches.Count == batchReferencedHandles.Span.Length)
-                    batchReferencedHandles.Resize(set.Batches.Count + 1, bufferPool.SpecializeFor<HandleSet>());
+                    batchReferencedHandles.Resize(set.Batches.Count + 1, bufferPool.SpecializeFor<IndexSet>());
                 set.Batches.AllocateUnsafely() = new ConstraintBatch(bufferPool, TypeProcessors.Length);
-                batchReferencedHandles.AllocateUnsafely() = new HandleSet(bufferPool, bodies.ActiveSet.Count);
+                batchReferencedHandles.AllocateUnsafely() = new IndexSet(bufferPool, bodies.ActiveSet.Count);
                 //Note that if there is no constraint batch for the given index, there is no way for the constraint add to be blocked. It's guaranteed success.
             }
             else
@@ -734,6 +734,16 @@ namespace BepuPhysics
             }
         }
 
+        internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
+        {
+            Debug.Assert(setsCapacity >= potentiallyAllocatedCount);
+            setsCapacity = BufferPool<ConstraintSet>.GetLowestContainingElementCount(setsCapacity);
+            if (Sets.Length != setsCapacity)
+            {
+                bufferPool.SpecializeFor<ConstraintSet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
+            }
+        }
+
         //Note that the following do not force resizes on inactive sets. Inactive sets are allocated with just enough space to cover what is in the island.
         //Since inactive islands never undergo incremental adds or removes, there is never any point to resizing their allocations.
         /// <summary>
@@ -772,7 +782,7 @@ namespace BepuPhysics
             {
                 batchReferencedHandles[i].Dispose(bufferPool);
             }
-            batchReferencedHandles.Dispose(bufferPool.SpecializeFor<HandleSet>());
+            batchReferencedHandles.Dispose(bufferPool.SpecializeFor<IndexSet>());
             for (int i = 0; i < Sets.Length; ++i)
             {
                 if (Sets[i].Allocated)

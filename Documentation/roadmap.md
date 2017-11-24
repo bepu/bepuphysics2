@@ -6,7 +6,7 @@ This is a high level plan for future development. For a detailed breakdown of ta
 
 The big goals for the initial version are:
 - Basic feature set covering most games.
-- Performance should generally be an order of magnitude than v1.
+- Performance should generally be an order of magnitude better than v1.
 - Stuff should tend to be automatically stable with as few tuning knobs as possible. In particular, it should avoid *global* tuning knobs. The use of an iterative solver means there are still mass ratio issues, but fiddly details like scale should just go away.
 
 The core feature set should include stuff like:

@@ -123,7 +123,7 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe void Allocate(int handle, ref int constraintBodyHandles, int bodyCount, ref HandleSet existingHandles, Bodies bodies,
+        public unsafe void Allocate(int handle, ref int constraintBodyHandles, int bodyCount, ref IndexSet existingHandles, Bodies bodies,
             int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool, out ConstraintReference reference)
         {
             //Add all the constraint's body handles to the batch we found (or created) to block future references to the same bodies.
@@ -157,7 +157,7 @@ namespace BepuPhysics
             public void* Handles;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ActiveBodyHandleRemover(Bodies bodies, ref HandleSet handles)
+            public ActiveBodyHandleRemover(Bodies bodies, ref IndexSet handles)
             {
                 Bodies = bodies;
                 Handles = Unsafe.AsPointer(ref handles);
@@ -166,7 +166,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void LoopBody(int bodyIndex)
             {
-                Unsafe.AsRef<HandleSet>(Handles).Remove(Bodies.ActiveSet.IndexToHandle[bodyIndex]);
+                Unsafe.AsRef<IndexSet>(Handles).Remove(Bodies.ActiveSet.IndexToHandle[bodyIndex]);
             }
         }
 
@@ -189,7 +189,7 @@ namespace BepuPhysics
             ValidateTypeBatchMappings();
         }
 
-        public unsafe void RemoveWithHandles(int constraintTypeId, int indexInTypeBatch, ref HandleSet handles, Solver solver)
+        public unsafe void RemoveWithHandles(int constraintTypeId, int indexInTypeBatch, ref IndexSet handles, Solver solver)
         {
             Debug.Assert(TypeIndexToTypeBatchIndex[constraintTypeId] >= 0, "Type index must actually exist within this batch.");
 

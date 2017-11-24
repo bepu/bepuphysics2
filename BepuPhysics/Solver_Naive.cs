@@ -100,7 +100,5 @@ namespace BepuPhysics
             return (end - start) / (double)Stopwatch.Frequency;
         }
 
-
-
     }
 }

@@ -488,6 +488,15 @@ namespace BepuPhysics
             Vector3Wide.Subtract(ref positionB, ref positionA, out localPositionB);
         }
 
+        internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
+        {
+            Debug.Assert(setsCapacity >= potentiallyAllocatedCount);
+            setsCapacity = BufferPool<BodySet>.GetLowestContainingElementCount(setsCapacity);
+            if(Sets.Length != setsCapacity)
+            {
+                pool.SpecializeFor<BodySet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void GatherInertia(ref TwoBodyReferences references, int count,

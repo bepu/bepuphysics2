@@ -1,4 +1,5 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics.Constraints;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
@@ -10,7 +11,7 @@ namespace BepuPhysics
 {
     public class Deactivator
     {
-        IdPool<Buffer<int>> islandIdPool;
+        IdPool<Buffer<int>> setIdPool;
         Bodies bodies;
         Solver solver;
         BufferPool pool;
@@ -37,8 +38,11 @@ namespace BepuPhysics
             this.bodies = bodies;
             this.solver = solver;
             this.pool = pool;
-            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out islandIdPool);
-            workDelegate = Work;
+            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out setIdPool);
+            //We reserve index 0 for the active set.
+            setIdPool.Take();
+            findIslandsDelegate = FindIslands;
+            gatherDelegate = Gather;
         }
 
         struct ConstraintBodyEnumerator : IForEach<int>
@@ -68,7 +72,7 @@ namespace BepuPhysics
         struct DeactivationPredicate : IPredicate<int>
         {
             public Bodies Bodies;
-            public HandleSet PreviouslyTraversedBodies;
+            public IndexSet PreviouslyTraversedBodies;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Matches(ref int bodyIndex)
@@ -82,7 +86,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        bool PushBody<TTraversalPredicate>(int bodyIndex, ref HandleSet consideredBodies, ref QuickList<int, Buffer<int>> bodyIndices, ref QuickList<int, Buffer<int>> visitationStack,
+        bool PushBody<TTraversalPredicate>(int bodyIndex, ref IndexSet consideredBodies, ref QuickList<int, Buffer<int>> bodyIndices, ref QuickList<int, Buffer<int>> visitationStack,
             ref BufferPool<int> intPool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
         {
             if (predicate.Matches(ref bodyIndex))
@@ -105,7 +109,7 @@ namespace BepuPhysics
         bool EnqueueUnvisitedNeighbors<TTraversalPredicate>(int bodyHandle,
             ref QuickList<int, Buffer<int>> bodyHandles,
             ref QuickList<int, Buffer<int>> constraintHandles,
-            ref HandleSet consideredBodies, ref HandleSet consideredConstraints,
+            ref IndexSet consideredBodies, ref IndexSet consideredConstraints,
             ref QuickList<int, Buffer<int>> visitationStack,
             ref ConstraintBodyEnumerator bodyEnumerator,
             ref BufferPool<int> intPool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
@@ -136,7 +140,7 @@ namespace BepuPhysics
 
         void CleanUpTraversal(
             BufferPool pool,
-            ref HandleSet consideredBodies, ref HandleSet consideredConstraints,
+            ref IndexSet consideredBodies, ref IndexSet consideredConstraints,
             ref QuickList<int, Buffer<int>> visitationStack)
         {
             var intPool = pool.SpecializeFor<int>();
@@ -173,8 +177,8 @@ namespace BepuPhysics
             //While we only need to track one of them for the purposes of traversal, tracking both allows low-overhead collection of unique bodies and constraints.
             //Note that the constraint handle set is initialized to cover the entire handle span. 
             //That's actually fine- every single object occupies only a single bit, so 131072 objects only use 16KB.
-            var consideredBodies = new HandleSet(pool, bodies.ActiveSet.Count);
-            var consideredConstraints = new HandleSet(pool, solver.HandlePool.HighestPossiblyClaimedId + 1);
+            var consideredBodies = new IndexSet(pool, bodies.ActiveSet.Count);
+            var consideredConstraints = new IndexSet(pool, solver.HandlePool.HighestPossiblyClaimedId + 1);
             //The stack will store body indices.
             QuickList<int, Buffer<int>>.Create(intPool, initialBodyCapacity, out var visitationStack);
 
@@ -203,20 +207,52 @@ namespace BepuPhysics
 
         int targetTraversedBodyCountPerThread;
         int targetDeactivatedBodyCountPerThread;
-        QuickList<int, Buffer<int>> targetBodyIndices;
+        QuickList<int, Buffer<int>> traversalTargetBodyIndices;
         IThreadDispatcher threadDispatcher;
         int jobIndex;
 
-        void Collect(int workerIndex, BufferPool threadPool)
+
+        struct WorkerTraversalResults
         {
-            var initialBodyCapacity = Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count);
+            //Note that all these resources are allocated on per-worker pools. Be careful when disposing them.
+            public IndexSet TraversedBodies;
+            public QuickList<Island, Buffer<Island>> Islands;
+
+            internal void Dispose(BufferPool pool)
+            {
+                for (int islandIndex = 0; islandIndex < Islands.Count; ++islandIndex)
+                {
+                    Islands[islandIndex].Dispose(pool);
+                }
+                Islands.Dispose(pool.SpecializeFor<Island>());
+                TraversedBodies.Dispose(pool);
+            }
+        }
+
+        Buffer<WorkerTraversalResults> workerTraversalResults;
+
+        struct GatheringJob
+        {
+            public int SourceWorkerIndex;
+            public Island Island;
+            public int TargetSetIndex;
+        }
+
+        QuickList<GatheringJob, Buffer<GatheringJob>> gatheringJobs;
+
+        void FindIslands(int workerIndex, BufferPool threadPool)
+        {
+            Debug.Assert(workerTraversalResults.Allocated && workerTraversalResults.Length > workerIndex);
+            ref var results = ref workerTraversalResults[workerIndex];
             var intPool = pool.SpecializeFor<int>();
-            QuickList<int, Buffer<int>>.Create(intPool, initialBodyCapacity, out var bodyIndices);
-            QuickList<int, Buffer<int>>.Create(intPool, Math.Min(InitialIslandBodyCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), out var constraintHandles);
+            var islandPool = threadPool.SpecializeFor<Island>();
+
+            QuickList<int, Buffer<int>>.Create(intPool, Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count), out var bodyIndices);
+            QuickList<int, Buffer<int>>.Create(intPool, Math.Min(InitialIslandConstraintCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), out var constraintHandles);
 
             DeactivationPredicate predicate;
             predicate.Bodies = bodies;
-            predicate.PreviouslyTraversedBodies = new HandleSet(threadPool, bodies.ActiveSet.Count);
+            predicate.PreviouslyTraversedBodies = new IndexSet(threadPool, bodies.ActiveSet.Count);
             var traversedBodies = 0;
             var deactivatedBodies = 0;
 
@@ -224,41 +260,42 @@ namespace BepuPhysics
             {
                 //This thread still has some deactivation budget, so try another traversal.
                 var targetIndex = Interlocked.Increment(ref jobIndex);
-                if (targetIndex >= targetBodyIndices.Count)
+                if (targetIndex >= traversalTargetBodyIndices.Count)
                     break;
-
-                var bodyIndex = targetBodyIndices[targetIndex];
+                var bodyIndex = traversalTargetBodyIndices[targetIndex];
                 if (CollectIsland(threadPool, bodyIndex, ref predicate, ref bodyIndices, ref constraintHandles))
                 {
                     //Found an island to deactivate!
-                    traversedBodies += bodyIndices.Count;
                     deactivatedBodies += bodyIndices.Count;
 
                     //Note that the deactivation predicate refuses to visit any body that was visited in any previous traversal on this thread. 
                     //From that we know that any newly discovered island is unique *on this thread*. It's very possible that a different thread has found the same
                     //island, but we let that happen in favor of avoiding tons of sync overhead.
-                    //When the main thread is actually applying deactivations sequentially, it will be working with body handles- it can look up
-                    //the current location of a body. If it's already been deactivated, the island has already been handled and is ignored.
+                    //The gathering phase will check each worker's island against all previous workers. If it's a duplicate, it will get thrown out.
+                    var island = new Island(ref bodyIndices, ref constraintHandles, solver, threadPool);
+                    results.Islands.Add(ref island, islandPool);
 
-                    //TODO: CREATE PROTO-ISLAND 
-                    bodyIndices.Count = 0;
-                    constraintHandles.Count = 0;
                 }
-                else
-                {
-                    //This island failed the predicate, so it can't deactivate. But it did cost something.
-                    traversedBodies += bodyIndices.Count;
-                }
+                traversedBodies += bodyIndices.Count;
+                bodyIndices.Count = 0;
+                constraintHandles.Count = 0;
             }
-            predicate.PreviouslyTraversedBodies.Dispose(threadPool);
             bodyIndices.Dispose(intPool);
             constraintHandles.Dispose(intPool);
+            results.TraversedBodies = predicate.PreviouslyTraversedBodies;
         }
 
-        Action<int> workDelegate;
-        void Work(int workerIndex)
+        Action<int> findIslandsDelegate;
+        void FindIslands(int workerIndex)
         {
-            Collect(workerIndex, threadDispatcher.GetThreadMemoryPool(workerIndex));
+            //The only reason we separate this out is to make it easier for the main pool to be passed in if there is only a single thread.
+            FindIslands(workerIndex, threadDispatcher.GetThreadMemoryPool(workerIndex));
+        }
+
+        Action<int> gatherDelegate;
+        void Gather(int workerIndex)
+        {
+
         }
 
         struct HandleComparer : IComparerRef<int>
@@ -278,9 +315,22 @@ namespace BepuPhysics
             if (bodies.ActiveSet.Count == 0)
                 return;
 
+            //There are three phases to deactivation:
+            //1) Traversing the constraint graph to identify 'simulation islands' that satisfy the deactivation conditions.
+            //2) Gathering the data backing the bodies and constraints of a simulation island and placing it into an inactive storage representation (a BodySet and ConstraintSet).
+            //3) Removing the deactivated bodies and constraints from the active set.
+            //Separating it into these phases allows for a fairly direct parallelization.
+            //Traversal proceeds in parallel, biting the bullet on the fact that different traversal starting points on separate threads may identify the same island sometimes.
+            //Once all islands have been detected, the second phase is able to eliminate duplicates and gather the remaining unique islands in parallel.
+            //Finally, while removal involves many sequential operations, there are some fully parallel parts and some of the locally sequential parts can be run in parallel with each other.
+
+            //The goal here isn't necessarily to speed up the best case- using three dispatches basically guarantees ~15-40us of overhead- 
+            //but rather to try to keep the worst case from dropping frames and to improve deactivation responsiveness.
+
+            //So first, traverse.
             int candidateCount = (int)Math.Max(1, bodies.ActiveSet.Count * TestedFractionPerFrame);
 
-            QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), candidateCount, out targetBodyIndices);
+            QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), candidateCount, out traversalTargetBodyIndices);
 
             //Uniformly distribute targets across the active set. Each frame, the targets are pushed up by one slot.
             int spacing = bodies.ActiveSet.Count / candidateCount;
@@ -299,7 +349,7 @@ namespace BepuPhysics
                 {
                     index -= bodies.ActiveSet.Count;
                 }
-                targetBodyIndices.AllocateUnsafely() = index;
+                traversalTargetBodyIndices.AllocateUnsafely() = index;
                 index += spacing;
             }
             ++scheduleOffset;
@@ -322,9 +372,9 @@ namespace BepuPhysics
                 QuickSort.Sort(ref sortedIndices[0], 0, bodies.ActiveSet.Count - 1, ref comparer);
 
                 //Now that we have a sorted set of indices, we have eliminated nondeterminism related to memory layout. The initial target body indices can be remapped onto the sorted list.
-                for (int i = 0; i < targetBodyIndices.Count; ++i)
+                for (int i = 0; i < traversalTargetBodyIndices.Count; ++i)
                 {
-                    targetBodyIndices[i] = sortedIndices[targetBodyIndices[i]];
+                    traversalTargetBodyIndices[i] = sortedIndices[traversalTargetBodyIndices[i]];
                 }
             }
 
@@ -332,68 +382,156 @@ namespace BepuPhysics
             targetDeactivatedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetDeactivatedFraction / threadCount);
             targetTraversedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetTraversedFraction / threadCount);
 
+            pool.SpecializeFor<WorkerTraversalResults>().Take(threadCount, out workerTraversalResults);
+            //Note that all resources within a worker's results set are allocate on the worker's pool since the thread may need to resize things.
+
             this.threadDispatcher = threadDispatcher;
+            jobIndex = -1;
             if (threadCount > 1)
             {
-                threadDispatcher.DispatchWorkers(workDelegate);
+                threadDispatcher.DispatchWorkers(findIslandsDelegate);
             }
             else
             {
-                Collect(0, pool);
+                FindIslands(0, pool);
             }
             this.threadDispatcher = null;
 
-            targetBodyIndices.Dispose(pool.SpecializeFor<int>());
+            traversalTargetBodyIndices.Dispose(pool.SpecializeFor<int>());
+
+            //Traversal is now done. We should have a set of results for each worker in the workerTraversalResults. It's time to gather all the data for the deactivating bodies and constraints.
+            //To make job pulling marginally easier for the gathering phase, we just copy all the jobs into a contiguous array.
+            var gatheringJobCount = 0;
+            for (int i = 0; i < threadCount; ++i)
+            {
+                gatheringJobCount += workerTraversalResults[i].Islands.Count;
+            }
+            QuickList<GatheringJob, Buffer<GatheringJob>>.Create(pool.SpecializeFor<GatheringJob>(), gatheringJobCount, out gatheringJobs);
+            //We now create jobs only for the set of unique islands. While each worker avoided creating duplicates locally, threads did not communicate and so may have found the same islands.
+            //Each worker output a set of their traversed bodies. Using it, we can efficiently check to see if a given island is a duplicate by checking all previous workers.
+            //If a previous worker traversed a body, the later worker's island holding that body is considered a duplicate.
+            //(Note that a body can only belong to one island. If two threads find the same body, it means they found the exact same island, just using different paths. They are fully redundant.)
+            for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
+            {
+                ref var workerIslands = ref workerTraversalResults[workerIndex].Islands;
+                for (int j = 0; j < workerIslands.Count; ++j)
+                {
+                    ref var island = ref workerIslands[j];
+                    bool skip = false;
+                    for (int previousWorkerIndex = 0; previousWorkerIndex < workerIndex; ++previousWorkerIndex)
+                    {
+                        if (workerTraversalResults[workerIndex].TraversedBodies.Contains(island.BodyIndices[0]))
+                        {
+                            //A previous worker already reported this island. It is a duplicate; skip it.
+                            skip = true;
+                        }
+                    }
+                    if (!skip)
+                    {
+                        //Allocate space for a new island.
+                        var setIndex = setIdPool.Take();
+                        if (setIndex >= bodies.Sets.Length)
+                        {
+                            var necessaryCapacity = setIndex + 1;
+                            EnsureSetsCapacity(necessaryCapacity);
+                        }
+                        bodies.Sets[setIndex] = new BodySet(island.BodyIndices.Count, pool);
+                        AllocateConstraintSet(ref island.Protobatches, solver, pool, out solver.Sets[setIndex]);
+
+                        //A single island may involve multiple jobs, depending on its size.
+                        //TODO: Revamp job structure.
+                        ref var job = ref gatheringJobs.AllocateUnsafely();
+                        job.Island = island;
+                        job.SourceWorkerIndex = workerIndex;
+                        job.TargetSetIndex = setIndex;
+                    }
+                }
+            }
+
+            jobIndex = -1;
+            if (threadCount > 1)
+            {
+                threadDispatcher.DispatchWorkers(gatherDelegate);
+                //The source of traversal worker resources is a per-thread pool.
+                for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
+                {
+                    workerTraversalResults[workerIndex].Dispose(threadDispatcher.GetThreadMemoryPool(workerIndex));
+                }
+            }
+            else
+            {
+                Gather(0);
+                //The source of traversal worker resources was the main pool since it's running in single threaded mode.
+                workerTraversalResults[0].Dispose(pool);
+            }
+            pool.SpecializeFor<WorkerTraversalResults>().Return(ref workerTraversalResults);
+            gatheringJobs.Dispose(pool.SpecializeFor<GatheringJob>());
         }
 
+        void AllocateConstraintSet(ref QuickList<IslandProtoConstraintBatch, Buffer<IslandProtoConstraintBatch>> batches, Solver solver, BufferPool pool, out ConstraintSet constraintSet)
+        {
+            constraintSet = new ConstraintSet(pool, batches.Count);
+            for (int i = 0; i < batches.Count; ++i)
+            {
+                ref var sourceBatch = ref batches[i];
+                ref var targetBatch = ref constraintSet.Batches.AllocateUnsafely();
+                pool.SpecializeFor<int>().Take(sourceBatch.TypeIdToIndex.Length, out targetBatch.TypeIndexToTypeBatchIndex);
+                QuickList<TypeBatch, Buffer<TypeBatch>>.Create(pool.SpecializeFor<TypeBatch>(), sourceBatch.TypeBatches.Count, out targetBatch.TypeBatches);
+                sourceBatch.TypeIdToIndex.CopyTo(0, ref targetBatch.TypeIndexToTypeBatchIndex, 0, targetBatch.TypeIndexToTypeBatchIndex.Length);
+                for (int j = 0; j < sourceBatch.TypeBatches.Count; ++j)
+                {
+                    ref var sourceTypeBatch = ref sourceBatch.TypeBatches[j];
+                    ref var targetTypeBatch = ref targetBatch.GetOrCreateTypeBatch(sourceTypeBatch.TypeId, solver.TypeProcessors[sourceTypeBatch.TypeId], sourceTypeBatch.Handles.Count, pool);
+                }
 
-        //public void Create(ref QuickList<int, Buffer<int>> bodyHandles, ref QuickList<int, Buffer<int>> constraintHandles,
-        //    BufferPool mainPool, BufferPool threadPool)
-        //{
-        //    //Note that, while we did encounter the indices associated with the island bodies handles and *could* have cached them, we opted to store the handles instead.
-        //    //This does incur additional (warm) indirections, but we would like to also use the handles again- to remove from the active set.
-        //    //Creating this island does not modify anything about the existing active set. All of that is deferred.
+            }
+        }
 
-        //    //Note that, while we have already traversed the constraint's connected bodies to collect the island, we did not cache all required data during the traversal.
-        //    //Doing so would be *usually* wasteful- the vast majority of traversals result in no deactivation.
-        //    //Further, the traversal does not otherwise need to touch the prestep data and accumulated impulses. Those are quite large, so avoiding needless accesses
-        //    //are important for keeping the traversal reasonably speedy.
-        //    //Given that we have to grab that additional information anyway, and given that it is likely in L1 (or failing that, L2) cache, we re-enumerate the constraint body 
-        //    //handles here.
+        /// <summary>
+        /// Ensures that the Bodies and Solver can hold at least the given number of sets (BodySets for the Bodies collection, ConstraintSets for the Solver).
+        /// </summary>
+        /// <param name="setsCapacity">Number of sets to guarantee space for.</param>
+        public void EnsureSetsCapacity(int setsCapacity)
+        {
+            var potentiallyAllocatedCount = setIdPool.HighestPossiblyClaimedId + 1;
+            if (setsCapacity > bodies.Sets.Length)
+            {
+                bodies.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
+            }
+            if (setsCapacity > solver.Sets.Length)
+            {
+                solver.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
+            }
+        }
 
-        //    //We have a bit of an annoyance to deal with:
-        //    //1) By convention, we never hold information in per-thread buffer pools between frames.
-        //    //2) We'd like to be able to run island creation on multiple threads.
-        //    //3) Island creation requires allocating space for all the body and constraint data.
-        //    //Implication:
-        //    //We must synchronize access to the main pool when retrieving persisted buffers. All ephemeral data comes from the thread pool.
-        //    //While this isn't too problematic (time spent retrieving island resources is going to be extremely brief), 
-        //    //the main pool access does restrict job scheduling with other main pool users that are unaware of the synchronization requirement.
+        /// <summary>
+        /// Ensures that the Bodies and Solver can hold the given number of sets. 
+        /// If the existing allocation is smaller than the requested sets capacity, the allocation will be enlarged.
+        /// If the existing allocation is larger than both the existing potentially allocated set range and the requested sets capacity, the allocation will be shrunk.
+        /// Shrinks will never cause an existing set to be lost.
+        /// </summary>
+        /// <param name="setsCapacity">Target number of sets to allocate space for.</param>
+        public void ResizeSetsCapacity(int setsCapacity)
+        {
+            var potentiallyAllocatedCount = setIdPool.HighestPossiblyClaimedId + 1;
+            setsCapacity = Math.Max(potentiallyAllocatedCount, setsCapacity);
+            bodies.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
+            solver.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
+        }
 
-        //    //Unless we perform constraint batching during traversal, the numbers of constraint batches, type batches, and constraints within individual type batches are unknown.
-        //    //We cannot just lock once and allocate a minimally sufficient set of buffers.
-        //    //An option:
-        //    //1) Enumerate each constraint's bodies. Convert them to handles and perform batching, locally creating constraintbatches and type batches, but only fill the body references.
-        //    //2) As you go, store the new handle->island location mapping.
-        //    //3) Using the capacities detected by 
-
-        //    var batchReferencedHandlesPool = threadPool.SpecializeFor<HandleSet>();
-        //    var intPool = threadPool.SpecializeFor<int>();
-        //    constraintHandles.
-        //    batchReferencedHandlesPool.Take(16, out var batchReferencedHandles);
-
-        //    for (int i = 0; i < ConstraintBatches.Count; ++i)
-        //    {
-        //        batchReferencedHandles[i].Dispose(threadPool);
-        //    }
-        //    batchReferencedHandlesPool.Return(ref batchReferencedHandles);
-
-        //}
-
+        public void Clear()
+        {
+            setIdPool.Clear();
+            //Slot 0 is reserved for the active set.
+            setIdPool.Take();
+        }
 
         public void Dispose()
         {
-            islandIdPool.Dispose(pool.SpecializeFor<int>());
+            setIdPool.Dispose(pool.SpecializeFor<int>());
         }
+
+
+
     }
 }

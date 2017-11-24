@@ -261,6 +261,7 @@ namespace BepuPhysics
             Bodies.EnsureCapacity(allocationTarget.Bodies);
             Bodies.MinimumConstraintCapacityPerBody = allocationTarget.ConstraintCountPerBodyEstimate;
             Bodies.EnsureConstraintListCapacities();
+            Deactivator.EnsureSetsCapacity(allocationTarget.Islands + 1);
             BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.EnsureCapacity(allocationTarget.Statics);
             Shapes.EnsureBatchCapacities(allocationTarget.ShapesPerType);
@@ -290,6 +291,7 @@ namespace BepuPhysics
             Bodies.Resize(allocationTarget.Bodies);
             Bodies.MinimumConstraintCapacityPerBody = allocationTarget.ConstraintCountPerBodyEstimate;
             Bodies.ResizeConstraintListCapacities();
+            Deactivator.ResizeSetsCapacity(allocationTarget.Islands + 1);
             BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.Resize(allocationTarget.Statics);
             Shapes.ResizeBatches(allocationTarget.ShapesPerType);
