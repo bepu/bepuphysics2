@@ -313,7 +313,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
 
-        public void UpdateConstraintBookkeeping(bool deterministic)
+        public void UpdateConstraintBookkeeping(bool deterministic, BufferPool threadPool)
         {
             //While body list removal could technically be internally multithreaded, it would be pretty complex- you would have to do one dispatch per solver.Batches batch
             //to guarantee that no two threads hit the same body constraint list at the same time. 
@@ -336,7 +336,7 @@ namespace BepuPhysics.CollisionDetection
             //It will attempt to look up handle->index mappings, so we can't corrupt them.
             if (deterministic)
             {
-                var intPool = pool.SpecializeFor<int>();
+                var intPool = threadPool.SpecializeFor<int>();
                 //The batch compressor requires constraint handles to be deterministic. While that could be changed, ensuring handle determinism fits conceptually
                 //with the user-managed constraint handles- they are all deterministic, so the contact ones might as well be too.
                 int count = 0;

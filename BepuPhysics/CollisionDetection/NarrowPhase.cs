@@ -111,21 +111,23 @@ namespace BepuPhysics.CollisionDetection
         bool deterministic;
         int flushJobIndex;
         QuickList<NarrowPhaseFlushJob, Buffer<NarrowPhaseFlushJob>> flushJobs;
+        IThreadDispatcher threadDispatcher;
         Action<int> flushWorkerLoop;
         void FlushWorkerLoop(int workerIndex)
         {
             int jobIndex;
+            var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
             while ((jobIndex = Interlocked.Increment(ref flushJobIndex)) < flushJobs.Count)
             {
-                ExecuteFlushJob(ref flushJobs[jobIndex]);
+                ExecuteFlushJob(ref flushJobs[jobIndex], threadPool);
             }
         }
-        void ExecuteFlushJob(ref NarrowPhaseFlushJob job)
+        void ExecuteFlushJob(ref NarrowPhaseFlushJob job, BufferPool threadPool)
         {
             switch (job.Type)
             {
                 case NarrowPhaseFlushJobType.UpdateConstraintBookkeeping:
-                    ConstraintRemover.UpdateConstraintBookkeeping(deterministic);
+                    ConstraintRemover.UpdateConstraintBookkeeping(deterministic, threadPool);
                     break;
                 case NarrowPhaseFlushJobType.RemoveConstraintFromTypeBatch:
                     ConstraintRemover.RemoveConstraintsFromTypeBatch(job.Index);
@@ -151,13 +153,15 @@ namespace BepuPhysics.CollisionDetection
             {
                 for (int i = 0; i < flushJobs.Count; ++i)
                 {
-                    ExecuteFlushJob(ref flushJobs[i]);
+                    ExecuteFlushJob(ref flushJobs[i], Pool);
                 }
             }
             else
             {
                 flushJobIndex = -1;
+                this.threadDispatcher = threadDispatcher;
                 threadDispatcher.DispatchWorkers(flushWorkerLoop);
+                this.threadDispatcher = null;
             }
             //var end = Stopwatch.GetTimestamp();
             //Console.WriteLine($"Flush stage 3 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");

@@ -19,7 +19,7 @@ namespace Demos
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
             const int width = 8;
-            const int height = 512;
+            const int height = 128;
             const int length = 8;
             var latticeSpacing = 1.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
