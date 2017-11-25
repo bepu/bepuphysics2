@@ -175,25 +175,17 @@ namespace BepuPhysics
             }
         }
 
-        /// <summary>
-        /// Removes an active body by its index. Any constraints connected to this body will be removed. Assumes that the input location is valid.
-        /// </summary>
-        /// <param name="activeBodyIndex">Index of the active body.</param>
-        public void RemoveAt(int activeBodyIndex)
+        internal int RemoveFromActiveSet(int activeBodyIndex)
         {
+            //Note that this is separated from the main removal because of deactivation. Deactivation doesn't want to truly remove from the *simulation*, just the active set.
             ref var set = ref ActiveSet;
-            //Constraints must be removed; we cannot leave 'orphans' in the solver because they will access invalid data.
-            ref var constraints = ref set.Constraints[activeBodyIndex];
-            for (int i = constraints.Count - 1; i >= 0; --i)
-            {
-                solver.Remove(constraints[i].ConnectingConstraintHandle);
-            }
             Debug.Assert(activeBodyIndex >= 0 && activeBodyIndex < set.Count);
             ValidateExistingHandle(set.IndexToHandle[activeBodyIndex]);
             ref var collidable = ref set.Collidables[activeBodyIndex];
             if (collidable.Shape.Exists)
             {
                 //The collidable exists, so it should be removed from the broadphase.
+                //This is true even when this function is used in the context of a deactivation. The collidable will be readded to the inactive tree.
                 RemoveCollidableFromBroadPhase(activeBodyIndex, ref collidable);
             }
 
@@ -205,6 +197,23 @@ namespace BepuPhysics
                 Debug.Assert(HandleToLocation[movedBodyHandle].SetIndex == 0 && HandleToLocation[movedBodyHandle].Index == movedBodyIndex);
                 HandleToLocation[movedBodyHandle].Index = activeBodyIndex;
             }
+            return handle;
+
+        }
+        /// <summary>
+        /// Removes an active body by its index. Any constraints connected to this body will be removed. Assumes that the input location is valid.
+        /// </summary>
+        /// <param name="activeBodyIndex">Index of the active body.</param>
+        public void RemoveAt(int activeBodyIndex)
+        {
+            //Constraints must be removed; we cannot leave 'orphans' in the solver because they will access invalid data.
+            ref var constraints = ref ActiveSet.Constraints[activeBodyIndex];
+            for (int i = constraints.Count - 1; i >= 0; --i)
+            {
+                solver.Remove(constraints[i].ConnectingConstraintHandle);
+            }
+
+            var handle = RemoveFromActiveSet(activeBodyIndex);
 
             HandlePool.Return(handle, pool.SpecializeFor<int>());
             ref var removedBodyLocation = ref HandleToLocation[handle];
@@ -492,7 +501,7 @@ namespace BepuPhysics
         {
             Debug.Assert(setsCapacity >= potentiallyAllocatedCount);
             setsCapacity = BufferPool<BodySet>.GetLowestContainingElementCount(setsCapacity);
-            if(Sets.Length != setsCapacity)
+            if (Sets.Length != setsCapacity)
             {
                 pool.SpecializeFor<BodySet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
             }

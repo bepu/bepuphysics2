@@ -51,6 +51,16 @@ namespace BepuUtilities.Memory
         }
 
         /// <summary>
+        /// Returns an id to the pool without checking if a resize is required on the available id stack.
+        /// </summary>
+        /// <param name="id">Id to return.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ReturnUnsafely(int id)
+        {
+            AvailableIds.AddUnsafely(id);
+        }
+
+        /// <summary>
         /// Resets the IdPool without returning any resources to the underlying memory pool.
         /// </summary>
         public void Clear()
@@ -120,6 +130,5 @@ namespace BepuUtilities.Memory
             nextIndex = 0;
             AvailableIds = new QuickList<int, TSpan>();
         }
-
-    }  
+            }  
 }

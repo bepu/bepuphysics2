@@ -267,12 +267,13 @@ namespace BepuPhysics.CollisionDetection
             var typeBatchIndexPool = pool.SpecializeFor<TypeBatchIndex>();
             var quickListPool = pool.SpecializeFor<QuickList<WorkerBatchReference, Buffer<WorkerBatchReference>>>();
             var intPool = pool.SpecializeFor<int>();
-
+            var removedConstraintCount = 0;
             for (int i = 0; i < threadCount; ++i)
             {
                 ref var cache = ref workerCaches[i];
                 for (int j = 0; j < cache.Batches.Count; ++j)
                 {
+                    removedConstraintCount += cache.BatchHandles[j].Count;
                     var batchIndex = batches.IndexOf(cache.Batches[j]);
                     if (batchIndex >= 0)
                     {
@@ -293,6 +294,11 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
             }
+
+            //Ensure that the solver's id pool is large enough to hold all constraint handles being removed.
+            //(Note that we do this even if we end up using this for deactivation, where we don't actually return the handles.
+            //There's no functional reason for that- it's just simpler to not have a conditional API, and it has no significant impact on performance. Might change later.)
+            solver.HandlePool.EnsureCapacity(solver.HandlePool.AvailableIds.Count + removedConstraintCount, intPool);
 
             //Ensure that the removal list is large enough to hold every single type batch in the worst case. This prevents the need to resize during execution.
             //That's valuable because every access to the main thread's buffer pool is a potential race condition when other tasks are also using it.
@@ -322,13 +328,15 @@ namespace BepuPhysics.CollisionDetection
                     solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle);
                 }
             }
-            var intPool = pool.SpecializeFor<int>();
 
             //Note that the handles are also removed here. Even though the action is independent, any resizes of the internal id pool structure would share acceses to the main thread's
             //buffer pool. Removing constraints is the other place where the main thread's buffer pool is used.
             //Doesn't matter too much; the total cost of this stage is very low.
+            //Note that neither of these paths actually zero out the slot associated with the handle. It is assumed that the typebatch removal is proceeding in parallel.
+            //It will attempt to look up handle->index mappings, so we can't corrupt them.
             if (deterministic)
             {
+                var intPool = pool.SpecializeFor<int>();
                 //The batch compressor requires constraint handles to be deterministic. While that could be changed, ensuring handle determinism fits conceptually
                 //with the user-managed constraint handles- they are all deterministic, so the contact ones might as well be too.
                 int count = 0;
@@ -360,7 +368,8 @@ namespace BepuPhysics.CollisionDetection
                     QuickSort.Sort(ref sortedHandles[0], 0, count - 1, ref comparer);
                     for (int i = 0; i < count; ++i)
                     {
-                        solver.HandlePool.Return(sortedHandles[i], intPool);
+                        //We ensured the capacity of the handle pool during job creation; no need to worry about resizing.
+                        solver.HandlePool.ReturnUnsafely(sortedHandles[i]);
                     }
                     intPool.Return(ref sortedHandles);
                 }
@@ -376,7 +385,8 @@ namespace BepuPhysics.CollisionDetection
                         ref var handles = ref workerCache.BatchHandles[batchIndex];
                         for (int handleIndex = 0; handleIndex < handles.Count; ++handleIndex)
                         {
-                            solver.HandlePool.Return(handles[handleIndex], intPool);
+                            //We ensured the capacity of the handle pool during job creation; no need to worry about resizing.
+                            solver.HandlePool.ReturnUnsafely(handles[handleIndex]);
                         }
                     }
                 }
