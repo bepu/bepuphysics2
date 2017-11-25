@@ -43,18 +43,7 @@ namespace BepuPhysics.CollisionDetection
             return Unsafe.As<TypeBatchIndex, int>(ref item);
         }
     }
-    public enum NarrowPhaseFlushJobType
-    {
-        UpdateConstraintBookkeeping,
-        RemoveConstraintFromTypeBatch,
-        FlushPairCacheChanges
-    }
 
-    public struct NarrowPhaseFlushJob
-    {
-        public NarrowPhaseFlushJobType Type;
-        public int Index;
-    }
 
     /// <summary>
     /// Accumulates constraints to remove from multiple threads, and efficiently removes them all as a batch.
@@ -252,14 +241,12 @@ namespace BepuPhysics.CollisionDetection
         //Cutting the cost of the worst case when thousands of constraints get removed by a factor of ~ThreadCount is worth this complexity. Frame spikes are evil!
 
         Batches batches;
-        public void CreateFlushJobs(ref QuickList<NarrowPhaseFlushJob, Buffer<NarrowPhaseFlushJob>> jobs)
+        /// <summary>
+        /// Processes enqueued constraint removals and prepares removal jobs.
+        /// </summary>
+        /// <returns>The number of removal jobs created. To complete the jobs, execute RemoveConstraintsFromTypeBatch for every index from 0 to the returned job count.</returns>
+        public int CreateFlushJobs()
         {
-            //Add the locally sequential jobs. Put them first in the hope that the usually-smaller per-typebatch jobs will balance out the remainder of the work.
-            var jobPool = pool.SpecializeFor<NarrowPhaseFlushJob>();
-            jobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.UpdateConstraintBookkeeping }, jobPool);
-            //TODO: For deactivation, you don't actually want to create a body list removal request. The bodies would be getting removed, so it would be redundant.
-            //Simple enough to adapt for that use case later. Probably need to get rid of the narrow phase specific reference.
-
             //Accumulate the set of unique type batches in a contiguous list so we can easily execute multithreaded jobs over them.
             //Note that we're not actually copying over the contents of the per-worker lists here- just storing a reference to the per-worker lists.
             Batches.Create(pool.SpecializeFor<TypeBatchIndex>(), pool.SpecializeFor<QuickList<WorkerBatchReference, Buffer<WorkerBatchReference>>>(), pool.SpecializeFor<int>(),
@@ -289,7 +276,6 @@ namespace BepuPhysics.CollisionDetection
                         reference.WorkerIndex = (short)i;
                         reference.WorkerBatchIndex = (short)j;
                         references.AddUnsafely(reference);
-                        jobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintFromTypeBatch, Index = batches.Count }, jobPool);
                         batches.Add(ref cache.Batches[j], ref references, typeBatchIndexPool, quickListPool, intPool);
                     }
                 }
@@ -310,6 +296,7 @@ namespace BepuPhysics.CollisionDetection
                 typeBatchCount += activeSet.Batches[i].TypeBatches.Count;
             }
             QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>>.Create(pool.SpecializeFor<TypeBatchIndex>(), typeBatchCount, out removedTypeBatches);
+            return batches.Count;
         }
 
 

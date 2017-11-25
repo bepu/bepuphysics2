@@ -74,7 +74,18 @@ namespace BepuPhysics.CollisionDetection
      */
 
 
+    public enum NarrowPhaseFlushJobType
+    {
+        UpdateConstraintBookkeeping,
+        RemoveConstraintFromTypeBatch,
+        FlushPairCacheChanges
+    }
 
+    public struct NarrowPhaseFlushJob
+    {
+        public NarrowPhaseFlushJobType Type;
+        public int Index;
+    }
 
     public abstract class NarrowPhase
     {
@@ -143,12 +154,22 @@ namespace BepuPhysics.CollisionDetection
         {
             OnPreflush(threadDispatcher, deterministic);
             //var start = Stopwatch.GetTimestamp();
-            QuickList<NarrowPhaseFlushJob, Buffer<NarrowPhaseFlushJob>>.Create(Pool.SpecializeFor<NarrowPhaseFlushJob>(), 128, out flushJobs);
+            var jobPool = Pool.SpecializeFor<NarrowPhaseFlushJob>();
+            QuickList<NarrowPhaseFlushJob, Buffer<NarrowPhaseFlushJob>>.Create(jobPool, 128, out flushJobs);
             PairCache.PrepareFlushJobs(ref flushJobs);
             //We indirectly pass the determinism state; it's used by the constraint remover bookkeeping.
             this.deterministic = deterministic;
-            ConstraintRemover.CreateFlushJobs(ref flushJobs);
-            
+            var removalBatchJobCount = ConstraintRemover.CreateFlushJobs();
+            //Note that we explicitly add the constraint remover jobs here. 
+            //The constraint remover can be used in two ways- deactivation style, and narrow phase style.
+            //In deactivation, we're not actually removing constraints from the simulation completely, so it requires fewer jobs.
+            //The constraint remover just lets you choose which jobs to call. The narrow phase needs all of them.
+            flushJobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.UpdateConstraintBookkeeping }, jobPool);
+            for (int i = 0; i < removalBatchJobCount; ++i)
+            {
+                flushJobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintFromTypeBatch, Index = i }, jobPool);
+            }
+
             if (threadDispatcher == null)
             {
                 for (int i = 0; i < flushJobs.Count; ++i)
@@ -166,10 +187,10 @@ namespace BepuPhysics.CollisionDetection
             //var end = Stopwatch.GetTimestamp();
             //Console.WriteLine($"Flush stage 3 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
             flushJobs.Dispose(Pool.SpecializeFor<NarrowPhaseFlushJob>());
-            
+
             PairCache.Postflush();
             ConstraintRemover.Postflush();
-            
+
             OnPostflush(threadDispatcher);
         }
 
@@ -268,24 +289,24 @@ namespace BepuPhysics.CollisionDetection
             {
                 //Since we disallow 2-static pairs and we guarantee the second slot holds the static if it exists, we know that A is a body and B is a static.
                 Debug.Assert(aMobility != CollidableMobility.Static && bMobility == CollidableMobility.Static);
-                
+
                 var bodyIndex = Bodies.HandleToLocation[a.Handle].Index;
                 var staticIndex = Statics.HandleToIndex[b.Handle];
                 Debug.Assert(Bodies.HandleToLocation[a.Handle].SetIndex == 0, "Static-body pairs should only exist if the body involved is active.");
 
                 //TODO: Ideally, the compiler would see this and optimize away the relevant math in AddBatchEntries. That's a longshot, though. May want to abuse some generics to force it.
                 var zeroVelocity = default(BodyVelocity);
-                AddBatchEntries(ref overlapWorker, ref pair, 
-                    ref bodySet.Collidables[bodyIndex], ref Statics.Collidables[staticIndex], 
-                    ref bodySet.Poses[bodyIndex], ref Statics.Poses[staticIndex], 
+                AddBatchEntries(ref overlapWorker, ref pair,
+                    ref bodySet.Collidables[bodyIndex], ref Statics.Collidables[staticIndex],
+                    ref bodySet.Poses[bodyIndex], ref Statics.Poses[staticIndex],
                     ref bodySet.Velocities[bodyIndex], ref zeroVelocity);
             }
 
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe void AddBatchEntries(ref OverlapWorker overlapWorker, 
-            ref CollidablePair pair, ref Collidable aCollidable, ref Collidable bCollidable, 
+        private unsafe void AddBatchEntries(ref OverlapWorker overlapWorker,
+            ref CollidablePair pair, ref Collidable aCollidable, ref Collidable bCollidable,
             ref RigidPose poseA, ref RigidPose poseB, ref BodyVelocity velocityA, ref BodyVelocity velocityB)
         {
             var shapeTypeA = aCollidable.Shape.Type;
