@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using BepuUtilities.Collections;
 
 namespace BepuPhysics.Constraints
 {
@@ -80,6 +81,10 @@ namespace BepuPhysics.Constraints
             int constraintStart, int constraintCount, ref int firstSourceIndex,
             ref Buffer<int> indexToHandleCache, ref RawBuffer bodyReferencesCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache,
             ref Buffer<ConstraintLocation> handlesToConstraints);
+
+        internal unsafe abstract void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<int, Buffer<int>> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch);
+
+
 
         [Conditional("DEBUG")]
         internal abstract void VerifySortRegion(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices);
@@ -507,6 +512,39 @@ namespace BepuPhysics.Constraints
                     ref typedBodyReferencesTarget[targetBundle], ref typedPrestepTarget[targetBundle], ref typedAccumulatedImpulsesTarget[targetBundle],
                     ref typeBatch.IndexToHandle[targetIndex], targetInner, targetIndex, ref handlesToConstraints);
 
+            }
+        }
+
+        internal unsafe sealed override void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<int, Buffer<int>> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch)
+        {
+            ref var activeConstraintSet = ref solver.ActiveSet;
+            ref var activeBodySet = ref bodies.ActiveSet;
+            for (int i = startIndex; i < endIndex; ++i)
+            {
+                ref var location = ref solver.HandleToConstraint[sourceHandles[i]];
+                Debug.Assert(location.SetIndex == 0, "Can only gather from the active set.");
+
+                ref var sourceBatch = ref activeConstraintSet.Batches[location.BatchIndex];
+                ref var sourceTypeBatch = ref sourceBatch.TypeBatches[sourceBatch.TypeIndexToTypeBatchIndex[location.TypeId]];
+                BundleIndexing.GetBundleIndices(location.IndexInTypeBatch, out var sourceBundle, out var sourceInner);
+                BundleIndexing.GetBundleIndices(i, out var targetBundle, out var targetInner);
+
+                //Note that we don't directly copy body references or projection information. Projection information is ephemeral and unnecessary for inactive constraints.
+                //Body references get turned into handles so that reactivation can easily track down the bodies' readded locations.
+                GatherScatter.CopyLane(
+                    ref Buffer<TPrestepData>.Get(ref sourceTypeBatch.PrestepData, sourceBundle), sourceInner,
+                    ref Buffer<TPrestepData>.Get(ref targetTypeBatch.PrestepData, targetBundle), targetInner);
+                GatherScatter.CopyLane(
+                    ref Buffer<TAccumulatedImpulse>.Get(ref sourceTypeBatch.AccumulatedImpulses, sourceBundle), sourceInner,
+                    ref Buffer<TAccumulatedImpulse>.Get(ref targetTypeBatch.AccumulatedImpulses, targetBundle), targetInner);
+                ref var sourceReferencesLaneStart = ref Unsafe.Add(ref Unsafe.As<TBodyReferences, int>(ref Buffer<TBodyReferences>.Get(ref sourceTypeBatch.BodyReferences, sourceBundle)), sourceInner);
+                ref var targetReferencesLaneStart = ref Unsafe.Add(ref Unsafe.As<TBodyReferences, int>(ref Buffer<TBodyReferences>.Get(ref sourceTypeBatch.BodyReferences, targetBundle)), targetInner);
+                var offset = 0;
+                for (int j = 0; j < bodiesPerConstraint; ++j)
+                {
+                    Unsafe.Add(ref targetReferencesLaneStart, offset) = activeBodySet.IndexToHandle[Unsafe.Add(ref sourceReferencesLaneStart, offset)];
+                    offset += Vector<int>.Count;
+                }
             }
         }
 

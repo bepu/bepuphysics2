@@ -233,9 +233,16 @@ namespace BepuPhysics
 
         struct GatheringJob
         {
-            public int SourceWorkerIndex;
-            public Island Island;
             public int TargetSetIndex;
+            public int TargetBatchIndex;
+            public int TargetTypeBatchIndex;
+            public QuickList<int, Buffer<int>> SourceIndices;
+            public int StartIndex;
+            public int EndIndex;
+            /// <summary>
+            /// If true, this job relates to a subset of body indices. If false, this job relates to a subset of constraint handles.
+            /// </summary>
+            public bool IsBodyJob;
         }
 
         QuickList<GatheringJob, Buffer<GatheringJob>> gatheringJobs;
@@ -295,7 +302,41 @@ namespace BepuPhysics
         Action<int> gatherDelegate;
         void Gather(int workerIndex)
         {
-
+            while(true)
+            {
+                var index = Interlocked.Increment(ref jobIndex);
+                if(index >= gatheringJobs.Count)
+                {
+                    break;
+                }
+                ref var job = ref gatheringJobs[index];
+                if(job.IsBodyJob)
+                {
+                    //Load a range of bodies from the active set and store them into the target inactive body set.
+                    ref var sourceSet = ref bodies.ActiveSet;
+                    for (int targetIndex = job.StartIndex; targetIndex < job.EndIndex; ++targetIndex)
+                    {
+                        var sourceIndex = job.SourceIndices[targetIndex];
+                        ref var targetSet = ref bodies.Sets[job.TargetSetIndex];
+                        targetSet.IndexToHandle[targetIndex] = sourceSet.IndexToHandle[sourceIndex];
+                        targetSet.Activity[targetIndex] = sourceSet.Activity[sourceIndex];
+                        targetSet.Collidables[targetIndex] = sourceSet.Collidables[sourceIndex];
+                        //Note that we are just copying the constraint list reference; we don't have to reallocate it.
+                        //Keep this in mind when removing the object from the active set. We don't want to dispose the list since we're still using it.
+                        targetSet.Constraints[targetIndex] = sourceSet.Constraints[sourceIndex];
+                        targetSet.LocalInertias[targetIndex] = sourceSet.LocalInertias[sourceIndex];
+                        targetSet.Poses[targetIndex] = sourceSet.Poses[sourceIndex];
+                        targetSet.Velocities[targetIndex] = sourceSet.Velocities[sourceIndex];
+                    }
+                }
+                else
+                {
+                    //Load a range of constraints from the active set and store them into the target inactive constraint set.
+                    ref var targetTypeBatch = ref solver.Sets[job.TargetSetIndex].Batches[job.TargetBatchIndex].TypeBatches[job.TargetTypeBatchIndex];
+                    //We can share a single virtual dispatch over all the constraints since they are of the same type. They may, however, be in different batches.
+                    solver.TypeProcessors[targetTypeBatch.TypeId].GatherActiveConstraints(bodies, solver, ref job.SourceIndices, job.StartIndex, job.EndIndex, ref targetTypeBatch);
+                }
+            }
         }
 
         struct HandleComparer : IComparerRef<int>
@@ -400,13 +441,11 @@ namespace BepuPhysics
             traversalTargetBodyIndices.Dispose(pool.SpecializeFor<int>());
 
             //Traversal is now done. We should have a set of results for each worker in the workerTraversalResults. It's time to gather all the data for the deactivating bodies and constraints.
-            //To make job pulling marginally easier for the gathering phase, we just copy all the jobs into a contiguous array.
-            var gatheringJobCount = 0;
-            for (int i = 0; i < threadCount; ++i)
-            {
-                gatheringJobCount += workerTraversalResults[i].Islands.Count;
-            }
-            QuickList<GatheringJob, Buffer<GatheringJob>>.Create(pool.SpecializeFor<GatheringJob>(), gatheringJobCount, out gatheringJobs);
+            //Note that we only preallocate a fixed size. It will often be an overestimate, but that's fine. Resizes are more concerning.
+            //(We could precompute the exact number of jobs, but it's not really necessary.) 
+            var objectsPerGatherJob = 32;
+            var gatheringJobPool = pool.SpecializeFor<GatheringJob>();
+            QuickList<GatheringJob, Buffer<GatheringJob>>.Create(gatheringJobPool, 512, out gatheringJobs);
             //We now create jobs only for the set of unique islands. While each worker avoided creating duplicates locally, threads did not communicate and so may have found the same islands.
             //Each worker output a set of their traversed bodies. Using it, we can efficiently check to see if a given island is a duplicate by checking all previous workers.
             //If a previous worker traversed a body, the later worker's island holding that body is considered a duplicate.
@@ -436,14 +475,59 @@ namespace BepuPhysics
                             EnsureSetsCapacity(necessaryCapacity);
                         }
                         bodies.Sets[setIndex] = new BodySet(island.BodyIndices.Count, pool);
+                        bodies.Sets[setIndex].Count = island.BodyIndices.Count;
                         AllocateConstraintSet(ref island.Protobatches, solver, pool, out solver.Sets[setIndex]);
 
                         //A single island may involve multiple jobs, depending on its size.
-                        //TODO: Revamp job structure.
-                        ref var job = ref gatheringJobs.AllocateUnsafely();
-                        job.Island = island;
-                        job.SourceWorkerIndex = workerIndex;
-                        job.TargetSetIndex = setIndex;
+                        //For simplicity, a job can only cover contiguous regions. In other words, if there are two type batches, there will be at least two jobs- even if the type batches
+                        //only have one constraint each. 
+                        //A job also only covers either bodies or constraints, not both at once.
+                        //TODO: This job scheduling pattern appears frequently. Would be nice to unify it. Obvious zero overhead approach with generics abuse.
+                        {
+                            var jobCount = Math.Max(1, island.BodyIndices.Count / objectsPerGatherJob);
+                            var bodiesPerJob = island.BodyIndices.Count / jobCount;
+                            var remainder = island.BodyIndices.Count - bodiesPerJob * jobCount;
+                            var previousEnd = 0;
+                            gatheringJobs.EnsureCapacity(gatheringJobs.Count + jobCount, gatheringJobPool);
+                            for (int i = 0; i < jobCount; ++i)
+                            {
+                                var bodiesInJob = i < remainder ? bodiesPerJob + 1 : bodiesPerJob;
+                                ref var job = ref gatheringJobs.AllocateUnsafely();
+                                job.IsBodyJob = true;
+                                job.SourceIndices = island.BodyIndices;
+                                job.StartIndex = previousEnd;
+                                previousEnd += bodiesInJob;
+                                job.EndIndex = previousEnd;
+                                job.TargetSetIndex = setIndex;
+                            }
+                        }
+
+                        for (int batchIndex = 0; batchIndex < island.Protobatches.Count; ++batchIndex)
+                        {
+                            ref var sourceBatch = ref island.Protobatches[batchIndex];
+                            for (int typeBatchIndex = 0; typeBatchIndex < sourceBatch.TypeBatches.Count; ++typeBatchIndex)
+                            {
+                                ref var sourceTypeBatch = ref sourceBatch.TypeBatches[typeBatchIndex];
+                                var jobCount = Math.Max(1, sourceTypeBatch.Handles.Count / objectsPerGatherJob);
+                                var constraintsPerJob = sourceTypeBatch.Handles.Count / jobCount;
+                                var remainder = sourceTypeBatch.Handles.Count - constraintsPerJob * jobCount;
+                                var previousEnd = 0;
+                                gatheringJobs.EnsureCapacity(gatheringJobs.Count + jobCount, gatheringJobPool);
+                                for (int i = 0; i < jobCount; ++i)
+                                {
+                                    var constraintsInJob = i < remainder ? constraintsPerJob + 1 : constraintsPerJob;
+                                    ref var job = ref gatheringJobs.AllocateUnsafely();
+                                    job.IsBodyJob = false;
+                                    job.SourceIndices = sourceTypeBatch.Handles;
+                                    job.StartIndex = previousEnd;
+                                    previousEnd += constraintsInJob;
+                                    job.EndIndex = previousEnd;
+                                    job.TargetSetIndex = setIndex;
+                                    job.TargetBatchIndex = batchIndex;
+                                    job.TargetTypeBatchIndex = typeBatchIndex;
+                                }
+                            }
+                        }
                     }
                 }
             }
