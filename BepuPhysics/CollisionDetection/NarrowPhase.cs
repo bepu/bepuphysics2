@@ -76,7 +76,9 @@ namespace BepuPhysics.CollisionDetection
 
     public enum NarrowPhaseFlushJobType
     {
-        UpdateConstraintBookkeeping,
+        RemoveConstraintsFromBodyLists,
+        ReturnConstraintHandles,
+        RemoveConstraintFromBatchReferencedHandles,
         RemoveConstraintFromTypeBatch,
         FlushPairCacheChanges
     }
@@ -137,8 +139,14 @@ namespace BepuPhysics.CollisionDetection
         {
             switch (job.Type)
             {
-                case NarrowPhaseFlushJobType.UpdateConstraintBookkeeping:
-                    ConstraintRemover.UpdateConstraintBookkeeping(deterministic, threadPool);
+                case NarrowPhaseFlushJobType.RemoveConstraintsFromBodyLists:
+                    ConstraintRemover.RemoveConstraintsFromBodyLists();
+                    break;
+                case NarrowPhaseFlushJobType.ReturnConstraintHandles:
+                    ConstraintRemover.ReturnConstraintHandles(deterministic, threadPool);
+                    break;
+                case NarrowPhaseFlushJobType.RemoveConstraintFromBatchReferencedHandles:
+                    ConstraintRemover.RemoveConstraintsFromBatchReferencedHandles();
                     break;
                 case NarrowPhaseFlushJobType.RemoveConstraintFromTypeBatch:
                     ConstraintRemover.RemoveConstraintsFromTypeBatch(job.Index);
@@ -164,10 +172,13 @@ namespace BepuPhysics.CollisionDetection
             //The constraint remover can be used in two ways- deactivation style, and narrow phase style.
             //In deactivation, we're not actually removing constraints from the simulation completely, so it requires fewer jobs.
             //The constraint remover just lets you choose which jobs to call. The narrow phase needs all of them.
-            flushJobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.UpdateConstraintBookkeeping }, jobPool);
+            flushJobs.EnsureCapacity(flushJobs.Count + removalBatchJobCount + 3, jobPool);
+            flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintsFromBodyLists });
+            flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.ReturnConstraintHandles });
+            flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintFromBatchReferencedHandles });
             for (int i = 0; i < removalBatchJobCount; ++i)
             {
-                flushJobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintFromTypeBatch, Index = i }, jobPool);
+                flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintFromTypeBatch, Index = i });
             }
 
             if (threadDispatcher == null)

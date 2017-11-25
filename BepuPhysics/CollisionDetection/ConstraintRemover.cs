@@ -299,26 +299,13 @@ namespace BepuPhysics.CollisionDetection
             return batches.Count;
         }
 
-
-        public void UpdateConstraintBookkeeping(bool deterministic, BufferPool threadPool)
+        /// <summary>
+        /// Returns the handles associated with all removed constraints to the solver's handle pool.
+        /// </summary>
+        /// <param name="deterministic">True if the return should be deterministic, false otherwise.</param>
+        /// <param name="threadPool">Pool to allocate from to support the deterministic sort.</param>
+        public void ReturnConstraintHandles(bool deterministic, BufferPool threadPool)
         {
-            //While body list removal could technically be internally multithreaded, it would be pretty complex- you would have to do one dispatch per solver.Batches batch
-            //to guarantee that no two threads hit the same body constraint list at the same time. 
-            //That is more complicated and would almost certainly be slower than this locally sequential version.
-            for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
-            {
-                ref var workerCache = ref workerCaches[workerIndex];
-                for (int removalTargetIndex = 0; removalTargetIndex < workerCache.RemovalTargets.Count; ++removalTargetIndex)
-                {
-                    ref var target = ref workerCache.RemovalTargets[removalTargetIndex];
-                    bodies.RemoveConstraint(target.BodyIndex, target.ConstraintHandle);
-                    solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle);
-                }
-            }
-
-            //Note that the handles are also removed here. Even though the action is independent, any resizes of the internal id pool structure would share acceses to the main thread's
-            //buffer pool. Removing constraints is the other place where the main thread's buffer pool is used.
-            //Doesn't matter too much; the total cost of this stage is very low.
             //Note that neither of these paths actually zero out the slot associated with the handle. It is assumed that the typebatch removal is proceeding in parallel.
             //It will attempt to look up handle->index mappings, so we can't corrupt them.
             if (deterministic)
@@ -376,6 +363,36 @@ namespace BepuPhysics.CollisionDetection
                             solver.HandlePool.ReturnUnsafely(handles[handleIndex]);
                         }
                     }
+                }
+            }
+        }
+
+        public void RemoveConstraintsFromBodyLists()
+        {
+            //While body list removal could technically be internally multithreaded, it would be pretty complex- you would have to do one dispatch per solver.Batches batch
+            //to guarantee that no two threads hit the same body constraint list at the same time. 
+            //That is more complicated and would almost certainly be slower than this locally sequential version.
+            for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
+            {
+                ref var workerCache = ref workerCaches[workerIndex];
+                for (int removalTargetIndex = 0; removalTargetIndex < workerCache.RemovalTargets.Count; ++removalTargetIndex)
+                {
+                    ref var target = ref workerCache.RemovalTargets[removalTargetIndex];
+                    bodies.RemoveConstraint(target.BodyIndex, target.ConstraintHandle);
+                }
+            }
+
+        }
+
+        public void RemoveConstraintsFromBatchReferencedHandles()
+        {
+            for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
+            {
+                ref var workerCache = ref workerCaches[workerIndex];
+                for (int removalTargetIndex = 0; removalTargetIndex < workerCache.RemovalTargets.Count; ++removalTargetIndex)
+                {
+                    ref var target = ref workerCache.RemovalTargets[removalTargetIndex];
+                    solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle);
                 }
             }
 
