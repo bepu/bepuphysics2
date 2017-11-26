@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using BepuUtilities;
 using System.Numerics;
+using BepuPhysics.CollisionDetection;
 
 namespace DemoRenderer.Constraints
 {
@@ -125,11 +126,6 @@ namespace DemoRenderer.Constraints
             lineExtractors[typeBatch.TypeId].ExtractLines(bodies, ref typeBatch, job.ConstraintStart, job.ConstraintCount, true, ref job.jobLines);
         }
 
-        bool IsContactBatch(int typeId)
-        {
-            //TODO: If the nonconvex contact count expands to 8, this will have to change.
-            return typeId < 16;
-        }
 
         internal void AddInstances(Bodies bodies, Solver solver, bool showConstraints, bool showContacts, ref QuickList<LineInstance, Array<LineInstance>> lines, ParallelLooper looper)
         {
@@ -148,7 +144,7 @@ namespace DemoRenderer.Constraints
                         {
                             ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
                             var extractor = lineExtractors[typeBatch.TypeId];
-                            var isContactBatch = IsContactBatch(typeBatch.TypeId);
+                            var isContactBatch = PairCache.IsContactBatch(typeBatch.TypeId);
                             if (extractor != null && ((isContactBatch && showContacts) || (!isContactBatch && showConstraints)))
                             {
                                 jobs.Add(new ThreadJob

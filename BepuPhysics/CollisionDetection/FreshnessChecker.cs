@@ -9,29 +9,29 @@ namespace BepuPhysics.CollisionDetection
     internal class FreshnessChecker
     {
         int freshnessJobCount;
-        PairCache PairCache;
-        ConstraintRemover ConstraintRemover;
+        PairCache pairCache;
+        ConstraintRemover constraintRemover;
 
         public FreshnessChecker(NarrowPhase narrowPhase)
         {
-            PairCache = narrowPhase.PairCache;
-            ConstraintRemover = narrowPhase.ConstraintRemover;
+            pairCache = narrowPhase.PairCache;
+            constraintRemover = narrowPhase.ConstraintRemover;
         }
 
         public void CreateJobs(int threadCount, ref QuickList<PreflushJob, Buffer<PreflushJob>> jobs, BufferPool pool)
         {
-            if (PairCache.Mapping.Count > 0)
+            if (pairCache.Mapping.Count > 0)
             {
                 if (threadCount > 1)
                 {
                     const int jobsPerThread = 2; //TODO: Empirical tune; probably just 1.
-                    freshnessJobCount = Math.Min(threadCount * jobsPerThread, PairCache.Mapping.Count);
-                    var pairsPerJob = PairCache.Mapping.Count / freshnessJobCount;
-                    var remainder = PairCache.Mapping.Count - pairsPerJob * freshnessJobCount;
+                    freshnessJobCount = Math.Min(threadCount * jobsPerThread, pairCache.Mapping.Count);
+                    var pairsPerJob = pairCache.Mapping.Count / freshnessJobCount;
+                    var remainder = pairCache.Mapping.Count - pairsPerJob * freshnessJobCount;
                     int previousEnd = 0;
                     jobs.EnsureCapacity(jobs.Count + freshnessJobCount, pool.SpecializeFor<PreflushJob>());
                     int jobIndex = 0;
-                    while (previousEnd < PairCache.Mapping.Count)
+                    while (previousEnd < pairCache.Mapping.Count)
                     {
                         ref var job = ref jobs.AllocateUnsafely();
                         job.Type = PreflushJobType.CheckFreshness;
@@ -39,15 +39,15 @@ namespace BepuPhysics.CollisionDetection
                         //The end of every interval except the last one should be aligned on an 8 byte boundary.
                         var pairsInJob = jobIndex < remainder ? pairsPerJob + 1 : pairsPerJob;
                         previousEnd = ((previousEnd + pairsInJob + 7) >> 3) << 3;
-                        if (previousEnd > PairCache.Mapping.Count)
-                            previousEnd = PairCache.Mapping.Count;
+                        if (previousEnd > pairCache.Mapping.Count)
+                            previousEnd = pairCache.Mapping.Count;
                         job.End = previousEnd;
                         ++jobIndex;
                     }
                 }
                 else
                 {
-                    jobs.Add(new PreflushJob { Type = PreflushJobType.CheckFreshness, Start = 0, End = PairCache.Mapping.Count }, pool.SpecializeFor<PreflushJob>());
+                    jobs.Add(new PreflushJob { Type = PreflushJobType.CheckFreshness, Start = 0, End = pairCache.Mapping.Count }, pool.SpecializeFor<PreflushJob>());
                 }
             }
         }
@@ -60,7 +60,7 @@ namespace BepuPhysics.CollisionDetection
             var remainder = count - (wideCount << 3);
             Debug.Assert((startIndex & 7) == 0 || startIndex == endIndex, "Either this job is empty or the start should be 8 byte aligned for quick reading.");
             //We will check 8 pairs simultaneously. Since the vast majority of pairs are not stale, the ability to skip 8 at a time speeds things up.
-            ref var start = ref Unsafe.As<byte, ulong>(ref PairCache.PairFreshness[startIndex]);
+            ref var start = ref Unsafe.As<byte, ulong>(ref pairCache.PairFreshness[startIndex]);
             for (int i = 0; i < wideCount; ++i)
             {
                 ref var freshnessBatch = ref Unsafe.Add(ref start, i);
@@ -124,7 +124,7 @@ namespace BepuPhysics.CollisionDetection
             //Check the remainder of the bytes one by one. Less than 8 left, so no need to be tricky.
             for (int i = endIndex - remainder; i < endIndex; ++i)
             {
-                if (PairCache.PairFreshness[i] == 0)
+                if (pairCache.PairFreshness[i] == 0)
                 {
                     EnqueueStaleRemoval(workerIndex, i);
                 }
@@ -136,10 +136,10 @@ namespace BepuPhysics.CollisionDetection
         {
             //Note that we have to grab the *old* handle, because the current frame's set of constraint caches do not contain this pair.
             //If they DID contain this pair, then it wouldn't be stale!
-            var constraintHandle = PairCache.GetOldConstraintHandle(pairIndex);
-            ConstraintRemover.EnqueueRemoval(workerIndex, constraintHandle);
-            ref var cache = ref PairCache.NextWorkerCaches[workerIndex];
-            cache.PendingRemoves.Add(PairCache.Mapping.Keys[pairIndex], cache.pool.SpecializeFor<CollidablePair>());
+            var constraintHandle = pairCache.GetOldConstraintHandle(pairIndex);
+            constraintRemover.EnqueueRemoval(workerIndex, constraintHandle);
+            ref var cache = ref pairCache.NextWorkerCaches[workerIndex];
+            cache.PendingRemoves.Add(pairCache.Mapping.Keys[pairIndex], cache.pool.SpecializeFor<CollidablePair>());
         }
     }
 }

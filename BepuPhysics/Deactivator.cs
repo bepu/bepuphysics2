@@ -18,6 +18,7 @@ namespace BepuPhysics
         Bodies bodies;
         Solver solver;
         BroadPhase broadPhase;
+        internal PairCache pairCache;
         ConstraintRemover constraintRemover;
         BufferPool pool;
         public int InitialIslandBodyCapacity { get; set; } = 1024;
@@ -383,6 +384,7 @@ namespace BepuPhysics
         {
             RemoveFromBatchReferencedHandles,
             RemoveConstraintsFromTypeBatch,
+            NotifyNarrowPhasePairCache,
             AddCollidablesToStaticTree,
             RemoveBodiesFromActiveSet,
         }
@@ -435,6 +437,27 @@ namespace BepuPhysics
                                 {
                                     ref var data = ref setReference.BroadPhaseData[bodyIndex];
                                     broadPhase.AddStatic(data.Reference, ref data.Bounds);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case RemovalJobType.NotifyNarrowPhasePairCache:
+                    {
+                        //This must be locally sequential because it results in removals from the pair cache's global overlap mapping.
+                        for (int setReferenceIndex = 0; setReferenceIndex < newInactiveSets.Count; ++setReferenceIndex)
+                        {
+                            ref var set = ref solver.Sets[newInactiveSets[setReferenceIndex].Index];
+                            for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
+                            {
+                                ref var batch = ref set.Batches[batchIndex];
+                                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                                {
+                                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                                    if (PairCache.IsContactBatch(typeBatch.TypeId))
+                                    {
+                                        pairCache.DeactivateTypeBatchPairs(ref batch.TypeBatches[typeBatchIndex]);
+                                    }
                                 }
                             }
                         }
@@ -685,8 +708,9 @@ namespace BepuPhysics
 
             var typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs();
 
-            QuickList<RemovalJob, Buffer<RemovalJob>>.Create(pool.SpecializeFor<RemovalJob>(), typeBatchConstraintRemovalJobCount + 3, out removalJobs);
+            QuickList<RemovalJob, Buffer<RemovalJob>>.Create(pool.SpecializeFor<RemovalJob>(), typeBatchConstraintRemovalJobCount + 4, out removalJobs);
             //The heavier locally sequential jobs are scheduled up front, leaving the smaller later tasks to fill gaps.
+            removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.NotifyNarrowPhasePairCache };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveBodiesFromActiveSet };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.AddCollidablesToStaticTree };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveFromBatchReferencedHandles };

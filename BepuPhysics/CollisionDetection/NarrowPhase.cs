@@ -213,6 +213,7 @@ namespace BepuPhysics.CollisionDetection
 
         protected abstract void OnDispose();
 
+
         //TODO: Configurable memory usage. It automatically adapts based on last frame state, but it's nice to be able to specify minimums when more information is known.
 
     }
@@ -290,7 +291,7 @@ namespace BepuPhysics.CollisionDetection
                 //Both references are bodies.
                 //TODO: While we test deactivation without activation, we have to stop the narrowphase from trying to do anything with inactive bodies.
                 //This will later become a Wake request.
-                if(Bodies.HandleToLocation[a.Handle].SetIndex != 0 || Bodies.HandleToLocation[b.Handle].SetIndex != 0)
+                if (Bodies.HandleToLocation[a.Handle].SetIndex != 0 || Bodies.HandleToLocation[b.Handle].SetIndex != 0)
                     return;
                 Debug.Assert(Bodies.HandleToLocation[a.Handle].SetIndex == 0 && Bodies.HandleToLocation[b.Handle].SetIndex == 0, "This needs to be updated when deactivation is fully implemented.");
                 var bodyIndexA = Bodies.HandleToLocation[a.Handle].Index;

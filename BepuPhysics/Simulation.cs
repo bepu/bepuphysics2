@@ -97,6 +97,7 @@ namespace BepuPhysics
             DefaultTypes.Register(simulation.Solver, out var defaultTaskRegistry);
             var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation, defaultTaskRegistry, narrowPhaseCallbacks);
             simulation.NarrowPhase = narrowPhase;
+            simulation.Deactivator.pairCache = narrowPhase.PairCache;
             simulation.BroadPhaseOverlapFinder = new CollidableOverlapFinder<TNarrowPhaseCallbacks>(narrowPhase, simulation.BroadPhase);
 
             return simulation;

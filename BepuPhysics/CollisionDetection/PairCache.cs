@@ -40,7 +40,7 @@ namespace BepuPhysics.CollisionDetection
 
     public struct CollidablePairComparer : IEqualityComparerRef<CollidablePair>
     {
-        //The order of collidables in the pair should not affect equality or hashing. The broad phase is not guaranteed to provide a reliable order.
+        //Note that pairs are sorted by handle, so we can assume order matters.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(ref CollidablePair a, ref CollidablePair b)
         {
@@ -84,7 +84,6 @@ namespace BepuPhysics.CollisionDetection
         /// atomic setting behavior for data types no larger than the native pointer size. Further, smaller sizes actually pay a higher price in terms of increased false sharing.
         /// Choice of data type is a balancing act between the memory bandwidth of the post analysis and the frequency of false sharing.
         /// </remarks>
-        //TODO: It's probably worth it to try out the other variants in a realistic test. False sharing is going to be less of an issue in the full narrowphase execution context.
         internal RawBuffer PairFreshness;
         BufferPool pool;
         int minimumPendingSize;
@@ -339,6 +338,39 @@ namespace BepuPhysics.CollisionDetection
             return constraintType & 0x3;
         }
 
+        /// <summary>
+        /// Gets whether a constraint type id maps to a contact constraint.
+        /// </summary>
+        /// <param name="constraintTypeId">Id of the constraint to check.</param>
+        /// <returns>True if the type id refers to a contact constraint. False otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsContactBatch(int constraintTypeId)
+        {
+            //TODO: If the nonconvex contact count expands to 8, this will have to change.
+            return constraintTypeId < 16;
+        }
+
+        struct CollisionPairLocation
+        {
+            public PairCacheIndex CollisionCache;
+            public PairCacheIndex ConstraintCache;
+            public int Hmm;
+        }
+
+        /// <summary>
+        /// Mapping from constraint handle back to collision detection pair cache locations.
+        /// </summary>
+        Buffer<CollisionPairLocation> ConstraintHandleToPair;
+
+        internal void DeactivateTypeBatchPairs(ref TypeBatch typeBatch)
+        {
+            //for (int i = 0; i < typeBatch.ConstraintCount; ++i)
+            //{
+            //    var handle = typeBatch.IndexToHandle[i];
+            //    ConstraintHandleToPair[handle]
+            //}
+        }
+
         internal unsafe void GatherOldImpulses(int constraintType, ref ConstraintReference constraintReference, float* oldImpulses)
         {
             //Constraints cover 16 possible cases:
@@ -382,6 +414,7 @@ namespace BepuPhysics.CollisionDetection
                         //1 contact
                     }
                     break;
+
                 case 4 + 1:
                     {
                         //2 contacts
@@ -557,14 +590,14 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void* GetOldConstraintCachePointer(int pairIndex)
+        internal unsafe void* GetOldConstraintCachePointer(int pairIndex)
         {
             ref var constraintCacheIndex = ref Mapping.Values[pairIndex].ConstraintCache;
             return workerCaches[constraintCacheIndex.Worker].GetConstraintCachePointer(constraintCacheIndex);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe int GetOldConstraintHandle(int pairIndex)
+        internal unsafe int GetOldConstraintHandle(int pairIndex)
         {
             ref var constraintCacheIndex = ref Mapping.Values[pairIndex].ConstraintCache;
             return *(int*)workerCaches[constraintCacheIndex.Worker].GetConstraintCachePointer(constraintCacheIndex);
@@ -600,6 +633,7 @@ namespace BepuPhysics.CollisionDetection
         {
             return ref Unsafe.AsRef<TCollisionData>(workerCaches[index.Worker].GetCollisionCachePointer(index));
         }
+
 
     }
 }
