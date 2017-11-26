@@ -21,6 +21,7 @@ namespace Demos
     {
         public TimingsRingBuffer Simulation;
         public TimingsRingBuffer PoseIntegrator;
+        public TimingsRingBuffer Deactivation;
         public TimingsRingBuffer BroadPhaseUpdate;
         public TimingsRingBuffer CollisionTesting;
         public TimingsRingBuffer NarrowPhaseFlush;
@@ -33,6 +34,7 @@ namespace Demos
         {
             Simulation = new TimingsRingBuffer(frameCapacity);
             PoseIntegrator = new TimingsRingBuffer(frameCapacity);
+            Deactivation = new TimingsRingBuffer(frameCapacity);
             BroadPhaseUpdate = new TimingsRingBuffer(frameCapacity);
             CollisionTesting = new TimingsRingBuffer(frameCapacity);
             NarrowPhaseFlush = new TimingsRingBuffer(frameCapacity);
@@ -47,6 +49,7 @@ namespace Demos
             //This requires the simulation to be compiled with profiling enabled.
             Simulation.Add(simulation.Timings[simulation]);
             PoseIntegrator.Add(simulation.Timings[simulation.PoseIntegrator]);
+            Deactivation.Add(simulation.Timings[simulation.Deactivator]);
             BroadPhaseUpdate.Add(simulation.Timings[simulation.BroadPhase]);
             CollisionTesting.Add(simulation.Timings[simulation.BroadPhaseOverlapFinder]);
             NarrowPhaseFlush.Add(simulation.Timings[simulation.NarrowPhase]);

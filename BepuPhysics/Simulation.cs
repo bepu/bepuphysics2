@@ -29,7 +29,8 @@ namespace BepuPhysics
         public CollidableOverlapFinder BroadPhaseOverlapFinder { get; private set; }
         public NarrowPhase NarrowPhase { get; private set; }
 
-
+        //Helpers shared across at least two stages.
+        internal ConstraintRemover constraintRemover;
 
         /// <summary>
         /// Gets the main memory pool used to fill persistent structures and main thread ephemeral resources across the engine.
@@ -59,11 +60,13 @@ namespace BepuPhysics
                 initialIslandCapacity: initialAllocationSizes.Islands,
                 minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
             Bodies.Initialize(Solver);
-            Deactivator = new Deactivator(Bodies, Solver, BufferPool);
+            constraintRemover = new ConstraintRemover(BufferPool, Bodies, Solver);
+            Deactivator = new Deactivator(Bodies, Solver, BroadPhase, constraintRemover, BufferPool);
             PoseIntegrator = new PoseIntegrator(Bodies, Shapes, BroadPhase);
             SolverBatchCompressor = new BatchCompressor(Solver, Bodies);
             BodyLayoutOptimizer = new BodyLayoutOptimizer(Bodies, BroadPhase, Solver, bufferPool);
             ConstraintLayoutOptimizer = new ConstraintLayoutOptimizer(Bodies, Solver);
+
         }
 
         /// <summary>
@@ -185,6 +188,15 @@ namespace BepuPhysics
             ProfilerStart(PoseIntegrator);
             PoseIntegrator.Update(dt, BufferPool, threadDispatcher);
             ProfilerEnd(PoseIntegrator);
+
+            //Note that the deactivator comes *after* velocity integration. That looks a little weird, but it's for a reason:
+            //When the narrow phase activates a bunch of objects in a pile, their accumulated impulses will represent all forces acting on them at the time of deactivation.
+            //That includes gravity. If we deactivate objects *before* gravity is applied in a given frame, then when those bodies are activated, the accumulated impulses
+            //will be less accurate because they assume that gravity has already been applied. This can cause a small bump.
+            //So instead, velocity integration (and deactivation candidacy management) comes before deactivation.
+            ProfilerStart(Deactivator);
+            Deactivator.Update(threadDispatcher, Deterministic);
+            ProfilerEnd(Deactivator);
 
             ProfilerStart(BroadPhase);
             BroadPhase.Update(threadDispatcher);

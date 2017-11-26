@@ -33,6 +33,11 @@ namespace Demos
                     Continuity = new ContinuousDetectionSettings(),
                     SpeculativeMargin = 0.1f,
                     Shape = ShapeIndex
+                },
+                Activity = new BodyActivityDescription
+                {
+                    DeactivationThreshold = -1,
+                    MinimumTimestepCountUnderThreshold = 16
                 }
             };
 

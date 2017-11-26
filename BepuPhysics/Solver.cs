@@ -736,7 +736,7 @@ namespace BepuPhysics
 
         internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
         {
-            Debug.Assert(setsCapacity >= potentiallyAllocatedCount);
+            Debug.Assert(setsCapacity >= potentiallyAllocatedCount && potentiallyAllocatedCount <= Sets.Length);
             setsCapacity = BufferPool<ConstraintSet>.GetLowestContainingElementCount(setsCapacity);
             if (Sets.Length != setsCapacity)
             {

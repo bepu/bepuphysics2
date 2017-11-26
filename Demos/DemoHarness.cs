@@ -85,6 +85,7 @@ namespace Demos
             });
             timingGraph.AddSeries("Total", new Vector3(1, 1, 1), 0.75f, timeSamples.Simulation);
             timingGraph.AddSeries("Pose Integrator", new Vector3(0, 0, 1), 0.25f, timeSamples.PoseIntegrator);
+            timingGraph.AddSeries("Deactivation", new Vector3(0.5f, 0, 1), 0.25f, timeSamples.Deactivation);
             timingGraph.AddSeries("Broad Update", new Vector3(1, 1, 0), 0.25f, timeSamples.BroadPhaseUpdate);
             timingGraph.AddSeries("Collision Test", new Vector3(0, 1, 0), 0.25f, timeSamples.CollisionTesting);
             timingGraph.AddSeries("Narrow Flush", new Vector3(1, 0, 1), 0.25f, timeSamples.NarrowPhaseFlush);

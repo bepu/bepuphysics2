@@ -1,9 +1,12 @@
-﻿using BepuPhysics.Constraints;
+﻿using BepuPhysics.Collidables;
+using BepuPhysics.CollisionDetection;
+using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -14,6 +17,8 @@ namespace BepuPhysics
         IdPool<Buffer<int>> setIdPool;
         Bodies bodies;
         Solver solver;
+        BroadPhase broadPhase;
+        ConstraintRemover constraintRemover;
         BufferPool pool;
         public int InitialIslandBodyCapacity { get; set; } = 1024;
         public int InitialIslandConstraintCapacity { get; set; } = 1024;
@@ -33,16 +38,19 @@ namespace BepuPhysics
         /// </summary>
         public float TargetTraversedFraction { get; set; } = 0.02f;
 
-        public Deactivator(Bodies bodies, Solver solver, BufferPool pool)
+        public Deactivator(Bodies bodies, Solver solver, BroadPhase broadPhase, ConstraintRemover constraintRemover, BufferPool pool)
         {
             this.bodies = bodies;
             this.solver = solver;
+            this.broadPhase = broadPhase;
+            this.constraintRemover = constraintRemover;
             this.pool = pool;
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out setIdPool);
             //We reserve index 0 for the active set.
             setIdPool.Take();
             findIslandsDelegate = FindIslands;
             gatherDelegate = Gather;
+            executeRemovalWorkDelegate = ExecuteRemovalWork;
         }
 
         struct ConstraintBodyEnumerator : IForEach<int>
@@ -243,6 +251,7 @@ namespace BepuPhysics
             /// If true, this job relates to a subset of body indices. If false, this job relates to a subset of constraint handles.
             /// </summary>
             public bool IsBodyJob;
+            public int TargetSetIndexInReferenceList; //Only set in body jobs.
         }
 
         QuickList<GatheringJob, Buffer<GatheringJob>> gatheringJobs;
@@ -251,8 +260,10 @@ namespace BepuPhysics
         {
             Debug.Assert(workerTraversalResults.Allocated && workerTraversalResults.Length > workerIndex);
             ref var results = ref workerTraversalResults[workerIndex];
-            var intPool = pool.SpecializeFor<int>();
+            results.TraversedBodies = new IndexSet(threadPool, bodies.ActiveSet.Count);
             var islandPool = threadPool.SpecializeFor<Island>();
+            QuickList<Island, Buffer<Island>>.Create(islandPool, 64, out results.Islands);
+            var intPool = threadPool.SpecializeFor<int>();
 
             QuickList<int, Buffer<int>>.Create(intPool, Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count), out var bodyIndices);
             QuickList<int, Buffer<int>>.Create(intPool, Math.Min(InitialIslandConstraintCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), out var constraintHandles);
@@ -300,33 +311,42 @@ namespace BepuPhysics
         }
 
         Action<int> gatherDelegate;
-        void Gather(int workerIndex)
+        unsafe void Gather(int workerIndex)
         {
-            while(true)
+            while (true)
             {
                 var index = Interlocked.Increment(ref jobIndex);
-                if(index >= gatheringJobs.Count)
+                if (index >= gatheringJobs.Count)
                 {
                     break;
                 }
                 ref var job = ref gatheringJobs[index];
-                if(job.IsBodyJob)
+                if (job.IsBodyJob)
                 {
                     //Load a range of bodies from the active set and store them into the target inactive body set.
                     ref var sourceSet = ref bodies.ActiveSet;
+                    ref var inactiveSetReference = ref newInactiveSets[job.TargetSetIndexInReferenceList];
                     for (int targetIndex = job.StartIndex; targetIndex < job.EndIndex; ++targetIndex)
                     {
                         var sourceIndex = job.SourceIndices[targetIndex];
                         ref var targetSet = ref bodies.Sets[job.TargetSetIndex];
                         targetSet.IndexToHandle[targetIndex] = sourceSet.IndexToHandle[sourceIndex];
                         targetSet.Activity[targetIndex] = sourceSet.Activity[sourceIndex];
-                        targetSet.Collidables[targetIndex] = sourceSet.Collidables[sourceIndex];
+                        ref var sourceCollidable = ref sourceSet.Collidables[sourceIndex];
+                        targetSet.Collidables[targetIndex] = sourceCollidable;
                         //Note that we are just copying the constraint list reference; we don't have to reallocate it.
                         //Keep this in mind when removing the object from the active set. We don't want to dispose the list since we're still using it.
                         targetSet.Constraints[targetIndex] = sourceSet.Constraints[sourceIndex];
                         targetSet.LocalInertias[targetIndex] = sourceSet.LocalInertias[sourceIndex];
                         targetSet.Poses[targetIndex] = sourceSet.Poses[sourceIndex];
                         targetSet.Velocities[targetIndex] = sourceSet.Velocities[sourceIndex];
+
+                        //Gather the broad phase data so that the later active set removal phase can stick it into the static broad phase structures.
+                        ref var broadPhaseData = ref inactiveSetReference.BroadPhaseData[targetIndex];
+                        broadPhaseData.Reference = broadPhase.activeLeaves[sourceCollidable.BroadPhaseIndex];
+                        broadPhase.GetActiveBoundsPointers(sourceCollidable.BroadPhaseIndex, out var minPtr, out var maxPtr);
+                        broadPhaseData.Bounds.Min = new Vector3(minPtr[0], minPtr[1], minPtr[2]);
+                        broadPhaseData.Bounds.Max = new Vector3(maxPtr[0], maxPtr[1], maxPtr[2]);
                     }
                 }
                 else
@@ -335,7 +355,102 @@ namespace BepuPhysics
                     ref var targetTypeBatch = ref solver.Sets[job.TargetSetIndex].Batches[job.TargetBatchIndex].TypeBatches[job.TargetTypeBatchIndex];
                     //We can share a single virtual dispatch over all the constraints since they are of the same type. They may, however, be in different batches.
                     solver.TypeProcessors[targetTypeBatch.TypeId].GatherActiveConstraints(bodies, solver, ref job.SourceIndices, job.StartIndex, job.EndIndex, ref targetTypeBatch);
+                    //Enqueue these constraints for later removal.
+                    for (int indexInTypeBatch = 0; indexInTypeBatch < targetTypeBatch.ConstraintCount; ++indexInTypeBatch)
+                    {
+                        constraintRemover.EnqueueRemoval(workerIndex, targetTypeBatch.IndexToHandle[indexInTypeBatch]);
+                    }
                 }
+            }
+        }
+        struct BroadPhaseData
+        {
+            public CollidableReference Reference;
+            public BoundingBox Bounds;
+        }
+
+        struct InactiveSetReference
+        {
+            public int Index;
+
+            public Buffer<BroadPhaseData> BroadPhaseData;
+        }
+
+        QuickList<InactiveSetReference, Buffer<InactiveSetReference>> newInactiveSets;
+        QuickList<RemovalJob, Buffer<RemovalJob>> removalJobs;
+
+        enum RemovalJobType
+        {
+            RemoveFromBatchReferencedHandles,
+            RemoveConstraintsFromTypeBatch,
+            AddCollidablesToStaticTree,
+            RemoveBodiesFromActiveSet,
+        }
+
+        struct RemovalJob
+        {
+            public RemovalJobType Type;
+            public int Index;
+        }
+
+
+        void ExecuteRemoval(ref RemovalJob job)
+        {
+            switch (job.Type)
+            {
+                case RemovalJobType.RemoveFromBatchReferencedHandles:
+                    constraintRemover.RemoveConstraintsFromBatchReferencedHandles();
+                    break;
+                case RemovalJobType.RemoveConstraintsFromTypeBatch:
+                    constraintRemover.RemoveConstraintsFromTypeBatch(job.Index);
+                    break;
+                case RemovalJobType.RemoveBodiesFromActiveSet:
+                    {
+                        for (int setReferenceIndex = 0; setReferenceIndex < newInactiveSets.Count; ++setReferenceIndex)
+                        {
+                            var setIndex = newInactiveSets[setReferenceIndex].Index;
+                            ref var set = ref bodies.Sets[setIndex];
+                            for (int bodyIndex = 0; bodyIndex < set.Count; ++bodyIndex)
+                            {
+                                ref var location = ref bodies.HandleToLocation[set.IndexToHandle[bodyIndex]];
+                                Debug.Assert(location.SetIndex == 0, "At this point, the deactivation hasn't gone through so the set should still be 0.");
+                                bodies.RemoveFromActiveSet(location.Index);
+                                //And now we can actually update the handle->body mapping.
+                                location.SetIndex = setIndex;
+                                location.Index = bodyIndex;
+                            }
+                        }
+                    }
+                    break;
+                case RemovalJobType.AddCollidablesToStaticTree:
+                    {
+                        for (int setReferenceIndex = 0; setReferenceIndex < newInactiveSets.Count; ++setReferenceIndex)
+                        {
+                            ref var setReference = ref newInactiveSets[setReferenceIndex];
+                            ref var set = ref bodies.Sets[setReference.Index];
+                            for (int bodyIndex = 0; bodyIndex < set.Count; ++bodyIndex)
+                            {
+                                ref var collidable = ref set.Collidables[bodyIndex];
+                                if (collidable.Shape.Exists)
+                                {
+                                    ref var data = ref setReference.BroadPhaseData[bodyIndex];
+                                    broadPhase.AddStatic(data.Reference, ref data.Bounds);
+                                }
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+        Action<int> executeRemovalWorkDelegate;
+        void ExecuteRemovalWork(int workerIndex)
+        {
+            while (true)
+            {
+                var index = Interlocked.Increment(ref jobIndex);
+                if (index >= removalJobs.Count)
+                    break;
+                ExecuteRemoval(ref removalJobs[index]);
             }
         }
 
@@ -440,16 +555,21 @@ namespace BepuPhysics
 
             traversalTargetBodyIndices.Dispose(pool.SpecializeFor<int>());
 
+            //TODO: In the event that no islands are available for deactivation, we should early out to avoid the next two dispatches. That will save about 20us on most frames.
+
             //Traversal is now done. We should have a set of results for each worker in the workerTraversalResults. It's time to gather all the data for the deactivating bodies and constraints.
             //Note that we only preallocate a fixed size. It will often be an overestimate, but that's fine. Resizes are more concerning.
             //(We could precompute the exact number of jobs, but it's not really necessary.) 
-            var objectsPerGatherJob = 32;
+            var objectsPerGatherJob = 64;
             var gatheringJobPool = pool.SpecializeFor<GatheringJob>();
             QuickList<GatheringJob, Buffer<GatheringJob>>.Create(gatheringJobPool, 512, out gatheringJobs);
             //We now create jobs only for the set of unique islands. While each worker avoided creating duplicates locally, threads did not communicate and so may have found the same islands.
             //Each worker output a set of their traversed bodies. Using it, we can efficiently check to see if a given island is a duplicate by checking all previous workers.
             //If a previous worker traversed a body, the later worker's island holding that body is considered a duplicate.
             //(Note that a body can only belong to one island. If two threads find the same body, it means they found the exact same island, just using different paths. They are fully redundant.)
+            var inactiveSetReferencePool = pool.SpecializeFor<InactiveSetReference>();
+            var broadPhaseDataPool = pool.SpecializeFor<BroadPhaseData>();
+            QuickList<InactiveSetReference, Buffer<InactiveSetReference>>.Create(inactiveSetReferencePool, 32, out newInactiveSets);
             for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
             {
                 ref var workerIslands = ref workerTraversalResults[workerIndex].Islands;
@@ -469,6 +589,12 @@ namespace BepuPhysics
                     {
                         //Allocate space for a new island.
                         var setIndex = setIdPool.Take();
+                        newInactiveSets.EnsureCapacity(newInactiveSets.Count + 1, inactiveSetReferencePool);
+                        var referenceIndex = newInactiveSets.Count;
+                        ref var newSetReference = ref newInactiveSets.AllocateUnsafely();
+                        newSetReference.Index = setIndex;
+                        //We allocate this list here, but the data is gathered on the worker thread.
+                        broadPhaseDataPool.Take(island.BodyIndices.Count, out newSetReference.BroadPhaseData);
                         if (setIndex >= bodies.Sets.Length)
                         {
                             var necessaryCapacity = setIndex + 1;
@@ -499,6 +625,7 @@ namespace BepuPhysics
                                 previousEnd += bodiesInJob;
                                 job.EndIndex = previousEnd;
                                 job.TargetSetIndex = setIndex;
+                                job.TargetSetIndexInReferenceList = referenceIndex;
                             }
                         }
 
@@ -532,6 +659,8 @@ namespace BepuPhysics
                 }
             }
 
+            constraintRemover.Prepare(threadDispatcher);
+
             jobIndex = -1;
             if (threadCount > 1)
             {
@@ -550,7 +679,72 @@ namespace BepuPhysics
             }
             pool.SpecializeFor<WorkerTraversalResults>().Return(ref workerTraversalResults);
             gatheringJobs.Dispose(pool.SpecializeFor<GatheringJob>());
+
+            //The gathering phase gathered all the constraints that need to be removed. 
+            //Note that while we're using the same ConstraintRemover as the narrow phase, we do not need to perform per-body constraint list removals or handle returns.
+
+            var typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs();
+
+            QuickList<RemovalJob, Buffer<RemovalJob>>.Create(pool.SpecializeFor<RemovalJob>(), typeBatchConstraintRemovalJobCount + 3, out removalJobs);
+            //The heavier locally sequential jobs are scheduled up front, leaving the smaller later tasks to fill gaps.
+            removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveBodiesFromActiveSet };
+            removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.AddCollidablesToStaticTree };
+            removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveFromBatchReferencedHandles };
+            for (int i = 0; i < typeBatchConstraintRemovalJobCount; ++i)
+            {
+                removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveConstraintsFromTypeBatch, Index = i };
+            }
+
+            if (threadCount > 1)
+            {
+                jobIndex = -1;
+                threadDispatcher.DispatchWorkers(executeRemovalWorkDelegate);
+            }
+            else
+            {
+                for (int i = 0; i < removalJobs.Count; ++i)
+                {
+                    ExecuteRemoval(ref removalJobs[i]);
+                }
+            }
+            removalJobs.Dispose(pool.SpecializeFor<RemovalJob>());
+            //TODO: While the handle->body location mapping has been updated, the handle->constraint location mapping is not yet changed. 
+            //Consider alternatives. This sequential phase is a byproduct of how the constraint remover works-
+            //since removing a constraint in a type batch can cause other constraints to move, it instead caches handles and looks up the current location as it goes.
+            //It could be changed to instead work on constraint indices which are sorted prior to removal to guarantee that all indices remain valid.
+            //If that was done (and no other constraint handle lookups are required either), the handle mapping update could be pulled in as a multithreaded task.
+            //May be possible to force the update right after the enqueue in the gather if you did this. (As always, double check, this is tricky business.)
+            //For now, we just do it sequentially because it's simple and relatively cheap (and I'd like to get this done sooner than later).
+            for (int i = 0; i < newInactiveSets.Count; ++i)
+            {
+                var setIndex = newInactiveSets[i].Index;
+                ref var set = ref solver.Sets[setIndex];
+                for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
+                {
+                    ref var batch = ref set.Batches[batchIndex];
+                    for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                    {
+                        ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                        for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
+                        {
+                            var handle = typeBatch.IndexToHandle[indexInTypeBatch];
+                            ref var constraintLocation = ref solver.HandleToConstraint[handle];
+                            constraintLocation.SetIndex = setIndex;
+                            constraintLocation.BatchIndex = batchIndex;
+                            constraintLocation.IndexInTypeBatch = indexInTypeBatch;
+                            Debug.Assert(constraintLocation.TypeId == typeBatch.TypeId, "Deactivating a constraint shouldn't change its type!");
+                        }
+                    }
+                }
+            }
+            for (int i = 0; i < newInactiveSets.Count; ++i)
+            {
+                broadPhaseDataPool.Return(ref newInactiveSets[i].BroadPhaseData);
+            }
+            newInactiveSets.Dispose(inactiveSetReferencePool);
+
         }
+
 
         void AllocateConstraintSet(ref QuickList<IslandProtoConstraintBatch, Buffer<IslandProtoConstraintBatch>> batches, Solver solver, BufferPool pool, out ConstraintSet constraintSet)
         {
@@ -577,7 +771,7 @@ namespace BepuPhysics
         /// <param name="setsCapacity">Number of sets to guarantee space for.</param>
         public void EnsureSetsCapacity(int setsCapacity)
         {
-            var potentiallyAllocatedCount = setIdPool.HighestPossiblyClaimedId + 1;
+            var potentiallyAllocatedCount = Math.Min(setIdPool.HighestPossiblyClaimedId + 1, Math.Min(bodies.Sets.Length, solver.Sets.Length));
             if (setsCapacity > bodies.Sets.Length)
             {
                 bodies.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
@@ -597,7 +791,7 @@ namespace BepuPhysics
         /// <param name="setsCapacity">Target number of sets to allocate space for.</param>
         public void ResizeSetsCapacity(int setsCapacity)
         {
-            var potentiallyAllocatedCount = setIdPool.HighestPossiblyClaimedId + 1;
+            var potentiallyAllocatedCount = Math.Min(setIdPool.HighestPossiblyClaimedId + 1, Math.Min(bodies.Sets.Length, solver.Sets.Length));
             setsCapacity = Math.Max(potentiallyAllocatedCount, setsCapacity);
             bodies.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
             solver.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);

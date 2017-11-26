@@ -236,11 +236,11 @@ namespace BepuPhysics.CollisionDetection
             Bodies = simulation.Bodies;
             Statics = simulation.Statics;
             Solver = simulation.Solver;
+            ConstraintRemover = simulation.constraintRemover;
             Callbacks = callbacks;
             Callbacks.Initialize(simulation);
             CollisionTaskRegistry = collisionTaskRegistry;
             PairCache = new PairCache(simulation.BufferPool, minimumMappingSize, minimumPendingSize, minimumPerTypeCapacity);
-            ConstraintRemover = new ConstraintRemover(simulation.BufferPool, simulation.Bodies, simulation.Solver, minimumRemovalCapacity: minimumPendingSize);
             FreshnessChecker = new FreshnessChecker(this);
             preflushWorkerLoop = PreflushWorkerLoop;
         }
