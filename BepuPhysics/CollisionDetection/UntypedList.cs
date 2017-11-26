@@ -8,9 +8,6 @@ namespace BepuPhysics.CollisionDetection
     public struct UntypedList
     {
         public RawBuffer Buffer;
-        /// <summary>
-        /// The number of bytes in the list.
-        /// </summary>
         public int Count;
         public int ByteCount;
 

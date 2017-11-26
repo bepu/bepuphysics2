@@ -362,13 +362,46 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         Buffer<CollisionPairLocation> ConstraintHandleToPair;
 
-        internal void DeactivateTypeBatchPairs(ref TypeBatch typeBatch)
+   
+        internal struct PairSubcache
         {
-            //for (int i = 0; i < typeBatch.ConstraintCount; ++i)
-            //{
-            //    var handle = typeBatch.IndexToHandle[i];
-            //    ConstraintHandleToPair[handle]
-            //}
+        }
+        //This buffer is filled in parallel with the Bodies.Sets and Solver.Sets.
+        //Note that this does not include the active set, so index 0 is always empty.
+        internal Buffer<PairSubcache> InactiveSets;
+
+        internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
+        {
+            Debug.Assert(setsCapacity >= potentiallyAllocatedCount && potentiallyAllocatedCount <= InactiveSets.Length);
+            setsCapacity = BufferPool<BodySet>.GetLowestContainingElementCount(setsCapacity);
+            if (InactiveSets.Length != setsCapacity)
+            {
+                pool.SpecializeFor<PairSubcache>().Resize(ref InactiveSets, setsCapacity, potentiallyAllocatedCount);
+            }
+        }
+
+        internal unsafe void DeactivateTypeBatchPairs(int setIndex, Solver solver)
+        {
+            ref var constraintSet = ref solver.Sets[setIndex];
+            ref var pairSet = ref InactiveSets[setIndex];
+            for (int batchIndex = 0; batchIndex < constraintSet.Batches.Count; ++batchIndex)
+            {
+                ref var batch = ref constraintSet.Batches[batchIndex];
+                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    if (IsContactBatch(typeBatch.TypeId))
+                    {
+                        for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
+                        {
+                            var handle = typeBatch.IndexToHandle[indexInTypeBatch];
+                            ref var pairLocation = ref ConstraintHandleToPair[handle];
+                            var collisionCache = workerCaches[pairLocation.CollisionCache.Worker].GetCollisionCachePointer(pairLocation.CollisionCache);
+
+                        }
+                    }
+                }
+            }
         }
 
         internal unsafe void GatherOldImpulses(int constraintType, ref ConstraintReference constraintReference, float* oldImpulses)
@@ -633,7 +666,6 @@ namespace BepuPhysics.CollisionDetection
         {
             return ref Unsafe.AsRef<TCollisionData>(workerCaches[index.Worker].GetCollisionCachePointer(index));
         }
-
 
     }
 }

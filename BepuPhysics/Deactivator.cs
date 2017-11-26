@@ -447,19 +447,7 @@ namespace BepuPhysics
                         //This must be locally sequential because it results in removals from the pair cache's global overlap mapping.
                         for (int setReferenceIndex = 0; setReferenceIndex < newInactiveSets.Count; ++setReferenceIndex)
                         {
-                            ref var set = ref solver.Sets[newInactiveSets[setReferenceIndex].Index];
-                            for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
-                            {
-                                ref var batch = ref set.Batches[batchIndex];
-                                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
-                                {
-                                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
-                                    if (PairCache.IsContactBatch(typeBatch.TypeId))
-                                    {
-                                        pairCache.DeactivateTypeBatchPairs(ref batch.TypeBatches[typeBatchIndex]);
-                                    }
-                                }
-                            }
+                            pairCache.DeactivateTypeBatchPairs(newInactiveSets[setReferenceIndex].Index, solver);
                         }
                     }
                     break;
@@ -593,6 +581,7 @@ namespace BepuPhysics
             var inactiveSetReferencePool = pool.SpecializeFor<InactiveSetReference>();
             var broadPhaseDataPool = pool.SpecializeFor<BroadPhaseData>();
             QuickList<InactiveSetReference, Buffer<InactiveSetReference>>.Create(inactiveSetReferencePool, 32, out newInactiveSets);
+            var deactivatedBodyCount = 0;
             for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
             {
                 ref var workerIslands = ref workerTraversalResults[workerIndex].Islands;
@@ -618,13 +607,10 @@ namespace BepuPhysics
                         newSetReference.Index = setIndex;
                         //We allocate the broad phase data buffer here, but the data is gathered on the worker thread.
                         broadPhaseDataPool.Take(island.BodyIndices.Count, out newSetReference.BroadPhaseData);
-                        if (setIndex >= bodies.Sets.Length)
-                        {
-                            var necessaryCapacity = setIndex + 1;
-                            EnsureSetsCapacity(necessaryCapacity);
-                        }
+                        EnsureSetsCapacity(setIndex + 1);
                         bodies.Sets[setIndex] = new BodySet(island.BodyIndices.Count, pool);
                         bodies.Sets[setIndex].Count = island.BodyIndices.Count;
+                        deactivatedBodyCount += island.BodyIndices.Count;
                         AllocateConstraintSet(ref island.Protobatches, solver, pool, out solver.Sets[setIndex]);
 
                         //A single island may involve multiple jobs, depending on its size.
@@ -703,11 +689,14 @@ namespace BepuPhysics
             pool.SpecializeFor<WorkerTraversalResults>().Return(ref workerTraversalResults);
             gatheringJobs.Dispose(pool.SpecializeFor<GatheringJob>());
 
+            //Now it's time for the removal of all the bodies and constraints from the active set.
             //The gathering phase gathered all the constraints that need to be removed. 
             //Note that while we're using the same ConstraintRemover as the narrow phase, we do not need to perform per-body constraint list removals or handle returns.
 
-            var typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs();
+            //We don't want the static tree to resize during removals. That would use the main pool and conflict with the NotifyNarrowPhasePairCache job's usage of the main pool.
+            broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount, broadPhase.StaticTree.LeafCount + deactivatedBodyCount);
 
+            var typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs();
             QuickList<RemovalJob, Buffer<RemovalJob>>.Create(pool.SpecializeFor<RemovalJob>(), typeBatchConstraintRemovalJobCount + 4, out removalJobs);
             //The heavier locally sequential jobs are scheduled up front, leaving the smaller later tasks to fill gaps.
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.NotifyNarrowPhasePairCache };
@@ -788,7 +777,7 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Ensures that the Bodies and Solver can hold at least the given number of sets (BodySets for the Bodies collection, ConstraintSets for the Solver).
+        /// Ensures that the Bodies, Solver, and NarrowPhase can hold at least the given number of sets (BodySets for the Bodies collection, ConstraintSets for the Solver, PairSubcaches for the NarrowPhase.PairCache).
         /// </summary>
         /// <param name="setsCapacity">Number of sets to guarantee space for.</param>
         public void EnsureSetsCapacity(int setsCapacity)
@@ -801,6 +790,10 @@ namespace BepuPhysics
             if (setsCapacity > solver.Sets.Length)
             {
                 solver.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
+            }
+            if (setsCapacity > pairCache.InactiveSets.Length)
+            {
+                pairCache.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
             }
         }
 
@@ -817,6 +810,7 @@ namespace BepuPhysics
             setsCapacity = Math.Max(potentiallyAllocatedCount, setsCapacity);
             bodies.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
             solver.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
+            pairCache.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
         }
 
         public void Clear()
