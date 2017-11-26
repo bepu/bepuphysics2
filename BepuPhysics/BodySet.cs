@@ -84,9 +84,6 @@ namespace BepuPhysics
             //Move the last body into the removed slot.
             --Count;
             bool bodyMoved = bodyIndex < Count;
-            ref var constraintsSlot = ref Constraints[bodyIndex];
-            constraintsSlot.Dispose(pool.SpecializeFor<BodyConstraintReference>());
-            Debug.Assert(constraintsSlot.Count == 0, "Removing a body without first removing its constraints results in orphaned constraints that will break stuff. Don't do it!");
             if (bodyMoved)
             {
                 movedBodyIndex = Count;
@@ -96,7 +93,11 @@ namespace BepuPhysics
                 LocalInertias[bodyIndex] = LocalInertias[movedBodyIndex];
                 Activity[bodyIndex] = Activity[movedBodyIndex];
                 Collidables[bodyIndex] = Collidables[movedBodyIndex];
-                constraintsSlot = Constraints[movedBodyIndex];
+                //Note that the constraint list is NOT disposed before being overwritten.
+                //The two callers for this function are 'true' removal, and deactivation. 
+                //During true removal, the caller is responsible for removing all constraints and disposing the list.
+                //In deactivation, the reference to the list is simply copied into the inactive set.
+                Constraints[bodyIndex] = Constraints[movedBodyIndex];
                 //Point the body handles at the new location.
                 movedBodyHandle = IndexToHandle[movedBodyIndex];
                 IndexToHandle[bodyIndex] = movedBodyHandle;

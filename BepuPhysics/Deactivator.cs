@@ -593,7 +593,7 @@ namespace BepuPhysics
                         var referenceIndex = newInactiveSets.Count;
                         ref var newSetReference = ref newInactiveSets.AllocateUnsafely();
                         newSetReference.Index = setIndex;
-                        //We allocate this list here, but the data is gathered on the worker thread.
+                        //We allocate the broad phase data buffer here, but the data is gathered on the worker thread.
                         broadPhaseDataPool.Take(island.BodyIndices.Count, out newSetReference.BroadPhaseData);
                         if (setIndex >= bodies.Sets.Length)
                         {
@@ -753,13 +753,11 @@ namespace BepuPhysics
             {
                 ref var sourceBatch = ref batches[i];
                 ref var targetBatch = ref constraintSet.Batches.AllocateUnsafely();
-                pool.SpecializeFor<int>().Take(sourceBatch.TypeIdToIndex.Length, out targetBatch.TypeIndexToTypeBatchIndex);
-                QuickList<TypeBatch, Buffer<TypeBatch>>.Create(pool.SpecializeFor<TypeBatch>(), sourceBatch.TypeBatches.Count, out targetBatch.TypeBatches);
-                sourceBatch.TypeIdToIndex.CopyTo(0, ref targetBatch.TypeIndexToTypeBatchIndex, 0, targetBatch.TypeIndexToTypeBatchIndex.Length);
+                targetBatch = new ConstraintBatch(pool, sourceBatch.TypeIdToIndex.Length);
                 for (int j = 0; j < sourceBatch.TypeBatches.Count; ++j)
                 {
                     ref var sourceTypeBatch = ref sourceBatch.TypeBatches[j];
-                    ref var targetTypeBatch = ref targetBatch.GetOrCreateTypeBatch(sourceTypeBatch.TypeId, solver.TypeProcessors[sourceTypeBatch.TypeId], sourceTypeBatch.Handles.Count, pool);
+                    ref var targetTypeBatch = ref targetBatch.CreateNewTypeBatch(sourceTypeBatch.TypeId, solver.TypeProcessors[sourceTypeBatch.TypeId], sourceTypeBatch.Handles.Count, pool);
                 }
 
             }

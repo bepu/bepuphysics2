@@ -178,6 +178,7 @@ namespace BepuPhysics
         internal int RemoveFromActiveSet(int activeBodyIndex)
         {
             //Note that this is separated from the main removal because of deactivation. Deactivation doesn't want to truly remove from the *simulation*, just the active set.
+            //The constraints, and references to the constraints, are left untouched.
             ref var set = ref ActiveSet;
             Debug.Assert(activeBodyIndex >= 0 && activeBodyIndex < set.Count);
             ValidateExistingHandle(set.IndexToHandle[activeBodyIndex]);
@@ -212,6 +213,7 @@ namespace BepuPhysics
             {
                 solver.Remove(constraints[i].ConnectingConstraintHandle);
             }
+            constraints.Dispose(pool.SpecializeFor<BodyConstraintReference>());
 
             var handle = RemoveFromActiveSet(activeBodyIndex);
 

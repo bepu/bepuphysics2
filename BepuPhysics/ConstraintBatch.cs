@@ -90,7 +90,7 @@ namespace BepuPhysics
             return ref TypeBatches[typeBatchIndex];
         }
 
-        ref TypeBatch CreateNewTypeBatch(int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool)
+        internal ref TypeBatch CreateNewTypeBatch(int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool)
         {
             var newIndex = TypeBatches.Count;
             TypeBatches.EnsureCapacity(TypeBatches.Count + 1, pool.SpecializeFor<TypeBatch>());
