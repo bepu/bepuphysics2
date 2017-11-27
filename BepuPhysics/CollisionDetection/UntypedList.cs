@@ -59,18 +59,18 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe int Allocate<T>(int minimumElementCount, BufferPool pool)
+        public unsafe int Allocate(int elementSizeInBytes, int minimumElementCount, BufferPool pool)
         {
-            var newSize = ByteCount + Unsafe.SizeOf<T>();
+            var newSize = ByteCount + elementSizeInBytes;
             if (!Buffer.Allocated)
             {
                 //This didn't exist at all before; create a new entry for this type.
-                ElementSizeInBytes = Unsafe.SizeOf<T>();
-                pool.Take(Math.Max(newSize, minimumElementCount * Unsafe.SizeOf<T>()), out Buffer);
+                ElementSizeInBytes = elementSizeInBytes;
+                pool.Take(Math.Max(newSize, minimumElementCount * elementSizeInBytes), out Buffer);
             }
             else
             {
-                Debug.Assert(Unsafe.SizeOf<T>() == ElementSizeInBytes);
+                Debug.Assert(elementSizeInBytes == ElementSizeInBytes);
                 if (newSize > Buffer.Length)
                 {
                     //This will bump up to the next allocated block size, so we don't have to worry about constant micro-resizes.
@@ -88,6 +88,13 @@ namespace BepuPhysics.CollisionDetection
             var byteIndex = ByteCount;
             ByteCount = newSize;
             return byteIndex;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe int Allocate<T>(int minimumElementCount, BufferPool pool)
+        {
+            var elementSizeInBytes = Unsafe.SizeOf<T>();
+            return Allocate(ElementSizeInBytes, minimumElementCount, pool);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

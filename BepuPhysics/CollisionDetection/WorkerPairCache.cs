@@ -23,8 +23,8 @@ namespace BepuPhysics.CollisionDetection
         int workerIndex;
         //Note that the per-type batches are untyped.
         //The caller will have the necessary type knowledge to interpret the buffer.
-        Buffer<UntypedList> constraintCaches;
-        Buffer<UntypedList> collisionCaches;
+        internal Buffer<UntypedList> constraintCaches;
+        internal Buffer<UntypedList> collisionCaches;
 
         public struct PendingAdd
         {

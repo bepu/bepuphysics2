@@ -395,7 +395,10 @@ namespace BepuPhysics.CollisionDetection
 
         internal struct PairSubcache
         {
-            public bool Allocated { get { return false; } }
+            public bool Allocated { get { return constraintCaches.Allocated; } }
+
+            internal Buffer<UntypedList> constraintCaches;
+            internal Buffer<UntypedList> collisionCaches;
 
             internal void Dispose()
             {
@@ -424,6 +427,7 @@ namespace BepuPhysics.CollisionDetection
         {
             ref var constraintSet = ref solver.Sets[setIndex];
             ref var pairSet = ref InactiveSets[setIndex];
+      
             for (int batchIndex = 0; batchIndex < constraintSet.Batches.Count; ++batchIndex)
             {
                 ref var batch = ref constraintSet.Batches[batchIndex];
@@ -436,8 +440,18 @@ namespace BepuPhysics.CollisionDetection
                         {
                             var handle = typeBatch.IndexToHandle[indexInTypeBatch];
                             ref var pairLocation = ref ConstraintHandleToPair[handle];
-                            var collisionCache = workerCaches[pairLocation.CollisionCache.Worker].GetCollisionCachePointer(pairLocation.CollisionCache);
+                            Debug.Assert(pairLocation.CollisionCache.Worker == pairLocation.ConstraintCache.Worker,
+                                "The collision and constraint caches should be in the same worker- it's redundant data right now...");
+                            ref var workerCache = ref workerCaches[pairLocation.CollisionCache.Worker];
+                            var collisionType = pairLocation.CollisionCache.Type;
+                            ref var sourceCache = ref workerCache.collisionCaches[pairLocation.CollisionCache.Type];
+                            ref var targetCache = ref pairSet.collisionCaches[collisionType];
+                            var sourceMemory = sourceCache.Buffer.Memory + pairLocation.CollisionCache.Index;
+                            //TODO: This is a pretty poor estimate, but produces minimal allocations. Given that many islands really do just involve
+                            //a single body, this isn't quite as absurd as it looks. However, you may want to consider walking the handles ahead of time to preallocate exactly enough space.
+                            targetCache.Allocate(sourceCache.ElementSizeInBytes, 1, pool);
 
+                            //TODO: These small copies are likely a poor use case for cpblk, may want to examine.
                         }
                     }
                 }
