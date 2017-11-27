@@ -15,7 +15,8 @@ namespace Demos
             camera.Position = new Vector3(-3f, 3, -3f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
+            Simulation = Simulation.Create(BufferPool, new TestCallbacks(), new SimulationAllocationSizes { Bodies = 64, ConstraintCountPerBodyEstimate = 1, Constraints = 64, ConstraintsPerTypeBatch = 2, Islands = 1, ShapesPerType = 1, Statics = 32 });
+
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
             const int width = 8;

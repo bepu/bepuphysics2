@@ -545,6 +545,7 @@ namespace BepuPhysics
                     traversalTargetBodyIndices[i] = sortedIndices[traversalTargetBodyIndices[i]];
                     Debug.Assert(traversalTargetBodyIndices[i] >= 0 && traversalTargetBodyIndices[i] < bodies.ActiveSet.Count);
                 }
+                pool.SpecializeFor<int>().Return(ref sortedIndices);
             }
 
             int threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
