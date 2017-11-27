@@ -205,6 +205,10 @@ namespace BepuPhysics.CollisionDetection
             OnPostflush(threadDispatcher);
         }
 
+        public void Clear()
+        {
+            PairCache.Clear();
+        }
         public void Dispose()
         {
             PairCache.Dispose();
@@ -212,6 +216,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         protected abstract void OnDispose();
+
 
 
         //TODO: Configurable memory usage. It automatically adapts based on last frame state, but it's nice to be able to specify minimums when more information is known.

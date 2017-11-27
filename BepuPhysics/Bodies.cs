@@ -86,7 +86,7 @@ namespace BepuPhysics
             //You could get by with something a lot less aggressive, but it does tend to avoid resizes in the case of extreme churn.
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialBodyCapacity, out HandlePool);
             ResizeHandles(initialBodyCapacity);
-            pool.SpecializeFor<BodySet>().Take(initialIslandCapacity + 1, out Sets);
+            ResizeSetsCapacity(initialIslandCapacity + 1, 0);
             ActiveSet = new BodySet(initialBodyCapacity, pool);
             this.activator = activator;
             this.shapes = shapes;
@@ -505,7 +505,10 @@ namespace BepuPhysics
             setsCapacity = BufferPool<BodySet>.GetLowestContainingElementCount(setsCapacity);
             if (Sets.Length != setsCapacity)
             {
+                var oldCapacity = Sets.Length;
                 pool.SpecializeFor<BodySet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
+                if (oldCapacity < Sets.Length)
+                    Sets.Clear(oldCapacity, Sets.Length - oldCapacity); //We rely on unused slots being default initialized.
             }
         }
 

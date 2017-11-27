@@ -106,7 +106,7 @@ namespace BepuPhysics.CollisionDetection
             OverlapMapping.Create(
                 pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>(),
                 SpanHelper.GetContainingPowerOf2(minimumMappingSize), 3, out Mapping);
-            pool.SpecializeFor<PairSubcache>().Take(initialSetCapacity, out InactiveSets);
+            ResizeSetsCapacity(initialSetCapacity, 0);
         }
 
         public void Prepare(IThreadDispatcher threadDispatcher = null)
@@ -253,6 +253,30 @@ namespace BepuPhysics.CollisionDetection
 
         }
 
+        internal void Clear()
+        {
+            for (int i = 0; i < workerCaches.Count; ++i)
+            {
+                workerCaches[i].Dispose();
+            }
+            workerCaches.Count = 0;
+            for (int i = 1; i < InactiveSets.Length; ++i)
+            {
+                if (InactiveSets[i].Allocated)
+                {
+                    InactiveSets[i].Dispose();
+                }
+            }
+#if DEBUG
+            if (NextWorkerCaches.Span.Allocated)
+            {
+                for (int i = 0; i < NextWorkerCaches.Span.Length; ++i)
+                {
+                    Debug.Assert(NextWorkerCaches[i].Equals(default(WorkerPairCache)), "Outside of the execution of the narrow phase, the 'next' caches should not be allocated.");
+                }
+            }
+#endif
+        }
 
         public void Dispose()
         {
@@ -262,14 +286,18 @@ namespace BepuPhysics.CollisionDetection
             }
             //Note that we do not need to dispose the worker cache arrays themselves- they were just arrays pulled out of a passthrough pool.
 #if DEBUG
-            for (int i = 0; i < NextWorkerCaches.Count; ++i)
+            if (NextWorkerCaches.Span.Allocated)
             {
-                Debug.Assert(NextWorkerCaches[i].Equals(default(WorkerPairCache)), "Outside of the execution of the narrow phase, the 'next' caches should not be allocated.");
+                for (int i = 0; i < NextWorkerCaches.Span.Length; ++i)
+                {
+                    Debug.Assert(NextWorkerCaches[i].Equals(default(WorkerPairCache)), "Outside of the execution of the narrow phase, the 'next' caches should not be allocated.");
+                }
             }
 #endif
             Mapping.Dispose(pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
             pool.SpecializeFor<PairSubcache>().Return(ref InactiveSets);
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int IndexOf(ref CollidablePair pair)
@@ -364,9 +392,16 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         Buffer<CollisionPairLocation> ConstraintHandleToPair;
 
-   
+
         internal struct PairSubcache
         {
+            public bool Allocated { get { return false; } }
+
+            internal void Dispose()
+            {
+                throw new NotImplementedException();
+                this = new PairSubcache();
+            }
         }
         //This buffer is filled in parallel with the Bodies.Sets and Solver.Sets.
         //Note that this does not include the active set, so index 0 is always empty.
@@ -375,10 +410,13 @@ namespace BepuPhysics.CollisionDetection
         internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
         {
             Debug.Assert(setsCapacity >= potentiallyAllocatedCount && potentiallyAllocatedCount <= InactiveSets.Length);
-            setsCapacity = BufferPool<BodySet>.GetLowestContainingElementCount(setsCapacity);
+            setsCapacity = BufferPool<PairSubcache>.GetLowestContainingElementCount(setsCapacity);
             if (InactiveSets.Length != setsCapacity)
             {
+                var oldCapacity = InactiveSets.Length;
                 pool.SpecializeFor<PairSubcache>().Resize(ref InactiveSets, setsCapacity, potentiallyAllocatedCount);
+                if (oldCapacity < InactiveSets.Length)
+                    InactiveSets.Clear(oldCapacity, InactiveSets.Length - oldCapacity); //We rely on unused slots being default initialized.
             }
         }
 

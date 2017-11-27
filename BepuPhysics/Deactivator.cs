@@ -147,17 +147,6 @@ namespace BepuPhysics
             return true;
         }
 
-        void CleanUpTraversal(
-            BufferPool pool,
-            ref IndexSet consideredBodies, ref IndexSet consideredConstraints,
-            ref QuickList<int, Buffer<int>> visitationStack)
-        {
-            var intPool = pool.SpecializeFor<int>();
-            consideredBodies.Dispose(pool);
-            consideredConstraints.Dispose(pool);
-            visitationStack.Dispose(intPool);
-        }
-
         /// <summary>
         /// Traverses the active constraint graph collecting bodies that match a predicate. If any body visited during the traversal fails to match the predicate, the traversal terminates.
         /// </summary>
@@ -195,24 +184,30 @@ namespace BepuPhysics
             //Start the traversal by pushing the initial body conditionally.
             if (!PushBody(startingActiveBodyIndex, ref consideredBodies, ref bodyIndices, ref visitationStack, ref intPool, ref predicate))
             {
-                CleanUpTraversal(pool, ref consideredBodies, ref consideredConstraints, ref visitationStack);
+                consideredBodies.Dispose(pool);
+                consideredConstraints.Dispose(pool);
+                visitationStack.Dispose(intPool);
                 return false;
             }
             var enumerator = new ConstraintBodyEnumerator();
             enumerator.IntPool = intPool;
+            QuickList<int, Buffer<int>>.Create(intPool, 4, out enumerator.ConstraintBodyIndices);
 
+            bool disqualified = false;
             while (visitationStack.TryPop(out var nextIndexToVisit))
             {
-                QuickList<int, Buffer<int>>.Create(intPool, 4, out enumerator.ConstraintBodyIndices);
                 if (!EnqueueUnvisitedNeighbors(nextIndexToVisit, ref bodyIndices, ref constraintHandles, ref consideredBodies, ref consideredConstraints, ref visitationStack,
                     ref enumerator, ref intPool, ref predicate))
                 {
-                    CleanUpTraversal(pool, ref consideredBodies, ref consideredConstraints, ref visitationStack);
-                    return false;
+                    disqualified = true;
+                    break;
                 }
             }
-            //The visitation stack was emptied without finding any traversal disqualifying bodies.
-            return true;
+            enumerator.ConstraintBodyIndices.Dispose(intPool);
+            consideredBodies.Dispose(pool);
+            consideredConstraints.Dispose(pool);
+            visitationStack.Dispose(intPool);
+            return !disqualified;
         }
 
         int targetTraversedBodyCountPerThread;

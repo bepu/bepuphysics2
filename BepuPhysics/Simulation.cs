@@ -251,6 +251,8 @@ namespace BepuPhysics
             Statics.Clear();
             Shapes.Clear();
             BroadPhase.Clear();
+            NarrowPhase.Clear();
+            Deactivator.Clear();
         }
 
         /// <summary>

@@ -276,7 +276,7 @@ namespace BepuPhysics
                 Constraints[i].Dispose(constraintReferencePool);
             }
             DisposeBuffers(pool);
-
+            this = new BodySet();
         }
     }
 }

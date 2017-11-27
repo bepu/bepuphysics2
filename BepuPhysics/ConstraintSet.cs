@@ -78,6 +78,7 @@ namespace BepuPhysics
                 Batches[i].Dispose(pool);
             }
             Batches.Dispose(pool.SpecializeFor<ConstraintBatch>());
+            this = new ConstraintSet();
         }
     }
 }

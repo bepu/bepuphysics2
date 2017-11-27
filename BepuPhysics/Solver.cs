@@ -181,11 +181,7 @@ namespace BepuPhysics
             this.bodies = bodies;
             this.bufferPool = bufferPool;
             IdPool<Buffer<int>>.Create(bufferPool.SpecializeFor<int>(), 128, out HandlePool);
-            //Note that managed arrays must be used to hold the reference types. It's technically possible to bypass this by completely abandoning inheritance in the typebatches, but
-            //that would make a variety of things more annoying to handle. We can make use of just a tiny amount of idiomatic C#-ness. This won't be many references anyway.
-            //We also don't bother pooling this stuff, and we don't have an API for preallocating it- because we're talking about a very, very small amount of data.
-            //It's not worth the introduced API complexity.
-            bufferPool.SpecializeFor<ConstraintSet>().Take(initialIslandCapacity + 1, out Sets);
+            ResizeSetsCapacity(initialIslandCapacity + 1, 0);
             ActiveSet = new ConstraintSet(bufferPool, BatchCountEstimate);
             QuickList<IndexSet, Buffer<IndexSet>>.Create(bufferPool.SpecializeFor<IndexSet>(), BatchCountEstimate, out batchReferencedHandles);
             bufferPool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
@@ -686,10 +682,15 @@ namespace BepuPhysics
                 batchReferencedHandles[batchIndex].Dispose(bufferPool);
             }
             batchReferencedHandles.Clear();
-            for (int i = 0; i < Sets.Length; ++i)
+            ActiveSet.Clear(bufferPool);
+            //All inactive sets are returned to the pool.
+            //Their allocations are always created to fit the actual island size.
+            for (int i = 1; i < Sets.Length; ++i)
             {
                 if (Sets[i].Allocated)
-                    Sets[i].Clear(bufferPool);
+                {
+                    Sets[i].Dispose(bufferPool);
+                }
             }
             HandlePool.Clear();
         }
@@ -740,7 +741,10 @@ namespace BepuPhysics
             setsCapacity = BufferPool<ConstraintSet>.GetLowestContainingElementCount(setsCapacity);
             if (Sets.Length != setsCapacity)
             {
+                var oldCapacity = Sets.Length;
                 bufferPool.SpecializeFor<ConstraintSet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
+                if (oldCapacity < Sets.Length)
+                    Sets.Clear(oldCapacity, Sets.Length - oldCapacity); //We rely on unused slots being default initialized.    }
             }
         }
 
