@@ -262,7 +262,6 @@ namespace BepuPhysics
         {
             Debug.Assert(workerTraversalResults.Allocated && workerTraversalResults.Length > workerIndex);
             ref var results = ref workerTraversalResults[workerIndex];
-            results.TraversedBodies = new IndexSet(threadPool, bodies.ActiveSet.Count);
             var islandPool = threadPool.SpecializeFor<Island>();
             QuickList<Island, Buffer<Island>>.Create(islandPool, 64, out results.Islands);
             var intPool = threadPool.SpecializeFor<int>();
