@@ -228,7 +228,7 @@ namespace BepuPhysics.CollisionDetection
         public TCallbacks Callbacks;
 
         public NarrowPhase(Simulation simulation, CollisionTaskRegistry collisionTaskRegistry, TCallbacks callbacks,
-             int minimumMappingSize = 2048, int minimumPendingSize = 128, int minimumPerTypeCapacity = 128)
+             int initialSetCapacity, int minimumMappingSize = 2048, int minimumPendingSize = 128, int minimumPerTypeCapacity = 128)
             : base()
         {
             Simulation = simulation;
@@ -241,7 +241,7 @@ namespace BepuPhysics.CollisionDetection
             Callbacks = callbacks;
             Callbacks.Initialize(simulation);
             CollisionTaskRegistry = collisionTaskRegistry;
-            PairCache = new PairCache(simulation.BufferPool, minimumMappingSize, minimumPendingSize, minimumPerTypeCapacity);
+            PairCache = new PairCache(simulation.BufferPool, initialSetCapacity, minimumMappingSize, minimumPendingSize, minimumPerTypeCapacity);
             FreshnessChecker = new FreshnessChecker(this);
             preflushWorkerLoop = PreflushWorkerLoop;
         }

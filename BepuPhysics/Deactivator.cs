@@ -172,6 +172,7 @@ namespace BepuPhysics
         public bool CollectIsland<TTraversalPredicate>(BufferPool pool, int startingActiveBodyIndex, ref TTraversalPredicate predicate,
             ref QuickList<int, Buffer<int>> bodyIndices, ref QuickList<int, Buffer<int>> constraintHandles) where TTraversalPredicate : IPredicate<int>
         {
+            Debug.Assert(startingActiveBodyIndex >= 0 && startingActiveBodyIndex < bodies.ActiveSet.Count);
             //We'll build the island by working depth-first. This means the bodies and constraints we accumulate will be stored in any inactive island by depth-first order,
             //which happens to be a pretty decent layout for cache purposes. In other words, when we wake these islands back up, bodies near each other in the graph will have 
             //a higher chance of being near each other in memory. Bodies directly connected may often end up adjacent to each other, meaning loading one body may give you the other for 'free'
@@ -512,7 +513,7 @@ namespace BepuPhysics
             var index = scheduleOffset;
             for (int i = 0; i < candidateCount; ++i)
             {
-                if (index > bodies.ActiveSet.Count)
+                if (index >= bodies.ActiveSet.Count)
                 {
                     index -= bodies.ActiveSet.Count;
                 }
@@ -542,6 +543,7 @@ namespace BepuPhysics
                 for (int i = 0; i < traversalTargetBodyIndices.Count; ++i)
                 {
                     traversalTargetBodyIndices[i] = sortedIndices[traversalTargetBodyIndices[i]];
+                    Debug.Assert(traversalTargetBodyIndices[i] >= 0 && traversalTargetBodyIndices[i] < bodies.ActiveSet.Count);
                 }
             }
 
@@ -591,6 +593,7 @@ namespace BepuPhysics
                     bool skip = false;
                     for (int previousWorkerIndex = 0; previousWorkerIndex < workerIndex; ++previousWorkerIndex)
                     {
+                        Debug.Assert(island.BodyIndices.Count > 0, "Any reported island should have a positive number of bodies in it. Otherwise, there's nothing to deactivate!");
                         if (workerTraversalResults[workerIndex].TraversedBodies.Contains(island.BodyIndices[0]))
                         {
                             //A previous worker already reported this island. It is a duplicate; skip it.
@@ -755,6 +758,7 @@ namespace BepuPhysics
                 broadPhaseDataPool.Return(ref newInactiveSets[i].BroadPhaseData);
             }
             newInactiveSets.Dispose(inactiveSetReferencePool);
+            constraintRemover.Postflush();
 
         }
 
@@ -782,7 +786,7 @@ namespace BepuPhysics
         /// <param name="setsCapacity">Number of sets to guarantee space for.</param>
         public void EnsureSetsCapacity(int setsCapacity)
         {
-            var potentiallyAllocatedCount = Math.Min(setIdPool.HighestPossiblyClaimedId + 1, Math.Min(bodies.Sets.Length, solver.Sets.Length));
+            var potentiallyAllocatedCount = Math.Min(setIdPool.HighestPossiblyClaimedId + 1, Math.Min(bodies.Sets.Length, Math.Min(solver.Sets.Length, pairCache.InactiveSets.Length)));
             if (setsCapacity > bodies.Sets.Length)
             {
                 bodies.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
@@ -806,7 +810,7 @@ namespace BepuPhysics
         /// <param name="setsCapacity">Target number of sets to allocate space for.</param>
         public void ResizeSetsCapacity(int setsCapacity)
         {
-            var potentiallyAllocatedCount = Math.Min(setIdPool.HighestPossiblyClaimedId + 1, Math.Min(bodies.Sets.Length, solver.Sets.Length));
+            var potentiallyAllocatedCount = Math.Min(setIdPool.HighestPossiblyClaimedId + 1, Math.Min(bodies.Sets.Length, Math.Min(solver.Sets.Length, pairCache.InactiveSets.Length)));
             setsCapacity = Math.Max(potentiallyAllocatedCount, setsCapacity);
             bodies.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);
             solver.ResizeSetsCapacity(setsCapacity, potentiallyAllocatedCount);

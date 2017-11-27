@@ -1,15 +1,23 @@
 ﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection
 {
+    
+
     /// <summary>
     /// The cached pair data created by a single worker during the last execution of narrow phase pair processing.
     /// </summary>
     public struct WorkerPairCache
     {
+        public struct PreallocationSizes
+        {
+            public int ElementCount;
+            public int ElementSizeInBytes;
+        }
         internal BufferPool pool; //note that this reference makes the entire worker pair cache nonblittable. That's why the pair cache uses managed arrays to store the worker caches.
         int minimumPerTypeCapacity;
         int workerIndex;
@@ -33,7 +41,9 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public QuickList<CollidablePair, Buffer<CollidablePair>> PendingRemoves;
 
-        public WorkerPairCache(int workerIndex, BufferPool pool, ref QuickList<int, Buffer<int>> minimumSizesPerConstraintType, ref QuickList<int, Buffer<int>> minimumSizesPerCollisionType,
+        public WorkerPairCache(int workerIndex, BufferPool pool, 
+            ref QuickList<PreallocationSizes, Buffer<PreallocationSizes>> minimumSizesPerConstraintType,
+            ref QuickList<PreallocationSizes, Buffer<PreallocationSizes>> minimumSizesPerCollisionType,
             int pendingCapacity, int minimumPerTypeCapacity = 128)
         {
             this.workerIndex = workerIndex;
@@ -44,8 +54,9 @@ namespace BepuPhysics.CollisionDetection
             pool.SpecializeFor<UntypedList>().Take((int)(minimumSizesPerCollisionType.Count * previousCountMultiplier), out collisionCaches);
             for (int i = 0; i < minimumSizesPerConstraintType.Count; ++i)
             {
-                if (minimumSizesPerConstraintType[i] > 0)
-                    constraintCaches[i] = new UntypedList(Math.Max(minimumPerTypeCapacity, (int)(previousCountMultiplier * minimumSizesPerConstraintType[i])), pool);
+                ref var sizes = ref minimumSizesPerConstraintType[i];
+                if (sizes.ElementCount > 0)
+                    constraintCaches[i] = new UntypedList(sizes.ElementSizeInBytes, Math.Max(minimumPerTypeCapacity, (int)(previousCountMultiplier * sizes.ElementCount)), pool);
                 else
                     constraintCaches[i] = new UntypedList();
             }
@@ -53,8 +64,9 @@ namespace BepuPhysics.CollisionDetection
             constraintCaches.Clear(minimumSizesPerConstraintType.Count, constraintCaches.Length - minimumSizesPerConstraintType.Count);
             for (int i = 0; i < minimumSizesPerCollisionType.Count; ++i)
             {
-                if (minimumSizesPerCollisionType[i] > 0)
-                    collisionCaches[i] = new UntypedList(Math.Max(minimumPerTypeCapacity, (int)(previousCountMultiplier * minimumSizesPerCollisionType[i])), pool);
+                ref var sizes = ref minimumSizesPerCollisionType[i];
+                if (sizes.ElementCount > 0)
+                    collisionCaches[i] = new UntypedList(sizes.ElementSizeInBytes, Math.Max(minimumPerTypeCapacity, (int)(previousCountMultiplier * sizes.ElementCount)), pool);
                 else
                     collisionCaches[i] = new UntypedList();
             }
@@ -88,29 +100,41 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        public void AccumulateMinimumSizes(ref QuickList<int, Buffer<int>> minimumSizesPerConstraintType, ref QuickList<int, Buffer<int>> minimumSizesPerCollisionType)
+        public void AccumulateMinimumSizes(
+            ref QuickList<PreallocationSizes, Buffer<PreallocationSizes>> minimumSizesPerConstraintType, 
+            ref QuickList<PreallocationSizes, Buffer<PreallocationSizes>> minimumSizesPerCollisionType)
         {
             //Note that the count is expanded only as a constraint or cache of a given type is encountered.
             for (int i = 0; i < constraintCaches.Length; ++i)
             {
-                if (constraintCaches[i].Count > 0)
+                ref var constraintCache = ref constraintCaches[i];
+                if (constraintCache.Count > 0)
                 {
                     if (i >= minimumSizesPerConstraintType.Count)
                     {
                         minimumSizesPerConstraintType.Count = i + 1;
                     }
-                    minimumSizesPerConstraintType[i] = Math.Max(minimumSizesPerConstraintType[i], constraintCaches[i].Count);
+                    ref var sizes = ref minimumSizesPerConstraintType[i];
+                    sizes.ElementCount = Math.Max(sizes.ElementCount, constraintCache.Count);
+                    //Technically this element size assignment may occur multiple times, but it's also simple and a one time process.
+                    Debug.Assert(sizes.ElementSizeInBytes == 0 || sizes.ElementSizeInBytes == constraintCache.ElementSizeInBytes, "Either this size hasn't been initialized, or it should match.");
+                    sizes.ElementSizeInBytes = constraintCache.ElementSizeInBytes;
                 }
             }
             for (int i = collisionCaches.Length - 1; i >= 0; --i)
             {
-                if (collisionCaches[i].Count > 0)
+                ref var collisionCache = ref collisionCaches[i];
+                if (collisionCache.Count > 0)
                 {
                     if (i >= minimumSizesPerCollisionType.Count)
                     {
                         minimumSizesPerCollisionType.Count = i + 1;
                     }
-                    minimumSizesPerCollisionType[i] = Math.Max(minimumSizesPerCollisionType[i], collisionCaches[i].Count);
+                    ref var sizes = ref minimumSizesPerCollisionType[i];
+                    sizes.ElementCount = Math.Max(sizes.ElementCount, collisionCache.Count);
+                    //Technically this element size assignment may occur multiple times, but it's also simple and a one time process.
+                    Debug.Assert(sizes.ElementSizeInBytes == 0 || sizes.ElementSizeInBytes == collisionCache.ElementSizeInBytes, "Either this size hasn't been initialized, or it should match.");
+                    sizes.ElementSizeInBytes = collisionCache.ElementSizeInBytes;
                 }
             }
         }

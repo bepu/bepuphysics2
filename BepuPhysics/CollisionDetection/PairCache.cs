@@ -98,7 +98,7 @@ namespace BepuPhysics.CollisionDetection
         internal QuickList<WorkerPairCache, Array<WorkerPairCache>> NextWorkerCaches;
 
 
-        public PairCache(BufferPool pool, int minimumMappingSize = 2048, int minimumPendingSize = 128, int minimumPerTypeCapacity = 128)
+        public PairCache(BufferPool pool, int initialSetCapacity, int minimumMappingSize, int minimumPendingSize, int minimumPerTypeCapacity)
         {
             this.minimumPendingSize = minimumPendingSize;
             this.minimumPerTypeCapacity = minimumPerTypeCapacity;
@@ -106,6 +106,7 @@ namespace BepuPhysics.CollisionDetection
             OverlapMapping.Create(
                 pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>(),
                 SpanHelper.GetContainingPowerOf2(minimumMappingSize), 3, out Mapping);
+            pool.SpecializeFor<PairSubcache>().Take(initialSetCapacity, out InactiveSets);
         }
 
         public void Prepare(IThreadDispatcher threadDispatcher = null)
@@ -119,8 +120,8 @@ namespace BepuPhysics.CollisionDetection
                 if (constraint > maximumConstraintTypeCount)
                     maximumConstraintTypeCount = constraint;
             }
-            QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), maximumConstraintTypeCount, out var minimumSizesPerConstraintType);
-            QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), maximumCollisionTypeCount, out var minimumSizesPerCollisionType);
+            QuickList<PreallocationSizes, Buffer<PreallocationSizes>>.Create(pool.SpecializeFor<PreallocationSizes>(), maximumConstraintTypeCount, out var minimumSizesPerConstraintType);
+            QuickList<PreallocationSizes, Buffer<PreallocationSizes>>.Create(pool.SpecializeFor<PreallocationSizes>(), maximumCollisionTypeCount, out var minimumSizesPerCollisionType);
             //Since the minimum size accumulation builds the minimum size incrementally, bad data within the array can corrupt the result- we must clear it.
             minimumSizesPerConstraintType.Span.Clear(0, minimumSizesPerConstraintType.Span.Length);
             minimumSizesPerCollisionType.Span.Clear(0, minimumSizesPerCollisionType.Span.Length);
@@ -157,8 +158,8 @@ namespace BepuPhysics.CollisionDetection
             {
                 NextWorkerCaches[0] = new WorkerPairCache(0, pool, ref minimumSizesPerConstraintType, ref minimumSizesPerCollisionType, pendingSize, minimumPerTypeCapacity);
             }
-            minimumSizesPerConstraintType.Dispose(pool.SpecializeFor<int>());
-            minimumSizesPerCollisionType.Dispose(pool.SpecializeFor<int>());
+            minimumSizesPerConstraintType.Dispose(pool.SpecializeFor<PreallocationSizes>());
+            minimumSizesPerCollisionType.Dispose(pool.SpecializeFor<PreallocationSizes>());
 
             //Create the pair freshness array for the existing overlaps.
             pool.Take(Mapping.Count, out PairFreshness);
@@ -267,6 +268,7 @@ namespace BepuPhysics.CollisionDetection
             }
 #endif
             Mapping.Dispose(pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
+            pool.SpecializeFor<PairSubcache>().Return(ref InactiveSets);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

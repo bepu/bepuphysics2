@@ -95,7 +95,7 @@ namespace BepuPhysics
 
             var simulation = new Simulation(bufferPool, initialAllocationSizes.Value);
             DefaultTypes.Register(simulation.Solver, out var defaultTaskRegistry);
-            var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation, defaultTaskRegistry, narrowPhaseCallbacks);
+            var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation, defaultTaskRegistry, narrowPhaseCallbacks, initialAllocationSizes.Value.Islands + 1);
             simulation.NarrowPhase = narrowPhase;
             simulation.Deactivator.pairCache = narrowPhase.PairCache;
             simulation.BroadPhaseOverlapFinder = new CollidableOverlapFinder<TNarrowPhaseCallbacks>(narrowPhase, simulation.BroadPhase);
@@ -105,6 +105,7 @@ namespace BepuPhysics
 
       
         //     CONSTRAINTS
+        //TODO: Push this into the Solver, like we did with Bodies and Statics.
 
         /// <summary>
         /// Allocates a constraint slot and sets up a constraint with the specified description.

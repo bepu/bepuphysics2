@@ -297,14 +297,14 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void Add<TContinuations, TFilters>(ref CollisionTaskReference reference, int pairSizeInBytes,
+        unsafe void Add<TContinuations, TFilters>(ref CollisionTaskReference reference,
             int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
             int flipMask, ContinuationIndex continuationId, ref TContinuations continuations, ref TFilters filters)
             where TContinuations : struct, IContinuations
             where TFilters : struct, ICollisionSubtaskFilters
         {
             ref var batch = ref batches[reference.TaskIndex];
-            var pairData = batch.AllocateUnsafely(pairSizeInBytes);
+            var pairData = batch.AllocateUnsafely();
             Unsafe.CopyBlockUnaligned(pairData, shapeA, (uint)shapeSizeA);
             Unsafe.CopyBlockUnaligned(pairData += shapeSizeA, shapeB, (uint)shapeSizeB);
             var poses = (RigidPair*)(pairData += shapeSizeB);
@@ -340,20 +340,21 @@ namespace BepuPhysics.CollisionDetection
             var pairSize = shapeSizeA + shapeSizeB + Unsafe.SizeOf<RigidPair>();
             if (!batch.Buffer.Allocated)
             {
-                batch = new UntypedList(reference.BatchSize * pairSize, pool);
+                batch = new UntypedList(pairSize, reference.BatchSize, pool);
                 if (minimumBatchIndex > reference.TaskIndex)
                     minimumBatchIndex = reference.TaskIndex;
                 if (maximumBatchIndex < reference.TaskIndex)
                     maximumBatchIndex = reference.TaskIndex;
             }
+            Debug.Assert(batch.Buffer.Allocated && batch.ElementSizeInBytes > 0 && batch.ElementSizeInBytes < 131072, "How'd the batch get corrupted?");
             if (shapeTypeIdA != reference.ExpectedFirstTypeId)
             {
                 //The inputs need to be reordered to guarantee that the collision tasks are handed data in the proper order.
-                Add(ref reference, pairSize, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, -1, continuationId, ref continuations, ref filters);
+                Add(ref reference, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, -1, continuationId, ref continuations, ref filters);
             }
             else
             {
-                Add(ref reference, pairSize, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, 0, continuationId, ref continuations, ref filters);
+                Add(ref reference, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, 0, continuationId, ref continuations, ref filters);
             }
         }
 
@@ -399,7 +400,7 @@ namespace BepuPhysics.CollisionDetection
             ref var batch = ref batches[reference.TaskIndex];
             if (!batch.Buffer.Allocated)
             {
-                batch = new UntypedList(reference.BatchSize * Unsafe.SizeOf<RigidPair<TShapeA, TShapeB>>(), pool);
+                batch = new UntypedList(Unsafe.SizeOf<RigidPair<TShapeA, TShapeB>>(), reference.BatchSize, pool);
                 if (minimumBatchIndex > reference.TaskIndex)
                     minimumBatchIndex = reference.TaskIndex;
                 if (maximumBatchIndex < reference.TaskIndex)

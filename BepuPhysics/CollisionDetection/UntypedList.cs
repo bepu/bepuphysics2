@@ -10,14 +10,16 @@ namespace BepuPhysics.CollisionDetection
         public RawBuffer Buffer;
         public int Count;
         public int ByteCount;
+        public int ElementSizeInBytes;
 
 
 
-        public UntypedList(int initialSizeInBytes, BufferPool pool)
+        public UntypedList(int elementSizeInBytes, int initialCapacityInElements, BufferPool pool)
         {
-            pool.Take(initialSizeInBytes, out Buffer);
+            pool.Take(initialCapacityInElements * elementSizeInBytes, out Buffer);
             Count = 0;
             ByteCount = 0;
+            ElementSizeInBytes = elementSizeInBytes;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -33,9 +35,9 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe byte* AllocateUnsafely(int sizeInBytes)
+        public unsafe byte* AllocateUnsafely()
         {
-            var newSize = ByteCount + sizeInBytes;
+            var newSize = ByteCount + ElementSizeInBytes;
             Count++;
             var byteIndex = ByteCount;
             ByteCount = newSize;
@@ -45,6 +47,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe ref T AllocateUnsafely<T>()
         {
+            Debug.Assert(Unsafe.SizeOf<T>() == ElementSizeInBytes);
             var newSize = ByteCount + Unsafe.SizeOf<T>();
             //If we store only byte count, we'd have to divide to get the element index.
             //If we store only count, we would have to store per-type size somewhere since the PairCache constructor doesn't have an id->type mapping.
@@ -62,10 +65,12 @@ namespace BepuPhysics.CollisionDetection
             if (!Buffer.Allocated)
             {
                 //This didn't exist at all before; create a new entry for this type.
+                ElementSizeInBytes = Unsafe.SizeOf<T>();
                 pool.Take(Math.Max(newSize, minimumElementCount * Unsafe.SizeOf<T>()), out Buffer);
             }
             else
             {
+                Debug.Assert(Unsafe.SizeOf<T>() == ElementSizeInBytes);
                 if (newSize > Buffer.Length)
                 {
                     //This will bump up to the next allocated block size, so we don't have to worry about constant micro-resizes.
