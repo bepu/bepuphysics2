@@ -30,7 +30,6 @@ namespace Demos
             //InterlockedOverheadTests.Test();
             //LocalsinitCodegen.Test();
             //AutoTester.Test();
-            //ContactManifoldConvergenceTests.Test();
             //BallSocketConvergenceTests.Test();
             //MemoryResizeTests.Test();
             //DisposeTests.Test();

@@ -341,23 +341,23 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe PairCacheIndex Add<TConstraintCache, TCollisionCache>(int workerIndex, ref CollidablePair pair,
-            ref TCollisionCache collisionCache, ref TConstraintCache constraintCache, int manifoldTypeAsConstraintType)
+            ref TCollisionCache collisionCache, ref TConstraintCache constraintCache)
             where TConstraintCache : IPairCacheEntry
             where TCollisionCache : IPairCacheEntry
         {
             //Note that we do not have to set any freshness bytes here; using this path means there exists no previous overlap to remove anyway.
-            return NextWorkerCaches[workerIndex].Add(ref pair, ref collisionCache, ref constraintCache, manifoldTypeAsConstraintType);
+            return NextWorkerCaches[workerIndex].Add(ref pair, ref collisionCache, ref constraintCache);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe void Update<TConstraintCache, TCollisionCache>(int workerIndex, int pairIndex, ref CollidablePairPointers pointers,
-            ref TCollisionCache collisionCache, ref TConstraintCache constraintCache, int manifoldTypeAsConstraintType)
+            ref TCollisionCache collisionCache, ref TConstraintCache constraintCache)
             where TConstraintCache : IPairCacheEntry
             where TCollisionCache : IPairCacheEntry
         {
             //We're updating an existing pair, so we should prevent this pair from being removed.
             PairFreshness[pairIndex] = 0xFF;
-            NextWorkerCaches[workerIndex].Update(ref pointers, ref collisionCache, ref constraintCache, manifoldTypeAsConstraintType);
+            NextWorkerCaches[workerIndex].Update(ref pointers, ref collisionCache, ref constraintCache);
         }
 
 
@@ -365,7 +365,7 @@ namespace BepuPhysics.CollisionDetection
         internal int GetContactCount(int constraintType)
         {
             //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-            return constraintType & 0x3;
+            return 1 + (constraintType & 0x3);
         }
 
         /// <summary>
@@ -491,7 +491,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
 
-        internal unsafe void GatherOldImpulses(int constraintType, ref ConstraintReference constraintReference, float* oldImpulses)
+        internal unsafe void GatherOldImpulses(ref ConstraintReference constraintReference, float* oldImpulses)
         {
             //Constraints cover 16 possible cases:
             //1-4 contacts: 0x3
@@ -502,7 +502,7 @@ namespace BepuPhysics.CollisionDetection
             //TODO: Note that we do not modify the friction accumulated impulses. This is just for simplicity- the impact of accumulated impulses on friction *should* be relatively
             //hard to notice compared to penetration impulses. We should, however, test this assumption.
             BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var inner);
-            switch (constraintType)
+            switch (constraintReference.TypeBatch.TypeId)
             {
                 //1 body
                 //Convex
@@ -600,7 +600,7 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        internal void ScatterNewImpulses<TContactImpulses>(int constraintType, ref ConstraintReference constraintReference, ref TContactImpulses contactImpulses)
+        internal void ScatterNewImpulses<TContactImpulses>(ref ConstraintReference constraintReference, ref TContactImpulses contactImpulses)
         {
             //Constraints cover 16 possible cases:
             //1-4 contacts: 0x3
@@ -611,7 +611,7 @@ namespace BepuPhysics.CollisionDetection
             //TODO: Note that we do not modify the friction accumulated impulses. This is just for simplicity- the impact of accumulated impulses on friction *should* be relatively
             //hard to notice compared to penetration impulses. We should, however, test this assumption.
             BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var inner);
-            switch (constraintType)
+            switch (constraintReference.TypeBatch.TypeId)
             {
                 //1 body
                 //Convex
@@ -738,7 +738,7 @@ namespace BepuPhysics.CollisionDetection
             //Note that this assumes that the constraint handle is stored in the first 4 bytes of the constraint cache.
             *(int*)NextWorkerCaches[constraintCacheIndex.Cache].GetConstraintCachePointer(constraintCacheIndex) = constraintHandle;
             solver.GetConstraintReference(constraintHandle, out var reference);
-            ScatterNewImpulses(constraintCacheIndex.Type, ref reference, ref impulses);
+            ScatterNewImpulses(ref reference, ref impulses);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
