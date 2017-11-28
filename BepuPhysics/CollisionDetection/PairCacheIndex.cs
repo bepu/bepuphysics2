@@ -20,12 +20,22 @@ namespace BepuPhysics.CollisionDetection
         }
 
         /// <summary>
-        /// Gets the worker index that created the entry.
+        /// Gets whether this index refers to an active cache entry. If false, the entry exists in an inactive set.
         /// </summary>
-        public int Worker
+        public bool Active
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (int)(packed >> 48) & 0x7FFF; } //15 bits
+            get { return (packed & (1UL << 62)) > 0; }
+        }
+
+
+        /// <summary>
+        /// Gets the index of the cache that owns the entry.
+        /// </summary>
+        public int Cache
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (int)(packed >> 48) & 0x3FFF; } //14 bits
         }
 
         /// <summary>
@@ -38,7 +48,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         /// <summary>
-        /// Gets the index of the object.
+        /// Gets the index of the object within the type specific list.
         /// </summary>
         public int Index
         {
@@ -48,15 +58,30 @@ namespace BepuPhysics.CollisionDetection
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PairCacheIndex(int worker, int type, int index)
+        public PairCacheIndex(int cache, int type, int index)
         {
-            Debug.Assert(worker >= 0 && worker < (1 << 15), "Do you really have that many threads, or is the index corrupt?");
+            Debug.Assert(cache >= 0 && cache < (1 << 14), "Do you really have that many threads, or is the index corrupt?");
             Debug.Assert(type >= 0 && type < (1 << 8), "Do you really have that many type indices, or is the index corrupt?");
-            //Note the inclusion of a set bit in the most significant slot.
-            //This encodes that the index was explicitly constructed, so it is a 'real' reference.
+            //Note the inclusion of a set bit in the most significant 2 bits.
+            //The MSB encodes that the index was explicitly constructed, so it is a 'real' reference.
             //A default constructed PairCacheIndex will have a 0 in the MSB, so we can use the default constructor for empty references.
-            packed = (ulong)((1L << 63) | ((long)worker << 48) | ((long)type << 40) | (long)index);
+            //The second most significant bit sets the active flag. This constructor is used only by active references.
+            packed = (ulong)((3L << 62) | ((long)cache << 48) | ((long)type << 40) | (long)index);
         }
 
-    }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static PairCacheIndex CreateInactiveReference(int cache, int type, int index)
+        {
+            Debug.Assert(cache >= 0 && cache < (1 << 14), "Do you really have that many threads, or is the index corrupt?");
+            Debug.Assert(type >= 0 && type < (1 << 8), "Do you really have that many type indices, or is the index corrupt?");
+            //Note the inclusion of a set bit in the most significant 2 bits.
+            //The MSB encodes that the index was explicitly constructed, so it is a 'real' reference.
+            //A default constructed PairCacheIndex will have a 0 in the MSB, so we can use the default constructor for empty references.
+            //The second most significant bit is left unset. This function creates only inactive references..
+            PairCacheIndex toReturn;
+            toReturn.packed = (ulong)((1L << 63) | ((long)cache << 48) | ((long)type << 40) | (long)index);
+            return toReturn;
+        }
+
+     }
 }

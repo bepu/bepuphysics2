@@ -180,7 +180,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe void* GetCollisionCachePointer(PairCacheIndex collisionCacheIndex)
         {
-            return constraintCaches[collisionCacheIndex.Type].Buffer.Memory + collisionCacheIndex.Index;
+            return collisionCaches[collisionCacheIndex.Type].Buffer.Memory + collisionCacheIndex.Index;
         }
 
         public void Dispose()

@@ -22,21 +22,30 @@ namespace BepuPhysics.CollisionDetection
             ElementSizeInBytes = elementSizeInBytes;
         }
 
+        [Conditional("DEBUG")]
+        void Validate()
+        {
+            Debug.Assert(ElementSizeInBytes > 0);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe ref T GetFromBytes<T>(int byteIndex)
         {
+            Validate();
             return ref Unsafe.As<byte, T>(ref Buffer.Memory[byteIndex]);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe ref T Get<T>(int index)
         {
+            Validate();
             return ref Unsafe.Add(ref Unsafe.As<byte, T>(ref *Buffer.Memory), index);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe byte* AllocateUnsafely()
         {
+            Validate();
             var newSize = ByteCount + ElementSizeInBytes;
             Count++;
             var byteIndex = ByteCount;
@@ -47,6 +56,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe ref T AllocateUnsafely<T>()
         {
+            Validate();
             Debug.Assert(Unsafe.SizeOf<T>() == ElementSizeInBytes);
             var newSize = ByteCount + Unsafe.SizeOf<T>();
             //If we store only byte count, we'd have to divide to get the element index.
@@ -58,6 +68,13 @@ namespace BepuPhysics.CollisionDetection
             return ref Unsafe.As<byte, T>(ref Buffer[byteIndex]);
         }
 
+        /// <summary>
+        /// Allocates an element in the list, initializing the backing buffer if needed.
+        /// </summary>
+        /// <param name="elementSizeInBytes">Number of bytes per element.</param>
+        /// <param name="minimumElementCount">Minimum size of the backing buffer to create if this is a new allocation.</param>
+        /// <param name="pool">Pool to pull allocations from.</param>
+        /// <returns>Index of the element in bytes within the list's buffer.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int Allocate(int elementSizeInBytes, int minimumElementCount, BufferPool pool)
         {
@@ -94,7 +111,7 @@ namespace BepuPhysics.CollisionDetection
         public unsafe int Allocate<T>(int minimumElementCount, BufferPool pool)
         {
             var elementSizeInBytes = Unsafe.SizeOf<T>();
-            return Allocate(ElementSizeInBytes, minimumElementCount, pool);
+            return Allocate(elementSizeInBytes, minimumElementCount, pool);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
