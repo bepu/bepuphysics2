@@ -109,8 +109,9 @@ namespace BepuPhysics.CollisionDetection
             ResizeSetsCapacity(initialSetCapacity, 0);
         }
 
-        public void Prepare(IThreadDispatcher threadDispatcher = null)
+        public void Prepare(Solver solver, IThreadDispatcher threadDispatcher = null)
         {
+            EnsureConstraintMappingCapacity(solver, solver.HandlePool.HighestPossiblyClaimedId + 1);
             int maximumConstraintTypeCount = 0, maximumCollisionTypeCount = 0;
             for (int i = 0; i < workerCaches.Count; ++i)
             {
@@ -167,6 +168,30 @@ namespace BepuPhysics.CollisionDetection
             //There is a small chance that multithreading this would be useful in larger simulations- but it would be very, very close.
             PairFreshness.Clear(0, Mapping.Count);
 
+        }
+
+        internal void EnsureConstraintMappingCapacity(Solver solver, int targetCapacity)
+        {
+            targetCapacity = Math.Max(solver.HandlePool.HighestPossiblyClaimedId + 1, targetCapacity);
+            if (ConstraintHandleToPair.Length < targetCapacity)
+            {
+                var oldCapacity = ConstraintHandleToPair.Length;
+                pool.SpecializeFor<CollisionPairLocation>().Resize(ref ConstraintHandleToPair, targetCapacity, ConstraintHandleToPair.Length);
+                ConstraintHandleToPair.Clear(oldCapacity, ConstraintHandleToPair.Length - oldCapacity);
+            }
+        }
+        internal void ResizeConstraintMappingCapacity(Solver solver, int targetCapacity)
+        {
+            targetCapacity = BufferPool<CollisionPairLocation>.GetLowestContainingElementCount(Math.Max(solver.HandlePool.HighestPossiblyClaimedId + 1, targetCapacity));
+            if (ConstraintHandleToPair.Length != targetCapacity)
+            {
+                var oldCapacity = ConstraintHandleToPair.Length;
+                pool.SpecializeFor<CollisionPairLocation>().Resize(ref ConstraintHandleToPair, targetCapacity, ConstraintHandleToPair.Length);
+                if (oldCapacity < ConstraintHandleToPair.Length)
+                {
+                    ConstraintHandleToPair.Clear(oldCapacity, ConstraintHandleToPair.Length - oldCapacity);
+                }
+            }
         }
 
 
@@ -296,6 +321,10 @@ namespace BepuPhysics.CollisionDetection
 #endif
             Mapping.Dispose(pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
             pool.SpecializeFor<InactivePairCache>().Return(ref InactiveSets);
+            //The constraint handle to pair is partially slaved to the constraint handle capacity. 
+            //It gets ensured every frame, but the gap between construction and the first frame could leave it uninitialized.
+            if (ConstraintHandleToPair.Allocated) 
+                pool.SpecializeFor<CollisionPairLocation>().Return(ref ConstraintHandleToPair);
         }
 
 

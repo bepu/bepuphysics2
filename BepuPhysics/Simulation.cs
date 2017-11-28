@@ -273,6 +273,7 @@ namespace BepuPhysics
             Solver.EnsureSolverCapacities(allocationTarget.Bodies, allocationTarget.Constraints);
             Solver.MinimumCapacityPerTypeBatch = Math.Max(allocationTarget.ConstraintsPerTypeBatch, Solver.MinimumCapacityPerTypeBatch);
             Solver.EnsureTypeBatchCapacities();
+            NarrowPhase.PairCache.EnsureConstraintMappingCapacity(Solver, allocationTarget.Constraints);
             //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
             Bodies.EnsureCapacity(allocationTarget.Bodies);
             Bodies.MinimumConstraintCapacityPerBody = allocationTarget.ConstraintCountPerBodyEstimate;
@@ -303,6 +304,7 @@ namespace BepuPhysics
             Solver.ResizeSolverCapacities(allocationTarget.Bodies, allocationTarget.Constraints);
             Solver.MinimumCapacityPerTypeBatch = allocationTarget.ConstraintsPerTypeBatch;
             Solver.ResizeTypeBatchCapacities();
+            NarrowPhase.PairCache.ResizeConstraintMappingCapacity(Solver, allocationTarget.Constraints);
             //Note that the bodies set has to come before the body layout optimizer; the body layout optimizer's sizes are dependent upon the bodies set.
             Bodies.Resize(allocationTarget.Bodies);
             Bodies.MinimumConstraintCapacityPerBody = allocationTarget.ConstraintCountPerBodyEstimate;
