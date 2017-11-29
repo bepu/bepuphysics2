@@ -389,7 +389,7 @@ namespace BepuUtilities.Memory
             return new BufferPool<T>(this);
         }
 
-        [Conditional("DEBUG")]
+        [Conditional("LEAKDEBUG")]
         void ValidatePinnedState(bool pinned)
         {
             for (int i = 0; i < pools.Length; ++i)

@@ -109,9 +109,8 @@ namespace BepuPhysics.CollisionDetection
             ResizeSetsCapacity(initialSetCapacity, 0);
         }
 
-        public void Prepare(Solver solver, IThreadDispatcher threadDispatcher = null)
+        public void Prepare(IThreadDispatcher threadDispatcher = null)
         {
-            EnsureConstraintMappingCapacity(solver, solver.HandlePool.HighestPossiblyClaimedId + 1);
             int maximumConstraintTypeCount = 0, maximumCollisionTypeCount = 0;
             for (int i = 0; i < workerCaches.Count; ++i)
             {
@@ -170,27 +169,21 @@ namespace BepuPhysics.CollisionDetection
 
         }
 
-        internal void EnsureConstraintMappingCapacity(Solver solver, int targetCapacity)
+        internal void EnsureConstraintToPairMappingCapacity(Solver solver, int targetCapacity)
         {
             targetCapacity = Math.Max(solver.HandlePool.HighestPossiblyClaimedId + 1, targetCapacity);
             if (ConstraintHandleToPair.Length < targetCapacity)
             {
-                var oldCapacity = ConstraintHandleToPair.Length;
                 pool.SpecializeFor<CollisionPairLocation>().Resize(ref ConstraintHandleToPair, targetCapacity, ConstraintHandleToPair.Length);
-                ConstraintHandleToPair.Clear(oldCapacity, ConstraintHandleToPair.Length - oldCapacity);
             }
         }
-        internal void ResizeConstraintMappingCapacity(Solver solver, int targetCapacity)
+
+        internal void ResizeConstraintToPairMappingCapacity(Solver solver, int targetCapacity)
         {
             targetCapacity = BufferPool<CollisionPairLocation>.GetLowestContainingElementCount(Math.Max(solver.HandlePool.HighestPossiblyClaimedId + 1, targetCapacity));
             if (ConstraintHandleToPair.Length != targetCapacity)
             {
-                var oldCapacity = ConstraintHandleToPair.Length;
-                pool.SpecializeFor<CollisionPairLocation>().Resize(ref ConstraintHandleToPair, targetCapacity, ConstraintHandleToPair.Length);
-                if (oldCapacity < ConstraintHandleToPair.Length)
-                {
-                    ConstraintHandleToPair.Clear(oldCapacity, ConstraintHandleToPair.Length - oldCapacity);
-                }
+                pool.SpecializeFor<CollisionPairLocation>().Resize(ref ConstraintHandleToPair, targetCapacity, Math.Min(targetCapacity, ConstraintHandleToPair.Length));
             }
         }
 
@@ -222,13 +215,13 @@ namespace BepuPhysics.CollisionDetection
                     largestIntermediateSize = newMappingSize;
             }
             Mapping.EnsureCapacity(largestIntermediateSize, pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
-
+            
             jobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.FlushPairCacheChanges }, pool.SpecializeFor<NarrowPhaseFlushJob>());
         }
-        public void FlushMappingChanges()
+        public unsafe void FlushMappingChanges()
         {
             //Flush all pending adds from the new set.
-            //TODO: Note that this phase accesses no shared memory- it's all pair cache local, and no pool accesses are made.
+            //Note that this phase accesses no shared memory- it's all pair cache local, and no pool accesses are made.
             //That means we could run it as a job alongside solver constraint removal. That's good, because adding and removing to the hash tables isn't terribly fast.  
             //(On the order of 10-100 nanoseconds per operation, so in pathological cases, it can start showing up in profiles.)
             for (int i = 0; i < NextWorkerCaches.Count; ++i)
@@ -323,7 +316,7 @@ namespace BepuPhysics.CollisionDetection
             pool.SpecializeFor<InactivePairCache>().Return(ref InactiveSets);
             //The constraint handle to pair is partially slaved to the constraint handle capacity. 
             //It gets ensured every frame, but the gap between construction and the first frame could leave it uninitialized.
-            if (ConstraintHandleToPair.Allocated) 
+            if (ConstraintHandleToPair.Allocated)
                 pool.SpecializeFor<CollisionPairLocation>().Return(ref ConstraintHandleToPair);
         }
 
@@ -388,6 +381,19 @@ namespace BepuPhysics.CollisionDetection
             PairFreshness[pairIndex] = 0xFF;
             NextWorkerCaches[workerIndex].Update(ref pointers, ref collisionCache, ref constraintCache);
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal unsafe void UpdateForExistingConstraint<TConstraintCache, TCollisionCache>(int workerIndex, int pairIndex, ref CollidablePairPointers pointers,
+            ref TCollisionCache collisionCache, ref TConstraintCache constraintCache, int constraintHandle)
+            where TConstraintCache : IPairCacheEntry
+            where TCollisionCache : IPairCacheEntry
+        {
+            Update(workerIndex, pairIndex, ref pointers, ref collisionCache, ref constraintCache);
+            //This codepath is used when an existing constraint can be updated without any need for an add/remove.
+            //CompleteConstraintAdd updates the handle->pair mapping, but since there is no add for this pair, we have to update the mapping for the new constraint cache location immediately.
+            //Note that the CollidablePair data doesn't need to be changed- for this codepath to be used, the pair and handle are unchanged.
+            ConstraintHandleToPair[constraintHandle].ConstraintCache = pointers.ConstraintCache;
+
+        }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -409,17 +415,16 @@ namespace BepuPhysics.CollisionDetection
             return constraintTypeId < 16;
         }
 
-        struct CollisionPairLocation
+        internal struct CollisionPairLocation
         {
-            public CollidablePair Collidables;
-            public PairCacheIndex CollisionCache;
+            public CollidablePair Pair;
             public PairCacheIndex ConstraintCache;
         }
 
         /// <summary>
         /// Mapping from constraint handle back to collision detection pair cache locations.
         /// </summary>
-        Buffer<CollisionPairLocation> ConstraintHandleToPair;
+        internal Buffer<CollisionPairLocation> ConstraintHandleToPair;
 
 
         internal struct InactivePairCache
@@ -484,7 +489,7 @@ namespace BepuPhysics.CollisionDetection
             //a lookup of any extant collision detection information associated with a constraint. In other words, you can go:
             //body handle->constraint lists->constraint handle->pair caches lookup->collision/constraint caches.
             //Whoever is using this feature would need to have type knowledge of some sort to extract the information, but it costs us nothing to stick the information in there.
-            //If we end up not wanting to support this, all we have to do is set the location = new PairCacheIndex() instead.
+            //If we end up not wanting to support this, all you have to do is remove this line. You don't even have to clear the slot.
             location = PairCacheIndex.CreateInactiveReference(setIndex, type, targetByteIndex);
         }
 
@@ -505,20 +510,20 @@ namespace BepuPhysics.CollisionDetection
                         {
                             var handle = typeBatch.IndexToHandle[indexInTypeBatch];
                             ref var pairLocation = ref ConstraintHandleToPair[handle];
-                            Debug.Assert(pairLocation.CollisionCache.Cache == pairLocation.ConstraintCache.Cache,
-                                "The collision and constraint caches should be in the same worker- it's redundant data right now...");
-                            if (pairLocation.CollisionCache.Exists)
-                                CopyToCache(setIndex, ref workerCaches[pairLocation.CollisionCache.Cache].collisionCaches, ref pairSet.collisionCaches, ref pairLocation.CollisionCache);
+                            //At the moment, we do *not* include the collision cache pointer in the handle mapping. The engine never needs it, and it cuts the size of the 
+                            //mapping buffer from 24 bytes per entry to 16. We leave this here as an example of what would be needed should looking up a collision cache
+                            //from constraint handle become useful. You would also need to update the PairCache.UpdateForExistingConstraint and PairCache.CompleteConstraintAdd.
+                            //if (pairLocation.CollisionCache.Exists)
+                            //    CopyToCache(setIndex, ref workerCaches[pairLocation.CollisionCache.Cache].collisionCaches, ref pairSet.collisionCaches, ref pairLocation.CollisionCache);
                             if (pairLocation.ConstraintCache.Exists)
                                 CopyToCache(setIndex, ref workerCaches[pairLocation.ConstraintCache.Cache].constraintCaches, ref pairSet.constraintCaches, ref pairLocation.ConstraintCache);
                             //Now that any existing cache data has been moved into the inactive set, we should remove the overlap from the overlap mapping.
-                            Mapping.FastRemove(ref pairLocation.Collidables);
+                            Mapping.FastRemove(ref pairLocation.Pair);
                         }
                     }
                 }
             }
         }
-
 
         internal unsafe void GatherOldImpulses(ref ConstraintReference constraintReference, float* oldImpulses)
         {
@@ -760,13 +765,20 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="impulses">Warm starting impulses to apply to the contact constraint.</param>
         /// <param name="constraintCacheIndex">Index of the constraint cache to update.</param>
         /// <param name="constraintHandle">Constraint handle associated with the constraint cache being updated.</param>
+        /// <param name="pair">Collidable pair associated with the new constraint.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe void CompleteConstraintAdd<TContactImpulses>(Solver solver, ref TContactImpulses impulses, PairCacheIndex constraintCacheIndex, int constraintHandle)
+        internal unsafe void CompleteConstraintAdd<TContactImpulses>(Solver solver, ref TContactImpulses impulses, PairCacheIndex constraintCacheIndex,
+            int constraintHandle, ref CollidablePair pair)
         {
             //Note that the update is being directed to the *next* worker caches. We have not yet performed the flush that swaps references.
             //Note that this assumes that the constraint handle is stored in the first 4 bytes of the constraint cache.
             *(int*)NextWorkerCaches[constraintCacheIndex.Cache].GetConstraintCachePointer(constraintCacheIndex) = constraintHandle;
             solver.GetConstraintReference(constraintHandle, out var reference);
+            //This mapping entry had to be deferred until now because no constraint handle was known until now. Now that we have it,
+            //we can fill in the pointers back to the overlap mapping and constraint cache.
+            ref var pairReference = ref ConstraintHandleToPair[constraintHandle];
+            pairReference.ConstraintCache = constraintCacheIndex;
+            pairReference.Pair = pair;
             ScatterNewImpulses(ref reference, ref impulses);
         }
 

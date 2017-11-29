@@ -74,15 +74,16 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void RequestAddConstraint<TDescription, TBodyHandles, TContactImpulses>(int workerIndex, int manifoldConstraintType, PairCacheIndex constraintCacheIndex, ref TContactImpulses newImpulses,
-           ref TDescription description, TBodyHandles bodyHandles) where TDescription : IConstraintDescription<TDescription>
+        unsafe void RequestAddConstraint<TDescription, TBodyHandles, TContactImpulses>(int workerIndex, int manifoldConstraintType,
+            ref CollidablePair pair, PairCacheIndex constraintCacheIndex, ref TContactImpulses newImpulses,
+            ref TDescription description, TBodyHandles bodyHandles) where TDescription : IConstraintDescription<TDescription>
         {
             //Note that this branch is (was?) JIT constant.
             if (typeof(TBodyHandles) != typeof(TwoBodyHandles) && typeof(TBodyHandles) != typeof(int))
             {
                 throw new InvalidOperationException("Invalid body handles type; the narrow phase should only use TwoBodyHandles or int.");
             }
-            AddConstraint(workerIndex, manifoldConstraintType, constraintCacheIndex, ref newImpulses, bodyHandles, ref description);            
+            AddConstraint(workerIndex, manifoldConstraintType, ref pair, constraintCacheIndex, ref newImpulses, bodyHandles, ref description);
         }
 
         unsafe void UpdateConstraint<TBodyHandles, TDescription, TContactImpulses, TCollisionCache, TConstraintCache>(int workerIndex, ref CollidablePair pair,
@@ -128,7 +129,7 @@ namespace BepuPhysics.CollisionDetection
                     //It's exactly the same type, so we can just overwrite its properties without worry.
                     //Note that we rely on the constraint handle being stored in the first 4 bytes of the constraint cache.
                     *(int*)Unsafe.AsPointer(ref newConstraintCache) = constraintHandle;
-                    PairCache.Update(workerIndex, index, ref pointers, ref collisionCache, ref newConstraintCache);
+                    PairCache.UpdateForExistingConstraint(workerIndex, index, ref pointers, ref collisionCache, ref newConstraintCache, constraintHandle);
                     //There exists a constraint and it has the same type as the manifold. Directly apply the new description and impulses.
                     Solver.ApplyDescription(ref constraintReference, ref description);
                     PairCache.ScatterNewImpulses(ref constraintReference, ref newImpulses);
@@ -142,7 +143,7 @@ namespace BepuPhysics.CollisionDetection
                     //means a 4-16x reduction in lock-related overhead, assuming no contests.)
                     //2) The old constraint must be removed.
                     PairCache.Update(workerIndex, index, ref pointers, ref collisionCache, ref newConstraintCache);
-                    RequestAddConstraint(workerIndex, manifoldTypeAsConstraintType, constraintCacheIndex, ref newImpulses, ref description, bodyHandles);
+                    RequestAddConstraint(workerIndex, manifoldTypeAsConstraintType, ref pair, constraintCacheIndex, ref newImpulses, ref description, bodyHandles);
                     ConstraintRemover.EnqueueRemoval(workerIndex, constraintHandle);
                 }
             }
@@ -153,10 +154,10 @@ namespace BepuPhysics.CollisionDetection
                 var constraintCacheIndex = PairCache.Add(workerIndex, ref pair, ref collisionCache, ref newConstraintCache);
                 var newImpulses = default(TContactImpulses);
                 //TODO: It would be nice to avoid the impulse scatter for fully new constraints; it's going to be all zeroes regardless. Worth investigating later.
-                RequestAddConstraint(workerIndex, manifoldTypeAsConstraintType, constraintCacheIndex, ref newImpulses, ref description, bodyHandles);
+                RequestAddConstraint(workerIndex, manifoldTypeAsConstraintType, ref pair, constraintCacheIndex, ref newImpulses, ref description, bodyHandles);
             }
         }
-
+        
         unsafe void UpdateConstraintForManifold<TCollisionCache, TBodyHandles>(int workerIndex, ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache,
             ref PairMaterialProperties material, TBodyHandles bodyHandles)
             where TCollisionCache : IPairCacheEntry

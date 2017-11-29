@@ -231,6 +231,14 @@ namespace BepuPhysics.CollisionDetection
         {
             var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
+            //Before we complete the addition of constraints, the pair cache's constraint handle->pair mapping must be made large enough to hold all existing constraints plus
+            //any that we are about to add. There's no guarantee that we will use them (some earlier handles may be available), but we have no good way to know ahead of time.
+            int newConstraintCount = 0;
+            for (int i = 0; i < threadCount; ++i)
+            {
+                newConstraintCount += overlapWorkers[i].PendingConstraints.CountConstraints();
+            }
+            PairCache.EnsureConstraintToPairMappingCapacity(Solver, Solver.HandlePool.HighestPossiblyClaimedId + newConstraintCount);
 
             if (threadCount > 1)
             {

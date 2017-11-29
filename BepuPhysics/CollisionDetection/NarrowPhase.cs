@@ -112,7 +112,7 @@ namespace BepuPhysics.CollisionDetection
         public void Prepare(IThreadDispatcher threadDispatcher = null)
         {
             OnPrepare(threadDispatcher);
-            PairCache.Prepare(Solver, threadDispatcher);
+            PairCache.Prepare(threadDispatcher);
             ConstraintRemover.Prepare(threadDispatcher);
         }
 
