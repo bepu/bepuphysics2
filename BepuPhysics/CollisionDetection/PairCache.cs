@@ -34,7 +34,7 @@ namespace BepuPhysics.CollisionDetection
 
         public override string ToString()
         {
-            return $"<{A.Handle}, {B.Handle}>";
+            return $"<{A.Mobility}[{A.Handle}], {B.Mobility}[{B.Handle}]>";
         }
     }
 
@@ -476,7 +476,9 @@ namespace BepuPhysics.CollisionDetection
             //TODO: Last second allocations here again. A prepass would help determine a minimal size without doing a bunch of resizes.
             if(type >= targetCaches.Length)
             {
+                var oldCapacity = targetCaches.Length;
                 pool.SpecializeFor<UntypedList>().Resize(ref targetCaches, type + 1, targetCaches.Length);
+                targetCaches.Clear(oldCapacity, targetCaches.Length - oldCapacity);
             }
             ref var target = ref targetCaches[type];
 

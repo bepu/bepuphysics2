@@ -98,32 +98,30 @@ namespace BepuPhysics
         bool PushBody<TTraversalPredicate>(int bodyIndex, ref IndexSet consideredBodies, ref QuickList<int, Buffer<int>> bodyIndices, ref QuickList<int, Buffer<int>> visitationStack,
             ref BufferPool<int> intPool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
         {
-            if (predicate.Matches(ref bodyIndex))
+            if (!consideredBodies.Contains(bodyIndex))
             {
-                if (!consideredBodies.Contains(bodyIndex))
+                if (!predicate.Matches(ref bodyIndex))
                 {
-                    //This body has not yet been traversed. Push it onto the stack.
-                    bodyIndices.Add(bodyIndex, intPool);
-                    consideredBodies.AddUnsafely(bodyIndex);
-                    visitationStack.Add(bodyIndex, intPool);
-
+                    return false;
                 }
-                return true;
+                //This body has not yet been traversed. Push it onto the stack.
+                bodyIndices.Add(bodyIndex, intPool);
+                consideredBodies.AddUnsafely(bodyIndex);
+                visitationStack.Add(bodyIndex, intPool);
             }
-            return false;
+            return true;
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        bool EnqueueUnvisitedNeighbors<TTraversalPredicate>(int bodyHandle,
-            ref QuickList<int, Buffer<int>> bodyHandles,
+        bool EnqueueUnvisitedNeighbors<TTraversalPredicate>(int bodyIndex,
+            ref QuickList<int, Buffer<int>> bodyIndices,
             ref QuickList<int, Buffer<int>> constraintHandles,
             ref IndexSet consideredBodies, ref IndexSet consideredConstraints,
             ref QuickList<int, Buffer<int>> visitationStack,
             ref ConstraintBodyEnumerator bodyEnumerator,
             ref BufferPool<int> intPool, ref TTraversalPredicate predicate) where TTraversalPredicate : IPredicate<int>
         {
-            var bodyIndex = bodies.HandleToLocation[bodyHandle].Index;
             bodyEnumerator.SourceIndex = bodyIndex;
             ref var list = ref bodies.ActiveSet.Constraints[bodyIndex];
             for (int i = 0; i < list.Count; ++i)
@@ -134,14 +132,14 @@ namespace BepuPhysics
                     //This constraint has not yet been traversed. Follow the constraint to every other connected body.
                     constraintHandles.Add(entry.ConnectingConstraintHandle, intPool);
                     consideredConstraints.AddUnsafely(entry.ConnectingConstraintHandle);
+                    bodyEnumerator.ConstraintBodyIndices.Count = 0;
                     solver.EnumerateConnectedBodies(entry.ConnectingConstraintHandle, ref bodyEnumerator);
                     for (int j = 0; j < bodyEnumerator.ConstraintBodyIndices.Count; ++j)
                     {
                         var connectedBodyIndex = bodyEnumerator.ConstraintBodyIndices[j];
-                        if (!PushBody(connectedBodyIndex, ref consideredBodies, ref bodyHandles, ref visitationStack, ref intPool, ref predicate))
+                        if (!PushBody(connectedBodyIndex, ref consideredBodies, ref bodyIndices, ref visitationStack, ref intPool, ref predicate))
                             return false;
                     }
-                    bodyEnumerator.ConstraintBodyIndices.Count = 0;
                 }
             }
             return true;
@@ -477,7 +475,7 @@ namespace BepuPhysics
         {
             if (bodies.ActiveSet.Count == 0)
                 return;
-
+            
             //There are three phases to deactivation:
             //1) Traversing the constraint graph to identify 'simulation islands' that satisfy the deactivation conditions.
             //2) Gathering the data backing the bodies and constraints of a simulation island and placing it into an inactive storage representation (a BodySet and ConstraintSet).
@@ -549,7 +547,6 @@ namespace BepuPhysics
 
             pool.SpecializeFor<WorkerTraversalResults>().Take(threadCount, out workerTraversalResults);
             //Note that all resources within a worker's results set are allocate on the worker's pool since the thread may need to resize things.
-
             this.threadDispatcher = threadDispatcher;
             jobIndex = -1;
             if (threadCount > 1)
@@ -586,7 +583,7 @@ namespace BepuPhysics
                 for (int j = 0; j < workerIslands.Count; ++j)
                 {
                     ref var island = ref workerIslands[j];
-                    island.Validate();
+                    island.Validate(solver);
                     bool skip = false;
                     for (int previousWorkerIndex = 0; previousWorkerIndex < workerIndex; ++previousWorkerIndex)
                     {

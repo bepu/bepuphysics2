@@ -23,10 +23,10 @@ namespace BepuPhysics
         public int TypeId;
         public QuickList<int, Buffer<int>> Handles;
 
-        public IslandProtoTypeBatch(BufferPool pool, int typeId, int initialTypeBatchSize)
+        public IslandProtoTypeBatch(BufferPool<int> intPool, int typeId, int initialTypeBatchSize)
         {
             TypeId = typeId;
-            QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), initialTypeBatchSize, out Handles);
+            QuickList<int, Buffer<int>>.Create(intPool, initialTypeBatchSize, out Handles);
         }
     }
 
@@ -47,21 +47,39 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ref IslandProtoTypeBatch GetOrCreateTypeBatch(int typeId, Solver solver, BufferPool pool)
+        ref IslandProtoTypeBatch GetOrCreateTypeBatch(int typeId, Solver solver, BufferPool<int> intPool)
         {
             ref var idMap = ref TypeIdToIndex[typeId];
             if (idMap == -1)
             {
                 idMap = TypeBatches.Count;
                 ref var typeBatch = ref TypeBatches.AllocateUnsafely();
-                typeBatch = new IslandProtoTypeBatch(pool, typeId, solver.GetMinimumCapacityForType(typeId));
+                typeBatch = new IslandProtoTypeBatch(intPool, typeId, solver.GetMinimumCapacityForType(typeId));
                 return ref typeBatch;
             }
-            return ref TypeBatches[typeId];
+            return ref TypeBatches[idMap];
+        }
+
+        [Conditional("DEBUG")]
+        internal void Validate(Solver solver)
+        {
+            for (int j = 0; j < TypeBatches.Count; ++j)
+            {
+                ref var typeBatch = ref TypeBatches[j];
+                Debug.Assert(typeBatch.Handles.Count > 0, "If we created a type batch, it better have some constraints in it!");
+                Debug.Assert(TypeIdToIndex[typeBatch.TypeId] == j);
+                for (int k = 0; k < typeBatch.Handles.Count; ++k)
+                {
+                    var handle = typeBatch.Handles[k];
+                    Debug.Assert(solver.HandleToConstraint[handle].TypeId == typeBatch.TypeId,
+                        "The handle mapping isn't yet updated, but the type id shouldn't change during a deactivation.");
+                }
+            }
         }
 
         public unsafe bool TryAdd(int constraintHandle, Solver solver, BufferPool pool)
         {
+            Validate(solver);
             ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle];
             var typeProcessor = solver.TypeProcessors[constraintLocation.TypeId];
             var bodiesPerConstraint = typeProcessor.BodiesPerConstraint;
@@ -73,20 +91,23 @@ namespace BepuPhysics
                 ref solver.ActiveSet.Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId),
                 constraintLocation.IndexInTypeBatch,
                 ref enumerator);
-
             if (ReferencedBodyIndices.CanFit(ref enumerator.BodyIndices[0], bodiesPerConstraint))
             {
-                ref var typeBatch = ref GetOrCreateTypeBatch(constraintLocation.TypeId, solver, pool);
-                typeBatch.Handles.AllocateUnsafely() = constraintHandle;
+                var intPool = pool.SpecializeFor<int>();
+                ref var typeBatch = ref GetOrCreateTypeBatch(constraintLocation.TypeId, solver, intPool);
+                Debug.Assert(typeBatch.TypeId == constraintLocation.TypeId);
+                typeBatch.Handles.Add(constraintHandle, intPool);
                 for (int i = 0; i < bodiesPerConstraint; ++i)
                 {
-                    ReferencedBodyIndices.Add(enumerator.BodyIndices[i], pool);
+                    ReferencedBodyIndices.AddUnsafely(enumerator.BodyIndices[i]);
                 }
+                Validate(solver);
                 return true;
             }
+            Validate(solver);
             return false;
         }
-
+        
         public void Dispose(BufferPool pool)
         {
             var intPool = pool.SpecializeFor<int>();
@@ -122,29 +143,27 @@ namespace BepuPhysics
             {
                 AddConstraint(constraintHandles[i], solver, pool);
             }
-            Validate();
+            Validate(solver);
         }
 
         [Conditional("DEBUG")]
-        public void Validate()
+        public void Validate(Solver solver)
         {
             for (int i = 0; i < Protobatches.Count; ++i)
             {
-                ref var batch = ref Protobatches[i];
-                for (int j =0; j < batch.TypeBatches.Count; ++j)
-                {
-                    ref var typeBatch = ref batch.TypeBatches[j];
-                    Debug.Assert(typeBatch.Handles.Count > 0, "If we created a type batch, it better have some constraints in it!");
-                }
+                Protobatches[i].Validate(solver);
             }
         }
 
         void AddConstraint(int constraintHandle, Solver solver, BufferPool pool)
         {
+            Validate(solver);
+
             for (int batchIndex = 0; batchIndex < Protobatches.Count; ++batchIndex)
             {
                 if (Protobatches[batchIndex].TryAdd(constraintHandle, solver, pool))
                 {
+                    Validate(solver);
                     return;
                 }
             }
@@ -153,6 +172,7 @@ namespace BepuPhysics
             ref var newBatch = ref Protobatches.AllocateUnsafely();
             newBatch = new IslandProtoConstraintBatch(solver, pool);
             newBatch.TryAdd(constraintHandle, solver, pool);
+            Validate(solver);
         }
 
         internal void Dispose(BufferPool pool)

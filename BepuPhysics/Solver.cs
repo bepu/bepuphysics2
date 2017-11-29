@@ -352,7 +352,6 @@ namespace BepuPhysics
                 {
                     for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
                     {
-                        ref var handles = ref batchReferencedHandles[batchIndex];
                         ref var batch = ref set.Batches[batchIndex];
                         for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                         {

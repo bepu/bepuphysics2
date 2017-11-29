@@ -107,6 +107,10 @@ namespace BepuPhysics
 
             //This optimization routine requires much less overhead than other options, like full island traversals. We only request the connections of a single body,
             //and the swap count is limited to the number of connected bodies.
+
+            //Don't bother optimizing if no optimizations can be performed. This condition is assumed during worker execution.
+            if (bodies.ActiveSet.Count <= 2)
+                return;
             int optimizationCount = (int)Math.Max(1, Math.Round(bodies.ActiveSet.Count * optimizationFraction));
             for (int i = 0; i < optimizationCount; ++i)
             {

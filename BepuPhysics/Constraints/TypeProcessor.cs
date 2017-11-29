@@ -507,10 +507,12 @@ namespace BepuPhysics.Constraints
         {
             ref var activeConstraintSet = ref solver.ActiveSet;
             ref var activeBodySet = ref bodies.ActiveSet;
-            sourceHandles.Span.CopyTo(startIndex, ref targetTypeBatch.IndexToHandle, startIndex, endIndex - startIndex);
             for (int i = startIndex; i < endIndex; ++i)
             {
-                ref var location = ref solver.HandleToConstraint[sourceHandles[i]];
+                var sourceHandle = sourceHandles[i];
+                targetTypeBatch.IndexToHandle[i] = sourceHandle;
+                ref var location = ref solver.HandleToConstraint[sourceHandle];
+                Debug.Assert(targetTypeBatch.TypeId == location.TypeId, "Can only gather from batches of the same type.");
                 Debug.Assert(location.SetIndex == 0, "Can only gather from the active set.");
 
                 ref var sourceBatch = ref activeConstraintSet.Batches[location.BatchIndex];
