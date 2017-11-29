@@ -504,6 +504,7 @@ namespace BepuPhysics.CollisionDetection
                 for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                 {
                     ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    Debug.Assert(typeBatch.ConstraintCount > 0, "If a type batch exists, it should contain constraints.");
                     if (IsContactBatch(typeBatch.TypeId))
                     {
                         for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)

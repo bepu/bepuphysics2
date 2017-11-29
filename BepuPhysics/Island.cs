@@ -122,6 +122,21 @@ namespace BepuPhysics
             {
                 AddConstraint(constraintHandles[i], solver, pool);
             }
+            Validate();
+        }
+
+        [Conditional("DEBUG")]
+        public void Validate()
+        {
+            for (int i = 0; i < Protobatches.Count; ++i)
+            {
+                ref var batch = ref Protobatches[i];
+                for (int j =0; j < batch.TypeBatches.Count; ++j)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[j];
+                    Debug.Assert(typeBatch.Handles.Count > 0, "If we created a type batch, it better have some constraints in it!");
+                }
+            }
         }
 
         void AddConstraint(int constraintHandle, Solver solver, BufferPool pool)

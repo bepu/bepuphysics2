@@ -519,6 +519,7 @@ namespace BepuPhysics.Constraints
         {
             ref var activeConstraintSet = ref solver.ActiveSet;
             ref var activeBodySet = ref bodies.ActiveSet;
+            sourceHandles.Span.CopyTo(0, ref targetTypeBatch.IndexToHandle, 0, sourceHandles.Count);
             for (int i = startIndex; i < endIndex; ++i)
             {
                 ref var location = ref solver.HandleToConstraint[sourceHandles[i]];

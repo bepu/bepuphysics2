@@ -238,7 +238,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 newConstraintCount += overlapWorkers[i].PendingConstraints.CountConstraints();
             }
-            PairCache.EnsureConstraintToPairMappingCapacity(Solver, Solver.HandlePool.HighestPossiblyClaimedId + newConstraintCount);
+            PairCache.EnsureConstraintToPairMappingCapacity(Solver, Solver.HandlePool.HighestPossiblyClaimedId + 1 + newConstraintCount);
 
             if (threadCount > 1)
             {
