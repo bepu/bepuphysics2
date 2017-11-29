@@ -473,6 +473,11 @@ namespace BepuPhysics.CollisionDetection
         {
             var type = location.Type;
             ref var source = ref sourceCaches[type];
+            //TODO: Last second allocations here again. A prepass would help determine a minimal size without doing a bunch of resizes.
+            if(type >= targetCaches.Length)
+            {
+                pool.SpecializeFor<UntypedList>().Resize(ref targetCaches, type + 1, targetCaches.Length);
+            }
             ref var target = ref targetCaches[type];
 
             //TODO: This is a pretty poor estimate, but produces minimal allocations. Given that many islands really do just involve

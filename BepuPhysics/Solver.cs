@@ -238,9 +238,10 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        internal unsafe void ValidateExistingHandles()
+        internal unsafe void ValidateExistingHandles(bool activeOnly = false)
         {
-            for (int i = 0; i < bodies.Sets.Length; ++i)
+            var maxBodySet = activeOnly ? 1 : bodies.Sets.Length;
+            for (int i = 0; i < maxBodySet; ++i)
             {
                 ref var set = ref bodies.Sets[i];
                 for (int j = 0; j < set.Count; ++j)
@@ -273,7 +274,8 @@ namespace BepuPhysics
             }
             var constraintBodyReferences = stackalloc int[maximumBodiesPerConstraint];
             enumerator.References = constraintBodyReferences;
-            for (int setIndex = 0; setIndex < Sets.Length; ++setIndex)
+            var maxConstraintSet = activeOnly ? 1 : Sets.Length;
+            for (int setIndex = 0; setIndex < maxConstraintSet; ++setIndex)
             {
                 ref var set = ref Sets[setIndex];
                 Debug.Assert(bodies.Sets.Length > setIndex);
@@ -340,9 +342,10 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        internal void ValidateConstraintMaps()
+        internal void ValidateConstraintMaps(bool activeOnly = false)
         {
-            for (int setIndex = 0; setIndex < Sets.Length; ++setIndex)
+            var setCount = activeOnly ? 1 : Sets.Length;
+            for (int setIndex = 0; setIndex < setCount; ++setIndex)
             {
                 ref var set = ref Sets[setIndex];
                 if (set.Allocated)

@@ -288,10 +288,7 @@ namespace BepuPhysics.Constraints
             var lastIndex = typeBatch.ConstraintCount - 1;
             typeBatch.ConstraintCount = lastIndex;
             BundleIndexing.GetBundleIndices(lastIndex, out var sourceBundleIndex, out var sourceInnerIndex);
-#if DEBUG
-            //The Move below overwrites the IndexToHandle, so if we want to use it for debugging, we gotta cache it.
-            var removedHandle = typeBatch.IndexToHandle[index];
-#endif
+
             ref var bodyReferences = ref Unsafe.As<byte, TBodyReferences>(ref *typeBatch.BodyReferences.Memory);
             if (index < lastIndex)
             {
@@ -310,15 +307,6 @@ namespace BepuPhysics.Constraints
             //If you don't read or write using data outside the count, then you don't need it.
             ref var bundle = ref Unsafe.Add(ref bodyReferences, sourceBundleIndex);
             GatherScatter.ClearLane<TBodyReferences, int>(ref bundle, sourceInnerIndex);
-
-#if DEBUG
-            //While it's not necessary to clear these, it can be useful for debugging if any accesses of the old position (that are not refilled immediately)
-            //result in some form of index error later upon invalid usage.
-            handlesToConstraints[removedHandle].BatchIndex = -1;
-            handlesToConstraints[removedHandle].IndexInTypeBatch = -1;
-            handlesToConstraints[removedHandle].TypeId = -1;
-            typeBatch.IndexToHandle[lastIndex] = -1;
-#endif
         }
 
         /// <summary>
@@ -519,7 +507,7 @@ namespace BepuPhysics.Constraints
         {
             ref var activeConstraintSet = ref solver.ActiveSet;
             ref var activeBodySet = ref bodies.ActiveSet;
-            sourceHandles.Span.CopyTo(0, ref targetTypeBatch.IndexToHandle, 0, sourceHandles.Count);
+            sourceHandles.Span.CopyTo(startIndex, ref targetTypeBatch.IndexToHandle, startIndex, endIndex - startIndex);
             for (int i = startIndex; i < endIndex; ++i)
             {
                 ref var location = ref solver.HandleToConstraint[sourceHandles[i]];
@@ -539,7 +527,7 @@ namespace BepuPhysics.Constraints
                     ref Buffer<TAccumulatedImpulse>.Get(ref sourceTypeBatch.AccumulatedImpulses, sourceBundle), sourceInner,
                     ref Buffer<TAccumulatedImpulse>.Get(ref targetTypeBatch.AccumulatedImpulses, targetBundle), targetInner);
                 ref var sourceReferencesLaneStart = ref Unsafe.Add(ref Unsafe.As<TBodyReferences, int>(ref Buffer<TBodyReferences>.Get(ref sourceTypeBatch.BodyReferences, sourceBundle)), sourceInner);
-                ref var targetReferencesLaneStart = ref Unsafe.Add(ref Unsafe.As<TBodyReferences, int>(ref Buffer<TBodyReferences>.Get(ref sourceTypeBatch.BodyReferences, targetBundle)), targetInner);
+                ref var targetReferencesLaneStart = ref Unsafe.Add(ref Unsafe.As<TBodyReferences, int>(ref Buffer<TBodyReferences>.Get(ref targetTypeBatch.BodyReferences, targetBundle)), targetInner);
                 var offset = 0;
                 for (int j = 0; j < bodiesPerConstraint; ++j)
                 {

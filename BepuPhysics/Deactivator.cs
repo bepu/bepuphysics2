@@ -352,11 +352,9 @@ namespace BepuPhysics
                     //We can share a single virtual dispatch over all the constraints since they are of the same type. They may, however, be in different batches.
                     solver.TypeProcessors[targetTypeBatch.TypeId].GatherActiveConstraints(bodies, solver, ref job.SourceIndices, job.StartIndex, job.EndIndex, ref targetTypeBatch);
                     //Enqueue these constraints for later removal.
-                    Console.WriteLine($"Deactivator deactivating constraint range: {{{job.TargetSetIndex}, {job.TargetBatchIndex}, {job.TargetTypeBatchIndex}}}, [{job.StartIndex}, {job.EndIndex})");
                     Debug.Assert(job.StartIndex >= 0 && job.EndIndex <= targetTypeBatch.ConstraintCount && job.StartIndex < job.EndIndex);
                     for (int indexInTypeBatch = job.StartIndex; indexInTypeBatch < job.EndIndex; ++indexInTypeBatch)
                     {
-                        Console.WriteLine($"Deactivator deactivating constraint handle: {targetTypeBatch.IndexToHandle[indexInTypeBatch]}");
                         constraintRemover.EnqueueRemoval(workerIndex, targetTypeBatch.IndexToHandle[indexInTypeBatch]);
                     }
                 }
@@ -442,7 +440,7 @@ namespace BepuPhysics
                     break;
                 case RemovalJobType.NotifyNarrowPhasePairCache:
                     {
-                        //This must be locally sequential because it results in removals from the pair cache's global overlap mapping.
+                        //This must be locally sequential because it results in removals from the pair cache's global overlap mapping and allocates from the main pool.
                         for (int setReferenceIndex = 0; setReferenceIndex < newInactiveSets.Count; ++setReferenceIndex)
                         {
                             pairCache.DeactivateTypeBatchPairs(newInactiveSets[setReferenceIndex].Index, solver);
@@ -673,7 +671,6 @@ namespace BepuPhysics
             constraintRemover.Prepare(threadDispatcher);
 
             jobIndex = -1;
-            Console.WriteLine("entering gather phase");
             if (threadCount > 1)
             {
                 threadDispatcher.DispatchWorkers(gatherDelegate);
@@ -759,7 +756,6 @@ namespace BepuPhysics
             }
             newInactiveSets.Dispose(inactiveSetReferencePool);
             constraintRemover.Postflush();
-
         }
 
 
