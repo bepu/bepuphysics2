@@ -180,7 +180,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintFromTypeBatch, Index = i });
             }
-
+            
             if (threadDispatcher == null)
             {
                 for (int i = 0; i < flushJobs.Count; ++i)
@@ -198,7 +198,7 @@ namespace BepuPhysics.CollisionDetection
             //var end = Stopwatch.GetTimestamp();
             //Console.WriteLine($"Flush stage 3 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
             flushJobs.Dispose(Pool.SpecializeFor<NarrowPhaseFlushJob>());
-
+            
             PairCache.Postflush();
             ConstraintRemover.Postflush();
 

@@ -157,7 +157,7 @@ namespace BepuPhysics.CollisionDetection
                 RequestAddConstraint(workerIndex, manifoldTypeAsConstraintType, ref pair, constraintCacheIndex, ref newImpulses, ref description, bodyHandles);
             }
         }
-        
+
         unsafe void UpdateConstraintForManifold<TCollisionCache, TBodyHandles>(int workerIndex, ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache,
             ref PairMaterialProperties material, TBodyHandles bodyHandles)
             where TCollisionCache : IPairCacheEntry

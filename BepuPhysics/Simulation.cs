@@ -185,12 +185,11 @@ namespace BepuPhysics
             //Note that the reason why the pose integrator comes first instead of, say, the solver, is that the solver relies on world space inertias calculated by the pose integration.
             //If the pose integrator doesn't run first, we either need 
             //1) complicated on demand updates of world inertia when objects are added or local inertias are changed or 
-            //2) local->world inertia calculation before the solver.        
-
+            //2) local->world inertia calculation before the solver.  
             ProfilerStart(PoseIntegrator);
             PoseIntegrator.Update(dt, BufferPool, threadDispatcher);
             ProfilerEnd(PoseIntegrator);
-
+            
             //Note that the deactivator comes *after* velocity integration. That looks a little weird, but it's for a reason:
             //When the narrow phase activates a bunch of objects in a pile, their accumulated impulses will represent all forces acting on them at the time of deactivation.
             //That includes gravity. If we deactivate objects *before* gravity is applied in a given frame, then when those bodies are activated, the accumulated impulses
@@ -199,15 +198,15 @@ namespace BepuPhysics
             ProfilerStart(Deactivator);
             Deactivator.Update(threadDispatcher, Deterministic);
             ProfilerEnd(Deactivator);
-
+            
             ProfilerStart(BroadPhase);
             BroadPhase.Update(threadDispatcher);
             ProfilerEnd(BroadPhase);
-
+            
             ProfilerStart(BroadPhaseOverlapFinder);
             BroadPhaseOverlapFinder.DispatchOverlaps(threadDispatcher);
             ProfilerEnd(BroadPhaseOverlapFinder);
-
+            
             ProfilerStart(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(NarrowPhase);

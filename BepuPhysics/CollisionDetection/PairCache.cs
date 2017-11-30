@@ -215,7 +215,7 @@ namespace BepuPhysics.CollisionDetection
                     largestIntermediateSize = newMappingSize;
             }
             Mapping.EnsureCapacity(largestIntermediateSize, pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
-            
+
             jobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.FlushPairCacheChanges }, pool.SpecializeFor<NarrowPhaseFlushJob>());
         }
         public unsafe void FlushMappingChanges()
@@ -474,7 +474,7 @@ namespace BepuPhysics.CollisionDetection
             var type = location.Type;
             ref var source = ref sourceCaches[type];
             //TODO: Last second allocations here again. A prepass would help determine a minimal size without doing a bunch of resizes.
-            if(type >= targetCaches.Length)
+            if (type >= targetCaches.Length)
             {
                 var oldCapacity = targetCaches.Length;
                 pool.SpecializeFor<UntypedList>().Resize(ref targetCaches, type + 1, targetCaches.Length);
@@ -486,7 +486,7 @@ namespace BepuPhysics.CollisionDetection
             //a single body, this isn't quite as absurd as it looks. However, you may want to consider walking the handles ahead of time to preallocate exactly enough space.
             var targetByteIndex = target.Allocate(source.ElementSizeInBytes, 1, pool);
             var sourceAddress = source.Buffer.Memory + location.Index;
-            var targetAddress = source.Buffer.Memory + targetByteIndex;
+            var targetAddress = target.Buffer.Memory + targetByteIndex;
             //TODO: These small copies are potentially a poor use case for cpblk, may want to examine.
             Unsafe.CopyBlockUnaligned(targetAddress, sourceAddress, (uint)source.ElementSizeInBytes);
             //The inactive set now contains both caches. Point the handle mapping at it.
@@ -498,6 +498,51 @@ namespace BepuPhysics.CollisionDetection
             //Whoever is using this feature would need to have type knowledge of some sort to extract the information, but it costs us nothing to stick the information in there.
             //If we end up not wanting to support this, all you have to do is remove this line. You don't even have to clear the slot.
             location = PairCacheIndex.CreateInactiveReference(setIndex, type, targetByteIndex);
+        }
+        [Conditional("DEBUG")]
+        internal unsafe void ValidateConstraintHandleToPairMapping()
+        {
+            ValidateConstraintHandleToPairMapping(ref workerCaches, false);
+        }
+        [Conditional("DEBUG")]
+        internal unsafe void ValidateConstraintHandleToPairMappingInProgress(bool ignoreStale)
+        {
+            ValidateConstraintHandleToPairMapping(ref NextWorkerCaches, ignoreStale);
+        }
+
+        [Conditional("DEBUG")]
+        internal unsafe void ValidateConstraintHandleToPairMapping(ref QuickList<WorkerPairCache, Array<WorkerPairCache>> caches, bool ignoreStale)
+        {
+            for (int i = 0; i < Mapping.Count; ++i)
+            {
+                if (!ignoreStale || PairFreshness[i] > 0)
+                {
+                    var existingCache = Mapping.Values[i].ConstraintCache;
+                    var existingHandle = *(int*)(caches[existingCache.Cache].constraintCaches[existingCache.Type].Buffer.Memory + existingCache.Index);
+                    Debug.Assert(existingCache.Active, "The overlap mapping should only contain references to constraints which are active.");
+                    Debug.Assert(
+                        ConstraintHandleToPair[existingHandle].ConstraintCache.packed == existingCache.packed &&
+                        new CollidablePairComparer().Equals(ref ConstraintHandleToPair[existingHandle].Pair, ref Mapping.Keys[i]),
+                        "The overlap mapping and handle mapping should match.");
+                }
+            }
+        }
+
+        [Conditional("DEBUG")]
+        internal unsafe void ValidateHandleCountInMapping(int constraintHandle, int expectedCount)
+        {
+            int count = 0;
+            for (int i = 0; i < Mapping.Count; ++i)
+            {
+                var existingCache = Mapping.Values[i].ConstraintCache;
+                var existingHandle = *(int*)(workerCaches[existingCache.Cache].constraintCaches[existingCache.Type].Buffer.Memory + existingCache.Index);
+                if (existingHandle == constraintHandle)
+                {
+                    ++count;
+                    Debug.Assert(count <= expectedCount && count <= 1, "Expected count violated.");
+                }
+            }
+            Debug.Assert(count == expectedCount, "Expected count for this handle not found!");
         }
 
         internal unsafe void DeactivateTypeBatchPairs(int setIndex, Solver solver)
@@ -782,12 +827,12 @@ namespace BepuPhysics.CollisionDetection
             //Note that this assumes that the constraint handle is stored in the first 4 bytes of the constraint cache.
             *(int*)NextWorkerCaches[constraintCacheIndex.Cache].GetConstraintCachePointer(constraintCacheIndex) = constraintHandle;
             solver.GetConstraintReference(constraintHandle, out var reference);
+            ScatterNewImpulses(ref reference, ref impulses);
             //This mapping entry had to be deferred until now because no constraint handle was known until now. Now that we have it,
             //we can fill in the pointers back to the overlap mapping and constraint cache.
             ref var pairReference = ref ConstraintHandleToPair[constraintHandle];
             pairReference.ConstraintCache = constraintCacheIndex;
             pairReference.Pair = pair;
-            ScatterNewImpulses(ref reference, ref impulses);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

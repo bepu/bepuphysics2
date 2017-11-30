@@ -125,6 +125,8 @@ namespace BepuPhysics
             ref var activity = ref Activity[index];
             activity.DeactivationThreshold = description.Activity.DeactivationThreshold;
             activity.MinimumTimestepsUnderThreshold = description.Activity.MinimumTimestepCountUnderThreshold;
+            activity.TimestepsUnderThresholdCount = 0;
+            activity.DeactivationCandidate = false;
         }
 
         public void GetDescription(int index, out BodyDescription description)

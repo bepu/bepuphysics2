@@ -515,7 +515,7 @@ namespace BepuPhysics
             }
             ++scheduleOffset;
 
-
+            
             if (deterministic)
             {
                 //The order in which deactivations occurs affects the result of the simulation. To ensure determinism, we need to pin the deactivation order to something
@@ -544,7 +544,7 @@ namespace BepuPhysics
             int threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
             targetDeactivatedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetDeactivatedFraction / threadCount);
             targetTraversedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetTraversedFraction / threadCount);
-
+            
             pool.SpecializeFor<WorkerTraversalResults>().Take(threadCount, out workerTraversalResults);
             //Note that all resources within a worker's results set are allocate on the worker's pool since the thread may need to resize things.
             this.threadDispatcher = threadDispatcher;
@@ -560,7 +560,7 @@ namespace BepuPhysics
             this.threadDispatcher = null;
 
             traversalTargetBodyIndices.Dispose(pool.SpecializeFor<int>());
-
+            
             //TODO: In the event that no islands are available for deactivation, we should early out to avoid the next two dispatches. That will save about 20us on most frames.
 
             //Traversal is now done. We should have a set of results for each worker in the workerTraversalResults. It's time to gather all the data for the deactivating bodies and constraints.
@@ -664,9 +664,9 @@ namespace BepuPhysics
                     }
                 }
             }
-
+            
             constraintRemover.Prepare(threadDispatcher);
-
+            
             jobIndex = -1;
             if (threadCount > 1)
             {
@@ -704,7 +704,7 @@ namespace BepuPhysics
             {
                 removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveConstraintsFromTypeBatch, Index = i };
             }
-
+            
             if (threadCount > 1)
             {
                 jobIndex = -1;

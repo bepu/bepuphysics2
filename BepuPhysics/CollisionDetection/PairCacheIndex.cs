@@ -8,7 +8,7 @@ namespace BepuPhysics.CollisionDetection
     /// </summary>
     public struct PairCacheIndex
     {
-        ulong packed;
+        internal ulong packed;
 
         /// <summary>
         /// Gets whether this index actually refers to anything. The Type and Index should only be used if this is true.
