@@ -16,31 +16,21 @@ namespace Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks(),
-                new SimulationAllocationSizes
-                {
-                    Bodies = 512,
-                    Statics = 512,
-                    ConstraintCountPerBodyEstimate = 16,
-                    Constraints = 4096,
-                    ConstraintsPerTypeBatch = 128,
-                    Islands = 4096,
-                    ShapesPerType = 4096,
-                });
-            //new SimulationAllocationSizes
-            //{
-            //    Bodies = 64,
-            //    ConstraintCountPerBodyEstimate = 1,
-            //    Constraints = 64,
-            //    ConstraintsPerTypeBatch = 2,
-            //    Islands = 1,
-            //    ShapesPerType = 1,
-            //    Statics = 32
-            //});
+            new SimulationAllocationSizes
+            {
+                Bodies = 1,
+                ConstraintCountPerBodyEstimate = 1,
+                Constraints = 1,
+                ConstraintsPerTypeBatch = 1,
+                Islands = 1,
+                ShapesPerType = 1,
+                Statics = 1
+            });
 
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 3;
-            const int height = 1;
+            const int width = 1;
+            const int height = 32;
             const int length = 1;
             var latticeSpacing = 1.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;

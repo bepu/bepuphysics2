@@ -51,6 +51,7 @@ namespace BepuPhysics
             setIdPool.Take();
             findIslandsDelegate = FindIslands;
             gatherDelegate = Gather;
+            typeBatchConstraintRemovalDelegate = TypeBatchConstraintRemoval;
             executeRemovalWorkDelegate = ExecuteRemovalWork;
         }
 
@@ -237,8 +238,6 @@ namespace BepuPhysics
         struct GatheringJob
         {
             public int TargetSetIndex;
-            public int TargetBatchIndex;
-            public int TargetTypeBatchIndex;
             public QuickList<int, Buffer<int>> SourceIndices;
             public int StartIndex;
             public int EndIndex;
@@ -246,7 +245,11 @@ namespace BepuPhysics
             /// If true, this job relates to a subset of body indices. If false, this job relates to a subset of constraint handles.
             /// </summary>
             public bool IsBodyJob;
+            //TODO: Could unionize these, but it's not very important.
             public int TargetSetIndexInReferenceList; //Only set in body jobs.
+            //Batch/typebatch indices only set in constraint jobs.
+            public int TargetBatchIndex;
+            public int TargetTypeBatchIndex;
         }
 
         QuickList<GatheringJob, Buffer<GatheringJob>> gatheringJobs;
@@ -357,6 +360,21 @@ namespace BepuPhysics
                 }
             }
         }
+
+        int typeBatchConstraintRemovalJobCount;
+        Action<int> typeBatchConstraintRemovalDelegate;
+
+        void TypeBatchConstraintRemoval(int workerIndex)
+        {
+            while (true)
+            {
+                var index = Interlocked.Increment(ref jobIndex);
+                if (index >= typeBatchConstraintRemovalJobCount)
+                    break;
+                constraintRemover.RemoveConstraintsFromTypeBatch(index);
+            }
+        }
+
         struct BroadPhaseData
         {
             public CollidableReference Reference;
@@ -376,16 +394,15 @@ namespace BepuPhysics
         enum RemovalJobType
         {
             RemoveFromBatchReferencedHandles,
-            RemoveConstraintsFromTypeBatch,
             NotifyNarrowPhasePairCache,
             AddCollidablesToStaticTree,
             RemoveBodiesFromActiveSet,
+            UpdateConstraintHandleMapping,
         }
 
         struct RemovalJob
         {
             public RemovalJobType Type;
-            public int Index;
         }
 
 
@@ -395,9 +412,6 @@ namespace BepuPhysics
             {
                 case RemovalJobType.RemoveFromBatchReferencedHandles:
                     constraintRemover.RemoveConstraintsFromBatchReferencedHandles();
-                    break;
-                case RemovalJobType.RemoveConstraintsFromTypeBatch:
-                    constraintRemover.RemoveConstraintsFromTypeBatch(job.Index);
                     break;
                 case RemovalJobType.RemoveBodiesFromActiveSet:
                     {
@@ -441,6 +455,43 @@ namespace BepuPhysics
                         for (int setReferenceIndex = 0; setReferenceIndex < newInactiveSets.Count; ++setReferenceIndex)
                         {
                             pairCache.DeactivateTypeBatchPairs(newInactiveSets[setReferenceIndex].Index, solver);
+                        }
+                    }
+                    break;
+                case RemovalJobType.UpdateConstraintHandleMapping:
+                    {
+                        //This phase existing after the type batch constraint removal is a byproduct of how the constraint remover works-
+                        //since removing a constraint in a type batch can cause other constraints to move, it instead caches handles and looks up the current location as it goes.
+                        //It could be changed to instead work on constraint indices which are sorted prior to removal to guarantee that all indices remain valid.
+                        //If that was done (and no other constraint handle lookups are required either), the handle mapping update could be pulled alongside the type batch constraint removal
+                        //as a multithreaded task.
+                        //May be possible to force the update right after the enqueue in the gather if you did this. (As always, double check, this is tricky business.)
+                        //For now, we just do it sequentially because it's simple, relatively cheap, and this fourth phase is the least load balanced 
+                        //(and I'd like to get this done sooner than later).
+
+                        //This could also be internally multithreaded. The only reason why it's not implemented that way is because it should be extremely cheap.
+                        //Could swap it over later if measurement suggests otherwise.
+                        for (int i = 0; i < newInactiveSets.Count; ++i)
+                        {
+                            var setIndex = newInactiveSets[i].Index;
+                            ref var set = ref solver.Sets[setIndex];
+                            for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
+                            {
+                                ref var batch = ref set.Batches[batchIndex];
+                                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                                {
+                                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                                    for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
+                                    {
+                                        var handle = typeBatch.IndexToHandle[indexInTypeBatch];
+                                        ref var constraintLocation = ref solver.HandleToConstraint[handle];
+                                        constraintLocation.SetIndex = setIndex;
+                                        constraintLocation.BatchIndex = batchIndex;
+                                        constraintLocation.IndexInTypeBatch = indexInTypeBatch;
+                                        Debug.Assert(constraintLocation.TypeId == typeBatch.TypeId, "Deactivating a constraint shouldn't change its type!");
+                                    }
+                                }
+                            }
                         }
                     }
                     break;
@@ -533,19 +584,20 @@ namespace BepuPhysics
             if (bodies.ActiveSet.Count == 0)
                 return;
 
-            //There are three phases to deactivation:
+            //There are four phases to deactivation:
             //1) Traversing the constraint graph to identify 'simulation islands' that satisfy the deactivation conditions.
             //2) Gathering the data backing the bodies and constraints of a simulation island and placing it into an inactive storage representation (a BodySet and ConstraintSet).
-            //3) Removing the deactivated bodies and constraints from the active set.
+            //3) Removing the deactivated constraints from their type batches.
+            //4) Finishing solver bookkeeping related to removed constraints, removing bodies, and other bookkeeping.
             //Separating it into these phases allows for a fairly direct parallelization.
             //Traversal proceeds in parallel, biting the bullet on the fact that different traversal starting points on separate threads may identify the same island sometimes.
             //Once all islands have been detected, the second phase is able to eliminate duplicates and gather the remaining unique islands in parallel.
             //Finally, while removal involves many sequential operations, there are some fully parallel parts and some of the locally sequential parts can be run in parallel with each other.
 
-            //The goal here isn't necessarily to speed up the best case- using three dispatches basically guarantees ~15-40us of overhead- 
+            //The goal here isn't necessarily to speed up the best case- using four dispatches basically guarantees 20us to 50us of overhead- 
             //but rather to try to keep the worst case from dropping frames and to improve deactivation responsiveness.
 
-            //So first, traverse.
+            //1) TRAVERSAL
             int candidateCount = (int)Math.Max(1, bodies.ActiveSet.Count * TestedFractionPerFrame);
 
             QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), candidateCount, out traversalTargetBodyIndices);
@@ -620,6 +672,7 @@ namespace BepuPhysics
 
             //TODO: In the event that no islands are available for deactivation, we should early out to avoid the next two dispatches. That will save about 20us on most frames.
 
+            //2) GATHERING
             //Traversal is now done. We should have a set of results for each worker in the workerTraversalResults. It's time to gather all the data for the deactivating bodies and constraints.
             //Note that we only preallocate a fixed size. It will often be an overestimate, but that's fine. Resizes are more concerning.
             //(We could precompute the exact number of jobs, but it's not really necessary.) 
@@ -763,24 +816,42 @@ namespace BepuPhysics
             pool.SpecializeFor<WorkerTraversalResults>().Return(ref workerTraversalResults);
             gatheringJobs.Dispose(pool.SpecializeFor<GatheringJob>());
 
-            //Now it's time for the removal of all the bodies and constraints from the active set.
-            //The gathering phase gathered all the constraints that need to be removed. 
+            //3) CONSTRAINT REMOVAL FROM TYPE BATCHES
+            //Removal from the type batches blocks body removal from the active set and the constraint handle mapping update:
+            //-Body removal results in moved bodies, and any constraints associated with moved bodies must have their body indices updated to point at the new location.
+            //Removing constraints from the type batch in parallel would cause a race condition.
+            //-The constraint handle mapping is used by the type batch removal to locate constraints. Updating the handle mapping introduces a race condition.
+            //Since the type batch removal for a large island (or multiple islands) will tend to create enough jobs to use the CPU,
+            //we punt all other work to the fourth stage. It takes the form of a series of locally sequential jobs, so it won't have wonderful load balancing.
+            //But perfect scaling is necessarily required- we just want to reduce the frame drops as much as possible.
+            typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs();
+            jobIndex = -1;
+            if (threadCount > 1)
+            {
+                threadDispatcher.DispatchWorkers(typeBatchConstraintRemovalDelegate);
+            }
+            else
+            {
+                for (int i = 0; i < typeBatchConstraintRemovalJobCount; ++i)
+                {
+                    constraintRemover.RemoveConstraintsFromTypeBatch(i);
+                }
+            }
+
+            //4) BOOKKEEPING AND REMOVAL FINALIZATION
+            //We've only removed constraints from type batches. Still need to update active set constraint batches, bodies, and so on.
             //Note that while we're using the same ConstraintRemover as the narrow phase, we do not need to perform per-body constraint list removals or handle returns.
 
             //We don't want the static tree to resize during removals. That would use the main pool and conflict with the NotifyNarrowPhasePairCache job's usage of the main pool.
             broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount, broadPhase.StaticTree.LeafCount + deactivatedBodyCount);
 
-            var typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs();
-            QuickList<RemovalJob, Buffer<RemovalJob>>.Create(pool.SpecializeFor<RemovalJob>(), typeBatchConstraintRemovalJobCount + 4, out removalJobs);
+            QuickList<RemovalJob, Buffer<RemovalJob>>.Create(pool.SpecializeFor<RemovalJob>(), 5, out removalJobs);
             //The heavier locally sequential jobs are scheduled up front, leaving the smaller later tasks to fill gaps.
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.NotifyNarrowPhasePairCache };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveBodiesFromActiveSet };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.AddCollidablesToStaticTree };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveFromBatchReferencedHandles };
-            for (int i = 0; i < typeBatchConstraintRemovalJobCount; ++i)
-            {
-                removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveConstraintsFromTypeBatch, Index = i };
-            }
+            removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.UpdateConstraintHandleMapping };
 
             Console.WriteLine("Deactivator ExecuteRemoval phase.");
             jobIndex = -1;
@@ -796,35 +867,7 @@ namespace BepuPhysics
                 }
             }
             removalJobs.Dispose(pool.SpecializeFor<RemovalJob>());
-            //TODO: While the handle->body location mapping has been updated, the handle->constraint location mapping is not yet changed. 
-            //Consider alternatives. This sequential phase is a byproduct of how the constraint remover works-
-            //since removing a constraint in a type batch can cause other constraints to move, it instead caches handles and looks up the current location as it goes.
-            //It could be changed to instead work on constraint indices which are sorted prior to removal to guarantee that all indices remain valid.
-            //If that was done (and no other constraint handle lookups are required either), the handle mapping update could be pulled in as a multithreaded task.
-            //May be possible to force the update right after the enqueue in the gather if you did this. (As always, double check, this is tricky business.)
-            //For now, we just do it sequentially because it's simple and relatively cheap (and I'd like to get this done sooner than later).
-            for (int i = 0; i < newInactiveSets.Count; ++i)
-            {
-                var setIndex = newInactiveSets[i].Index;
-                ref var set = ref solver.Sets[setIndex];
-                for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
-                {
-                    ref var batch = ref set.Batches[batchIndex];
-                    for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
-                    {
-                        ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
-                        for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
-                        {
-                            var handle = typeBatch.IndexToHandle[indexInTypeBatch];
-                            ref var constraintLocation = ref solver.HandleToConstraint[handle];
-                            constraintLocation.SetIndex = setIndex;
-                            constraintLocation.BatchIndex = batchIndex;
-                            constraintLocation.IndexInTypeBatch = indexInTypeBatch;
-                            Debug.Assert(constraintLocation.TypeId == typeBatch.TypeId, "Deactivating a constraint shouldn't change its type!");
-                        }
-                    }
-                }
-            }
+
             for (int i = 0; i < newInactiveSets.Count; ++i)
             {
                 broadPhaseDataPool.Return(ref newInactiveSets[i].BroadPhaseData);
