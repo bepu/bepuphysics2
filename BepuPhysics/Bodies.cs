@@ -407,6 +407,46 @@ namespace BepuPhysics
             Debug.Assert(set.IndexToHandle[location.Index] == handle, "Handle->index must match index->handle map.");
         }
 
+        
+        private int ValidateAndCountShapefulBodies(ref BodySet set, Tree tree, ref Buffer<CollidableReference> leaves)
+        {
+            int shapefulBodyCount = 0;
+            for (int i = 0; i < set.Count; ++i)
+            {
+                ref var collidable = ref set.Collidables[i];
+                if (collidable.Shape.Exists)
+                {
+                    Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < tree.LeafCount);
+                    ref var leaf = ref leaves[collidable.BroadPhaseIndex];
+                    Debug.Assert(leaf.Handle == set.IndexToHandle[i]);
+                    Debug.Assert(leaf.Mobility == CollidableMobility.Dynamic || leaf.Mobility == CollidableMobility.Kinematic);
+                    Debug.Assert((leaf.Mobility == CollidableMobility.Kinematic) == ActiveSet.Activity[i].Kinematic);
+                    ++shapefulBodyCount;
+                }
+            }
+            return shapefulBodyCount;
+        }
+
+
+        [Conditional("DEBUG")]
+        internal void ValidateCollidables(Statics statics)
+        {
+            var activeShapefulBodyCount = ValidateAndCountShapefulBodies(ref ActiveSet, broadPhase.ActiveTree, ref broadPhase.activeLeaves);
+            Debug.Assert(broadPhase.ActiveTree.LeafCount == activeShapefulBodyCount);
+
+            int inactiveShapefulBodyCount = 0;
+
+            for (int setIndex = 1; setIndex < Sets.Length; ++setIndex)
+            {
+                ref var set = ref Sets[setIndex];
+                if (set.Allocated)
+                {
+                    inactiveShapefulBodyCount += ValidateAndCountShapefulBodies(ref set, broadPhase.StaticTree, ref broadPhase.staticLeaves);
+                }
+            }
+            Debug.Assert(inactiveShapefulBodyCount + statics.Count == broadPhase.StaticTree.LeafCount);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void GatherInertiaForBody(ref BodyInertia source, ref float targetInertiaBase, int targetLaneIndex)
         {

@@ -278,9 +278,9 @@ namespace BepuPhysics
             for (int setIndex = 0; setIndex < maxConstraintSet; ++setIndex)
             {
                 ref var set = ref Sets[setIndex];
-                Debug.Assert(bodies.Sets.Length > setIndex);
                 if (set.Allocated)
                 {
+                    Debug.Assert(bodies.Sets.Length > setIndex);
                     //We are going to test this in both directions:
                     //For each constraint, for each body within that constraint, confirm that the referenced body includes the constraint in its constraint list.
                     //For each body, for each constraint referenced by that body, confirm that the referenced constraint includes the body in its body list.

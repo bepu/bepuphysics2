@@ -79,8 +79,9 @@ namespace BepuPhysics.CollisionDetection
             var badMaxValue = new Vector3(float.MinValue);
             var mergedMin = badMinValue; //Note- using isolated vectors instead of actual BoundingBox here to avoid a compiler bug: https://github.com/dotnet/coreclr/issues/12950
             var mergedMax = badMaxValue;
-            Debug.Assert(node->ChildCount == Math.Min(leafCount, 2));
-            for (int i = 0; i < node->ChildCount; ++i)
+            var childCount = Math.Min(leafCount, 2);
+            Debug.Assert(node->ChildCount == childCount);
+            for (int i = 0; i < childCount; ++i)
             {
                 ref var child = ref children[i];
                 if (child.Min == badMinValue || child.Max == badMaxValue)
@@ -150,7 +151,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 throw new Exception($"Invalid node count of {nodeCount}, larger than nodes array length {Nodes.Length}.");
             }
-            if (LeafCount > 0 && (nodes[0].IndexInParent != -1 || nodes[0].IndexInParent != -1))
+            if (LeafCount > 0 && (nodes[0].Parent != -1 || nodes[0].IndexInParent != -1))
             {
                 throw new Exception($"Invalid parent pointers on root.");
             }

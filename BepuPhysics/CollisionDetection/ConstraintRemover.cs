@@ -50,8 +50,8 @@ namespace BepuPhysics.CollisionDetection
     /// </summary>
     public class ConstraintRemover
     {
-        Solver solver;
-        Bodies bodies;
+        internal Solver solver;
+        internal Bodies bodies;
         BufferPool pool;
 
         struct WorkerCache

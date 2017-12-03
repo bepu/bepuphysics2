@@ -132,7 +132,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
 
-        internal unsafe void GetOverlaps<TOverlapHandler>(Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler
+        public unsafe void GetOverlaps<TOverlapHandler>(Tree treeB, ref TOverlapHandler overlapHandler) where TOverlapHandler : struct, IOverlapHandler
         {
             if (leafCount == 0 || treeB.leafCount == 0)
                 return;

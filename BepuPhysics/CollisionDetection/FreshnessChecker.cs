@@ -131,12 +131,37 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
+        [Conditional("DEBUG")]
+        unsafe void PrintRemovalInformation(int constraintHandle)
+        {
+            Console.Write($"Found STALE constraint handle: {constraintHandle}, body handles (constraints per body): ");
+            ref var location = ref constraintRemover.solver.HandleToConstraint[constraintHandle];
+            Debug.Assert(location.SetIndex == 0);
+            ref var batch = ref constraintRemover.solver.ActiveSet.Batches[location.BatchIndex];
+            ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[location.TypeId]];
+            Debug.Assert(typeBatch.TypeId == location.TypeId);
+            ConstraintReferenceCollector enumerator;
+            enumerator.Index = 0;
+            var typeProcessor = constraintRemover.solver.TypeProcessors[location.TypeId];
+            var references = stackalloc int[typeProcessor.BodiesPerConstraint];
+            enumerator.References = references;
+            typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, location.IndexInTypeBatch, ref enumerator);
+            for (int i = 0; i < typeProcessor.BodiesPerConstraint; ++i)
+            {
+                var bodyHandle = constraintRemover.bodies.ActiveSet.IndexToHandle[references[i]];
+                Console.Write($"{bodyHandle} ({constraintRemover.bodies.ActiveSet.Constraints[references[i]].Count}), ");
+                
+            }
+            Console.WriteLine();
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void EnqueueStaleRemoval(int workerIndex, int pairIndex)
+        unsafe void EnqueueStaleRemoval(int workerIndex, int pairIndex)
         {
             //Note that we have to grab the *old* handle, because the current frame's set of constraint caches do not contain this pair.
             //If they DID contain this pair, then it wouldn't be stale!
             var constraintHandle = pairCache.GetOldConstraintHandle(pairIndex);
+            PrintRemovalInformation(constraintHandle);
             constraintRemover.EnqueueRemoval(workerIndex, constraintHandle);
             ref var cache = ref pairCache.NextWorkerCaches[workerIndex];
             cache.PendingRemoves.Add(pairCache.Mapping.Keys[pairIndex], cache.pool.SpecializeFor<CollidablePair>());

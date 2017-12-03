@@ -44,7 +44,7 @@ namespace BepuPhysics
             this.bodies = bodies;
             this.solver = solver;
             this.broadPhase = broadPhase;
-            this.constraintRemover = constraintRemover;
+            this.constraintRemover = new ConstraintRemover(pool, bodies, solver);// constraintRemover;
             this.pool = pool;
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out setIdPool);
             //We reserve index 0 for the active set.
@@ -286,7 +286,6 @@ namespace BepuPhysics
                     //The gathering phase will check each worker's island against all previous workers. If it's a duplicate, it will get thrown out.
                     var island = new Island(ref bodyIndices, ref constraintHandles, solver, threadPool);
                     results.Islands.Add(ref island, islandPool);
-
                 }
                 traversedBodies += bodyIndices.Count;
                 bodyIndices.Count = 0;
@@ -430,7 +429,7 @@ namespace BepuPhysics
                                 if (collidable.Shape.Exists)
                                 {
                                     ref var data = ref setReference.BroadPhaseData[bodyIndex];
-                                    broadPhase.AddStatic(data.Reference, ref data.Bounds);
+                                    collidable.BroadPhaseIndex = broadPhase.AddStatic(data.Reference, ref data.Bounds);
                                 }
                             }
                         }
@@ -471,11 +470,69 @@ namespace BepuPhysics
 
         int scheduleOffset;
 
+        [Conditional("DEBUG")]
+        unsafe void PrintIsland(ref Island island)
+        {
+            Console.Write($"{island.BodyIndices.Count} body handles: ");
+            for (int i = 0; i < island.BodyIndices.Count; ++i)
+                Console.Write($"{bodies.ActiveSet.IndexToHandle[island.BodyIndices[i]]}, ");
+            Console.WriteLine();
+            int constraintCount = 0;
+            for (int batchIndex = 0; batchIndex < island.Protobatches.Count; ++batchIndex)
+            {
+                ref var batch = ref island.Protobatches[batchIndex];
+                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    constraintCount += typeBatch.Handles.Count;
+                }
+            }
+            Console.Write($"{constraintCount} constraint handles: ");
+            ConstraintReferenceCollector bodyIndexEnumerator;
+            var intPool = pool.SpecializeFor<int>();
+            QuickSet<int, Buffer<int>, Buffer<int>, PrimitiveComparer<int>>.Create(intPool, intPool, 3, 3, out var constraintReferencedBodyHandles);
+            for (int batchIndex = 0; batchIndex < island.Protobatches.Count; ++batchIndex)
+            {
+                ref var batch = ref island.Protobatches[batchIndex];
+                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
+                    var references = stackalloc int[typeProcessor.BodiesPerConstraint];
+                    bodyIndexEnumerator.References = references;
+                    for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.Handles.Count; ++indexInTypeBatch)
+                    {
+                        var handle = typeBatch.Handles[indexInTypeBatch];
+                        ref var location = ref solver.HandleToConstraint[handle];
+                        Debug.Assert(location.SetIndex == 0);
+                        Debug.Assert(location.TypeId == typeBatch.TypeId);
+                        ref var solverBatch = ref solver.Sets[0].Batches[location.BatchIndex];
+                        bodyIndexEnumerator.Index = 0;
+                        typeProcessor.EnumerateConnectedBodyIndices(
+                            ref solverBatch.TypeBatches[solverBatch.TypeIndexToTypeBatchIndex[location.TypeId]], location.IndexInTypeBatch, ref bodyIndexEnumerator);
+                        for (int i = 0; i < typeProcessor.BodiesPerConstraint; ++i)
+                        {
+                            constraintReferencedBodyHandles.Add(ref bodies.ActiveSet.IndexToHandle[references[i]], intPool, intPool);
+                        }
+                        Console.Write($"{handle}, ");
+                    }
+                }
+            }
+            Console.WriteLine();
+            Console.Write("Unique body handles referenced by all constraints: ");
+            for (int i = 0; i < constraintReferencedBodyHandles.Count; ++i)
+            {
+                Console.Write($"{constraintReferencedBodyHandles[i]}, ");
+            }
+            Console.WriteLine();
+        }
         public void Update(IThreadDispatcher threadDispatcher, bool deterministic)
         {
+            threadDispatcher = null;
+            Console.WriteLine("FRAME");
             if (bodies.ActiveSet.Count == 0)
                 return;
-            
+
             //There are three phases to deactivation:
             //1) Traversing the constraint graph to identify 'simulation islands' that satisfy the deactivation conditions.
             //2) Gathering the data backing the bodies and constraints of a simulation island and placing it into an inactive storage representation (a BodySet and ConstraintSet).
@@ -515,7 +572,7 @@ namespace BepuPhysics
             }
             ++scheduleOffset;
 
-            
+
             if (deterministic)
             {
                 //The order in which deactivations occurs affects the result of the simulation. To ensure determinism, we need to pin the deactivation order to something
@@ -544,7 +601,7 @@ namespace BepuPhysics
             int threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
             targetDeactivatedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetDeactivatedFraction / threadCount);
             targetTraversedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetTraversedFraction / threadCount);
-            
+
             pool.SpecializeFor<WorkerTraversalResults>().Take(threadCount, out workerTraversalResults);
             //Note that all resources within a worker's results set are allocate on the worker's pool since the thread may need to resize things.
             this.threadDispatcher = threadDispatcher;
@@ -560,7 +617,7 @@ namespace BepuPhysics
             this.threadDispatcher = null;
 
             traversalTargetBodyIndices.Dispose(pool.SpecializeFor<int>());
-            
+
             //TODO: In the event that no islands are available for deactivation, we should early out to avoid the next two dispatches. That will save about 20us on most frames.
 
             //Traversal is now done. We should have a set of results for each worker in the workerTraversalResults. It's time to gather all the data for the deactivating bodies and constraints.
@@ -588,10 +645,14 @@ namespace BepuPhysics
                     for (int previousWorkerIndex = 0; previousWorkerIndex < workerIndex; ++previousWorkerIndex)
                     {
                         Debug.Assert(island.BodyIndices.Count > 0, "Any reported island should have a positive number of bodies in it. Otherwise, there's nothing to deactivate!");
-                        if (workerTraversalResults[workerIndex].TraversedBodies.Contains(island.BodyIndices[0]))
+                        if (workerTraversalResults[previousWorkerIndex].TraversedBodies.Contains(island.BodyIndices[0]))
                         {
                             //A previous worker already reported this island. It is a duplicate; skip it.
+                            Console.WriteLine($"SKIPPING ISLAND, BLOCKED BY PREVIOUS WORKER {previousWorkerIndex}:");
+
+                            PrintIsland(ref island);
                             skip = true;
+                            break;
                         }
                     }
                     if (!skip)
@@ -608,7 +669,23 @@ namespace BepuPhysics
                         bodies.Sets[setIndex] = new BodySet(island.BodyIndices.Count, pool);
                         bodies.Sets[setIndex].Count = island.BodyIndices.Count;
                         deactivatedBodyCount += island.BodyIndices.Count;
-                        AllocateConstraintSet(ref island.Protobatches, solver, pool, out solver.Sets[setIndex]);
+                        ref var constraintSet = ref solver.Sets[setIndex];
+                        constraintSet = new ConstraintSet(pool, island.Protobatches.Count);
+                        for (int batchIndex = 0; batchIndex < island.Protobatches.Count; ++batchIndex)
+                        {
+                            ref var sourceBatch = ref island.Protobatches[batchIndex];
+                            ref var targetBatch = ref constraintSet.Batches.AllocateUnsafely();
+                            targetBatch = new ConstraintBatch(pool, sourceBatch.TypeIdToIndex.Length);
+                            for (int typeBatchIndex = 0; typeBatchIndex < sourceBatch.TypeBatches.Count; ++typeBatchIndex)
+                            {
+                                ref var sourceTypeBatch = ref sourceBatch.TypeBatches[typeBatchIndex];
+                                ref var targetTypeBatch = ref targetBatch.CreateNewTypeBatch(sourceTypeBatch.TypeId, solver.TypeProcessors[sourceTypeBatch.TypeId], sourceTypeBatch.Handles.Count, pool);
+                                targetTypeBatch.ConstraintCount = sourceTypeBatch.Handles.Count;
+                            }
+                        }
+
+                        Console.WriteLine("PREPARING JOBS FOR ISLAND:");
+                        PrintIsland(ref island);
 
                         //A single island may involve multiple jobs, depending on its size.
                         //For simplicity, a job can only cover contiguous regions. In other words, if there are two type batches, there will be at least two jobs- even if the type batches
@@ -664,9 +741,9 @@ namespace BepuPhysics
                     }
                 }
             }
-            
+
             constraintRemover.Prepare(threadDispatcher);
-            
+
             jobIndex = -1;
             if (threadCount > 1)
             {
@@ -704,10 +781,11 @@ namespace BepuPhysics
             {
                 removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveConstraintsFromTypeBatch, Index = i };
             }
-            
+
+            Console.WriteLine("Deactivator ExecuteRemoval phase.");
+            jobIndex = -1;
             if (threadCount > 1)
             {
-                jobIndex = -1;
                 threadDispatcher.DispatchWorkers(executeRemovalWorkDelegate);
             }
             else
@@ -755,24 +833,6 @@ namespace BepuPhysics
             constraintRemover.Postflush();
         }
 
-
-        void AllocateConstraintSet(ref QuickList<IslandProtoConstraintBatch, Buffer<IslandProtoConstraintBatch>> batches, Solver solver, BufferPool pool, out ConstraintSet constraintSet)
-        {
-            constraintSet = new ConstraintSet(pool, batches.Count);
-            for (int i = 0; i < batches.Count; ++i)
-            {
-                ref var sourceBatch = ref batches[i];
-                ref var targetBatch = ref constraintSet.Batches.AllocateUnsafely();
-                targetBatch = new ConstraintBatch(pool, sourceBatch.TypeIdToIndex.Length);
-                for (int j = 0; j < sourceBatch.TypeBatches.Count; ++j)
-                {
-                    ref var sourceTypeBatch = ref sourceBatch.TypeBatches[j];
-                    ref var targetTypeBatch = ref targetBatch.CreateNewTypeBatch(sourceTypeBatch.TypeId, solver.TypeProcessors[sourceTypeBatch.TypeId], sourceTypeBatch.Handles.Count, pool);
-                    targetTypeBatch.ConstraintCount = sourceTypeBatch.Handles.Count;
-                }
-
-            }
-        }
 
         /// <summary>
         /// Ensures that the Bodies, Solver, and NarrowPhase can hold at least the given number of sets (BodySets for the Bodies collection, ConstraintSets for the Solver, PairSubcaches for the NarrowPhase.PairCache).

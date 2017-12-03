@@ -51,10 +51,10 @@ namespace BepuPhysics
             Activator = new IslandActivator();
             Bodies = new Bodies(bufferPool, Activator, Shapes, BroadPhase,
                 initialAllocationSizes.Bodies,
-                initialAllocationSizes.Islands, 
+                initialAllocationSizes.Islands,
                 initialAllocationSizes.ConstraintCountPerBodyEstimate);
             Statics = new Statics(bufferPool, Shapes, Bodies, BroadPhase, Activator, initialAllocationSizes.Statics);
-            
+
             Solver = new Solver(Bodies, BufferPool, 8,
                 initialCapacity: initialAllocationSizes.Constraints,
                 initialIslandCapacity: initialAllocationSizes.Islands,
@@ -103,7 +103,7 @@ namespace BepuPhysics
             return simulation;
         }
 
-      
+
         //     CONSTRAINTS
         //TODO: Push this into the Solver, like we did with Bodies and Statics.
 
@@ -189,7 +189,11 @@ namespace BepuPhysics
             ProfilerStart(PoseIntegrator);
             PoseIntegrator.Update(dt, BufferPool, threadDispatcher);
             ProfilerEnd(PoseIntegrator);
-            
+
+            NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
+            Solver.ValidateConstraintMaps();
+            Solver.ValidateExistingHandles();
+            Bodies.ValidateCollidables(Statics);
             //Note that the deactivator comes *after* velocity integration. That looks a little weird, but it's for a reason:
             //When the narrow phase activates a bunch of objects in a pile, their accumulated impulses will represent all forces acting on them at the time of deactivation.
             //That includes gravity. If we deactivate objects *before* gravity is applied in a given frame, then when those bodies are activated, the accumulated impulses
@@ -198,18 +202,38 @@ namespace BepuPhysics
             ProfilerStart(Deactivator);
             Deactivator.Update(threadDispatcher, Deterministic);
             ProfilerEnd(Deactivator);
-            
+
+            NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
+            Solver.ValidateConstraintMaps();
+            Solver.ValidateExistingHandles();
+            Bodies.ValidateCollidables(Statics);
+
             ProfilerStart(BroadPhase);
             BroadPhase.Update(threadDispatcher);
             ProfilerEnd(BroadPhase);
-            
+
+            BroadPhase.ActiveTree.Validate();
+            BroadPhase.StaticTree.Validate();
+
+            NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
+            Solver.ValidateConstraintMaps();
+            Solver.ValidateExistingHandles();
+            Bodies.ValidateCollidables(Statics);
+
             ProfilerStart(BroadPhaseOverlapFinder);
             BroadPhaseOverlapFinder.DispatchOverlaps(threadDispatcher);
             ProfilerEnd(BroadPhaseOverlapFinder);
-            
+
+
             ProfilerStart(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(NarrowPhase);
+
+
+            NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
+            Solver.ValidateConstraintMaps();
+            Solver.ValidateExistingHandles();
+            Bodies.ValidateCollidables(Statics);
 
             ProfilerStart(Solver);
             if (threadDispatcher == null)
