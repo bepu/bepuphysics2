@@ -25,10 +25,10 @@ namespace BepuPhysics.CollisionDetection
             struct PendingConstraint<TBodyHandles, TDescription, TContactImpulses> where TDescription : IConstraintDescription<TDescription>
             {
                 //Note the memory ordering. Body handles come first; deterministic flushes rely the memory layout to sort pending constraints.
-                public CollidablePair Pair;
                 public TBodyHandles BodyHandles;
                 public TDescription ConstraintDescription;
                 public TContactImpulses Impulses;
+                public CollidablePair Pair;
                 public PairCacheIndex ConstraintCacheIndex;
             }
 
@@ -53,13 +53,13 @@ namespace BepuPhysics.CollisionDetection
                 where TDescription : IConstraintDescription<TDescription>
             {
                 ref var cache = ref pendingConstraintsByType[manifoldConstraintType];
-                var index = cache.Allocate<PendingConstraint<TBodyHandles, TDescription, TContactImpulses>>(minimumConstraintCountPerCache, pool);
-                ref var pendingAdd = ref Unsafe.AsRef<PendingConstraint<TBodyHandles, TDescription, TContactImpulses>>(cache.Buffer.Memory + index);
-                pendingAdd.Pair = pair;
+                var byteIndex = cache.Allocate<PendingConstraint<TBodyHandles, TDescription, TContactImpulses>>(minimumConstraintCountPerCache, pool);
+                ref var pendingAdd = ref Unsafe.AsRef<PendingConstraint<TBodyHandles, TDescription, TContactImpulses>>(cache.Buffer.Memory + byteIndex);
                 pendingAdd.BodyHandles = bodyHandles;
                 pendingAdd.ConstraintDescription = constraintDescription;
-                pendingAdd.ConstraintCacheIndex = constraintCacheIndex;
                 pendingAdd.Impulses = impulses;
+                pendingAdd.Pair = pair;
+                pendingAdd.ConstraintCacheIndex = constraintCacheIndex;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -281,8 +281,7 @@ namespace BepuPhysics.CollisionDetection
                 ref var list = ref pendingConstraintsByType[typeIndex];
                 Debug.Assert(list.Buffer.Allocated, "The target region should be allocated, or else the job scheduler is broken.");
                 Debug.Assert(list.Count > 0);
-                var sizePerPendingConstraint = list.ByteCount / list.Count;
-                int byteIndex = start * sizePerPendingConstraint;
+                int byteIndex = start * list.ElementSizeInBytes;
                 //This follows the same convention as the GatherOldImpulses and ScatterNewImpulses of the PairCache.
                 //Constraints cover 16 possible cases:
                 //1-4 contacts: 0x3
@@ -294,7 +293,7 @@ namespace BepuPhysics.CollisionDetection
                 for (int i = start; i < end; ++i)
                 {
                     speculativeBatchIndicesForType[i] = (ushort)solver.FindCandidateBatch(0, ref *(int*)(list.Buffer.Memory + byteIndex), bodyCount);
-                    byteIndex += sizePerPendingConstraint;
+                    byteIndex += list.ElementSizeInBytes;
                 }
             }
 

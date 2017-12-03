@@ -393,9 +393,9 @@ namespace BepuPhysics.CollisionDetection
                 public ref T Allocate(BufferPool pool, out int index)
                 {
                     index = Ids.Take();
-                    if (Caches.Length < index)
+                    if (Caches.Length <= index)
                     {
-                        pool.SpecializeFor<T>().Resize(ref Caches, index, Caches.Length);
+                        pool.SpecializeFor<T>().Resize(ref Caches, index + 1, Caches.Length);
                     }
                     return ref Caches[index];
                 }

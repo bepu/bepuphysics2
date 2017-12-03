@@ -272,6 +272,7 @@ namespace BepuPhysics.CollisionDetection
 
         public unsafe void HandleOverlap(int workerIndex, CollidableReference a, CollidableReference b)
         {
+            Debug.Assert(a.Packed != b.Packed, "Excuse me, broad phase, but an object cannot collide with itself!");
             //In order to guarantee contact manifold and constraint consistency across multiple frames, we must guarantee that the order of collidables submitted 
             //is the same every time. Since the provided handles do not move for the lifespan of the collidable in the simulation, they can be used as an ordering.
             //Between two bodies, simply put the lower handle in slot A always.
@@ -333,6 +334,7 @@ namespace BepuPhysics.CollisionDetection
             ref CollidablePair pair, ref Collidable aCollidable, ref Collidable bCollidable,
             ref RigidPose poseA, ref RigidPose poseB, ref BodyVelocity velocityA, ref BodyVelocity velocityB)
         {
+            Debug.Assert(pair.A.Packed != pair.B.Packed);
             var shapeTypeA = aCollidable.Shape.Type;
             var shapeTypeB = bCollidable.Shape.Type;
             Shapes[shapeTypeA].GetShapeData(aCollidable.Shape.Index, out var shapePointerA, out var shapeSizeA);
