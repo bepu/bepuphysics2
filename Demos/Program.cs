@@ -36,7 +36,7 @@ namespace Demos
             //ConstraintCacheOptimizationTests.Test();
             //SortTest.Test();
             //SpanCodegenTests.Test();
-            IntertreeThreadingTests.Test();
+            //IntertreeThreadingTests.Test();
             //return;
 
             //Console.ReadKey();

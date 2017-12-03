@@ -154,6 +154,57 @@ namespace BepuPhysics
             Solver.Remove(constraintHandle);
         }
 
+        private int ValidateAndCountShapefulBodies(ref BodySet bodySet, Tree tree, ref Buffer<CollidableReference> leaves)
+        {
+            int shapefulBodyCount = 0;
+            for (int i = 0; i < bodySet.Count; ++i)
+            {
+                ref var collidable = ref bodySet.Collidables[i];
+                if (collidable.Shape.Exists)
+                {
+                    Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < tree.LeafCount);
+                    ref var leaf = ref leaves[collidable.BroadPhaseIndex];
+                    Debug.Assert(leaf.Handle == bodySet.IndexToHandle[i]);
+                    Debug.Assert(leaf.Mobility == CollidableMobility.Dynamic || leaf.Mobility == CollidableMobility.Kinematic);
+                    Debug.Assert((leaf.Mobility == CollidableMobility.Kinematic) == Bodies.ActiveSet.Activity[i].Kinematic);
+                    ++shapefulBodyCount;
+                }
+            }
+            return shapefulBodyCount;
+        }
+
+
+        [Conditional("DEBUG")]
+        internal void ValidateCollidables()
+        {
+            var activeShapefulBodyCount = ValidateAndCountShapefulBodies(ref Bodies.ActiveSet, BroadPhase.ActiveTree, ref BroadPhase.activeLeaves);
+            Debug.Assert(BroadPhase.ActiveTree.LeafCount == activeShapefulBodyCount);
+
+            int inactiveShapefulBodyCount = 0;
+
+            for (int setIndex = 1; setIndex < Bodies.Sets.Length; ++setIndex)
+            {
+                ref var set = ref Bodies.Sets[setIndex];
+                if (set.Allocated)
+                {
+                    inactiveShapefulBodyCount += ValidateAndCountShapefulBodies(ref set, BroadPhase.StaticTree, ref BroadPhase.staticLeaves);
+                }
+            }
+            Debug.Assert(inactiveShapefulBodyCount + Statics.Count == BroadPhase.StaticTree.LeafCount);
+            for (int i = 0; i < Statics.Count; ++i)
+            {
+                ref var collidable = ref Statics.Collidables[i];
+                Debug.Assert(collidable.Shape.Exists, "All static collidables must have shapes. That's their only purpose.");
+
+                Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < BroadPhase.StaticTree.LeafCount);
+                ref var leaf = ref BroadPhase.staticLeaves[collidable.BroadPhaseIndex];
+                Debug.Assert(leaf.Handle == Statics.IndexToHandle[i]);
+                Debug.Assert(leaf.Mobility == CollidableMobility.Static);
+            }
+
+
+        }
+
         //TODO: I wonder if people will abuse the dt-as-parameter to the point where we should make it a field instead, like it effectively was in v1.
         /// <summary>
         /// Performs one timestep of the given length.
@@ -193,7 +244,7 @@ namespace BepuPhysics
             NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
             Solver.ValidateConstraintMaps();
             Solver.ValidateExistingHandles();
-            Bodies.ValidateCollidables(Statics);
+            ValidateCollidables();
             //Note that the deactivator comes *after* velocity integration. That looks a little weird, but it's for a reason:
             //When the narrow phase activates a bunch of objects in a pile, their accumulated impulses will represent all forces acting on them at the time of deactivation.
             //That includes gravity. If we deactivate objects *before* gravity is applied in a given frame, then when those bodies are activated, the accumulated impulses
@@ -206,7 +257,7 @@ namespace BepuPhysics
             NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
             Solver.ValidateConstraintMaps();
             Solver.ValidateExistingHandles();
-            Bodies.ValidateCollidables(Statics);
+            ValidateCollidables();
 
             ProfilerStart(BroadPhase);
             BroadPhase.Update(threadDispatcher);
@@ -218,7 +269,7 @@ namespace BepuPhysics
             NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
             Solver.ValidateConstraintMaps();
             Solver.ValidateExistingHandles();
-            Bodies.ValidateCollidables(Statics);
+            ValidateCollidables();
 
             ProfilerStart(BroadPhaseOverlapFinder);
             BroadPhaseOverlapFinder.DispatchOverlaps(threadDispatcher);
@@ -233,7 +284,7 @@ namespace BepuPhysics
             NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
             Solver.ValidateConstraintMaps();
             Solver.ValidateExistingHandles();
-            Bodies.ValidateCollidables(Statics);
+            ValidateCollidables();
 
             ProfilerStart(Solver);
             if (threadDispatcher == null)
