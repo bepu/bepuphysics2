@@ -202,6 +202,15 @@ namespace BepuPhysics
                 Debug.Assert(leaf.Mobility == CollidableMobility.Static);
             }
 
+            //Ensure there are no duplicates between the two broad phase trees.
+            for (int i = 0; i < BroadPhase.ActiveTree.LeafCount; ++i)
+            {
+                var activeLeaf = BroadPhase.activeLeaves[i];
+                for (int j = 0; j < BroadPhase.StaticTree.LeafCount; ++j)
+                {
+                    Debug.Assert(BroadPhase.staticLeaves[j].Packed != activeLeaf.Packed);
+                }
+            }
 
         }
 
@@ -263,23 +272,20 @@ namespace BepuPhysics
             BroadPhase.Update(threadDispatcher);
             ProfilerEnd(BroadPhase);
 
-            BroadPhase.ActiveTree.Validate();
-            BroadPhase.StaticTree.Validate();
-
             NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
             Solver.ValidateConstraintMaps();
             Solver.ValidateExistingHandles();
             ValidateCollidables();
+            BroadPhase.ActiveTree.Validate();
+            BroadPhase.StaticTree.Validate();
 
             ProfilerStart(BroadPhaseOverlapFinder);
             BroadPhaseOverlapFinder.DispatchOverlaps(threadDispatcher);
             ProfilerEnd(BroadPhaseOverlapFinder);
 
-
             ProfilerStart(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(NarrowPhase);
-
 
             NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
             Solver.ValidateConstraintMaps();

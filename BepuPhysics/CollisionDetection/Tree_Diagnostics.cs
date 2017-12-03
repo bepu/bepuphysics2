@@ -103,9 +103,16 @@ namespace BepuPhysics.CollisionDetection
                     {
                         throw new Exception($"Bad leaf count on {nodeIndex} child {i}, it's a leaf but leafCount is {child.LeafCount}.");
                     }
+                    var leafIndex = Encode(child.Index);
+                    if (leafIndex < 0 || leafIndex >= leafCount)
+                        throw new Exception("Bad node-contained leaf index.");
+                    if (leaves[leafIndex].NodeIndex != nodeIndex || leaves[leafIndex].ChildIndex != i)
+                    {
+                        throw new Exception("Mismatch between node-held leaf pointer and leaf's pointers.");
+                    }
                 }
             }
-            
+
             if (expectedParentIndex >= 0 && //Not a root node,
                 (mergedMin != expectedMin || mergedMax != expectedMax))
             {

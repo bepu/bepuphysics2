@@ -110,14 +110,17 @@ namespace BepuPhysics.CollisionDetection
                     //This initialization/resize should occur extremely rarely.
                     selfHandlers = new SelfOverlapHandler[threadDispatcher.ThreadCount];
                     intertreeHandlers = new IntertreeOverlapHandler[threadDispatcher.ThreadCount];
-                    for (int i = 0; i < intertreeHandlers.Length; ++i)
-                    {
-                        selfHandlers[i] = new SelfOverlapHandler(broadPhase.activeLeaves, narrowPhase, i);
-                    }
-                    for (int i = 0; i < intertreeHandlers.Length; ++i)
-                    {
-                        intertreeHandlers[i] = new IntertreeOverlapHandler(broadPhase.activeLeaves, broadPhase.staticLeaves, narrowPhase, i);
-                    }
+                }
+                //Note that the overlap handlers are reinitialized regardless of whether the thread count changed.
+                //This is just a simple way to guarantee that the most recent broad phase buffers are used- caching the buffers outside of this execution
+                //would be invalid because they may get resized, invalidating the pointers.
+                for (int i = 0; i < selfHandlers.Length; ++i)
+                {
+                    selfHandlers[i] = new SelfOverlapHandler(broadPhase.activeLeaves, narrowPhase, i);
+                }
+                for (int i = 0; i < intertreeHandlers.Length; ++i)
+                {
+                    intertreeHandlers[i] = new IntertreeOverlapHandler(broadPhase.activeLeaves, broadPhase.staticLeaves, narrowPhase, i);
                 }
                 Debug.Assert(intertreeHandlers.Length >= threadDispatcher.ThreadCount);
                 selfTestContext.PrepareJobs(broadPhase.ActiveTree, selfHandlers, threadDispatcher.ThreadCount);
@@ -131,7 +134,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 var selfTestHandler = new SelfOverlapHandler(broadPhase.activeLeaves, narrowPhase, 0);
                 broadPhase.ActiveTree.GetSelfOverlaps(ref selfTestHandler);
-                var intertreeHandler =  new IntertreeOverlapHandler(broadPhase.activeLeaves, broadPhase.staticLeaves, narrowPhase, 0);
+                var intertreeHandler = new IntertreeOverlapHandler(broadPhase.activeLeaves, broadPhase.staticLeaves, narrowPhase, 0);
                 broadPhase.ActiveTree.GetOverlaps(broadPhase.StaticTree, ref intertreeHandler);
                 ref var worker = ref narrowPhase.overlapWorkers[0];
                 worker.Batcher.Flush(ref worker.ConstraintGenerators, ref worker.Filters);
