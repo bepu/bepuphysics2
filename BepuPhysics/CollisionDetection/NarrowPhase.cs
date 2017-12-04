@@ -292,16 +292,13 @@ namespace BepuPhysics.CollisionDetection
             ref var overlapWorker = ref overlapWorkers[workerIndex];
             var pair = new CollidablePair(a, b);
             ref var bodySet = ref Bodies.ActiveSet;
-            Console.WriteLine($"HandleOverlap outside mobility test of pair {pair}");
             if (aMobility != CollidableMobility.Static && bMobility != CollidableMobility.Static)
             {
                 //Both references are bodies.
                 //TODO: While we test deactivation without activation, we have to stop the narrowphase from trying to do anything with inactive bodies.
                 //This will later become a Wake request.
-                //Console.WriteLine($"-HandleOverlap of body pair {pair}");
                 if (Bodies.HandleToLocation[a.Handle].SetIndex != 0 || Bodies.HandleToLocation[b.Handle].SetIndex != 0)
                     return;
-                //Console.WriteLine($"-HandleOverlap of ACTIVE body pair {pair}");
                 Debug.Assert(Bodies.HandleToLocation[a.Handle].SetIndex == 0 && Bodies.HandleToLocation[b.Handle].SetIndex == 0, "This needs to be updated when deactivation is fully implemented.");
                 var bodyIndexA = Bodies.HandleToLocation[a.Handle].Index;
                 var bodyIndexB = Bodies.HandleToLocation[b.Handle].Index;

@@ -127,6 +127,7 @@ namespace BepuPhysics
             activity.MinimumTimestepsUnderThreshold = description.Activity.MinimumTimestepCountUnderThreshold;
             activity.TimestepsUnderThresholdCount = 0;
             activity.DeactivationCandidate = false;
+            activity.Kinematic = Bodies.IsKinematic(ref description.LocalInertia);
         }
 
         public void GetDescription(int index, out BodyDescription description)

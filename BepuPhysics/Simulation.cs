@@ -250,10 +250,6 @@ namespace BepuPhysics
             PoseIntegrator.Update(dt, BufferPool, threadDispatcher);
             ProfilerEnd(PoseIntegrator);
 
-            NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
-            Solver.ValidateConstraintMaps();
-            Solver.ValidateExistingHandles();
-            ValidateCollidables();
             //Note that the deactivator comes *after* velocity integration. That looks a little weird, but it's for a reason:
             //When the narrow phase activates a bunch of objects in a pile, their accumulated impulses will represent all forces acting on them at the time of deactivation.
             //That includes gravity. If we deactivate objects *before* gravity is applied in a given frame, then when those bodies are activated, the accumulated impulses
@@ -263,21 +259,9 @@ namespace BepuPhysics
             Deactivator.Update(threadDispatcher, Deterministic);
             ProfilerEnd(Deactivator);
 
-            NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
-            Solver.ValidateConstraintMaps();
-            Solver.ValidateExistingHandles();
-            ValidateCollidables();
-
             ProfilerStart(BroadPhase);
             BroadPhase.Update(threadDispatcher);
             ProfilerEnd(BroadPhase);
-
-            NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
-            Solver.ValidateConstraintMaps();
-            Solver.ValidateExistingHandles();
-            ValidateCollidables();
-            BroadPhase.ActiveTree.Validate();
-            BroadPhase.StaticTree.Validate();
 
             ProfilerStart(BroadPhaseOverlapFinder);
             BroadPhaseOverlapFinder.DispatchOverlaps(threadDispatcher);
@@ -286,11 +270,6 @@ namespace BepuPhysics
             ProfilerStart(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(NarrowPhase);
-
-            NarrowPhase.PairCache.ValidateConstraintHandleToPairMapping();
-            Solver.ValidateConstraintMaps();
-            Solver.ValidateExistingHandles();
-            ValidateCollidables();
 
             ProfilerStart(Solver);
             if (threadDispatcher == null)

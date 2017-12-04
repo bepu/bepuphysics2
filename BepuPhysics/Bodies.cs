@@ -273,10 +273,12 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void UpdateKinematicState(int handle, ref BodyLocation location, ref BodySet set)
+        void UpdateBroadPhaseKinematicState(int handle, ref BodyLocation location, ref BodySet set)
         {
+            Debug.Assert(set.Activity[location.Index].Kinematic == IsKinematic(ref set.LocalInertias[location.Index]), 
+                "Activity's kinematic state should be updated prior to the broad phase update call. This function simply shares its determination.");
             ref var collidable = ref set.Collidables[location.Index];
-            var kinematic = IsKinematic(ref set.LocalInertias[location.Index]);
+            var kinematic = set.Activity[location.Index].Kinematic;
             if (collidable.Shape.Exists)
             {
                 var mobility = kinematic ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
@@ -289,7 +291,6 @@ namespace BepuPhysics
                     broadPhase.staticLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
                 }
             }
-            set.Activity[location.Index].Kinematic = kinematic;
         }
 
         /// <summary>
@@ -312,7 +313,8 @@ namespace BepuPhysics
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
             set.LocalInertias[location.Index] = inertia;
-            UpdateKinematicState(handle, ref location, ref set);
+            set.Activity[location.Index].Kinematic = IsKinematic(ref inertia);
+            UpdateBroadPhaseKinematicState(handle, ref location, ref set);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -375,7 +377,7 @@ namespace BepuPhysics
             var oldShape = collidable.Shape;
             set.ApplyDescriptionByIndex(location.Index, ref description);
             UpdateForShapeChange(handle, location.Index, oldShape, description.Collidable.Shape);
-            UpdateKinematicState(handle, ref location, ref set);
+            UpdateBroadPhaseKinematicState(handle, ref location, ref set);
         }
 
         /// <summary>

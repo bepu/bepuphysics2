@@ -13,7 +13,7 @@ namespace Demos
     {
         static void Main(string[] args)
         {
-            ConstraintDescriptionMappingTests.Test();
+            //ConstraintDescriptionMappingTests.Test();
             //CollidablePairComparerTests.Test();
             //HeadlessDemo.Simple();
             //BatchedCollisionTests.Test();
