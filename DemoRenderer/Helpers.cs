@@ -6,6 +6,7 @@ using Buffer = SharpDX.Direct3D11.Buffer;
 using System.Runtime.CompilerServices;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using Quaternion = BepuUtilities.Quaternion;
 
 namespace DemoRenderer
 {
@@ -182,6 +183,36 @@ namespace DemoRenderer
             if (b > BScale)
                 b = BScale;
             return r | (g << 11) | (b << 22);
+        }
+
+        /// <summary>
+        /// Unpacks a 3 component color packed by the Helpers.PackColor function.
+        /// </summary>
+        /// <param name="packedColor">Packed representation of the color to unpack.</param>
+        /// <param name="color">Unpacked color.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void UnpackColor(uint packedColor, out Vector3 color)
+        {
+            //We don't support any form of alpha, so we dedicate 11 bits to R, 11 bits to G, and 10 bits to B.
+            //B is stored in most significant, R in least significant.
+            color.X = (packedColor & 0x7FF) / (float)((1 << 11) - 1);
+            color.Y = ((packedColor >> 11) & 0x7FF) / (float)((1 << 11) - 1);
+            color.Z = ((packedColor >> 22) & 0x3FF) / (float)((1 << 10) - 1);
+        }
+
+        /// <summary>
+        /// Weakly packs an orientation into a 3 component vector by ensuring the W component is positive and then dropping it. Remaining components are kept in full precision.
+        /// </summary>
+        /// <param name="source">Orientation to pack.</param>
+        /// <param name="packed">W-less packed orientation, with remaining components negated to guarantee that the reconstructed positive W component is valid.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void PackOrientation(ref Quaternion source, out Vector3 packed)
+        {
+            packed = new Vector3(source.X, source.Y, source.Z);
+            if (source.W < 0)
+            {
+                packed = -packed;
+            }
         }
 
         [Conditional("DEBUG")]

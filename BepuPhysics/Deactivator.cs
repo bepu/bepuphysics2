@@ -90,6 +90,8 @@ namespace BepuPhysics
                 //Note that we block traversals on a single thread from retreading old ground.
                 if (PreviouslyTraversedBodies.Contains(bodyIndex))
                     return false;
+                //Note that it is safe to add to the previously traversed body set. The current traversal's consideredBodies set is tested first.
+                //If it gets a hit, the predicate isn't executed, but the traversal doesn't stop.
                 PreviouslyTraversedBodies.AddUnsafely(bodyIndex);
                 return Bodies.ActiveSet.Activity[bodyIndex].DeactivationCandidate;
             }
@@ -543,6 +545,40 @@ namespace BepuPhysics
         {
             if (bodies.ActiveSet.Count == 0)
                 return;
+
+            //var totalHeuristic = 0f;
+            //var deactivationCandidateCount = 0;
+            //var totalEnergyOfNonCandidates = 0f;
+            //var totalEnergyOfCandidates = 0f;
+            //var highestEnergy = 0f;
+            //var highestEnergyIndex = -1;
+            //for (int i = 0; i < bodies.ActiveSet.Count; ++i)
+            //{
+            //    ref var velocities = ref bodies.ActiveSet.Velocities[i];
+            //    var heuristic = velocities.Linear.LengthSquared() + velocities.Angular.LengthSquared();
+            //    totalHeuristic += heuristic;
+            //    ref var activity = ref bodies.ActiveSet.Activity[i];
+            //    if (activity.DeactivationCandidate)
+            //    {
+            //        ++deactivationCandidateCount;
+            //        totalEnergyOfCandidates += heuristic;
+            //    }
+            //    else
+            //    {
+            //        totalEnergyOfNonCandidates += heuristic;
+            //    }
+            //    if (heuristic > highestEnergy)
+            //    {
+            //        highestEnergyIndex = i;
+            //        highestEnergy = heuristic;
+            //    }
+            //}
+            //Console.WriteLine(
+            //    $"TE: {totalHeuristic}, " +
+            //    $"CC: {deactivationCandidateCount}, " +
+            //    $"ACE: {totalEnergyOfCandidates / deactivationCandidateCount}, " +
+            //    $"ANCE: {totalEnergyOfNonCandidates / (bodies.ActiveSet.Count - deactivationCandidateCount)}" +
+            //    $"HE: {highestEnergy}, HEI: {highestEnergyIndex}");
 
             //There are four threaded phases to deactivation:
             //1) Traversing the constraint graph to identify 'simulation islands' that satisfy the deactivation conditions.

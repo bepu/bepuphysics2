@@ -3,6 +3,8 @@ vs
 ps
 [META]*/
 #include "WholeScreenTriangle.hlsl"
+#include "Common.hlsl"
+
 cbuffer Constants : register(b0)
 {
 	float4x4 NDCToOffset;
@@ -27,13 +29,11 @@ PSInput VSMain(uint vertexId : SV_VertexId)
 float3 PSMain(PSInput input) : SV_Target0
 {
 	float3 direction = normalize(input.Offset);
-	//We'll want to cache and reuse this direction and lighting values in the other object shaders once they have actual lighting. Just pull it into some common include.
-	float3 toSunDirection = normalize(float3(0.37, 0.93, 0.3));
-	float sunDot = dot(direction, toSunDirection);
+	float sunDot = dot(direction, ToSunDirection);
 	float sunContribution = sunDot * sunDot;
 	sunContribution = sunContribution * sunContribution;
 	sunContribution = sunContribution * sunContribution;
-	return 0.125 + 
-		saturate(direction.y) * float3(0.128, 0.283, .855) +
-		sunContribution * (sunDot >= 0 ? 0.5 : 0.2);
+	return BackgroundBase +
+		saturate(direction.y) * SkyColor +
+		SunColor * sunContribution * (sunDot >= 0 ? 0.5 : 0.2);
 }

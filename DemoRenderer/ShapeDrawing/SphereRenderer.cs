@@ -6,7 +6,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using Quaternion = BepuUtilities.Quaternion;
 
-namespace DemoRenderer.Shapes
+namespace DemoRenderer.ShapeDrawing
 {
     /// <summary>
     /// GPU-relevant information for the rendering of a single sphere instance.
@@ -15,7 +15,8 @@ namespace DemoRenderer.Shapes
     {
         public Vector3 Position;
         public float Radius;
-        public Quaternion Orientation;
+        public Vector3 PackedOrientation;
+        public uint PackedColor;
     }
 
     public class SphereRenderer : IDisposable
@@ -37,15 +38,19 @@ namespace DemoRenderer.Shapes
             public Vector3 CameraBackward;
         }
         ConstantsBuffer<VertexConstants> vertexConstants;
-        [StructLayout(LayoutKind.Explicit)]
+        [StructLayout(LayoutKind.Explicit, Size = 48)]
         struct PixelConstants
         {
             [FieldOffset(0)]
-            public Vector3 CameraForward;
-            [FieldOffset(16)]
+            public Vector3 CameraRight;
+            [FieldOffset(12)]
             public float NearClip;
-            [FieldOffset(20)]
+            [FieldOffset(16)]
+            public Vector3 CameraUp;
+            [FieldOffset(28)]
             public float FarClip;
+            [FieldOffset(32)]
+            public Vector3 CameraBackward;
         }
         ConstantsBuffer<PixelConstants> pixelConstants;
 
@@ -58,17 +63,17 @@ namespace DemoRenderer.Shapes
         public SphereRenderer(Device device, ShaderCache cache, int maximumInstancesPerDraw = 2048)
         {
             instances = new StructuredBuffer<SphereInstance>(device, maximumInstancesPerDraw, "Sphere Instances");
-            
+
             indices = new IndexBuffer(Helpers.GetBoxIndices(maximumInstancesPerDraw), device, "Sphere AABB Indices");
 
             vertexConstants = new ConstantsBuffer<VertexConstants>(device, debugName: "Sphere Renderer Vertex Constants");
             pixelConstants = new ConstantsBuffer<PixelConstants>(device, debugName: "Sphere Renderer Pixel Constants");
 
-            vertexShader = new VertexShader(device, cache.GetShader(@"Shapes\RenderSpheres.hlsl.vshader"));
-            pixelShader = new PixelShader(device, cache.GetShader(@"Shapes\RenderSpheres.hlsl.pshader"));
+            vertexShader = new VertexShader(device, cache.GetShader(@"ShapeDrawing\RenderSpheres.hlsl.vshader"));
+            pixelShader = new PixelShader(device, cache.GetShader(@"ShapeDrawing\RenderSpheres.hlsl.pshader"));
         }
 
-        public void Render(DeviceContext context, Camera camera, SphereInstance[] instances, int start, int count)
+        public void Render(DeviceContext context, Camera camera, Int2 screenResolution, SphereInstance[] instances, int start, int count)
         {
             var vertexConstantsData = new VertexConstants
             {
@@ -82,9 +87,11 @@ namespace DemoRenderer.Shapes
             vertexConstants.Update(context, ref vertexConstantsData);
             var pixelConstantsData = new PixelConstants
             {
-                CameraForward = camera.Forward,
+                CameraRight = camera.Right,
                 NearClip = camera.NearClip,
-                FarClip = camera.FarClip
+                CameraUp = camera.Up,
+                FarClip = camera.FarClip,
+                CameraBackward = camera.Backward
             };
             pixelConstants.Update(context, ref pixelConstantsData);
 
@@ -96,7 +103,7 @@ namespace DemoRenderer.Shapes
             context.VertexShader.SetConstantBuffer(0, vertexConstants.Buffer);
             context.VertexShader.SetShaderResource(0, this.instances.SRV);
             context.PixelShader.Set(pixelShader);
-            context.PixelShader.SetConstantBuffer(0, pixelConstants.Buffer);
+            context.PixelShader.SetConstantBuffer(1, pixelConstants.Buffer);
 
             while (count > 0)
             {

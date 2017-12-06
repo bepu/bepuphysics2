@@ -2,6 +2,7 @@
 vs
 ps
 [META]*/
+#include "Common.hlsl"
 cbuffer VertexConstants : register(b0)
 {
 	float4x4 Projection;
@@ -16,9 +17,10 @@ cbuffer VertexConstants : register(b0)
 
 struct SphereInstance
 {
-	nointerpolation float3 Position : SpherePosition;
-	nointerpolation float Radius : SphereRadius;
-	nointerpolation float4 Orientation : SphereOrientation;
+	nointerpolation float3 Position : Position;
+	nointerpolation float Radius : Radius;
+	nointerpolation float3 PackedOrientation : PackedOrientation;
+	nointerpolation uint PackedColor : PackedColor;
 };
 
 StructuredBuffer<SphereInstance> Instances : register(t0);
@@ -35,11 +37,10 @@ PSInput VSMain(uint vertexId : SV_VertexId)
 	//The vertex id is used to position each vertex. 
 	//Each AABB has 8 vertices; the position is based on the 3 least significant bits.
 	int instanceId = vertexId >> 3;
-	SphereInstance instance = Instances[instanceId];
 	PSInput output;
-	output.Sphere.Position = instance.Position - CameraPosition;
-	output.Sphere.Radius = instance.Radius;
-	output.Sphere.Orientation = instance.Orientation;
+	output.Sphere = Instances[instanceId];
+	//Note that we move the instance location into camera local translation.
+	output.Sphere.Position -= CameraPosition;
 
 	//Convert the vertex id to local AABB coordinates, and then into view space.
 	//Note that this id->coordinate transformation requires consistency with the index buffer
@@ -47,17 +48,15 @@ PSInput VSMain(uint vertexId : SV_VertexId)
 	//So vertexId&1 == 1 => +x, vertexId&2 == 2 => +y, and vertexId&4 == 4 => +z.
 	float3 aabbCoordinates = float3((vertexId & 1) << 1, vertexId & 2, (vertexId & 4) >> 1) - 1;
 
-	float3 offset = instance.Position - CameraPosition;
 	//Note that in view space, -z moves away along the camera's forward axis by convention.
-	float3 sphereViewPosition = float3(dot(CameraRight, offset), dot(CameraUp, offset), dot(CameraBackward, offset));
-
-	float3 vertexViewPosition = sphereViewPosition + instance.Radius * aabbCoordinates;
+	float3 sphereViewPosition = float3(dot(CameraRight, output.Sphere.Position), dot(CameraUp, output.Sphere.Position), dot(CameraBackward, output.Sphere.Position));
+	float3 vertexViewPosition = sphereViewPosition + output.Sphere.Radius * aabbCoordinates;
 	if (aabbCoordinates.z > 0)
 	{
 		//Clamp the near side of the AABB to the camera nearclip plane (unless the far side of the AABB passes the near plane).
 		//This keeps the raytraced sphere visible even during camera overlap.
 		//Note the consequences of -z being forward.
-		vertexViewPosition.z = max(min(-NearClip - 1e-5, vertexViewPosition.z), sphereViewPosition.z - instance.Radius);
+		vertexViewPosition.z = max(min(-NearClip - 1e-5, vertexViewPosition.z), sphereViewPosition.z - output.Sphere.Radius);
 	}
 	output.ToAABB = vertexViewPosition.x * CameraRight + vertexViewPosition.y * CameraUp + vertexViewPosition.z * CameraBackward;
 	output.Position = mul(float4(vertexViewPosition, 1), Projection);
@@ -70,12 +69,13 @@ struct PSOutput
 	float Depth : SV_DepthLessEqual;
 };
 
-cbuffer PixelConstants : register(b0)
+cbuffer PixelConstants : register(b1)
 {
-	float3 CameraForward;
-	float Padding;
+	float3 CameraRightPS;
 	float Near;
+	float3 CameraUpPS;
 	float Far;
+	float3 CameraBackwardPS;
 };
 
 
@@ -134,25 +134,6 @@ bool RayCastSphere(float3 rayDirection, float3 spherePosition, float radius,
 	}
 }
 
-float3 TransformByConjugate(float3 v, float4 rotation)
-{
-	float x2 = rotation.x + rotation.x;
-	float y2 = rotation.y + rotation.y;
-	float z2 = rotation.z + rotation.z;
-	float xx2 = rotation.x * x2;
-	float xy2 = rotation.x * y2;
-	float xz2 = rotation.x * z2;
-	float yy2 = rotation.y * y2;
-	float yz2 = rotation.y * z2;
-	float zz2 = rotation.z * z2;
-	float wx2 = rotation.w * -x2;
-	float wy2 = rotation.w * -y2;
-	float wz2 = rotation.w * -z2;
-	return float3(
-		v.x * (1.0 - yy2 - zz2) + v.y * (xy2 - wz2) + v.z * (xz2 + wy2),
-		v.x * (xy2 + wz2) + v.y * (1.0 - xx2 - zz2) + v.z * (yz2 - wx2),
-		v.x * (xz2 - wy2) + v.y * (yz2 + wx2) + v.z * (1.0 - xx2 - yy2));
-}
 
 PSOutput PSMain(PSInput input)
 {
@@ -161,8 +142,15 @@ PSOutput PSMain(PSInput input)
 	float3 hitLocation, hitNormal;
 	if (RayCastSphere(input.ToAABB, input.Sphere.Position, input.Sphere.Radius, t, hitLocation, hitNormal))
 	{
-		output.Color = normalize(abs(TransformByConjugate(hitNormal, input.Sphere.Orientation)));
-		output.Depth = GetProjectedDepth(-dot(CameraForward, hitLocation), -Near, -Far);
+		float3 baseColor = UnpackR11G11B10_UNorm(input.Sphere.PackedColor);
+		float z = -dot(CameraBackwardPS, hitLocation);
+		float4 orientation = UnpackOrientation(input.Sphere.PackedOrientation);
+
+		float3 color = ShadeSurface(
+			hitLocation, hitNormal, UnpackR11G11B10_UNorm(input.Sphere.PackedColor),
+			input.Sphere.Position, orientation, input.Sphere.Radius * 2, z);
+		output.Color = color;// baseColor * 0.9 + 0.1 * normalize(abs(TransformByConjugate(hitNormal, UnpackOrientation(input.Sphere.PackedOrientation))));
+		output.Depth = GetProjectedDepth(z, Near, Far);
 	}
 	else
 	{

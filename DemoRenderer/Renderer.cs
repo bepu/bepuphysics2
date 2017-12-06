@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using DemoRenderer.Shapes;
+using DemoRenderer.ShapeDrawing;
 using BepuPhysics;
 using DemoRenderer.Constraints;
 
@@ -200,7 +200,7 @@ namespace DemoRenderer
             context.OutputMerger.SetBlendState(opaqueBlendState);
             context.OutputMerger.SetDepthStencilState(opaqueDepthState);
 
-            SphereRenderer.Render(context, camera, Shapes.spheres.Span.Memory, 0, Shapes.spheres.Count);
+            SphereRenderer.Render(context, camera, Surface.Resolution, Shapes.spheres.Span.Memory, 0, Shapes.spheres.Count);
             LineRenderer.Render(context, camera, Surface.Resolution, Lines.lines.Span.Memory, 0, Lines.lines.Count);
 
             Background.Render(context, camera);

@@ -29,10 +29,10 @@ namespace Demos
 
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 32;
-            const int height = 32;
-            const int length = 32;
-            var latticeSpacing = 1.1f;
+            const int width = 5;
+            const int height = 5;
+            const int length = 5;
+            var latticeSpacing = 5.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
                 new RegularGridBuilder(new Vector3(latticeSpacing, 1.0f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
