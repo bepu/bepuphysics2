@@ -18,7 +18,7 @@ cbuffer VertexConstants : register(b0)
 struct LineInstance
 {
 	float3 Start;
-	float Padding;
+	uint PackedBackgroundColor;
 	float3 End;
 	uint PackedColor;
 };
@@ -32,7 +32,8 @@ struct PSInput
 	nointerpolation float3 Start : LineStart;
 	nointerpolation float3 Direction : LineDirection;
 	nointerpolation float Length : LineLength;
-	nointerpolation float3 Color : ScreenLineColor;
+	nointerpolation float3 Color : ScreenLineColor0;
+	nointerpolation float3 BackgroundColor : ScreenLineColor1;
 	float PixelSize : WorldPixelSize;
 };
 #define InnerRadius 0.5
@@ -53,6 +54,7 @@ PSInput VSMain(uint vertexId : SV_VertexId)
 	output.Direction = worldLine;
 	output.Length = worldLineLength;
 	output.Color = UnpackR11G11B10_UNorm(instance.PackedColor);
+	output.BackgroundColor = UnpackR11G11B10_UNorm(instance.PackedBackgroundColor);
 	//How wide is a pixel at this vertex, approximately?
 	//Convert the vertex id to local box coordinates.
 	//Note that this id->coordinate transformation requires consistency with the index buffer
@@ -130,15 +132,13 @@ PSOutput PSMain(PSInput input)
 	float lineScreenDistance = lineDistance / input.PixelSize;
 
 	float innerDistance = lineScreenDistance - InnerRadius;
-	float outerDistance = lineScreenDistance - OuterRadius;
 	//This distance is measured in screen pixels. Treat every pixel as having a set radius.
 	//If the line's distance is beyond the sample radius, then there is zero coverage.
 	//If the distance is 0, then the sample is half covered.
 	//If the distance is less than -sampleRadius, then it's fully covered.
 	float innerColorScale = saturate(0.5 - innerDistance / (SampleRadius * 2));
-	float outerColorScale = saturate(0.5 - outerDistance / (SampleRadius * 2));
 	//TODO: For now, don't bother using a falloff on the outer radius.
-	output.Color = input.Color * innerColorScale + 1 - innerColorScale;
+	output.Color = input.Color * innerColorScale + input.BackgroundColor * (1 - innerColorScale);
 	//output.Color = 0;
 	return output;
 }

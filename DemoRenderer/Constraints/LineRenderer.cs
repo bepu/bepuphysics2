@@ -3,6 +3,7 @@ using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace DemoRenderer.Constraints
@@ -15,16 +16,28 @@ namespace DemoRenderer.Constraints
     {
         [FieldOffset(0)]
         public Vector3 Start;
+        [FieldOffset(12)]
+        public uint PackedBackgroundColor;
         [FieldOffset(16)]
         public Vector3 End;
         [FieldOffset(28)]
         public uint PackedColor;
 
-        public LineInstance(ref Vector3 start, ref Vector3 end, ref Vector3 color)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public LineInstance(ref Vector3 start, ref Vector3 end, ref Vector3 color, ref Vector3 backgroundColor)
         {
             Start = start;
+            PackedBackgroundColor = Helpers.PackColor(ref backgroundColor);
             End = end;
             PackedColor = Helpers.PackColor(ref color);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public LineInstance(ref Vector3 start, ref Vector3 end, uint packedColor, uint packedBackgroundColor)
+        {
+            Start = start;
+            PackedBackgroundColor = packedBackgroundColor;
+            End = end;
+            PackedColor = packedColor;
         }
     }
 

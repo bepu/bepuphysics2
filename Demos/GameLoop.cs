@@ -29,7 +29,7 @@ namespace Demos
 #endif
             Surface = new RenderSurface(window.Handle, window.Resolution, enableDeviceDebugLayer: useDebugLayer);
             Renderer = new Renderer(Surface);
-            Camera = new Camera(window.Resolution.X / (float)window.Resolution.Y, (float)Math.PI / 2, 0.01f, 100000);            
+            Camera = new Camera(window.Resolution.X / (float)window.Resolution.Y, (float)Math.PI / 3, 0.01f, 100000);            
         }
 
         void Update(float dt)

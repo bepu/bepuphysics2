@@ -38,7 +38,16 @@ namespace DemoRenderer.Constraints
             var end = job.LeafStart + job.LeafCount;
             var lineCount = 12 * job.LeafCount;
             var masterStart = Interlocked.Add(ref masterLinesCount, lineCount) - lineCount;
-            var color = job.CoversActiveCollidables ? new Vector3(0, 1, 0) : new Vector3(0, 0.5f, 0.5f);
+            var color = new Vector3(0, 1, 0);
+            var backgroundColor = new Vector3(0, 0, 0);
+            if (!job.CoversActiveCollidables)
+            {
+                var inactiveTint = new Vector3(0.3f, 0.3f, 0.7f);
+                color *= inactiveTint;
+                backgroundColor *= inactiveTint;
+            }
+            var packedColor = Helpers.PackColor(ref color);
+            var packedBackgroundColor = Helpers.PackColor(ref backgroundColor);
             for (int i = 0; i < job.LeafCount; ++i)
             {
                 var broadPhaseIndex = job.LeafStart + i;
@@ -57,18 +66,18 @@ namespace DemoRenderer.Constraints
                 var v101 = new Vector3(max->X, min->Y, max->Z);
                 var v110 = new Vector3(max->X, max->Y, min->Z);
                 var outputStartIndex = masterStart + i * 12;
-                masterLinesSpan[outputStartIndex + 0] = new LineInstance(ref *min, ref v001, ref color);
-                masterLinesSpan[outputStartIndex + 1] = new LineInstance(ref *min, ref v010, ref color);
-                masterLinesSpan[outputStartIndex + 2] = new LineInstance(ref *min, ref v100, ref color);
-                masterLinesSpan[outputStartIndex + 3] = new LineInstance(ref v001, ref v011, ref color);
-                masterLinesSpan[outputStartIndex + 4] = new LineInstance(ref v001, ref v101, ref color);
-                masterLinesSpan[outputStartIndex + 5] = new LineInstance(ref v010, ref v011, ref color);
-                masterLinesSpan[outputStartIndex + 6] = new LineInstance(ref v010, ref v110, ref color);
-                masterLinesSpan[outputStartIndex + 7] = new LineInstance(ref v011, ref *max, ref color);
-                masterLinesSpan[outputStartIndex + 8] = new LineInstance(ref v100, ref v101, ref color);
-                masterLinesSpan[outputStartIndex + 9] = new LineInstance(ref v100, ref v110, ref color);
-                masterLinesSpan[outputStartIndex + 10] = new LineInstance(ref v101, ref *max, ref color);
-                masterLinesSpan[outputStartIndex + 11] = new LineInstance(ref v110, ref *max, ref color);
+                masterLinesSpan[outputStartIndex + 0] = new LineInstance(ref *min, ref v001, packedColor, packedBackgroundColor);
+                masterLinesSpan[outputStartIndex + 1] = new LineInstance(ref *min, ref v010, packedColor, packedBackgroundColor);
+                masterLinesSpan[outputStartIndex + 2] = new LineInstance(ref *min, ref v100, packedColor, packedBackgroundColor);
+                masterLinesSpan[outputStartIndex + 3] = new LineInstance(ref v001, ref v011, packedColor, packedBackgroundColor);
+                masterLinesSpan[outputStartIndex + 4] = new LineInstance(ref v001, ref v101, packedColor, packedBackgroundColor);
+                masterLinesSpan[outputStartIndex + 5] = new LineInstance(ref v010, ref v011, packedColor, packedBackgroundColor);
+                masterLinesSpan[outputStartIndex + 6] = new LineInstance(ref v010, ref v110, packedColor, packedBackgroundColor);
+                masterLinesSpan[outputStartIndex + 7] = new LineInstance(ref v011, ref *max, packedColor, packedBackgroundColor);
+                masterLinesSpan[outputStartIndex + 8] = new LineInstance(ref v100, ref v101, packedColor, packedBackgroundColor);
+                masterLinesSpan[outputStartIndex + 9] = new LineInstance(ref v100, ref v110, packedColor, packedBackgroundColor);
+                masterLinesSpan[outputStartIndex + 10] = new LineInstance(ref v101, ref *max, packedColor, packedBackgroundColor);
+                masterLinesSpan[outputStartIndex + 11] = new LineInstance(ref v110, ref *max, packedColor, packedBackgroundColor);
             }
         }
 

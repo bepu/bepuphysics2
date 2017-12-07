@@ -460,7 +460,7 @@ namespace BepuPhysics
         //But for the most part, we don't want to pay the overhead of an abstract invocation within the inner loop of the solver. 
         //Given the current limits of C# and the compiler, the best option seems to be a interface implementing struct that provides this functionality.
         //The users would be type specialized by the compiler, avoiding virtual invocation. 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] //Note that this doesn't do anything at the moment- the stackalloc hack blocks inlining.
+        [MethodImpl(MethodImplOptions.NoOptimization)] //Note that this doesn't do anything at the moment- the stackalloc hack blocks inlining.
         internal void GatherInertiaAndPose(ref TwoBodyReferences references, int count,
             out Vector3Wide localPositionB, out QuaternionWide orientationA, out QuaternionWide orientationB,
             out BodyInertias inertiaA, out BodyInertias inertiaB)
