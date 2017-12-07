@@ -1,4 +1,5 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics;
+using BepuUtilities;
 using DemoContentLoader;
 using DemoRenderer.UI;
 using Demos.Properties;

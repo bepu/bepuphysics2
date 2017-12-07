@@ -82,9 +82,9 @@ float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float
 	float largeOuterLineWidth = .1;
 	float largeInnerLineWidth = largeOuterLineWidth * 0.35;
 
-	float smallLineWidth = distance * 0.005;
-	float mediumLineWidth = distance * 0.007;
-	float largeLineWidth = distance * 0.009;
+	float smallLineWidth = distance * 0.0025;
+	float mediumLineWidth = distance * 0.0035;
+	float largeLineWidth = distance * 0.0045;
 	float innerLineWidthScale = 0.35;
 
 	const float3 smallLineColor = 0.15;

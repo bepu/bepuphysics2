@@ -460,7 +460,7 @@ namespace BepuPhysics
         //But for the most part, we don't want to pay the overhead of an abstract invocation within the inner loop of the solver. 
         //Given the current limits of C# and the compiler, the best option seems to be a interface implementing struct that provides this functionality.
         //The users would be type specialized by the compiler, avoiding virtual invocation. 
-        [MethodImpl(MethodImplOptions.NoOptimization)] //Note that this doesn't do anything at the moment- the stackalloc hack blocks inlining.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] //Note that this doesn't do anything at the moment- the stackalloc hack blocks inlining.
         internal void GatherInertiaAndPose(ref TwoBodyReferences references, int count,
             out Vector3Wide localPositionB, out QuaternionWide orientationA, out QuaternionWide orientationB,
             out BodyInertias inertiaA, out BodyInertias inertiaB)
@@ -475,7 +475,7 @@ namespace BepuPhysics
                 //The inclusion of this hack convinces the JIT to store the gathered values into stack memory rather than aggressively enregistering it.
                 //(Why? I didn't bother checking too closely. Maybe the JIT's more aggressive about looking for type punning in the presence of certain kinds of unsafe code.)
                 //TODO: remove this once the fix is in. It blocks inlining.
-                var hiPleaseDontRemoveThisWithoutTestingOrEverythingMightExplode = stackalloc byte[0];
+                var hiPleaseDontRemoveThisWithoutTestingOrEverythingMightExplode = stackalloc byte[1];
             }
             ref var targetInertiaBaseA = ref Unsafe.As<Vector<float>, float>(ref inertiaA.InverseInertiaTensor.M11);
             ref var targetInertiaBaseB = ref Unsafe.As<Vector<float>, float>(ref inertiaB.InverseInertiaTensor.M11);
