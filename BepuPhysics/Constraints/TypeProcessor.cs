@@ -88,6 +88,9 @@ namespace BepuPhysics.Constraints
             int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetBatchIndex, int targetTypeBatchIndex,
             int sourceStart, int targetStart, int count, Bodies bodies, Solver solver);
 
+
+        internal unsafe abstract void AddInactiveBodyHandlesToBatchReferences(ref TypeBatch typeBatch, ref IndexSet targetBatchReferencedHandles);
+
         [Conditional("DEBUG")]
         internal abstract void VerifySortRegion(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices);
         internal abstract int GetBodyReferenceCount(ref TypeBatch typeBatch, int body);
@@ -115,6 +118,7 @@ namespace BepuPhysics.Constraints
         {
             SolveIteration(ref typeBatch, ref bodyVelocities, 0, typeBatch.BundleCount);
         }
+
     }
 
     /// <summary>
@@ -609,11 +613,31 @@ namespace BepuPhysics.Constraints
                 location.BatchIndex = targetBatchIndex;
                 Debug.Assert(sourceTypeBatch.TypeId == location.TypeId);
                 location.IndexInTypeBatch = targetIndex;
-                //This could be done with a bulk copy, but eh!
+                //This could be done with a bulk copy, but eh! We already touched the memory.
                 targetTypeBatch.IndexToHandle[targetIndex] = constraintHandle;
             }
         }
 
+
+        internal unsafe sealed override void AddInactiveBodyHandlesToBatchReferences(ref TypeBatch typeBatch, ref IndexSet targetBatchReferencedHandles)
+        {
+            for (int i = 0; i < typeBatch.ConstraintCount; ++i)
+            {
+                BundleIndexing.GetBundleIndices(i, out var sourceBundle, out var sourceInner);
+                ref var sourceHandlesStart = ref Unsafe.Add(ref Unsafe.As<TBodyReferences, int>(ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, sourceBundle)), sourceInner);
+                var offset = 0;
+                for (int j = 0; j < bodiesPerConstraint; ++j)
+                {
+                    var bodyHandle = Unsafe.Add(ref sourceHandlesStart, offset);
+                    Debug.Assert(!targetBatchReferencedHandles.Contains(bodyHandle),
+                        "It should be impossible for a batch in the active set to already contain a reference to a body that is being activated.");
+                    //Given that we're only adding references to bodies that already exist, and therefore were at some point in the active set, it should never be necessary
+                    //to resize the batch referenced handles structure.
+                    targetBatchReferencedHandles.AddUnsafely(bodyHandle);
+                    offset += Vector<int>.Count;
+                }
+            }
+        }
 
         internal override int GetBodyReferenceCount(ref TypeBatch typeBatch, int bodyToFind)
         {

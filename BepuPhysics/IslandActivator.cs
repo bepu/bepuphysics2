@@ -156,12 +156,15 @@ namespace BepuPhysics
         struct PhaseOneJob
         {
             public JobType Type;
+            public int BatchIndex; //Only used by batch reference update jobs.
+            //Only used by body region copy.
+            public int SourceSet;
             public int SourceStart;
             public int TargetStart;
             public int Count;
-            public int SourceSet;
+            //could union these, but it's preeeetty pointless.
         }
-        struct ConstraintCopyJob
+        struct PhaseTwoJob
         {
             public int SourceStart;
             public int TargetStart;
@@ -174,8 +177,9 @@ namespace BepuPhysics
             public int TargetTypeBatch;
         }
 
+        QuickList<int, Buffer<int>> uniqueSetIndices;
         QuickList<PhaseOneJob, Buffer<PhaseOneJob>> phaseOneJobs;
-        QuickList<ConstraintCopyJob, Buffer<ConstraintCopyJob>> phaseTwoJobs;
+        QuickList<PhaseTwoJob, Buffer<PhaseTwoJob>> phaseTwoJobs;
         internal void ExecutePhaseOneJob(int index)
         {
             ref var job = ref phaseOneJobs[index];
@@ -195,6 +199,23 @@ namespace BepuPhysics
                         //The speculative search will then try to find a batch for that constraint, and it may end up erroneously
                         //finding a batch slot that gets blocked by this activation procedure. 
                         //But the speculative process is *speculative*; it is fine for it to be wrong, so long as it isn't wrong in a way that makes it choose a higher batch index.
+
+                        //Note that this is parallel over different batches, regardless of which source set they're from.
+                        ref var targetBatchReferencedHandles = ref solver.batchReferencedHandles[job.BatchIndex];
+                        for (int i = 0; i < uniqueSetIndices.Count; ++i)
+                        {
+                            var setIndex = uniqueSetIndices[i];
+                            ref var sourceSet = ref solver.Sets[setIndex];
+                            if (sourceSet.Batches.Count > job.BatchIndex)
+                            {
+                                ref var batch = ref sourceSet.Batches[job.BatchIndex];
+                                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                                {
+                                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                                    solver.TypeProcessors[typeBatch.TypeId].AddInactiveBodyHandlesToBatchReferences(ref typeBatch, ref targetBatchReferencedHandles);
+                                }
+                            }
+                        }
                     }
                     break;
                 case JobType.CopyBodyRegion:
@@ -268,6 +289,7 @@ namespace BepuPhysics
         internal (int phaseOneJobCount, int phaseTwoJobCount) PrepareJobs(ref QuickList<int, Buffer<int>> setIndices, int threadCount)
         {
             ValidateUniqueSets(ref setIndices);
+            this.uniqueSetIndices = setIndices;
             return (0, 0);
         }
 
@@ -282,6 +304,7 @@ namespace BepuPhysics
                 bodySet.DisposeBuffers(pool);
                 constraintSet.Dispose(pool);
                 pairCacheSet.Dispose(pool);
+                this.uniqueSetIndices = new QuickList<int, Buffer<int>>();
             }
         }
 
