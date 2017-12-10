@@ -169,6 +169,7 @@ namespace BepuPhysics.CollisionDetection
 
         }
 
+
         internal void EnsureConstraintToPairMappingCapacity(Solver solver, int targetCapacity)
         {
             targetCapacity = Math.Max(solver.HandlePool.HighestPossiblyClaimedId + 1, targetCapacity);
@@ -391,8 +392,8 @@ namespace BepuPhysics.CollisionDetection
             //This codepath is used when an existing constraint can be updated without any need for an add/remove.
             //CompleteConstraintAdd updates the handle->pair mapping, but since there is no add for this pair, we have to update the mapping for the new constraint cache location immediately.
             //Note that the CollidablePair data doesn't need to be changed- for this codepath to be used, the pair and handle are unchanged.
-            ConstraintHandleToPair[constraintHandle].ConstraintCache = pointers.ConstraintCache;
-
+            ref var mapping = ref ConstraintHandleToPair[constraintHandle];
+            mapping.ConstraintCache = pointers.ConstraintCache;
         }
 
 
@@ -419,6 +420,7 @@ namespace BepuPhysics.CollisionDetection
         {
             public CollidablePair Pair;
             public PairCacheIndex ConstraintCache;
+            public PairCacheIndex CollisionCache;
         }
 
         /// <summary>
@@ -468,37 +470,6 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-
-        private unsafe void CopyToCache(int setIndex, ref Buffer<UntypedList> sourceCaches, ref Buffer<UntypedList> targetCaches, ref PairCacheIndex location)
-        {
-            var type = location.Type;
-            ref var source = ref sourceCaches[type];
-            //TODO: Last second allocations here again. A prepass would help determine a minimal size without doing a bunch of resizes.
-            if (type >= targetCaches.Length)
-            {
-                var oldCapacity = targetCaches.Length;
-                pool.SpecializeFor<UntypedList>().Resize(ref targetCaches, type + 1, targetCaches.Length);
-                targetCaches.Clear(oldCapacity, targetCaches.Length - oldCapacity);
-            }
-            ref var target = ref targetCaches[type];
-
-            //TODO: This is a pretty poor estimate, but produces minimal allocations. Given that many islands really do just involve
-            //a single body, this isn't quite as absurd as it looks. However, you may want to consider walking the handles ahead of time to preallocate exactly enough space.
-            var targetByteIndex = target.Allocate(source.ElementSizeInBytes, 1, pool);
-            var sourceAddress = source.Buffer.Memory + location.Index;
-            var targetAddress = target.Buffer.Memory + targetByteIndex;
-            //TODO: These small copies are potentially a poor use case for cpblk, may want to examine.
-            Unsafe.CopyBlockUnaligned(targetAddress, sourceAddress, (uint)source.ElementSizeInBytes);
-            //The inactive set now contains both caches. Point the handle mapping at it.
-            //Note the special encoding for inactive set entries. This doesn't affect the performance of active caches; they don't have to consider the activity state.
-            //This is strictly for the benefit of the handle->cache lookup table. Further, note that *this is not actually required by the engine*.
-            //Nowhere do we use the handle->cache lookup during normal execution. Since the handle->cache table allocation exists regardless, we take advantage of it to theoretically allow
-            //a lookup of any extant collision detection information associated with a constraint. In other words, you can go:
-            //body handle->constraint lists->constraint handle->pair caches lookup->collision/constraint caches.
-            //Whoever is using this feature would need to have type knowledge of some sort to extract the information, but it costs us nothing to stick the information in there.
-            //If we end up not wanting to support this, all you have to do is remove this line. You don't even have to clear the slot.
-            location = PairCacheIndex.CreateInactiveReference(setIndex, type, targetByteIndex);
-        }
         [Conditional("DEBUG")]
         internal unsafe void ValidateConstraintHandleToPairMapping()
         {
@@ -545,6 +516,38 @@ namespace BepuPhysics.CollisionDetection
             Debug.Assert(count == expectedCount, "Expected count for this handle not found!");
         }
 
+        private unsafe void CopyToInactiveCache(int setIndex, ref Buffer<UntypedList> sourceCaches, ref Buffer<UntypedList> targetCaches, ref PairCacheIndex location)
+        {
+            var type = location.Type;
+            ref var source = ref sourceCaches[type];
+            //TODO: Last second allocations here again. A prepass would help determine a minimal size without doing a bunch of resizes.
+            if (type >= targetCaches.Length)
+            {
+                var oldCapacity = targetCaches.Length;
+                pool.SpecializeFor<UntypedList>().Resize(ref targetCaches, type + 1, targetCaches.Length);
+                targetCaches.Clear(oldCapacity, targetCaches.Length - oldCapacity);
+            }
+            ref var target = ref targetCaches[type];
+
+            //TODO: This is a pretty poor estimate, but produces minimal allocations. Given that many islands really do just involve
+            //a single body, this isn't quite as absurd as it looks. However, you may want to consider walking the handles ahead of time to preallocate exactly enough space.
+            var targetByteIndex = target.Allocate(source.ElementSizeInBytes, 1, pool);
+            var sourceAddress = source.Buffer.Memory + location.Index;
+            var targetAddress = target.Buffer.Memory + targetByteIndex;
+            //TODO: These small copies are potentially a poor use case for cpblk, may want to examine.
+            Unsafe.CopyBlockUnaligned(targetAddress, sourceAddress, (uint)source.ElementSizeInBytes);
+            //The inactive set now contains both caches. Point the handle mapping at it.
+            //Note the special encoding for inactive set entries. This doesn't affect the performance of active caches; they don't have to consider the activity state.
+            //This is strictly for the benefit of the handle->cache lookup table. Further, note that *this is not actually required by the engine*.
+            //Nowhere do we use the handle->cache lookup during normal execution. Since the handle->cache table allocation exists regardless, we take advantage of it to theoretically allow
+            //a lookup of any extant collision detection information associated with a constraint. In other words, you can go:
+            //body handle->constraint lists->constraint handle->pair caches lookup->collision/constraint caches.
+            //Whoever is using this feature would need to have type knowledge of some sort to extract the information, but it costs us nothing to stick the information in there.
+            //If we end up not wanting to support this, all you have to do is remove this line. You don't even have to clear the slot.
+            //(Note that we DO require that the handle mapping contains a valid pair. Activation relies on the handle mapping stored pair.)
+            location = PairCacheIndex.CreateInactiveReference(setIndex, type, targetByteIndex);
+        }
+
         internal unsafe void DeactivateTypeBatchPairs(int setIndex, Solver solver)
         {
             ref var constraintSet = ref solver.Sets[setIndex];
@@ -566,15 +569,67 @@ namespace BepuPhysics.CollisionDetection
                             //At the moment, we do *not* include the collision cache pointer in the handle mapping. The engine never needs it, and it cuts the size of the 
                             //mapping buffer from 24 bytes per entry to 16. We leave this here as an example of what would be needed should looking up a collision cache
                             //from constraint handle become useful. You would also need to update the PairCache.UpdateForExistingConstraint and PairCache.CompleteConstraintAdd.
-                            //if (pairLocation.CollisionCache.Exists)
-                            //    CopyToCache(setIndex, ref workerCaches[pairLocation.CollisionCache.Cache].collisionCaches, ref pairSet.collisionCaches, ref pairLocation.CollisionCache);
+                            if (pairLocation.CollisionCache.Exists)
+                                CopyToInactiveCache(setIndex, ref workerCaches[pairLocation.CollisionCache.Cache].collisionCaches, ref pairSet.collisionCaches, ref pairLocation.CollisionCache);
                             if (pairLocation.ConstraintCache.Exists)
-                                CopyToCache(setIndex, ref workerCaches[pairLocation.ConstraintCache.Cache].constraintCaches, ref pairSet.constraintCaches, ref pairLocation.ConstraintCache);
+                                CopyToInactiveCache(setIndex, ref workerCaches[pairLocation.ConstraintCache.Cache].constraintCaches, ref pairSet.constraintCaches, ref pairLocation.ConstraintCache);
                             //Now that any existing cache data has been moved into the inactive set, we should remove the overlap from the overlap mapping.
                             Mapping.FastRemove(ref pairLocation.Pair);
                         }
                     }
                 }
+            }
+        }
+
+        internal ref WorkerPairCache GetCacheForActivation()
+        {
+            //Note that the target location for the set depends on whether the activation is being executed from within the context of the narrow phase.
+            //Either way, we need to put the data into the most recently updated cache. If this is happening inside the narrow phase, that is the NextWorkerCaches,
+            //because we haven't yet flipped the buffers. If it's outside of the narrow phase, then it's the current workerCaches. 
+            //We can distinguish between the two by checking whether the NextWorkerCaches are allocated. They don't exist outside of the narrowphase's execution.
+
+            //Also note that we only deal with one worker cache. Activation just dumps new collision caches into the first thread. This works out since
+            //the actual pair cache modification is locally sequential right now.
+            if (NextWorkerCaches[0].collisionCaches.Allocated)
+                return ref NextWorkerCaches[0];
+            return ref workerCaches[0];
+        }
+
+        unsafe void CopyCachesForActivation(ref Buffer<UntypedList> source, ref Buffer<UntypedList> target)
+        {
+            for (int i = 0; i < source.Length; ++i)
+            {
+                ref var sourceCache = ref source[i];
+                if (sourceCache.Buffer.Allocated)
+                {
+                    ref var targetCache = ref target[i];
+                    Debug.Assert(targetCache.Buffer.Length >= targetCache.ByteCount + sourceCache.ByteCount,
+                        "The capacity of relevant active set caches should have already been ensured.");
+                    Debug.Assert(sourceCache.ElementSizeInBytes == targetCache.ElementSizeInBytes);
+                    Unsafe.CopyBlockUnaligned(targetCache.Buffer.Memory + targetCache.ByteCount, sourceCache.Buffer.Memory, (uint)sourceCache.ByteCount);
+                    targetCache.ByteCount += sourceCache.ByteCount;
+                    targetCache.Count += sourceCache.ByteCount;
+                }
+            }
+        }
+
+        internal void ActivateSet(int setIndex)
+        {
+            ref var inactiveSet = ref InactiveSets[setIndex];
+            Debug.Assert(inactiveSet.Allocated);
+            ref var activeSet = ref GetCacheForActivation();
+            for (int i = 0; i < inactiveSet.constraintCaches.Length; ++i)
+            {
+                ref var cache = ref inactiveSet.constraintCaches[i];
+                if (cache.Buffer.Allocated)
+                {
+                    ref var activeCache = ref activeSet.constraintCaches[i];
+                    Debug.Assert(activeSet.collisionCaches[i])
+                }
+            }
+            for (int i = 0; i < inactiveSet.collisionCaches.Length; ++i)
+            {
+
             }
         }
 
@@ -831,8 +886,8 @@ namespace BepuPhysics.CollisionDetection
             //This mapping entry had to be deferred until now because no constraint handle was known until now. Now that we have it,
             //we can fill in the pointers back to the overlap mapping and constraint cache.
             ref var pairReference = ref ConstraintHandleToPair[constraintHandle];
-            pairReference.ConstraintCache = constraintCacheIndex;
             pairReference.Pair = pair;
+            pairReference.ConstraintCache = constraintCacheIndex;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

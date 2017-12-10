@@ -35,7 +35,7 @@ namespace BepuPhysics.CollisionDetection
         public int Cache
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (int)(packed >> 48) & 0x3FFF; } //14 bits
+            get { return (int)(packed >> 38) & 0x3FFFFF; } //24 bits
         }
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace BepuPhysics.CollisionDetection
         public int Type
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (int)(packed >> 40) & 0xFF; } //8 bits
+            get { return (int)(packed >> 30) & 0xFF; } //8 bits
         }
 
         /// <summary>
@@ -53,33 +53,33 @@ namespace BepuPhysics.CollisionDetection
         public int Index
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (int)(packed & 0xFF_FFFF_FFFF); } //40 bits
+            get { return (int)(packed & 0x3FFF_FFFF); } //30 bits
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PairCacheIndex(int cache, int type, int index)
         {
-            Debug.Assert(cache >= 0 && cache < (1 << 14), "Do you really have that many threads, or is the index corrupt?");
+            Debug.Assert(cache >= 0 && cache < (1 << 24), "Do you really have that many threads, or is the index corrupt?");
             Debug.Assert(type >= 0 && type < (1 << 8), "Do you really have that many type indices, or is the index corrupt?");
             //Note the inclusion of a set bit in the most significant 2 bits.
             //The MSB encodes that the index was explicitly constructed, so it is a 'real' reference.
             //A default constructed PairCacheIndex will have a 0 in the MSB, so we can use the default constructor for empty references.
             //The second most significant bit sets the active flag. This constructor is used only by active references.
-            packed = (ulong)((3L << 62) | ((long)cache << 48) | ((long)type << 40) | (long)index);
+            packed = (ulong)((3L << 62) | ((long)cache << 38) | ((long)type << 30) | (long)index);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static PairCacheIndex CreateInactiveReference(int cache, int type, int index)
         {
-            Debug.Assert(cache >= 0 && cache < (1 << 14), "Do you really have that many threads, or is the index corrupt?");
+            Debug.Assert(cache >= 0 && cache < (1 << 24), "Do you really have that many sets, or is the index corrupt?");
             Debug.Assert(type >= 0 && type < (1 << 8), "Do you really have that many type indices, or is the index corrupt?");
             //Note the inclusion of a set bit in the most significant 2 bits.
             //The MSB encodes that the index was explicitly constructed, so it is a 'real' reference.
             //A default constructed PairCacheIndex will have a 0 in the MSB, so we can use the default constructor for empty references.
             //The second most significant bit is left unset. This function creates only inactive references..
             PairCacheIndex toReturn;
-            toReturn.packed = (ulong)((1L << 63) | ((long)cache << 48) | ((long)type << 40) | (long)index);
+            toReturn.packed = (ulong)((1L << 63) | ((long)cache << 38) | ((long)type << 30) | (long)index);
             return toReturn;
         }
 

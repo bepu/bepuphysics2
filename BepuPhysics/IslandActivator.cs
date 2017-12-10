@@ -188,6 +188,12 @@ namespace BepuPhysics
                 case JobType.PairCache:
                     {
                         //Updating the pair cache is locally sequential because it modifies the global overlap mapping, which at the moment is a hash table.
+                        //The other per-type caches could be separated from this job and handled in an internally multithreaded way, but that would add complexity that is likely unnecessary.
+                        //We'll assume the other jobs can balance things out until proven otherwise.
+                        for (int i = 0; i < uniqueSetIndices.Count; ++i)
+                        {
+                            pairCache.ActivateSet(i);
+                        }
                     }
                     break;
                 case JobType.UpdateBatchReferencedHandles:
