@@ -420,7 +420,6 @@ namespace BepuPhysics.CollisionDetection
         {
             public CollidablePair Pair;
             public PairCacheIndex ConstraintCache;
-            public PairCacheIndex CollisionCache;
         }
 
         /// <summary>
@@ -569,8 +568,8 @@ namespace BepuPhysics.CollisionDetection
                             //At the moment, we do *not* include the collision cache pointer in the handle mapping. The engine never needs it, and it cuts the size of the 
                             //mapping buffer from 24 bytes per entry to 16. We leave this here as an example of what would be needed should looking up a collision cache
                             //from constraint handle become useful. You would also need to update the PairCache.UpdateForExistingConstraint and PairCache.CompleteConstraintAdd.
-                            if (pairLocation.CollisionCache.Exists)
-                                CopyToInactiveCache(setIndex, ref workerCaches[pairLocation.CollisionCache.Cache].collisionCaches, ref pairSet.collisionCaches, ref pairLocation.CollisionCache);
+                            //if (pairLocation.CollisionCache.Exists)
+                            //    CopyToInactiveCache(setIndex, ref workerCaches[pairLocation.CollisionCache.Cache].collisionCaches, ref pairSet.collisionCaches, ref pairLocation.CollisionCache);
                             if (pairLocation.ConstraintCache.Exists)
                                 CopyToInactiveCache(setIndex, ref workerCaches[pairLocation.ConstraintCache.Cache].constraintCaches, ref pairSet.constraintCaches, ref pairLocation.ConstraintCache);
                             //Now that any existing cache data has been moved into the inactive set, we should remove the overlap from the overlap mapping.
@@ -624,7 +623,7 @@ namespace BepuPhysics.CollisionDetection
                 if (cache.Buffer.Allocated)
                 {
                     ref var activeCache = ref activeSet.constraintCaches[i];
-                    Debug.Assert(activeSet.collisionCaches[i])
+                    //Debug.Assert(activeSet.collisionCaches[i])
                 }
             }
             for (int i = 0; i < inactiveSet.collisionCaches.Length; ++i)

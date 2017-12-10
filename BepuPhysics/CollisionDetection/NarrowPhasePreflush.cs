@@ -237,6 +237,8 @@ namespace BepuPhysics.CollisionDetection
             for (int i = 0; i < threadCount; ++i)
             {
                 newConstraintCount += overlapWorkers[i].PendingConstraints.CountConstraints();
+                //TODO: TEMP
+                overlapWorkers[i].PendingSetActivations.Dispose(overlapWorkers[i].Batcher.pool.SpecializeFor<int>());
             }
             PairCache.EnsureConstraintToPairMappingCapacity(Solver, Solver.HandlePool.HighestPossiblyClaimedId + 1 + newConstraintCount);
 

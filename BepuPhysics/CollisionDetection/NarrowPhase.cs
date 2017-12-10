@@ -294,13 +294,13 @@ namespace BepuPhysics.CollisionDetection
             if (aMobility != CollidableMobility.Static && bMobility != CollidableMobility.Static)
             {
                 //Both references are bodies.
-                //TODO: While we test deactivation without activation, we have to stop the narrowphase from trying to do anything with inactive bodies.
-                //This will later become a Wake request.
                 ref var bodyLocationA = ref Bodies.HandleToLocation[a.Handle];
                 ref var bodyLocationB = ref Bodies.HandleToLocation[b.Handle];
                 Debug.Assert(bodyLocationA.SetIndex == 0 || bodyLocationB.SetIndex == 0, "One of the two bodies must be active. Otherwise, something is busted!");
                 if (bodyLocationA.SetIndex != bodyLocationB.SetIndex)
                 {
+                    //TODO: TEMP; don't proceed with any activations
+                    return;
                     //One of the two bodies is inactive. Its island must be forced awake before the solver tries to do anything with the constraints we build.
                     overlapWorker.PendingSetActivations.Add(bodyLocationA.SetIndex > 0 ? bodyLocationA.SetIndex : bodyLocationB.SetIndex, overlapWorker.Batcher.pool.SpecializeFor<int>());
                 }
