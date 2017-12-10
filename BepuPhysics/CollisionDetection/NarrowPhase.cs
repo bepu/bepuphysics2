@@ -291,37 +291,43 @@ namespace BepuPhysics.CollisionDetection
                 return;
             ref var overlapWorker = ref overlapWorkers[workerIndex];
             var pair = new CollidablePair(a, b);
-            ref var bodySet = ref Bodies.ActiveSet;
             if (aMobility != CollidableMobility.Static && bMobility != CollidableMobility.Static)
             {
                 //Both references are bodies.
                 //TODO: While we test deactivation without activation, we have to stop the narrowphase from trying to do anything with inactive bodies.
                 //This will later become a Wake request.
-                if (Bodies.HandleToLocation[a.Handle].SetIndex != 0 || Bodies.HandleToLocation[b.Handle].SetIndex != 0)
-                    return;
-                Debug.Assert(Bodies.HandleToLocation[a.Handle].SetIndex == 0 && Bodies.HandleToLocation[b.Handle].SetIndex == 0, "This needs to be updated when deactivation is fully implemented.");
-                var bodyIndexA = Bodies.HandleToLocation[a.Handle].Index;
-                var bodyIndexB = Bodies.HandleToLocation[b.Handle].Index;
+                ref var bodyLocationA = ref Bodies.HandleToLocation[a.Handle];
+                ref var bodyLocationB = ref Bodies.HandleToLocation[b.Handle];
+                Debug.Assert(bodyLocationA.SetIndex == 0 || bodyLocationB.SetIndex == 0, "One of the two bodies must be active. Otherwise, something is busted!");
+                if (bodyLocationA.SetIndex != bodyLocationB.SetIndex)
+                {
+                    //One of the two bodies is inactive. Its island must be forced awake before the solver tries to do anything with the constraints we build.
+                    overlapWorker.PendingSetActivations.Add(bodyLocationA.SetIndex > 0 ? bodyLocationA.SetIndex : bodyLocationB.SetIndex, overlapWorker.Batcher.pool.SpecializeFor<int>());
+                }
+                ref var setA = ref Bodies.Sets[bodyLocationA.SetIndex];
+                ref var setB = ref Bodies.Sets[bodyLocationB.SetIndex];
                 AddBatchEntries(ref overlapWorker, ref pair,
-                    ref bodySet.Collidables[bodyIndexA], ref bodySet.Collidables[bodyIndexB],
-                    ref bodySet.Poses[bodyIndexA], ref bodySet.Poses[bodyIndexB],
-                    ref bodySet.Velocities[bodyIndexA], ref bodySet.Velocities[bodyIndexB]);
+                    ref setA.Collidables[bodyLocationA.Index], ref setB.Collidables[bodyLocationB.Index],
+                    ref setA.Poses[bodyLocationA.Index], ref setB.Poses[bodyLocationB.Index],
+                    ref setA.Velocities[bodyLocationA.Index], ref setB.Velocities[bodyLocationB.Index]);
             }
             else
             {
                 //Since we disallow 2-static pairs and we guarantee the second slot holds the static if it exists, we know that A is a body and B is a static.
+                //Further, we know that the body must be an *active* body, because inactive bodies and statics exist within the same static/inactive broad phase tree and are not tested
+                //against each other.
                 Debug.Assert(aMobility != CollidableMobility.Static && bMobility == CollidableMobility.Static);
-                
-                var bodyIndex = Bodies.HandleToLocation[a.Handle].Index;
+                ref var bodyLocation = ref Bodies.HandleToLocation[a.Handle];
+                Debug.Assert(bodyLocation.SetIndex == 0, "The body of a body-static pair must be active.");
                 var staticIndex = Statics.HandleToIndex[b.Handle];
-                Debug.Assert(Bodies.HandleToLocation[a.Handle].SetIndex == 0, "Static-body pairs should only exist if the body involved is active.");
 
                 //TODO: Ideally, the compiler would see this and optimize away the relevant math in AddBatchEntries. That's a longshot, though. May want to abuse some generics to force it.
                 var zeroVelocity = default(BodyVelocity);
+                ref var bodySet = ref Bodies.ActiveSet;
                 AddBatchEntries(ref overlapWorker, ref pair,
-                    ref bodySet.Collidables[bodyIndex], ref Statics.Collidables[staticIndex],
-                    ref bodySet.Poses[bodyIndex], ref Statics.Poses[staticIndex],
-                    ref bodySet.Velocities[bodyIndex], ref zeroVelocity);
+                    ref bodySet.Collidables[bodyLocation.Index], ref Statics.Collidables[staticIndex],
+                    ref bodySet.Poses[bodyLocation.Index], ref Statics.Poses[staticIndex],
+                    ref bodySet.Velocities[bodyLocation.Index], ref zeroVelocity);
             }
 
         }

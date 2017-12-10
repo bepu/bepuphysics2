@@ -5,7 +5,7 @@
     <AssemblyName>BepuUtilities</AssemblyName>
     <RootNamespace>BepuUtilities</RootNamespace>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>2.0.0-beta</Version>
+    <Version>2.0.0-alpha</Version>
     <Company>Bepu Entertainment LLC</Company>
     <Authors>Ross Nordby</Authors>
     <Description>Early version of BEPUphysics v2.</Description>
@@ -15,6 +15,7 @@
     <RepositoryUrl>https://github.com/bepu/bepuphysics2</RepositoryUrl>
     <PackageIconUrl>https://raw.githubusercontent.com/bepu/bepuphysics1/master/Documentation/images/readme/bepuphysicslogo256.png</PackageIconUrl>
     <Configurations>Debug;Release;ReleaseStrip</Configurations>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   <Import Sdk="Microsoft.NET.Sdk" Project="Sdk.targets" />
 

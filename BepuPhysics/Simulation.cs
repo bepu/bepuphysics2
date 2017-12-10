@@ -48,8 +48,7 @@ namespace BepuPhysics
             BufferPool = bufferPool;
             Shapes = new Shapes(bufferPool, initialAllocationSizes.ShapesPerType);
             BroadPhase = new BroadPhase(bufferPool, initialAllocationSizes.Bodies, initialAllocationSizes.Bodies + initialAllocationSizes.Statics);
-            Activator = new IslandActivator();
-            Bodies = new Bodies(bufferPool, Activator, Shapes, BroadPhase,
+            Bodies = new Bodies(bufferPool, Shapes, BroadPhase,
                 initialAllocationSizes.Bodies,
                 initialAllocationSizes.Islands,
                 initialAllocationSizes.ConstraintCountPerBodyEstimate);
@@ -59,7 +58,8 @@ namespace BepuPhysics
                 initialCapacity: initialAllocationSizes.Constraints,
                 initialIslandCapacity: initialAllocationSizes.Islands,
                 minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
-            Bodies.Initialize(Solver);
+            Activator = new IslandActivator(Bodies, Solver, bufferPool);
+            Bodies.Initialize(Solver, Activator);
             constraintRemover = new ConstraintRemover(BufferPool, Bodies, Solver);
             Deactivator = new Deactivator(Bodies, Solver, BroadPhase, constraintRemover, BufferPool);
             PoseIntegrator = new PoseIntegrator(Bodies, Shapes, BroadPhase);
@@ -98,6 +98,7 @@ namespace BepuPhysics
             var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation, defaultTaskRegistry, narrowPhaseCallbacks, initialAllocationSizes.Value.Islands + 1);
             simulation.NarrowPhase = narrowPhase;
             simulation.Deactivator.pairCache = narrowPhase.PairCache;
+            simulation.Activator.pairCache = narrowPhase.PairCache;
             simulation.BroadPhaseOverlapFinder = new CollidableOverlapFinder<TNarrowPhaseCallbacks>(narrowPhase, simulation.BroadPhase);
 
             return simulation;

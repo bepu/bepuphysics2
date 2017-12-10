@@ -258,10 +258,8 @@ namespace Demos
             {
                 input.MouseLocked = false;
             }
-
             demo.Update(input, dt);
             timeSamples.RecordFrame(demo.Simulation);
-            var stats = timeSamples.PoseIntegrator.ComputeStats();
         }
 
         TextBuilder uiText = new TextBuilder(128);

@@ -274,7 +274,7 @@ namespace BepuPhysics.CollisionDetection
         //Similarly, a hull-hull collision test could spawn many subtasks, but those subtasks may not be of the same type as any top level pair.
 
         CollisionTaskRegistry typeMatrix;
-        BufferPool pool;
+        internal BufferPool pool;
 
 
         int minimumBatchIndex, maximumBatchIndex;

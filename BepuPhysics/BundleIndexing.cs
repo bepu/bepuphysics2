@@ -55,7 +55,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetBundleCount(int elementCount)
         {
-            return (elementCount >> VectorShift) + ((elementCount & VectorMask) > 0 ? 1 : 0);
+            return (elementCount + VectorMask) >> VectorShift;
         }
     }
 }

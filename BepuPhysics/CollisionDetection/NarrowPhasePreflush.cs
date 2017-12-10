@@ -31,13 +31,13 @@ namespace BepuPhysics.CollisionDetection
 
         /// <summary>
         /// Adds constraints to the solver and constraint graph in an order determined by the previous sorts and with the help of the speculatively computed batch targets. Locally sequential.
-        /// Accesses main thread buffer pool when type batches are created or resize.
+        /// Accesses main thread buffer pool when type batches are created or resized.
         /// </summary>
         DeterministicConstraintAdd,
         /// <summary>
         /// Adds constraints to the solver and constraint graph in an order determined by the collision detection phase. If the collision detection phase is nondeterministic due to threading, then 
         /// this will result in nondeterministic adds to the solver.
-        /// Accesses main thread buffer pool when type batches are created or resize.
+        /// Accesses main thread buffer pool when type batches are created or resized.
         /// </summary>
         NondeterministicConstraintAdd,
         /// <summary>
@@ -269,15 +269,15 @@ namespace BepuPhysics.CollisionDetection
                     sortedConstraints.Clear(0, PendingConstraintAddCache.ConstraintTypeCount);
                     for (int typeIndex = 0; typeIndex < PendingConstraintAddCache.ConstraintTypeCount; ++typeIndex)
                     {
-                        int typeCount = 0;
+                        int countInType = 0;
                         for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
                         {
-                            typeCount += overlapWorkers[workerIndex].PendingConstraints.pendingConstraintsByType[typeIndex].Count;
+                            countInType += overlapWorkers[workerIndex].PendingConstraints.pendingConstraintsByType[typeIndex].Count;
                         }
-                        if (typeCount > 0)
+                        if (countInType > 0)
                         {
                             //Note that we don't actually add any constraint targets here- we let the actual worker threads do that. No reason not to, and it extracts a tiny bit of extra parallelism.
-                            QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>>.Create(Pool.SpecializeFor<SortConstraintTarget>(), typeCount, out sortedConstraints[typeIndex]);
+                            QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>>.Create(Pool.SpecializeFor<SortConstraintTarget>(), countInType, out sortedConstraints[typeIndex]);
                             preflushJobs.Add(new PreflushJob { Type = PreflushJobType.SortContactConstraintType, TypeIndex = typeIndex, WorkerCount = threadCount }, Pool.SpecializeFor<PreflushJob>());
                         }
                     }

@@ -71,13 +71,12 @@ namespace BepuPhysics
         /// Constructs a new bodies collection. Initialize must be called for the instance to be ready for use.
         /// </summary>
         /// <param name="pool">Pool for the collection to pull persistent allocations from.</param>
-        /// <param name="activator">Island activator to use when bodies undergo transitions requiring that they exist in the active set.</param>
         /// <param name="shapes">Shapes referenced by the collection's bodies.</param>
         /// <param name="broadPhase">Broad phase containing the body collidables.</param>
         /// <param name="initialBodyCapacity">Initial number of bodies to allocate space for in the active set.</param>
         /// <param name="initialIslandCapacity">Initial number of islands to allocate space for in the Sets buffer.</param>
         /// <param name="initialConstraintCapacityPerBody">Expected number of constraint references per body to allocate space for.</param>
-        public unsafe Bodies(BufferPool pool, IslandActivator activator, Shapes shapes, BroadPhase broadPhase,
+        public unsafe Bodies(BufferPool pool, Shapes shapes, BroadPhase broadPhase,
             int initialBodyCapacity, int initialIslandCapacity, int initialConstraintCapacityPerBody)
         {
             this.pool = pool;
@@ -88,7 +87,6 @@ namespace BepuPhysics
             ResizeHandles(initialBodyCapacity);
             ResizeSetsCapacity(initialIslandCapacity + 1, 0);
             ActiveSet = new BodySet(initialBodyCapacity, pool);
-            this.activator = activator;
             this.shapes = shapes;
             this.broadPhase = broadPhase;
             MinimumConstraintCapacityPerBody = initialConstraintCapacityPerBody;
@@ -98,9 +96,11 @@ namespace BepuPhysics
         /// Initializes the bodies set. Used to complete bidirectional dependencies.
         /// </summary>
         /// <param name="solver">Solver responsible for the constraints connected to the collection's bodies.</param>
-        public void Initialize(Solver solver)
+        /// <param name="activator">Island activator to use when bodies undergo transitions requiring that they exist in the active set.</param>
+        public void Initialize(Solver solver, IslandActivator activator)
         {
             this.solver = solver;
+            this.activator = activator;
         }
 
         void AddCollidableToBroadPhase(int bodyHandle, ref RigidPose pose, ref BodyInertia localInertia, ref Collidable collidable)

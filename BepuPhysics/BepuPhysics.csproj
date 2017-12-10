@@ -13,6 +13,7 @@
     <RepositoryUrl>https://github.com/bepu/bepuphysics2</RepositoryUrl>
     <PackageIconUrl>https://raw.githubusercontent.com/bepu/bepuphysics1/master/Documentation/images/readme/bepuphysicslogo256.png</PackageIconUrl>
     <Configurations>Debug;Release;ReleaseStrip</Configurations>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   <Import Sdk="Microsoft.NET.Sdk" Project="Sdk.targets" />
 
@@ -20,10 +21,9 @@
     <PostBuildEvent Condition="'$(Configuration)'=='ReleaseStrip'">dotnet "$(SolutionDir)Dependencies\ilopt\ilopt.dll" "$(TargetPath)"</PostBuildEvent>
   </PropertyGroup>
 
-  <!-- TODO: Why is this necessary? It refers to 1.6.1 rather than 2.0 without this, despite the target framework being set to 2.0 above. -->
   <PropertyGroup>
+    <!-- TODO: Why is this necessary? It refers to 1.6.1 rather than 2.0 without this, despite the target framework being set to 2.0 above. -->
     <NetStandardImplicitPackageVersion>2.0</NetStandardImplicitPackageVersion>
-    <AssemblyVersion>2.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

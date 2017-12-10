@@ -39,8 +39,6 @@ namespace Demos
         public virtual void Update(Input input, float dt)
         {
             ++frameCount;
-            if (input.IsDown(OpenTK.Input.Key.P))
-                Console.WriteLine("p");
             if (input.IsDown(OpenTK.Input.MouseButton.Middle))
             {
                 if (frameCount % 20 == 0)

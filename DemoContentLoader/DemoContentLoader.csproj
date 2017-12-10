@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   
   <!-- TODO: Why is this necessary? It refers to 1.6.1 rather than 2.0 without this, despite the target framework being set to 2.0 above. -->

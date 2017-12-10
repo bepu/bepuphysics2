@@ -4,6 +4,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
+    <LangVersion>7.2</LangVersion>
     <!--<RuntimeFrameworkVersion>2.1.0-preview2-25616-02</RuntimeFrameworkVersion>-->
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -13,10 +14,6 @@
     <PreBuildEvent Condition="'$(Configuration)'=='Debug'">dotnet "$(SolutionDir)DemoContentBuilder\bin\x64\$(Configuration)\netcoreapp2.0\DemoContentBuilder.dll" "$(ProjectDir)$(ProjectName).content" -debug</PreBuildEvent>
     <PreBuildEvent Condition="'$(Configuration)'!='Debug'">dotnet "$(SolutionDir)DemoContentBuilder\bin\x64\$(Configuration)\netcoreapp2.0\DemoContentBuilder.dll" "$(ProjectDir)$(ProjectName).content"</PreBuildEvent>
   </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" />
 
   <ItemGroup>
     <PackageReference Include="SharpDX" Version="4.0.1" />

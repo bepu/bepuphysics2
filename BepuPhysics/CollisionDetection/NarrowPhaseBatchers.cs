@@ -46,6 +46,7 @@ namespace BepuPhysics.CollisionDetection
             public BatcherFilters Filters;
             public ConstraintGenerators ConstraintGenerators;
             public PendingConstraintAddCache PendingConstraints;
+            public QuickList<int, Buffer<int>> PendingSetActivations;
 
             public OverlapWorker(int workerIndex, BufferPool pool, NarrowPhase<TCallbacks> narrowPhase)
             {
@@ -53,7 +54,9 @@ namespace BepuPhysics.CollisionDetection
                 Filters = new BatcherFilters(workerIndex, narrowPhase);
                 ConstraintGenerators = new ConstraintGenerators(workerIndex, pool, narrowPhase);
                 PendingConstraints = new PendingConstraintAddCache(pool);
+                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out PendingSetActivations);
             }
+
         }
 
         internal OverlapWorker[] overlapWorkers;

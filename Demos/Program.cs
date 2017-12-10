@@ -1,5 +1,4 @@
-﻿using BepuPhysics;
-using BepuUtilities;
+﻿using BepuUtilities;
 using DemoContentLoader;
 using DemoRenderer.UI;
 using Demos.Properties;
@@ -14,6 +13,7 @@ namespace Demos
     {
         static void Main(string[] args)
         {
+            //OperatorCodegenTests.Test();
             //ConstraintDescriptionMappingTests.Test();
             //CollidablePairComparerTests.Test();
             //HeadlessDemo.Simple();

@@ -272,7 +272,6 @@ namespace BepuPhysics
             {
                 TypeBatches[i].Dispose(pool);
             }
-            TypeBatches.Clear();
             pool.SpecializeFor<int>().Return(ref TypeIndexToTypeBatchIndex);
             TypeIndexToTypeBatchIndex = new Buffer<int>();
             TypeBatches.Dispose(pool.SpecializeFor<TypeBatch>());

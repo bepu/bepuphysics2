@@ -84,7 +84,9 @@ namespace BepuPhysics.Constraints
 
         internal unsafe abstract void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<int, Buffer<int>> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch);
 
-
+        internal unsafe abstract void CopyInactiveToActive(
+            int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetBatchIndex, int targetTypeBatchIndex,
+            int sourceStart, int targetStart, int count, Bodies bodies, Solver solver);
 
         [Conditional("DEBUG")]
         internal abstract void VerifySortRegion(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices);
@@ -113,7 +115,6 @@ namespace BepuPhysics.Constraints
         {
             SolveIteration(ref typeBatch, ref bodyVelocities, 0, typeBatch.BundleCount);
         }
-
     }
 
     /// <summary>
@@ -536,6 +537,80 @@ namespace BepuPhysics.Constraints
                     Unsafe.Add(ref targetReferencesLaneStart, offset) = activeBodySet.IndexToHandle[Unsafe.Add(ref sourceReferencesLaneStart, offset)];
                     offset += Vector<int>.Count;
                 }
+            }
+        }
+
+
+        internal unsafe sealed override void CopyInactiveToActive(
+            int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetBatchIndex, int targetTypeBatchIndex,
+            int sourceStart, int targetStart, int count, Bodies bodies, Solver solver)
+        {
+            ref var sourceTypeBatch = ref solver.Sets[sourceSet].Batches[sourceBatchIndex].TypeBatches[sourceTypeBatchIndex];
+            ref var targetTypeBatch = ref solver.ActiveSet.Batches[targetBatchIndex].TypeBatches[targetTypeBatchIndex];
+            Debug.Assert(sourceStart >= 0 && sourceStart + count < sourceTypeBatch.ConstraintCount);
+            Debug.Assert(targetStart >= 0 && targetStart + count < targetTypeBatch.ConstraintCount,
+                "This function should only be used when a region has been preallocated within the type batch.");
+            Debug.Assert(sourceTypeBatch.TypeId == targetTypeBatch.TypeId);
+            if ((sourceStart & BundleIndexing.VectorMask) == 0 && (targetStart & BundleIndexing.VectorMask) == 0)
+            {
+                //Both regions start bundle aligned.
+                Debug.Assert(count > 0);
+                var bundleCount = BundleIndexing.GetBundleCount(count);
+                //Note that we copy full bundles even if the end isn't bundle aligned.                
+                Debug.Assert((count & BundleIndexing.VectorShift) == 0 || (targetStart + count) == targetTypeBatch.ConstraintCount,
+                    "The caller of this function guarantees that the only time that the 1) starts are bundle aligned and 2) the end is not bundle aligned is when the last bundle " +
+                    "of the region is the last bundle of the entire type batch. Since no further copies can affect the overwritten slots, bundle-wide copies are safe.");
+                var sourcePrestepData = sourceTypeBatch.PrestepData.As<TPrestepData>();
+                var sourceAccumulatedImpulses = sourceTypeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
+                var targetPrestepData = targetTypeBatch.PrestepData.As<TPrestepData>();
+                var targetAccumulatedImpulses = targetTypeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
+                var sourceBundleStart = sourceStart >> BundleIndexing.VectorShift;
+                var targetBundleStart = targetStart >> BundleIndexing.VectorShift;
+                sourcePrestepData.CopyTo(sourceBundleStart, ref targetPrestepData, targetBundleStart, bundleCount);
+                sourceAccumulatedImpulses.CopyTo(sourceBundleStart, ref targetAccumulatedImpulses, targetBundleStart, bundleCount);
+            }
+            else
+            {
+                Debug.Assert(count < Vector<float>.Count, "Unaligned copies should only occur on 'remainder' regions scheduled to pad the aligned copies.");
+                for (int i = 0; i < count; ++i)
+                {
+                    var sourceIndex = sourceStart + i;
+                    var targetIndex = targetStart + i;
+                    BundleIndexing.GetBundleIndices(sourceIndex, out var sourceBundle, out var sourceInner);
+                    BundleIndexing.GetBundleIndices(targetIndex, out var targetBundle, out var targetInner);
+                    GatherScatter.CopyLane(
+                     ref Buffer<TPrestepData>.Get(ref sourceTypeBatch.PrestepData, sourceBundle), sourceInner,
+                     ref Buffer<TPrestepData>.Get(ref targetTypeBatch.PrestepData, targetBundle), targetInner);
+                    GatherScatter.CopyLane(
+                        ref Buffer<TAccumulatedImpulse>.Get(ref sourceTypeBatch.AccumulatedImpulses, sourceBundle), sourceInner,
+                        ref Buffer<TAccumulatedImpulse>.Get(ref targetTypeBatch.AccumulatedImpulses, targetBundle), targetInner);
+                }
+            }
+            //Note that body reference copies cannot be done in bulk because inactive constraints refer to body handles while active constraints refer to body indices.
+            for (int i = 0; i < count; ++i)
+            {
+                var sourceIndex = sourceStart + i;
+                var targetIndex = targetStart + i;
+                BundleIndexing.GetBundleIndices(sourceIndex, out var sourceBundle, out var sourceInner);
+                BundleIndexing.GetBundleIndices(targetIndex, out var targetBundle, out var targetInner);
+
+                ref var sourceReferencesLaneStart = ref Unsafe.Add(ref Unsafe.As<TBodyReferences, int>(ref Buffer<TBodyReferences>.Get(ref sourceTypeBatch.BodyReferences, sourceBundle)), sourceInner);
+                ref var targetReferencesLaneStart = ref Unsafe.Add(ref Unsafe.As<TBodyReferences, int>(ref Buffer<TBodyReferences>.Get(ref targetTypeBatch.BodyReferences, targetBundle)), targetInner);
+                var offset = 0;
+                for (int j = 0; j < bodiesPerConstraint; ++j)
+                {
+                    Unsafe.Add(ref targetReferencesLaneStart, offset) = bodies.HandleToLocation[Unsafe.Add(ref sourceReferencesLaneStart, offset)].Index;
+                    offset += Vector<int>.Count;
+                }
+                var constraintHandle = sourceTypeBatch.IndexToHandle[sourceIndex];
+                ref var location = ref solver.HandleToConstraint[constraintHandle];
+                Debug.Assert(location.SetIndex == sourceSet);
+                location.SetIndex = 0;
+                location.BatchIndex = targetBatchIndex;
+                Debug.Assert(sourceTypeBatch.TypeId == location.TypeId);
+                location.IndexInTypeBatch = targetIndex;
+                //This could be done with a bulk copy, but eh!
+                targetTypeBatch.IndexToHandle[targetIndex] = constraintHandle;
             }
         }
 
