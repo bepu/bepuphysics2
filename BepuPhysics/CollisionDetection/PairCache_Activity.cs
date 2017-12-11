@@ -110,7 +110,7 @@ namespace BepuPhysics.CollisionDetection
                             pairLocation.InactivePairIndex = builder.Add(ref workerCaches, pool, ref Mapping.Keys[elementIndex], ref cacheLocations);
 
                             //Now that any existing cache data has been moved into the inactive set, we should remove the overlap from the overlap mapping.
-                            Mapping.FastRemove(ref pairLocation.Pair);
+                            Mapping.FastRemove(tableIndex, elementIndex);
                         }
                     }
                 }

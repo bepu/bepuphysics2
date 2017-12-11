@@ -527,6 +527,58 @@ namespace BepuUtilities.Collections
         //there may later exist an order preserving "Remove". That would be a very sneaky breaking change.
 
         /// <summary>
+        /// Removes an element from the dictionary according to its table and element index. Can only be used if the table and element index are valid.
+        /// </summary>
+        /// <param name="tableIndex">Index of the table entry associated with the existing element to remove.</param>
+        /// <param name="elementIndex">Index of the existing element to remove in the contiguous element array.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void FastRemove(int tableIndex, int elementIndex)
+        {
+            Debug.Assert(GetTableIndices(ref Span[elementIndex], out var debugTableIndex, out var debugElementIndex) && debugTableIndex == tableIndex && debugElementIndex == elementIndex,
+                 "The table index and element index used to directly remove must match an actual element.");
+
+            //Add and remove must both maintain a property:
+            //All items are either at their desired index (as defined by the hash), or they are contained in a contiguous block clockwise from the desired index.
+            //Removals seek to fill the gap they create by searching clockwise to find items which can be moved backward.
+            //Search clockwise for an item to fill this slot. The search must continue until a gap is found.
+            int moveCandidateIndex;
+            int gapIndex = tableIndex;
+            //Search clockwise.
+            while ((moveCandidateIndex = Table[tableIndex = (tableIndex + 1) & TableMask]) > 0)
+            {
+                //This slot contains something. What is its actual index?
+                --moveCandidateIndex;
+                int desiredIndex = HashHelper.Rehash(EqualityComparer.Hash(ref Span[moveCandidateIndex])) & TableMask;
+
+                //Would this element be closer to its actual index if it was moved to the gap?
+                //To find out, compute the clockwise distance from the gap and the clockwise distance from the ideal location.
+
+                var distanceFromGap = (tableIndex - gapIndex) & TableMask;
+                var distanceFromIdeal = (tableIndex - desiredIndex) & TableMask;
+                if (distanceFromGap <= distanceFromIdeal)
+                {
+                    //The distance to the gap is less than or equal the distance to the ideal location, so just move to the gap.
+                    Table[gapIndex] = Table[tableIndex];
+                    gapIndex = tableIndex;
+                }
+
+            }
+            //Clear the table gap left by the removal.
+            Table[gapIndex] = 0;
+            //Swap the final element into the removed object's element array index, if the removed object wasn't the last object.
+            --Count;
+            if (elementIndex < Count)
+            {
+                Span[elementIndex] = Span[Count];
+                //Locate the swapped object in the table and update its index.
+                GetTableIndices(ref Span[elementIndex], out tableIndex, out int oldElementIndex);
+                Table[tableIndex] = elementIndex + 1; //Remember the encoding! all indices offset by 1.
+            }
+            //Clear the final slot in the elements set.
+            Span[Count] = default;
+        }
+
+        /// <summary>
         /// Removes an element from the set if belongs to the set.
         /// Does not preserve the order of elements in the set.
         /// </summary>
@@ -536,49 +588,10 @@ namespace BepuUtilities.Collections
         {
             Validate();
             //Find it.
-            if (GetTableIndices(ref element, out int tableIndex, out int objectIndex))
+            if (GetTableIndices(ref element, out int tableIndex, out int elementIndex))
             {
                 //We found the object!
-                //Add and remove must both maintain a property:
-                //All items are either at their desired index (as defined by the hash), or they are contained in a contiguous block clockwise from the desired index.
-                //Removals seek to fill the gap they create by searching clockwise to find items which can be moved backward.
-                //Search clockwise for an item to fill this slot. The search must continue until a gap is found.
-                int moveCandidateIndex;
-                int gapIndex = tableIndex;
-                //Search clockwise.
-                while ((moveCandidateIndex = Table[tableIndex = (tableIndex + 1) & TableMask]) > 0)
-                {
-                    //This slot contains something. What is its actual index?
-                    --moveCandidateIndex;
-                    int desiredIndex = HashHelper.Rehash(EqualityComparer.Hash(ref Span[moveCandidateIndex])) & TableMask;
-
-                    //Would this element be closer to its actual index if it was moved to the gap?
-                    //To find out, compute the clockwise distance from the gap and the clockwise distance from the ideal location.
-
-                    var distanceFromGap = (tableIndex - gapIndex) & TableMask;
-                    var distanceFromIdeal = (tableIndex - desiredIndex) & TableMask;
-                    if (distanceFromGap <= distanceFromIdeal)
-                    {
-                        //The distance to the gap is less than or equal the distance to the ideal location, so just move to the gap.
-                        Table[gapIndex] = Table[tableIndex];
-                        gapIndex = tableIndex;
-                    }
-
-                }
-                //Clear the table gap left by the removal.
-                Table[gapIndex] = 0;
-                //Swap the final element into the removed object's element array index, if the removed object wasn't the last object.
-                --Count;
-                if (objectIndex < Count)
-                {
-                    Span[objectIndex] = Span[Count];
-                    //Locate the swapped object in the table and update its index.
-                    GetTableIndices(ref Span[objectIndex], out tableIndex, out int oldObjectIndex);
-                    Table[tableIndex] = objectIndex + 1; //Remember the encoding! all indices offset by 1.
-                }
-                //Clear the final slot in the elements set.
-                Span[Count] = default(T);
-
+                FastRemove(tableIndex, elementIndex);
                 return true;
             }
             return false;
