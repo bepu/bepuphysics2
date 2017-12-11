@@ -1,5 +1,5 @@
-﻿using BEPUutilities2.Collections;
-using BEPUutilities2.Memory;
+﻿using BepuUtilities.Collections;
+using BepuUtilities.Memory;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

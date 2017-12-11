@@ -1,4 +1,4 @@
-﻿using BEPUutilities2;
+﻿using BepuUtilities;
 using System;
 using System.Numerics;
 

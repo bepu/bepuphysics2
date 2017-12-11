@@ -1,4 +1,4 @@
-﻿using BEPUutilities2;
+﻿using BepuUtilities;
 using System.Numerics;
 
 //using bVector3 = BEPUutilities.Vector3;
