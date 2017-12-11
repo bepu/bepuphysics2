@@ -217,7 +217,7 @@ namespace BepuPhysics.CollisionDetection
                     break;
                 case PreflushJobType.DeterministicConstraintAdd:
                     {
-                        for (int typeIndex = 0; typeIndex < PendingConstraintAddCache.ConstraintTypeCount; ++typeIndex)
+                        for (int typeIndex = 0; typeIndex < PairCache.CollisionConstraintTypeCount; ++typeIndex)
                         {
                             PendingConstraintAddCache.DeterministicallyAddType(typeIndex, overlapWorkers, ref sortedConstraints[typeIndex], Simulation, ref PairCache);
                         }
@@ -267,9 +267,9 @@ namespace BepuPhysics.CollisionDetection
                 //Note that we create the sort jobs first. They tend to be individually much heftier than the constraint batch finder phase, and we'd like to be able to fill in the execution gaps.
                 if (deterministic)
                 {
-                    Pool.SpecializeFor<QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>>>().Take(PendingConstraintAddCache.ConstraintTypeCount, out sortedConstraints);
-                    sortedConstraints.Clear(0, PendingConstraintAddCache.ConstraintTypeCount);
-                    for (int typeIndex = 0; typeIndex < PendingConstraintAddCache.ConstraintTypeCount; ++typeIndex)
+                    Pool.SpecializeFor<QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>>>().Take(PairCache.CollisionConstraintTypeCount, out sortedConstraints);
+                    sortedConstraints.Clear(0, PairCache.CollisionConstraintTypeCount);
+                    for (int typeIndex = 0; typeIndex < PairCache.CollisionConstraintTypeCount; ++typeIndex)
                     {
                         int countInType = 0;
                         for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
@@ -286,7 +286,7 @@ namespace BepuPhysics.CollisionDetection
                 }
                 const int maximumConstraintsPerJob = 16; //TODO: Empirical tuning.
 
-                for (int typeIndex = 0; typeIndex < PendingConstraintAddCache.ConstraintTypeCount; ++typeIndex)
+                for (int typeIndex = 0; typeIndex < PairCache.CollisionConstraintTypeCount; ++typeIndex)
                 {
                     for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
                     {
@@ -359,7 +359,7 @@ namespace BepuPhysics.CollisionDetection
                 if (deterministic)
                 {
                     var targetPool = Pool.SpecializeFor<SortConstraintTarget>();
-                    for (int i = 0; i < PendingConstraintAddCache.ConstraintTypeCount; ++i)
+                    for (int i = 0; i < PairCache.CollisionConstraintTypeCount; ++i)
                     {
                         ref var typeList = ref sortedConstraints[i];
                         if (typeList.Span.Allocated)

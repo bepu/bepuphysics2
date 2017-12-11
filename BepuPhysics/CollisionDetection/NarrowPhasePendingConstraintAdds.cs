@@ -32,8 +32,6 @@ namespace BepuPhysics.CollisionDetection
                 public PairCacheIndex ConstraintCacheIndex;
             }
 
-            //TODO: If we add in nonconvex manifolds with up to 8 contacts, this will need to change- we preallocate enough space to hold all possible narrowphase generated types.
-            public const int ConstraintTypeCount = 16;
             internal Buffer<UntypedList> pendingConstraintsByType;
             internal Buffer<Buffer<ushort>> speculativeBatchIndices;
             int minimumConstraintCountPerCache;
@@ -41,9 +39,9 @@ namespace BepuPhysics.CollisionDetection
             public PendingConstraintAddCache(BufferPool pool, int minimumConstraintCountPerCache = 128)
             {
                 this.pool = pool;
-                pool.SpecializeFor<UntypedList>().Take(ConstraintTypeCount, out pendingConstraintsByType);
+                pool.SpecializeFor<UntypedList>().Take(PairCache.CollisionConstraintTypeCount, out pendingConstraintsByType);
                 //Have to clear the memory before use to avoid trash data sticking around.
-                pendingConstraintsByType.Clear(0, ConstraintTypeCount);
+                pendingConstraintsByType.Clear(0, PairCache.CollisionConstraintTypeCount);
                 this.minimumConstraintCountPerCache = minimumConstraintCountPerCache;
                 speculativeBatchIndices = new Buffer<Buffer<ushort>>();
             }
@@ -302,7 +300,7 @@ namespace BepuPhysics.CollisionDetection
             //freshness checker would cause bugs.
             public void Dispose()
             {
-                for (int i = 0; i < ConstraintTypeCount; ++i)
+                for (int i = 0; i < PairCache.CollisionConstraintTypeCount; ++i)
                 {
                     if (pendingConstraintsByType[i].Buffer.Allocated)
                         pool.Return(ref pendingConstraintsByType[i].Buffer);
@@ -312,10 +310,10 @@ namespace BepuPhysics.CollisionDetection
 
             internal void AllocateForSpeculativeSearch()
             {
-                pool.SpecializeFor<Buffer<ushort>>().Take(ConstraintTypeCount, out speculativeBatchIndices);
-                speculativeBatchIndices.Clear(0, ConstraintTypeCount);
+                pool.SpecializeFor<Buffer<ushort>>().Take(PairCache.CollisionConstraintTypeCount, out speculativeBatchIndices);
+                speculativeBatchIndices.Clear(0, PairCache.CollisionConstraintTypeCount);
                 var indexPool = pool.SpecializeFor<ushort>();
-                for (int i = 0; i < ConstraintTypeCount; ++i)
+                for (int i = 0; i < PairCache.CollisionConstraintTypeCount; ++i)
                 {
                     ref var typeList = ref pendingConstraintsByType[i];
                     if (typeList.Buffer.Allocated)
@@ -329,7 +327,7 @@ namespace BepuPhysics.CollisionDetection
             internal void DisposeSpeculativeSearch()
             {
                 var indexPool = pool.SpecializeFor<ushort>();
-                for (int i = 0; i < ConstraintTypeCount; ++i)
+                for (int i = 0; i < PairCache.CollisionConstraintTypeCount; ++i)
                 {
                     ref var indices = ref speculativeBatchIndices[i];
                     if (indices.Allocated)
@@ -342,7 +340,7 @@ namespace BepuPhysics.CollisionDetection
             internal int CountConstraints()
             {
                 int count = 0;
-                for (int i = 0; i < ConstraintTypeCount; ++i)
+                for (int i = 0; i < PairCache.CollisionConstraintTypeCount; ++i)
                 {
                     count += pendingConstraintsByType[i].Count;
                 }

@@ -453,10 +453,23 @@ namespace BepuPhysics
                 case RemovalJobType.NotifyNarrowPhasePairCache:
                     {
                         //This must be locally sequential because it results in removals from the pair cache's global overlap mapping and allocates from the main pool.
+
+                        //While calculating exactly how much space we'll need for the set builder is a little tricky because it requires checking individual entry types,
+                        //we can approximate it based on bodies.
+                        int largestBodyCount = 0;
+                        for (int i = 0; i < newInactiveSets.Count; ++i)
+                        {
+                            var setCount = bodies.Sets[newInactiveSets[i].Index].Count;
+                            if (setCount > largestBodyCount)
+                                largestBodyCount = setCount;
+                        }
+                        //We just arbitrarily guess a few pairs per body. It might be wrong, but that's fine- it'll resize if needed. Just don't want to constantly resize.
+                        var setBuilder = new InactiveSetBuilder(pool, largestBodyCount * 4, largestBodyCount);
                         for (int setReferenceIndex = 0; setReferenceIndex < newInactiveSets.Count; ++setReferenceIndex)
                         {
-                            pairCache.DeactivateTypeBatchPairs(newInactiveSets[setReferenceIndex].Index, solver);
+                            pairCache.DeactivateTypeBatchPairs(ref setBuilder, newInactiveSets[setReferenceIndex].Index, solver);
                         }
+                        setBuilder.Dispose(pool);
                     }
                     break;
             }

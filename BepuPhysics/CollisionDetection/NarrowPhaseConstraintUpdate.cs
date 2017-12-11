@@ -129,7 +129,7 @@ namespace BepuPhysics.CollisionDetection
                     //It's exactly the same type, so we can just overwrite its properties without worry.
                     //Note that we rely on the constraint handle being stored in the first 4 bytes of the constraint cache.
                     *(int*)Unsafe.AsPointer(ref newConstraintCache) = constraintHandle;
-                    PairCache.UpdateForExistingConstraint(workerIndex, index, ref pointers, ref collisionCache, ref newConstraintCache, constraintHandle);
+                    PairCache.Update(workerIndex, index, ref pointers, ref collisionCache, ref newConstraintCache);
                     //There exists a constraint and it has the same type as the manifold. Directly apply the new description and impulses.
                     Solver.ApplyDescription(ref constraintReference, ref description);
                     PairCache.ScatterNewImpulses(ref constraintReference, ref newImpulses);
