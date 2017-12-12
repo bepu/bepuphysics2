@@ -5,6 +5,7 @@ using BepuUtilities.Memory;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 
@@ -57,9 +58,9 @@ namespace BepuPhysics
         /// <param name="setIndex">Index of the set to activate.</param>
         public void ActivateSet(int setIndex)
         {
-            ValidateSetIndex(setIndex);
             if (setIndex > 0)
             {
+                ValidateInactiveSetIndex(setIndex);
                 //TODO: Some fairly pointless work here- spans or other approaches could help with the API.
                 QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 1, out var list);
                 list.AddUnsafely(setIndex);
@@ -114,7 +115,7 @@ namespace BepuPhysics
                 }
             }
 
-            DisposeSets(ref uniqueSetIndices);
+            DisposeActivatedSets(ref uniqueSetIndices);
 
             uniqueSetIndices.Dispose(pool.SpecializeFor<int>());
         }
@@ -272,9 +273,9 @@ namespace BepuPhysics
             }
         }
         [Conditional("DEBUG")]
-        void ValidateSetIndex(int setIndex)
+        void ValidateInactiveSetIndex(int setIndex)
         {
-            Debug.Assert(setIndex >= 0 && setIndex < bodies.Sets.Length && setIndex < solver.Sets.Length && setIndex < pairCache.InactiveSets.Length);
+            Debug.Assert(setIndex >= 1 && setIndex < bodies.Sets.Length && setIndex < solver.Sets.Length && setIndex < pairCache.InactiveSets.Length);
             Debug.Assert(bodies.Sets[setIndex].Allocated && solver.Sets[setIndex].Allocated && pairCache.InactiveSets[setIndex].Allocated);
         }
         [Conditional("DEBUG")]
@@ -284,7 +285,7 @@ namespace BepuPhysics
             for (int i = 0; i < setIndices.Count; ++i)
             {
                 var setIndex = setIndices[i];
-                ValidateSetIndex(setIndex);
+                ValidateInactiveSetIndex(setIndex);
                 Debug.Assert(!set.Contains(setIndex));
                 set.Add(setIndex, pool);
             }
@@ -292,14 +293,131 @@ namespace BepuPhysics
 
         }
 
+        struct TypeAllocationSizes
+        {
+            public Buffer<int> TypeCounts;
+            public int HighestOccupiedTypeIndex;
+            public TypeAllocationSizes(BufferPool pool, int maximumTypeCount)
+            {
+                pool.SpecializeFor<int>().Take(maximumTypeCount, out TypeCounts);
+                TypeCounts.Clear(0, maximumTypeCount);
+                HighestOccupiedTypeIndex = 0;
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Add(int typeId, int count)
+            {
+                TypeCounts[typeId] += count;
+                if (typeId > HighestOccupiedTypeIndex)
+                    HighestOccupiedTypeIndex = typeId;
+            }
+            public void Dispose(BufferPool pool)
+            {
+                pool.SpecializeFor<int>().Return(ref TypeCounts);
+            }
+        }
+
+
         internal (int phaseOneJobCount, int phaseTwoJobCount) PrepareJobs(ref QuickList<int, Buffer<int>> setIndices, int threadCount)
         {
             ValidateUniqueSets(ref setIndices);
             this.uniqueSetIndices = setIndices;
+
+            //We have three main jobs in this function:
+            //1) Ensure that the active set in the bodies, solver, and pair cache can hold the newly activated islands without resizing or accessing a buffer pool.
+            //2) Allocate space in the active set for the bodies and constraints.
+            //(Pair caches are left to be handled in a locally sequential task right now due to the overlap mapping being global.
+            //The type caches could be updated in parallel, but we just didn't split it out. You can consider doing that if there appears to be a reason to do so.)
+            //3) Schedule actual jobs for the two work phases.
+
+            int newBodyCount = 0;
+            int highestNewBatchCount = 0;
+            int highestRequiredTypeCapacity = 0;
+            for (int i = 0; i < setIndices.Count; ++i)
+            {
+                var setIndex = setIndices[i];
+                newBodyCount += bodies.Sets[setIndex].Count;
+                var setBatchCount = solver.Sets[setIndex].Batches.Count;
+                if (highestNewBatchCount < setBatchCount)
+                    highestNewBatchCount = setBatchCount;
+                ref var constraintSet = ref solver.Sets[setIndex];
+                for (int batchIndex = 0; batchIndex < constraintSet.Batches.Count; ++batchIndex)
+                {
+                    ref var batch = ref constraintSet.Batches[batchIndex];
+                    for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                    {
+                        ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                        if (highestRequiredTypeCapacity < typeBatch.TypeId)
+                            highestRequiredTypeCapacity = typeBatch.TypeId;
+                    }
+                }
+
+            }
+            //We accumulated indices above; add one to get the capacity requirement.
+            ++highestRequiredTypeCapacity;
+            pool.SpecializeFor<TypeAllocationSizes>().Take(highestNewBatchCount, out var constraintCountPerTypePerBatch);
+            for (int batchIndex = 0; batchIndex < highestNewBatchCount; ++batchIndex)
+            {
+                constraintCountPerTypePerBatch[batchIndex] = new TypeAllocationSizes(pool, highestRequiredTypeCapacity);
+            }
+            var narrowPhaseConstraintCaches = new TypeAllocationSizes(pool, PairCache.CollisionConstraintTypeCount);
+            var narrowPhaseCollisionCaches = new TypeAllocationSizes(pool, PairCache.CollisionTypeCount);
+
+            void AccumulatePairCacheTypeCounts(ref Buffer<InactiveCache> sourceTypeCaches, ref TypeAllocationSizes counts)
+            {
+                for (int j = 0; j < sourceTypeCaches.Length; ++j)
+                {
+                    ref var sourceCache = ref sourceTypeCaches[j];
+                    if (sourceCache.List.Buffer.Allocated)
+                        counts.Add(sourceCache.TypeId, sourceCache.List.ByteCount);
+                    else
+                        break; //Encountering an unallocated slot is a termination condition. Used instead of explicitly storing cache counts, which are only rarely useful.
+                }
+            }
+            for (int i = 0; i < setIndices.Count; ++i)
+            {
+                var setIndex = setIndices[i];
+                ref var constraintSet = ref solver.Sets[setIndex];
+                for (int batchIndex = 0; batchIndex < constraintSet.Batches.Count; ++batchIndex)
+                {
+                    ref var constraintCountPerType = ref constraintCountPerTypePerBatch[batchIndex];
+                    ref var batch = ref constraintSet.Batches[batchIndex];
+                    for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                    {
+                        ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                        constraintCountPerType.Add(typeBatch.TypeId, typeBatch.ConstraintCount);
+                    }
+                }
+
+                ref var sourceSet = ref pairCache.InactiveSets[setIndex];
+                AccumulatePairCacheTypeCounts(ref sourceSet.ConstraintCaches, ref narrowPhaseConstraintCaches);
+                AccumulatePairCacheTypeCounts(ref sourceSet.CollisionCaches, ref narrowPhaseCollisionCaches);
+            }
+
+            //We now know how many new bodies, constraint batch entries, and pair cache entries are going to be added.
+            //Ensure capacities on all systems.
+            bodies.EnsureCapacity(bodies.ActiveSet.Count + newBodyCount);
+            solver.ActiveSet.Batches.EnsureCapacity(highestNewBatchCount, pool.SpecializeFor<ConstraintBatch>());
+            solver.batchReferencedHandles.EnsureCapacity(highestNewBatchCount, pool.SpecializeFor<IndexSet>());
+            for (int i = solver.ActiveSet.Batches.Count; i < highestNewBatchCount; ++i)
+            {
+                solver.ActiveSet.Batches.AllocateUnsafely() = new ConstraintBatch(pool);
+                solver.batchReferencedHandles.AllocateUnsafely() = new IndexSet(pool, bodies.HandlePool.HighestPossiblyClaimedId + 1);
+            }
+            ref var targetPairCache = ref pairCache.GetCacheForActivation();
+            for (int typeIndex = 0; typeIndex <= narrowPhaseConstraintCaches.HighestOccupiedTypeIndex; ++typeIndex)
+            {
+                var typeByteCount = narrowPhaseConstraintCaches.TypeCounts[typeIndex];
+                if(typeByteCount > 0)
+                {
+                    ref var targetSubCache = ref targetPairCache.constraintCaches[typeIndex];
+                    targetSubCache.EnsureCapacityInBytes(targetSubCache.ByteCount + targetByteCount, pool);
+                }
+            }
+
             return (0, 0);
         }
 
-        internal void DisposeSets(ref QuickList<int, Buffer<int>> setIndices)
+        internal void DisposeActivatedSets(ref QuickList<int, Buffer<int>> setIndices)
         {
             for (int i = 0; i < setIndices.Count; ++i)
             {
