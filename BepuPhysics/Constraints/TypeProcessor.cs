@@ -564,6 +564,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
+
         internal unsafe sealed override void CopyInactiveToActive(
             int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetBatchIndex, int targetTypeBatchIndex,
             int sourceStart, int targetStart, int count, Bodies bodies, Solver solver)
@@ -574,15 +575,16 @@ namespace BepuPhysics.Constraints
             Debug.Assert(targetStart >= 0 && targetStart + count < targetTypeBatch.ConstraintCount,
                 "This function should only be used when a region has been preallocated within the type batch.");
             Debug.Assert(sourceTypeBatch.TypeId == targetTypeBatch.TypeId);
-            if ((sourceStart & BundleIndexing.VectorMask) == 0 && (targetStart & BundleIndexing.VectorMask) == 0)
+            //TODO: Note that we give up on a bulk copy very easily here.
+            //If you see this showing up in profiling to a meaningful extent, consider doing incomplete copies to allow a central bulk copy.
+            //The only reasons that such a thing isn't already implemented are simplicity and time.
+            if ((targetStart & BundleIndexing.VectorMask) == 0 &&
+                (sourceStart & BundleIndexing.VectorMask) == 0 &&
+                ((count & BundleIndexing.VectorMask) == 0 || count == targetTypeBatch.ConstraintCount))
             {
-                //Both regions start bundle aligned.
+                //We can use a simple bulk copy here.      
                 Debug.Assert(count > 0);
                 var bundleCount = BundleIndexing.GetBundleCount(count);
-                //Note that we copy full bundles even if the end isn't bundle aligned.                
-                Debug.Assert((count & BundleIndexing.VectorShift) == 0 || (targetStart + count) == targetTypeBatch.ConstraintCount,
-                    "The caller of this function guarantees that the only time that the 1) starts are bundle aligned and 2) the end is not bundle aligned is when the last bundle " +
-                    "of the region is the last bundle of the entire type batch. Since no further copies can affect the overwritten slots, bundle-wide copies are safe.");
                 var sourcePrestepData = sourceTypeBatch.PrestepData.As<TPrestepData>();
                 var sourceAccumulatedImpulses = sourceTypeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
                 var targetPrestepData = targetTypeBatch.PrestepData.As<TPrestepData>();
@@ -594,7 +596,6 @@ namespace BepuPhysics.Constraints
             }
             else
             {
-                Debug.Assert(count < Vector<float>.Count, "Jobs with unaligned starts should only occur on incomplete bundle regions.");
                 CopyIncompleteBundle(sourceStart, targetStart, count, ref sourceTypeBatch, ref targetTypeBatch);
             }
             //Note that body reference copies cannot be done in bulk because inactive constraints refer to body handles while active constraints refer to body indices.

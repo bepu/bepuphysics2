@@ -172,9 +172,8 @@ namespace BepuPhysics
             public int Count;
             public int SourceSet;
             public int TypeId;
-            public int SourceBatch;
+            public int Batch;
             public int SourceTypeBatch;
-            public int TargetBatch;
             public int TargetTypeBatch;
         }
 
@@ -258,11 +257,11 @@ namespace BepuPhysics
             //2) Inactive constraints store their body references as body *handles* rather than body indices.
             //Pulling the type batches back into the active set requires translating those body handles to body indices.  
             //3) The translation from body handle to body index requires that the bodies already have an active set identity, which is why the constraints wait until the second phase.
-            ref var sourceTypeBatch = ref solver.Sets[job.SourceSet].Batches[job.SourceBatch].TypeBatches[job.SourceTypeBatch];
-            ref var targetTypeBatch = ref solver.ActiveSet.Batches[job.TargetBatch].TypeBatches[job.TargetTypeBatch];
+            ref var sourceTypeBatch = ref solver.Sets[job.SourceSet].Batches[job.Batch].TypeBatches[job.SourceTypeBatch];
+            ref var targetTypeBatch = ref solver.ActiveSet.Batches[job.Batch].TypeBatches[job.TargetTypeBatch];
             Debug.Assert(targetTypeBatch.TypeId == sourceTypeBatch.TypeId);
             solver.TypeProcessors[job.TypeId].CopyInactiveToActive(
-                job.SourceSet, job.SourceBatch, job.SourceTypeBatch, job.TargetBatch, job.TargetTypeBatch,
+                job.SourceSet, job.Batch, job.SourceTypeBatch, job.Batch, job.TargetTypeBatch,
                 job.SourceStart, job.TargetStart, job.Count, bodies, solver);
         }
 
@@ -463,6 +462,7 @@ namespace BepuPhysics
 
             ref var activeBodySet = ref bodies.ActiveSet;
             ref var activeSolverSet = ref solver.ActiveSet;
+            //TODO: The job sizes are a little goofy for single threaded execution. Easy enough to resolve with special case or dynamic size.
             for (int i = 0; i < uniqueSetIndices.Count; ++i)
             {
                 var sourceSetIndex = uniqueSetIndices[i];
@@ -486,11 +486,11 @@ namespace BepuPhysics
                         activeBodySet.Count += job.Count;
                     }
                     Debug.Assert(previousSourceEnd == sourceSet.Count);
+                    Debug.Assert(activeBodySet.Count < activeBodySet.IndexToHandle.Length);
                 }
                 {
                     const int constraintJobSize = 32;
                     ref var sourceSet = ref solver.Sets[sourceSetIndex];
-                    var setJobCount = 0;
                     for (int batchIndex = 0; batchIndex < sourceSet.Batches.Count; ++batchIndex)
                     {
                         ref var sourceBatch = ref sourceSet.Batches[batchIndex];
@@ -498,16 +498,31 @@ namespace BepuPhysics
                         for (int sourceTypeBatchIndex = 0; sourceTypeBatchIndex < sourceBatch.TypeBatches.Count; ++sourceTypeBatchIndex)
                         {
                             ref var sourceTypeBatch = ref sourceBatch.TypeBatches[sourceTypeBatchIndex];
-                            ref var targetTypeBatch = ref targetBatch.TypeBatches[targetBatch.TypeIndexToTypeBatchIndex[sourceTypeBatch.TypeId]];
-                            //Note that there is some complexity here regarding scheduling jobs.
-                            //Constraints are bundled together. Two threads should never work on the same bundle.
-                            //But type batches may have incomplete bundles at the end.
-                            //A single job should be created to copy 
-                            var bundleRemainder = targetTypeBatch.ConstraintCount & BundleIndexing.VectorMask;
-                            if(bundleRemainder > 0)
+                            var targetTypeBatchIndex = targetBatch.TypeIndexToTypeBatchIndex[sourceTypeBatch.TypeId];
+                            ref var targetTypeBatch = ref targetBatch.TypeBatches[targetTypeBatchIndex];
+                            //TODO: It would be nice to be a little more clever about scheduling start and end points for the sake of avoiding partial bundles.
+                            var jobCount = Math.Max(1, sourceTypeBatch.ConstraintCount / constraintJobSize);
+                            var baseConstraintsPerJob = sourceTypeBatch.ConstraintCount / jobCount;
+                            var remainder = sourceTypeBatch.ConstraintCount - baseConstraintsPerJob * jobCount;
+                            phaseTwoJobs.EnsureCapacity(phaseTwoJobs.Count + jobCount, phaseTwoJobPool);
+
+                            var previousSourceEnd = 0;
+                            for (int jobIndex = 0; jobIndex < jobCount; ++jobIndex)
                             {
-                                //There
+                                ref var job = ref phaseTwoJobs.AllocateUnsafely();
+                                job.TypeId = sourceTypeBatch.TypeId;
+                                job.Batch = batchIndex;
+                                job.SourceSet = sourceSetIndex;
+                                job.SourceTypeBatch = sourceTypeBatchIndex;
+                                job.TargetTypeBatch = targetTypeBatchIndex;
+                                job.Count = jobIndex > remainder ? baseConstraintsPerJob : baseConstraintsPerJob + 1;
+                                job.SourceStart = previousSourceEnd;
+                                job.TargetStart = targetTypeBatch.ConstraintCount;
+                                previousSourceEnd += job.Count;
+                                targetTypeBatch.ConstraintCount += jobCount;
                             }
+                            Debug.Assert(previousSourceEnd == sourceTypeBatch.ConstraintCount);
+                            Debug.Assert(targetTypeBatch.ConstraintCount < targetTypeBatch.IndexToHandle.Length);
                         }
                     }
                 }
