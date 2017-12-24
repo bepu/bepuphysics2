@@ -57,6 +57,11 @@ namespace BepuPhysics
                 TypeIndexToTypeBatchIndex[i] = -1;
             }
         }
+        internal void EnsureTypeMapSize(BufferPool pool, int targetSize)
+        {
+            if (targetSize > TypeIndexToTypeBatchIndex.Length)
+                ResizeTypeMap(pool, targetSize);
+        }
 
         [Conditional("DEBUG")]
         void ValidateTypeBatchMappings()

@@ -394,28 +394,57 @@ namespace BepuPhysics
             }
 
             //We now know how many new bodies, constraint batch entries, and pair cache entries are going to be added.
-            //Ensure capacities on all systems.
+            //Ensure capacities on all systems:
+            //bodies,
             bodies.EnsureCapacity(bodies.ActiveSet.Count + newBodyCount);
+            //constraints,
             solver.ActiveSet.Batches.EnsureCapacity(highestNewBatchCount, pool.SpecializeFor<ConstraintBatch>());
             solver.batchReferencedHandles.EnsureCapacity(highestNewBatchCount, pool.SpecializeFor<IndexSet>());
-            for (int i = solver.ActiveSet.Batches.Count; i < highestNewBatchCount; ++i)
+            for (int batchIndex = solver.ActiveSet.Batches.Count; batchIndex < highestNewBatchCount; ++batchIndex)
             {
                 solver.ActiveSet.Batches.AllocateUnsafely() = new ConstraintBatch(pool);
                 solver.batchReferencedHandles.AllocateUnsafely() = new IndexSet(pool, bodies.HandlePool.HighestPossiblyClaimedId + 1);
             }
-            ref var targetPairCache = ref pairCache.GetCacheForActivation();
-            for (int typeIndex = 0; typeIndex <= narrowPhaseConstraintCaches.HighestOccupiedTypeIndex; ++typeIndex)
+            for (int batchIndex = 0; batchIndex < highestNewBatchCount; ++batchIndex)
             {
-                var typeByteCount = narrowPhaseConstraintCaches.TypeCounts[typeIndex];
-                if(typeByteCount > 0)
+                ref var constraintCountPerType = ref constraintCountPerTypePerBatch[batchIndex];
+                ref var batch = ref solver.ActiveSet.Batches[batchIndex];
+                batch.EnsureTypeMapSize(pool, constraintCountPerType.HighestOccupiedTypeIndex);
+                for (int typeId = 0; typeId <= constraintCountPerType.HighestOccupiedTypeIndex; ++typeId)
                 {
-                    ref var targetSubCache = ref targetPairCache.constraintCaches[typeIndex];
-                    targetSubCache.EnsureCapacityInBytes(targetSubCache.ByteCount + targetByteCount, pool);
+                    var countForType = constraintCountPerType.TypeCounts[typeId];
+                    if (countForType > 0)
+                    {
+                        var typeProcessor = solver.TypeProcessors[typeId];
+                        ref var typeBatch = ref batch.GetOrCreateTypeBatch(typeId, typeProcessor, countForType, pool);
+                        var targetCapacity = countForType + typeBatch.ConstraintCount; 
+                        if (targetCapacity > typeBatch.IndexToHandle.Length)
+                        {
+                            typeProcessor.Resize(ref typeBatch, targetCapacity, pool);
+                        }
+                    }
                 }
             }
+            //and narrow phase pair caches.
+            ref var targetPairCache = ref pairCache.GetCacheForActivation();
+            void EnsurePairCacheTypeCapacities(ref TypeAllocationSizes cacheSizes, ref Buffer<UntypedList> targetCaches, BufferPool cachePool)
+            {
+                for (int typeIndex = 0; typeIndex <= cacheSizes.HighestOccupiedTypeIndex; ++typeIndex)
+                {
+                    var typeByteCount = cacheSizes.TypeCounts[typeIndex];
+                    if (typeByteCount > 0)
+                    {
+                        ref var targetSubCache = ref targetCaches[typeIndex];
+                        targetSubCache.EnsureCapacityInBytes(targetSubCache.ByteCount + typeByteCount, cachePool);
+                    }
+                }
+            }
+            EnsurePairCacheTypeCapacities(ref narrowPhaseConstraintCaches, ref targetPairCache.constraintCaches, targetPairCache.pool);
+            EnsurePairCacheTypeCapacities(ref narrowPhaseCollisionCaches, ref targetPairCache.collisionCaches, targetPairCache.pool);
 
             return (0, 0);
         }
+
 
         internal void DisposeActivatedSets(ref QuickList<int, Buffer<int>> setIndices)
         {

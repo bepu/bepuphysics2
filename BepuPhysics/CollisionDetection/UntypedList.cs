@@ -43,6 +43,15 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void EnsureCapacityInBytes(int targetCapacityInBytes, BufferPool pool)
+        {
+            if(Buffer.Length < targetCapacityInBytes)
+            {
+                pool.Resize(ref Buffer, targetCapacityInBytes, ByteCount);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe byte* AllocateUnsafely()
         {
             Validate();
@@ -52,7 +61,7 @@ namespace BepuPhysics.CollisionDetection
             ByteCount = newSize;
             return Buffer.Memory + byteIndex;
         }
-    
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe ref T AllocateUnsafely<T>()
         {
@@ -121,5 +130,6 @@ namespace BepuPhysics.CollisionDetection
             GetFromBytes<T>(byteIndex) = data;
             return byteIndex;
         }
+
     }
 }
