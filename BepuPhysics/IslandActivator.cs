@@ -115,7 +115,7 @@ namespace BepuPhysics
                 }
             }
 
-            DisposeActivatedSets(ref uniqueSetIndices);
+            DisposeForCompletedActivations(ref uniqueSetIndices);
 
             uniqueSetIndices.Dispose(pool.SpecializeFor<int>());
         }
@@ -233,10 +233,16 @@ namespace BepuPhysics
                         sourceSet.Activity.CopyTo(job.SourceStart, ref targetSet.Activity, job.TargetStart, job.Count);
                         sourceSet.Collidables.CopyTo(job.SourceStart, ref targetSet.Collidables, job.TargetStart, job.Count);
                         sourceSet.Constraints.CopyTo(job.SourceStart, ref targetSet.Constraints, job.TargetStart, job.Count);
-                        sourceSet.IndexToHandle.CopyTo(job.SourceStart, ref targetSet.IndexToHandle, job.TargetStart, job.Count);
                         sourceSet.LocalInertias.CopyTo(job.SourceStart, ref targetSet.LocalInertias, job.TargetStart, job.Count);
                         sourceSet.Poses.CopyTo(job.SourceStart, ref targetSet.Poses, job.TargetStart, job.Count);
                         sourceSet.Velocities.CopyTo(job.SourceStart, ref targetSet.Velocities, job.TargetStart, job.Count);
+                        sourceSet.IndexToHandle.CopyTo(job.SourceStart, ref targetSet.IndexToHandle, job.TargetStart, job.Count);
+                        for (int i = 0; i < job.Count; ++i)
+                        {
+                            ref var bodyLocation = ref bodies.HandleToLocation[sourceSet.IndexToHandle[job.SourceStart + i]];
+                            bodyLocation.SetIndex = 0;
+                            bodyLocation.Index = job.TargetStart + i;
+                        }
                     }
                     break;
             }
@@ -245,7 +251,7 @@ namespace BepuPhysics
         internal void ExecutePhaseTwoJob(int index)
         {
             ref var job = ref phaseTwoJobs[index];
-            //Constraints are a little more complicated than bodies for two reasons:
+            //Constraints are a little more complicated than bodies for a few reasons:
             //1) Constraints are stored in AOSOA format. We cannot simply copy with bundle alignment with no preparation, since that may leave a gap.
             //To avoid this issue, we instead use the last bundle of the source batch to pad out any incomplete bundles ahead of the target copy region.
             //The scheduler attempts to maximize the number of jobs which are pure bundle copies.
@@ -417,7 +423,7 @@ namespace BepuPhysics
                     {
                         var typeProcessor = solver.TypeProcessors[typeId];
                         ref var typeBatch = ref batch.GetOrCreateTypeBatch(typeId, typeProcessor, countForType, pool);
-                        var targetCapacity = countForType + typeBatch.ConstraintCount; 
+                        var targetCapacity = countForType + typeBatch.ConstraintCount;
                         if (targetCapacity > typeBatch.IndexToHandle.Length)
                         {
                             typeProcessor.Resize(ref typeBatch, targetCapacity, pool);
@@ -442,11 +448,76 @@ namespace BepuPhysics
             EnsurePairCacheTypeCapacities(ref narrowPhaseConstraintCaches, ref targetPairCache.constraintCaches, targetPairCache.pool);
             EnsurePairCacheTypeCapacities(ref narrowPhaseCollisionCaches, ref targetPairCache.collisionCaches, targetPairCache.pool);
 
-            return (0, 0);
+            var phaseOneJobPool = pool.SpecializeFor<PhaseOneJob>();
+            var phaseTwoJobPool = pool.SpecializeFor<PhaseTwoJob>();
+            QuickList<PhaseOneJob, Buffer<PhaseOneJob>>.Create(phaseOneJobPool, Math.Max(32, highestNewBatchCount + 1), out phaseOneJobs);
+            QuickList<PhaseTwoJob, Buffer<PhaseTwoJob>>.Create(phaseTwoJobPool, 32, out phaseTwoJobs);
+            //Finally, create actual jobs. Note that this involves actually allocating space in the bodies set and in type batches for the workers to fill in.
+            //(Pair caches are currently handled in a locally sequential way and do not require preallocation.)
+
+            phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = JobType.PairCache };
+            for (int batchIndex = 0; batchIndex < highestNewBatchCount; ++batchIndex)
+            {
+                phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = JobType.UpdateBatchReferencedHandles, BatchIndex = batchIndex };
+            }
+
+            ref var activeBodySet = ref bodies.ActiveSet;
+            ref var activeSolverSet = ref solver.ActiveSet;
+            for (int i = 0; i < uniqueSetIndices.Count; ++i)
+            {
+                var sourceSetIndex = uniqueSetIndices[i];
+                {
+                    const int bodyJobSize = 64;
+                    ref var sourceSet = ref bodies.Sets[sourceSetIndex];
+                    var setJobCount = Math.Max(1, sourceSet.Count / bodyJobSize);
+                    var baseBodiesPerJob = sourceSet.Count / setJobCount;
+                    var remainder = sourceSet.Count - baseBodiesPerJob * setJobCount;
+                    phaseOneJobs.EnsureCapacity(phaseOneJobs.Count + setJobCount, phaseOneJobPool);
+                    var previousSourceEnd = 0;
+                    for (int jobIndex = 0; jobIndex < setJobCount; ++jobIndex)
+                    {
+                        ref var job = ref phaseOneJobs.AllocateUnsafely();
+                        job.Type = JobType.CopyBodyRegion;
+                        job.SourceSet = sourceSetIndex;
+                        job.SourceStart = previousSourceEnd;
+                        job.TargetStart = activeBodySet.Count;
+                        job.Count = jobIndex > remainder ? baseBodiesPerJob : baseBodiesPerJob + 1;
+                        previousSourceEnd += job.Count;
+                        activeBodySet.Count += job.Count;
+                    }
+                    Debug.Assert(previousSourceEnd == sourceSet.Count);
+                }
+                {
+                    const int constraintJobSize = 32;
+                    ref var sourceSet = ref solver.Sets[sourceSetIndex];
+                    var setJobCount = 0;
+                    for (int batchIndex = 0; batchIndex < sourceSet.Batches.Count; ++batchIndex)
+                    {
+                        ref var sourceBatch = ref sourceSet.Batches[batchIndex];
+                        ref var targetBatch = ref activeSolverSet.Batches[batchIndex];
+                        for (int sourceTypeBatchIndex = 0; sourceTypeBatchIndex < sourceBatch.TypeBatches.Count; ++sourceTypeBatchIndex)
+                        {
+                            ref var sourceTypeBatch = ref sourceBatch.TypeBatches[sourceTypeBatchIndex];
+                            ref var targetTypeBatch = ref targetBatch.TypeBatches[targetBatch.TypeIndexToTypeBatchIndex[sourceTypeBatch.TypeId]];
+                            //Note that there is some complexity here regarding scheduling jobs.
+                            //Constraints are bundled together. Two threads should never work on the same bundle.
+                            //But type batches may have incomplete bundles at the end.
+                            //A single job should be created to copy 
+                            var bundleRemainder = targetTypeBatch.ConstraintCount & BundleIndexing.VectorMask;
+                            if(bundleRemainder > 0)
+                            {
+                                //There
+                            }
+                        }
+                    }
+                }
+            }
+
+            return (phaseOneJobs.Count, phaseTwoJobs.Count);
         }
 
 
-        internal void DisposeActivatedSets(ref QuickList<int, Buffer<int>> setIndices)
+        internal void DisposeForCompletedActivations(ref QuickList<int, Buffer<int>> setIndices)
         {
             for (int i = 0; i < setIndices.Count; ++i)
             {
@@ -459,11 +530,8 @@ namespace BepuPhysics
                 pairCacheSet.Dispose(pool);
                 this.uniqueSetIndices = new QuickList<int, Buffer<int>>();
             }
-        }
-
-
-        internal void Dispose()
-        {
+            phaseOneJobs.Dispose(pool.SpecializeFor<PhaseOneJob>());
+            phaseTwoJobs.Dispose(pool.SpecializeFor<PhaseTwoJob>());
         }
     }
 }

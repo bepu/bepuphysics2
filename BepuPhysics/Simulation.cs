@@ -382,7 +382,6 @@ namespace BepuPhysics
         public void Dispose()
         {
             Clear();
-            Activator.Dispose();
             Deactivator.Dispose();
             Solver.Dispose();
             BroadPhase.Dispose();

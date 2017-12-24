@@ -544,6 +544,25 @@ namespace BepuPhysics.Constraints
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void CopyIncompleteBundle(int sourceStart, int targetStart, int count, ref TypeBatch sourceTypeBatch, ref TypeBatch targetTypeBatch)
+        {
+            for (int i = 0; i < count; ++i)
+            {
+                //Note that this implementation allows two threads to access a single bundle. That would be a pretty bad case of false sharing if it happens, but
+                //it won't cause correctness problems.
+                var sourceIndex = sourceStart + i;
+                var targetIndex = targetStart + i;
+                BundleIndexing.GetBundleIndices(sourceIndex, out var sourceBundle, out var sourceInner);
+                BundleIndexing.GetBundleIndices(targetIndex, out var targetBundle, out var targetInner);
+                GatherScatter.CopyLane(
+                    ref Buffer<TPrestepData>.Get(ref sourceTypeBatch.PrestepData, sourceBundle), sourceInner,
+                    ref Buffer<TPrestepData>.Get(ref targetTypeBatch.PrestepData, targetBundle), targetInner);
+                GatherScatter.CopyLane(
+                    ref Buffer<TAccumulatedImpulse>.Get(ref sourceTypeBatch.AccumulatedImpulses, sourceBundle), sourceInner,
+                    ref Buffer<TAccumulatedImpulse>.Get(ref targetTypeBatch.AccumulatedImpulses, targetBundle), targetInner);
+            }
+        }
 
         internal unsafe sealed override void CopyInactiveToActive(
             int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetBatchIndex, int targetTypeBatchIndex,
@@ -575,20 +594,8 @@ namespace BepuPhysics.Constraints
             }
             else
             {
-                Debug.Assert(count < Vector<float>.Count, "Unaligned copies should only occur on 'remainder' regions scheduled to pad the aligned copies.");
-                for (int i = 0; i < count; ++i)
-                {
-                    var sourceIndex = sourceStart + i;
-                    var targetIndex = targetStart + i;
-                    BundleIndexing.GetBundleIndices(sourceIndex, out var sourceBundle, out var sourceInner);
-                    BundleIndexing.GetBundleIndices(targetIndex, out var targetBundle, out var targetInner);
-                    GatherScatter.CopyLane(
-                     ref Buffer<TPrestepData>.Get(ref sourceTypeBatch.PrestepData, sourceBundle), sourceInner,
-                     ref Buffer<TPrestepData>.Get(ref targetTypeBatch.PrestepData, targetBundle), targetInner);
-                    GatherScatter.CopyLane(
-                        ref Buffer<TAccumulatedImpulse>.Get(ref sourceTypeBatch.AccumulatedImpulses, sourceBundle), sourceInner,
-                        ref Buffer<TAccumulatedImpulse>.Get(ref targetTypeBatch.AccumulatedImpulses, targetBundle), targetInner);
-                }
+                Debug.Assert(count < Vector<float>.Count, "Jobs with unaligned starts should only occur on incomplete bundle regions.");
+                CopyIncompleteBundle(sourceStart, targetStart, count, ref sourceTypeBatch, ref targetTypeBatch);
             }
             //Note that body reference copies cannot be done in bulk because inactive constraints refer to body handles while active constraints refer to body indices.
             for (int i = 0; i < count; ++i)
