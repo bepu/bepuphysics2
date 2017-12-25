@@ -348,8 +348,8 @@ namespace BepuPhysics
                         ref var broadPhaseData = ref inactiveSetReference.BroadPhaseData[targetIndex];
                         broadPhaseData.Reference = broadPhase.activeLeaves[sourceCollidable.BroadPhaseIndex];
                         broadPhase.GetActiveBoundsPointers(sourceCollidable.BroadPhaseIndex, out var minPtr, out var maxPtr);
-                        broadPhaseData.Bounds.Min = new Vector3(minPtr[0], minPtr[1], minPtr[2]);
-                        broadPhaseData.Bounds.Max = new Vector3(maxPtr[0], maxPtr[1], maxPtr[2]);
+                        broadPhaseData.Bounds.Min = *minPtr;
+                        broadPhaseData.Bounds.Max = *maxPtr;
                     }
                 }
                 else
@@ -382,7 +382,7 @@ namespace BepuPhysics
             }
         }
 
-        struct BroadPhaseData
+        struct CachedBroadPhaseData
         {
             public CollidableReference Reference;
             public BoundingBox Bounds;
@@ -392,7 +392,7 @@ namespace BepuPhysics
         {
             public int Index;
 
-            public Buffer<BroadPhaseData> BroadPhaseData;
+            public Buffer<CachedBroadPhaseData> BroadPhaseData;
         }
 
         QuickList<InactiveSetReference, Buffer<InactiveSetReference>> newInactiveSets;
@@ -725,7 +725,7 @@ namespace BepuPhysics
             //If a previous worker traversed a body, the later worker's island holding that body is considered a duplicate.
             //(Note that a body can only belong to one island. If two threads find the same body, it means they found the exact same island, just using different paths. They are fully redundant.)
             var inactiveSetReferencePool = pool.SpecializeFor<InactiveSetReference>();
-            var broadPhaseDataPool = pool.SpecializeFor<BroadPhaseData>();
+            var broadPhaseDataPool = pool.SpecializeFor<CachedBroadPhaseData>();
             QuickList<InactiveSetReference, Buffer<InactiveSetReference>>.Create(inactiveSetReferencePool, 32, out newInactiveSets);
             var deactivatedBodyCount = 0;
             for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)

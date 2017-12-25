@@ -52,13 +52,11 @@ namespace DemoRenderer.Constraints
             {
                 var broadPhaseIndex = job.LeafStart + i;
 
-                float* minFloat, maxFloat;
+                Vector3* min, max;
                 if (job.CoversActiveCollidables)
-                    broadPhase.GetActiveBoundsPointers(broadPhaseIndex, out minFloat, out maxFloat);
+                    broadPhase.GetActiveBoundsPointers(broadPhaseIndex, out min, out max);
                 else
-                    broadPhase.GetStaticBoundsPointers(broadPhaseIndex, out minFloat, out maxFloat);
-                var min = (Vector3*)minFloat;
-                var max = (Vector3*)maxFloat;
+                    broadPhase.GetStaticBoundsPointers(broadPhaseIndex, out min, out max);
                 var v001 = new Vector3(min->X, min->Y, max->Z);
                 var v010 = new Vector3(min->X, max->Y, min->Z);
                 var v011 = new Vector3(min->X, max->Y, max->Z);

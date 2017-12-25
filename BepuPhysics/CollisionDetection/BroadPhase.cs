@@ -4,6 +4,7 @@ using BepuPhysics.Collidables;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Numerics;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -78,20 +79,20 @@ namespace BepuPhysics.CollisionDetection
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void GetBoundsPointers(int broadPhaseIndex, Tree tree, out float* minPointer, out float* maxPointer)
+        static void GetBoundsPointers(int broadPhaseIndex, Tree tree, out Vector3* minPointer, out Vector3* maxPointer)
         {
             var leaf = tree.Leaves[broadPhaseIndex];
             var nodeChild = (&tree.nodes[leaf.NodeIndex].A) + leaf.ChildIndex;
-            minPointer = &nodeChild->Min.X;
-            maxPointer = &nodeChild->Max.X;
+            minPointer = &nodeChild->Min;
+            maxPointer = &nodeChild->Max;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetActiveBoundsPointers(int index, out float* minPointer, out float* maxPointer)
+        public void GetActiveBoundsPointers(int index, out Vector3* minPointer, out Vector3* maxPointer)
         {
             GetBoundsPointers(index, ActiveTree, out minPointer, out maxPointer);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetStaticBoundsPointers(int index, out float* minPointer, out float* maxPointer)
+        public void GetStaticBoundsPointers(int index, out Vector3* minPointer, out Vector3* maxPointer)
         {
             GetBoundsPointers(index, StaticTree, out minPointer, out maxPointer);
         }

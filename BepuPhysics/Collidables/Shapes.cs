@@ -94,12 +94,14 @@ namespace BepuPhysics.Collidables
                 //that was worth using at any given time. Abstraction for the sake of abstraction at the cost of virtual calls everywhere isn't worth it.
                 BroadPhase.GetActiveBoundsPointers(Bodies.ActiveSet.Collidables[BodyIndices[startIndex + i]].BroadPhaseIndex, out var minPointer, out var maxPointer);
                 //TODO: Check codegen.
-                *minPointer = Unsafe.Add(ref minBase, i);
-                *(minPointer + 1) = Unsafe.Add(ref minBase, i + Vector<float>.Count);
-                *(minPointer + 2) = Unsafe.Add(ref minBase, i + Vector<float>.Count * 2);
-                *maxPointer = Unsafe.Add(ref maxBase, i);
-                *(maxPointer + 1) = Unsafe.Add(ref maxBase, i + Vector<float>.Count);
-                *(maxPointer + 2) = Unsafe.Add(ref maxBase, i + Vector<float>.Count * 2);
+                *minPointer = new Vector3(
+                    Unsafe.Add(ref minBase, i),
+                    Unsafe.Add(ref minBase, i + Vector<float>.Count),
+                    Unsafe.Add(ref minBase, i + Vector<float>.Count * 2));
+                *maxPointer = new Vector3(
+                    Unsafe.Add(ref maxBase, i),
+                    Unsafe.Add(ref maxBase, i + Vector<float>.Count),
+                    Unsafe.Add(ref maxBase, i + Vector<float>.Count * 2));
             }
         }
     }

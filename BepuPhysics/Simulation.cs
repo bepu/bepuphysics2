@@ -60,7 +60,7 @@ namespace BepuPhysics
                 minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
             constraintRemover = new ConstraintRemover(BufferPool, Bodies, Solver);
             Deactivator = new Deactivator(Bodies, Solver, BroadPhase, constraintRemover, BufferPool);
-            Activator = new IslandActivator(Bodies, Solver, Deactivator, bufferPool);
+            Activator = new IslandActivator(Bodies, Statics, Solver, BroadPhase, Deactivator, bufferPool);
             Bodies.Initialize(Solver, Activator);
             PoseIntegrator = new PoseIntegrator(Bodies, Shapes, BroadPhase);
             SolverBatchCompressor = new BatchCompressor(Solver, Bodies);

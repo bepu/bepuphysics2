@@ -17,15 +17,19 @@ namespace BepuPhysics
     public class IslandActivator
     {
         Solver solver;
+        Statics statics;
         Bodies bodies;
+        BroadPhase broadPhase;
         Deactivator deactivator;
-        internal PairCache pairCache;
         BufferPool pool;
+        internal PairCache pairCache;
 
-        public IslandActivator(Bodies bodies, Solver solver, Deactivator deactivator, BufferPool pool)
+        public IslandActivator(Bodies bodies, Statics statics, Solver solver, BroadPhase broadPhase, Deactivator deactivator, BufferPool pool)
         {
             this.bodies = bodies;
+            this.statics = statics;
             this.solver = solver;
+            this.broadPhase = broadPhase;
             this.deactivator = deactivator;
             this.pool = pool;
 
@@ -149,7 +153,7 @@ namespace BepuPhysics
                 ExecutePhaseTwoJob(index);
             }
         }
-        enum JobType
+        enum PhaseOneJobType
         {
             PairCache,
             UpdateBatchReferencedHandles,
@@ -158,7 +162,7 @@ namespace BepuPhysics
 
         struct PhaseOneJob
         {
-            public JobType Type;
+            public PhaseOneJobType Type;
             public int BatchIndex; //Only used by batch reference update jobs.
             //Only used by body region copy.
             public int SourceSet;
@@ -167,8 +171,14 @@ namespace BepuPhysics
             public int Count;
             //could union these, but it's preeeetty pointless.
         }
+        enum PhaseTwoJobType
+        {
+            BroadPhase,
+            CopyConstraintRegion,
+        }
         struct PhaseTwoJob
         {
+            public PhaseTwoJobType Type;
             public int SourceStart;
             public int TargetStart;
             public int Count;
@@ -182,12 +192,12 @@ namespace BepuPhysics
         QuickList<int, Buffer<int>> uniqueSetIndices;
         QuickList<PhaseOneJob, Buffer<PhaseOneJob>> phaseOneJobs;
         QuickList<PhaseTwoJob, Buffer<PhaseTwoJob>> phaseTwoJobs;
-        internal void ExecutePhaseOneJob(int index)
+        internal unsafe void ExecutePhaseOneJob(int index)
         {
             ref var job = ref phaseOneJobs[index];
             switch (job.Type)
             {
-                case JobType.PairCache:
+                case PhaseOneJobType.PairCache:
                     {
                         //Updating the pair cache is locally sequential because it modifies the global overlap mapping, which at the moment is a hash table.
                         //The other per-type caches could be separated from this job and handled in an internally multithreaded way, but that would add complexity that is likely unnecessary.
@@ -198,7 +208,7 @@ namespace BepuPhysics
                         }
                     }
                     break;
-                case JobType.UpdateBatchReferencedHandles:
+                case PhaseOneJobType.UpdateBatchReferencedHandles:
                     {
                         //Note that the narrow phase will schedule this job alongside another worker which reads existing batch referenced handles.
                         //There will be some cache line sharing sometimes. That's not wonderful for performance, but it should not cause bugs:
@@ -226,7 +236,7 @@ namespace BepuPhysics
                         }
                     }
                     break;
-                case JobType.CopyBodyRegion:
+                case PhaseOneJobType.CopyBodyRegion:
                     {
                         //Since we already preallocated everything during the job preparation, all we have to do is copy from the inactive set location.
                         ref var sourceSet = ref bodies.Sets[job.SourceSet];
@@ -249,22 +259,75 @@ namespace BepuPhysics
             }
         }
 
-        internal void ExecutePhaseTwoJob(int index)
+        internal unsafe void ExecutePhaseTwoJob(int index)
         {
             ref var job = ref phaseTwoJobs[index];
-            //Constraints are a little more complicated than bodies for a few reasons:
-            //1) Constraints are stored in AOSOA format. We cannot simply copy with bundle alignment with no preparation, since that may leave a gap.
-            //To avoid this issue, we instead use the last bundle of the source batch to pad out any incomplete bundles ahead of the target copy region.
-            //The scheduler attempts to maximize the number of jobs which are pure bundle copies.
-            //2) Inactive constraints store their body references as body *handles* rather than body indices.
-            //Pulling the type batches back into the active set requires translating those body handles to body indices.  
-            //3) The translation from body handle to body index requires that the bodies already have an active set identity, which is why the constraints wait until the second phase.
-            ref var sourceTypeBatch = ref solver.Sets[job.SourceSet].Batches[job.Batch].TypeBatches[job.SourceTypeBatch];
-            ref var targetTypeBatch = ref solver.ActiveSet.Batches[job.Batch].TypeBatches[job.TargetTypeBatch];
-            Debug.Assert(targetTypeBatch.TypeId == sourceTypeBatch.TypeId);
-            solver.TypeProcessors[job.TypeId].CopyInactiveToActive(
-                job.SourceSet, job.Batch, job.SourceTypeBatch, job.Batch, job.TargetTypeBatch,
-                job.SourceStart, job.TargetStart, job.Count, bodies, solver);
+            switch (job.Type)
+            {
+                case PhaseTwoJobType.BroadPhase:
+                    {
+                        //Note that the broad phase add/remove has a dependency on the body copies; that's why it's in the second phase.
+                        //Also note that the broad phase update cannot be split into two parallel jobs because removals update broad phase indices of moved leaves,
+                        //which in context might belong to activated collidables that have not yet been removed.
+                        //If the indices are sorted, this could be avoided and this could be split into two jobs. Only bother if performance numbers suggest it.
+                        ref var activeSet = ref bodies.ActiveSet;
+                        for (int i = 0; i < uniqueSetIndices.Count; ++i)
+                        {
+                            ref var inactiveBodySet = ref bodies.Sets[uniqueSetIndices[i]];
+                            for (int j = 0; j < inactiveBodySet.Count; ++j)
+                            {
+                                //Note that we have to go grab the active version of the collidable, since the active version is potentially modified by removals.
+                                ref var bodyLocation = ref bodies.HandleToLocation[inactiveBodySet.IndexToHandle[j]];
+                                Debug.Assert(bodyLocation.SetIndex == 0);
+                                //The broad phase index value is currently the static index, either copied from the inactive set or modified by a removal below.
+                                //We'll update it, so just take a reference.
+                                ref var broadPhaseIndex = ref activeSet.Collidables[bodyLocation.Index].BroadPhaseIndex;
+                                if (broadPhaseIndex >= 0)
+                                {
+                                    broadPhase.GetStaticBoundsPointers(broadPhaseIndex, out var minPointer, out var maxPointer);
+                                    BoundingBox bounds;
+                                    bounds.Min = *minPointer;
+                                    bounds.Max = *maxPointer;
+                                    var staticBroadPhaseIndexToRemove = broadPhaseIndex;
+                                    broadPhaseIndex = broadPhase.AddActive(broadPhase.staticLeaves[broadPhaseIndex], ref bounds);
+
+                                    if (broadPhase.RemoveStaticAt(staticBroadPhaseIndexToRemove, out var movedLeaf))
+                                    {
+                                        if (movedLeaf.Mobility == Collidables.CollidableMobility.Static)
+                                        {
+                                            statics.Collidables[statics.HandleToIndex[movedLeaf.Handle]].BroadPhaseIndex = staticBroadPhaseIndexToRemove;
+                                        }
+                                        else
+                                        {
+                                            //Note that the moved leaf cannot refer to one of the collidables that we've already moved into the active set, because all such collidables
+                                            //have already been removed. 
+                                            bodies.UpdateCollidableBroadPhaseIndex(movedLeaf.Handle, staticBroadPhaseIndexToRemove);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case PhaseTwoJobType.CopyConstraintRegion:
+                    {
+                        //Constraints are a little more complicated than bodies for a few reasons:
+                        //1) Constraints are stored in AOSOA format. We cannot simply copy with bundle alignment with no preparation, since that may leave a gap.
+                        //To avoid this issue, we instead use the last bundle of the source batch to pad out any incomplete bundles ahead of the target copy region.
+                        //The scheduler attempts to maximize the number of jobs which are pure bundle copies.
+                        //2) Inactive constraints store their body references as body *handles* rather than body indices.
+                        //Pulling the type batches back into the active set requires translating those body handles to body indices.  
+                        //3) The translation from body handle to body index requires that the bodies already have an active set identity, which is why the constraints wait until the second phase.
+                        ref var sourceTypeBatch = ref solver.Sets[job.SourceSet].Batches[job.Batch].TypeBatches[job.SourceTypeBatch];
+                        ref var targetTypeBatch = ref solver.ActiveSet.Batches[job.Batch].TypeBatches[job.TargetTypeBatch];
+                        Debug.Assert(targetTypeBatch.TypeId == sourceTypeBatch.TypeId);
+                        solver.TypeProcessors[job.TypeId].CopyInactiveToActive(
+                            job.SourceSet, job.Batch, job.SourceTypeBatch, job.Batch, job.TargetTypeBatch,
+                            job.SourceStart, job.TargetStart, job.Count, bodies, solver);
+                    }
+                    break;
+            }
+
         }
 
         internal void AccumulateUniqueIndices(ref QuickList<int, Buffer<int>> candidateSetIndices, ref IndexSet uniqueSet, ref QuickList<int, Buffer<int>> uniqueSetIndices, BufferPool pool)
@@ -438,6 +501,8 @@ namespace BepuPhysics
             //Ensure capacities on all systems:
             //bodies,
             bodies.EnsureCapacity(bodies.ActiveSet.Count + newBodyCount);
+            //broad bphase, (technically overestimating, not every body has a collidable, but vast majority do and shrug)
+            broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount + newBodyCount, broadPhase.StaticTree.LeafCount);
             //constraints,
             solver.ActiveSet.Batches.EnsureCapacity(highestNewBatchCount, pool.SpecializeFor<ConstraintBatch>());
             solver.batchReferencedHandles.EnsureCapacity(highestNewBatchCount, pool.SpecializeFor<IndexSet>());
@@ -482,7 +547,7 @@ namespace BepuPhysics
             }
             EnsurePairCacheTypeCapacities(ref narrowPhaseConstraintCaches, ref targetPairCache.constraintCaches, targetPairCache.pool);
             EnsurePairCacheTypeCapacities(ref narrowPhaseCollisionCaches, ref targetPairCache.collisionCaches, targetPairCache.pool);
-            pairCache.Mapping.EnsureCapacity(pairCache.Mapping.Count + newPairCount, 
+            pairCache.Mapping.EnsureCapacity(pairCache.Mapping.Count + newPairCount,
                 pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
 
             var phaseOneJobPool = pool.SpecializeFor<PhaseOneJob>();
@@ -492,11 +557,12 @@ namespace BepuPhysics
             //Finally, create actual jobs. Note that this involves actually allocating space in the bodies set and in type batches for the workers to fill in.
             //(Pair caches are currently handled in a locally sequential way and do not require preallocation.)
 
-            phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = JobType.PairCache };
+            phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.PairCache };
             for (int batchIndex = 0; batchIndex < highestNewBatchCount; ++batchIndex)
             {
-                phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = JobType.UpdateBatchReferencedHandles, BatchIndex = batchIndex };
+                phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.UpdateBatchReferencedHandles, BatchIndex = batchIndex };
             }
+            phaseTwoJobs.AllocateUnsafely() = new PhaseTwoJob { Type = PhaseTwoJobType.BroadPhase };
 
             ref var activeBodySet = ref bodies.ActiveSet;
             ref var activeSolverSet = ref solver.ActiveSet;
@@ -515,7 +581,7 @@ namespace BepuPhysics
                     for (int jobIndex = 0; jobIndex < setJobCount; ++jobIndex)
                     {
                         ref var job = ref phaseOneJobs.AllocateUnsafely();
-                        job.Type = JobType.CopyBodyRegion;
+                        job.Type = PhaseOneJobType.CopyBodyRegion;
                         job.SourceSet = sourceSetIndex;
                         job.SourceStart = previousSourceEnd;
                         job.TargetStart = activeBodySet.Count;
@@ -548,6 +614,7 @@ namespace BepuPhysics
                             for (int jobIndex = 0; jobIndex < jobCount; ++jobIndex)
                             {
                                 ref var job = ref phaseTwoJobs.AllocateUnsafely();
+                                job.Type = PhaseTwoJobType.CopyConstraintRegion;
                                 job.TypeId = sourceTypeBatch.TypeId;
                                 job.Batch = batchIndex;
                                 job.SourceSet = sourceSetIndex;
