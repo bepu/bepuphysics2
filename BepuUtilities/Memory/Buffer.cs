@@ -40,12 +40,14 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref T Get(ref RawBuffer buffer, int index)
         {
+            Debug.Assert(index >= 0 && index * Unsafe.SizeOf<T>() < buffer.Length, "Index out of range.");
             return ref Get(buffer.Memory, index);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref T Get(ref Buffer<T> buffer, int index)
         {
+            Debug.Assert(index >= 0 && index < buffer.length, "Index out of range.");
             return ref Get(buffer.Memory, index);
         }
 

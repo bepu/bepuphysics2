@@ -358,8 +358,8 @@ namespace BepuPhysics
         void ValidateInactiveSetIndex(int setIndex)
         {
             Debug.Assert(setIndex >= 1 && setIndex < bodies.Sets.Length && setIndex < solver.Sets.Length && setIndex < pairCache.InactiveSets.Length);
-            //Note that pair cache sets are not guaranteed to be allocated if there are no pairs.
-            Debug.Assert(bodies.Sets[setIndex].Allocated && solver.Sets[setIndex].Allocated);
+            //Note that pair cache sets are not guaranteed to be allocated if there are no pairs, and solver sets are not guaranteed to exist if there are no constraints.
+            Debug.Assert(bodies.Sets[setIndex].Allocated);
         }
         [Conditional("DEBUG")]
         void ValidateUniqueSets(ref QuickList<int, Buffer<int>> setIndices)

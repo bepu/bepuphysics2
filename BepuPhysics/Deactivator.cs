@@ -760,18 +760,21 @@ namespace BepuPhysics
                         bodies.Sets[setIndex] = new BodySet(island.BodyIndices.Count, pool);
                         bodies.Sets[setIndex].Count = island.BodyIndices.Count;
                         deactivatedBodyCount += island.BodyIndices.Count;
-                        ref var constraintSet = ref solver.Sets[setIndex];
-                        constraintSet = new ConstraintSet(pool, island.Protobatches.Count);
-                        for (int batchIndex = 0; batchIndex < island.Protobatches.Count; ++batchIndex)
+                        if (island.Protobatches.Count > 0)
                         {
-                            ref var sourceBatch = ref island.Protobatches[batchIndex];
-                            ref var targetBatch = ref constraintSet.Batches.AllocateUnsafely();
-                            targetBatch = new ConstraintBatch(pool, sourceBatch.TypeIdToIndex.Length);
-                            for (int typeBatchIndex = 0; typeBatchIndex < sourceBatch.TypeBatches.Count; ++typeBatchIndex)
+                            ref var constraintSet = ref solver.Sets[setIndex];
+                            constraintSet = new ConstraintSet(pool, island.Protobatches.Count);
+                            for (int batchIndex = 0; batchIndex < island.Protobatches.Count; ++batchIndex)
                             {
-                                ref var sourceTypeBatch = ref sourceBatch.TypeBatches[typeBatchIndex];
-                                ref var targetTypeBatch = ref targetBatch.CreateNewTypeBatch(sourceTypeBatch.TypeId, solver.TypeProcessors[sourceTypeBatch.TypeId], sourceTypeBatch.Handles.Count, pool);
-                                targetTypeBatch.ConstraintCount = sourceTypeBatch.Handles.Count;
+                                ref var sourceBatch = ref island.Protobatches[batchIndex];
+                                ref var targetBatch = ref constraintSet.Batches.AllocateUnsafely();
+                                targetBatch = new ConstraintBatch(pool, sourceBatch.TypeIdToIndex.Length);
+                                for (int typeBatchIndex = 0; typeBatchIndex < sourceBatch.TypeBatches.Count; ++typeBatchIndex)
+                                {
+                                    ref var sourceTypeBatch = ref sourceBatch.TypeBatches[typeBatchIndex];
+                                    ref var targetTypeBatch = ref targetBatch.CreateNewTypeBatch(sourceTypeBatch.TypeId, solver.TypeProcessors[sourceTypeBatch.TypeId], sourceTypeBatch.Handles.Count, pool);
+                                    targetTypeBatch.ConstraintCount = sourceTypeBatch.Handles.Count;
+                                }
                             }
                         }
 

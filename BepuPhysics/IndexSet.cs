@@ -25,9 +25,9 @@ namespace BepuPhysics
         const int mask = 63;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int GetSizeInLongs(int count)
+        static int GetBundleCapacity(int count)
         {
-            return (count >> shift) + ((count & mask) > 0 ? 1 : 0);
+            return (count + mask) >> shift;
         }
 
         public IndexSet(BufferPool pool, int initialCapacity)
@@ -40,7 +40,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void InternalResize(BufferPool pool, int capacity)
         {
-            InternalResizeForBundleCount(pool, GetSizeInLongs(capacity));
+            InternalResizeForBundleCount(pool, GetBundleCapacity(capacity));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -129,7 +129,7 @@ namespace BepuPhysics
         //While we expose a compaction and resize, using it requires care. It would be a mistake to, for example, shrink beyond the current bodies indices size.
         public void Compact(int indexCapacity, BufferPool pool)
         {
-            var desiredBundleCount = BufferPool<ulong>.GetLowestContainingElementCount(GetSizeInLongs(indexCapacity));
+            var desiredBundleCount = BufferPool<ulong>.GetLowestContainingElementCount(GetBundleCapacity(indexCapacity));
             if (flags.Length > desiredBundleCount)
             {
                 InternalResizeForBundleCount(pool, desiredBundleCount);
@@ -137,7 +137,7 @@ namespace BepuPhysics
         }
         public void Resize(int indexCapacity, BufferPool pool)
         {
-            var desiredBundleCount = BufferPool<ulong>.GetLowestContainingElementCount(GetSizeInLongs(indexCapacity));
+            var desiredBundleCount = BufferPool<ulong>.GetLowestContainingElementCount(GetBundleCapacity(indexCapacity));
             if (flags.Length != desiredBundleCount)
             {
                 InternalResizeForBundleCount(pool, desiredBundleCount);
