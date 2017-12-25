@@ -40,15 +40,20 @@ namespace BepuPhysics.CollisionDetection
                     break;
             }
             pool.SpecializeFor<InactiveCache>().Return(ref ConstraintCaches);
-            for (int i = 0; i < CollisionCaches.Length; ++i)
+            //Remember, collision caches are not guaranteed to exist. If none are found during set construction, nothing is allocated for them.
+            //This just saves a little bit of extra space for the inactive set.
+            if (CollisionCaches.Allocated)
             {
-                ref var cache = ref CollisionCaches[i];
-                if (cache.List.Buffer.Allocated)
-                    pool.Return(ref cache.List.Buffer);
-                else
-                    break;
+                for (int i = 0; i < CollisionCaches.Length; ++i)
+                {
+                    ref var cache = ref CollisionCaches[i];
+                    if (cache.List.Buffer.Allocated)
+                        pool.Return(ref cache.List.Buffer);
+                    else
+                        break;
+                }
+                pool.SpecializeFor<InactiveCache>().Return(ref CollisionCaches);
             }
-            pool.SpecializeFor<InactiveCache>().Return(ref CollisionCaches);
             Pairs.Dispose(pool.SpecializeFor<InactivePair>());
         }
     }

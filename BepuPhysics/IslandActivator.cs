@@ -18,13 +18,15 @@ namespace BepuPhysics
     {
         Solver solver;
         Bodies bodies;
+        Deactivator deactivator;
         internal PairCache pairCache;
         BufferPool pool;
 
-        public IslandActivator(Bodies bodies, Solver solver, BufferPool pool)
+        public IslandActivator(Bodies bodies, Solver solver, Deactivator deactivator, BufferPool pool)
         {
             this.bodies = bodies;
             this.solver = solver;
+            this.deactivator = deactivator;
             this.pool = pool;
 
             this.phaseOneWorkerDelegate = PhaseOneWorker;
@@ -192,7 +194,7 @@ namespace BepuPhysics
                         //We'll assume the other jobs can balance things out until proven otherwise.
                         for (int i = 0; i < uniqueSetIndices.Count; ++i)
                         {
-                            pairCache.ActivateSet(i);
+                            pairCache.ActivateSet(uniqueSetIndices[i]);
                         }
                     }
                     break;
@@ -298,26 +300,58 @@ namespace BepuPhysics
 
         }
 
-        struct TypeAllocationSizes
+        //This is getting into the realm of Fizzbuzz Enterprise. 
+        interface ITypeCount
         {
-            public Buffer<int> TypeCounts;
+            void Add<T>(T other) where T : ITypeCount;
+        }
+        struct ConstraintCount : ITypeCount
+        {
+            public int Count;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Add<T>(T other) where T : ITypeCount
+            {
+                Debug.Assert(typeof(T) == typeof(ConstraintCount));
+                Count += Unsafe.As<T, ConstraintCount>(ref other).Count;
+            }
+        }
+        struct PairCacheCount : ITypeCount
+        {
+            public int ElementSizeInBytes;
+            public int ByteCount;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Add<T>(T other) where T : ITypeCount
+            {
+                Debug.Assert(typeof(T) == typeof(PairCacheCount));
+                ref var pairCacheOther = ref Unsafe.As<T, PairCacheCount>(ref other);
+                Debug.Assert(ElementSizeInBytes == 0 || ElementSizeInBytes == pairCacheOther.ElementSizeInBytes);
+                ElementSizeInBytes = pairCacheOther.ElementSizeInBytes;
+                ByteCount += pairCacheOther.ByteCount;
+            }
+        }
+
+        struct TypeAllocationSizes<T> where T : ITypeCount
+        {
+            public Buffer<T> TypeCounts;
             public int HighestOccupiedTypeIndex;
             public TypeAllocationSizes(BufferPool pool, int maximumTypeCount)
             {
-                pool.SpecializeFor<int>().Take(maximumTypeCount, out TypeCounts);
+                pool.SpecializeFor<T>().Take(maximumTypeCount, out TypeCounts);
                 TypeCounts.Clear(0, maximumTypeCount);
                 HighestOccupiedTypeIndex = 0;
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Add(int typeId, int count)
+            public void Add(int typeId, T typeCount)
             {
-                TypeCounts[typeId] += count;
+                TypeCounts[typeId].Add(typeCount);
                 if (typeId > HighestOccupiedTypeIndex)
                     HighestOccupiedTypeIndex = typeId;
             }
             public void Dispose(BufferPool pool)
             {
-                pool.SpecializeFor<int>().Return(ref TypeCounts);
+                pool.SpecializeFor<T>().Return(ref TypeCounts);
             }
         }
 
@@ -359,21 +393,21 @@ namespace BepuPhysics
             }
             //We accumulated indices above; add one to get the capacity requirement.
             ++highestRequiredTypeCapacity;
-            pool.SpecializeFor<TypeAllocationSizes>().Take(highestNewBatchCount, out var constraintCountPerTypePerBatch);
+            pool.SpecializeFor<TypeAllocationSizes<ConstraintCount>>().Take(highestNewBatchCount, out var constraintCountPerTypePerBatch);
             for (int batchIndex = 0; batchIndex < highestNewBatchCount; ++batchIndex)
             {
-                constraintCountPerTypePerBatch[batchIndex] = new TypeAllocationSizes(pool, highestRequiredTypeCapacity);
+                constraintCountPerTypePerBatch[batchIndex] = new TypeAllocationSizes<ConstraintCount>(pool, highestRequiredTypeCapacity);
             }
-            var narrowPhaseConstraintCaches = new TypeAllocationSizes(pool, PairCache.CollisionConstraintTypeCount);
-            var narrowPhaseCollisionCaches = new TypeAllocationSizes(pool, PairCache.CollisionTypeCount);
+            var narrowPhaseConstraintCaches = new TypeAllocationSizes<PairCacheCount>(pool, PairCache.CollisionConstraintTypeCount);
+            var narrowPhaseCollisionCaches = new TypeAllocationSizes<PairCacheCount>(pool, PairCache.CollisionTypeCount);
 
-            void AccumulatePairCacheTypeCounts(ref Buffer<InactiveCache> sourceTypeCaches, ref TypeAllocationSizes counts)
+            void AccumulatePairCacheTypeCounts(ref Buffer<InactiveCache> sourceTypeCaches, ref TypeAllocationSizes<PairCacheCount> counts)
             {
                 for (int j = 0; j < sourceTypeCaches.Length; ++j)
                 {
                     ref var sourceCache = ref sourceTypeCaches[j];
                     if (sourceCache.List.Buffer.Allocated)
-                        counts.Add(sourceCache.TypeId, sourceCache.List.ByteCount);
+                        counts.Add(sourceCache.TypeId, new PairCacheCount { ByteCount = sourceCache.List.ByteCount, ElementSizeInBytes = sourceCache.List.ElementSizeInBytes });
                     else
                         break; //Encountering an unallocated slot is a termination condition. Used instead of explicitly storing cache counts, which are only rarely useful.
                 }
@@ -389,7 +423,7 @@ namespace BepuPhysics
                     for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                     {
                         ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
-                        constraintCountPerType.Add(typeBatch.TypeId, typeBatch.ConstraintCount);
+                        constraintCountPerType.Add(typeBatch.TypeId, new ConstraintCount { Count = typeBatch.ConstraintCount });
                     }
                 }
 
@@ -417,7 +451,7 @@ namespace BepuPhysics
                 batch.EnsureTypeMapSize(pool, constraintCountPerType.HighestOccupiedTypeIndex);
                 for (int typeId = 0; typeId <= constraintCountPerType.HighestOccupiedTypeIndex; ++typeId)
                 {
-                    var countForType = constraintCountPerType.TypeCounts[typeId];
+                    var countForType = constraintCountPerType.TypeCounts[typeId].Count;
                     if (countForType > 0)
                     {
                         var typeProcessor = solver.TypeProcessors[typeId];
@@ -432,15 +466,15 @@ namespace BepuPhysics
             }
             //and narrow phase pair caches.
             ref var targetPairCache = ref pairCache.GetCacheForActivation();
-            void EnsurePairCacheTypeCapacities(ref TypeAllocationSizes cacheSizes, ref Buffer<UntypedList> targetCaches, BufferPool cachePool)
+            void EnsurePairCacheTypeCapacities(ref TypeAllocationSizes<PairCacheCount> cacheSizes, ref Buffer<UntypedList> targetCaches, BufferPool cachePool)
             {
                 for (int typeIndex = 0; typeIndex <= cacheSizes.HighestOccupiedTypeIndex; ++typeIndex)
                 {
-                    var typeByteCount = cacheSizes.TypeCounts[typeIndex];
-                    if (typeByteCount > 0)
+                    ref var pairCacheCount = ref cacheSizes.TypeCounts[typeIndex];
+                    if (pairCacheCount.ByteCount > 0)
                     {
                         ref var targetSubCache = ref targetCaches[typeIndex];
-                        targetSubCache.EnsureCapacityInBytes(targetSubCache.ByteCount + typeByteCount, cachePool);
+                        targetSubCache.EnsureCapacityInBytes(pairCacheCount.ElementSizeInBytes, targetSubCache.ByteCount + pairCacheCount.ByteCount, cachePool);
                     }
                 }
             }
@@ -481,7 +515,7 @@ namespace BepuPhysics
                         job.SourceSet = sourceSetIndex;
                         job.SourceStart = previousSourceEnd;
                         job.TargetStart = activeBodySet.Count;
-                        job.Count = jobIndex > remainder ? baseBodiesPerJob : baseBodiesPerJob + 1;
+                        job.Count = jobIndex >= remainder ? baseBodiesPerJob : baseBodiesPerJob + 1;
                         previousSourceEnd += job.Count;
                         activeBodySet.Count += job.Count;
                     }
@@ -515,14 +549,14 @@ namespace BepuPhysics
                                 job.SourceSet = sourceSetIndex;
                                 job.SourceTypeBatch = sourceTypeBatchIndex;
                                 job.TargetTypeBatch = targetTypeBatchIndex;
-                                job.Count = jobIndex > remainder ? baseConstraintsPerJob : baseConstraintsPerJob + 1;
+                                job.Count = jobIndex >= remainder ? baseConstraintsPerJob : baseConstraintsPerJob + 1;
                                 job.SourceStart = previousSourceEnd;
                                 job.TargetStart = targetTypeBatch.ConstraintCount;
                                 previousSourceEnd += job.Count;
-                                targetTypeBatch.ConstraintCount += jobCount;
+                                targetTypeBatch.ConstraintCount += job.Count;
                             }
                             Debug.Assert(previousSourceEnd == sourceTypeBatch.ConstraintCount);
-                            Debug.Assert(targetTypeBatch.ConstraintCount < targetTypeBatch.IndexToHandle.Length);
+                            Debug.Assert(targetTypeBatch.ConstraintCount <= targetTypeBatch.IndexToHandle.Length);
                         }
                     }
                 }
@@ -536,14 +570,16 @@ namespace BepuPhysics
         {
             for (int i = 0; i < setIndices.Count; ++i)
             {
-                ref var bodySet = ref bodies.Sets[i];
-                ref var constraintSet = ref solver.Sets[i];
-                ref var pairCacheSet = ref pairCache.InactiveSets[i];
+                var setIndex = setIndices[i];
+                ref var bodySet = ref bodies.Sets[setIndex];
+                ref var constraintSet = ref solver.Sets[setIndex];
+                ref var pairCacheSet = ref pairCache.InactiveSets[setIndex];
                 Debug.Assert(bodySet.Allocated && constraintSet.Allocated && pairCacheSet.Allocated);
                 bodySet.DisposeBuffers(pool);
                 constraintSet.Dispose(pool);
                 pairCacheSet.Dispose(pool);
                 this.uniqueSetIndices = new QuickList<int, Buffer<int>>();
+                deactivator.ReturnSetId(setIndex);
             }
             phaseOneJobs.Dispose(pool.SpecializeFor<PhaseOneJob>());
             phaseTwoJobs.Dispose(pool.SpecializeFor<PhaseTwoJob>());

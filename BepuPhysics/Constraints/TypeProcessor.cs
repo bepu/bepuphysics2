@@ -571,8 +571,8 @@ namespace BepuPhysics.Constraints
         {
             ref var sourceTypeBatch = ref solver.Sets[sourceSet].Batches[sourceBatchIndex].TypeBatches[sourceTypeBatchIndex];
             ref var targetTypeBatch = ref solver.ActiveSet.Batches[targetBatchIndex].TypeBatches[targetTypeBatchIndex];
-            Debug.Assert(sourceStart >= 0 && sourceStart + count < sourceTypeBatch.ConstraintCount);
-            Debug.Assert(targetStart >= 0 && targetStart + count < targetTypeBatch.ConstraintCount,
+            Debug.Assert(sourceStart >= 0 && sourceStart + count <= sourceTypeBatch.ConstraintCount);
+            Debug.Assert(targetStart >= 0 && targetStart + count <= targetTypeBatch.ConstraintCount,
                 "This function should only be used when a region has been preallocated within the type batch.");
             Debug.Assert(sourceTypeBatch.TypeId == targetTypeBatch.TypeId);
             //TODO: Note that we give up on a bulk copy very easily here.

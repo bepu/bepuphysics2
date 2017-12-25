@@ -13,13 +13,26 @@ namespace BepuPhysics.CollisionDetection
         public int ElementSizeInBytes;
 
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public UntypedList(int elementSizeInBytes, int initialCapacityInElements, BufferPool pool)
         {
             pool.Take(initialCapacityInElements * elementSizeInBytes, out Buffer);
             Count = 0;
             ByteCount = 0;
             ElementSizeInBytes = elementSizeInBytes;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void EnsureCapacityInBytes(int elementSizeInBytes, int targetCapacityInBytes, BufferPool pool)
+        {
+            //EnsureCapacity is basically a secondary constructor, but it can be used on already-existing caches. It has the same required output.
+            Debug.Assert(ElementSizeInBytes == 0 || ElementSizeInBytes == elementSizeInBytes,
+                "Ensuring capacity should not change an already existing list's element size in bytes.");
+            ElementSizeInBytes = elementSizeInBytes;
+            if (Buffer.Length < targetCapacityInBytes)
+            {
+                pool.Resize(ref Buffer, targetCapacityInBytes, ByteCount);
+            }
         }
 
         [Conditional("DEBUG")]
@@ -42,14 +55,7 @@ namespace BepuPhysics.CollisionDetection
             return ref Unsafe.Add(ref Unsafe.As<byte, T>(ref *Buffer.Memory), index);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void EnsureCapacityInBytes(int targetCapacityInBytes, BufferPool pool)
-        {
-            if(Buffer.Length < targetCapacityInBytes)
-            {
-                pool.Resize(ref Buffer, targetCapacityInBytes, ByteCount);
-            }
-        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe byte* AllocateUnsafely()

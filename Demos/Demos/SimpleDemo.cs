@@ -29,9 +29,9 @@ namespace Demos
 
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 24;
-            const int height = 24;
-            const int length = 24;
+            const int width = 2;
+            const int height = 2;
+            const int length = 2;
             var latticeSpacing = 1.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
@@ -82,6 +82,20 @@ namespace Demos
         public override void Update(Input input, float dt)
         {
             //Console.WriteLine($"Preframe {frameIndex++}, mapping count: {Simulation.NarrowPhase.PairCache.Mapping.Count}");
+
+            if (input.WasPushed(OpenTK.Input.Key.P))
+            {
+                for (int handle = 0; handle < Simulation.Bodies.HandleToLocation.Length; ++handle)
+                {
+                    ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[handle];
+                    if(bodyLocation.SetIndex > 0)
+                    {
+                        var bodyHandleToActivate = Simulation.Bodies.ActiveSet.IndexToHandle[0];
+                        Simulation.Activator.ActivateBody(bodyHandleToActivate);
+                        break;
+                    }
+                }
+            }
 
             //for (int i = 0; i < Simulation.Bodies.BodyCount; ++i)
             //{

@@ -87,8 +87,6 @@ namespace BepuPhysics.CollisionDetection
         internal unsafe void DeactivateTypeBatchPairs(ref InactiveSetBuilder builder, int setIndex, Solver solver)
         {
             ref var constraintSet = ref solver.Sets[setIndex];
-            ref var pairSet = ref InactiveSets[setIndex];
-
             for (int batchIndex = 0; batchIndex < constraintSet.Batches.Count; ++batchIndex)
             {
                 ref var batch = ref constraintSet.Batches[batchIndex];

@@ -55,6 +55,11 @@ namespace BepuPhysics
             executeRemovalWorkDelegate = ExecuteRemovalWork;
         }
 
+        internal void ReturnSetId(int id)
+        {
+            setIdPool.Return(id, pool.SpecializeFor<int>());
+        }
+
         struct ConstraintBodyEnumerator : IForEach<int>
         {
             public QuickList<int, Buffer<int>> ConstraintBodyIndices;
