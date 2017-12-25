@@ -130,12 +130,16 @@ namespace BepuPhysics.CollisionDetection
             return ref workerCaches[0];
         }
 
-        private unsafe void CopyCacheForActivation(ref Buffer<InactiveCache> inactiveCaches, ref Buffer<UntypedList> activeCaches, ref InactivePair pair)
+        private unsafe PairCacheIndex CopyCacheForActivation(ref Buffer<InactiveCache> inactiveCaches, ref Buffer<UntypedList> activeCaches, TypedIndex sourceCacheIndex)
         {
-            ref var sourceCache = ref inactiveCaches[pair.ConstraintCache.Type];
+            ref var sourceCache = ref inactiveCaches[sourceCacheIndex.Type];
+            //Note that the sourceCacheIndex.Type refers to the index of the type in a packed list, not the noncontiguous type id. 
+            //The unpacked active caches use the noncontiguous type id, so the sourceCache.TypeId is now referenced rather than the sourceCacheIndex.Type.
             ref var targetCache = ref activeCaches[sourceCache.TypeId];
-            var targetConstraintByteIndex = targetCache.Allocate(sourceCache.List.ElementSizeInBytes, sourceCache.List.Count, pool);
-            Unsafe.CopyBlockUnaligned(targetCache.Buffer.Memory + targetConstraintByteIndex, sourceCache.List.Buffer.Memory + pair.ConstraintCache.Index, (uint)sourceCache.List.ElementSizeInBytes);
+            var targetByteIndex = targetCache.Allocate(sourceCache.List.ElementSizeInBytes, sourceCache.List.Count, pool);
+            Unsafe.CopyBlockUnaligned(targetCache.Buffer.Memory + targetByteIndex, sourceCache.List.Buffer.Memory + sourceCacheIndex.Index, (uint)sourceCache.List.ElementSizeInBytes);
+            //Note that the cache chosen for activated entries is always the first one, so the cache index is simply 0.
+            return new PairCacheIndex(0, sourceCache.TypeId, targetByteIndex);
         }
         internal unsafe void ActivateSet(int setIndex)
         {
@@ -145,15 +149,22 @@ namespace BepuPhysics.CollisionDetection
             //For simplicity, activation simply walks the pairs list in the inactive set.
             //By construction of the inactive set, the cache accesses will be highly cache coherent, so the fact that it doesn't do bulk copies isn't that bad.
             //(we COULD make it do bulk copies, but only bother with that if there is any reason to.)
+
             for (int i = 0; i < inactiveSet.Pairs.Count; ++i)
             {
                 ref var pair = ref inactiveSet.Pairs[i];
-                CopyCacheForActivation(ref inactiveSet.ConstraintCaches, ref activeSet.constraintCaches, ref pair);
+                CollidablePairPointers pointers;
+                pointers.ConstraintCache = CopyCacheForActivation(ref inactiveSet.ConstraintCaches, ref activeSet.constraintCaches, pair.ConstraintCache);
                 if (pair.CollisionCache.Exists)
                 {
-                    CopyCacheForActivation(ref inactiveSet.CollisionCaches, ref activeSet.collisionCaches, ref pair);
+                    pointers.CollisionDetectionCache = CopyCacheForActivation(ref inactiveSet.CollisionCaches, ref activeSet.collisionCaches, pair.CollisionCache);
                 }
-            }           
+                else
+                {
+                    pointers.CollisionDetectionCache = new PairCacheIndex();
+                }
+                Mapping.AddUnsafely(ref pair.Pair, ref pointers);
+            }
         }
 
     }

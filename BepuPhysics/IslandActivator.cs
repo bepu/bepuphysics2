@@ -412,6 +412,7 @@ namespace BepuPhysics
                         break; //Encountering an unallocated slot is a termination condition. Used instead of explicitly storing cache counts, which are only rarely useful.
                 }
             }
+            int newPairCount = 0;
             for (int i = 0; i < setIndices.Count; ++i)
             {
                 var setIndex = setIndices[i];
@@ -428,6 +429,7 @@ namespace BepuPhysics
                 }
 
                 ref var sourceSet = ref pairCache.InactiveSets[setIndex];
+                newPairCount += sourceSet.Pairs.Count;
                 AccumulatePairCacheTypeCounts(ref sourceSet.ConstraintCaches, ref narrowPhaseConstraintCaches);
                 AccumulatePairCacheTypeCounts(ref sourceSet.CollisionCaches, ref narrowPhaseCollisionCaches);
             }
@@ -480,6 +482,8 @@ namespace BepuPhysics
             }
             EnsurePairCacheTypeCapacities(ref narrowPhaseConstraintCaches, ref targetPairCache.constraintCaches, targetPairCache.pool);
             EnsurePairCacheTypeCapacities(ref narrowPhaseCollisionCaches, ref targetPairCache.collisionCaches, targetPairCache.pool);
+            pairCache.Mapping.EnsureCapacity(pairCache.Mapping.Count + newPairCount, 
+                pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
 
             var phaseOneJobPool = pool.SpecializeFor<PhaseOneJob>();
             var phaseTwoJobPool = pool.SpecializeFor<PhaseTwoJob>();
