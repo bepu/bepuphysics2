@@ -36,7 +36,7 @@ namespace Demos
                 },
                 Activity = new BodyActivityDescription
                 {
-                    DeactivationThreshold = 0.1f,
+                    DeactivationThreshold = 15.1f,
                     MinimumTimestepCountUnderThreshold = 64
                 }
             };

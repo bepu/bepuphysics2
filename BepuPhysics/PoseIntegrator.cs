@@ -64,6 +64,7 @@ namespace BepuPhysics
                 //Update deactivation candidacy. Note that this comes before velocity integration. That means an object can go inactive with gravity-induced velocity.
                 //That is actually intended: when the narrowphase wakes up an island, the accumulated impulses in the island will be ready for gravity's influence.
                 //To do otherwise would hurt the solver's guess, reducing the quality of the solve and possibly causing a little bump.
+                //This is only relevant when the update order actually puts the deactivator after gravity. For ease of use, this fact may be ignored by the simulation update order.
                 ref var activity = ref Unsafe.Add(ref baseActivity, i);
                 var velocityHeuristic = velocity.Linear.LengthSquared() + velocity.Angular.LengthSquared();
                 if (velocityHeuristic > activity.DeactivationThreshold)

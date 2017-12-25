@@ -163,26 +163,33 @@ namespace BepuPhysics.CollisionDetection
             //2) minimizes the memory required for the inactive set. Using the same format as the active set would require about a kilobyte per set, 
             //which gets expensive when you have tens of thousands of isolated islands!
 
-            CopyExistingLists(ref ConstraintCaches, pool, out set.ConstraintCaches, out var constraintTypeRemap);
-            CopyExistingLists(ref CollisionCaches, pool, out set.CollisionCaches, out var collisionTypeRemap);
-            Debug.Assert(set.ConstraintCaches.Length > 0,
-                "While there may be no collision caches, the deactivation process is only triggered for pairs with constraints, so there must be at least one constraint.");
-
-            QuickList<InactivePair, Buffer<InactivePair>>.Create(pool.SpecializeFor<InactivePair>(), Pairs.Count, out set.Pairs);
-            for (int i = 0; i < Pairs.Count; ++i)
+            if (Pairs.Count > 0)
             {
-                ref var sourcePair = ref Pairs[i];
-                ref var remappedPair = ref set.Pairs.AllocateUnsafely();
-                remappedPair.Pair = sourcePair.Pair;
-                remappedPair.ConstraintCache = new TypedIndex(constraintTypeRemap[sourcePair.ConstraintCache.Type], sourcePair.ConstraintCache.Index);
-                remappedPair.CollisionCache = sourcePair.CollisionCache.Exists ?
-                    new TypedIndex(collisionTypeRemap[sourcePair.CollisionCache.Type], sourcePair.CollisionCache.Index) : new TypedIndex();
-            }
-            pool.SpecializeFor<int>().Return(ref constraintTypeRemap);
-            if (collisionTypeRemap.Allocated)
-                pool.SpecializeFor<int>().Return(ref collisionTypeRemap);
-            Pairs.Count = 0;
+                CopyExistingLists(ref ConstraintCaches, pool, out set.ConstraintCaches, out var constraintTypeRemap);
+                CopyExistingLists(ref CollisionCaches, pool, out set.CollisionCaches, out var collisionTypeRemap);
+                Debug.Assert(set.ConstraintCaches.Length > 0,
+                    "While there may be no collision caches, the deactivation process is only triggered for pairs with constraints, so there must be at least one constraint.");
 
+                QuickList<InactivePair, Buffer<InactivePair>>.Create(pool.SpecializeFor<InactivePair>(), Pairs.Count, out set.Pairs);
+                for (int i = 0; i < Pairs.Count; ++i)
+                {
+                    ref var sourcePair = ref Pairs[i];
+                    ref var remappedPair = ref set.Pairs.AllocateUnsafely();
+                    remappedPair.Pair = sourcePair.Pair;
+                    remappedPair.ConstraintCache = new TypedIndex(constraintTypeRemap[sourcePair.ConstraintCache.Type], sourcePair.ConstraintCache.Index);
+                    remappedPair.CollisionCache = sourcePair.CollisionCache.Exists ?
+                        new TypedIndex(collisionTypeRemap[sourcePair.CollisionCache.Type], sourcePair.CollisionCache.Index) : new TypedIndex();
+                }
+                pool.SpecializeFor<int>().Return(ref constraintTypeRemap);
+                if (collisionTypeRemap.Allocated)
+                    pool.SpecializeFor<int>().Return(ref collisionTypeRemap);
+                Pairs.Count = 0;
+            }
+            else
+            {
+                //No pairs -> no set required.
+                set = new InactiveSet();
+            }
         }
 
         public void Dispose(BufferPool pool)

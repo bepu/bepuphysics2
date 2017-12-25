@@ -227,7 +227,18 @@ namespace BepuPhysics
         {
             ProfilerClear();
             ProfilerStart(this);
-            //Note that the first behavior-affecting stage is actually the pose integrator. This is a shift from v1, where collision detection went first.
+            //Note that there is a reason to put the deactivator *after* velocity integration. That sounds a little weird, but there's a good reason:
+            //When the narrow phase activates a bunch of objects in a pile, their accumulated impulses will represent all forces acting on them at the time of deactivation.
+            //That includes gravity. If we deactivate objects *before* gravity is applied in a given frame, then when those bodies are activated, the accumulated impulses
+            //will be less accurate because they assume that gravity has already been applied. This can cause a small bump.
+            //So instead, velocity integration (and deactivation candidacy management) comes before deactivation.
+
+            //Deactivation at the start, on the other hand, stops some forms of unintuitive behavior when using direct activations. Just a matter of preference.
+            ProfilerStart(Deactivator);
+            Deactivator.Update(threadDispatcher, Deterministic);
+            ProfilerEnd(Deactivator);
+
+            //Note that pose integrator comes before collision detection and solving. This is a shift from v1, where collision detection went first.
             //This is a tradeoff:
             //1) Any externally set velocities will be integrated without input from the solver. The v1-style external velocity control won't work as well-
             //the user would instead have to change velocities after the pose integrator runs. This isn't perfect either, since the pose integrator is also responsible
@@ -236,9 +247,7 @@ namespace BepuPhysics
             //3) Generated contact positions are in sync with the integrated poses. 
             //That's often helpful for gameplay purposes- you don't have to reinterpret contact data when creating graphical effects or positioning sound sources.
 
-            //TODO: This is something that is possibly worth exposing as one of the generic type parameters. Users could just choose the order arbitrarily.
-            //Or, since you're talking about something that happens once per frame instead of once per collision pair, just provide a simple callback.
-            //(Or maybe an enum even?)
+            //TODO: This is something that is possibly worth external customization. Users could just choose the order arbitrarily.
             //#1 is a difficult problem, though. There is no fully 'correct' place to change velocities. We might just have to bite the bullet and create a
             //inertia tensor/bounding box update separate from pose integration. If the cache gets evicted in between (virtually guaranteed unless no stages run),
             //this basically means an extra 100-200 microseconds per frame on a processor with ~20GBps bandwidth simulating 32768 bodies.
@@ -251,14 +260,7 @@ namespace BepuPhysics
             PoseIntegrator.Update(dt, BufferPool, threadDispatcher);
             ProfilerEnd(PoseIntegrator);
 
-            //Note that the deactivator comes *after* velocity integration. That looks a little weird, but it's for a reason:
-            //When the narrow phase activates a bunch of objects in a pile, their accumulated impulses will represent all forces acting on them at the time of deactivation.
-            //That includes gravity. If we deactivate objects *before* gravity is applied in a given frame, then when those bodies are activated, the accumulated impulses
-            //will be less accurate because they assume that gravity has already been applied. This can cause a small bump.
-            //So instead, velocity integration (and deactivation candidacy management) comes before deactivation.
-            ProfilerStart(Deactivator);
-            Deactivator.Update(threadDispatcher, Deterministic);
-            ProfilerEnd(Deactivator);
+
 
             ProfilerStart(BroadPhase);
             BroadPhase.Update(threadDispatcher);

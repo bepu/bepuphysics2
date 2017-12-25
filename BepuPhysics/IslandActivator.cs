@@ -91,7 +91,9 @@ namespace BepuPhysics
             //TODO: It would probably be a good idea to add a little heuristic to avoid doing multithreaded dispatches if there are only like 5 total bodies.
             //Shouldn't matter too much- the threaded variant should only really be used when doing big batched changes, so having a fixed constant cost isn't that bad.
             int threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
-            var (phaseOneJobCount, phaseTwoJobCount) = PrepareJobs(ref uniqueSetIndices, threadCount);
+            //Note that direct activations always reset activity states. I suspect this is sufficiently universal that no one will ever want the alternative,
+            //even though the narrowphase does avoid resetting deactivation states for the sake of faster resleeping when possible.
+            var (phaseOneJobCount, phaseTwoJobCount) = PrepareJobs(ref uniqueSetIndices, true, threadCount);
 
             if (threadCount > 1)
             {
@@ -189,6 +191,7 @@ namespace BepuPhysics
             public int TargetTypeBatch;
         }
 
+        bool resetActivityStates;
         QuickList<int, Buffer<int>> uniqueSetIndices;
         QuickList<PhaseOneJob, Buffer<PhaseOneJob>> phaseOneJobs;
         QuickList<PhaseTwoJob, Buffer<PhaseTwoJob>> phaseTwoJobs;
@@ -241,12 +244,21 @@ namespace BepuPhysics
                         //Since we already preallocated everything during the job preparation, all we have to do is copy from the inactive set location.
                         ref var sourceSet = ref bodies.Sets[job.SourceSet];
                         ref var targetSet = ref bodies.ActiveSet;
-                        sourceSet.Activity.CopyTo(job.SourceStart, ref targetSet.Activity, job.TargetStart, job.Count);
                         sourceSet.Collidables.CopyTo(job.SourceStart, ref targetSet.Collidables, job.TargetStart, job.Count);
                         sourceSet.Constraints.CopyTo(job.SourceStart, ref targetSet.Constraints, job.TargetStart, job.Count);
                         sourceSet.LocalInertias.CopyTo(job.SourceStart, ref targetSet.LocalInertias, job.TargetStart, job.Count);
                         sourceSet.Poses.CopyTo(job.SourceStart, ref targetSet.Poses, job.TargetStart, job.Count);
                         sourceSet.Velocities.CopyTo(job.SourceStart, ref targetSet.Velocities, job.TargetStart, job.Count);
+                        sourceSet.Activity.CopyTo(job.SourceStart, ref targetSet.Activity, job.TargetStart, job.Count);
+                        if (resetActivityStates)
+                        {
+                            for (int targetIndex = job.TargetStart + job.Count - 1; targetIndex >= job.TargetStart; --targetIndex)
+                            {
+                                ref var targetActivity = ref targetSet.Activity[targetIndex];
+                                targetActivity.TimestepsUnderThresholdCount = 0;
+                                targetActivity.DeactivationCandidate = false;
+                            }
+                        }
                         sourceSet.IndexToHandle.CopyTo(job.SourceStart, ref targetSet.IndexToHandle, job.TargetStart, job.Count);
                         for (int i = 0; i < job.Count; ++i)
                         {
@@ -346,7 +358,8 @@ namespace BepuPhysics
         void ValidateInactiveSetIndex(int setIndex)
         {
             Debug.Assert(setIndex >= 1 && setIndex < bodies.Sets.Length && setIndex < solver.Sets.Length && setIndex < pairCache.InactiveSets.Length);
-            Debug.Assert(bodies.Sets[setIndex].Allocated && solver.Sets[setIndex].Allocated && pairCache.InactiveSets[setIndex].Allocated);
+            //Note that pair cache sets are not guaranteed to be allocated if there are no pairs.
+            Debug.Assert(bodies.Sets[setIndex].Allocated && solver.Sets[setIndex].Allocated);
         }
         [Conditional("DEBUG")]
         void ValidateUniqueSets(ref QuickList<int, Buffer<int>> setIndices)
@@ -419,10 +432,11 @@ namespace BepuPhysics
         }
 
 
-        internal (int phaseOneJobCount, int phaseTwoJobCount) PrepareJobs(ref QuickList<int, Buffer<int>> setIndices, int threadCount)
+        internal (int phaseOneJobCount, int phaseTwoJobCount) PrepareJobs(ref QuickList<int, Buffer<int>> setIndices, bool resetActivityStates, int threadCount)
         {
             ValidateUniqueSets(ref setIndices);
             this.uniqueSetIndices = setIndices;
+            this.resetActivityStates = resetActivityStates;
 
             //We have three main jobs in this function:
             //1) Ensure that the active set in the bodies, solver, and pair cache can hold the newly activated islands without resizing or accessing a buffer pool.
@@ -590,7 +604,7 @@ namespace BepuPhysics
                         activeBodySet.Count += job.Count;
                     }
                     Debug.Assert(previousSourceEnd == sourceSet.Count);
-                    Debug.Assert(activeBodySet.Count < activeBodySet.IndexToHandle.Length);
+                    Debug.Assert(activeBodySet.Count <= activeBodySet.IndexToHandle.Length);
                 }
                 {
                     const int constraintJobSize = 32;
@@ -643,12 +657,15 @@ namespace BepuPhysics
             {
                 var setIndex = setIndices[i];
                 ref var bodySet = ref bodies.Sets[setIndex];
+                //Note that neither the constraint set nor the pair cache set necessarily exist. It is possible for bodies to go inactive by themselves.
                 ref var constraintSet = ref solver.Sets[setIndex];
                 ref var pairCacheSet = ref pairCache.InactiveSets[setIndex];
-                Debug.Assert(bodySet.Allocated && constraintSet.Allocated && pairCacheSet.Allocated);
+                Debug.Assert(bodySet.Allocated);
                 bodySet.DisposeBuffers(pool);
-                constraintSet.Dispose(pool);
-                pairCacheSet.Dispose(pool);
+                if (constraintSet.Allocated)
+                    constraintSet.Dispose(pool);
+                if (pairCacheSet.Allocated)
+                    pairCacheSet.Dispose(pool);
                 this.uniqueSetIndices = new QuickList<int, Buffer<int>>();
                 deactivator.ReturnSetId(setIndex);
             }

@@ -144,26 +144,29 @@ namespace BepuPhysics.CollisionDetection
         internal unsafe void ActivateSet(int setIndex)
         {
             ref var inactiveSet = ref InactiveSets[setIndex];
-            Debug.Assert(inactiveSet.Allocated);
-            ref var activeSet = ref GetCacheForActivation();
-            //For simplicity, activation simply walks the pairs list in the inactive set.
-            //By construction of the inactive set, the cache accesses will be highly cache coherent, so the fact that it doesn't do bulk copies isn't that bad.
-            //(we COULD make it do bulk copies, but only bother with that if there is any reason to.)
-
-            for (int i = 0; i < inactiveSet.Pairs.Count; ++i)
+            //If there are no pairs, there is no need for an inactive set, so it's not guaranteed to be allocated.
+            if (inactiveSet.Allocated)
             {
-                ref var pair = ref inactiveSet.Pairs[i];
-                CollidablePairPointers pointers;
-                pointers.ConstraintCache = CopyCacheForActivation(ref inactiveSet.ConstraintCaches, ref activeSet.constraintCaches, pair.ConstraintCache);
-                if (pair.CollisionCache.Exists)
+                ref var activeSet = ref GetCacheForActivation();
+                //For simplicity, activation simply walks the pairs list in the inactive set.
+                //By construction of the inactive set, the cache accesses will be highly cache coherent, so the fact that it doesn't do bulk copies isn't that bad.
+                //(we COULD make it do bulk copies, but only bother with that if there is any reason to.)
+
+                for (int i = 0; i < inactiveSet.Pairs.Count; ++i)
                 {
-                    pointers.CollisionDetectionCache = CopyCacheForActivation(ref inactiveSet.CollisionCaches, ref activeSet.collisionCaches, pair.CollisionCache);
+                    ref var pair = ref inactiveSet.Pairs[i];
+                    CollidablePairPointers pointers;
+                    pointers.ConstraintCache = CopyCacheForActivation(ref inactiveSet.ConstraintCaches, ref activeSet.constraintCaches, pair.ConstraintCache);
+                    if (pair.CollisionCache.Exists)
+                    {
+                        pointers.CollisionDetectionCache = CopyCacheForActivation(ref inactiveSet.CollisionCaches, ref activeSet.collisionCaches, pair.CollisionCache);
+                    }
+                    else
+                    {
+                        pointers.CollisionDetectionCache = new PairCacheIndex();
+                    }
+                    Mapping.AddUnsafely(ref pair.Pair, ref pointers);
                 }
-                else
-                {
-                    pointers.CollisionDetectionCache = new PairCacheIndex();
-                }
-                Mapping.AddUnsafely(ref pair.Pair, ref pointers);
             }
         }
 

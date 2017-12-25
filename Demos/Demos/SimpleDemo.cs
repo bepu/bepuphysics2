@@ -30,7 +30,7 @@ namespace Demos
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
             const int width = 2;
-            const int height = 2;
+            const int height = 4;
             const int length = 2;
             var latticeSpacing = 1.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
@@ -38,7 +38,7 @@ namespace Demos
                 new RegularGridBuilder(new Vector3(latticeSpacing, 1.0f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -1, 0);
             Simulation.Deterministic = false;
 
             var staticShape = new Sphere(4);
@@ -90,9 +90,8 @@ namespace Demos
                     ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[handle];
                     if(bodyLocation.SetIndex > 0)
                     {
-                        var bodyHandleToActivate = Simulation.Bodies.ActiveSet.IndexToHandle[0];
-                        Simulation.Activator.ActivateBody(bodyHandleToActivate);
-                        break;
+                        Simulation.Activator.ActivateBody(handle);
+                        //break;
                     }
                 }
             }
