@@ -584,7 +584,8 @@ namespace BepuPhysics
         }
 
 
-        void Deactivate(ref QuickList<int, Buffer<int>> traversalStartBodyIndices, IThreadDispatcher threadDispatcher, bool forceDeactivation)
+        void Deactivate(ref QuickList<int, Buffer<int>> traversalStartBodyIndices, IThreadDispatcher threadDispatcher,
+            int targetDeactivatedBodyCountPerThread, int targetTraversedBodyCountPerThread, bool forceDeactivation)
         {
             //There are four threaded phases to deactivation:
             //1) Traversing the constraint graph to identify 'simulation islands' that satisfy the deactivation conditions.
@@ -602,13 +603,13 @@ namespace BepuPhysics
             if (bodies.ActiveSet.Count == 0 || traversalStartBodyIndices.Count == 0)
                 return;
 
-            this.traversalStartBodyIndices = traversalStartBodyIndices;
 
             //1) TRAVERSAL      
-            int threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
-            targetDeactivatedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetDeactivatedFraction / threadCount);
-            targetTraversedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetTraversedFraction / threadCount);
+            this.traversalStartBodyIndices = traversalStartBodyIndices;
+            this.targetDeactivatedBodyCountPerThread = targetDeactivatedBodyCountPerThread;
+            this.targetTraversedBodyCountPerThread = targetDeactivatedBodyCountPerThread;
 
+            int threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
             pool.SpecializeFor<WorkerTraversalResults>().Take(threadCount, out workerTraversalResults);
             //Note that all resources within a worker's results set are allocate on the worker's pool since the thread may need to resize things.
             this.threadDispatcher = threadDispatcher;
@@ -890,7 +891,7 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for the deactivation attempt, if any. If null, deactivation is performed on the calling thread.</param>
         public void Deactivate(ref QuickList<int, Buffer<int>> bodyIndices, IThreadDispatcher threadDispatcher = null)
         {
-            Deactivate(ref bodyIndices, threadDispatcher, true);
+            Deactivate(ref bodyIndices, threadDispatcher, int.MaxValue, int.MaxValue, true);
         }
 
         /// <summary>
@@ -963,8 +964,10 @@ namespace BepuPhysics
                 }
                 pool.SpecializeFor<int>().Return(ref sortedIndices);
             }
-
-            Deactivate(ref traversalStartBodyIndices, threadDispatcher, deterministic);
+            var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
+            var targetDeactivatedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetDeactivatedFraction / threadCount);
+            var targetTraversedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetTraversedFraction / threadCount);
+            Deactivate(ref traversalStartBodyIndices, threadDispatcher, targetDeactivatedBodyCountPerThread, targetTraversedBodyCountPerThread, false);
 
             traversalStartBodyIndices.Dispose(pool.SpecializeFor<int>());
         }

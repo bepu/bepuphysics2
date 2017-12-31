@@ -5,6 +5,9 @@ using BepuPhysics;
 using BepuPhysics.Collidables;
 using System;
 using System.Numerics;
+using System.Diagnostics;
+using BepuUtilities.Memory;
+using BepuUtilities.Collections;
 
 namespace Demos
 {
@@ -29,9 +32,9 @@ namespace Demos
 
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 2;
-            const int height = 32;
-            const int length = 2;
+            const int width = 12;
+            const int height = 12;
+            const int length = 12;
             var latticeSpacing = 3.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
@@ -85,16 +88,62 @@ namespace Demos
 
             if (input.WasPushed(OpenTK.Input.Key.P))
             {
-                for (int handle = 0; handle < Simulation.Bodies.HandleToLocation.Length; ++handle)
+                for (int iterationIndex = 0; iterationIndex < 100; ++iterationIndex)
                 {
-                    ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[handle];
-                    if(bodyLocation.SetIndex > 0)
+                    QuickList<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), Simulation.Bodies.ActiveSet.Count, out var bodyIndicestoDeactivate);
+                    for (int i = 0; i < Simulation.Bodies.ActiveSet.Count; ++i)
                     {
-                        Simulation.Activator.ActivateBody(handle);
-                        //break;
+                        bodyIndicestoDeactivate.AllocateUnsafely() = i;
                     }
+                    Simulation.Deactivator.Deactivate(ref bodyIndicestoDeactivate, ThreadDispatcher);
+
+                    bodyIndicestoDeactivate.Dispose(BufferPool.SpecializeFor<int>());
+
+                    QuickList<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), Simulation.Bodies.Sets.Length, out var setsToActivate);
+                    for (int i = 1; i < Simulation.Bodies.Sets.Length; ++i)
+                    {
+                        if (Simulation.Bodies.Sets[i].Allocated)
+                        {
+                            setsToActivate.AllocateUnsafely() = i;
+                        }
+                    }
+
+                    Simulation.Activator.ActivateSets(ref setsToActivate, ThreadDispatcher);
+                    setsToActivate.Dispose(BufferPool.SpecializeFor<int>());
+
                 }
             }
+
+            //if (input.WasPushed(OpenTK.Input.Key.P))
+            //{
+            //    QuickList<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), Simulation.Bodies.Sets.Length, out var setsToActivate);
+            //    for (int i = 1; i < Simulation.Bodies.Sets.Length; ++i)
+            //    {
+            //        if (Simulation.Bodies.Sets[i].Allocated)
+            //        {
+            //            setsToActivate.AllocateUnsafely() = i;
+            //        }
+            //    }
+
+            //    var start = Stopwatch.GetTimestamp();
+            //    Simulation.Activator.ActivateSets(ref setsToActivate, ThreadDispatcher);
+            //    var end = Stopwatch.GetTimestamp();
+            //    setsToActivate.Dispose(BufferPool.SpecializeFor<int>());
+            //    Console.WriteLine($"{setsToActivate.Count} activations, time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
+            //}
+            //if (input.WasPushed(OpenTK.Input.Key.O))
+            //{
+            //    QuickList<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), Simulation.Bodies.ActiveSet.Count, out var bodyIndicestoDeactivate);
+            //    for (int i = 0; i < Simulation.Bodies.ActiveSet.Count; ++i)
+            //    {
+            //        bodyIndicestoDeactivate.AllocateUnsafely() = i;
+            //    }
+            //    var start = Stopwatch.GetTimestamp();
+            //    Simulation.Deactivator.Deactivate(ref bodyIndicestoDeactivate, ThreadDispatcher);
+            //    var end = Stopwatch.GetTimestamp();
+            //bodyIndicestoDeactivate.Dispose(BufferPool.SpecializeFor<int>());
+            //    Console.WriteLine($"{bodyIndicestoDeactivate.Count} deactivations, time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
+            //}
 
             //for (int i = 0; i < Simulation.Bodies.BodyCount; ++i)
             //{
