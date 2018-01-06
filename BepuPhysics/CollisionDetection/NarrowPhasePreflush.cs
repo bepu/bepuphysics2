@@ -358,6 +358,8 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                 }
+                //This must be cached so that the freshness checker does not schedule jobs over newly activated entries.
+                var originalPairCacheMappingCount = PairCache.Mapping.Count;
                 //var start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;
                 threadDispatcher.DispatchWorkers(preflushWorkerLoop);
@@ -386,7 +388,7 @@ namespace BepuPhysics.CollisionDetection
                 {
                     preflushJobs.Add(new PreflushJob { Type = PreflushJobType.ActivatorPhaseTwo, JobIndex = i }, preflushJobPool);
                 }
-                FreshnessChecker.CreateJobs(threadCount, ref preflushJobs, Pool);
+                FreshnessChecker.CreateJobs(threadCount, ref preflushJobs, Pool, originalPairCacheMappingCount);
 
                 //start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;

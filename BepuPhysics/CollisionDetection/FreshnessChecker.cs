@@ -18,20 +18,20 @@ namespace BepuPhysics.CollisionDetection
             constraintRemover = narrowPhase.ConstraintRemover;
         }
 
-        public void CreateJobs(int threadCount, ref QuickList<PreflushJob, Buffer<PreflushJob>> jobs, BufferPool pool)
+        public void CreateJobs(int threadCount, ref QuickList<PreflushJob, Buffer<PreflushJob>> jobs, BufferPool pool, int mappingCount)
         {
-            if (pairCache.Mapping.Count > 0)
+            if (mappingCount > 0)
             {
                 if (threadCount > 1)
                 {
                     const int jobsPerThread = 2; //TODO: Empirical tune; probably just 1.
-                    freshnessJobCount = Math.Min(threadCount * jobsPerThread, pairCache.Mapping.Count);
-                    var pairsPerJob = pairCache.Mapping.Count / freshnessJobCount;
-                    var remainder = pairCache.Mapping.Count - pairsPerJob * freshnessJobCount;
+                    freshnessJobCount = Math.Min(threadCount * jobsPerThread, mappingCount);
+                    var pairsPerJob = mappingCount / freshnessJobCount;
+                    var remainder = mappingCount - pairsPerJob * freshnessJobCount;
                     int previousEnd = 0;
                     jobs.EnsureCapacity(jobs.Count + freshnessJobCount, pool.SpecializeFor<PreflushJob>());
                     int jobIndex = 0;
-                    while (previousEnd < pairCache.Mapping.Count)
+                    while (previousEnd < mappingCount)
                     {
                         ref var job = ref jobs.AllocateUnsafely();
                         job.Type = PreflushJobType.CheckFreshness;
@@ -39,15 +39,15 @@ namespace BepuPhysics.CollisionDetection
                         //The end of every interval except the last one should be aligned on an 8 byte boundary.
                         var pairsInJob = jobIndex < remainder ? pairsPerJob + 1 : pairsPerJob;
                         previousEnd = ((previousEnd + pairsInJob + 7) >> 3) << 3;
-                        if (previousEnd > pairCache.Mapping.Count)
-                            previousEnd = pairCache.Mapping.Count;
+                        if (previousEnd > mappingCount)
+                            previousEnd = mappingCount;
                         job.End = previousEnd;
                         ++jobIndex;
                     }
                 }
                 else
                 {
-                    jobs.Add(new PreflushJob { Type = PreflushJobType.CheckFreshness, Start = 0, End = pairCache.Mapping.Count }, pool.SpecializeFor<PreflushJob>());
+                    jobs.Add(new PreflushJob { Type = PreflushJobType.CheckFreshness, Start = 0, End = mappingCount }, pool.SpecializeFor<PreflushJob>());
                 }
             }
         }
