@@ -32,9 +32,9 @@ namespace Demos
 
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 4;
-            const int height = 4;
-            const int length = 4;
+            const int width = 8;
+            const int height = 8;
+            const int length = 8;
             var latticeSpacing = 3.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
@@ -84,8 +84,6 @@ namespace Demos
         int frameIndex;
         public override void Update(Input input, float dt)
         {
-            if (frameIndex == 815)
-                Console.WriteLine("b");
             Console.WriteLine($"Preframe {frameIndex++}");
             if (input.WasPushed(OpenTK.Input.Key.P))
             {

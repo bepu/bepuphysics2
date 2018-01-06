@@ -44,6 +44,16 @@ namespace BepuPhysics
             workerDelegate = Worker;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void RotateInertia(ref Triangular3x3 localInertiaTensor, ref Quaternion orientation, out Triangular3x3 rotatedInertiaTensor)
+        {
+            Matrix3x3.CreateFromQuaternion(ref orientation, out var orientationMatrix);
+            //I^-1 = RT * Ilocal^-1 * R 
+            //NOTE: If you were willing to confuse users a little bit, the local inertia could be required to be diagonal.
+            //This would be totally fine for all the primitive types which happen to have diagonal inertias, but for more complex shapes (convex hulls, meshes), 
+            //there would need to be a reorientation step. That could be confusing, and it's probably not worth it.
+            Triangular3x3.RotationSandwich(ref orientationMatrix, ref localInertiaTensor, out rotatedInertiaTensor);
+        }
 
         unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, ref BoundingBoxUpdater boundingBoxUpdater)
         {
@@ -101,12 +111,7 @@ namespace BepuPhysics
                 //This would require a scan through all pose memory to support, but if you do it at the same time as AABB update, that's fine- that stage uses the pose too.
                 ref var localInertias = ref Unsafe.Add(ref baseLocalInertias, i);
                 ref var inertias = ref Unsafe.Add(ref baseInertias, i);
-                Matrix3x3.CreateFromQuaternion(ref pose.Orientation, out var orientationMatrix);
-                //I^-1 = RT * Ilocal^-1 * R 
-                //NOTE: If you were willing to confuse users a little bit, the local inertia could be required to be diagonal.
-                //This would be totally fine for all the primitive types which happen to have diagonal inertias, but for more complex shapes (convex hulls, meshes), 
-                //there would need to be a reorientation step. That could be confusing, and it's probably not worth it.
-                Triangular3x3.RotationSandwich(ref orientationMatrix, ref localInertias.InverseInertiaTensor, out inertias.InverseInertiaTensor);
+                RotateInertia(ref localInertias.InverseInertiaTensor, ref pose.Orientation, out inertias.InverseInertiaTensor);
                 //While it's a bit goofy just to copy over the inverse mass every frame even if it doesn't change,
                 //it's virtually always gathered together with the inertia tensor and it really isn't worth a whole extra external system to copy inverse masses only on demand.
                 inertias.InverseMass = localInertias.InverseMass;
