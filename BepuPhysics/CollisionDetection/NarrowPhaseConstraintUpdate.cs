@@ -155,6 +155,20 @@ namespace BepuPhysics.CollisionDetection
                 var newImpulses = default(TContactImpulses);
                 //TODO: It would be nice to avoid the impulse scatter for fully new constraints; it's going to be all zeroes regardless. Worth investigating later.
                 RequestAddConstraint(workerIndex, manifoldTypeAsConstraintType, ref pair, constraintCacheIndex, ref newImpulses, ref description, bodyHandles);
+                //This is a new connection in the constraint graph, so we must check to see if any involved body is inactive.
+                //Note that this is only possible when both colliders are bodies. If only one collider is a body, then it must be active otherwise this pair would never have been tested.
+                if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
+                {
+                    ref var twoBodyHandles = ref Unsafe.As<TBodyHandles, TwoBodyHandles>(ref bodyHandles);
+                    ref var locationA = ref Bodies.HandleToLocation[twoBodyHandles.A];
+                    ref var locationB = ref Bodies.HandleToLocation[twoBodyHandles.B];
+                    //Only one of the two can be inactive.
+                    if (locationA.SetIndex != locationB.SetIndex)
+                    {
+                        ref var overlapWorker = ref overlapWorkers[workerIndex];
+                        overlapWorker.PendingSetActivations.Add(locationA.SetIndex > 0 ? locationA.SetIndex : locationB.SetIndex, overlapWorker.Batcher.pool.SpecializeFor<int>());
+                    }
+                }
             }
         }
 

@@ -297,11 +297,6 @@ namespace BepuPhysics.CollisionDetection
                 ref var bodyLocationA = ref Bodies.HandleToLocation[a.Handle];
                 ref var bodyLocationB = ref Bodies.HandleToLocation[b.Handle];
                 Debug.Assert(bodyLocationA.SetIndex == 0 || bodyLocationB.SetIndex == 0, "One of the two bodies must be active. Otherwise, something is busted!");
-                if (bodyLocationA.SetIndex != bodyLocationB.SetIndex)
-                {
-                    //One of the two bodies is inactive. Its island must be forced awake before the solver tries to do anything with the constraints we build.
-                    overlapWorker.PendingSetActivations.Add(bodyLocationA.SetIndex > 0 ? bodyLocationA.SetIndex : bodyLocationB.SetIndex, overlapWorker.Batcher.pool.SpecializeFor<int>());
-                }
                 ref var setA = ref Bodies.Sets[bodyLocationA.SetIndex];
                 ref var setB = ref Bodies.Sets[bodyLocationB.SetIndex];
                 AddBatchEntries(ref overlapWorker, ref pair,

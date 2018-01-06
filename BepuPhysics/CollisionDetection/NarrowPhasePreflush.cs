@@ -274,7 +274,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 overlapWorkers[i].PendingSetActivations.Dispose(overlapWorkers[i].Batcher.pool.SpecializeFor<int>());
             }
-            (int activatorPhaseOneJobCount, int activatorPhaseTwoJobCount) = Simulation.Activator.PrepareJobs(ref setsToActivate, true, threadCount);
+            (int activatorPhaseOneJobCount, int activatorPhaseTwoJobCount) = Simulation.Activator.PrepareJobs(ref setsToActivate, false, threadCount);
             if (threadCount > 1)
             {
                 //Given the sizes involved, a fixed guess of 128 should be just fine for essentially any simulation. Overkill, but not in a concerning way.
@@ -419,19 +419,6 @@ namespace BepuPhysics.CollisionDetection
             {
                 //Single threaded. Quite a bit simpler!
                 //Three tasks: activate, freshness checker, and add all pending constraints.
-                if (activatorPhaseOneJobCount > 0)
-                {
-                    Console.Write($"Activation! {activatorPhaseOneJobCount} phase one, {activatorPhaseTwoJobCount} phase two. Sets: ");
-                    for (int i = 0; i < setsToActivate.Count; ++i)
-                    {
-                        Console.Write($"{setsToActivate[i]}, ");
-                    }
-                    Console.WriteLine();
-                }
-                else
-                {
-                    Console.WriteLine("No activations.");
-                }
                 //Note that phase one changes the PairCache.Mapping.Count; the count must be cached so that the freshness checker doesn't bother analyzing the newly activated pairs.
                 var originalMappingCount = PairCache.Mapping.Count;
                 for (int i = 0; i < activatorPhaseOneJobCount; ++i)
