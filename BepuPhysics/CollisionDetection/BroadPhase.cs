@@ -123,6 +123,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 StaticTree.RefitAndRefine(frameIndex);
             }
+            //++frameIndex;
         }
 
         /// <summary>

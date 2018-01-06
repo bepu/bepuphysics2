@@ -158,35 +158,7 @@ namespace BepuPhysics.Constraints
             for (int i = 1; i < bodyCount; ++i)
             {
                 Unsafe.Add(ref targetLane, i * stride) = bodyIndices[i];
-            }
-
-#if DEBUG
-            //The inner index is the last slot in the bundle, since adds always append and constraints are always a contiguous block.
-            //Loop through the indices of the bundle and confirm that none of the indices are the same.
-            for (int i = 0; i <= innerIndex; ++i)
-            {
-                var indices = stackalloc int[bodyCount * 2];
-                for (int j = 0; j < bodyCount; ++j)
-                {
-                    indices[j] = Unsafe.Add(ref start, i + stride * j);
-                }
-                for (int j = i + 1; j <= innerIndex; ++j)
-                {
-                    for (int k = 0; k < bodyCount; ++k)
-                    {
-                        indices[bodyCount + k] = Unsafe.Add(ref start, j + stride * k);
-                    }
-                    for (int k = 0; k < bodyCount * 2; ++k)
-                    {
-                        for (int l = k + 1; l < bodyCount * 2; ++l)
-                        {
-                            Debug.Assert(indices[k] != indices[l], "A bundle should not share any body references. If an add causes redundant body references, something upstream broke.");
-                        }
-                    }
-                }
-
-            }
-#endif
+            }            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

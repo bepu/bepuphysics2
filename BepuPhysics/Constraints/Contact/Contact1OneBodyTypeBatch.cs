@@ -21,7 +21,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> MaximumRecoveryVelocity;
         public Vector<float> PenetrationDepth0;
     }
-    
+
     public struct ContactManifold1OneBodyProjection
     {
         public BodyInertias InertiaA;

@@ -299,8 +299,6 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(bodyLocationA.SetIndex == 0 || bodyLocationB.SetIndex == 0, "One of the two bodies must be active. Otherwise, something is busted!");
                 if (bodyLocationA.SetIndex != bodyLocationB.SetIndex)
                 {
-                    //TODO: TEMP; don't proceed with any activations or collision detection associated with inactives
-                    return;
                     //One of the two bodies is inactive. Its island must be forced awake before the solver tries to do anything with the constraints we build.
                     overlapWorker.PendingSetActivations.Add(bodyLocationA.SetIndex > 0 ? bodyLocationA.SetIndex : bodyLocationB.SetIndex, overlapWorker.Batcher.pool.SpecializeFor<int>());
                 }

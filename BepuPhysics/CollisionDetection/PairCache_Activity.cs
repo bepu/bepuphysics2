@@ -1,6 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -151,7 +152,6 @@ namespace BepuPhysics.CollisionDetection
                 //For simplicity, activation simply walks the pairs list in the inactive set.
                 //By construction of the inactive set, the cache accesses will be highly cache coherent, so the fact that it doesn't do bulk copies isn't that bad.
                 //(we COULD make it do bulk copies, but only bother with that if there is any reason to.)
-
                 for (int i = 0; i < inactiveSet.Pairs.Count; ++i)
                 {
                     ref var pair = ref inactiveSet.Pairs[i];

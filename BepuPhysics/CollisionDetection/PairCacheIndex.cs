@@ -83,5 +83,10 @@ namespace BepuPhysics.CollisionDetection
             return toReturn;
         }
 
-     }
+        public override string ToString()
+        {
+            return $"{{{Cache}, {Type}, {Index}}}";
+        }
+
+    }
 }

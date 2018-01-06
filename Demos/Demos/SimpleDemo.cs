@@ -32,16 +32,16 @@ namespace Demos
 
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 12;
-            const int height = 12;
-            const int length = 12;
+            const int width = 4;
+            const int height = 4;
+            const int length = 4;
             var latticeSpacing = 3.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
                 new RegularGridBuilder(new Vector3(latticeSpacing, 1.5f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -1, 0);
             Simulation.Deterministic = false;
 
             var staticShape = new Sphere(4);
@@ -84,8 +84,9 @@ namespace Demos
         int frameIndex;
         public override void Update(Input input, float dt)
         {
-            //Console.WriteLine($"Preframe {frameIndex++}, mapping count: {Simulation.NarrowPhase.PairCache.Mapping.Count}");
-
+            if (frameIndex == 815)
+                Console.WriteLine("b");
+            Console.WriteLine($"Preframe {frameIndex++}");
             if (input.WasPushed(OpenTK.Input.Key.P))
             {
                 for (int iterationIndex = 0; iterationIndex < 100; ++iterationIndex)

@@ -84,7 +84,7 @@ namespace BepuPhysics
         {
             QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), setIndices.Count, out var uniqueSetIndices);
             var uniqueSet = new IndexSet(pool, bodies.Sets.Length);
-            AccumulateUniqueIndices(ref setIndices, ref uniqueSet, ref uniqueSetIndices, pool);
+            AccumulateUniqueIndices(ref setIndices, ref uniqueSet, ref uniqueSetIndices);
             uniqueSet.Dispose(pool);
 
             //Note that we use the same codepath as multithreading, we just don't use a multithreaded dispatch to execute jobs.
@@ -342,15 +342,15 @@ namespace BepuPhysics
 
         }
 
-        internal void AccumulateUniqueIndices(ref QuickList<int, Buffer<int>> candidateSetIndices, ref IndexSet uniqueSet, ref QuickList<int, Buffer<int>> uniqueSetIndices, BufferPool pool)
+        internal void AccumulateUniqueIndices(ref QuickList<int, Buffer<int>> candidateSetIndices, ref IndexSet uniqueSet, ref QuickList<int, Buffer<int>> uniqueSetIndices)
         {
             for (int i = 0; i < candidateSetIndices.Count; ++i)
             {
                 var candidateSetIndex = candidateSetIndices[i];
                 if (!uniqueSet.Contains(candidateSetIndex))
                 {
-                    uniqueSet.Add(candidateSetIndex, pool);
-                    uniqueSetIndices.Add(candidateSetIndex, pool.SpecializeFor<int>());
+                    uniqueSet.AddUnsafely(candidateSetIndex);
+                    uniqueSetIndices.AllocateUnsafely() = candidateSetIndex;
                 }
             }
         }
@@ -434,6 +434,8 @@ namespace BepuPhysics
 
         internal (int phaseOneJobCount, int phaseTwoJobCount) PrepareJobs(ref QuickList<int, Buffer<int>> setIndices, bool resetActivityStates, int threadCount)
         {
+            if (setIndices.Count == 0)
+                return (0, 0);
             ValidateUniqueSets(ref setIndices);
             this.uniqueSetIndices = setIndices;
             this.resetActivityStates = resetActivityStates;

@@ -112,7 +112,11 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
             }
-
+            var metric = ComputeBoundsMetric(ref mergedMin, ref mergedMax);
+            if (float.IsNaN(metric) || float.IsInfinity(metric))
+            {
+                throw new Exception($"Bad bounds: {metric} SAH. {mergedMin}, {mergedMax}.");
+            }
             if (expectedParentIndex >= 0 && //Not a root node,
                 (mergedMin != expectedMin || mergedMax != expectedMax))
             {

@@ -232,8 +232,7 @@ namespace BepuPhysics.CollisionDetection
                 refinementTargets.AddUnsafely(0);
                 nodes->RefineFlag = 1;
             }
-
-
+            
             //Refine all marked targets.
 
             QuickList<int, Buffer<int>>.Create(intPool, maximumSubtrees, out var subtreeReferences);

@@ -244,9 +244,12 @@ namespace BepuPhysics
             for (int i = 0; i < maxBodySet; ++i)
             {
                 ref var set = ref bodies.Sets[i];
-                for (int j = 0; j < set.Count; ++j)
+                if (set.Allocated)
                 {
-                    bodies.ValidateExistingHandle(set.IndexToHandle[j]);
+                    for (int j = 0; j < set.Count; ++j)
+                    {
+                        bodies.ValidateExistingHandle(set.IndexToHandle[j]);
+                    }
                 }
             }
             //Validate the bodies referenced in the active batchReferencedHandles collections. 

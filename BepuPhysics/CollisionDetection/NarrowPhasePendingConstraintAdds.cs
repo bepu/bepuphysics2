@@ -82,7 +82,7 @@ namespace BepuPhysics.CollisionDetection
             /// Flushes pending constraints into the simulation without any form of synchronization. Adds occur in the order of manifold generation.
             /// If the contact manifold generation is deterministic, then the result of this add will be deterministic.
             /// </summary>
-            internal void FlushSequentially(Simulation simulation, ref PairCache pairCache)
+            internal void FlushSequentially(Simulation simulation, PairCache pairCache)
             {
                 //This is going to be pretty horrible!
                 //There is no type information beyond the index of the cache.
