@@ -63,6 +63,7 @@ namespace BepuUtilities.Memory
                 //Specifically, they're using:
                 //return ref Unsafe.Add(ref _pointer.Value, index);
                 //where _pointer is a ByReference<T>, which we cannot use.
+                Debug.Assert(index >= 0 && index < length, "Index out of range.");
                 return ref Get(Memory, index);
             }
         }

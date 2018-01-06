@@ -250,7 +250,6 @@ namespace BepuPhysics
                         //Note that we use a manual loop copy for the local inertias and poses since we're accessing them during the world inertia calculation anyway.
                         //This can worsen the copy codegen a little, but it means we only have to scan the memory once.
                         //(Realistically, either option is fast- these regions won't tend to fill L1.) 
-                        int jobTargetEnd = job.TargetStart + job.Count;
                         for (int i = 0; i < job.Count; ++i)
                         {
                             var sourceIndex = job.SourceStart + i;
@@ -264,7 +263,6 @@ namespace BepuPhysics
                             targetLocalInertia = sourceLocalInertia;
                             PoseIntegrator.RotateInertia(ref sourceLocalInertia.InverseInertiaTensor, ref sourcePose.Orientation, out targetWorldInertia.InverseInertiaTensor);
                             targetWorldInertia.InverseMass = sourceLocalInertia.InverseMass;
-
                         }
                         sourceSet.Velocities.CopyTo(job.SourceStart, ref targetSet.Velocities, job.TargetStart, job.Count);
                         sourceSet.Activity.CopyTo(job.SourceStart, ref targetSet.Activity, job.TargetStart, job.Count);
@@ -666,7 +664,7 @@ namespace BepuPhysics
                     }
                 }
             }
-            for (int i =0; i < phaseOneJobs.Count; ++i)
+            for (int i = 0; i < phaseOneJobs.Count; ++i)
             {
                 Debug.Assert((int)phaseOneJobs[i].Type < 10);
             }

@@ -275,7 +275,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void UpdateBroadPhaseKinematicState(int handle, ref BodyLocation location, ref BodySet set)
         {
-            Debug.Assert(set.Activity[location.Index].Kinematic == IsKinematic(ref set.LocalInertias[location.Index]), 
+            Debug.Assert(set.Activity[location.Index].Kinematic == IsKinematic(ref set.LocalInertias[location.Index]),
                 "Activity's kinematic state should be updated prior to the broad phase update call. This function simply shares its determination.");
             ref var collidable = ref set.Collidables[location.Index];
             var kinematic = set.Activity[location.Index].Kinematic;
@@ -408,7 +408,7 @@ namespace BepuPhysics
             Debug.Assert(location.Index >= 0 && location.Index < set.Count, "Body index must fall within the existing body set.");
             Debug.Assert(set.IndexToHandle[location.Index] == handle, "Handle->index must match index->handle map.");
         }
-                
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void GatherInertiaForBody(ref BodyInertia source, ref float targetInertiaBase, int targetLaneIndex)
         {
@@ -735,14 +735,26 @@ namespace BepuPhysics
         //Note that these resize and ensure capacity functions affect only the active set.
         //Inactive islands are created with minimal allocations. Since you cannot add to or remove from inactive islands, it is pointless to try to modify their allocation sizes.
         /// <summary>
-        /// Reallocates the inertias buffer to the smallest size that can hold all active bodies.
+        /// Reallocates the inertias buffer for the target capacity. Will not shrink below the size of the current active set.
         /// </summary>
-        internal void ResizeIneritas()
-        {
-            var targetInertiaCapacity = BufferPool<BodyInertia>.GetLowestContainingElementCount(ActiveSet.Count);
-            if (Inertias.Length != targetInertiaCapacity)
+        internal void ResizeInertias(int capacity)
+        {            
+            var targetCapacity = BufferPool<BodyInertia>.GetLowestContainingElementCount(Math.Max(capacity, ActiveSet.Count));
+            if (Inertias.Length != targetCapacity)
             {
-                pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, targetInertiaCapacity, 0);
+                pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, targetCapacity, 0);
+            }
+        }
+        /// <summary>
+        /// Guarantees that the inertias capacity is sufficient for the given capacity.
+        /// </summary>
+        internal void EnsureInertiasCapacity(int capacity)
+        {
+            if (capacity < ActiveSet.Count)
+                capacity = ActiveSet.Count;
+            if (Inertias.Length < capacity)
+            {
+                pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, capacity, 0);
             }
         }
 
@@ -757,6 +769,7 @@ namespace BepuPhysics
             {
                 ActiveSet.InternalResize(targetBodyCapacity, pool);
             }
+            ResizeInertias(capacity);
             var targetHandleCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, HandlePool.HighestPossiblyClaimedId + 1));
             if (HandleToLocation.Length != targetHandleCapacity)
             {
@@ -790,6 +803,7 @@ namespace BepuPhysics
             {
                 ActiveSet.InternalResize(capacity, pool);
             }
+            EnsureInertiasCapacity(capacity);
             if (HandleToLocation.Length < capacity)
             {
                 ResizeHandles(capacity);

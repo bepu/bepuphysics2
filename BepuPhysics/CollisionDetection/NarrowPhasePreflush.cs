@@ -274,7 +274,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 overlapWorkers[i].PendingSetActivations.Dispose(overlapWorkers[i].Batcher.pool.SpecializeFor<int>());
             }
-            (int activatorPhaseOneJobCount, int activatorPhaseTwoJobCount) = Simulation.Activator.PrepareJobs(ref setsToActivate, false, threadCount);
+            (int activatorPhaseOneJobCount, int activatorPhaseTwoJobCount) = Simulation.Activator.PrepareJobs(ref setsToActivate, true, threadCount);
             if (threadCount > 1)
             {
                 //Given the sizes involved, a fixed guess of 128 should be just fine for essentially any simulation. Overkill, but not in a concerning way.

@@ -196,7 +196,7 @@ namespace BepuPhysics
         {
             //For now, the pose integrator (as the first stage that references them in any way) is responsible for ensuring that the bodies have a reasonable size inertias buffer.
             //Note that ownership (for purposes of final disposal) still belongs to the Bodies set.
-            bodies.ResizeIneritas();
+            bodies.EnsureInertiasCapacity(bodies.ActiveSet.Count);
 
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
             gravityDt = Gravity * dt;
