@@ -52,6 +52,8 @@ namespace DemoUtilities
         MouseButtonSet anyDownedButtons;
         MouseButtonSet downedButtons;
         MouseButtonSet previousDownedButtons;
+        public QuickList<char, Array<char>> TypedCharacters;
+
 
         /// <summary>
         /// Forces the mouse to stay at the center of the screen by recentering it on every flush.
@@ -112,7 +114,7 @@ namespace DemoUtilities
             this.window.MouseDown += MouseDown;
             this.window.MouseUp += MouseUp;
             this.window.MouseWheel += MouseWheel;
-
+            this.window.KeyPress += KeyPress;
             var keyPool = new PassthroughArrayPool<Key>();
             var mouseButtonPool = new PassthroughArrayPool<MouseButton>();
             var intPool = new PassthroughArrayPool<int>();
@@ -122,6 +124,12 @@ namespace DemoUtilities
             KeySet.Create(keyPool, intPool, 3, 3, out anyDownedKeys);
             KeySet.Create(keyPool, intPool, 3, 3, out downedKeys);
             KeySet.Create(keyPool, intPool, 3, 3, out previousDownedKeys);
+            QuickList<char, Array<char>>.Create(new PassthroughArrayPool<char>(), 32, out TypedCharacters);
+        }
+
+        private void KeyPress(object sender, KeyPressEventArgs e)
+        {
+            TypedCharacters.Add(e.KeyChar, new PassthroughArrayPool<char>());
         }
 
         private void MouseWheel(object sender, MouseWheelEventArgs e)
@@ -146,6 +154,9 @@ namespace DemoUtilities
         {
             anyDownedKeys.Add(e.Key, new PassthroughArrayPool<Key>(), new PassthroughArrayPool<int>());
             downedKeys.Add(e.Key, new PassthroughArrayPool<Key>(), new PassthroughArrayPool<int>());
+            //Unfortunately, backspace isn't reported by keypress, so we do it manually.
+            if (e.Key == Key.BackSpace)
+                TypedCharacters.Add('\b', new PassthroughArrayPool<char>());
         }
         private void KeyUp(object sender, KeyboardKeyEventArgs e)
         {
@@ -236,6 +247,7 @@ namespace DemoUtilities
             {
                 window.CursorVisible = true;
             }
+
         }
         public void End()
         {
@@ -252,6 +264,7 @@ namespace DemoUtilities
                 previousDownedButtons.Add(downedButtons[i], mouseButtonPool, intPool);
             ScrolledDown = 0;
             ScrolledUp = 0;
+            TypedCharacters.Count = 0;
         }
 
         /// <summary>

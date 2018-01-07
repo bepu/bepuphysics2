@@ -17,7 +17,7 @@ namespace Demos
         }
 
         List<Option> options = new List<Option>();
-        void AddOption<T>(string name) where T : Demo, new()
+        void AddOption<T>() where T : Demo, new()
         {
             options.Add(new Option
             {
@@ -30,15 +30,18 @@ namespace Demos
                     demo.Initialize(camera);
                     return demo;
                 },
-                Name = name
+                Name = typeof(T).Name
             });
         }
 
         public DemoSet()
         {
             //Could use a text template or something here, but, on the other hand, ehhhhhhhhhhhhhhhhhhhhhhhhh
-            AddOption<SimpleDemo>(nameof(SimpleDemo));
+            AddOption<SimpleDemo>();
+            AddOption<FountainStressTestDemo>();
         }
+
+        public int Count { get { return options.Count; } }
 
         public string GetName(int index)
         {

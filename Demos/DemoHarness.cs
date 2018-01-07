@@ -1,23 +1,19 @@
 ﻿using BepuUtilities;
-using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
+using Demos.UI;
 using DemoUtilities;
-using OpenTK.Input;
 using System;
 using System.Numerics;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
 
 namespace Demos
 {
     public class DemoHarness : IDisposable
     {
         Window window;
-        Input input;
+        internal Input input;
         Camera camera;
-        Controls controls;
+        internal Controls controls;
         Font font;
 
         bool showControls;
@@ -35,12 +31,16 @@ namespace Demos
         TimingDisplayMode timingDisplayMode;
         Graph timingGraph;
 
-        DemoSet demoSet;
+        DemoSwapper swapper;
+        internal DemoSet demoSet;
         Demo demo;
-        void ChangeToDemo(int demoIndex)
+        internal void TryChangeToDemo(int demoIndex)
         {
-            demo.Dispose();
-            demo = demoSet.Build(demoIndex, camera);
+            if (demoIndex >= 0 && demoIndex < demoSet.Count)
+            {
+                demo.Dispose();
+                demo = demoSet.Build(demoIndex, camera);
+            }
         }
 
         SimulationTimeSamples timeSamples = new SimulationTimeSamples(512);
@@ -253,6 +253,7 @@ namespace Demos
                         newDisplayMode = 0;
                     UpdateTimingGraphForMode((TimingDisplayMode)newDisplayMode);
                 }
+                swapper.CheckForDemoSwap(this);
             }
             else
             {
@@ -278,7 +279,7 @@ namespace Demos
             if (showControls)
             {
                 var penPosition = new Vector2(window.Resolution.X - textHeight * 6 - 25, window.Resolution.Y - 25);
-                penPosition.Y -= 15 * lineSpacing;
+                penPosition.Y -= 16 * lineSpacing;
                 uiText.Clear().Append("Controls: ");
                 var headerHeight = textHeight * 1.2f;
                 renderer.TextBatcher.Write(uiText, penPosition - new Vector2(0.5f * GlyphBatch.MeasureLength(uiText, font, headerHeight), 0), headerHeight, textColor, font);
@@ -313,6 +314,7 @@ namespace Demos
                 WriteName(nameof(controls.ShowContacts), controls.ShowContacts.ToString());
                 WriteName(nameof(controls.ShowBoundingBoxes), controls.ShowBoundingBoxes.ToString());
                 WriteName(nameof(controls.ChangeTimingDisplayMode), controls.ChangeTimingDisplayMode.ToString());
+                WriteName(nameof(controls.ChangeDemo), controls.ChangeDemo.ToString());
                 WriteName(nameof(controls.ShowControls), controls.ShowControls.ToString());
             }
             else
@@ -323,6 +325,8 @@ namespace Demos
                     new Vector2(window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, textHeight), window.Resolution.Y - inset),
                     textHeight, textColor, font);
             }
+
+            swapper.Draw(uiText, renderer.TextBatcher, demoSet, new Vector2(16, 16), textHeight, textColor, font);
 
             if (timingDisplayMode != TimingDisplayMode.Minimized)
             {

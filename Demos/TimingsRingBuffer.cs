@@ -1,6 +1,6 @@
 ﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using DemoRenderer.UI;
+using Demos.UI;
 using System;
 
 namespace Demos

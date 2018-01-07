@@ -226,6 +226,7 @@ namespace Demos
         public InstantBind ShowContacts;
         public InstantBind ShowBoundingBoxes;
         public InstantBind ChangeTimingDisplayMode;
+        public HoldableBind ChangeDemo;
         public InstantBind ShowControls;
 
         public static Controls Default
@@ -253,6 +254,7 @@ namespace Demos
                     ShowContacts = Key.K,
                     ShowBoundingBoxes = Key.L,
                     ChangeTimingDisplayMode = Key.F2,
+                    ChangeDemo = Key.Tilde,
                     ShowControls = Key.F1,
                 };
             }
