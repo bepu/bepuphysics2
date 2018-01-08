@@ -159,7 +159,7 @@ namespace Demos
             }
 
             //Spray some balls!
-            int newBallCount = 5;
+            int newBallCount = 8;
             var spawnLocation = new Vector3(0, 10, 0);
             for (int i = 0; i < newBallCount; ++i)
             {
@@ -198,9 +198,8 @@ namespace Demos
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(ref description), BufferPool.SpecializeFor<int>());
 
             }
-            int targetAsymptote = 512;
+            int targetAsymptote = 65536;
             var removalCount = (int)(dynamicHandles.Count * (newBallCount / (float)targetAsymptote));
-            Console.WriteLine($"Removing: {removalCount}");
             for (int i = 0; i < removalCount; ++i)
             {
                 if (dynamicHandles.TryDequeue(out var handle))

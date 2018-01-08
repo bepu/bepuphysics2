@@ -158,7 +158,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void RemoveConstraint(int bodyIndex, int constraintHandle, int minimumConstraintCapacityPerBody, BufferPool pool)
+        internal void RemoveConstraintReference(int bodyIndex, int constraintHandle, int minimumConstraintCapacityPerBody, BufferPool pool)
         {
             //This uses a linear search. That's fine; bodies will rarely have more than a handful of constraints associated with them.
             //Attempting to use something like a hash set for fast removes would just introduce more constant overhead and slow it down on average.

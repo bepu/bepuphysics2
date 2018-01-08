@@ -251,9 +251,9 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="bodyIndex">Index of the active body.</param>
         /// <param name="constraintHandle">Handle of the constraint to remove.</param>
-        internal void RemoveConstraint(int bodyIndex, int constraintHandle)
+        internal void RemoveConstraintReference(int bodyIndex, int constraintHandle)
         {
-            ActiveSet.RemoveConstraint(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, pool);
+            ActiveSet.RemoveConstraintReference(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, pool);
         }
 
         /// <summary>

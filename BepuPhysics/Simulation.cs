@@ -62,6 +62,7 @@ namespace BepuPhysics
             Deactivator = new Deactivator(Bodies, Solver, BroadPhase, constraintRemover, BufferPool);
             Activator = new IslandActivator(Bodies, Statics, Solver, BroadPhase, Deactivator, bufferPool);
             Bodies.Initialize(Solver, Activator);
+            Solver.activator = Activator;
             PoseIntegrator = new PoseIntegrator(Bodies, Shapes, BroadPhase);
             SolverBatchCompressor = new BatchCompressor(Solver, Bodies);
             BodyLayoutOptimizer = new BodyLayoutOptimizer(Bodies, BroadPhase, Solver, bufferPool);
@@ -99,6 +100,7 @@ namespace BepuPhysics
             simulation.NarrowPhase = narrowPhase;
             simulation.Deactivator.pairCache = narrowPhase.PairCache;
             simulation.Activator.pairCache = narrowPhase.PairCache;
+            simulation.Solver.pairCache = narrowPhase.PairCache;
             simulation.BroadPhaseOverlapFinder = new CollidableOverlapFinder<TNarrowPhaseCallbacks>(narrowPhase, simulation.BroadPhase);
 
             return simulation;

@@ -170,5 +170,14 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
+        internal void RemoveReferenceIfContactConstraint(int handle, int typeId)
+        {
+            if (IsContactBatch(typeId))
+            {
+                var removed = Mapping.FastRemove(ref ConstraintHandleToPair[handle].Pair);
+                Debug.Assert(removed, "If a contact constraint is being directly removed, it must exist within the pair mapping- " +
+                    "all *active* contact constraints do, and it's not valid to attempt to remove an inactive constraint.");
+            }
+        }
     }
 }

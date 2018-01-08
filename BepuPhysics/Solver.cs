@@ -4,6 +4,7 @@ using BepuPhysics.Constraints;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using BepuPhysics.CollisionDetection;
 
 namespace BepuPhysics
 {
@@ -63,6 +64,8 @@ namespace BepuPhysics
         public TypeProcessor[] TypeProcessors;
 
         internal Bodies bodies;
+        internal PairCache pairCache;
+        internal IslandActivator activator;
 
         /// <summary>
         /// Pool to retrieve constraint handles from when creating new constraints.
@@ -591,12 +594,19 @@ namespace BepuPhysics
         /// <param name="handle">Handle of the constraint to remove from the solver.</param>
         public void Remove(int handle)
         {
+            ref var constraintLocation = ref HandleToConstraint[handle];
+            if(constraintLocation.SetIndex > 0)
+            {
+                //In order to remove a constraint, it must be active.
+                activator.ActivateConstraint(handle);
+            }
+            Debug.Assert(constraintLocation.SetIndex == 0);
             ConstraintGraphRemovalEnumerator enumerator;
             enumerator.bodies = bodies;
             enumerator.constraintHandle = handle;
             EnumerateConnectedBodies(handle, ref enumerator);
 
-            ref var constraintLocation = ref HandleToConstraint[handle];
+            pairCache.RemoveReferenceIfContactConstraint(handle, constraintLocation.TypeId);
             RemoveFromBatch(constraintLocation.BatchIndex, constraintLocation.TypeId, constraintLocation.IndexInTypeBatch);
             HandlePool.Return(handle, bufferPool.SpecializeFor<int>());
         }
