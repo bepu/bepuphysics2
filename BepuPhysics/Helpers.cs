@@ -1,9 +1,18 @@
 ﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics
 {
     internal static class Helpers
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Swap<T>(ref T a, ref T b)
+        {
+            var temp = a;
+            a = b;
+            b = temp;
+        }
+
         public static void BuildOrthnormalBasis(ref Vector3Wide normal, out Vector3Wide t1, out Vector3Wide t2)
         {
             //This could probably be improved.

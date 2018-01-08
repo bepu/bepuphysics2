@@ -62,6 +62,10 @@ namespace BepuPhysics
 
             //Update the body locations.
             bodies.ActiveSet.Swap(a, b, ref bodies.HandleToLocation);
+            //Note that the active set does not contain the world inertia. While this isn't actually a problem for correctness so long as the body layout optimizer
+            //takes places before the pose integrator or after all stages, it does create a pretty confusing dependency which is easy to forget.
+            //Given how cheap it is, we're just going to swap the world inertia too.
+            Helpers.Swap(ref bodies.Inertias[a], ref bodies.Inertias[b]);
         }
 
         int nextBodyIndex = 0;

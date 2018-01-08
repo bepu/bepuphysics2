@@ -742,7 +742,7 @@ namespace BepuPhysics
             var targetCapacity = BufferPool<BodyInertia>.GetLowestContainingElementCount(Math.Max(capacity, ActiveSet.Count));
             if (Inertias.Length != targetCapacity)
             {
-                pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, targetCapacity, 0);
+                pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, targetCapacity, Math.Min(Inertias.Length, ActiveSet.Count));
             }
         }
         /// <summary>
@@ -754,7 +754,7 @@ namespace BepuPhysics
                 capacity = ActiveSet.Count;
             if (Inertias.Length < capacity)
             {
-                pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, capacity, 0);
+                pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, capacity, Math.Min(Inertias.Length, ActiveSet.Count));
             }
         }
 

@@ -92,7 +92,7 @@ namespace BepuPhysics
             //Shouldn't matter too much- the threaded variant should only really be used when doing big batched changes, so having a fixed constant cost isn't that bad.
             int threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
             //Note that direct activations always reset activity states. I suspect this is sufficiently universal that no one will ever want the alternative,
-            //even though the narrowphase does avoid resetting deactivation states for the sake of faster resleeping when possible.
+            //even though the narrowphase does avoid resetting deactivation states for the sake of faster resleeping when possible.      
             var (phaseOneJobCount, phaseTwoJobCount) = PrepareJobs(ref uniqueSetIndices, true, threadCount);
 
             if (threadCount > 1)
@@ -663,10 +663,6 @@ namespace BepuPhysics
                         }
                     }
                 }
-            }
-            for (int i = 0; i < phaseOneJobs.Count; ++i)
-            {
-                Debug.Assert((int)phaseOneJobs[i].Type < 10);
             }
             return (phaseOneJobs.Count, phaseTwoJobs.Count);
         }

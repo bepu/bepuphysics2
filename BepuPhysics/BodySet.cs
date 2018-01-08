@@ -199,14 +199,6 @@ namespace BepuPhysics
         }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Swap<T>(ref T a, ref T b)
-        {
-            var temp = a;
-            a = b;
-            b = temp;
-        }
-
         /// <summary>
         /// Swaps the memory of two bodies. Indexed by memory slot, not by handle index.
         /// </summary>
@@ -217,13 +209,13 @@ namespace BepuPhysics
         {
             handleToIndex[IndexToHandle[slotA]].Index = slotB;
             handleToIndex[IndexToHandle[slotB]].Index = slotA;
-            Swap(ref IndexToHandle[slotA], ref IndexToHandle[slotB]);
-            Swap(ref Collidables[slotA], ref Collidables[slotB]);
-            Swap(ref Poses[slotA], ref Poses[slotB]);
-            Swap(ref Velocities[slotA], ref Velocities[slotB]);
-            Swap(ref LocalInertias[slotA], ref LocalInertias[slotB]);
-            Swap(ref Activity[slotA], ref Activity[slotB]);
-            Swap(ref Constraints[slotA], ref Constraints[slotB]);
+            Helpers.Swap(ref IndexToHandle[slotA], ref IndexToHandle[slotB]);
+            Helpers.Swap(ref Collidables[slotA], ref Collidables[slotB]);
+            Helpers.Swap(ref Poses[slotA], ref Poses[slotB]);
+            Helpers.Swap(ref Velocities[slotA], ref Velocities[slotB]);
+            Helpers.Swap(ref LocalInertias[slotA], ref LocalInertias[slotB]);
+            Helpers.Swap(ref Activity[slotA], ref Activity[slotB]);
+            Helpers.Swap(ref Constraints[slotA], ref Constraints[slotB]);
         }
 
         internal unsafe void InternalResize(int targetBodyCapacity, BufferPool pool)

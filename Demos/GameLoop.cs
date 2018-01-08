@@ -37,7 +37,7 @@ namespace Demos
             Input.Start();
             if (DemoHarness != null)
             {
-                //We'll let the delgate's logic handle the variable time steps.
+                //We'll let the delegate's logic handle the variable time steps.
                 DemoHarness.Update(dt);
                 //At the moment, rendering just follows sequentially. Later on we might want to distinguish it a bit more with fixed time stepping or something. Maybe.
                 DemoHarness.Render(Renderer);

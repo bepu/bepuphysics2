@@ -13,6 +13,8 @@ namespace Demos
 {
     public class FountainStressTestDemo : Demo
     {
+        QuickQueue<int, Buffer<int>> dynamicHandles;
+        Random random;
         public unsafe override void Initialize(Camera camera)
         {
             camera.Position = new Vector3(-3f, 3, -3f);
@@ -93,16 +95,18 @@ namespace Demos
                 };
                 kinematicHandles[i] = Simulation.Bodies.Add(ref description);
             }
+
+            QuickQueue<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), 65536, out dynamicHandles);
+            random = new Random(5);
         }
 
         double time;
         double t;
         int[] kinematicHandles;
-
-        int frameIndex;
+        
         public override void Update(Input input, float dt)
         {
-            time += dt;
+            time += 1f / 60f;
 
             //Occasionally, the animation stops completely. The resulting velocities will be zero, so the kinematics will have a chance to rest (testing kinematic rest states).
             var dip = 0.1;
@@ -113,7 +117,7 @@ namespace Demos
 
             var baseAngle = (float)(t * 0.015);
             var anglePerKinematic = MathHelper.TwoPi / kinematicHandles.Length;
-            var maxDisplacement = 30 * dt;
+            var maxDisplacement = 50 * dt;
             var inverseDt = 1f / dt;
             for (int i = 0; i < kinematicHandles.Length; ++i)
             {
@@ -146,11 +150,52 @@ namespace Demos
                 }
                 else
                 {
-                    if(bodyLocation.SetIndex == 0)
+                    if (bodyLocation.SetIndex == 0)
                     {
                         Simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear = new Vector3();
                     }
                 }
+            }
+
+            //Spray some balls!
+            int newBallCount = 5;
+            var spawnLocation = new Vector3(0, 10, 0);
+            for (int i = 0; i < newBallCount; ++i)
+            {
+                //For the sake of the stress test, every single body has its own shape that gets removed when the body is removed.
+                var shape = new Sphere(0.35f + 0.35f * (float)random.NextDouble());
+                var shapeIndex = Simulation.Shapes.Add(ref shape);
+                var description = new BodyDescription
+                {
+                    Pose = new RigidPose
+                    {
+                        Position = spawnLocation,
+                        Orientation = BepuUtilities.Quaternion.Identity
+                    },
+                    LocalInertia = new BodyInertia { InverseMass = 1 },
+                    Collidable = new CollidableDescription
+                    {
+                        Continuity = new ContinuousDetectionSettings(),
+                        SpeculativeMargin = 0.1f,
+                        Shape = shapeIndex
+                    },
+                    Activity = new BodyActivityDescription
+                    {
+                        DeactivationThreshold = .1f,
+                        MinimumTimestepCountUnderThreshold = 32
+                    }
+                };
+
+                var inverseInertia = description.LocalInertia.InverseMass * (1f / (shape.Radius * shape.Radius * 2 / 3));
+                description.LocalInertia.InverseInertiaTensor.M11 = inverseInertia;
+                description.LocalInertia.InverseInertiaTensor.M22 = inverseInertia;
+                description.LocalInertia.InverseInertiaTensor.M33 = inverseInertia;
+
+
+                description.Velocity.Linear = new Vector3(-20 + 40 * (float)random.NextDouble(), 75, -20 + 40 * (float)random.NextDouble());
+
+                dynamicHandles.Enqueue(Simulation.Bodies.Add(ref description), BufferPool.SpecializeFor<int>());
+
             }
             base.Update(input, dt);
 
