@@ -738,7 +738,7 @@ namespace BepuPhysics
         /// Reallocates the inertias buffer for the target capacity. Will not shrink below the size of the current active set.
         /// </summary>
         internal void ResizeInertias(int capacity)
-        {            
+        {
             var targetCapacity = BufferPool<BodyInertia>.GetLowestContainingElementCount(Math.Max(capacity, ActiveSet.Count));
             if (Inertias.Length != targetCapacity)
             {

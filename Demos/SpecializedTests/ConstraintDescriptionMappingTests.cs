@@ -54,7 +54,7 @@ namespace Demos.SpecializedTests
 
                 ref var source = ref sources[constraintTestIndex];
                 FillWithRandomBytes(ref source, random);
-                constraintHandles[constraintTestIndex] = simulation.Add(ref constraintBodyHandles[0], constraintTypeBodyCount, ref source);
+                constraintHandles[constraintTestIndex] = simulation.Solver.Add(ref constraintBodyHandles[0], constraintTypeBodyCount, ref source);
 
             }
             for (int constraintTestIndex = 0; constraintTestIndex < constraintTestCount; ++constraintTestIndex)
@@ -63,7 +63,7 @@ namespace Demos.SpecializedTests
                 var aValue = (ValueType)description;
                 var bValue = (ValueType)sources[constraintTestIndex];
                 CheckEquality(typeof(T).Name, typeof(T), aValue, bValue);
-                simulation.RemoveConstraint(constraintHandles[constraintTestIndex]);
+                simulation.Solver.Remove(constraintHandles[constraintTestIndex]);
             }
         }
 

@@ -201,6 +201,7 @@ namespace BepuPhysics
             var typeBatchIndex = TypeIndexToTypeBatchIndex[constraintTypeId];
             var handleRemover = new ActiveBodyHandleRemover(solver.bodies, ref handles);
             ref var typeBatch = ref TypeBatches[typeBatchIndex];
+            Debug.Assert(typeBatch.ConstraintCount > indexInTypeBatch);
             solver.TypeProcessors[constraintTypeId].EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref handleRemover);
             Remove(ref typeBatch, typeBatchIndex, indexInTypeBatch, solver.TypeProcessors[constraintTypeId], ref solver.HandleToConstraint, solver.bufferPool);
 

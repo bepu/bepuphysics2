@@ -105,55 +105,6 @@ namespace BepuPhysics
         }
 
 
-        //     CONSTRAINTS
-        //TODO: Push this into the Solver, like we did with Bodies and Statics.
-
-        /// <summary>
-        /// Allocates a constraint slot and sets up a constraint with the specified description.
-        /// </summary>
-        /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandles">First body handle in a list of body handles used by the constraint.</param>
-        /// <param name="bodyCount">Number of bodies used by the constraint.</param>
-        /// <returns>Allocated constraint handle.</returns>
-        public int Add<TDescription>(ref int bodyHandles, int bodyCount, ref TDescription description)
-            where TDescription : IConstraintDescription<TDescription>
-        {
-            Solver.Add(ref bodyHandles, bodyCount, ref description, out int constraintHandle);
-            for (int i = 0; i < bodyCount; ++i)
-            {
-                var bodyHandle = Unsafe.Add(ref bodyHandles, i);
-                Bodies.ValidateExistingHandle(bodyHandle);
-                Bodies.AddConstraint(Bodies.HandleToLocation[bodyHandle].Index, constraintHandle, i);
-            }
-            return constraintHandle;
-        }
-
-        /// <summary>
-        /// Allocates a two-body constraint slot and sets up a constraint with the specified description.
-        /// </summary>
-        /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
-        /// <param name="bodyHandleA">First body of the pair.</param>
-        /// <param name="bodyHandleB">Second body of the pair.</param>
-        /// <returns>Allocated constraint handle.</returns>
-        public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, ref TDescription description)
-            where TDescription : IConstraintDescription<TDescription>
-        {
-            //Don't really want to take a dependency on the stack layout of parameters, so...
-            var bodyReferences = stackalloc int[2];
-            bodyReferences[0] = bodyHandleA;
-            bodyReferences[1] = bodyHandleB;
-            return Add(ref bodyReferences[0], 2, ref description);
-        }
-
-
-        public void RemoveConstraint(int constraintHandle)
-        {
-            ConstraintGraphRemovalEnumerator enumerator;
-            enumerator.bodies = Bodies;
-            enumerator.constraintHandle = constraintHandle;
-            Solver.EnumerateConnectedBodies(constraintHandle, ref enumerator);
-            Solver.Remove(constraintHandle);
-        }
 
         private int ValidateAndCountShapefulBodies(ref BodySet bodySet, Tree tree, ref Buffer<CollidableReference> leaves)
         {
@@ -263,7 +214,7 @@ namespace BepuPhysics
             ProfilerStart(BroadPhase);
             BroadPhase.Update(threadDispatcher);
             ProfilerEnd(BroadPhase);
-            
+
             ProfilerStart(BroadPhaseOverlapFinder);
             BroadPhaseOverlapFinder.DispatchOverlaps(threadDispatcher);
             ProfilerEnd(BroadPhaseOverlapFinder);

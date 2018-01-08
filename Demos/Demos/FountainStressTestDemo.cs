@@ -103,22 +103,23 @@ namespace Demos
         double time;
         double t;
         int[] kinematicHandles;
-        
+
         public override void Update(Input input, float dt)
         {
-            time += 1f / 60f;
+            var timestepDuration = 1f / 60f;
+            time += timestepDuration;
 
             //Occasionally, the animation stops completely. The resulting velocities will be zero, so the kinematics will have a chance to rest (testing kinematic rest states).
             var dip = 0.1;
             var progressionMultiplier = 0.5 - dip + (1 + dip) * 0.5 * Math.Cos(time * 0.25);
             if (progressionMultiplier < 0)
                 progressionMultiplier = 0;
-            t += dt * progressionMultiplier;
+            t += timestepDuration * progressionMultiplier;
 
             var baseAngle = (float)(t * 0.015);
             var anglePerKinematic = MathHelper.TwoPi / kinematicHandles.Length;
-            var maxDisplacement = 50 * dt;
-            var inverseDt = 1f / dt;
+            var maxDisplacement = 50 * timestepDuration;
+            var inverseDt = 1f / timestepDuration;
             for (int i = 0; i < kinematicHandles.Length; ++i)
             {
                 ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[kinematicHandles[i]];
@@ -196,6 +197,24 @@ namespace Demos
 
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(ref description), BufferPool.SpecializeFor<int>());
 
+            }
+            int targetAsymptote = 512;
+            var removalCount = (int)(dynamicHandles.Count * (newBallCount / (float)targetAsymptote));
+            Console.WriteLine($"Removing: {removalCount}");
+            for (int i = 0; i < removalCount; ++i)
+            {
+                if (dynamicHandles.TryDequeue(out var handle))
+                {
+                    ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[handle];
+                    //Every body has a unique shape, so we need to remove shapes with bodies.
+                    var shapeIndex = Simulation.Bodies.Sets[bodyLocation.SetIndex].Collidables[bodyLocation.Index].Shape;
+                    Simulation.Bodies.Remove(handle);
+                    Simulation.Shapes.Remove(shapeIndex);
+                }
+                else
+                {
+                    break;
+                }
             }
             base.Update(input, dt);
 

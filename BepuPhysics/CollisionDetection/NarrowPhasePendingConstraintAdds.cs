@@ -72,7 +72,7 @@ namespace BepuPhysics.CollisionDetection
                     for (int i = 0; i < list.Count; ++i)
                     {
                         ref var add = ref Unsafe.Add(ref start, i);
-                        var handle = simulation.Add(ref Unsafe.As<TBodyHandles, int>(ref add.BodyHandles), typeof(TBodyHandles) == typeof(TwoBodyHandles) ? 2 : 1, ref add.ConstraintDescription);
+                        var handle = simulation.Solver.Add(ref Unsafe.As<TBodyHandles, int>(ref add.BodyHandles), typeof(TBodyHandles) == typeof(TwoBodyHandles) ? 2 : 1, ref add.ConstraintDescription);
                         pairCache.CompleteConstraintAdd(simulation.Solver, ref add.Impulses, add.ConstraintCacheIndex, handle, ref add.Pair);
                     }
                 }
