@@ -39,7 +39,8 @@ namespace Demos
         public virtual void Update(Input input, float dt)
         {
             ++frameCount;
-            if (input.IsDown(OpenTK.Input.MouseButton.Middle))
+            //If we're running headless, there is no input.
+            if (input != null && input.IsDown(OpenTK.Input.MouseButton.Middle))
             {
                 if (frameCount % 20 == 0)
                     Simulation.Timestep(1 / 60f, ThreadDispatcher);
@@ -49,7 +50,7 @@ namespace Demos
                 //TODO: While for the sake of the demos, using one update per render is probably the easiest/best choice,
                 //we can't assume that every monitor has a 60hz refresh rate. One simple option here is to just measure the primary display's refresh rate ahead of time
                 //and use that as the simulation timestep duration. Different displays would affect the simulation, but it wouldn't be too bad, and it would be locally consistent.
-                Simulation.Timestep(1 / 60f, ThreadDispatcher);
+                Simulation.Timestep(1 / 60f);
             }
         }
 

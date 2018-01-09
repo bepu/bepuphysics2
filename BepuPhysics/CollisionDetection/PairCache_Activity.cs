@@ -124,10 +124,20 @@ namespace BepuPhysics.CollisionDetection
             //because we haven't yet flipped the buffers. If it's outside of the narrow phase, then it's the current workerCaches. 
             //We can distinguish between the two by checking whether the NextWorkerCaches are allocated. They don't exist outside of the narrowphase's execution.
 
-            //Also note that we only deal with one worker cache. Activation just dumps new collision caches into the first thread. This works out since
+            //Also note that we only deal with one worker cache. Activation just dumps new caches into the first thread. This works out since
             //the actual pair cache modification is locally sequential right now.
-            if (NextWorkerCaches[0].collisionCaches.Allocated)
+            if (NextWorkerCaches.Span.Allocated && NextWorkerCaches.Count > 0 && NextWorkerCaches[0].collisionCaches.Allocated)
                 return ref NextWorkerCaches[0];
+            if (workerCaches.Span.Allocated)
+                return ref workerCaches[0];
+            //No caches exist yet; this must be an external call taking place before the first update. Lazily initialize one worker cache.
+            QuickList<WorkerPairCache, Array<WorkerPairCache>>.Create(new PassthroughArrayPool<WorkerPairCache>(), 1, out workerCaches);
+            var preallocationSizesPool = pool.SpecializeFor<WorkerPairCache.PreallocationSizes>();
+            QuickList<WorkerPairCache.PreallocationSizes, Buffer<WorkerPairCache.PreallocationSizes>>.Create(preallocationSizesPool, 1, out var constraints);
+            QuickList<WorkerPairCache.PreallocationSizes, Buffer<WorkerPairCache.PreallocationSizes>>.Create(preallocationSizesPool, 1, out var collisions);
+            workerCaches.AllocateUnsafely() = new WorkerPairCache(0, pool, ref constraints, ref collisions, 0);
+            constraints.Dispose(preallocationSizesPool);
+            collisions.Dispose(preallocationSizesPool);
             return ref workerCaches[0];
         }
 
