@@ -18,17 +18,13 @@ namespace BepuUtilities.Memory
             Debug.Assert(power >= 0 && power <= MaximumSpanSizePower, $"Power must be from 0 to {MaximumSpanSizePower}, inclusive.");
         }
         /// <summary>
-        /// Computes the lowest integer N such that 2^N >= i.
+        /// Computes the largest integer N such that 2^N is less than or equal to i.
         /// </summary>
-        /// <param name="i">Integer to compute the power of .</param>
-        /// <returns>Loweset integer N such that 2^N >= i.</returns>
+        /// <param name="i">Integer to compute the power of.</param>
+        /// <returns>Loweset integer N such that 2^N is less than or equal to i.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetContainingPowerOf2(int i)
+        public static int GetPowerOf2(int i)
         {
-            Debug.Assert(i >= 0 && i <= (1 << MaximumSpanSizePower), "i must be from 0 to " + ((1 << MaximumSpanSizePower) - 1) + ", inclusive.");
-            //We want the buffer which would fully contain the count, so it should be effectively Ceiling(Log(i)).
-            //Doubling the value (and subtracting one, to avoid the already-a-power-of-two case) takes care of this.
-            i = ((i > 0 ? i : 1) << 1) - 1;
             int log = 0;
             if ((i & 0xFFFF0000) > 0)
             {
@@ -55,6 +51,20 @@ namespace BepuUtilities.Memory
                 log |= 1;
             }
             return log;
+        }
+        /// <summary>
+        /// Computes the lowest integer N such that 2^N >= i.
+        /// </summary>
+        /// <param name="i">Integer to compute the power of.</param>
+        /// <returns>Loweset integer N such that 2^N >= i.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetContainingPowerOf2(int i)
+        {
+            Debug.Assert(i >= 0 && i <= (1 << MaximumSpanSizePower), "i must be from 0 to " + ((1 << MaximumSpanSizePower) - 1) + ", inclusive.");
+            //We want the buffer which would fully contain the count, so it should be effectively Ceiling(Log(i)).
+            //Doubling the value (and subtracting one, to avoid the already-a-power-of-two case) takes care of this.
+            i = ((i > 0 ? i : 1) << 1) - 1;
+            return GetPowerOf2(i);
         }
 
         /// <summary>

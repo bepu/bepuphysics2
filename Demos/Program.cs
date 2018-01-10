@@ -1,10 +1,12 @@
 ﻿using BepuUtilities;
+using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer.UI;
 using Demos.Properties;
 using Demos.SpecializedTests;
 using DemoUtilities;
 using OpenTK;
+using System.Diagnostics;
 using System.IO;
 
 namespace Demos
@@ -13,7 +15,7 @@ namespace Demos
     {
         static void Main(string[] args)
         {
-            HeadlessDemo.Test<ReactivateTests>(0, 1024);
+            //HeadlessDemo.Test<ReactivateTests>(0, 1024);
             //OperatorCodegenTests.Test();
             //ConstraintDescriptionMappingTests.Test();
             //CollidablePairComparerTests.Test();

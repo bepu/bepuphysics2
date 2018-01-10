@@ -52,7 +52,7 @@ namespace BepuPhysics
                 initialAllocationSizes.Bodies,
                 initialAllocationSizes.Islands,
                 initialAllocationSizes.ConstraintCountPerBodyEstimate);
-            Statics = new Statics(bufferPool, Shapes, Bodies, BroadPhase, Activator, initialAllocationSizes.Statics);
+            Statics = new Statics(bufferPool, Shapes, Bodies, BroadPhase, initialAllocationSizes.Statics);
 
             Solver = new Solver(Bodies, BufferPool, 8,
                 initialCapacity: initialAllocationSizes.Constraints,
@@ -61,8 +61,9 @@ namespace BepuPhysics
             constraintRemover = new ConstraintRemover(BufferPool, Bodies, Solver);
             Deactivator = new Deactivator(Bodies, Solver, BroadPhase, constraintRemover, BufferPool);
             Activator = new IslandActivator(Bodies, Statics, Solver, BroadPhase, Deactivator, bufferPool);
-            Bodies.Initialize(Solver, Activator);
+            Statics.activator = Activator;
             Solver.activator = Activator;
+            Bodies.Initialize(Solver, Activator);
             PoseIntegrator = new PoseIntegrator(Bodies, Shapes, BroadPhase);
             SolverBatchCompressor = new BatchCompressor(Solver, Bodies);
             BodyLayoutOptimizer = new BodyLayoutOptimizer(Bodies, BroadPhase, Solver, bufferPool);

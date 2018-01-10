@@ -82,6 +82,12 @@ namespace BepuUtilities.Collections
         }
 
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int GetCapacityMask(int spanLength)
+        {
+            return (1 << SpanHelper.GetPowerOf2(spanLength)) - 1;
+        }
+
         /// <summary>
         /// Creates a new queue.
         /// </summary>
@@ -89,12 +95,12 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public QuickQueue(ref TSpan initialSpan)
         {
-            ValidateSpanCapacity(ref initialSpan);
             Span = initialSpan;
             Count = 0;
-            CapacityMask = Span.Length - 1;
+            CapacityMask = GetCapacityMask(Span.Length);
             FirstIndex = 0;
             LastIndex = CapacityMask;
+            ValidateSpanCapacity(ref initialSpan, CapacityMask);
         }
         /// <summary>
         /// Creates a new queue.
@@ -106,11 +112,11 @@ namespace BepuUtilities.Collections
         public static void Create<TPool>(TPool pool, int minimumInitialCount, out QuickQueue<T, TSpan> queue) where TPool : IMemoryPool<T, TSpan>
         {
             pool.Take(minimumInitialCount, out queue.Span);
-            ValidateSpanCapacity(ref queue.Span);
             queue.Count = 0;
-            queue.CapacityMask = queue.Span.Length - 1;
+            queue.CapacityMask = GetCapacityMask(queue.Span.Length);
             queue.FirstIndex = 0;
             queue.LastIndex = queue.CapacityMask;
+            ValidateSpanCapacity(ref queue.Span, queue.CapacityMask);
 
         }
 
@@ -135,7 +141,7 @@ namespace BepuUtilities.Collections
                 Count = oldQueue.Count;
             LastIndex = Count - 1;
             FirstIndex = 0;
-            CapacityMask = newSpan.Length - 1;
+            CapacityMask = GetCapacityMask(newSpan.Length);
             Span = newSpan;
 
             oldSpan = oldQueue.Span;
@@ -161,7 +167,7 @@ namespace BepuUtilities.Collections
         /// If the new span is smaller, the queue's count is truncated and the extra elements are dropped. 
         /// </summary>
         /// <typeparam name="TPool">Type of the span pool.</typeparam>
-        /// <param name="newSizePower">Exponent of the size of the new memory block. New size will be 2^newSizePower.</param>
+        /// <param name="newSizePower">Exponent of the size of the new memory block. New size will be at least 2^newSizePower.</param>
         /// <param name="pool">Pool to pull a new span from and return the old span to.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ResizeForPower<TPool>(int newSizePower, TPool pool) where TPool : IMemoryPool<T, TSpan>
@@ -206,7 +212,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnsureCapacity<TPool>(int count, TPool pool) where TPool : IMemoryPool<T, TSpan>
         {
-            if (count > Span.Length)
+            if (count >= CapacityMask)
             {
                 Resize(count, pool);
             }
@@ -494,7 +500,7 @@ namespace BepuUtilities.Collections
             ClearSpan(ref Span, FirstIndex, LastIndex, Count);
             Count = 0;
             FirstIndex = 0;
-            LastIndex = CapacityMask; //length - 1
+            LastIndex = CapacityMask;
         }
 
         /// <summary>
@@ -510,7 +516,7 @@ namespace BepuUtilities.Collections
 
         public Enumerator GetEnumerator()
         {
-            return new Enumerator(ref Span, Count, FirstIndex);
+            return new Enumerator(ref Span, Count, FirstIndex, CapacityMask);
         }
 
         public struct Enumerator : IEnumerator<T>
@@ -521,12 +527,12 @@ namespace BepuUtilities.Collections
             private readonly int capacityMask;
             private int index;
 
-            public Enumerator(ref TSpan span, int count, int firstIndex)
+            public Enumerator(ref TSpan span, int count, int firstIndex, int capacityMask)
             {
                 this.span = span;
                 this.count = count;
                 this.firstIndex = firstIndex;
-                this.capacityMask = span.Length - 1;
+                this.capacityMask = capacityMask;
                 index = -1;
             }
 
@@ -562,22 +568,23 @@ namespace BepuUtilities.Collections
         }
 
         [Conditional("DEBUG")]
-        static void ValidateSpanCapacity(ref TSpan span)
+        static void ValidateSpanCapacity(ref TSpan span, int capacityMask)
         {
-            Debug.Assert((span.Length & (span.Length - 1)) == 0, "Queues depend upon power of 2 backing span sizes for efficient modulo operations.");
+            Debug.Assert((1 << SpanHelper.GetPowerOf2(span.Length)) - 1 == capacityMask,
+                "Capacity mask should be the largest power of 2 that fits in the allocated span, minus one. This is necessary for efficient modulo operations.");
         }
 
         [Conditional("DEBUG")]
         void ValidateUnsafeAdd()
         {
-            Debug.Assert(Count < Span.Length, "Unsafe adders can only be used if the capacity is guaranteed to hold the new size.");
+            Debug.Assert(Count <= CapacityMask, "Unsafe adders can only be used if the capacity is guaranteed to hold the new size.");
         }
 
         [Conditional("DEBUG")]
         private void Validate()
         {
             Debug.Assert(Span.Length > 0, "Any QuickQueue in use should have a nonzero length Span. Was this instance default constructed without further initialization?");
-            ValidateSpanCapacity(ref Span);
+            ValidateSpanCapacity(ref Span, CapacityMask);
         }
 
     }

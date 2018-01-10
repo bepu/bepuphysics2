@@ -548,6 +548,7 @@ namespace BepuPhysics
                 ref var constraintCountPerType = ref constraintCountPerTypePerBatch[batchIndex];
                 ref var batch = ref solver.ActiveSet.Batches[batchIndex];
                 batch.EnsureTypeMapSize(pool, constraintCountPerType.HighestOccupiedTypeIndex);
+                solver.batchReferencedHandles[batchIndex].EnsureCapacity(bodies.HandlePool.HighestPossiblyClaimedId + 1, pool);
                 for (int typeId = 0; typeId <= constraintCountPerType.HighestOccupiedTypeIndex; ++typeId)
                 {
                     var countForType = constraintCountPerType.TypeCounts[typeId].Count;

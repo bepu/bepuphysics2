@@ -43,9 +43,9 @@ namespace BepuPhysics
         Shapes shapes;
         Bodies bodies;
         BroadPhase broadPhase;
-        IslandActivator activator;
+        internal IslandActivator activator;
 
-        public unsafe Statics(BufferPool pool, Shapes shapes, Bodies bodies, BroadPhase broadPhase, IslandActivator activator, int initialCapacity = 4096)
+        public unsafe Statics(BufferPool pool, Shapes shapes, Bodies bodies, BroadPhase broadPhase, int initialCapacity = 4096)
         {
             this.pool = pool;
             InternalResize(Math.Max(1, initialCapacity));
@@ -53,7 +53,6 @@ namespace BepuPhysics
             this.shapes = shapes;
             this.bodies = bodies;
             this.broadPhase = broadPhase;
-            this.activator = activator;
 
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCapacity, out HandlePool);
         }
@@ -130,8 +129,8 @@ namespace BepuPhysics
             Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < broadPhase.StaticTree.LeafCount);
             broadPhase.GetStaticBoundsPointers(collidable.BroadPhaseIndex, out var minPointer, out var maxPointer);
             BoundingBox oldBounds;
-            oldBounds.Min = *(Vector3*)minPointer;
-            oldBounds.Max = *(Vector3*)maxPointer;
+            oldBounds.Min = *minPointer;
+            oldBounds.Max = *maxPointer;
             ActivateBodiesInBounds(ref oldBounds);
         }
 

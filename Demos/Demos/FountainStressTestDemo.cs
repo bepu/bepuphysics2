@@ -13,6 +13,7 @@ namespace Demos
 {
     public class FountainStressTestDemo : Demo
     {
+        QuickQueue<StaticDescription, Buffer<StaticDescription>> removedStatics;
         QuickQueue<int, Buffer<int>> dynamicHandles;
         Random random;
         public unsafe override void Initialize(Camera camera)
@@ -97,6 +98,7 @@ namespace Demos
             }
 
             QuickQueue<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), 65536, out dynamicHandles);
+            QuickQueue<StaticDescription, Buffer<StaticDescription>>.Create(BufferPool.SpecializeFor<StaticDescription>(), 512, out removedStatics);
             random = new Random(5);
         }
 
@@ -157,6 +159,28 @@ namespace Demos
                     }
                 }
             }
+
+            //Remove some statics from the simulation.
+            var missingStaticsAsymptote = 512;
+            var staticRemovalsPerFrame = 8;
+            for (int i = 0; i < staticRemovalsPerFrame; ++i)
+            {
+                var indexToRemove = random.Next(Simulation.Statics.Count);
+                Simulation.Statics.GetDescription(Simulation.Statics.IndexToHandle[indexToRemove], out var staticDescription);
+                Simulation.Statics.RemoveAt(indexToRemove);
+                removedStatics.Enqueue(ref staticDescription, BufferPool.SpecializeFor<StaticDescription>());
+            }
+
+
+            //Add some of the missing static bodies back into the simulation.
+            var staticAddCount = removedStatics.Count * (staticRemovalsPerFrame / (float)missingStaticsAsymptote);
+            for (int i = 0; i < staticAddCount; ++i)
+            {
+                Debug.Assert(removedStatics.Count > 0);
+                var staticDescription = removedStatics.Dequeue();
+                Simulation.Statics.Add(ref staticDescription);
+            }
+
 
             //Spray some balls!
             int newBallCount = 8;
