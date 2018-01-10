@@ -92,7 +92,7 @@ namespace Demos
                             startingRadius * (float)Math.Sin(angle)),
                         Orientation = BepuUtilities.Quaternion.Identity
                     },
-                    Activity = new BodyActivityDescription { DeactivationThreshold = 0, MinimumTimestepCountUnderThreshold = 4 },
+                    Activity = new BodyActivityDescription { SleepThreshold = 0, MinimumTimestepCountUnderThreshold = 4 },
                 };
                 kinematicHandles[i] = Simulation.Bodies.Add(ref description);
             }
@@ -142,7 +142,7 @@ namespace Demos
                     if (bodyLocation.SetIndex > 0)
                     {
                         //We're requesting a nonzero velocity, so it must be active.
-                        Simulation.Activator.ActivateSet(bodyLocation.SetIndex);
+                        Simulation.Awakener.AwakenSet(bodyLocation.SetIndex);
                     }
                     if (distance > maxDisplacement)
                     {
@@ -206,7 +206,7 @@ namespace Demos
                     },
                     Activity = new BodyActivityDescription
                     {
-                        DeactivationThreshold = .1f,
+                        SleepThreshold = .1f,
                         MinimumTimestepCountUnderThreshold = 32
                     }
                 };
@@ -217,7 +217,7 @@ namespace Demos
                 description.LocalInertia.InverseInertiaTensor.M33 = inverseInertia;
 
 
-                description.Velocity.Linear = new Vector3(-20 + 40 * (float)random.NextDouble(), 75, -20 + 40 * (float)random.NextDouble());
+                description.Velocity.Linear = new Vector3(-20 + 40 * (float)random.NextDouble(), 25, -20 + 40 * (float)random.NextDouble());
 
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(ref description), BufferPool.SpecializeFor<int>());
 

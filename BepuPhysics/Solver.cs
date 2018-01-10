@@ -65,7 +65,7 @@ namespace BepuPhysics
 
         internal Bodies bodies;
         internal PairCache pairCache;
-        internal IslandActivator activator;
+        internal IslandAwakener awakener;
 
         /// <summary>
         /// Pool to retrieve constraint handles from when creating new constraints.
@@ -598,7 +598,7 @@ namespace BepuPhysics
             if(constraintLocation.SetIndex > 0)
             {
                 //In order to remove a constraint, it must be active.
-                activator.ActivateConstraint(handle);
+                awakener.AwakenConstraint(handle);
             }
             Debug.Assert(constraintLocation.SetIndex == 0);
             ConstraintGraphRemovalEnumerator enumerator;

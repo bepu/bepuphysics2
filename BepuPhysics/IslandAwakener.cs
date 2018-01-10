@@ -12,25 +12,25 @@ using System.Threading;
 namespace BepuPhysics
 {
     /// <summary>
-    /// Provides functionality for efficiently activating previously deactivated bodies and their associated islands.
+    /// Provides functionality for efficiently waking up sleeping bodies.
     /// </summary>
-    public class IslandActivator
+    public class IslandAwakener
     {
         Solver solver;
         Statics statics;
         Bodies bodies;
         BroadPhase broadPhase;
-        Deactivator deactivator;
+        IslandSleeper sleeper;
         BufferPool pool;
         internal PairCache pairCache;
 
-        public IslandActivator(Bodies bodies, Statics statics, Solver solver, BroadPhase broadPhase, Deactivator deactivator, BufferPool pool)
+        public IslandAwakener(Bodies bodies, Statics statics, Solver solver, BroadPhase broadPhase, IslandSleeper sleeper, BufferPool pool)
         {
             this.bodies = bodies;
             this.statics = statics;
             this.solver = solver;
             this.broadPhase = broadPhase;
-            this.deactivator = deactivator;
+            this.sleeper = sleeper;
             this.pool = pool;
 
             this.phaseOneWorkerDelegate = PhaseOneWorker;
@@ -38,49 +38,49 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Activates a body if it is inactive. All bodies that can be found by traversing the constraint graph from the body will also be activated.
-        /// If the body is already active, this does nothing.
+        /// Wakes up a body if it is sleeping. All bodies that can be found by traversing the constraint graph from the body will also be awakened.
+        /// If the body is already awake, this does nothing.
         /// </summary>
-        /// <param name="bodyHandle">Handle of the body to activate.</param>
-        public void ActivateBody(int bodyHandle)
+        /// <param name="bodyHandle">Handle of the body to awaken.</param>
+        public void AwakenBody(int bodyHandle)
         {
             bodies.ValidateExistingHandle(bodyHandle);
-            ActivateSet(bodies.HandleToLocation[bodyHandle].SetIndex);
+            AwakenSet(bodies.HandleToLocation[bodyHandle].SetIndex);
         }
 
         /// <summary>
-        /// Activates any inactive bodies associated with a constraint. All bodies that can be found by traversing the constraint graph from the constraint referenced bodies will also be activated.
-        /// If all bodies associated with the constraint are already active, this does nothing.
+        /// Wakes up any sleeping bodies associated with a constraint. All bodies that can be found by traversing the constraint graph from the constraint referenced bodies will also be awakened.
+        /// If all bodies associated with the constraint are already awake, this does nothing.
         /// </summary>
-        /// <param name="constraintHandle">Handle of the constraint to activate.</param>
-        public void ActivateConstraint(int constraintHandle)
+        /// <param name="constraintHandle">Handle of the constraint to awaken.</param>
+        public void AwakenConstraint(int constraintHandle)
         {
-            ActivateSet(solver.HandleToConstraint[constraintHandle].SetIndex);
+            AwakenSet(solver.HandleToConstraint[constraintHandle].SetIndex);
         }
 
         /// <summary>
-        /// Activates all bodies and constraints within a set. Doesn't do anything if the set is active (index zero).
+        /// Wakes up all bodies and constraints within a set. Doesn't do anything if the set is awake (index zero).
         /// </summary>
-        /// <param name="setIndex">Index of the set to activate.</param>
-        public void ActivateSet(int setIndex)
+        /// <param name="setIndex">Index of the set to awaken.</param>
+        public void AwakenSet(int setIndex)
         {
             if (setIndex > 0)
             {
-                ValidateInactiveSetIndex(setIndex);
+                ValidateSleepingSetIndex(setIndex);
                 //TODO: Some fairly pointless work here- spans or other approaches could help with the API.
                 QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 1, out var list);
                 list.AddUnsafely(setIndex);
-                ActivateSets(ref list);
+                AwakenSets(ref list);
                 list.Dispose(pool.SpecializeFor<int>());
             }
         }
 
         /// <summary>
-        /// Activates a list of set indices.
+        /// Awakens a list of set indices.
         /// </summary>
-        /// <param name="setIndices">List of set indices to activate.</param>
-        /// <param name="threadDispatcher">Thread dispatcher to use when activating the bodies. Pass null to run on a single thread.</param>
-        public void ActivateSets(ref QuickList<int, Buffer<int>> setIndices, IThreadDispatcher threadDispatcher = null)
+        /// <param name="setIndices">List of set indices to wake up.</param>
+        /// <param name="threadDispatcher">Thread dispatcher to use when waking the bodies. Pass null to run on a single thread.</param>
+        public void AwakenSets(ref QuickList<int, Buffer<int>> setIndices, IThreadDispatcher threadDispatcher = null)
         {
             QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), setIndices.Count, out var uniqueSetIndices);
             var uniqueSet = new IndexSet(pool, bodies.Sets.Length);
@@ -91,8 +91,8 @@ namespace BepuPhysics
             //TODO: It would probably be a good idea to add a little heuristic to avoid doing multithreaded dispatches if there are only like 5 total bodies.
             //Shouldn't matter too much- the threaded variant should only really be used when doing big batched changes, so having a fixed constant cost isn't that bad.
             int threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
-            //Note that direct activations always reset activity states. I suspect this is sufficiently universal that no one will ever want the alternative,
-            //even though the narrowphase does avoid resetting deactivation states for the sake of faster resleeping when possible.      
+            //Note that direct wakes always reset activity states. I suspect this is sufficiently universal that no one will ever want the alternative,
+            //even though the narrowphase does avoid resetting activity states for the sake of faster resleeping when possible.      
             var (phaseOneJobCount, phaseTwoJobCount) = PrepareJobs(ref uniqueSetIndices, true, threadCount);
 
             if (threadCount > 1)
@@ -123,13 +123,13 @@ namespace BepuPhysics
                 }
             }
 
-            DisposeForCompletedActivations(ref uniqueSetIndices);
+            DisposeForCompletedAwakenings(ref uniqueSetIndices);
 
             uniqueSetIndices.Dispose(pool.SpecializeFor<int>());
         }
 
-        //Note that the worker loop and its supporting fields are only used when the island activator is used in isolation by an external call.
-        //The engine's own use of the activator takes place in the narrowphase, where the activation jobs are scheduled alongside other jobs for greater parallelism.
+        //Note that the worker loop and its supporting fields are only used when the island awakener is used in isolation by an external call.
+        //The engine's own use of the awakener takes place in the narrowphase, where the awakener jobs are scheduled alongside other jobs for greater parallelism.
         int jobIndex;
         int jobCount;
         //TODO: once again, we repeat this worker pattern. We've done this, what, seven times? It wouldn't even be that difficult to centralize it. We'll get around to that at some point.
@@ -207,7 +207,7 @@ namespace BepuPhysics
                         //We'll assume the other jobs can balance things out until proven otherwise.
                         for (int i = 0; i < uniqueSetIndices.Count; ++i)
                         {
-                            pairCache.ActivateSet(uniqueSetIndices[i]);
+                            pairCache.AwakenSet(uniqueSetIndices[i]);
                         }
                     }
                     break;
@@ -216,9 +216,9 @@ namespace BepuPhysics
                         //Note that the narrow phase will schedule this job alongside another worker which reads existing batch referenced handles.
                         //There will be some cache line sharing sometimes. That's not wonderful for performance, but it should not cause bugs:
                         //1) The narrowphase's speculative batch search is readonly, so there are no competing writes.
-                        //2) Activation requires that a new constraint has been created involving an inactive body.
+                        //2) Awakening requires that a new constraint has been created involving an sleeping body.
                         //The speculative search will then try to find a batch for that constraint, and it may end up erroneously
-                        //finding a batch slot that gets blocked by this activation procedure. 
+                        //finding a batch slot that gets blocked by this waking procedure. 
                         //But the speculative process is *speculative*; it is fine for it to be wrong, so long as it isn't wrong in a way that makes it choose a higher batch index.
 
                         //Note that this is parallel over different batches, regardless of which source set they're from.
@@ -233,7 +233,7 @@ namespace BepuPhysics
                                 for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                                 {
                                     ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
-                                    solver.TypeProcessors[typeBatch.TypeId].AddInactiveBodyHandlesToBatchReferences(ref typeBatch, ref targetBatchReferencedHandles);
+                                    solver.TypeProcessors[typeBatch.TypeId].AddWakingBodyHandlesToBatchReferences(ref typeBatch, ref targetBatchReferencedHandles);
                                 }
                             }
                         }
@@ -241,7 +241,7 @@ namespace BepuPhysics
                     break;
                 case PhaseOneJobType.CopyBodyRegion:
                     {
-                        //Since we already preallocated everything during the job preparation, all we have to do is copy from the inactive set location.
+                        //Since we already preallocated everything during the job preparation, all we have to do is copy from the sleeping set location.
                         ref var sourceSet = ref bodies.Sets[job.SourceSet];
                         ref var targetSet = ref bodies.ActiveSet;
                         sourceSet.Collidables.CopyTo(job.SourceStart, ref targetSet.Collidables, job.TargetStart, job.Count);
@@ -272,7 +272,7 @@ namespace BepuPhysics
                             {
                                 ref var targetActivity = ref targetSet.Activity[targetIndex];
                                 targetActivity.TimestepsUnderThresholdCount = 0;
-                                targetActivity.DeactivationCandidate = false;
+                                targetActivity.SleepCandidate = false;
                             }
                         }
                         sourceSet.IndexToHandle.CopyTo(job.SourceStart, ref targetSet.IndexToHandle, job.TargetStart, job.Count);
@@ -296,18 +296,18 @@ namespace BepuPhysics
                     {
                         //Note that the broad phase add/remove has a dependency on the body copies; that's why it's in the second phase.
                         //Also note that the broad phase update cannot be split into two parallel jobs because removals update broad phase indices of moved leaves,
-                        //which in context might belong to activated collidables that have not yet been removed.
+                        //which in context might belong to awakened collidables that have not yet been removed.
                         //If the indices are sorted, this could be avoided and this could be split into two jobs. Only bother if performance numbers suggest it.
                         ref var activeSet = ref bodies.ActiveSet;
                         for (int i = 0; i < uniqueSetIndices.Count; ++i)
                         {
-                            ref var inactiveBodySet = ref bodies.Sets[uniqueSetIndices[i]];
-                            for (int j = 0; j < inactiveBodySet.Count; ++j)
+                            ref var sleepingBodySet = ref bodies.Sets[uniqueSetIndices[i]];
+                            for (int j = 0; j < sleepingBodySet.Count; ++j)
                             {
                                 //Note that we have to go grab the active version of the collidable, since the active version is potentially modified by removals.
-                                ref var bodyLocation = ref bodies.HandleToLocation[inactiveBodySet.IndexToHandle[j]];
+                                ref var bodyLocation = ref bodies.HandleToLocation[sleepingBodySet.IndexToHandle[j]];
                                 Debug.Assert(bodyLocation.SetIndex == 0);
-                                //The broad phase index value is currently the static index, either copied from the inactive set or modified by a removal below.
+                                //The broad phase index value is currently the static index, either copied from the sleeping set or modified by a removal below.
                                 //We'll update it, so just take a reference.
                                 ref var broadPhaseIndex = ref activeSet.Collidables[bodyLocation.Index].BroadPhaseIndex;
                                 if (broadPhaseIndex >= 0)
@@ -343,13 +343,13 @@ namespace BepuPhysics
                         //1) Constraints are stored in AOSOA format. We cannot simply copy with bundle alignment with no preparation, since that may leave a gap.
                         //To avoid this issue, we instead use the last bundle of the source batch to pad out any incomplete bundles ahead of the target copy region.
                         //The scheduler attempts to maximize the number of jobs which are pure bundle copies.
-                        //2) Inactive constraints store their body references as body *handles* rather than body indices.
+                        //2) Sleeping constraints store their body references as body *handles* rather than body indices.
                         //Pulling the type batches back into the active set requires translating those body handles to body indices.  
                         //3) The translation from body handle to body index requires that the bodies already have an active set identity, which is why the constraints wait until the second phase.
                         ref var sourceTypeBatch = ref solver.Sets[job.SourceSet].Batches[job.Batch].TypeBatches[job.SourceTypeBatch];
                         ref var targetTypeBatch = ref solver.ActiveSet.Batches[job.Batch].TypeBatches[job.TargetTypeBatch];
                         Debug.Assert(targetTypeBatch.TypeId == sourceTypeBatch.TypeId);
-                        solver.TypeProcessors[job.TypeId].CopyInactiveToActive(
+                        solver.TypeProcessors[job.TypeId].CopySleepingToActive(
                             job.SourceSet, job.Batch, job.SourceTypeBatch, job.Batch, job.TargetTypeBatch,
                             job.SourceStart, job.TargetStart, job.Count, bodies, solver);
                     }
@@ -371,9 +371,9 @@ namespace BepuPhysics
             }
         }
         [Conditional("DEBUG")]
-        void ValidateInactiveSetIndex(int setIndex)
+        void ValidateSleepingSetIndex(int setIndex)
         {
-            Debug.Assert(setIndex >= 1 && setIndex < bodies.Sets.Length && setIndex < solver.Sets.Length && setIndex < pairCache.InactiveSets.Length);
+            Debug.Assert(setIndex >= 1 && setIndex < bodies.Sets.Length && setIndex < solver.Sets.Length && setIndex < pairCache.SleepingSets.Length);
             //Note that pair cache sets are not guaranteed to be allocated if there are no pairs, and solver sets are not guaranteed to exist if there are no constraints.
             Debug.Assert(bodies.Sets[setIndex].Allocated);
         }
@@ -384,7 +384,7 @@ namespace BepuPhysics
             for (int i = 0; i < setIndices.Count; ++i)
             {
                 var setIndex = setIndices[i];
-                ValidateInactiveSetIndex(setIndex);
+                ValidateSleepingSetIndex(setIndex);
                 Debug.Assert(!set.Contains(setIndex));
                 set.Add(setIndex, pool);
             }
@@ -457,7 +457,7 @@ namespace BepuPhysics
             this.resetActivityStates = resetActivityStates;
 
             //We have three main jobs in this function:
-            //1) Ensure that the active set in the bodies, solver, and pair cache can hold the newly activated islands without resizing or accessing a buffer pool.
+            //1) Ensure that the active set in the bodies, solver, and pair cache can hold the newly awakened islands without resizing or accessing a buffer pool.
             //2) Allocate space in the active set for the bodies and constraints.
             //(Pair caches are left to be handled in a locally sequential task right now due to the overlap mapping being global.
             //The type caches could be updated in parallel, but we just didn't split it out. You can consider doing that if there appears to be a reason to do so.)
@@ -496,7 +496,7 @@ namespace BepuPhysics
             var narrowPhaseConstraintCaches = new TypeAllocationSizes<PairCacheCount>(pool, PairCache.CollisionConstraintTypeCount);
             var narrowPhaseCollisionCaches = new TypeAllocationSizes<PairCacheCount>(pool, PairCache.CollisionTypeCount);
 
-            void AccumulatePairCacheTypeCounts(ref Buffer<InactiveCache> sourceTypeCaches, ref TypeAllocationSizes<PairCacheCount> counts)
+            void AccumulatePairCacheTypeCounts(ref Buffer<SleepingCache> sourceTypeCaches, ref TypeAllocationSizes<PairCacheCount> counts)
             {
                 for (int j = 0; j < sourceTypeCaches.Length; ++j)
                 {
@@ -523,7 +523,7 @@ namespace BepuPhysics
                     }
                 }
 
-                ref var sourceSet = ref pairCache.InactiveSets[setIndex];
+                ref var sourceSet = ref pairCache.SleepingSets[setIndex];
                 newPairCount += sourceSet.Pairs.Count;
                 AccumulatePairCacheTypeCounts(ref sourceSet.ConstraintCaches, ref narrowPhaseConstraintCaches);
                 AccumulatePairCacheTypeCounts(ref sourceSet.CollisionCaches, ref narrowPhaseCollisionCaches);
@@ -565,7 +565,7 @@ namespace BepuPhysics
                 }
             }
             //and narrow phase pair caches.
-            ref var targetPairCache = ref pairCache.GetCacheForActivation();
+            ref var targetPairCache = ref pairCache.GetCacheForAwakening();
             void EnsurePairCacheTypeCapacities(ref TypeAllocationSizes<PairCacheCount> cacheSizes, ref Buffer<UntypedList> targetCaches, BufferPool cachePool)
             {
                 for (int typeIndex = 0; typeIndex <= cacheSizes.HighestOccupiedTypeIndex; ++typeIndex)
@@ -669,15 +669,15 @@ namespace BepuPhysics
         }
 
 
-        internal void DisposeForCompletedActivations(ref QuickList<int, Buffer<int>> setIndices)
+        internal void DisposeForCompletedAwakenings(ref QuickList<int, Buffer<int>> setIndices)
         {
             for (int i = 0; i < setIndices.Count; ++i)
             {
                 var setIndex = setIndices[i];
                 ref var bodySet = ref bodies.Sets[setIndex];
-                //Note that neither the constraint set nor the pair cache set necessarily exist. It is possible for bodies to go inactive by themselves.
+                //Note that neither the constraint set nor the pair cache set necessarily exist. It is possible for bodies to go to sleep by themselves.
                 ref var constraintSet = ref solver.Sets[setIndex];
-                ref var pairCacheSet = ref pairCache.InactiveSets[setIndex];
+                ref var pairCacheSet = ref pairCache.SleepingSets[setIndex];
                 Debug.Assert(bodySet.Allocated);
                 bodySet.DisposeBuffers(pool);
                 if (constraintSet.Allocated)
@@ -685,7 +685,7 @@ namespace BepuPhysics
                 if (pairCacheSet.Allocated)
                     pairCacheSet.Dispose(pool);
                 this.uniqueSetIndices = new QuickList<int, Buffer<int>>();
-                deactivator.ReturnSetId(setIndex);
+                sleeper.ReturnSetId(setIndex);
             }
             phaseOneJobs.Dispose(pool.SpecializeFor<PhaseOneJob>());
             phaseTwoJobs.Dispose(pool.SpecializeFor<PhaseTwoJob>());

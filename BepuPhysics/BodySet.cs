@@ -94,9 +94,9 @@ namespace BepuPhysics
                 Activity[bodyIndex] = Activity[movedBodyIndex];
                 Collidables[bodyIndex] = Collidables[movedBodyIndex];
                 //Note that the constraint list is NOT disposed before being overwritten.
-                //The two callers for this function are 'true' removal, and deactivation. 
+                //The two callers for this function are 'true' removal, and sleeping. 
                 //During true removal, the caller is responsible for removing all constraints and disposing the list.
-                //In deactivation, the reference to the list is simply copied into the inactive set.
+                //In sleeping, the reference to the list is simply copied into the sleeping set.
                 Constraints[bodyIndex] = Constraints[movedBodyIndex];
                 //Point the body handles at the new location.
                 movedBodyHandle = IndexToHandle[movedBodyIndex];
@@ -123,10 +123,10 @@ namespace BepuPhysics
             //so that it can create/remove an entry. That's why this function isn't public.
             collidable.Shape = description.Collidable.Shape;
             ref var activity = ref Activity[index];
-            activity.DeactivationThreshold = description.Activity.DeactivationThreshold;
+            activity.SleepThreshold = description.Activity.SleepThreshold;
             activity.MinimumTimestepsUnderThreshold = description.Activity.MinimumTimestepCountUnderThreshold;
             activity.TimestepsUnderThresholdCount = 0;
-            activity.DeactivationCandidate = false;
+            activity.SleepCandidate = false;
             activity.Kinematic = Bodies.IsKinematic(ref description.LocalInertia);
         }
 
@@ -140,7 +140,7 @@ namespace BepuPhysics
             description.Collidable.Shape = collidable.Shape;
             description.Collidable.SpeculativeMargin = collidable.SpeculativeMargin;
             ref var activity = ref Activity[index];
-            description.Activity.DeactivationThreshold = activity.DeactivationThreshold;
+            description.Activity.SleepThreshold = activity.SleepThreshold;
             description.Activity.MinimumTimestepCountUnderThreshold = activity.MinimumTimestepsUnderThreshold;
         }
 

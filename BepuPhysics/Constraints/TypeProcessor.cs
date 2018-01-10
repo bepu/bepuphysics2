@@ -13,7 +13,7 @@ namespace BepuPhysics.Constraints
     /// <remarks>
     /// <para>This class holds no actual state of its own. A solver creates a unique type processor for each registered constraint type, and all instances are held in untyped memory.
     /// Splitting the functionality from the data allows for far fewer GC-tracked instances and allows the raw data layout to be shared more easily.</para>
-    /// <para>For example, deactivated simulation islands store type batches, but they are created and used differently- and for convenience, they are stored on a per-island basis.
+    /// <para>For example, sleeping simulation islands store type batches, but they are created and used differently- and for convenience, they are stored on a per-island basis.
     /// Using the same system but with reference type TypeBatches, tens of thousands of inactive islands would imply tens of thousands of GC-tracked objects.</para>
     /// That's not acceptable, so here we are. 
     /// <para>Conceptually, you can think of the solver's array of TypeProcessors like C function pointers.</para>
@@ -84,12 +84,12 @@ namespace BepuPhysics.Constraints
 
         internal unsafe abstract void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<int, Buffer<int>> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch);
 
-        internal unsafe abstract void CopyInactiveToActive(
+        internal unsafe abstract void CopySleepingToActive(
             int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetBatchIndex, int targetTypeBatchIndex,
             int sourceStart, int targetStart, int count, Bodies bodies, Solver solver);
 
 
-        internal unsafe abstract void AddInactiveBodyHandlesToBatchReferences(ref TypeBatch typeBatch, ref IndexSet targetBatchReferencedHandles);
+        internal unsafe abstract void AddWakingBodyHandlesToBatchReferences(ref TypeBatch typeBatch, ref IndexSet targetBatchReferencedHandles);
 
         [Conditional("DEBUG")]
         internal abstract void VerifySortRegion(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, ref Buffer<int> sortedKeys, ref Buffer<int> sortedSourceIndices);
@@ -497,8 +497,8 @@ namespace BepuPhysics.Constraints
                 BundleIndexing.GetBundleIndices(location.IndexInTypeBatch, out var sourceBundle, out var sourceInner);
                 BundleIndexing.GetBundleIndices(i, out var targetBundle, out var targetInner);
 
-                //Note that we don't directly copy body references or projection information. Projection information is ephemeral and unnecessary for inactive constraints.
-                //Body references get turned into handles so that reactivation can easily track down the bodies' readded locations.
+                //Note that we don't directly copy body references or projection information. Projection information is ephemeral and unnecessary for sleeping constraints.
+                //Body references get turned into handles so that awakening can easily track down the bodies' readded locations.
                 GatherScatter.CopyLane(
                     ref Buffer<TPrestepData>.Get(ref sourceTypeBatch.PrestepData, sourceBundle), sourceInner,
                     ref Buffer<TPrestepData>.Get(ref targetTypeBatch.PrestepData, targetBundle), targetInner);
@@ -537,7 +537,7 @@ namespace BepuPhysics.Constraints
         }
 
 
-        internal unsafe sealed override void CopyInactiveToActive(
+        internal unsafe sealed override void CopySleepingToActive(
             int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetBatchIndex, int targetTypeBatchIndex,
             int sourceStart, int targetStart, int count, Bodies bodies, Solver solver)
         {
@@ -599,7 +599,7 @@ namespace BepuPhysics.Constraints
         }
 
 
-        internal unsafe sealed override void AddInactiveBodyHandlesToBatchReferences(ref TypeBatch typeBatch, ref IndexSet targetBatchReferencedHandles)
+        internal unsafe sealed override void AddWakingBodyHandlesToBatchReferences(ref TypeBatch typeBatch, ref IndexSet targetBatchReferencedHandles)
         {
             for (int i = 0; i < typeBatch.ConstraintCount; ++i)
             {
@@ -610,7 +610,7 @@ namespace BepuPhysics.Constraints
                 {
                     var bodyHandle = Unsafe.Add(ref sourceHandlesStart, offset);
                     Debug.Assert(!targetBatchReferencedHandles.Contains(bodyHandle),
-                        "It should be impossible for a batch in the active set to already contain a reference to a body that is being activated.");
+                        "It should be impossible for a batch in the active set to already contain a reference to a body that is being woken up.");
                     //Given that we're only adding references to bodies that already exist, and therefore were at some point in the active set, it should never be necessary
                     //to resize the batch referenced handles structure.
                     targetBatchReferencedHandles.AddUnsafely(bodyHandle);

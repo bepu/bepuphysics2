@@ -15,8 +15,8 @@ namespace BepuPhysics
     /// </summary>
     public partial class Simulation : IDisposable
     {
-        public IslandActivator Activator { get; private set; }
-        public Deactivator Deactivator { get; private set; }
+        public IslandAwakener Awakener { get; private set; }
+        public IslandSleeper Sleeper { get; private set; }
         public Bodies Bodies { get; private set; }
         public Statics Statics { get; private set; }
         public Shapes Shapes { get; private set; }
@@ -59,11 +59,11 @@ namespace BepuPhysics
                 initialIslandCapacity: initialAllocationSizes.Islands,
                 minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
             constraintRemover = new ConstraintRemover(BufferPool, Bodies, Solver);
-            Deactivator = new Deactivator(Bodies, Solver, BroadPhase, constraintRemover, BufferPool);
-            Activator = new IslandActivator(Bodies, Statics, Solver, BroadPhase, Deactivator, bufferPool);
-            Statics.activator = Activator;
-            Solver.activator = Activator;
-            Bodies.Initialize(Solver, Activator);
+            Sleeper = new IslandSleeper(Bodies, Solver, BroadPhase, constraintRemover, BufferPool);
+            Awakener = new IslandAwakener(Bodies, Statics, Solver, BroadPhase, Sleeper, bufferPool);
+            Statics.awakener = Awakener;
+            Solver.awakener = Awakener;
+            Bodies.Initialize(Solver, Awakener);
             PoseIntegrator = new PoseIntegrator(Bodies, Shapes, BroadPhase);
             SolverBatchCompressor = new BatchCompressor(Solver, Bodies);
             BodyLayoutOptimizer = new BodyLayoutOptimizer(Bodies, BroadPhase, Solver, bufferPool);
@@ -99,8 +99,8 @@ namespace BepuPhysics
             DefaultTypes.Register(simulation.Solver, out var defaultTaskRegistry);
             var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation, defaultTaskRegistry, narrowPhaseCallbacks, initialAllocationSizes.Value.Islands + 1);
             simulation.NarrowPhase = narrowPhase;
-            simulation.Deactivator.pairCache = narrowPhase.PairCache;
-            simulation.Activator.pairCache = narrowPhase.PairCache;
+            simulation.Sleeper.pairCache = narrowPhase.PairCache;
+            simulation.Awakener.pairCache = narrowPhase.PairCache;
             simulation.Solver.pairCache = narrowPhase.PairCache;
             simulation.BroadPhaseOverlapFinder = new CollidableOverlapFinder<TNarrowPhaseCallbacks>(narrowPhase, simulation.BroadPhase);
 
@@ -181,16 +181,16 @@ namespace BepuPhysics
         {
             ProfilerClear();
             ProfilerStart(this);
-            //Note that there is a reason to put the deactivator *after* velocity integration. That sounds a little weird, but there's a good reason:
-            //When the narrow phase activates a bunch of objects in a pile, their accumulated impulses will represent all forces acting on them at the time of deactivation.
-            //That includes gravity. If we deactivate objects *before* gravity is applied in a given frame, then when those bodies are activated, the accumulated impulses
+            //Note that there is a reason to put the sleep *after* velocity integration. That sounds a little weird, but there's a good reason:
+            //When the narrow phase activates a bunch of objects in a pile, their accumulated impulses will represent all forces acting on them at the time of sleep.
+            //That includes gravity. If we sleep objects *before* gravity is applied in a given frame, then when those bodies are awakened, the accumulated impulses
             //will be less accurate because they assume that gravity has already been applied. This can cause a small bump.
-            //So instead, velocity integration (and deactivation candidacy management) comes before deactivation.
+            //So instead, velocity integration (and deactivation candidacy management) comes before sleep.
 
-            //Deactivation at the start, on the other hand, stops some forms of unintuitive behavior when using direct activations. Just a matter of preference.
-            ProfilerStart(Deactivator);
-            Deactivator.Update(threadDispatcher, Deterministic);
-            ProfilerEnd(Deactivator);
+            //Sleep at the start, on the other hand, stops some forms of unintuitive behavior when using direct awakenings. Just a matter of preference.
+            ProfilerStart(Sleeper);
+            Sleeper.Update(threadDispatcher, Deterministic);
+            ProfilerEnd(Sleeper);
 
             //Note that pose integrator comes before collision detection and solving. This is a shift from v1, where collision detection went first.
             //This is a tradeoff:
@@ -266,7 +266,7 @@ namespace BepuPhysics
             Shapes.Clear();
             BroadPhase.Clear();
             NarrowPhase.Clear();
-            Deactivator.Clear();
+            Sleeper.Clear();
         }
 
         /// <summary>
@@ -292,7 +292,7 @@ namespace BepuPhysics
             Bodies.EnsureCapacity(allocationTarget.Bodies);
             Bodies.MinimumConstraintCapacityPerBody = allocationTarget.ConstraintCountPerBodyEstimate;
             Bodies.EnsureConstraintListCapacities();
-            Deactivator.EnsureSetsCapacity(allocationTarget.Islands + 1);
+            Sleeper.EnsureSetsCapacity(allocationTarget.Islands + 1);
             BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.EnsureCapacity(allocationTarget.Statics);
             Shapes.EnsureBatchCapacities(allocationTarget.ShapesPerType);
@@ -323,7 +323,7 @@ namespace BepuPhysics
             Bodies.Resize(allocationTarget.Bodies);
             Bodies.MinimumConstraintCapacityPerBody = allocationTarget.ConstraintCountPerBodyEstimate;
             Bodies.ResizeConstraintListCapacities();
-            Deactivator.ResizeSetsCapacity(allocationTarget.Islands + 1);
+            Sleeper.ResizeSetsCapacity(allocationTarget.Islands + 1);
             BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.Resize(allocationTarget.Statics);
             Shapes.ResizeBatches(allocationTarget.ShapesPerType);
@@ -336,7 +336,7 @@ namespace BepuPhysics
         public void Dispose()
         {
             Clear();
-            Deactivator.Dispose();
+            Sleeper.Dispose();
             Solver.Dispose();
             BroadPhase.Dispose();
             NarrowPhase.Dispose();

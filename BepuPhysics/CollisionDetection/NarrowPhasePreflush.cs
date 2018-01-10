@@ -14,9 +14,9 @@ namespace BepuPhysics.CollisionDetection
     internal enum PreflushJobType
     {
         /// <summary>
-        /// Phase one job in the activator. JobIndex used to identify sub-job.
+        /// Phase one job in the awakener. JobIndex used to identify sub-job.
         /// </summary>
-        ActivatorPhaseOne,
+        AwakenerPhaseOne,
         /// <summary>
         /// Sorts the constraints of a single type across all workers. Used by deterministic preflushes to schedule adds.
         /// Accesses no buffer pools; memory is allocated and returned on main thread.
@@ -44,9 +44,9 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         NondeterministicConstraintAdd,
         /// <summary>
-        /// Phase two job in the activator. JobIndex used to identify sub-job.
+        /// Phase two job in the awakener. JobIndex used to identify sub-job.
         /// </summary>
-        ActivatorPhaseTwo,
+        AwakenerPhaseTwo,
         /// <summary>
         /// Check the freshness bytes in a region to remove stale pairs.
         /// </summary>
@@ -85,7 +85,7 @@ namespace BepuPhysics.CollisionDetection
         [FieldOffset(16)]
         public int WorkerCount;
         /// <summary>
-        /// Index of the job. Used by ActivatorPhaseOne and ActivatorPhaseTwo tasks.
+        /// Index of the job. Used by AwakenerPhaseOne and AwakenerPhaseTwo tasks.
         /// </summary>
         [FieldOffset(4)]
         public int JobIndex;
@@ -234,14 +234,14 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                     break;
-                case PreflushJobType.ActivatorPhaseOne:
+                case PreflushJobType.AwakenerPhaseOne:
                     {
-                        Simulation.Activator.ExecutePhaseOneJob(job.JobIndex);
+                        Simulation.Awakener.ExecutePhaseOneJob(job.JobIndex);
                     }
                     break;
-                case PreflushJobType.ActivatorPhaseTwo:
+                case PreflushJobType.AwakenerPhaseTwo:
                     {
-                        Simulation.Activator.ExecutePhaseTwoJob(job.JobIndex);
+                        Simulation.Awakener.ExecutePhaseTwoJob(job.JobIndex);
                     }
                     break;
             }
@@ -255,36 +255,36 @@ namespace BepuPhysics.CollisionDetection
             //Before we complete the addition of constraints, the pair cache's constraint handle->pair mapping must be made large enough to hold all existing constraints plus
             //any that we are about to add. There's no guarantee that we will use them (some earlier handles may be available), but we have no good way to know ahead of time.
             int newConstraintCount = 0;
-            int setsToActivateCapacity = 0;
+            int setsToAwakenCapacity = 0;
             for (int i = 0; i < threadCount; ++i)
             {
                 newConstraintCount += overlapWorkers[i].PendingConstraints.CountConstraints();
                 //This will tend to significantly overestimate the true set requirement, but that's not concerning- the maximum allocation won't be troublesome regardless.
-                setsToActivateCapacity += overlapWorkers[i].PendingSetActivations.Count;
+                setsToAwakenCapacity += overlapWorkers[i].PendingSetAwakenings.Count;
             }
             PairCache.EnsureConstraintToPairMappingCapacity(Solver, Solver.HandlePool.HighestPossiblyClaimedId + 1 + newConstraintCount);
-            QuickList<int, Buffer<int>>.Create(Pool.SpecializeFor<int>(), setsToActivateCapacity, out var setsToActivate);
-            var uniqueActivationsSet = new IndexSet(Pool, Simulation.Bodies.Sets.Length);
+            QuickList<int, Buffer<int>>.Create(Pool.SpecializeFor<int>(), setsToAwakenCapacity, out var setsToAwaken);
+            var uniqueAwakeningsSet = new IndexSet(Pool, Simulation.Bodies.Sets.Length);
             for (int i = 0; i < threadCount; ++i)
             {
-                Simulation.Activator.AccumulateUniqueIndices(ref overlapWorkers[i].PendingSetActivations, ref uniqueActivationsSet, ref setsToActivate);
+                Simulation.Awakener.AccumulateUniqueIndices(ref overlapWorkers[i].PendingSetAwakenings, ref uniqueAwakeningsSet, ref setsToAwaken);
             }
-            uniqueActivationsSet.Dispose(Pool);
+            uniqueAwakeningsSet.Dispose(Pool);
             for (int i = 0; i < threadCount; ++i)
             {
-                overlapWorkers[i].PendingSetActivations.Dispose(overlapWorkers[i].Batcher.pool.SpecializeFor<int>());
+                overlapWorkers[i].PendingSetAwakenings.Dispose(overlapWorkers[i].Batcher.pool.SpecializeFor<int>());
             }
-            (int activatorPhaseOneJobCount, int activatorPhaseTwoJobCount) = Simulation.Activator.PrepareJobs(ref setsToActivate, false, threadCount);
+            (int awakenerPhaseOneJobCount, int awakenerPhaseTwoJobCount) = Simulation.Awakener.PrepareJobs(ref setsToAwaken, false, threadCount);
             if (threadCount > 1)
             {
                 //Given the sizes involved, a fixed guess of 128 should be just fine for essentially any simulation. Overkill, but not in a concerning way.
                 //Temporarily allocating 1KB of memory isn't a big deal, and we will only touch the necessary subset of it anyway.
                 //(There are pathological cases where resizes are still possible, but the constraint remover handles them by not adding unsafely.)
-                QuickList<PreflushJob, Buffer<PreflushJob>>.Create(Pool.SpecializeFor<PreflushJob>(), 128 + Math.Max(activatorPhaseOneJobCount, activatorPhaseTwoJobCount), out preflushJobs);
+                QuickList<PreflushJob, Buffer<PreflushJob>>.Create(Pool.SpecializeFor<PreflushJob>(), 128 + Math.Max(awakenerPhaseOneJobCount, awakenerPhaseTwoJobCount), out preflushJobs);
 
                 //FIRST PHASE: 
                 //1) If deterministic, sort each type batch.
-                //2) Perform any activator phase one jobs (pair cache activations, update activated batch referenced handles, copy activated body regions).
+                //2) Perform any awakener phase one jobs (pair cache awakenings, update awakened batch referenced handles, copy awakened body regions).
                 //3) Speculatively search for best-guess constraint batches for each new constraint in parallel.
 
                 //Following the goals of the first phase, we have to responsibilities during job creation:
@@ -299,13 +299,13 @@ namespace BepuPhysics.CollisionDetection
                     overlapWorkers[i].PendingConstraints.AllocateForSpeculativeSearch();
                 }
                 var preflushJobPool = Pool.SpecializeFor<PreflushJob>();
-                for (int i = 0; i < activatorPhaseOneJobCount; ++i)
+                for (int i = 0; i < awakenerPhaseOneJobCount; ++i)
                 {
-                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.ActivatorPhaseOne, JobIndex = i }, preflushJobPool);
+                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.AwakenerPhaseOne, JobIndex = i }, preflushJobPool);
                 }
                 //Note that we create the sort jobs ahead of batch finder. 
                 //They tend to be individually much heftier than the constraint batch finder phase, and we'd like to be able to fill in the execution gaps.
-                //TODO: It would be nice to have all the jobs semi-sorted by heftiness- that would just split the activator job creator loop. Only bother if profiling suggests it.
+                //TODO: It would be nice to have all the jobs semi-sorted by heftiness- that would just split the awakener job creator loop. Only bother if profiling suggests it.
                 if (deterministic)
                 {
                     Pool.SpecializeFor<QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>>>().Take(PairCache.CollisionConstraintTypeCount, out sortedConstraints);
@@ -358,7 +358,7 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                 }
-                //This must be cached so that the freshness checker does not schedule jobs over newly activated entries.
+                //This must be cached so that the freshness checker does not schedule jobs over newly awakened entries.
                 var originalPairCacheMappingCount = PairCache.Mapping.Count;
                 //var start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;
@@ -372,7 +372,7 @@ namespace BepuPhysics.CollisionDetection
 
                 //SECOND PHASE:
                 //1) Locally sequential constraint adds. This is the beefiest single task, and it runs on one thread. It can be deterministic or nondeterministic.
-                //2) Activator phase two (broadphase update, constraint region copies).
+                //2) Awakener phase two (broadphase update, constraint region copies).
                 //3) Freshness checker. Lots of smaller jobs that can hopefully fill the gap while the constraint adds finish. The wider the CPU, the less this will be possible.
 
                 preflushJobs.Clear(); //Note job clear. We're setting up new jobs.
@@ -384,9 +384,9 @@ namespace BepuPhysics.CollisionDetection
                 {
                     preflushJobs.Add(new PreflushJob { Type = PreflushJobType.NondeterministicConstraintAdd, WorkerCount = threadCount }, preflushJobPool);
                 }
-                for (int i = 0; i < activatorPhaseTwoJobCount; ++i)
+                for (int i = 0; i < awakenerPhaseTwoJobCount; ++i)
                 {
-                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.ActivatorPhaseTwo, JobIndex = i }, preflushJobPool);
+                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.AwakenerPhaseTwo, JobIndex = i }, preflushJobPool);
                 }
                 FreshnessChecker.CreateJobs(threadCount, ref preflushJobs, Pool, originalPairCacheMappingCount);
 
@@ -420,27 +420,27 @@ namespace BepuPhysics.CollisionDetection
             else
             {
                 //Single threaded. Quite a bit simpler!
-                //Three tasks: activate, freshness checker, and add all pending constraints.
-                //Note that phase one changes the PairCache.Mapping.Count; the count must be cached so that the freshness checker doesn't bother analyzing the newly activated pairs.
+                //Three tasks: awakenings, freshness checker, and add all pending constraints.
+                //Note that phase one changes the PairCache.Mapping.Count; the count must be cached so that the freshness checker doesn't bother analyzing the newly awakened pairs.
                 var originalMappingCount = PairCache.Mapping.Count;
-                for (int i = 0; i < activatorPhaseOneJobCount; ++i)
-                    Simulation.Activator.ExecutePhaseOneJob(i);
-                //Note that phase one of activation must occur before the constraint flush. Phase one registers the newly activated constraints in constraint batches.
-                //This this was not done, pending adds might end up in the same batches as newly activated constraints that share bodies.
+                for (int i = 0; i < awakenerPhaseOneJobCount; ++i)
+                    Simulation.Awakener.ExecutePhaseOneJob(i);
+                //Note that phase one of awakener must occur before the constraint flush. Phase one registers the newly awakened constraints in constraint batches.
+                //This this was not done, pending adds might end up in the same batches as newly awake constraints that share bodies.
                 overlapWorkers[0].PendingConstraints.FlushSequentially(Simulation, PairCache);
                 FreshnessChecker.CheckFreshnessInRegion(0, 0, originalMappingCount);
-                for (int i = 0; i < activatorPhaseTwoJobCount; ++i)
-                    Simulation.Activator.ExecutePhaseTwoJob(i);
+                for (int i = 0; i < awakenerPhaseTwoJobCount; ++i)
+                    Simulation.Awakener.ExecutePhaseTwoJob(i);
             }
             for (int i = 0; i < threadCount; ++i)
             {
                 overlapWorkers[i].PendingConstraints.Dispose();
             }
-            if (setsToActivate.Count > 0)
+            if (setsToAwaken.Count > 0)
             {
-                Simulation.Activator.DisposeForCompletedActivations(ref setsToActivate);
+                Simulation.Awakener.DisposeForCompletedAwakenings(ref setsToAwaken);
             }
-            setsToActivate.Dispose(Pool.SpecializeFor<int>());
+            setsToAwaken.Dispose(Pool.SpecializeFor<int>());
 
         }
     }

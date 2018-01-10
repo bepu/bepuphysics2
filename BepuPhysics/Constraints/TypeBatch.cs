@@ -16,7 +16,7 @@ namespace BepuPhysics.Constraints
         public RawBuffer BodyReferences;
         public RawBuffer PrestepData;
         public RawBuffer AccumulatedImpulses;
-        //TODO: Note that we still include a projection buffer here- even though deactivated islands using this struct will never allocate space for it,
+        //TODO: Note that we still include a projection buffer here- even though sleeping islands using this struct will never allocate space for it,
         //and even though we may end up not even persisting the allocation between frames. We may later pull this out and store it strictly ephemerally in the solver.
         public RawBuffer Projection;
         public Buffer<int> IndexToHandle;

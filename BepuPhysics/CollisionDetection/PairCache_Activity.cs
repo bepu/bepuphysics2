@@ -12,7 +12,7 @@ namespace BepuPhysics.CollisionDetection
         internal struct CollisionPairLocation
         {
             public CollidablePair Pair;
-            //Used only when the collision pair was moved into an inactive set by deactivation.
+            //Used only when the collision pair was moved into a sleeping set.
             public int InactiveSetIndex;
             public int InactivePairIndex;
         }
@@ -25,18 +25,18 @@ namespace BepuPhysics.CollisionDetection
 
         //This buffer is filled in parallel with the Bodies.Sets and Solver.Sets.
         //Note that this does not include the active set, so index 0 is always empty.
-        internal Buffer<InactiveSet> InactiveSets;
+        internal Buffer<SleepingSet> SleepingSets;
 
         internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
         {
-            Debug.Assert(setsCapacity >= potentiallyAllocatedCount && potentiallyAllocatedCount <= InactiveSets.Length);
-            setsCapacity = BufferPool<InactiveSet>.GetLowestContainingElementCount(setsCapacity);
-            if (InactiveSets.Length != setsCapacity)
+            Debug.Assert(setsCapacity >= potentiallyAllocatedCount && potentiallyAllocatedCount <= SleepingSets.Length);
+            setsCapacity = BufferPool<SleepingSet>.GetLowestContainingElementCount(setsCapacity);
+            if (SleepingSets.Length != setsCapacity)
             {
-                var oldCapacity = InactiveSets.Length;
-                pool.SpecializeFor<InactiveSet>().Resize(ref InactiveSets, setsCapacity, potentiallyAllocatedCount);
-                if (oldCapacity < InactiveSets.Length)
-                    InactiveSets.Clear(oldCapacity, InactiveSets.Length - oldCapacity); //We rely on unused slots being default initialized.
+                var oldCapacity = SleepingSets.Length;
+                pool.SpecializeFor<SleepingSet>().Resize(ref SleepingSets, setsCapacity, potentiallyAllocatedCount);
+                if (oldCapacity < SleepingSets.Length)
+                    SleepingSets.Clear(oldCapacity, SleepingSets.Length - oldCapacity); //We rely on unused slots being default initialized.
             }
         }
 
@@ -85,7 +85,7 @@ namespace BepuPhysics.CollisionDetection
             Debug.Assert(count == expectedCount, "Expected count for this handle not found!");
         }
 
-        internal unsafe void DeactivateTypeBatchPairs(ref InactiveSetBuilder builder, int setIndex, Solver solver)
+        internal unsafe void SleepTypeBatchPairs(ref SleepingSetBuilder builder, int setIndex, Solver solver)
         {
             ref var constraintSet = ref solver.Sets[setIndex];
             for (int batchIndex = 0; batchIndex < constraintSet.Batches.Count; ++batchIndex)
@@ -114,17 +114,17 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
             }
-            builder.FinalizeSet(pool, out InactiveSets[setIndex]);
+            builder.FinalizeSet(pool, out SleepingSets[setIndex]);
         }
 
-        internal ref WorkerPairCache GetCacheForActivation()
+        internal ref WorkerPairCache GetCacheForAwakening()
         {
-            //Note that the target location for the set depends on whether the activation is being executed from within the context of the narrow phase.
+            //Note that the target location for the set depends on whether the awakening is being executed from within the context of the narrow phase.
             //Either way, we need to put the data into the most recently updated cache. If this is happening inside the narrow phase, that is the NextWorkerCaches,
             //because we haven't yet flipped the buffers. If it's outside of the narrow phase, then it's the current workerCaches. 
             //We can distinguish between the two by checking whether the NextWorkerCaches are allocated. They don't exist outside of the narrowphase's execution.
 
-            //Also note that we only deal with one worker cache. Activation just dumps new caches into the first thread. This works out since
+            //Also note that we only deal with one worker cache. Wake ups just dump new caches into the first thread. This works out since
             //the actual pair cache modification is locally sequential right now.
             if (NextWorkerCaches.Span.Allocated && NextWorkerCaches.Count > 0 && NextWorkerCaches[0].collisionCaches.Allocated)
                 return ref NextWorkerCaches[0];
@@ -141,7 +141,7 @@ namespace BepuPhysics.CollisionDetection
             return ref workerCaches[0];
         }
 
-        private unsafe PairCacheIndex CopyCacheForActivation(ref Buffer<InactiveCache> inactiveCaches, ref Buffer<UntypedList> activeCaches, TypedIndex sourceCacheIndex)
+        private unsafe PairCacheIndex CopyCacheForAwakening(ref Buffer<SleepingCache> inactiveCaches, ref Buffer<UntypedList> activeCaches, TypedIndex sourceCacheIndex)
         {
             ref var sourceCache = ref inactiveCaches[sourceCacheIndex.Type];
             //Note that the sourceCacheIndex.Type refers to the index of the type in a packed list, not the noncontiguous type id. 
@@ -152,24 +152,24 @@ namespace BepuPhysics.CollisionDetection
             //Note that the cache chosen for activated entries is always the first one, so the cache index is simply 0.
             return new PairCacheIndex(0, sourceCache.TypeId, targetByteIndex);
         }
-        internal unsafe void ActivateSet(int setIndex)
+        internal unsafe void AwakenSet(int setIndex)
         {
-            ref var inactiveSet = ref InactiveSets[setIndex];
+            ref var sleepingSet = ref SleepingSets[setIndex];
             //If there are no pairs, there is no need for an inactive set, so it's not guaranteed to be allocated.
-            if (inactiveSet.Allocated)
+            if (sleepingSet.Allocated)
             {
-                ref var activeSet = ref GetCacheForActivation();
-                //For simplicity, activation simply walks the pairs list in the inactive set.
+                ref var activeSet = ref GetCacheForAwakening();
+                //For simplicity, awakening simply walks the pairs list in the sleeping set.
                 //By construction of the inactive set, the cache accesses will be highly cache coherent, so the fact that it doesn't do bulk copies isn't that bad.
                 //(we COULD make it do bulk copies, but only bother with that if there is any reason to.)
-                for (int i = 0; i < inactiveSet.Pairs.Count; ++i)
+                for (int i = 0; i < sleepingSet.Pairs.Count; ++i)
                 {
-                    ref var pair = ref inactiveSet.Pairs[i];
+                    ref var pair = ref sleepingSet.Pairs[i];
                     CollidablePairPointers pointers;
-                    pointers.ConstraintCache = CopyCacheForActivation(ref inactiveSet.ConstraintCaches, ref activeSet.constraintCaches, pair.ConstraintCache);
+                    pointers.ConstraintCache = CopyCacheForAwakening(ref sleepingSet.ConstraintCaches, ref activeSet.constraintCaches, pair.ConstraintCache);
                     if (pair.CollisionCache.Exists)
                     {
-                        pointers.CollisionDetectionCache = CopyCacheForActivation(ref inactiveSet.CollisionCaches, ref activeSet.collisionCaches, pair.CollisionCache);
+                        pointers.CollisionDetectionCache = CopyCacheForAwakening(ref sleepingSet.CollisionCaches, ref activeSet.collisionCaches, pair.CollisionCache);
                     }
                     else
                     {

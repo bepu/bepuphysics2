@@ -169,8 +169,8 @@ namespace BepuPhysics.CollisionDetection
             this.deterministic = deterministic;
             var removalBatchJobCount = ConstraintRemover.CreateFlushJobs();
             //Note that we explicitly add the constraint remover jobs here. 
-            //The constraint remover can be used in two ways- deactivation style, and narrow phase style.
-            //In deactivation, we're not actually removing constraints from the simulation completely, so it requires fewer jobs.
+            //The constraint remover can be used in two ways- sleeper style, and narrow phase style.
+            //In sleeping, we're not actually removing constraints from the simulation completely, so it requires fewer jobs.
             //The constraint remover just lets you choose which jobs to call. The narrow phase needs all of them.
             flushJobs.EnsureCapacity(flushJobs.Count + removalBatchJobCount + 3, jobPool);
             flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintsFromBodyLists });

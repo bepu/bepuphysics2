@@ -71,10 +71,10 @@ namespace DemoRenderer.ShapeDrawing
 
             if (setIndex == 0)
             {
-                if (activity.DeactivationCandidate)
+                if (activity.SleepCandidate)
                 {
-                    var deactivationCandidateTint = new Vector3(0.35f, 0.35f, 0.7f);
-                    color *= deactivationCandidateTint;
+                    var sleepCandidateTint = new Vector3(0.35f, 0.35f, 0.7f);
+                    color *= sleepCandidateTint;
                 }
             }
             else

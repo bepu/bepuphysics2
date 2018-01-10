@@ -56,7 +56,7 @@ namespace BepuPhysics
         public Buffer<BodyInertia> Inertias;
         protected internal BufferPool pool;
 
-        protected internal IslandActivator activator;
+        protected internal IslandAwakener awakener;
         protected internal Shapes shapes;
         protected internal BroadPhase broadPhase;
         protected internal Solver solver;
@@ -96,11 +96,11 @@ namespace BepuPhysics
         /// Initializes the bodies set. Used to complete bidirectional dependencies.
         /// </summary>
         /// <param name="solver">Solver responsible for the constraints connected to the collection's bodies.</param>
-        /// <param name="activator">Island activator to use when bodies undergo transitions requiring that they exist in the active set.</param>
-        public void Initialize(Solver solver, IslandActivator activator)
+        /// <param name="awakener">Island awakener to use when bodies undergo transitions requiring that they exist in the active set.</param>
+        public void Initialize(Solver solver, IslandAwakener awakener)
         {
             this.solver = solver;
-            this.activator = activator;
+            this.awakener = awakener;
         }
 
         void AddCollidableToBroadPhase(int bodyHandle, ref RigidPose pose, ref BodyInertia localInertia, ref Collidable collidable)
@@ -177,7 +177,7 @@ namespace BepuPhysics
 
         internal int RemoveFromActiveSet(int activeBodyIndex)
         {
-            //Note that this is separated from the main removal because of deactivation. Deactivation doesn't want to truly remove from the *simulation*, just the active set.
+            //Note that this is separated from the main removal because of sleeping. Sleeping doesn't want to truly remove from the *simulation*, just the active set.
             //The constraints, and references to the constraints, are left untouched.
             ref var set = ref ActiveSet;
             Debug.Assert(activeBodyIndex >= 0 && activeBodyIndex < set.Count);
@@ -186,7 +186,7 @@ namespace BepuPhysics
             if (collidable.Shape.Exists)
             {
                 //The collidable exists, so it should be removed from the broadphase.
-                //This is true even when this function is used in the context of a deactivation. The collidable will be readded to the inactive tree.
+                //This is true even when this function is used in the context of a sleep. The collidable will be readded to the static tree.
                 RemoveCollidableFromBroadPhase(activeBodyIndex, ref collidable);
             }
 
@@ -231,7 +231,7 @@ namespace BepuPhysics
         public void Remove(int handle)
         {
             ValidateExistingHandle(handle);
-            activator.ActivateBody(handle);
+            awakener.AwakenBody(handle);
             RemoveAt(HandleToLocation[handle].Index);
         }
 
@@ -308,7 +308,7 @@ namespace BepuPhysics
             if (location.SetIndex > 0)
             {
                 //The body is inactive. Wake it up.
-                activator.ActivateBody(handle);
+                awakener.AwakenBody(handle);
             }
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
@@ -346,7 +346,7 @@ namespace BepuPhysics
             if (location.SetIndex > 0)
             {
                 //The body is inactive. Wake it up.
-                activator.ActivateBody(handle);
+                awakener.AwakenBody(handle);
             }
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             Debug.Assert(location.SetIndex == 0, "We should be working with an active shape.");
@@ -369,7 +369,7 @@ namespace BepuPhysics
             if (location.SetIndex > 0)
             {
                 //The body is inactive. Wake it up.
-                activator.ActivateBody(handle);
+                awakener.AwakenBody(handle);
             }
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];

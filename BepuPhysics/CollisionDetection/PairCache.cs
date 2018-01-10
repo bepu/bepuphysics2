@@ -279,11 +279,11 @@ namespace BepuPhysics.CollisionDetection
                 workerCaches[i].Dispose();
             }
             workerCaches.Count = 0;
-            for (int i = 1; i < InactiveSets.Length; ++i)
+            for (int i = 1; i < SleepingSets.Length; ++i)
             {
-                if (InactiveSets[i].Allocated)
+                if (SleepingSets[i].Allocated)
                 {
-                    InactiveSets[i].Dispose(pool);
+                    SleepingSets[i].Dispose(pool);
                 }
             }
 #if DEBUG
@@ -314,13 +314,13 @@ namespace BepuPhysics.CollisionDetection
             }
 #endif
             Mapping.Dispose(pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
-            for (int i = 1; i < InactiveSets.Length; ++i)
+            for (int i = 1; i < SleepingSets.Length; ++i)
             {
-                ref var set = ref InactiveSets[i];
+                ref var set = ref SleepingSets[i];
                 if (set.Allocated)
                     set.Dispose(pool);
             }
-            pool.SpecializeFor<InactiveSet>().Return(ref InactiveSets);
+            pool.SpecializeFor<SleepingSet>().Return(ref SleepingSets);
             //The constraint handle to pair is partially slaved to the constraint handle capacity. 
             //It gets ensured every frame, but the gap between construction and the first frame could leave it uninitialized.
             if (ConstraintHandleToPair.Allocated)

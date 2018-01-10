@@ -166,7 +166,7 @@ namespace BepuPhysics.CollisionDetection
                     if (locationA.SetIndex != locationB.SetIndex)
                     {
                         ref var overlapWorker = ref overlapWorkers[workerIndex];
-                        overlapWorker.PendingSetActivations.Add(locationA.SetIndex > 0 ? locationA.SetIndex : locationB.SetIndex, overlapWorker.Batcher.pool.SpecializeFor<int>());
+                        overlapWorker.PendingSetAwakenings.Add(locationA.SetIndex > 0 ? locationA.SetIndex : locationB.SetIndex, overlapWorker.Batcher.pool.SpecializeFor<int>());
                     }
                 }
             }

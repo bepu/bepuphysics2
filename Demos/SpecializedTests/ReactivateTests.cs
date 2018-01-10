@@ -85,7 +85,7 @@ namespace Demos
                 {
                     bodyIndicestoDeactivate.AllocateUnsafely() = i;
                 }
-                Simulation.Deactivator.Deactivate(ref bodyIndicestoDeactivate);
+                Simulation.Sleeper.Sleep(ref bodyIndicestoDeactivate);
 
                 bodyIndicestoDeactivate.Dispose(BufferPool.SpecializeFor<int>());
 
@@ -98,7 +98,7 @@ namespace Demos
                     }
                 }
 
-                Simulation.Activator.ActivateSets(ref setsToActivate);
+                Simulation.Awakener.AwakenSets(ref setsToActivate);
                 setsToActivate.Dispose(BufferPool.SpecializeFor<int>());
 
             }

@@ -43,7 +43,7 @@ namespace BepuPhysics
         Shapes shapes;
         Bodies bodies;
         BroadPhase broadPhase;
-        internal IslandActivator activator;
+        internal IslandAwakener awakener;
 
         public unsafe Statics(BufferPool pool, Shapes shapes, Bodies bodies, BroadPhase broadPhase, int initialCapacity = 4096)
         {
@@ -113,25 +113,25 @@ namespace BepuPhysics
             }
         }
 
-        void ActivateBodiesInBounds(ref BoundingBox bounds)
+        void AwakenBodiesInBounds(ref BoundingBox bounds)
         {
             var collector = new InactiveBodyCollector(broadPhase, pool);
             broadPhase.StaticTree.GetOverlaps(ref bounds, ref collector);
             for (int i = 0; i < collector.InactiveBodyHandles.Count; ++i)
             {
-                activator.ActivateBody(collector.InactiveBodyHandles[i]);
+                awakener.AwakenBody(collector.InactiveBodyHandles[i]);
             }
             collector.Dispose();
         }
 
-        unsafe void ActivateBodiesInExistingBounds(ref Collidable collidable)
+        unsafe void AwakenBodiesInExistingBounds(ref Collidable collidable)
         {
             Debug.Assert(collidable.BroadPhaseIndex >= 0 && collidable.BroadPhaseIndex < broadPhase.StaticTree.LeafCount);
             broadPhase.GetStaticBoundsPointers(collidable.BroadPhaseIndex, out var minPointer, out var maxPointer);
             BoundingBox oldBounds;
             oldBounds.Min = *minPointer;
             oldBounds.Max = *maxPointer;
-            ActivateBodiesInBounds(ref oldBounds);
+            AwakenBodiesInBounds(ref oldBounds);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -139,7 +139,7 @@ namespace BepuPhysics
         {
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
             shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, ref pose, out bounds.Min, out bounds.Max);
-            ActivateBodiesInBounds(ref bounds);
+            AwakenBodiesInBounds(ref bounds);
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace BepuPhysics
 
             ref var collidable = ref Collidables[index];
             Debug.Assert(collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
-            ActivateBodiesInExistingBounds(ref collidable);
+            AwakenBodiesInExistingBounds(ref collidable);
 
             var removedBroadPhaseIndex = collidable.BroadPhaseIndex;
             if (broadPhase.RemoveStaticAt(removedBroadPhaseIndex, out var movedLeaf))
@@ -263,7 +263,7 @@ namespace BepuPhysics
             var index = HandleToIndex[handle];
             Debug.Assert(description.Collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
             //Wake all bodies up in the old bounds AND the new bounds. Inactive bodies that may have been resting on the old static need to be aware of the new environment.
-            ActivateBodiesInExistingBounds(ref Collidables[index]);
+            AwakenBodiesInExistingBounds(ref Collidables[index]);
             ApplyDescriptionByIndex(index, handle, ref description);
 
         }
