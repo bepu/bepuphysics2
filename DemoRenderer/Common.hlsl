@@ -24,15 +24,23 @@ float3 AccumulateLight(float3 normal)
 		SunColor * (saturate(sunDot) + 0.2 * saturate(-sunDot));
 }
 
-float GetLocalGridPlaneCoverage(float x, float gridSpacing, float inverseGridSpacing,
-	float outerLineWidth, float innerLineWidth)
+float EvaluateIntegral(float x, float normalizedLineWidth)
 {
-	//Note that the grid spacing is offset by half a cell. This stops larger grid lines from completely overriding the color of smaller objects in the distance.
-	//x += gridSpacing * 0.5f;
-	float nearestPlane = gridSpacing * round(x * inverseGridSpacing);
-	float d = 2 * abs(x - nearestPlane);
-
-	return 1 - saturate((d - innerLineWidth) / (outerLineWidth - innerLineWidth));
+	float halfWidth = normalizedLineWidth * 0.5;
+	float shiftedX = x - halfWidth;
+	//This is a piecewise function. It increases linearly every time it reaches a grid plane's covered interval, and remains flat everywhere else.
+	return normalizedLineWidth * (floor(x + 1 + halfWidth) + saturate((shiftedX - floor(shiftedX) - (1 - normalizedLineWidth)) / normalizedLineWidth));
+}
+float GetLocalGridPlaneCoverage(float2 interval, float inverseGridSpacing, float lineWidth)
+{
+	//Work in grid units.
+	float start = interval.x * inverseGridSpacing;
+	float end = interval.y * inverseGridSpacing;
+	float normalizedLineWidth = lineWidth * inverseGridSpacing;
+	//Note that we assume a simple uniform box region aligned with the local plane normal. That's not actually correct, but it's a decent approximation.
+	//In order to get the coverage fraction, we analytically integrate how much of the interval is covered and divide that by the whole interval width.
+	float normalizedCoveredSpan = EvaluateIntegral(end, normalizedLineWidth) - EvaluateIntegral(start, normalizedLineWidth);
+	return normalizedCoveredSpan / max(1e-7, end - start);
 }
 
 float GetNormalFade(float axisLocalNormal)
@@ -44,21 +52,21 @@ float GetNormalFade(float axisLocalNormal)
 
 float GetLocalGridCoverage(
 	float3 localPosition, float3 localNormal, float distance,
-	float gridSpacing, float inverseGridSpacing,
-	float outerLineWidth, float innerLineWidth,
+	float inverseGridSpacing,
+	float lineWidth,
 	float fadeOutStart, float fadeOutEnd)
 {
 	float distanceFade = (1 - saturate((distance - fadeOutStart) / (fadeOutEnd - fadeOutStart)));
-	float x = GetLocalGridPlaneCoverage(localPosition.x, gridSpacing, inverseGridSpacing, outerLineWidth, innerLineWidth) * (distanceFade * GetNormalFade(localNormal.x));
-	float y = GetLocalGridPlaneCoverage(localPosition.y, gridSpacing, inverseGridSpacing, outerLineWidth, innerLineWidth) * (distanceFade * GetNormalFade(localNormal.y));
-	float z = GetLocalGridPlaneCoverage(localPosition.z, gridSpacing, inverseGridSpacing, outerLineWidth, innerLineWidth) * (distanceFade * GetNormalFade(localNormal.z));
+	float x = GetLocalGridPlaneCoverage(localPosition.x, inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.x));
+	float y = GetLocalGridPlaneCoverage(localPosition.y, inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.y));
+	float z = GetLocalGridPlaneCoverage(localPosition.z, inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.z));
 
 	float contribution = x + y * (1 - x);
 	contribution = contribution + z * (1 - contribution);
 	return contribution;
 }
 
-float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float shapeSize, float distance)
+float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float3 dpdx, float3 dpdy, float shapeSize, float distance)
 {
 	const float smallGridSpacing = 1.0;
 	const float mediumGridSpacing = 5.0;
@@ -93,16 +101,16 @@ float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float
 
 	float sizeFadeStart = shapeSize * 0.125;
 	float sizeFadeEnd = shapeSize * 0.25;
-	float sizeFade = 1 - saturate((largeLineWidth - sizeFadeStart) / (sizeFadeEnd - sizeFadeStart));
+	float sizeFade = 1;// 1 - saturate((largeLineWidth - sizeFadeStart) / (sizeFadeEnd - sizeFadeStart));
 
-	float smallCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, smallGridSpacing, 1.0 / smallGridSpacing,
-		smallLineWidth, smallLineWidth * innerLineWidthScale,
+	float smallCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / smallGridSpacing,
+		smallLineWidth,
 		smallGridFadeOutStart, smallGridFadeOutEnd) * sizeFade;
-	float mediumCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, mediumGridSpacing, 1.0 / mediumGridSpacing,
-		mediumLineWidth, mediumLineWidth* innerLineWidthScale,
+	float mediumCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / mediumGridSpacing,
+		mediumLineWidth,
 		mediumGridFadeOutStart, mediumGridFadeOutEnd)* sizeFade;
-	float largeCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, largeGridSpacing, 1.0 / largeGridSpacing,
-		largeLineWidth, largeLineWidth* innerLineWidthScale,
+	float largeCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / largeGridSpacing,
+		largeLineWidth,
 		largeGridFadeOutStart, largeGridFadeOutEnd)* sizeFade;
 	float4 smallContribution = float4(smallCoverage * smallLineColor, smallCoverage);
 	float4 mediumContribution = float4(mediumCoverage * mediumLineColor, mediumCoverage);
@@ -132,12 +140,30 @@ float3 TransformByConjugate(float3 v, float4 rotation)
 		v.x * (xz2 - wy2) + v.y * (yz2 + wx2) + v.z * (1.0 - xx2 - yy2));
 }
 
-float3 ShadeSurface(float3 surfacePosition, float3 surfaceNormal, float3 surfaceColor,
+void GetScreenspaceDerivatives(float3 surfacePosition, float3 surfaceNormal, float3 currentRayDirection, float2 pixelSizeAtUnitPlane, out float3 dpdx, out float3 dpdy)
+{
+	float2 unitZDirection = currentRayDirection.xy / currentRayDirection.z;
+	float3 adjacentXDirection = float3(unitZDirection + float2(pixelSizeAtUnitPlane.x, 0), 1);
+	float3 adjacentYDirection = float3(unitZDirection + float2(0, pixelSizeAtUnitPlane.y), 1);
+	float velocityX = dot(surfaceNormal, adjacentXDirection);
+	float velocityY = dot(surfaceNormal, adjacentYDirection);
+	float distance = dot(surfaceNormal, surfacePosition);
+	float tX = distance / velocityX;
+	float tY = distance / velocityY;
+	dpdx = adjacentXDirection * tX - surfacePosition;
+	dpdy = adjacentYDirection * tY - surfacePosition;
+
+
+}
+
+float3 ShadeSurface(float3 surfacePosition, float3 surfaceNormal, float3 surfaceColor, float3 dpdx, float3 dpdy,
 	float3 instancePosition, float4 instanceOrientation, float shapeSize, float zDistance)
 {
 	float3 shapeLocalPosition = TransformByConjugate(surfacePosition - instancePosition, instanceOrientation);
 	float3 shapeLocalNormal = TransformByConjugate(surfaceNormal, instanceOrientation);
-	float4 grid = GetLocalGridContributions(shapeLocalPosition, shapeLocalNormal, shapeSize, zDistance);
+	float3 shapeLocalDpdx = TransformByConjugate(dpdx, instanceOrientation);
+	float3 shapeLocalDpdy = TransformByConjugate(dpdy, instanceOrientation);
+	float4 grid = GetLocalGridContributions(shapeLocalPosition, shapeLocalNormal, shapeLocalDpdx, shapeLocalDpdy, shapeSize, zDistance);
 	float3 compositedColor = grid.xyz + surfaceColor * (1 - grid.w);
 	return compositedColor * AccumulateLight(surfaceNormal);
 }

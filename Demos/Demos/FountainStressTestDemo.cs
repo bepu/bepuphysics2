@@ -217,7 +217,7 @@ namespace Demos
                 description.LocalInertia.InverseInertiaTensor.M33 = inverseInertia;
 
 
-                description.Velocity.Linear = new Vector3(-20 + 40 * (float)random.NextDouble(), 25, -20 + 40 * (float)random.NextDouble());
+                description.Velocity.Linear = new Vector3(-20 + 40 * (float)random.NextDouble(), 75, -20 + 40 * (float)random.NextDouble());
 
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(ref description), BufferPool.SpecializeFor<int>());
 

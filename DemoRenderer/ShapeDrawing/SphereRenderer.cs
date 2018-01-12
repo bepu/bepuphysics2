@@ -38,7 +38,7 @@ namespace DemoRenderer.ShapeDrawing
             public Vector3 CameraBackward;
         }
         ConstantsBuffer<VertexConstants> vertexConstants;
-        [StructLayout(LayoutKind.Explicit, Size = 48)]
+        [StructLayout(LayoutKind.Explicit, Size = 64)]
         struct PixelConstants
         {
             [FieldOffset(0)]
@@ -51,6 +51,9 @@ namespace DemoRenderer.ShapeDrawing
             public float FarClip;
             [FieldOffset(32)]
             public Vector3 CameraBackward;
+            [FieldOffset(48)]
+            public Vector2 PixelSizeAtUnitPlane;
+
         }
         ConstantsBuffer<PixelConstants> pixelConstants;
 
@@ -85,13 +88,16 @@ namespace DemoRenderer.ShapeDrawing
                 CameraBackward = camera.Backward,
             };
             vertexConstants.Update(context, ref vertexConstantsData);
+            var viewportHeight = 2 * (float)Math.Tan(camera.FieldOfView / 2);
+            var viewportWidth = viewportHeight * camera.AspectRatio;
             var pixelConstantsData = new PixelConstants
             {
                 CameraRight = camera.Right,
                 NearClip = camera.NearClip,
                 CameraUp = camera.Up,
                 FarClip = camera.FarClip,
-                CameraBackward = camera.Backward
+                CameraBackward = camera.Backward,
+                PixelSizeAtUnitPlane = new Vector2(viewportWidth / screenResolution.X, viewportHeight / screenResolution.Y)
             };
             pixelConstants.Update(context, ref pixelConstantsData);
 

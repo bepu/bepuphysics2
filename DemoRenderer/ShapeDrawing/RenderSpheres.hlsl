@@ -76,6 +76,8 @@ cbuffer PixelConstants : register(b1)
 	float3 CameraUpPS;
 	float Far;
 	float3 CameraBackwardPS;
+	float Padding;
+	float2 PixelSizeAtUnitPlane;
 };
 
 
@@ -145,9 +147,10 @@ PSOutput PSMain(PSInput input)
 		float3 baseColor = UnpackR11G11B10_UNorm(input.Sphere.PackedColor);
 		float z = -dot(CameraBackwardPS, hitLocation);
 		float4 orientation = UnpackOrientation(input.Sphere.PackedOrientation);
-
+		float3 dpdx, dpdy;
+		GetScreenspaceDerivatives(hitLocation, hitNormal, input.ToAABB, PixelSizeAtUnitPlane, dpdx, dpdy);
 		float3 color = ShadeSurface(
-			hitLocation, hitNormal, UnpackR11G11B10_UNorm(input.Sphere.PackedColor),
+			hitLocation, hitNormal, UnpackR11G11B10_UNorm(input.Sphere.PackedColor), dpdx, dpdy,
 			input.Sphere.Position, orientation, input.Sphere.Radius * 2, z);
 		output.Color = color;// baseColor * 0.9 + 0.1 * normalize(abs(TransformByConjugate(hitNormal, UnpackOrientation(input.Sphere.PackedOrientation))));
 		output.Depth = GetProjectedDepth(z, Near, Far);

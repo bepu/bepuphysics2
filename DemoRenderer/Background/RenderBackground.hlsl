@@ -34,6 +34,6 @@ float3 PSMain(PSInput input) : SV_Target0
 	sunContribution = sunContribution * sunContribution;
 	sunContribution = sunContribution * sunContribution;
 	return BackgroundBase +
-		saturate(direction.y) * SkyColor +
+		sqrt(saturate(direction.y)) * SkyColor +
 		SunColor * sunContribution * (sunDot >= 0 ? 0.5 : 0.2);
 }
