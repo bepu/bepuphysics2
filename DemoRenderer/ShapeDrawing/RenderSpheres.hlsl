@@ -148,11 +148,11 @@ PSOutput PSMain(PSInput input)
 		float z = -dot(CameraBackwardPS, hitLocation);
 		float4 orientation = UnpackOrientation(input.Sphere.PackedOrientation);
 		float3 dpdx, dpdy;
-		GetScreenspaceDerivatives(hitLocation, hitNormal, input.ToAABB, PixelSizeAtUnitPlane, dpdx, dpdy);
+		GetScreenspaceDerivatives(hitLocation, hitNormal, input.ToAABB, CameraRightPS, CameraUpPS, CameraBackwardPS, PixelSizeAtUnitPlane, dpdx, dpdy);
 		float3 color = ShadeSurface(
 			hitLocation, hitNormal, UnpackR11G11B10_UNorm(input.Sphere.PackedColor), dpdx, dpdy,
 			input.Sphere.Position, orientation, input.Sphere.Radius * 2, z);
-		output.Color = color;// baseColor * 0.9 + 0.1 * normalize(abs(TransformByConjugate(hitNormal, UnpackOrientation(input.Sphere.PackedOrientation))));
+		output.Color = color;
 		output.Depth = GetProjectedDepth(z, Near, Far);
 	}
 	else

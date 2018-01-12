@@ -29,7 +29,7 @@ float EvaluateIntegral(float x, float normalizedLineWidth)
 	float halfWidth = normalizedLineWidth * 0.5;
 	float shiftedX = x - halfWidth;
 	//This is a piecewise function. It increases linearly every time it reaches a grid plane's covered interval, and remains flat everywhere else.
-	return normalizedLineWidth * (floor(x + 1 + halfWidth) + saturate((shiftedX - floor(shiftedX) - (1 - normalizedLineWidth)) / normalizedLineWidth));
+	return normalizedLineWidth * (floor(shiftedX + 1) + saturate((shiftedX - floor(shiftedX) - (1 - normalizedLineWidth)) / normalizedLineWidth));
 }
 float GetLocalGridPlaneCoverage(float2 interval, float inverseGridSpacing, float lineWidth)
 {
@@ -39,8 +39,10 @@ float GetLocalGridPlaneCoverage(float2 interval, float inverseGridSpacing, float
 	float normalizedLineWidth = lineWidth * inverseGridSpacing;
 	//Note that we assume a simple uniform box region aligned with the local plane normal. That's not actually correct, but it's a decent approximation.
 	//In order to get the coverage fraction, we analytically integrate how much of the interval is covered and divide that by the whole interval width.
-	float normalizedCoveredSpan = EvaluateIntegral(end, normalizedLineWidth) - EvaluateIntegral(start, normalizedLineWidth);
-	return normalizedCoveredSpan / max(1e-7, end - start);
+	float s = min(start, end);
+	float e = max(start, end);
+	float normalizedCoveredSpan = EvaluateIntegral(e, normalizedLineWidth) - EvaluateIntegral(s, normalizedLineWidth);
+	return normalizedCoveredSpan / (e - s);
 }
 
 float GetNormalFade(float axisLocalNormal)
@@ -54,12 +56,13 @@ float GetLocalGridCoverage(
 	float3 localPosition, float3 localNormal, float distance,
 	float inverseGridSpacing,
 	float lineWidth,
+	float3 halfSampleSpan,
 	float fadeOutStart, float fadeOutEnd)
 {
 	float distanceFade = (1 - saturate((distance - fadeOutStart) / (fadeOutEnd - fadeOutStart)));
-	float x = GetLocalGridPlaneCoverage(localPosition.x, inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.x));
-	float y = GetLocalGridPlaneCoverage(localPosition.y, inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.y));
-	float z = GetLocalGridPlaneCoverage(localPosition.z, inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.z));
+	float x = GetLocalGridPlaneCoverage(float2(localPosition.x - halfSampleSpan.x, localPosition.x + halfSampleSpan.x), inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.x));
+	float y = GetLocalGridPlaneCoverage(float2(localPosition.y - halfSampleSpan.y, localPosition.y + halfSampleSpan.y), inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.y));
+	float z = GetLocalGridPlaneCoverage(float2(localPosition.z - halfSampleSpan.z, localPosition.z + halfSampleSpan.z), inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.z));
 
 	float contribution = x + y * (1 - x);
 	contribution = contribution + z * (1 - contribution);
@@ -81,19 +84,10 @@ float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float
 	const float largeGridFadeOutStart = 800;
 	const float largeGridFadeOutEnd = 1500;
 
-	float smallOuterLineWidth = 0.01;
-	float smallInnerLineWidth = smallOuterLineWidth * 0.35;
+	const float smallLineWidth = 0.01;
+	const float mediumLineWidth = 0.05;
+	const float largeLineWidth = .1;
 
-	float mediumOuterLineWidth = 0.05;
-	float mediumInnerLineWidth = mediumOuterLineWidth * 0.35;
-
-	float largeOuterLineWidth = .1;
-	float largeInnerLineWidth = largeOuterLineWidth * 0.35;
-
-	float smallLineWidth = distance * 0.0025;
-	float mediumLineWidth = distance * 0.0035;
-	float largeLineWidth = distance * 0.0045;
-	float innerLineWidthScale = 0.35;
 
 	const float3 smallLineColor = 0.15;
 	const float3 mediumLineColor = 0.1;
@@ -102,17 +96,18 @@ float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float
 	float sizeFadeStart = shapeSize * 0.125;
 	float sizeFadeEnd = shapeSize * 0.25;
 	float sizeFade = 1;// 1 - saturate((largeLineWidth - sizeFadeStart) / (sizeFadeEnd - sizeFadeStart));
-
+	float3 halfSampleSpan = 0.5 * (dpdx + dpdy);
 	float smallCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / smallGridSpacing,
-		smallLineWidth,
+		smallLineWidth, halfSampleSpan,
 		smallGridFadeOutStart, smallGridFadeOutEnd) * sizeFade;
 	float mediumCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / mediumGridSpacing,
-		mediumLineWidth,
+		mediumLineWidth, halfSampleSpan,
 		mediumGridFadeOutStart, mediumGridFadeOutEnd)* sizeFade;
 	float largeCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / largeGridSpacing,
-		largeLineWidth,
+		largeLineWidth, halfSampleSpan,
 		largeGridFadeOutStart, largeGridFadeOutEnd)* sizeFade;
 	float4 smallContribution = float4(smallCoverage * smallLineColor, smallCoverage);
+	return smallContribution;
 	float4 mediumContribution = float4(mediumCoverage * mediumLineColor, mediumCoverage);
 	float4 largeContribution = float4(largeCoverage * largeLineColor, largeCoverage);
 	float4 contribution = mediumContribution + smallContribution * (1 - mediumContribution.w);
@@ -140,16 +135,25 @@ float3 TransformByConjugate(float3 v, float4 rotation)
 		v.x * (xz2 - wy2) + v.y * (yz2 + wx2) + v.z * (1.0 - xx2 - yy2));
 }
 
-void GetScreenspaceDerivatives(float3 surfacePosition, float3 surfaceNormal, float3 currentRayDirection, float2 pixelSizeAtUnitPlane, out float3 dpdx, out float3 dpdy)
+void GetScreenspaceDerivatives(float3 surfacePosition, float3 surfaceNormal, float3 currentRayDirection, float3 right, float3 up, float3 backward,
+	float2 pixelSizeAtUnitPlane, out float3 dpdx, out float3 dpdy)
 {
-	float2 unitZDirection = currentRayDirection.xy / currentRayDirection.z;
-	float3 adjacentXDirection = float3(unitZDirection + float2(pixelSizeAtUnitPlane.x, 0), 1);
-	float3 adjacentYDirection = float3(unitZDirection + float2(0, pixelSizeAtUnitPlane.y), 1);
+	//Pull the ray direction into view local space.
+	float3 viewSpaceDirection = float3(
+		dot(currentRayDirection, right),
+		dot(currentRayDirection, up),
+		dot(currentRayDirection, -backward));
+	//Now build two adjacent pixel directions and bring them into world space, since the surface normal is in world space.
+	float2 unitZDirection = viewSpaceDirection.xy / viewSpaceDirection.z;
+	float2 adjacentX = unitZDirection + float2(pixelSizeAtUnitPlane.x, 0);
+	float3 adjacentXDirection = adjacentX.x * right + adjacentX.y * up - backward;
+	float2 adjacentY = unitZDirection + float2(0, pixelSizeAtUnitPlane.y);
+	float3 adjacentYDirection = adjacentY.x * right + adjacentY.y * up - backward;
 	float velocityX = dot(surfaceNormal, adjacentXDirection);
 	float velocityY = dot(surfaceNormal, adjacentYDirection);
 	float distance = dot(surfaceNormal, surfacePosition);
-	float tX = distance / velocityX;
-	float tY = distance / velocityY;
+	float tX = min(1e7, distance / velocityX);
+	float tY = min(1e7, distance / velocityY);
 	dpdx = adjacentXDirection * tX - surfacePosition;
 	dpdy = adjacentYDirection * tY - surfacePosition;
 
