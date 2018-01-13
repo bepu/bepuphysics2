@@ -29,6 +29,8 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide Normal;
         public TangentFrictionOneBody.Projection Tangent;
         public PenetrationLimit1OneBody.Projection Penetration;
+        public Vector<float> PremultipliedTwistFrictionCoefficient;
+        public TwistFrictionProjection Twist;
     }
 
     public struct Contact1OneBodyFunctions :
@@ -44,6 +46,10 @@ namespace BepuPhysics.Constraints.Contact
             Helpers.BuildOrthnormalBasis(ref prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.Prestep(ref x, ref z, ref prestep.OffsetA0, ref projection.InertiaA, out projection.Tangent);
             PenetrationLimit1OneBody.Prestep(ref projection.InertiaA, ref prestep.Normal, ref prestep, dt, inverseDt, out projection.Penetration);
+            //Single contact manifolds have no true surface area, so approximate twist friction lever arm using the penetration depth. 
+            projection.PremultipliedTwistFrictionCoefficient = Vector.Max(Vector<float>.Zero, prestep.FrictionCoefficient * prestep.PenetrationDepth0);
+            TwistFrictionOneBody.Prestep(ref projection.InertiaA, ref prestep.Normal, out projection.Twist);
+
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -54,6 +60,7 @@ namespace BepuPhysics.Constraints.Contact
             PenetrationLimit1OneBody.WarmStart(ref projection.Penetration, ref projection.InertiaA,
                 ref projection.Normal,
                 ref accumulatedImpulses.Penetration0, ref wsvA);
+            TwistFrictionOneBody.WarmStart(ref projection.Normal, ref projection.InertiaA, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -67,6 +74,8 @@ namespace BepuPhysics.Constraints.Contact
             //It's a pretty minor effect either way.
             PenetrationLimit1OneBody.Solve(ref projection.Penetration, ref projection.InertiaA, ref projection.Normal,
                 ref accumulatedImpulses.Penetration0, ref wsvA);
+            var maximumTwistImpulse = projection.PremultipliedTwistFrictionCoefficient * accumulatedImpulses.Penetration0;
+            TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
     }
@@ -74,7 +83,7 @@ namespace BepuPhysics.Constraints.Contact
     /// <summary>
     /// Handles the solve iterations of a bunch of 4-contact convex manifold constraints.
     /// </summary>
-    public class Contact1OneBodyTypeBatch :
+    public class Contact1OneBodyTypeProcessor :
         OneBodyTypeProcessor<Contact1OneBodyPrestepData, ContactManifold1OneBodyProjection, Contact1AccumulatedImpulses, Contact1OneBodyFunctions>
     {
         public const int BatchTypeId = 0;

@@ -125,10 +125,10 @@ namespace BepuPhysics.Constraints.Contact
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => Contact4TypeBatch.BatchTypeId;
+            get => Contact4TypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact4TypeBatch);
+        public Type BatchType => typeof(Contact4TypeProcessor);
     }
 
 }

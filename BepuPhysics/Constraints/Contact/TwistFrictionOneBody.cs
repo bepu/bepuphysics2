@@ -67,8 +67,8 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref Vector3Wide angularJacobianA, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref TwistFrictionProjection projection, 
-            ref Vector<float> maximumImpulse, ref Vector<float> accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public static void Solve(ref Vector3Wide angularJacobianA, ref BodyInertias inertiaA, ref TwistFrictionProjection projection, 
+            ref Vector<float> maximumImpulse, ref Vector<float> accumulatedImpulse, ref BodyVelocities wsvA)
         {
             ComputeCorrectiveImpulse(ref angularJacobianA, ref projection, ref wsvA, ref maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
             ApplyImpulse(ref angularJacobianA, ref inertiaA, ref correctiveCSI, ref wsvA);

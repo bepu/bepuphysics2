@@ -32,13 +32,13 @@ namespace Demos
 
             var shape = new Sphere(0.5f);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 16;
-            const int height = 128;
-            const int length = 16;
-            var latticeSpacing = 5.1f;
+            const int width = 32;
+            const int height = 32;
+            const int length = 32;
+            var latticeSpacing = 1.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
-                new RegularGridBuilder(new Vector3(latticeSpacing, 1.5f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
+                new RegularGridBuilder(new Vector3(latticeSpacing, 1.1f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
@@ -84,76 +84,7 @@ namespace Demos
         int frameIndex;
         public override void Update(Input input, float dt)
         {
-            Console.WriteLine($"Preframe {frameIndex++}");
-            if (input.WasPushed(OpenTK.Input.Key.P))
-            {
-                for (int iterationIndex = 0; iterationIndex < 100; ++iterationIndex)
-                {
-                    QuickList<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), Simulation.Bodies.ActiveSet.Count, out var bodyIndicestoDeactivate);
-                    for (int i = 0; i < Simulation.Bodies.ActiveSet.Count; ++i)
-                    {
-                        bodyIndicestoDeactivate.AllocateUnsafely() = i;
-                    }
-                    Simulation.Sleeper.Sleep(ref bodyIndicestoDeactivate, ThreadDispatcher);
-
-                    bodyIndicestoDeactivate.Dispose(BufferPool.SpecializeFor<int>());
-
-                    QuickList<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), Simulation.Bodies.Sets.Length, out var setsToActivate);
-                    for (int i = 1; i < Simulation.Bodies.Sets.Length; ++i)
-                    {
-                        if (Simulation.Bodies.Sets[i].Allocated)
-                        {
-                            setsToActivate.AllocateUnsafely() = i;
-                        }
-                    }
-
-                    Simulation.Awakener.AwakenSets(ref setsToActivate, ThreadDispatcher);
-                    setsToActivate.Dispose(BufferPool.SpecializeFor<int>());
-
-                }
-            }
-
-            //if (input.WasPushed(OpenTK.Input.Key.P))
-            //{
-            //    QuickList<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), Simulation.Bodies.Sets.Length, out var setsToActivate);
-            //    for (int i = 1; i < Simulation.Bodies.Sets.Length; ++i)
-            //    {
-            //        if (Simulation.Bodies.Sets[i].Allocated)
-            //        {
-            //            setsToActivate.AllocateUnsafely() = i;
-            //        }
-            //    }
-
-            //    var start = Stopwatch.GetTimestamp();
-            //    Simulation.Activator.ActivateSets(ref setsToActivate, ThreadDispatcher);
-            //    var end = Stopwatch.GetTimestamp();
-            //    setsToActivate.Dispose(BufferPool.SpecializeFor<int>());
-            //    Console.WriteLine($"{setsToActivate.Count} activations, time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
-            //}
-            //if (input.WasPushed(OpenTK.Input.Key.O))
-            //{
-            //    QuickList<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), Simulation.Bodies.ActiveSet.Count, out var bodyIndicestoDeactivate);
-            //    for (int i = 0; i < Simulation.Bodies.ActiveSet.Count; ++i)
-            //    {
-            //        bodyIndicestoDeactivate.AllocateUnsafely() = i;
-            //    }
-            //    var start = Stopwatch.GetTimestamp();
-            //    Simulation.Deactivator.Deactivate(ref bodyIndicestoDeactivate, ThreadDispatcher);
-            //    var end = Stopwatch.GetTimestamp();
-            //bodyIndicestoDeactivate.Dispose(BufferPool.SpecializeFor<int>());
-            //    Console.WriteLine($"{bodyIndicestoDeactivate.Count} deactivations, time (ms): {(end - start) * 1e3 / Stopwatch.Frequency}");
-            //}
-
-            //for (int i = 0; i < Simulation.Bodies.BodyCount; ++i)
-            //{
-            //    Simulation.Bodies.ValidateExistingHandle(Simulation.Bodies.IndexToHandle[i]);
-            //}
-            //if (input.WasPushed(OpenTK.Input.Key.P))
-            //{
-            //    Console.WriteLine("stoppls");
-            //}
             base.Update(input, dt);
-
         }
 
     }

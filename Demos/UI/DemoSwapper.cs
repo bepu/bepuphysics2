@@ -64,6 +64,8 @@ namespace Demos.UI
                 text.Clear().Append("Swap demo to: ");
                 if (TargetDemoIndex >= 0)
                     text.Append(TargetDemoIndex);
+                else
+                    text.Append("_");
                 textBatcher.Write(text, position, textHeight, textColor, font);
 
                 var lineSpacing = textHeight * 1.1f;

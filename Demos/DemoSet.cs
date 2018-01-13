@@ -36,9 +36,8 @@ namespace Demos
 
         public DemoSet()
         {
-            //Could use a text template or something here, but, on the other hand, ehhhhhhhhhhhhhhhhhhhhhhhhh
-            AddOption<FountainStressTestDemo>();
             AddOption<SimpleDemo>();
+            AddOption<FountainStressTestDemo>();
         }
 
         public int Count { get { return options.Count; } }

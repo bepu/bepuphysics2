@@ -83,11 +83,11 @@ namespace BepuPhysics.Constraints.Contact
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return Contact1TypeBatch.BatchTypeId;
+                return Contact1TypeProcessor.BatchTypeId;
             }
         }
 
-        public Type BatchType => typeof(Contact1TypeBatch);
+        public Type BatchType => typeof(Contact1TypeProcessor);
     }
 
 }

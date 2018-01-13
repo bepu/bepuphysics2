@@ -33,7 +33,7 @@ namespace Demos
             pairMaterial.FrictionCoefficient = 1;
             pairMaterial.MaximumRecoveryVelocity = float.MaxValue;
             pairMaterial.SpringSettings.NaturalFrequency = MathHelper.Pi * 30;
-            pairMaterial.SpringSettings.DampingRatio = 100f;// 100000;
+            pairMaterial.SpringSettings.DampingRatio = 100f;
             return true;
         }
 
