@@ -39,10 +39,8 @@ float GetLocalGridPlaneCoverage(float2 interval, float inverseGridSpacing, float
 	float normalizedLineWidth = lineWidth * inverseGridSpacing;
 	//Note that we assume a simple uniform box region aligned with the local plane normal. That's not actually correct, but it's a decent approximation.
 	//In order to get the coverage fraction, we analytically integrate how much of the interval is covered and divide that by the whole interval width.
-	float s = min(start, end);
-	float e = max(start, end);
-	float normalizedCoveredSpan = EvaluateIntegral(e, normalizedLineWidth) - EvaluateIntegral(s, normalizedLineWidth);
-	return normalizedCoveredSpan / max(1e-5, e - s);
+	float normalizedCoveredSpan = EvaluateIntegral(end, normalizedLineWidth) - EvaluateIntegral(start, normalizedLineWidth);
+	return max(0, normalizedCoveredSpan) / max(1e-7, end - start);
 }
 
 float GetNormalFade(float axisLocalNormal)
@@ -83,9 +81,7 @@ float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float
 
 	//Create a local bounding box for the sample. We assume the screenspace derivatives dpdx and dpdy extend both positively and negatively from the central sample.
 	//Since they're centered on the central sample, the extent in either direction is half of the derivative.
-	float3 halfMinBounds = 0.25 * min(-abs(dpdx), -abs(dpdy));
-	float3 halfMaxBounds = 0.25 * max(abs(dpdx), abs(dpdy));
-	float3 halfSampleSpan = halfMaxBounds - halfMinBounds;
+	float3 halfSampleSpan = 0.5 * max(abs(dpdx), abs(dpdy));
 	float smallCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / smallGridSpacing,
 		smallLineWidth, halfSampleSpan);
 	float mediumCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / mediumGridSpacing,
