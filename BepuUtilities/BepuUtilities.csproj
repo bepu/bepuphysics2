@@ -1,6 +1,4 @@
-﻿<Project>
-  <!--Note workaround for macro evaluation issue.-->
-  <Import Sdk="Microsoft.NET.Sdk" Project="Sdk.props" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>BepuUtilities</AssemblyName>
     <RootNamespace>BepuUtilities</RootNamespace>
@@ -17,16 +15,10 @@
     <Configurations>Debug;Release;ReleaseStrip</Configurations>
     <LangVersion>7.2</LangVersion>
   </PropertyGroup>
-  <Import Sdk="Microsoft.NET.Sdk" Project="Sdk.targets" />
 
-  <PropertyGroup>
-    <PostBuildEvent Condition="'$(Configuration)'=='ReleaseStrip'">dotnet "$(SolutionDir)Dependencies\ilopt\ilopt.dll" "$(TargetPath)"</PostBuildEvent>
-  </PropertyGroup>
-
-  <!-- TODO: Why is this necessary? It refers to 1.6.1 rather than 2.0 without this, despite the target framework being set to 2.0 above. -->
-  <PropertyGroup>
-    <NetStandardImplicitPackageVersion>2.0</NetStandardImplicitPackageVersion>
-  </PropertyGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Condition="'$(Configuration)'=='ReleaseStrip'" Command="dotnet &quot;$(SolutionDir)Dependencies\ilopt\ilopt.dll&quot; &quot;$(TargetPath)&quot;" />
+  </Target>
     
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
