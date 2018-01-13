@@ -42,7 +42,7 @@ float GetLocalGridPlaneCoverage(float2 interval, float inverseGridSpacing, float
 	float s = min(start, end);
 	float e = max(start, end);
 	float normalizedCoveredSpan = EvaluateIntegral(e, normalizedLineWidth) - EvaluateIntegral(s, normalizedLineWidth);
-	return normalizedCoveredSpan / (e - s);
+	return normalizedCoveredSpan / max(1e-5, e - s);
 }
 
 float GetNormalFade(float axisLocalNormal)
@@ -56,13 +56,11 @@ float GetLocalGridCoverage(
 	float3 localPosition, float3 localNormal, float distance,
 	float inverseGridSpacing,
 	float lineWidth,
-	float3 halfSampleSpan,
-	float fadeOutStart, float fadeOutEnd)
+	float3 halfSampleSpan)
 {
-	float distanceFade = (1 - saturate((distance - fadeOutStart) / (fadeOutEnd - fadeOutStart)));
-	float x = GetLocalGridPlaneCoverage(float2(localPosition.x - halfSampleSpan.x, localPosition.x + halfSampleSpan.x), inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.x));
-	float y = GetLocalGridPlaneCoverage(float2(localPosition.y - halfSampleSpan.y, localPosition.y + halfSampleSpan.y), inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.y));
-	float z = GetLocalGridPlaneCoverage(float2(localPosition.z - halfSampleSpan.z, localPosition.z + halfSampleSpan.z), inverseGridSpacing, lineWidth) * (distanceFade * GetNormalFade(localNormal.z));
+	float x = GetLocalGridPlaneCoverage(float2(localPosition.x - halfSampleSpan.x, localPosition.x + halfSampleSpan.x), inverseGridSpacing, lineWidth) * GetNormalFade(localNormal.x);
+	float y = GetLocalGridPlaneCoverage(float2(localPosition.y - halfSampleSpan.y, localPosition.y + halfSampleSpan.y), inverseGridSpacing, lineWidth) * GetNormalFade(localNormal.y);
+	float z = GetLocalGridPlaneCoverage(float2(localPosition.z - halfSampleSpan.z, localPosition.z + halfSampleSpan.z), inverseGridSpacing, lineWidth) * GetNormalFade(localNormal.z);
 
 	float contribution = x + y * (1 - x);
 	contribution = contribution + z * (1 - contribution);
@@ -75,39 +73,26 @@ float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float
 	const float mediumGridSpacing = 5.0;
 	const float largeGridSpacing = 25.0;
 
-	const float smallGridFadeOutStart = 30;
-	const float smallGridFadeOutEnd = 50;
-
-	const float mediumGridFadeOutStart = 100;
-	const float mediumGridFadeOutEnd = 150;
-
-	const float largeGridFadeOutStart = 800;
-	const float largeGridFadeOutEnd = 1500;
-
 	const float smallLineWidth = 0.01;
-	const float mediumLineWidth = 0.05;
+	const float mediumLineWidth = 0.035;
 	const float largeLineWidth = .1;
-
 
 	const float3 smallLineColor = 0.15;
 	const float3 mediumLineColor = 0.1;
 	const float3 largeLineColor = 0.05;
 
-	float sizeFadeStart = shapeSize * 0.125;
-	float sizeFadeEnd = shapeSize * 0.25;
-	float sizeFade = 1;// 1 - saturate((largeLineWidth - sizeFadeStart) / (sizeFadeEnd - sizeFadeStart));
-	float3 halfSampleSpan = 0.5 * (dpdx + dpdy);
+	//Create a local bounding box for the sample. We assume the screenspace derivatives dpdx and dpdy extend both positively and negatively from the central sample.
+	//Since they're centered on the central sample, the extent in either direction is half of the derivative.
+	float3 halfMinBounds = 0.25 * min(-abs(dpdx), -abs(dpdy));
+	float3 halfMaxBounds = 0.25 * max(abs(dpdx), abs(dpdy));
+	float3 halfSampleSpan = halfMaxBounds - halfMinBounds;
 	float smallCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / smallGridSpacing,
-		smallLineWidth, halfSampleSpan,
-		smallGridFadeOutStart, smallGridFadeOutEnd) * sizeFade;
+		smallLineWidth, halfSampleSpan);
 	float mediumCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / mediumGridSpacing,
-		mediumLineWidth, halfSampleSpan,
-		mediumGridFadeOutStart, mediumGridFadeOutEnd)* sizeFade;
+		mediumLineWidth, halfSampleSpan);
 	float largeCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / largeGridSpacing,
-		largeLineWidth, halfSampleSpan,
-		largeGridFadeOutStart, largeGridFadeOutEnd)* sizeFade;
+		largeLineWidth, halfSampleSpan);
 	float4 smallContribution = float4(smallCoverage * smallLineColor, smallCoverage);
-	return smallContribution;
 	float4 mediumContribution = float4(mediumCoverage * mediumLineColor, mediumCoverage);
 	float4 largeContribution = float4(largeCoverage * largeLineColor, largeCoverage);
 	float4 contribution = mediumContribution + smallContribution * (1 - mediumContribution.w);
