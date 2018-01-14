@@ -13,6 +13,7 @@ namespace BepuPhysics
             b = temp;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void BuildOrthnormalBasis(ref Vector3Wide normal, out Vector3Wide t1, out Vector3Wide t2)
         {
             //This could probably be improved.

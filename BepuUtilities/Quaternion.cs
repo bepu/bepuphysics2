@@ -150,7 +150,7 @@ namespace BepuUtilities
             }
             else
             {
-                if(r.X.X < -r.Y.Y)
+                if (r.X.X < -r.Y.Y)
                 {
                     t = 1 - r.X.X - r.Y.Y + r.Z.Z;
                     q.X = r.Z.X + r.X.Z;
@@ -395,7 +395,7 @@ namespace BepuUtilities
         //If you need a high performance equality or hash, you'll need to implement something better than this.
         public override bool Equals(object obj)
         {
-            if(obj is Quaternion q)
+            if (obj is Quaternion q)
             {
                 return this == q;
             }
@@ -492,13 +492,12 @@ namespace BepuUtilities
         }
 
         /// <summary>
-        /// Transforms a vector using a quaternion. Specialized for x,0,0 vectors.
+        /// Transforms the unit X direction using a quaternion.
         /// </summary>
-        /// <param name="x">X component of the vector to transform.</param>
         /// <param name="rotation">Rotation to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformX(float x, ref Quaternion rotation, out Vector3 result)
+        public static void TransformUnitX(ref Quaternion rotation, out Vector3 result)
         {
             //This operation is an optimized-down version of v' = q * v * q^-1.
             //The expanded form would be to treat v as an 'axis only' quaternion
@@ -512,24 +511,19 @@ namespace BepuUtilities
             float zz2 = rotation.Z * z2;
             float wy2 = rotation.W * y2;
             float wz2 = rotation.W * z2;
-            //Defer the component setting since they're used in computation.
-            float transformedX = x * (1f - yy2 - zz2);
-            float transformedY = x * (xy2 + wz2);
-            float transformedZ = x * (xz2 - wy2);
-            result.X = transformedX;
-            result.Y = transformedY;
-            result.Z = transformedZ;
+            result.X = 1f - yy2 - zz2;
+            result.Y = xy2 + wz2;
+            result.Z = xz2 - wy2;
 
         }
 
         /// <summary>
-        /// Transforms a vector using a quaternion. Specialized for 0,y,0 vectors.
+        /// Transforms the unit Y vector using a quaternion.
         /// </summary>
-        /// <param name="y">Y component of the vector to transform.</param>
         /// <param name="rotation">Rotation to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformY(float y, ref Quaternion rotation, out Vector3 result)
+        public static void TransformUnitY(ref Quaternion rotation, out Vector3 result)
         {
             //This operation is an optimized-down version of v' = q * v * q^-1.
             //The expanded form would be to treat v as an 'axis only' quaternion
@@ -544,24 +538,18 @@ namespace BepuUtilities
             float zz2 = rotation.Z * z2;
             float wx2 = rotation.W * x2;
             float wz2 = rotation.W * z2;
-            //Defer the component setting since they're used in computation.
-            float transformedX = y * (xy2 - wz2);
-            float transformedY = y * (1f - xx2 - zz2);
-            float transformedZ = y * (yz2 + wx2);
-            result.X = transformedX;
-            result.Y = transformedY;
-            result.Z = transformedZ;
-
+            result.X = xy2 - wz2;
+            result.Y = 1f - xx2 - zz2;
+            result.Z = yz2 + wx2;
         }
 
         /// <summary>
-        /// Transforms a vector using a quaternion. Specialized for 0,0,z vectors.
+        /// Transforms the unit Z vector using a quaternion.
         /// </summary>
-        /// <param name="z">Z component of the vector to transform.</param>
         /// <param name="rotation">Rotation to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformZ(float z, ref Quaternion rotation, out Vector3 result)
+        public static void TransformUnitZ(ref Quaternion rotation, out Vector3 result)
         {
             //This operation is an optimized-down version of v' = q * v * q^-1.
             //The expanded form would be to treat v as an 'axis only' quaternion
@@ -576,16 +564,11 @@ namespace BepuUtilities
             float yz2 = rotation.Y * z2;
             float wx2 = rotation.W * x2;
             float wy2 = rotation.W * y2;
-            //Defer the component setting since they're used in computation.
-            float transformedX = z * (xz2 + wy2);
-            float transformedY = z * (yz2 - wx2);
-            float transformedZ = z * (1f - xx2 - yy2);
-            result.X = transformedX;
-            result.Y = transformedY;
-            result.Z = transformedZ;
-
+            result.X = xz2 + wy2;
+            result.Y = yz2 - wx2;
+            result.Z = 1f - xx2 - yy2;
         }
-        
+
         /// <summary>
         /// Creates a quaternion from an axis and angle.
         /// </summary>

@@ -193,6 +193,102 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Transforms the unit X direction using a quaternion.
+        /// </summary>
+        /// <param name="rotation">Rotation to apply to the vector.</param>
+        /// <param name="result">Transformed vector.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void TransformUnitX(ref QuaternionWide rotation, out Vector3Wide result)
+        {
+            var y2 = rotation.Y + rotation.Y;
+            var z2 = rotation.Z + rotation.Z;
+            var xy2 = rotation.X * y2;
+            var xz2 = rotation.X * z2;
+            var yy2 = rotation.Y * y2;
+            var zz2 = rotation.Z * z2;
+            var wy2 = rotation.W * y2;
+            var wz2 = rotation.W * z2;
+            result.X = Vector<float>.One - yy2 - zz2;
+            result.Y = xy2 + wz2;
+            result.Z = xz2 - wy2;
+
+        }
+
+        /// <summary>
+        /// Transforms the unit Y vector using a quaternion.
+        /// </summary>
+        /// <param name="rotation">Rotation to apply to the vector.</param>
+        /// <param name="result">Transformed vector.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void TransformUnitY(ref QuaternionWide rotation, out Vector3Wide result)
+        {
+            var x2 = rotation.X + rotation.X;
+            var y2 = rotation.Y + rotation.Y;
+            var z2 = rotation.Z + rotation.Z;
+            var xx2 = rotation.X * x2;
+            var xy2 = rotation.X * y2;
+            var yz2 = rotation.Y * z2;
+            var zz2 = rotation.Z * z2;
+            var wx2 = rotation.W * x2;
+            var wz2 = rotation.W * z2;
+            result.X = xy2 - wz2;
+            result.Y = Vector<float>.One - xx2 - zz2;
+            result.Z = yz2 + wx2;
+        }
+
+        /// <summary>
+        /// Transforms the unit Z vector using a quaternion.
+        /// </summary>
+        /// <param name="rotation">Rotation to apply to the vector.</param>
+        /// <param name="result">Transformed vector.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void TransformUnitZ(ref QuaternionWide rotation, out Vector3Wide result)
+        {
+            var x2 = rotation.X + rotation.X;
+            var y2 = rotation.Y + rotation.Y;
+            var z2 = rotation.Z + rotation.Z;
+            var xx2 = rotation.X * x2;
+            var xz2 = rotation.X * z2;
+            var yy2 = rotation.Y * y2;
+            var yz2 = rotation.Y * z2;
+            var wx2 = rotation.W * x2;
+            var wy2 = rotation.W * y2;
+            result.X = xz2 + wy2;
+            result.Y = yz2 - wx2;
+            result.Z = Vector<float>.One - xx2 - yy2;
+        }
+
+        /// <summary>
+        /// Transforms the unit X and unit Y direction using a quaternion.
+        /// </summary>
+        /// <param name="rotation">Rotation to apply to the vector.</param>
+        /// <param name="x">Transformed unit X vector.</param>
+        /// <param name="y">Transformed unit Y vector.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void TransformUnitXY(ref QuaternionWide rotation, out Vector3Wide x, out Vector3Wide y)
+        {
+            var x2 = rotation.X + rotation.X;
+            var y2 = rotation.Y + rotation.Y;
+            var z2 = rotation.Z + rotation.Z;
+            var xx2 = rotation.X * x2;
+            var xy2 = rotation.X * y2;
+            var xz2 = rotation.X * z2;
+            var yy2 = rotation.Y * y2;
+            var yz2 = rotation.Y * z2;
+            var zz2 = rotation.Z * z2;
+            var wx2 = rotation.W * x2;
+            var wy2 = rotation.W * y2;
+            var wz2 = rotation.W * z2;
+            x.X = Vector<float>.One - yy2 - zz2;
+            x.Y = xy2 + wz2;
+            x.Z = xz2 - wy2;
+            y.X = xy2 - wz2;
+            y.Y = Vector<float>.One - xx2 - zz2;
+            y.Z = yz2 + wx2;
+        }
+
+
+        /// <summary>
         /// Concatenates the transforms of two quaternions together such that the resulting quaternion, applied as an orientation to a vector v, is equivalent to
         /// transformed = (v * a) * b. Assumes that the memory backing the input and output do not overlap.
         /// </summary>
@@ -236,5 +332,7 @@ namespace BepuPhysics
             result.Z = -quaternion.Z;
             result.W = quaternion.W;
         }
+
+
     }
 }

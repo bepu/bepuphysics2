@@ -36,6 +36,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<CapsuleTestDemo>();
             AddOption<SimpleDemo>();
             AddOption<FountainStressTestDemo>();
         }

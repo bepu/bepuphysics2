@@ -82,7 +82,7 @@ namespace Demos
         {
             offsetB = b.Position - a.Position;
             y = Vector3.Normalize(-offsetB);
-            Quaternion.TransformZ(1, ref a.Orientation, out var ax);
+            Quaternion.TransformUnitZ(ref a.Orientation, out var ax);
             x = Vector3.Cross(ax, y);
             var xLength = x.Length();
             if (xLength > 1e-7)
@@ -91,7 +91,7 @@ namespace Demos
             }
             else
             {
-                Quaternion.TransformX(1, ref a.Orientation, out var az);
+                Quaternion.TransformUnitX(ref a.Orientation, out var az);
                 x = Vector3.Normalize(Vector3.Cross(az, y));
             }
             z = Vector3.Cross(x, y);

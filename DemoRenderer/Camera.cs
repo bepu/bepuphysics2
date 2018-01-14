@@ -103,7 +103,7 @@ namespace DemoRenderer
             get
             {
                 var orientation = OrientationQuaternion;
-                Quaternion.TransformX(1, ref orientation, out var right);
+                Quaternion.TransformUnitX(ref orientation, out var right);
                 return right;
             }
         }
@@ -125,7 +125,7 @@ namespace DemoRenderer
             get
             {
                 var orientation = OrientationQuaternion;
-                Quaternion.TransformY(1, ref orientation, out var up);
+                Quaternion.TransformUnitY(ref orientation, out var up);
                 return up;
             }
         }
@@ -147,7 +147,7 @@ namespace DemoRenderer
             get
             {
                 var orientation = OrientationQuaternion;
-                Quaternion.TransformZ(1, ref orientation, out var backward);
+                Quaternion.TransformUnitZ(ref orientation, out var backward);
                 return backward;
             }
         }
