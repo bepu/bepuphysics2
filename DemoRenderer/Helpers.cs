@@ -215,6 +215,57 @@ namespace DemoRenderer
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void PackDuplicateZeroSNORM(float source, out ushort packed)
+        {
+            Debug.Assert(source >= -1 && source <= 1);
+            var magnitude = source * ((1 << 15) - 1);
+            ref var reinterpreted = ref Unsafe.As<float, uint>(ref magnitude);
+            //Cache the sign bit and move it into position.
+            var sign = (int)((reinterpreted & 0x8000_0000u) >> 16);
+            //Clear the sign bit.
+            reinterpreted &= 0x7FFF_FFFF;
+            packed = (ushort)((int)magnitude | sign);
+        }
+        /// <summary>
+        /// Packs an orientation into 8 bytes by storing each component in 16 bits. The most significant bit of each component is used as a sign bit. The remaining bits are used for magnitude.
+        /// </summary>
+        /// <param name="source">Orientation to pack.</param>
+        /// <param name="packed">Packed orientation.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static ulong PackOrientationU64(ref Quaternion source)
+        {
+            //This isn't exactly a clever packing, but with 64 bits, cleverness isn't required.
+            ref var vectorSource = ref Unsafe.As<float, Vector4>(ref source.X);
+            var clamped = Vector4.Max(new Vector4(-1), Vector4.Min(new Vector4(1), vectorSource));
+            ulong packed;
+            ref var packedShorts = ref Unsafe.As<ulong, ushort>(ref *&packed);
+            PackDuplicateZeroSNORM(clamped.X, out packedShorts);
+            PackDuplicateZeroSNORM(clamped.Y, out Unsafe.Add(ref packedShorts, 1));
+            PackDuplicateZeroSNORM(clamped.Z, out Unsafe.Add(ref packedShorts, 2));
+            PackDuplicateZeroSNORM(clamped.W, out Unsafe.Add(ref packedShorts, 3));
+            return packed;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static unsafe float UnpackDuplicateZeroSNORM(ushort packed)
+        {
+            var unpacked = (packed & ((1 << 15) - 1)) * (1f / ((1 << 15) - 1));
+            ref var reinterpreted = ref Unsafe.As<float, uint>(ref *&unpacked);
+            //Set the sign bit.
+            reinterpreted |= (packed & (1u << 15)) << 16;
+            return unpacked;
+        }
+        public static void UnpackOrientation(ulong packed, out Quaternion orientation)
+        {
+            ref var packedShorts = ref Unsafe.As<ulong, ushort>(ref packed);
+            orientation.X = UnpackDuplicateZeroSNORM(packedShorts);
+            orientation.Y = UnpackDuplicateZeroSNORM(Unsafe.Add(ref packedShorts, 1));
+            orientation.Z = UnpackDuplicateZeroSNORM(Unsafe.Add(ref packedShorts, 2));
+            orientation.W = UnpackDuplicateZeroSNORM(Unsafe.Add(ref packedShorts, 3));
+            Quaternion.Normalize(ref orientation);
+        }
+
         [Conditional("DEBUG")]
         public static void CheckForUndisposed(bool disposed, object o)
         {

@@ -12,12 +12,13 @@ namespace DemoRenderer.ShapeDrawing
     {
         //For now, we only have spheres. Later, once other shapes exist, this will be responsible for bucketing the different shape types and when necessary caching shape models.
         internal QuickList<SphereInstance, Array<SphereInstance>> spheres;
+        internal QuickList<CapsuleInstance, Array<CapsuleInstance>> capsules;
 
         ParallelLooper looper;
         public ShapesExtractor(ParallelLooper looper, int initialCapacityPerShapeType = 1024)
         {
-            var initialSpheresSpan = new Array<SphereInstance>(new SphereInstance[initialCapacityPerShapeType]);
-            spheres = new QuickList<SphereInstance, Array<SphereInstance>>(ref initialSpheresSpan);
+            QuickList<SphereInstance, Array<SphereInstance>>.Create(new PassthroughArrayPool<SphereInstance>(), initialCapacityPerShapeType, out spheres);
+            QuickList<CapsuleInstance, Array<CapsuleInstance>>.Create(new PassthroughArrayPool<CapsuleInstance>(), initialCapacityPerShapeType, out capsules);
             this.looper = looper;
         }
 
@@ -39,6 +40,18 @@ namespace DemoRenderer.ShapeDrawing
                         Helpers.PackOrientation(ref pose.Orientation, out instance.PackedOrientation);
                         instance.PackedColor = Helpers.PackColor(ref color);
                         spheres.Add(ref instance, new PassthroughArrayPool<SphereInstance>());
+                    }
+                    break;
+                case Capsule.Id:
+                    {
+                        CapsuleInstance instance;
+                        instance.Position = pose.Position;
+                        ref var capsule = ref shapes.GetShape<Capsule>(shapeIndex.Index);
+                        instance.Radius = capsule.Radius;
+                        instance.HalfLength = capsule.HalfLength;
+                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
+                        instance.PackedColor = Helpers.PackColor(ref color);
+                        capsules.Add(ref instance, new PassthroughArrayPool<CapsuleInstance>());
                     }
                     break;
             }

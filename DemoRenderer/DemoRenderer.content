@@ -1,4 +1,5 @@
 ﻿ShapeDrawing\RenderSpheres.hlsl
+ShapeDrawing\RenderCapsules.hlsl
 Constraints\RenderLines.hlsl
 UI\RenderUILines.hlsl
 UI\RenderGlyphs.hlsl

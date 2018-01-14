@@ -22,7 +22,8 @@ namespace DemoRenderer
         public BackgroundRenderer Background { get; private set; }
         //TODO: Down the road, the sphere renderer will be joined by a bunch of other types. 
         //They'll likely be stored in an array indexed by a shape type rather than just being a swarm of properties.
-        public SphereRenderer SphereRenderer { get; private set; }
+        public RayTracedRenderer<SphereInstance> SphereRenderer { get; private set; }
+        public RayTracedRenderer<CapsuleInstance> CapsuleRenderer { get; private set; }
         public ShapesExtractor Shapes { get; private set; }
         public LineRenderer LineRenderer { get; private set; }
         public LineExtractor Lines { get; private set; }
@@ -61,7 +62,8 @@ namespace DemoRenderer
                 ShaderCache = ShaderCache.Load(stream);
             }
             Shapes = new ShapesExtractor(looper);
-            SphereRenderer = new SphereRenderer(surface.Device, ShaderCache);
+            SphereRenderer = new RayTracedRenderer<SphereInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderSpheres.hlsl");
+            CapsuleRenderer = new RayTracedRenderer<CapsuleInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderCapsules.hlsl");
             Lines = new LineExtractor(looper);
             LineRenderer = new LineRenderer(surface.Device, ShaderCache);
             Background = new BackgroundRenderer(surface.Device, ShaderCache);
@@ -201,6 +203,7 @@ namespace DemoRenderer
             context.OutputMerger.SetDepthStencilState(opaqueDepthState);
 
             SphereRenderer.Render(context, camera, Surface.Resolution, Shapes.spheres.Span.Memory, 0, Shapes.spheres.Count);
+            //CapsuleRenderer.Render(context, camera, Surface.Resolution, Shapes.capsules.Span.Memory, 0, Shapes.capsules.Count);
             LineRenderer.Render(context, camera, Surface.Resolution, Lines.lines.Span.Memory, 0, Lines.lines.Count);
 
             Background.Render(context, camera);
@@ -226,6 +229,9 @@ namespace DemoRenderer
                 disposed = true;
                 Background.Dispose();
                 CompressToSwap.Dispose();
+
+                SphereRenderer.Dispose();
+                CapsuleRenderer.Dispose();
 
                 UILineRenderer.Dispose();
                 GlyphRenderer.Dispose();
