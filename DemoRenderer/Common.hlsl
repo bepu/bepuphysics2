@@ -12,6 +12,57 @@ float4 UnpackOrientation(float3 packedOrientation)
 	return float4(packedOrientation, sqrt(saturate(1 - dot(packedOrientation, packedOrientation))));
 }
 
+float UnpackComponent(uint packed)
+{
+	float magnitude = (packed & ((1 << 15) - 1)) * (1.0 / ((1 << 15) - 1));
+	uint unpackedUInt = asuint(magnitude);
+	//Set the sign bit.
+	unpackedUInt |= (packed & (1u << 15)) << 16;
+	return asfloat(unpackedUInt | ((packed & (1u << 15)) << 16));
+}
+float4 UnpackOrientation(uint2 packedOrientation)
+{
+	float4 orientation = float4(
+		UnpackComponent(packedOrientation.x),
+		UnpackComponent(packedOrientation.x >> 16),
+		UnpackComponent(packedOrientation.y),
+		UnpackComponent(packedOrientation.y >> 16));
+	return orientation / length(orientation);
+}
+
+float3 TransformByConjugate(float3 v, float4 rotation)
+{
+	float x2 = rotation.x + rotation.x;
+	float y2 = rotation.y + rotation.y;
+	float z2 = rotation.z + rotation.z;
+	float xx2 = rotation.x * x2;
+	float xy2 = rotation.x * y2;
+	float xz2 = rotation.x * z2;
+	float yy2 = rotation.y * y2;
+	float yz2 = rotation.y * z2;
+	float zz2 = rotation.z * z2;
+	float wx2 = rotation.w * -x2;
+	float wy2 = rotation.w * -y2;
+	float wz2 = rotation.w * -z2;
+	return float3(
+		v.x * (1.0 - yy2 - zz2) + v.y * (xy2 - wz2) + v.z * (xz2 + wy2),
+		v.x * (xy2 + wz2) + v.y * (1.0 - xx2 - zz2) + v.z * (yz2 - wx2),
+		v.x * (xz2 - wy2) + v.y * (yz2 + wx2) + v.z * (1.0 - xx2 - yy2));
+}
+float3 TransformUnitY(float4 rotation)
+{
+	float x2 = rotation.x + rotation.x;
+	float y2 = rotation.y + rotation.y;
+	float z2 = rotation.z + rotation.z;
+	float xx2 = rotation.x * x2;
+	float xy2 = rotation.x * y2;
+	float yz2 = rotation.y * z2;
+	float zz2 = rotation.z * z2;
+	float wx2 = rotation.w * x2;
+	float wz2 = rotation.w * z2;
+	return float3(xy2 - wz2, 1.0 - xx2 - zz2, yz2 + wx2);
+}
+
 float3 AccumulateLight(float3 normal)
 {
 	//This uses a very simple ambient + diffuse + approximate hemispheric sky scheme.
@@ -96,25 +147,6 @@ float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float
 
 }
 
-float3 TransformByConjugate(float3 v, float4 rotation)
-{
-	float x2 = rotation.x + rotation.x;
-	float y2 = rotation.y + rotation.y;
-	float z2 = rotation.z + rotation.z;
-	float xx2 = rotation.x * x2;
-	float xy2 = rotation.x * y2;
-	float xz2 = rotation.x * z2;
-	float yy2 = rotation.y * y2;
-	float yz2 = rotation.y * z2;
-	float zz2 = rotation.z * z2;
-	float wx2 = rotation.w * -x2;
-	float wy2 = rotation.w * -y2;
-	float wz2 = rotation.w * -z2;
-	return float3(
-		v.x * (1.0 - yy2 - zz2) + v.y * (xy2 - wz2) + v.z * (xz2 + wy2),
-		v.x * (xy2 + wz2) + v.y * (1.0 - xx2 - zz2) + v.z * (yz2 - wx2),
-		v.x * (xz2 - wy2) + v.y * (yz2 + wx2) + v.z * (1.0 - xx2 - yy2));
-}
 
 void GetScreenspaceDerivatives(float3 surfacePosition, float3 surfaceNormal, float3 currentRayDirection, float3 right, float3 up, float3 backward,
 	float2 pixelSizeAtUnitPlane, out float3 dpdx, out float3 dpdy)

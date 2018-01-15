@@ -102,6 +102,7 @@ namespace BepuUtilities
         /// <param name="a">First quaternion to multiply.</param>
         /// <param name="b">Second quaternion to multiply.</param>
         /// <returns>Product of the multiplication.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion Concatenate(Quaternion a, Quaternion b)
         {
             ConcatenateWithoutOverlap(ref a, ref b, out var result);
@@ -113,6 +114,7 @@ namespace BepuUtilities
         /// </summary>
         public static Quaternion Identity
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
                 return new Quaternion(0, 0, 0, 1);
@@ -175,6 +177,7 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="r">Rotation matrix used to create a new quaternion.</param>
         /// <returns>Quaternion representing the same rotation as the matrix.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion CreateFromRotationMatrix(Matrix3x3 r)
         {
             Quaternion toReturn;
@@ -238,6 +241,7 @@ namespace BepuUtilities
         /// Computes the squared length of the quaternion.
         /// </summary>
         /// <returns>Squared length of the quaternion.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float LengthSquared()
         {
             return X * X + Y * Y + Z * Z + W * W;
@@ -247,6 +251,7 @@ namespace BepuUtilities
         /// Computes the length of the quaternion.
         /// </summary>
         /// <returns>Length of the quaternion.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float Length()
         {
             return (float)Math.Sqrt(X * X + Y * Y + Z * Z + W * W);
@@ -260,6 +265,7 @@ namespace BepuUtilities
         /// <param name="end">Ending point of the interpolation.</param>
         /// <param name="interpolationAmount">Amount of the end point to use.</param>
         /// <param name="result">Interpolated intermediate quaternion.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Slerp(ref Quaternion start, ref Quaternion end, float interpolationAmount, out Quaternion result)
         {
             double cosHalfTheta = start.W * end.W + start.X * end.X + start.Y * end.Y + start.Z * end.Z;
@@ -307,10 +313,10 @@ namespace BepuUtilities
         /// <param name="end">Ending point of the interpolation.</param>
         /// <param name="interpolationAmount">Amount of the end point to use.</param>
         /// <returns>Interpolated intermediate quaternion.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion Slerp(Quaternion start, Quaternion end, float interpolationAmount)
         {
-            Quaternion toReturn;
-            Slerp(ref start, ref end, interpolationAmount, out toReturn);
+            Slerp(ref start, ref end, interpolationAmount, out Quaternion toReturn);
             return toReturn;
         }
 
@@ -320,6 +326,7 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="quaternion">Quaternion to conjugate.</param>
         /// <param name="result">Conjugated quaternion.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Conjugate(ref Quaternion quaternion, out Quaternion result)
         {
             result.X = -quaternion.X;
@@ -333,10 +340,10 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="quaternion">Quaternion to conjugate.</param>
         /// <returns>Conjugated quaternion.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion Conjugate(Quaternion quaternion)
         {
-            Quaternion toReturn;
-            Conjugate(ref quaternion, out toReturn);
+            Conjugate(ref quaternion, out Quaternion toReturn);
             return toReturn;
         }
 
@@ -347,6 +354,7 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="quaternion">Quaternion to invert.</param>
         /// <param name="result">Result of the inversion.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Inverse(ref Quaternion quaternion, out Quaternion result)
         {
             float inverseSquaredNorm = quaternion.X * quaternion.X + quaternion.Y * quaternion.Y + quaternion.Z * quaternion.Z + quaternion.W * quaternion.W;
@@ -361,6 +369,7 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="quaternion">Quaternion to invert.</param>
         /// <returns>Result of the inversion.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion Inverse(Quaternion quaternion)
         {
             Quaternion result;
@@ -375,6 +384,7 @@ namespace BepuUtilities
         /// <param name="a">First quaternion to test for equivalence.</param>
         /// <param name="b">Second quaternion to test for equivalence.</param>
         /// <returns>Whether or not the quaternions' components were equal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator ==(Quaternion a, Quaternion b)
         {
             return a.X == b.X && a.Y == b.Y && a.Z == b.Z && a.W == b.W;
@@ -386,6 +396,7 @@ namespace BepuUtilities
         /// <param name="a">First quaternion to test for equivalence.</param>
         /// <param name="b">Second quaternion to test for equivalence.</param>
         /// <returns>Whether the quaternions' components were not equal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator !=(Quaternion a, Quaternion b)
         {
             return a.X != b.X || a.Y != b.Y || a.Z != b.Z || a.W != b.W;
@@ -426,6 +437,7 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="q">Quaternion to negate.</param>
         /// <returns>Negated result.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion Negate(Quaternion q)
         {
             Negate(ref q, out var result);
@@ -437,6 +449,7 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="q">Quaternion to negate.</param>
         /// <returns>Negated result.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion operator -(Quaternion q)
         {
             Negate(ref q, out var result);
@@ -484,6 +497,7 @@ namespace BepuUtilities
         /// <param name="v">Vector to transform.</param>
         /// <param name="rotation">Rotation to apply to the vector.</param>
         /// <returns>Transformed vector.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3 Transform(Vector3 v, Quaternion rotation)
         {
             Vector3 toReturn;
@@ -575,6 +589,7 @@ namespace BepuUtilities
         /// <param name="axis">Axis of rotation.</param>
         /// <param name="angle">Angle to rotate around the axis.</param>
         /// <returns>Quaternion representing the axis and angle rotation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion CreateFromAxisAngle(Vector3 axis, float angle)
         {
             double halfAngle = angle * 0.5;

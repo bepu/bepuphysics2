@@ -31,7 +31,6 @@ struct PSInput
 	float3 ToAABB : RayDirection;
 	SphereInstance Sphere;
 };
-#define SampleRadius 0.70710678118
 PSInput VSMain(uint vertexId : SV_VertexId)
 {
 	//The vertex id is used to position each vertex. 
