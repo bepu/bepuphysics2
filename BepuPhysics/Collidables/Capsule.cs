@@ -88,9 +88,21 @@ namespace BepuPhysics.Collidables
         {
             //It's convenient to work in local space, so pull the ray into the capsule's local space.
             Matrix3x3.CreateFromQuaternion(ref pose.Orientation, out var orientation);
-            Matrix3x3.TransformTranspose(ref direction, ref orientation, out var d);
             var o = origin - pose.Position;
             Matrix3x3.TransformTranspose(ref o, ref orientation, out o);
+            var radiusSquared = Radius * Radius;
+            //Check up front whether the ray starts within the capsule.
+            if ((o - new Vector3(0, MathHelper.Clamp(o.Y, -HalfLength, HalfLength), 0)).LengthSquared() <= radiusSquared)
+            {
+                t = 0;
+                //There is no obvious choice for a normal for rays which start inside the capsule's volume.
+                //Just choose the reverse of the ray direction.
+                //(One potentially useful alternative is the direction of minimum penetration, but that is not trivial to compute for all shapes, and it's not like this function
+                //exposes penetration depth. Probably best to leave that logic to a dedicated point sample function.)
+                normal = -direction;
+                return true;
+            }
+            Matrix3x3.TransformTranspose(ref direction, ref orientation, out var d);
 
             //The goal is to solve:
             //||o + d * t - (0, clamp((o + d * t).y, -halfLength, halfLength), 0) || = radius
@@ -104,7 +116,7 @@ namespace BepuPhysics.Collidables
             var dxox = d.X * o.X;
             var dzoz = d.Z * o.Z;
             var denom = dx2 + dz2;
-            var discriminant = 2 * dxox * dzoz - dz2 * o.X * o.X - dx2 * o.Z * o.Z + denom * Radius * Radius;
+            var discriminant = 2 * dxox * dzoz - dz2 * o.X * o.X - dx2 * o.Z * o.Z + denom * radiusSquared;
             if (discriminant < 0)
             {
                 //The infinite cylinder isn't hit, so the capsule can't be hit.
@@ -115,35 +127,67 @@ namespace BepuPhysics.Collidables
             var b = dxox + dzoz;
 
             //There exists a solution to the cylinder intersection.
-            var offset = (float)Math.Sqrt(discriminant);
-            //If -b + offset < 0, then the second impact occurs before the ray starts and there is no intersection.
-            if (offset - b < 0)
+            var unscaledTOffset = (float)Math.Sqrt(discriminant);
+            //If -b + offset < 0, then the second impact on the cylinder occurs before the ray starts and there can be no intersection.
+            if (unscaledTOffset - b < 0)
             {
                 t = 0;
                 normal = new Vector3();
                 return false;
             }
-            t = (-b - offset) / denom;
-            //We've already ensured that the second solution occurs at some point after t = 0. Still don't want to generate negative t values, so clamp:
-            if (t < 0)
-                t = 0;
-            var cylinderHitLocation = o + d * t;
-            //var normalOffset = o + d * t;
-            //normalOffset.Y -= tb;
-            //var lengthSquared = normalOffset.LengthSquared();
-            //if (lengthSquared > 1e-9f)
-            //{
-            //    normal = normalOffset / (float)Math.Sqrt(lengthSquared);
-            //}
-            //else
-            //{
-            //    normal = new Vector3(0, 1, 0);
-            //}
-            //Matrix3x3.Transform(ref normal, ref orientation, out normal);
-            t = 0;
-            normal = new Vector3();
-            return true;
+            var inverseDenom = 1f / denom;
+            float spherePosition;
+            if (d.Y * d.Y * inverseDenom < 1e10)
+            {
+                t = (-b - unscaledTOffset) / denom;
+                //We've already ensured that the second solution occurs at some point after t = 0. Still don't want to generate negative t values, so clamp:
+                if (t < 0)
+                    t = 0;
+                var cylinderHitLocation = o + d * t;
+                if (cylinderHitLocation.Y < -HalfLength)
+                {
+                    spherePosition = -HalfLength;
+                }
+                else if (cylinderHitLocation.Y > HalfLength)
+                {
+                    spherePosition = HalfLength;
+                }
+                else
+                {
+                    //The hit is on the cylindrical portion of the capsule.
+                    normal = new Vector3(cylinderHitLocation.X, 0, cylinderHitLocation.Z) / Radius;
+                    Matrix3x3.Transform(ref normal, ref orientation, out normal);
+                    return true;
+                }
+            }
+            else
+            {
+                //The ray is parallel to the axis; the impact is on a spherical cap.
+                //We know the ray start isn't in the capsule, so we only need to test 
+                spherePosition = d.Y > 0 ? -HalfLength : HalfLength;
+            }
 
+            var capA = Vector3.Dot(d, d);
+            var capB = -2 * (spherePosition * d.Y - Vector3.Dot(d, o));
+            var capC = spherePosition * spherePosition - 2 * spherePosition * o.Y + Vector3.Dot(o, o) - radiusSquared;
+            var capDiscriminant = capB * capB - 4 * capA * capC;
+            if (capDiscriminant < 0)
+            {
+                t = 0;
+                normal = new Vector3();
+                return false;
+            }
+            var unscaledCapTOffset = (float)Math.Sqrt(capDiscriminant);
+            if (unscaledCapTOffset - capB < 0)
+            {
+                t = 0;
+                normal = new Vector3();
+                return false;
+            }
+            t = (-capB - unscaledCapTOffset) / (2 * capA);
+            normal = (o + d * t - new Vector3(0, spherePosition, 0)) / Radius;
+            Matrix3x3.Transform(ref normal, ref orientation, out normal);
+            return true;
 
         }
 

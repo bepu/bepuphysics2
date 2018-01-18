@@ -57,7 +57,7 @@ namespace Demos.SpecializedTests
             var squaredDistanceFromSurface = Vector3.DistanceSquared(point, new Vector3(0, projected, 0)) - capsule.Radius * capsule.Radius;
             if (squaredDistanceFromSurface < 0)
                 squaredDistanceFromSurface = -squaredDistanceFromSurface;
-            const float threshold = 1e-6f;
+            float threshold = capsule.Radius * 1e-3f;
             return squaredDistanceFromSurface < threshold * threshold;
         }
 
