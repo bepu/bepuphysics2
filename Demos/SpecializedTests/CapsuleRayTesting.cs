@@ -17,7 +17,7 @@ namespace Demos.SpecializedTests
             const float sizeSpan = 200;
             shape = new Capsule(sizeMin + sizeSpan * (float)random.NextDouble(), sizeMin * sizeSpan * (float)random.NextDouble());
         }
-        static void GetPointInVolume(Random random, ref Capsule capsule, out Vector3 pointInCapsule)
+        static void GetPointInVolume(Random random, ref Capsule capsule, out Vector3 localPointInCapsule)
         {
             float distanceSquared;
             float radiusSquared = capsule.Radius * capsule.Radius;
@@ -26,39 +26,46 @@ namespace Demos.SpecializedTests
             min = -min;
             do
             {
-                pointInCapsule = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
-                var projectedCandidate = new Vector3(0, Math.Max(-capsule.HalfLength, Math.Min(capsule.HalfLength, pointInCapsule.Y)), 0);
-                distanceSquared = Vector3.DistanceSquared(projectedCandidate, pointInCapsule);
+                localPointInCapsule = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                var projectedCandidate = new Vector3(0, Math.Max(-capsule.HalfLength, Math.Min(capsule.HalfLength, localPointInCapsule.Y)), 0);
+                distanceSquared = Vector3.DistanceSquared(projectedCandidate, localPointInCapsule);
 
             } while (distanceSquared > radiusSquared);
         }
 
-        static void GetSurface(Random random, ref Capsule capsule, out Vector3 pointOnCapsule, out Vector3 normal)
+        static void GetSurface(Random random, ref Capsule capsule, out Vector3 localPointOnCapsule, out Vector3 localNormal)
         {
             float distanceSquared;
             float radiusSquared = capsule.Radius * capsule.Radius;
             var min = new Vector3(capsule.Radius, capsule.Radius + capsule.HalfLength, capsule.Radius);
             var span = min * 2;
+            Vector3 offset, projectedCandidate;
             min = -min;
             do
             {
-                pointOnCapsule = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
-                var projectedCandidate = new Vector3(0, Math.Max(-capsule.HalfLength, Math.Min(capsule.HalfLength, pointOnCapsule.Y)), 0);
-                distanceSquared = Vector3.DistanceSquared(projectedCandidate, pointOnCapsule);
+                localPointOnCapsule = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                projectedCandidate = new Vector3(0, Math.Max(-capsule.HalfLength, Math.Min(capsule.HalfLength, localPointOnCapsule.Y)), 0);
+                offset = localPointOnCapsule - projectedCandidate;
+                distanceSquared = offset.LengthSquared();
 
             } while (distanceSquared < 1e-7f);
-            normal = pointOnCapsule / (float)Math.Sqrt(distanceSquared);
-            pointOnCapsule = normal * capsule.Radius;
+            localNormal = offset / (float)Math.Sqrt(distanceSquared);
+            localPointOnCapsule = projectedCandidate + localNormal * capsule.Radius;
         }
 
-        static bool PointIsOnSurface(ref Capsule capsule, ref Vector3 point)
+        static bool PointIsOnSurface(ref Capsule capsule, ref Vector3 localPoint)
         {
-            var projected = MathHelper.Clamp(point.Y, -capsule.HalfLength, capsule.HalfLength);
-            var squaredDistanceFromSurface = Vector3.DistanceSquared(point, new Vector3(0, projected, 0)) - capsule.Radius * capsule.Radius;
+            var projected = MathHelper.Clamp(localPoint.Y, -capsule.HalfLength, capsule.HalfLength);
+            var squaredDistanceFromSurface = Vector3.DistanceSquared(localPoint, new Vector3(0, projected, 0)) - capsule.Radius * capsule.Radius;
             if (squaredDistanceFromSurface < 0)
                 squaredDistanceFromSurface = -squaredDistanceFromSurface;
             float threshold = capsule.Radius * 1e-3f;
             return squaredDistanceFromSurface < threshold * threshold;
+        }
+
+        static float GetDistance(ref Capsule capsule, ref Vector3 localPoint)
+        {
+            return Vector3.Distance(localPoint, new Vector3(0, MathHelper.Clamp(localPoint.Y, -capsule.HalfLength, capsule.HalfLength), 0));
         }
 
         static void GetUnitDirection(Random random, out Vector3 direction)
@@ -89,14 +96,24 @@ namespace Demos.SpecializedTests
         }
         static void GetPointOnPlane(Random random, float centralExclusion, float span, ref Vector3 anchor, ref Vector3 normal, out Vector3 point)
         {
-            Matrix3x3.CreateFromAxisAngle(ref normal, (float)random.NextDouble() * MathHelper.TwoPi, out var basis);
+            
             Vector2 localPoint;
             var exclusionSquared = centralExclusion * centralExclusion;
             do
             {
                 localPoint = span * (new Vector2((float)random.NextDouble(), (float)random.NextDouble()) * new Vector2(0.5f) - new Vector2(0.5f));
             } while (localPoint.LengthSquared() < exclusionSquared);
-            point = anchor + basis.X * localPoint.X + basis.Z * localPoint.Y;
+
+            Vector3 basisX;
+            float basisXLengthSquared;
+            do
+            {
+                GetUnitDirection(random, out var randomDirection);
+                Vector3x.Cross(ref normal, ref randomDirection, out basisX);
+                basisXLengthSquared = basisX.LengthSquared();
+            } while (basisXLengthSquared < 1e-7f);
+            Vector3x.Cross(ref normal, ref basisX, out var basisZ);
+            point = anchor + basisX * localPoint.X + basisZ * localPoint.Y;
         }
 
 
@@ -190,16 +207,17 @@ namespace Demos.SpecializedTests
                     for (int rayIndex = 0; rayIndex < outsideRays; ++rayIndex)
                     {
                         //Create a ray that lies on one of the shape's tangent planes, offset from the surface some amount to avoid numerical limitations.
-                        GetSurface(random, ref shape, out var pointOnSurface, out var normal);
-                        var localTargetPoint = pointOnSurface + normal * (tangentMinimumDistance + (float)random.NextDouble() * tangentDistanceSpan);
+                        GetSurface(random, ref shape, out var pointOnSurface, out var localNormal);
+                        var localTargetPoint = pointOnSurface + localNormal * (tangentMinimumDistance + (float)random.NextDouble() * tangentDistanceSpan);
                         var exclusion = tangentCentralExclusionMin + (float)random.NextDouble() * tangentCentralExclusionSpan;
                         var span = exclusion + tangentSourceSpanMin + tangentSourceSpanSpan * (float)random.NextDouble();
-                        GetPointOnPlane(random, exclusion, span, ref localTargetPoint, ref normal, out var localSourcePoint);
+                        GetPointOnPlane(random, exclusion, span, ref localTargetPoint, ref localNormal, out var localSourcePoint);
                         var directionScale = (0.01f + 2 * (float)random.NextDouble());
                         var localDirection = (localTargetPoint - localSourcePoint) * directionScale;
                         Matrix3x3.Transform(ref localSourcePoint, ref orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
                         Matrix3x3.Transform(ref localDirection, ref orientation, out var direction);
+
                         if (shape.RayTest(ref pose, ref sourcePoint, ref direction, out var t, out var rayTestedNormal))
                         {
                             Console.WriteLine($"Outside ray incorrectly detected an impact.");
