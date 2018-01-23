@@ -91,48 +91,24 @@ float GetProjectedDepth(float linearDepth, float near, float far)
 bool RayCastSphere(float3 rayDirection, float3 spherePosition, float radius,
 	out float t, out float3 hitLocation, out float3 hitNormal)
 {
-	float directionLength = length(rayDirection);
-	float3 normalizedDirection = rayDirection / directionLength;
-	float3 m = -spherePosition;
-	float b = dot(m, normalizedDirection);
-	float c = dot(m, m) - radius * radius;
+	//Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
+	float inverseDLength = 1.0 / length(rayDirection);
+	float3 d = rayDirection * inverseDLength;
 
-	//This isn't a very good GPU implementation, but only worry about that if it becomes an issue.
-	if (c > 0 && b > 0)
-	{
-		t = 0;
-		hitLocation = 0;
-		hitNormal = 0;
-		return false;
-	}
-	else
-	{
-		float discriminant = b * b - c;
-		if (discriminant < 0)
-		{
-			t = 0;
-			hitLocation = 0;
-			hitNormal = 0;
-			return false;
-		}
-		else
-		{
-			t = -b - sqrt(discriminant);
-			if (t < 0)
-			{
-				t = 0;
-				hitLocation = 0;
-				hitNormal = 0;
-				return false;
-			}
-			else
-			{
-				hitLocation = normalizedDirection * t;
-				hitNormal = normalize(hitLocation - spherePosition);
-				return true;
-			}
-		}
-	}
+	//Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
+	float3 o = -spherePosition;
+	float tOffset = max(0, -dot(o, d) - radius);
+	o += d * tOffset;
+	float b = dot(o, d);
+	float c = dot(o, o) - radius * radius;
+
+	float discriminant = b * b - c;
+	t = max(0, -b - sqrt(discriminant));
+	hitLocation = o + d * t;
+	hitNormal = hitLocation / radius;
+	hitLocation += spherePosition;
+	t = (t + tOffset) * inverseDLength;
+	return (b <= 0 || c <= 0) && discriminant > 0;
 }
 
 

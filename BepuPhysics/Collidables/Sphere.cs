@@ -57,6 +57,45 @@ namespace BepuPhysics.Collidables
             max = new Vector3(Radius);
         }
 
+        public bool RayTest(ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, out float t, out Vector3 normal)
+        {
+            //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
+            var inverseDLength = 1f / direction.Length();
+            var d = direction * inverseDLength;
+
+            //Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
+            var o = origin - pose.Position;
+            var tOffset = -Vector3.Dot(o, d) - Radius;
+            if (tOffset < 0)
+                tOffset = 0;
+            o += d * tOffset;
+            var b = Vector3.Dot(o, d);
+            var c = Vector3.Dot(o, o) - Radius * Radius;
+
+            if (b > 0 && c > 0)
+            {
+                //Ray is outside and pointing away, no hit.
+                t = 0;
+                normal = new Vector3();
+                return false;
+            }
+
+            var discriminant = b * b - c;
+            if (discriminant < 0)
+            {
+                //Ray misses, no hit.
+                t = 0;
+                normal = new Vector3();
+                return false;
+            }
+            t = -b - (float)Math.Sqrt(discriminant);
+            if (t < 0)
+                t = 0;
+            normal = (o + d * t) / Radius;
+            t = (t + tOffset) * inverseDLength;
+            return true;
+        }
+
         /// <summary>
         /// Type id of sphere shapes.
         /// </summary>

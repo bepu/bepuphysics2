@@ -1,4 +1,5 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics.Collidables;
+using BepuUtilities;
 using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer.UI;
@@ -15,7 +16,8 @@ namespace Demos
     {
         static void Main(string[] args)
         {
-            CapsuleRayTesting.Test();
+            RayTesting.Test<Capsule, CapsuleRayTester>();
+            RayTesting.Test<Sphere, SphereRayTester>();
             //HeadlessDemo.Test<ReactivateTests>(0, 1024);
             //OperatorCodegenTests.Test();
             //ConstraintDescriptionMappingTests.Test();

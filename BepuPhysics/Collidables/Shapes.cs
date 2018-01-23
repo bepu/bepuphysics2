@@ -28,6 +28,8 @@ namespace BepuPhysics.Collidables
         //I don't predict ever needing it, but such an implementation could be added...
         void GetBounds(ref BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max);
 
+        bool RayTest(ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, out float t, out Vector3 normal);
+
         //These functions require only an orientation because the effect of the position on the bounding box is the same for all shapes.
         //By isolating the shape from the position, we can more easily swap out the position representation for higher precision modes while only modifying the stuff that actually
         //deals with positions directly.
