@@ -49,19 +49,22 @@ PSInput VSMain(uint vertexId : SV_VertexId)
 	float3 aabbCoordinates = float3((vertexId & 1) << 1, vertexId & 2, (vertexId & 4) >> 1) - 1;
 
 	//Note that in view space, -z moves away along the camera's forward axis by convention.
-	float3 viewPosition = float3(dot(CameraRight, output.Instance.Position), dot(CameraUp, output.Instance.Position), dot(CameraBackward, output.Instance.Position));
-	
+	float3x3 worldToViewRotation = transpose(float3x3(CameraRight, CameraUp, CameraBackward));
+	float3 viewPosition = mul(output.Instance.Position, worldToViewRotation);
+
 	//Compute the bounds of the capsule in view space.
 	float4 orientation = UnpackOrientation(output.Instance.PackedOrientation);
-	float3 maxOffset = output.Instance.HalfLength * abs(TransformUnitY(orientation)) + output.Instance.Radius;
+	float3x3 orientationMatrix = ConvertToRotationMatrix(orientation);
+	float3x3 viewSpaceInstanceOrientation = mul(orientationMatrix, worldToViewRotation);
+	float3 viewMaxOffset = output.Instance.HalfLength * abs(viewSpaceInstanceOrientation[1]) + output.Instance.Radius;
 
-	float3 vertexViewPosition = viewPosition + maxOffset * aabbCoordinates;
+	float3 vertexViewPosition = viewPosition + viewMaxOffset * aabbCoordinates;
 	if (aabbCoordinates.z > 0)
 	{
 		//Clamp the near side of the AABB to the camera nearclip plane (unless the far side of the AABB passes the near plane).
 		//This keeps the raytraced instance visible even during camera overlap.
 		//Note the consequences of -z being forward.
-		vertexViewPosition.z = max(min(-NearClip - 1e-5, vertexViewPosition.z), viewPosition.z - maxOffset.z);
+		vertexViewPosition.z = max(min(-NearClip - 1e-5, vertexViewPosition.z), viewPosition.z - viewMaxOffset.z);
 	}
 	output.ToAABB = vertexViewPosition.x * CameraRight + vertexViewPosition.y * CameraUp + vertexViewPosition.z * CameraBackward;
 	output.Position = mul(float4(vertexViewPosition, 1), Projection);
@@ -94,73 +97,111 @@ float GetProjectedDepth(float linearDepth, float near, float far)
 	return (far * near - dn) / (linearDepth * far - dn);
 }
 
-bool RayCastCapsule(float3 rayDirection, float3 spherePosition, float radius, float halfLength, float4 orientation,
+bool RayCastCapsule(float3 rayDirection, float3 capsulePosition, float4 capsuleOrientation, float radius, float halfLength,
 	out float t, out float3 hitLocation, out float3 hitNormal)
 {
-	float directionLength = length(rayDirection);
-	float3 normalizedDirection = rayDirection / directionLength;
-	float3 m = -spherePosition;
-	float b = dot(m, normalizedDirection);
-	float c = dot(m, m) - radius * radius;
+	//It's convenient to work in local space, so pull the ray into the capsule's local space.
+	float3x3 orientationMatrix = ConvertToRotationMatrix(capsuleOrientation);
+	float3 o = mul(-capsulePosition, transpose(orientationMatrix));
+	float3 d = mul(rayDirection, transpose(orientationMatrix));
 
-	//This isn't a very good GPU implementation, but only worry about that if it becomes an issue.
-	if (c > 0 && b > 0)
+	//Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
+	float inverseDLength = 1.0 / length(d);
+	d *= inverseDLength;
+
+	//Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
+	float tOffset = 0;// max(0, -dot(o, d) - (halfLength + radius));
+	o += d * tOffset;
+	float2 oh = float2(o.x, o.z);
+	float2 dh = float2(d.x, d.z);
+	float a = dot(dh, dh);
+	float b = dot(oh, dh);
+	float radiusSquared = radius * radius;
+	float c = dot(oh, oh) - radiusSquared;
+	if (b > 0 && c > 0)
 	{
-		t = 0;
-		hitLocation = 0;
-		hitNormal = 0;
+		//Ray is outside and pointing away, no hit.
+		hitLocation = hitNormal = t = 0;
 		return false;
 	}
-	else
+
+	float sphereY;
+	if (a > 1.0e-8)
 	{
-		float discriminant = b * b - c;
+		float discriminant = b * b - a * c;
 		if (discriminant < 0)
 		{
-			t = 0;
-			hitLocation = 0;
-			hitNormal = 0;
+			//The infinite cylinder isn't hit, so the capsule can't be hit.
+			hitLocation = hitNormal = t = 0;
 			return false;
+		}
+		t = max(-tOffset, (-b - sqrt(discriminant)) / a);
+		float3 cylinderHitLocation = o + d * t;
+		if (cylinderHitLocation.y < -halfLength)
+		{
+			sphereY = -halfLength;
+		}
+		else if (cylinderHitLocation.y > halfLength)
+		{
+			sphereY = halfLength;
 		}
 		else
 		{
-			t = -b - sqrt(discriminant);
-			if (t < 0)
-			{
-				t = 0;
-				hitLocation = 0;
-				hitNormal = 0;
-				return false;
-			}
-			else
-			{
-				hitLocation = normalizedDirection * t;
-				hitNormal = normalize(hitLocation - spherePosition);
-				return true;
-			}
+			//The hit is on the cylindrical portion of the capsule.
+			hitNormal = mul(float3(cylinderHitLocation.x, 0, cylinderHitLocation.z) / radius, orientationMatrix);
+			t = (t + tOffset) * inverseDLength;
+			hitLocation = rayDirection * t;
+			return true;
 		}
 	}
+	else
+	{
+		//The ray is parallel to the axis; the impact is on a spherical cap or nothing.
+		sphereY = d.y > 0 ? -halfLength : halfLength;
+	}
+	float3 os = float3(o.x, o.y - sphereY, o.z);
+	float capB = dot(os, d);
+	float capC = dot(os, os) - radiusSquared;
+
+	if (capB > 0 && capC > 0)
+	{
+		//Ray is outside and pointing away, no hit.
+		hitLocation = hitNormal = t = 0;
+		return false;
+	}
+
+	float capDiscriminant = capB * capB - capC;
+	if (capDiscriminant < 0)
+	{
+		//Ray misses, no hit.
+		hitLocation = hitNormal = t = 0;
+		return false;
+	}
+	t = max(-tOffset, -capB - sqrt(capDiscriminant));
+	hitNormal = mul((os + d * t) / radius, orientationMatrix);
+	t = (t + tOffset) * inverseDLength;
+	hitLocation = rayDirection * t;
+	return true;
 }
 
 
 PSOutput PSMain(PSInput input)
 {
 	PSOutput output;
-	//float t;
-	//float3 hitLocation, hitNormal;
-	//if (RayCastCapsule(input.ToAABB, input.Instance.Position, input.Instance.Radius, t, hitLocation, hitNormal))
-	//{
-	//	float3 baseColor = UnpackR11G11B10_UNorm(input.Sphere.PackedColor);
-	//	float z = -dot(CameraBackwardPS, hitLocation);
-	//	float4 orientation = UnpackOrientation(input.Sphere.PackedOrientation);
-	//	float3 dpdx, dpdy;
-	//	GetScreenspaceDerivatives(hitLocation, hitNormal, input.ToAABB, CameraRightPS, CameraUpPS, CameraBackwardPS, PixelSizeAtUnitPlane, dpdx, dpdy);
-	//	float3 color = ShadeSurface(
-	//		hitLocation, hitNormal, UnpackR11G11B10_UNorm(input.Sphere.PackedColor), dpdx, dpdy,
-	//		input.Sphere.Position, orientation, input.Sphere.Radius * 2, z);
-	//	output.Color = color;
-	//	output.Depth = GetProjectedDepth(z, Near, Far);
-	//}
-	//else
+	float t;
+	float3 hitLocation, hitNormal;
+	float4 orientation = UnpackOrientation(input.Instance.PackedOrientation);
+	if (RayCastCapsule(input.ToAABB, input.Instance.Position, orientation, input.Instance.Radius, input.Instance.HalfLength, t, hitLocation, hitNormal))
+	{
+		float3 dpdx, dpdy;
+		GetScreenspaceDerivatives(hitLocation, hitNormal, input.ToAABB, CameraRightPS, CameraUpPS, CameraBackwardPS, PixelSizeAtUnitPlane, dpdx, dpdy);
+		float3 color = ShadeSurface(
+			hitLocation, hitNormal, UnpackR11G11B10_UNorm(input.Instance.PackedColor), dpdx, dpdy,
+			input.Instance.Position, orientation);
+		output.Color = color;
+		output.Depth = GetProjectedDepth(-dot(CameraBackwardPS, hitLocation), Near, Far);
+	}
+	else
 	{
 		output.Color = 0;
 		output.Depth = 0;

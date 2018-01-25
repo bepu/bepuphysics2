@@ -120,15 +120,14 @@ PSOutput PSMain(PSInput input)
 	if (RayCastSphere(input.ToAABB, input.Sphere.Position, input.Sphere.Radius, t, hitLocation, hitNormal))
 	{
 		float3 baseColor = UnpackR11G11B10_UNorm(input.Sphere.PackedColor);
-		float z = -dot(CameraBackwardPS, hitLocation);
 		float4 orientation = UnpackOrientation(input.Sphere.PackedOrientation);
 		float3 dpdx, dpdy;
 		GetScreenspaceDerivatives(hitLocation, hitNormal, input.ToAABB, CameraRightPS, CameraUpPS, CameraBackwardPS, PixelSizeAtUnitPlane, dpdx, dpdy);
 		float3 color = ShadeSurface(
 			hitLocation, hitNormal, UnpackR11G11B10_UNorm(input.Sphere.PackedColor), dpdx, dpdy,
-			input.Sphere.Position, orientation, input.Sphere.Radius * 2, z);
+			input.Sphere.Position, orientation);
 		output.Color = color;
-		output.Depth = GetProjectedDepth(z, Near, Far);
+		output.Depth = GetProjectedDepth(-dot(CameraBackwardPS, hitLocation), Near, Far);
 	}
 	else
 	{

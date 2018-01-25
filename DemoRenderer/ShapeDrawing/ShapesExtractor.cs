@@ -25,6 +25,7 @@ namespace DemoRenderer.ShapeDrawing
         public void ClearInstances()
         {
             spheres.Count = 0;
+            capsules.Count = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

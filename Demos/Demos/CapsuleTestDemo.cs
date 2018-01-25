@@ -36,11 +36,11 @@ namespace Demos
 
             var staticShape = new Capsule(4, 10);
             var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
-            const int staticGridWidthInSpheres = 100;
+            const int staticGridWidth = 10;
             const float staticSpacing = 8;
-            for (int i = 0; i < staticGridWidthInSpheres; ++i)
+            for (int i = 0; i < staticGridWidth; ++i)
             {
-                for (int j = 0; j < staticGridWidthInSpheres; ++j)
+                for (int j = 0; j < staticGridWidth; ++j)
                 {
                     var staticDescription = new StaticDescription
                     {
@@ -53,10 +53,10 @@ namespace Demos
                         Pose = new RigidPose
                         {
                             Position = new Vector3(
-                            -staticGridWidthInSpheres * staticSpacing * 0.5f + i * staticSpacing,
+                            -staticGridWidth * staticSpacing * 0.5f + i * staticSpacing,
                             -4,
-                            -staticGridWidthInSpheres * staticSpacing * 0.5f + j * staticSpacing),
-                            Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver2)
+                            -staticGridWidth * staticSpacing * 0.5f + j * staticSpacing),
+                            Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)
                         }
                     };
                     Simulation.Statics.Add(ref staticDescription);

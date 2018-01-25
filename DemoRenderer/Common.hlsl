@@ -29,8 +29,11 @@ float4 UnpackOrientation(uint2 packedOrientation)
 		UnpackComponent(packedOrientation.y >> 16));
 	return orientation / length(orientation);
 }
-
-float3 TransformByConjugate(float3 v, float4 rotation)
+float4 Conjugate(float4 rotation)
+{
+	return float4(rotation.xyz, -rotation.w);
+}
+float3 Transform(float3 v, float4 rotation)
 {
 	float x2 = rotation.x + rotation.x;
 	float y2 = rotation.y + rotation.y;
@@ -41,14 +44,35 @@ float3 TransformByConjugate(float3 v, float4 rotation)
 	float yy2 = rotation.y * y2;
 	float yz2 = rotation.y * z2;
 	float zz2 = rotation.z * z2;
-	float wx2 = rotation.w * -x2;
-	float wy2 = rotation.w * -y2;
-	float wz2 = rotation.w * -z2;
+	float wx2 = rotation.w * x2;
+	float wy2 = rotation.w * y2;
+	float wz2 = rotation.w * z2;
 	return float3(
 		v.x * (1.0 - yy2 - zz2) + v.y * (xy2 - wz2) + v.z * (xz2 + wy2),
 		v.x * (xy2 + wz2) + v.y * (1.0 - xx2 - zz2) + v.z * (yz2 - wx2),
 		v.x * (xz2 - wy2) + v.y * (yz2 + wx2) + v.z * (1.0 - xx2 - yy2));
 }
+
+float3x3 ConvertToRotationMatrix(float4 rotation)
+{
+	float x2 = rotation.x + rotation.x;
+	float y2 = rotation.y + rotation.y;
+	float z2 = rotation.z + rotation.z;
+	float xx2 = rotation.x * x2;
+	float xy2 = rotation.x * y2;
+	float xz2 = rotation.x * z2;
+	float yy2 = rotation.y * y2;
+	float yz2 = rotation.y * z2;
+	float zz2 = rotation.z * z2;
+	float wx2 = rotation.w * x2;
+	float wy2 = rotation.w * y2;
+	float wz2 = rotation.w * z2;
+	return float3x3(
+		float3(1.0 - yy2 - zz2, xy2 - wz2, xz2 + wy2),
+		float3(xy2 + wz2, 1.0 - xx2 - zz2, yz2 - wx2),
+		float3(xz2 - wy2, yz2 + wx2, 1.0 - xx2 - yy2));
+}
+
 float3 TransformUnitY(float4 rotation)
 {
 	float x2 = rotation.x + rotation.x;
@@ -102,7 +126,7 @@ float GetNormalFade(float axisLocalNormal)
 }
 
 float GetLocalGridCoverage(
-	float3 localPosition, float3 localNormal, float distance,
+	float3 localPosition, float3 localNormal,
 	float inverseGridSpacing,
 	float lineWidth,
 	float3 halfSampleSpan)
@@ -116,7 +140,7 @@ float GetLocalGridCoverage(
 	return contribution;
 }
 
-float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float3 dpdx, float3 dpdy, float shapeSize, float distance)
+float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float3 dpdx, float3 dpdy)
 {
 	const float smallGridSpacing = 1.0;
 	const float mediumGridSpacing = 5.0;
@@ -127,17 +151,17 @@ float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float
 	const float largeLineWidth = .1;
 
 	const float3 smallLineColor = 0.15;
-	const float3 mediumLineColor = 0.1;
+	const float3 mediumLineColor = 0.075;
 	const float3 largeLineColor = 0.05;
 
 	//Create a local bounding box for the sample. We assume the screenspace derivatives dpdx and dpdy extend both positively and negatively from the central sample.
 	//Since they're centered on the central sample, the extent in either direction is half of the derivative.
 	float3 halfSampleSpan = 0.5 * max(abs(dpdx), abs(dpdy));
-	float smallCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / smallGridSpacing,
+	float smallCoverage = GetLocalGridCoverage(localPosition, localNormal, 1.0 / smallGridSpacing,
 		smallLineWidth, halfSampleSpan);
-	float mediumCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / mediumGridSpacing,
+	float mediumCoverage = GetLocalGridCoverage(localPosition, localNormal, 1.0 / mediumGridSpacing,
 		mediumLineWidth, halfSampleSpan);
-	float largeCoverage = GetLocalGridCoverage(localPosition, localNormal, distance, 1.0 / largeGridSpacing,
+	float largeCoverage = GetLocalGridCoverage(localPosition, localNormal, 1.0 / largeGridSpacing,
 		largeLineWidth, halfSampleSpan);
 	float4 smallContribution = float4(smallCoverage * smallLineColor, smallCoverage);
 	float4 mediumContribution = float4(mediumCoverage * mediumLineColor, mediumCoverage);
@@ -174,13 +198,14 @@ void GetScreenspaceDerivatives(float3 surfacePosition, float3 surfaceNormal, flo
 }
 
 float3 ShadeSurface(float3 surfacePosition, float3 surfaceNormal, float3 surfaceColor, float3 dpdx, float3 dpdy,
-	float3 instancePosition, float4 instanceOrientation, float shapeSize, float zDistance)
+	float3 instancePosition, float4 instanceOrientation)
 {
-	float3 shapeLocalPosition = TransformByConjugate(surfacePosition - instancePosition, instanceOrientation);
-	float3 shapeLocalNormal = TransformByConjugate(surfaceNormal, instanceOrientation);
-	float3 shapeLocalDpdx = TransformByConjugate(dpdx, instanceOrientation);
-	float3 shapeLocalDpdy = TransformByConjugate(dpdy, instanceOrientation);
-	float4 grid = GetLocalGridContributions(shapeLocalPosition, shapeLocalNormal, shapeLocalDpdx, shapeLocalDpdy, shapeSize, zDistance);
+	float3x3 worldToLocalRotation = ConvertToRotationMatrix(Conjugate(instanceOrientation));
+	float3 shapeLocalPosition = mul(surfacePosition - instancePosition, worldToLocalRotation);
+	float3 shapeLocalNormal = mul(surfaceNormal, worldToLocalRotation);
+	float3 shapeLocalDpdx = mul(dpdx, worldToLocalRotation);
+	float3 shapeLocalDpdy = mul(dpdy, worldToLocalRotation);
+	float4 grid = GetLocalGridContributions(shapeLocalPosition, shapeLocalNormal, shapeLocalDpdx, shapeLocalDpdy);
 	float3 compositedColor = grid.xyz + surfaceColor * (1 - grid.w);
 	return compositedColor * AccumulateLight(surfaceNormal);
 }

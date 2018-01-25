@@ -16,8 +16,8 @@ namespace Demos
     {
         static void Main(string[] args)
         {
-            RayTesting.Test<Capsule, CapsuleRayTester>();
-            RayTesting.Test<Sphere, SphereRayTester>();
+            //RayTesting.Test<Capsule, CapsuleRayTester>();
+            //RayTesting.Test<Sphere, SphereRayTester>();
             //HeadlessDemo.Test<ReactivateTests>(0, 1024);
             //OperatorCodegenTests.Test();
             //ConstraintDescriptionMappingTests.Test();

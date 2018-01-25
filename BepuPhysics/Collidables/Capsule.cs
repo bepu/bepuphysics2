@@ -126,8 +126,8 @@ namespace BepuPhysics.Collidables
                     return false;
                 }
                 t = (-b - (float)Math.Sqrt(discriminant)) / a;
-                if (t < 0)
-                    t = 0;
+                if (t < -tOffset)
+                    t = -tOffset;
                 var cylinderHitLocation = o + d * t;
                 if (cylinderHitLocation.Y < -HalfLength)
                 {
@@ -148,8 +148,7 @@ namespace BepuPhysics.Collidables
             }
             else
             {
-                //The ray is parallel to the axis; the impact is on a spherical cap.
-                //We know the ray start isn't in the capsule, so we only need to test 
+                //The ray is parallel to the axis; the impact is on a spherical cap or nothing.
                 sphereY = d.Y > 0 ? -HalfLength : HalfLength;
             }
             
@@ -174,8 +173,8 @@ namespace BepuPhysics.Collidables
                 return false;
             }
             t = -capB - (float)Math.Sqrt(capDiscriminant);
-            if (t < 0)
-                t = 0;
+            if (t < -tOffset)
+                t = -tOffset;
             normal = (os + d * t) / Radius;
             t = (t + tOffset) * inverseDLength;
             Matrix3x3.Transform(ref normal, ref orientation, out normal);

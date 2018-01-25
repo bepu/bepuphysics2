@@ -89,8 +89,8 @@ namespace BepuPhysics.Collidables
                 return false;
             }
             t = -b - (float)Math.Sqrt(discriminant);
-            if (t < 0)
-                t = 0;
+            if (t < -tOffset)
+                t = -tOffset;
             normal = (o + d * t) / Radius;
             t = (t + tOffset) * inverseDLength;
             return true;
