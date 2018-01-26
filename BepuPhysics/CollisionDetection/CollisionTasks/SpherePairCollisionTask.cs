@@ -30,18 +30,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             depth = radiiA + radiiB - centerDistance;
 
             //The contact position relative to object A is computed as the average of the extreme point along the normal toward the opposing sphere on each sphere, averaged.
-            //In other words:
-            //contactPosition = (positionA + (-normal) * radiusA + positionB + normal * radiusB) / 2
-            //Note the use of the negative normal for the contribution from sphere A- the normal is calibrated to point from B to A.
-            //Now, because both positions are relative to positionA:
-            //relativeContactPosition = (-normal * radiusA + relativePositionB + normal * radiusB) / 2
-            //relativeContactPosition = (relativePositionB + (normal * radiusB - normal * radiusA)) / 2
-            //relativeContactPosition = (relativePositionB + normal * (radiusB - radiusA)) / 2
-            var radiusDifference = radiiB - radiiA;
-            Vector3Wide.Scale(ref contactNormal, ref radiusDifference, out var offsetFromB);
-            Vector3Wide.Add(ref relativePositionB, ref offsetFromB, out relativeContactPosition);
-            var scale = new Vector<float>(0.5f);
-            Vector3Wide.Scale(ref relativeContactPosition, ref scale, out relativeContactPosition);
+            var negativeOffsetFromA = depth * 0.5f - radiiA;
+            Vector3Wide.Scale(ref contactNormal, ref negativeOffsetFromA, out relativeContactPosition);
         }
     }
 
@@ -94,7 +84,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 Vector3Wide.Subtract(ref positionB, ref positionA, out relativePosition);
                 SpherePairTester.Test(ref radiiA, ref radiiB, ref relativePosition, out contactPosition, out contactNormal, out depth);
-
+                
                 GatherScatter.Scatter<float, ContactManifold>(ref relativePosition.X, ref manifolds->OffsetB.X, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref relativePosition.Y, ref manifolds->OffsetB.Y, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref relativePosition.Z, ref manifolds->OffsetB.Z, countInBundle);

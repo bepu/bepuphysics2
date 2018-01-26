@@ -39,7 +39,7 @@ namespace Demos
                     SleepThreshold = .1f,
                     MinimumTimestepCountUnderThreshold = 32
                 },
-                Velocity = new BodyVelocity { Angular = new Vector3(0, (rowIndex % 2 - 0.5f) * 20, 0) }
+                //Velocity = new BodyVelocity { Angular = new Vector3(0, (rowIndex % 2 - 0.5f) * 20, 0) }
             };
 
             var inverseInertia = bodyDescription.LocalInertia.InverseMass * InverseInertiaMultiplier;

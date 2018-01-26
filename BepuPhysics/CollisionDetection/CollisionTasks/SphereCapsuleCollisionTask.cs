@@ -15,20 +15,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Test(
             ref Vector<float> sphere, ref CapsuleWide capsule,
-            ref Vector3Wide capsuleToSphere, ref QuaternionWide capsuleOrientation,
+            ref Vector3Wide sphereToCapsule, ref QuaternionWide capsuleOrientation,
             out Vector3Wide relativeContactPosition, out Vector3Wide contactNormal, out Vector<float> depth)
         {
             //The contact for a sphere-capsule pair is based on the closest point of the sphere center to the capsule internal line segment.
             QuaternionWide.TransformUnitXY(ref capsuleOrientation, out var x, out var y);
-            Vector3Wide.Dot(ref y, ref capsuleToSphere, out var t);
-            t = Vector.Min(capsule.HalfLength, Vector.Max(-capsule.HalfLength, t));
-            Vector3Wide.Scale(ref y, ref t, out var closestPointOnLineSegment);
+            Vector3Wide.Dot(ref y, ref sphereToCapsule, out var t);
+            t = Vector.Min(capsule.HalfLength, Vector.Max(-capsule.HalfLength, -t));
+            Vector3Wide.Scale(ref y, ref t, out var capsuleLocalClosestPointOnLineSegment);
 
-            Vector3Wide.Subtract(ref capsuleToSphere, ref closestPointOnLineSegment, out var offset);
-            //Note that the normal points from B to A by convention. Here, the sphere is A, the capsule is B.
-            Vector3Wide.Length(ref offset, out var internalDistance);
-            var inverseDistance = Vector<float>.One / internalDistance;            
-            Vector3Wide.Scale(ref offset, ref inverseDistance, out contactNormal);
+            Vector3Wide.Add(ref sphereToCapsule, ref capsuleLocalClosestPointOnLineSegment, out var sphereToInternalSegment);
+            Vector3Wide.Length(ref sphereToInternalSegment, out var internalDistance);
+            //Note that the normal points from B to A by convention. Here, the sphere is A, the capsule is B, so the normalization requires a negation.
+            var inverseDistance = new Vector<float>(-1f) / internalDistance;            
+            Vector3Wide.Scale(ref sphereToInternalSegment, ref inverseDistance, out contactNormal);
             var normalIsValid = Vector.GreaterThan(internalDistance, Vector<float>.Zero);
             //If the center of the sphere is on the internal line segment, then choose a direction on the plane defined by the capsule's up vector.
             //We computed one such candidate earlier. Note that we could usually get away with choosing a completely arbitrary direction, but 
@@ -39,16 +39,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(ref normalIsValid, ref contactNormal, ref x, out contactNormal);
             depth = sphere + capsule.Radius - internalDistance;
 
-            //The contact position relative to object A is computed as the average of the extreme point along the normal toward the opposing shape on each shape, averaged.
-            //In other words:
-            //relativeContactPosition = (capsuleToSphere + (-normal) * sphereRadius + closestPointOnLineSegment + normal * capsuleRadius) / 2
-            //relativeContactPosition = (capsuleToSphere + closestPointOnLineSegment + normal * (capsuleRadius - sphereRadius)) / 2
-            var radiusDifference = capsule.Radius - sphere;
-            Vector3Wide.Scale(ref contactNormal, ref radiusDifference, out relativeContactPosition);
-            Vector3Wide.Add(ref relativeContactPosition, ref capsuleToSphere, out relativeContactPosition);
-            Vector3Wide.Add(ref relativeContactPosition, ref closestPointOnLineSegment, out relativeContactPosition);
-            var scale = new Vector<float>(0.5f);
-            Vector3Wide.Scale(ref relativeContactPosition, ref scale, out relativeContactPosition);
+            //The contact position relative to object A (the sphere) is computed as the average of the extreme point along the normal toward the opposing shape on each shape, averaged.
+            //For capsule-sphere, this can be computed from the normal and depth.
+            var negativeOffsetFromSphere = depth * 0.5f - sphere;
+            Vector3Wide.Scale(ref contactNormal, ref negativeOffsetFromSphere, out relativeContactPosition);
         }
     }
 
@@ -78,7 +72,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide spherePosition;
             Vector3Wide capsulePosition;
             QuaternionWide capsuleOrientation;
-            Vector3Wide contactNormal, contactPosition, capsuleToSphere;
+            Vector3Wide contactNormal, contactPosition, sphereToCapsule;
             Vector<float> depth;
 
             for (int i = 0; i < batch.Count; i += Vector<float>.Count)
@@ -105,12 +99,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsuleOrientation.Z, ref bundleStart.Shared.PoseB.Orientation.Z, countInBundle);
                 GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsuleOrientation.W, ref bundleStart.Shared.PoseB.Orientation.W, countInBundle);
 
-                Vector3Wide.Subtract(ref spherePosition, ref capsulePosition, out capsuleToSphere);
-                SphereCapsuleTester.Test(ref spheres, ref capsules, ref capsuleToSphere, ref capsuleOrientation, out contactPosition, out contactNormal, out depth);
+                Vector3Wide.Subtract(ref capsulePosition, ref spherePosition, out sphereToCapsule);
+                SphereCapsuleTester.Test(ref spheres, ref capsules, ref sphereToCapsule, ref capsuleOrientation, out contactPosition, out contactNormal, out depth);
 
-                GatherScatter.Scatter<float, ContactManifold>(ref capsuleToSphere.X, ref manifolds->OffsetB.X, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref capsuleToSphere.Y, ref manifolds->OffsetB.Y, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref capsuleToSphere.Z, ref manifolds->OffsetB.Z, countInBundle);
+                Vector3Wide.Negate(ref sphereToCapsule);
+                GatherScatter.Scatter<float, ContactManifold>(ref sphereToCapsule.X, ref manifolds->OffsetB.X, countInBundle);
+                GatherScatter.Scatter<float, ContactManifold>(ref sphereToCapsule.Y, ref manifolds->OffsetB.Y, countInBundle);
+                GatherScatter.Scatter<float, ContactManifold>(ref sphereToCapsule.Z, ref manifolds->OffsetB.Z, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref contactPosition.X, ref manifolds->Offset0.X, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref contactPosition.Y, ref manifolds->Offset0.Y, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref contactPosition.Z, ref manifolds->Offset0.Z, countInBundle);
