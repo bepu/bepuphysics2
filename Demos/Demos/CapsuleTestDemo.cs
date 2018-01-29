@@ -20,14 +20,14 @@ namespace Demos
             camera.Pitch = MathHelper.Pi * 0.1f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
-            var shape = new Sphere(0.5f);
+            var shape = new Capsule(0.5f, 1f);
             BodyInertia localInertia;
             localInertia.InverseMass = 1f;
             shape.ComputeLocalInverseInertia(1f / localInertia.InverseMass, out localInertia.InverseInertiaTensor);
             //capsuleInertia.InverseInertiaTensor = new Triangular3x3();
             var shapeIndex = Simulation.Shapes.Add(ref shape);
             const int width = 1;
-            const int height = 2;
+            const int height = 1;
             const int length = 1;
             var latticeSpacing = 1.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
@@ -38,7 +38,7 @@ namespace Demos
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -1, 0);
             Simulation.Deterministic = false;
 
-            var staticShape = new Capsule(4f, 6);
+            var staticShape = new Sphere(4f);
             var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
             const int staticGridWidth = 16;
             const float staticSpacing = 6;

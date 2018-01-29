@@ -72,8 +72,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide spherePosition;
             Vector3Wide capsulePosition;
             QuaternionWide capsuleOrientation;
-            Vector3Wide contactNormal, contactPosition, sphereToCapsule;
+            Vector3Wide contactNormal, contactPosition, offsetB;
             Vector<float> depth;
+            Vector<int> flipMask;
 
             for (int i = 0; i < batch.Count; i += Vector<float>.Count)
             {
@@ -98,13 +99,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsuleOrientation.Y, ref bundleStart.Shared.PoseB.Orientation.Y, countInBundle);
                 GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsuleOrientation.Z, ref bundleStart.Shared.PoseB.Orientation.Z, countInBundle);
                 GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsuleOrientation.W, ref bundleStart.Shared.PoseB.Orientation.W, countInBundle);
+                GatherScatter.Gather<int, RigidPair<Sphere, Capsule>>(ref flipMask, ref bundleStart.Shared.FlipMask, countInBundle);
 
-                Vector3Wide.Subtract(ref capsulePosition, ref spherePosition, out sphereToCapsule);
-                SphereCapsuleTester.Test(ref spheres, ref capsules, ref sphereToCapsule, ref capsuleOrientation, out contactPosition, out contactNormal, out depth);
-                
-                GatherScatter.Scatter<float, ContactManifold>(ref sphereToCapsule.X, ref manifolds->OffsetB.X, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref sphereToCapsule.Y, ref manifolds->OffsetB.Y, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref sphereToCapsule.Z, ref manifolds->OffsetB.Z, countInBundle);
+                Vector3Wide.Subtract(ref capsulePosition, ref spherePosition, out offsetB);
+                SphereCapsuleTester.Test(ref spheres, ref capsules, ref offsetB, ref capsuleOrientation, out contactPosition, out contactNormal, out depth);
+
+                //Flip back any contacts associated with pairs which had to be flipped for shape order.
+                Vector3Wide.Negate(ref contactNormal, out var flippedNormal);
+                Vector3Wide.Subtract(ref contactPosition, ref offsetB, out var flippedContactPosition);
+                Vector3Wide.Negate(ref offsetB, out var flippedOffsetB);
+                Vector3Wide.ConditionalSelect(ref flipMask, ref flippedNormal, ref contactNormal, out contactNormal);
+                Vector3Wide.ConditionalSelect(ref flipMask, ref flippedContactPosition, ref contactPosition, out contactPosition);
+                Vector3Wide.ConditionalSelect(ref flipMask, ref flippedOffsetB, ref offsetB, out offsetB);
+
+                GatherScatter.Scatter<float, ContactManifold>(ref offsetB.X, ref manifolds->OffsetB.X, countInBundle);
+                GatherScatter.Scatter<float, ContactManifold>(ref offsetB.Y, ref manifolds->OffsetB.Y, countInBundle);
+                GatherScatter.Scatter<float, ContactManifold>(ref offsetB.Z, ref manifolds->OffsetB.Z, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref contactPosition.X, ref manifolds->Offset0.X, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref contactPosition.Y, ref manifolds->Offset0.Y, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref contactPosition.Z, ref manifolds->Offset0.Z, countInBundle);
@@ -114,14 +124,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 GatherScatter.Scatter<float, ContactManifold>(ref contactNormal.Z, ref manifolds->Normal0.Z, countInBundle);
                 for (int j = 0; j < countInBundle; ++j)
                 {
-                    if (Unsafe.Add(ref bundleStart, j).Shared.FlipMask < 0)
-                    {
-                        var manifold = manifolds + j;
-                        manifold->ConvexNormal = -manifold->ConvexNormal;
-                        manifold->Offset0 = manifold->Offset0 - manifold->OffsetB;
-                        manifold->OffsetB = -manifold->OffsetB;
-                        //Console.WriteLine($"Depth: {manifold->Depth0}");
-                    }
                     continuations.Notify(Unsafe.Add(ref bundleStart, j).Shared.Continuation, manifolds + j);
                     Debug.Assert(manifolds[j].ContactCount == 1 && manifolds[j].Convex, "The notify function should not modify the provided manifold reference.");
                 }
