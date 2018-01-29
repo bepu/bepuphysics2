@@ -68,9 +68,9 @@ float3x3 ConvertToRotationMatrix(float4 rotation)
 	float wy2 = rotation.w * y2;
 	float wz2 = rotation.w * z2;
 	return float3x3(
-		float3(1.0 - yy2 - zz2, xy2 - wz2, xz2 + wy2),
-		float3(xy2 + wz2, 1.0 - xx2 - zz2, yz2 - wx2),
-		float3(xz2 - wy2, yz2 + wx2, 1.0 - xx2 - yy2));
+		float3(1.0 - yy2 - zz2, xy2 + wz2, xz2 - wy2),
+		float3(xy2 - wz2, 1.0 - xx2 - zz2, yz2 + wx2),
+		float3(xz2 + wy2, yz2 - wx2, 1.0 - xx2 - yy2));
 }
 
 float3 TransformUnitY(float4 rotation)

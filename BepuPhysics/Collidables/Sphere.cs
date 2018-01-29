@@ -96,6 +96,16 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
+        public void ComputeLocalInverseInertia(float mass, out Triangular3x3 localInverseInertia)
+        {
+            localInverseInertia.M11 = (5f / 2f) / (mass * Radius * Radius);
+            localInverseInertia.M21 = 0;
+            localInverseInertia.M22 = localInverseInertia.M11;
+            localInverseInertia.M31 = 0;
+            localInverseInertia.M32 = 0;
+            localInverseInertia.M33 = localInverseInertia.M11;
+        }
+
         /// <summary>
         /// Type id of sphere shapes.
         /// </summary>

@@ -27,7 +27,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(ref sphereToCapsule, ref capsuleLocalClosestPointOnLineSegment, out var sphereToInternalSegment);
             Vector3Wide.Length(ref sphereToInternalSegment, out var internalDistance);
             //Note that the normal points from B to A by convention. Here, the sphere is A, the capsule is B, so the normalization requires a negation.
-            var inverseDistance = new Vector<float>(-1f) / internalDistance;            
+            var inverseDistance = new Vector<float>(-1f) / internalDistance;
             Vector3Wide.Scale(ref sphereToInternalSegment, ref inverseDistance, out contactNormal);
             var normalIsValid = Vector.GreaterThan(internalDistance, Vector<float>.Zero);
             //If the center of the sphere is on the internal line segment, then choose a direction on the plane defined by the capsule's up vector.
@@ -101,8 +101,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 Vector3Wide.Subtract(ref capsulePosition, ref spherePosition, out sphereToCapsule);
                 SphereCapsuleTester.Test(ref spheres, ref capsules, ref sphereToCapsule, ref capsuleOrientation, out contactPosition, out contactNormal, out depth);
-
-                Vector3Wide.Negate(ref sphereToCapsule);
+                
                 GatherScatter.Scatter<float, ContactManifold>(ref sphereToCapsule.X, ref manifolds->OffsetB.X, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref sphereToCapsule.Y, ref manifolds->OffsetB.Y, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref sphereToCapsule.Z, ref manifolds->OffsetB.Z, countInBundle);
@@ -115,11 +114,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 GatherScatter.Scatter<float, ContactManifold>(ref contactNormal.Z, ref manifolds->Normal0.Z, countInBundle);
                 for (int j = 0; j < countInBundle; ++j)
                 {
+                    if (Unsafe.Add(ref bundleStart, j).Shared.FlipMask < 0)
+                    {
+                        var manifold = manifolds + j;
+                        manifold->ConvexNormal = -manifold->ConvexNormal;
+                        manifold->Offset0 = manifold->Offset0 - manifold->OffsetB;
+                        manifold->OffsetB = -manifold->OffsetB;
+                        //Console.WriteLine($"Depth: {manifold->Depth0}");
+                    }
                     continuations.Notify(Unsafe.Add(ref bundleStart, j).Shared.Continuation, manifolds + j);
                     Debug.Assert(manifolds[j].ContactCount == 1 && manifolds[j].Convex, "The notify function should not modify the provided manifold reference.");
                 }
             }
-        }
 
+        }
     }
 }

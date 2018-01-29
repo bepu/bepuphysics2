@@ -85,11 +85,10 @@ namespace BepuPhysics.Constraints.Contact
             Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.AngularVelocity, ref jacobians.AngularA, out var csvaAngular);
             Vector2Wide.Add(ref csvaLinear, ref csvaAngular, out var csv);
             //Required corrective velocity is the negation of the current constraint space velocity.
-            Vector2Wide.Negate(ref csv, out csv);
-            Triangular2x2Wide.TransformBySymmetricWithoutOverlap(ref csv, ref data.EffectiveMass, out var csi);
+            Triangular2x2Wide.TransformBySymmetricWithoutOverlap(ref csv, ref data.EffectiveMass, out var negativeCSI);
 
             var previousAccumulated = accumulatedImpulse;
-            Vector2Wide.Add(ref accumulatedImpulse, ref csi, out accumulatedImpulse);
+            Vector2Wide.Subtract(ref accumulatedImpulse, ref negativeCSI, out accumulatedImpulse);
             //The maximum force of friction depends upon the normal impulse. The maximum is supplied per iteration.
             Vector2Wide.Length(ref accumulatedImpulse, out var accumulatedMagnitude);
             //Note division by zero guard.

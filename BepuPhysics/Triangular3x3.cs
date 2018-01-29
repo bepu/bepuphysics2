@@ -68,5 +68,31 @@ namespace BepuPhysics
             sandwich.M32 = i31 * r.X.Y + i32 * r.Y.Y + i33 * r.Z.Y;
             sandwich.M33 = i31 * r.X.Z + i32 * r.Y.Z + i33 * r.Z.Z;
         }
+
+        /// <summary>
+        /// Inverts the given matix.
+        /// </summary>
+        /// <param name="m">Matrix to be inverted.</param>
+        /// <param name="inverse">Inverted matrix.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static void SymmetricInvert(ref Triangular3x3 m, out Triangular3x3 inverse)
+        {
+            var m11 = m.M22 * m.M33 - m.M32 * m.M32;
+            var m21 = m.M32 * m.M31 - m.M33 * m.M21;
+            var m31 = m.M21 * m.M32 - m.M31 * m.M22;
+            var determinantInverse = 1f / (m11 * m.M11 + m21 * m.M21 + m31 * m.M31);
+
+            var m22 = m.M33 * m.M11 - m.M31 * m.M31;
+            var m32 = m.M31 * m.M21 - m.M11 * m.M32;
+
+            var m33 = m.M11 * m.M22 - m.M21 * m.M21;
+
+            inverse.M11 = m11 * determinantInverse;
+            inverse.M21 = m21 * determinantInverse;
+            inverse.M31 = m31 * determinantInverse;
+            inverse.M22 = m22 * determinantInverse;
+            inverse.M32 = m32 * determinantInverse;
+            inverse.M33 = m33 * determinantInverse;
+        }
     }
 }

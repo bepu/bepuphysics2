@@ -31,6 +31,9 @@ namespace Demos
             });
 
             var shape = new Sphere(0.5f);
+            BodyInertia sphereInertia;
+            sphereInertia.InverseMass = 1;
+            shape.ComputeLocalInverseInertia(1f / sphereInertia.InverseMass, out sphereInertia.InverseInertiaTensor);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
             const int width = 1;
             const int height = 4;
@@ -38,7 +41,7 @@ namespace Demos
             var latticeSpacing = 1.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
-                new RegularGridBuilder(new Vector3(latticeSpacing, 1.1f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), 1f / (shape.Radius * shape.Radius * 2 / 3), shapeIndex),
+                new RegularGridBuilder(new Vector3(latticeSpacing, 1.1f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), sphereInertia, shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -1, 0);

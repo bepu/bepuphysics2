@@ -151,8 +151,8 @@ namespace BepuPhysics.Collidables
                 //The ray is parallel to the axis; the impact is on a spherical cap or nothing.
                 sphereY = d.Y > 0 ? -HalfLength : HalfLength;
             }
-            
-            var os = o - new Vector3(0, sphereY, 0); 
+
+            var os = o - new Vector3(0, sphereY, 0);
             var capB = Vector3.Dot(os, d);
             var capC = Vector3.Dot(os, os) - radiusSquared;
 
@@ -180,6 +180,22 @@ namespace BepuPhysics.Collidables
             Matrix3x3.Transform(ref normal, ref orientation, out normal);
             return true;
 
+        }
+
+        public void ComputeLocalInverseInertia(float mass, out Triangular3x3 localInverseInertia)
+        {
+            var r2 = Radius * Radius;
+            var h2 = HalfLength * HalfLength;
+            var cylinderVolume = 2 * mass * HalfLength * r2 * MathHelper.Pi;
+            var hemisphereVolume = (2f / 3f) * mass * r2 * Radius * MathHelper.Pi;
+            localInverseInertia.M11 = 1f / (
+                cylinderVolume * ((4f / 12f) * h2 + r2 / 4f) +
+                hemisphereVolume * ((4f / 5f) * r2 + 4 * h2 + (6f / 4f) * HalfLength * Radius));
+            localInverseInertia.M21 = 0;
+            localInverseInertia.M22 = 1f / (cylinderVolume * r2 / 2f + hemisphereVolume * (4f / 5f * r2));
+            localInverseInertia.M31 = 0;
+            localInverseInertia.M32 = 0;
+            localInverseInertia.M33 = localInverseInertia.M11;
         }
 
         /// <summary>

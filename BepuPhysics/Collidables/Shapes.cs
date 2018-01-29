@@ -30,6 +30,8 @@ namespace BepuPhysics.Collidables
 
         bool RayTest(ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, out float t, out Vector3 normal);
 
+        void ComputeLocalInverseInertia(float mass, out Triangular3x3 localInverseInertia);
+
         //These functions require only an orientation because the effect of the position on the bounding box is the same for all shapes.
         //By isolating the shape from the position, we can more easily swap out the position representation for higher precision modes while only modifying the stuff that actually
         //deals with positions directly.
@@ -352,6 +354,9 @@ namespace BepuPhysics.Collidables
                     batches.Resize(typeId, new PassthroughArrayPool<ShapeBatch>());
                 }
                 batches.Count = typeId + 1;
+            }
+            if(batches[typeId] == null)
+            {
                 batches[typeId] = new ShapeBatch<TShape>(pool, InitialCapacityPerTypeBatch);
             }
             Debug.Assert(batches[typeId] is ShapeBatch<TShape>);
