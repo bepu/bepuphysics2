@@ -1,25 +1,47 @@
 # Roadmap
 
-This is a high level plan for future development. For a detailed breakdown of tasks in progress, check the [issues](https://github.com/bepu/bepuphysics2/issues) page.
+This is a high level plan for future development. All dates and features are goals, not guarantees. For a detailed breakdown of tasks in progress, check the [issues](https://github.com/bepu/bepuphysics2/issues) page.
 
-## Near future (Q4 2017-Q1 2018)
+## Near future (Q1-Q2 2018)
 
 The big goals for the initial version are:
-- Basic feature set covering most games.
 - Performance should generally be an order of magnitude better than v1.
 - Stuff should tend to be automatically stable with as few tuning knobs as possible. In particular, it should avoid *global* tuning knobs. The use of an iterative solver means there are still mass ratio issues, but fiddly details like scale should just go away.
 
-The core feature set should include stuff like:
-- Zoo of convex and nonconvex collision shapes, with associated contact tests
-- Ray casts and sweeps, both simulation-wide and low level primitives
-- Zoo of common constraints
-- Automatic activity management
-- Continuous collision detection
-
 Note that this release will lack many of v1's built in features, like:
-- Buoyancy
-- Full featured character controller (though I will likely provide a simple example version in the demos, just without the full upstepping/downstepping/stance shifting feature set)
-- Dedicated vehicle type
+- Buoyancy.
+- Full featured character controller (though I will likely provide a simple example version in the demos, just without the full upstepping/downstepping/stance shifting feature set).
+- Dedicated vehicle type.
+
+The initial version will be split into incremental stages: alpha, beta, and release.
+
+### Alpha (February 2018)
+This will be the first version that is likely to be useful to anyone, but not everyone.
+- Spheres, capsules, and boxes.
+- List-based compound shape type. Primarily useful for small groups of shapes.
+- Basic non-contact constraints. Should be able to simulate a ragdoll.
+- Some extra convenience types for accessing body data.
+
+### Beta (March-April 2018)
+The beta should be able to support most games, but will still be missing some important pieces.
+- Triangulated mesh colliders with boundary smoothing.
+- Tree-accelerated compound for larger collections of shapes.
+- Simulation-wide ray and shape casts.
+- A few additional common constraint types.
+
+### Release (March-May 2018)
+Should be able to support the core features required by physically complex games.
+- Better handling of some dangerous performance corner cases in the solver.
+- Fully enabled CCD.
+- Convex hulls.
+- Additional ease of use features, especially for supplying custom body properties to collision filtering and velocity integration.
+- More educational demos, including some deeper dives like showing how to create a custom voxel world collidable.
+
+### Nice-to-haves 
+There are a few features which aren't fundamentally required for a release, but which are still high value. These might get pulled into one of the above milestones if possible. If they don't make it into the first version, they'll probably show up later.
+- Further broad phase improvements.
+- Experimental general convex boundary smoothing.
+- Cylinders and cones.
  
 ## Medium term (Q2 2018-Q2 2019)
 

@@ -18,7 +18,7 @@ namespace Demos
         Random random;
         public unsafe override void Initialize(Camera camera)
         {
-            camera.Position = new Vector3(-3f, 3, -3f);
+            camera.Position = new Vector3(-15f, 20, -15f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks(),

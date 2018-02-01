@@ -36,9 +36,9 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<FountainStressTestDemo>();
             AddOption<CapsuleTestDemo>();
             AddOption<SimpleDemo>();
-            AddOption<FountainStressTestDemo>();
         }
 
         public int Count { get { return options.Count; } }
