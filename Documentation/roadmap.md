@@ -16,14 +16,14 @@ Note that this release will lack many of v1's built in features, like:
 The initial version will be split into incremental stages: alpha, beta, and release.
 
 ### Alpha (February 2018)
-This will be the first version that is likely to be useful to anyone, but not everyone.
+This will be the first version that is likely to be useful to anyone, but far from everyone.
 - Spheres, capsules, and boxes.
 - List-based compound shape type. Primarily useful for small groups of shapes.
 - Basic non-contact constraints. Should be able to simulate a ragdoll.
 - Some extra convenience types for accessing body data.
 
 ### Beta (March-April 2018)
-The beta should be able to support most games, but will still be missing some important pieces.
+The beta will still be missing some important pieces, but should be able to support most games.
 - Triangulated mesh colliders with boundary smoothing.
 - Tree-accelerated compound for larger collections of shapes.
 - Simulation-wide ray and shape casts.
