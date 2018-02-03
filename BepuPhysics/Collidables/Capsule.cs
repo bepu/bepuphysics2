@@ -182,22 +182,26 @@ namespace BepuPhysics.Collidables
 
         }
 
-        public void ComputeLocalInverseInertia(float mass, out Triangular3x3 localInverseInertia)
+        public void ComputeLocalInverseInertia(float inverseMass, out Triangular3x3 localInverseInertia)
         {
+
             var r2 = Radius * Radius;
             var h2 = HalfLength * HalfLength;
-            var cylinderVolume = 2 * mass * HalfLength * r2 * MathHelper.Pi;
-            var hemisphereVolume = (2f / 3f) * mass * r2 * Radius * MathHelper.Pi;
-            localInverseInertia.M11 = 1f / (
+            var cylinderVolume = 2 * HalfLength * r2 * MathHelper.Pi;
+            var sphereVolume = (4f / 3f) * r2 * Radius * MathHelper.Pi;
+            var inverseTotal = 1f / (cylinderVolume + sphereVolume);
+            cylinderVolume *= inverseTotal;
+            sphereVolume *= inverseTotal;
+            localInverseInertia.M11 = inverseMass / (
                 cylinderVolume * ((4f / 12f) * h2 + r2 / 4f) +
-                hemisphereVolume * ((4f / 5f) * r2 + 4 * h2 + (6f / 4f) * HalfLength * Radius));
+                sphereVolume * ((2f / 5f) * r2 + 2 * h2 + (3f / 4f) * HalfLength * Radius));
             localInverseInertia.M21 = 0;
-            localInverseInertia.M22 = 1f / (cylinderVolume * r2 / 2f + hemisphereVolume * (4f / 5f * r2));
+            localInverseInertia.M22 = inverseMass / (cylinderVolume * (1f / 2f) * r2 + sphereVolume * (2f / 5f) * r2);
             localInverseInertia.M31 = 0;
             localInverseInertia.M32 = 0;
-            localInverseInertia.M33 = localInverseInertia.M11;
+            localInverseInertia.M33 = localInverseInertia.M11;                        
         }
-
+        
         /// <summary>
         /// Type id of capsule shapes.
         /// </summary>

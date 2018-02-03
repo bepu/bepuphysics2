@@ -68,7 +68,7 @@ namespace BepuPhysics
             sandwich.M32 = i31 * r.X.Y + i32 * r.Y.Y + i33 * r.Z.Y;
             sandwich.M33 = i31 * r.X.Z + i32 * r.Y.Z + i33 * r.Z.Z;
         }
-
+        
         /// <summary>
         /// Inverts the given matix.
         /// </summary>
@@ -93,6 +93,23 @@ namespace BepuPhysics
             inverse.M22 = m22 * determinantInverse;
             inverse.M32 = m32 * determinantInverse;
             inverse.M33 = m33 * determinantInverse;
+        }
+
+        /// <summary>
+        /// Multiplies every component in the matrix by the given scale.
+        /// </summary>
+        /// <param name="m">Matrix to be scaled.</param>
+        /// <param name="scale">Scale to apply to every component of the original matrix.</param>
+        /// <param name="scaled">Scaled result.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Scale(ref Triangular3x3 m, float scale, out Triangular3x3 scaled)
+        {
+            scaled.M11 = m.M11 * scale;
+            scaled.M21 = m.M21 * scale;
+            scaled.M22 = m.M22 * scale;
+            scaled.M31 = m.M31 * scale;
+            scaled.M32 = m.M32 * scale;
+            scaled.M33 = m.M33 * scale;
         }
     }
 }

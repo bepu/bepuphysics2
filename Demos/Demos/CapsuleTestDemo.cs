@@ -20,22 +20,22 @@ namespace Demos
             camera.Pitch = MathHelper.Pi * 0.1f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
-            var shape = new Capsule(0.5f, 1f);
+            var shape = new Capsule(.5f, .5f);
             BodyInertia localInertia;
             localInertia.InverseMass = 1f;
-            shape.ComputeLocalInverseInertia(1f / localInertia.InverseMass, out localInertia.InverseInertiaTensor);
+            shape.ComputeLocalInverseInertia(localInertia.InverseMass, out localInertia.InverseInertiaTensor);
             //capsuleInertia.InverseInertiaTensor = new Triangular3x3();
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 1;
-            const int height = 1;
-            const int length = 1;
+            const int width = 3;
+            const int height = 3;
+            const int length = 3;
             var latticeSpacing = 1.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
-                new RegularGridBuilder(new Vector3(latticeSpacing, 1.1f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), localInertia, shapeIndex),
+                new RegularGridBuilder(new Vector3(latticeSpacing, 2.1f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), localInertia, shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -1, 0);
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
             Simulation.Deterministic = false;
 
             var staticShape = new Sphere(4f);

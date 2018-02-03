@@ -96,9 +96,9 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
-        public void ComputeLocalInverseInertia(float mass, out Triangular3x3 localInverseInertia)
+        public void ComputeLocalInverseInertia(float inverseMass, out Triangular3x3 localInverseInertia)
         {
-            localInverseInertia.M11 = (5f / 2f) / (mass * Radius * Radius);
+            localInverseInertia.M11 = inverseMass / ((2f / 5f) * Radius * Radius);
             localInverseInertia.M21 = 0;
             localInverseInertia.M22 = localInverseInertia.M11;
             localInverseInertia.M31 = 0;
