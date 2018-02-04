@@ -46,6 +46,7 @@ namespace Demos.SpecializedTests
             var numericalLocalInertia = new Triangular3x3();
             var tester = default(TInertiaTester);
             int containedSampleCount = 0;
+
             for (int i = 0; i < axisSampleCount; ++i)
             {
                 for (int j = 0; j < axisSampleCount; ++j)
@@ -67,6 +68,7 @@ namespace Demos.SpecializedTests
                     }
                 }
             }
+
             Triangular3x3.Scale(ref numericalLocalInertia, mass / containedSampleCount, out numericalLocalInertia);
             Triangular3x3.SymmetricInvert(ref numericalLocalInertia, out var numericalLocalInverseInertia);
             shape.ComputeLocalInverseInertia(1f / mass, out var analyticLocalInverseInertia);
@@ -86,7 +88,7 @@ namespace Demos.SpecializedTests
             if (Math.Abs(a) > 1e-5f)
             {
                 var ratio = a / b;
-                return ratio < 1.02f || ratio > 1f / 1.02f;
+                return ratio < 1.1f && ratio > 1f / 1.1f;
             }
             return Math.Abs(b) <= 1e-5;
         }
@@ -95,14 +97,15 @@ namespace Demos.SpecializedTests
         {
             var random = new Random(5);
             const int shapeTrials = 32;
-            for (int i = 0; i < shapeTrials; ++i)
-            {
-                var sphere = new Sphere(0.01f + (float)random.NextDouble() * 10);
-                CheckInertia<Sphere, SphereInertiaTester>(ref sphere);
-            }
+            //for (int i = 0; i < shapeTrials; ++i)
+            //{
+            //    var sphere = new Sphere(0.01f + (float)random.NextDouble() * 10);
+            //    CheckInertia<Sphere, SphereInertiaTester>(ref sphere);
+            //}
             for (int i = 0; i < shapeTrials; ++i)
             {
                 var capsule = new Capsule(0.01f + (float)random.NextDouble() * 10, 0.01f + (float)random.NextDouble() * 10);
+                capsule = new Capsule(5f, 10);
                 CheckInertia<Capsule, CapsuleInertiaTester>(ref capsule);
             }
         }
