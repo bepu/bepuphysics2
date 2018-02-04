@@ -15,9 +15,10 @@ namespace Demos
     {
         public unsafe override void Initialize(Camera camera)
         {
-            camera.Position = new Vector3(-10, 10, -10);
+            camera.Position = new Vector3(-10, 5, -10);
+            //camera.Yaw = MathHelper.Pi ; 
             camera.Yaw = MathHelper.Pi * 3f / 4;
-            camera.Pitch = MathHelper.Pi * 0.1f;
+            //camera.Pitch = MathHelper.Pi * 0.1f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
             var shape = new Capsule(.5f, .5f);
@@ -26,21 +27,45 @@ namespace Demos
             shape.ComputeLocalInverseInertia(localInertia.InverseMass, out localInertia.InverseInertiaTensor);
             //capsuleInertia.InverseInertiaTensor = new Triangular3x3();
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 3;
-            const int height = 3;
-            const int length = 3;
+            const int width = 32;
+            const int height = 32;
+            const int length = 32;
             var latticeSpacing = 1.1f;
-            var latticeOffset = -0.5f * width * latticeSpacing;
+            var latticeOffset = 0;// -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
-                new RegularGridBuilder(new Vector3(latticeSpacing, 2.1f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), localInertia, shapeIndex),
+                new RegularGridBuilder(new Vector3(latticeSpacing, 2.1f, latticeSpacing), new Vector3(latticeOffset, 7, latticeOffset), localInertia, shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -1, 0);
             Simulation.Deterministic = false;
+
+            //var bodyDescription = new BodyDescription
+            //{
+            //    Pose = new RigidPose
+            //    {
+            //        Position = new Vector3(0, 5, -0.5f),
+            //        //Orientation = BepuUtilities.Quaternion.Identity
+            //        Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2)
+            //    },
+            //    LocalInertia = new BodyInertia(),
+            //    Collidable = new CollidableDescription
+            //    {
+            //        Continuity = new ContinuousDetectionSettings(),
+            //        SpeculativeMargin = 0.1f,
+            //        Shape = shapeIndex
+            //    },
+            //    Activity = new BodyActivityDescription
+            //    {
+            //        SleepThreshold = -.1f,
+            //        MinimumTimestepCountUnderThreshold = 32
+            //    },
+            //    //Velocity = new BodyVelocity { Angular = new Vector3(0, (rowIndex % 2 - 0.5f) * 20, 0) }
+            //};
+            //Simulation.Bodies.Add(ref bodyDescription);
 
             var staticShape = new Sphere(4f);
             var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
-            const int staticGridWidth = 16;
+            const int staticGridWidth = 64;
             const float staticSpacing = 6;
             var gridOffset = -0.5f * staticGridWidth * staticSpacing;
             for (int i = 0; i < staticGridWidth; ++i)

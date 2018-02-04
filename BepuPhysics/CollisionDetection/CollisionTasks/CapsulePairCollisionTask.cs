@@ -67,7 +67,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(ref normalIsValid, ref manifold.ContactNormal, ref xa, out manifold.ContactNormal);
 
             manifold.Depth = a.Radius + b.Radius - distance;
-            manifold.OffsetA0 = closestPointOnA;
+            var negativeOffsetFromA = manifold.Depth * 0.5f - a.Radius;
+            Vector3Wide.Scale(ref manifold.ContactNormal, ref negativeOffsetFromA, out manifold.OffsetA0);
+            Vector3Wide.Add(ref manifold.OffsetA0, ref closestPointOnA, out manifold.OffsetA0);
 
             manifold.Count = Vector<int>.One;
         }
