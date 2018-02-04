@@ -190,18 +190,19 @@ namespace BepuPhysics.Collidables
             var cylinderVolume = 2 * HalfLength * r2 * MathHelper.Pi;
             var sphereVolume = (4f / 3f) * r2 * Radius * MathHelper.Pi;
             var inverseTotal = 1f / (cylinderVolume + sphereVolume);
+            //Volume is in units of the capsule's whole volume.
             cylinderVolume *= inverseTotal;
             sphereVolume *= inverseTotal;
             localInverseInertia.M11 = inverseMass / (
-                cylinderVolume * ((4f / 12f) * h2 + r2 / 4f) +
-                sphereVolume * ((2f / 5f) * r2 + 2 * h2 + (3f / 4f) * HalfLength * Radius));
+                cylinderVolume * ((3f / 12f) * r2 + (4f / 12f) * h2) +
+                sphereVolume * ((2f / 5f) * r2 + (6f / 8f) * Radius * HalfLength + h2));
             localInverseInertia.M21 = 0;
             localInverseInertia.M22 = inverseMass / (cylinderVolume * (1f / 2f) * r2 + sphereVolume * (2f / 5f) * r2);
             localInverseInertia.M31 = 0;
             localInverseInertia.M32 = 0;
-            localInverseInertia.M33 = localInverseInertia.M11;                        
+            localInverseInertia.M33 = localInverseInertia.M11;            
         }
-        
+
         /// <summary>
         /// Type id of capsule shapes.
         /// </summary>

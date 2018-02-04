@@ -4,6 +4,7 @@ using BepuUtilities;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Demos.SpecializedTests
@@ -18,7 +19,7 @@ namespace Demos.SpecializedTests
     {
         public bool PointIsContained(ref Sphere shape, ref Vector3 point)
         {
-            return point.Length() <= shape.Radius;
+            return point.LengthSquared() <= shape.Radius * shape.Radius;
         }
     }
 
@@ -27,7 +28,16 @@ namespace Demos.SpecializedTests
         public bool PointIsContained(ref Capsule shape, ref Vector3 point)
         {
             var projectedPoint = new Vector3(0, Math.Max(-shape.HalfLength, Math.Min(shape.HalfLength, point.Y)), 0);
-            return (point - projectedPoint).Length() <= shape.Radius;
+            return (point - projectedPoint).LengthSquared() <= shape.Radius * shape.Radius;
+        }
+    }
+    public struct BoxInertiaTester : IInertiaTester<Box>
+    {
+        public bool PointIsContained(ref Box shape, ref Vector3 point)
+        {
+            ref var extent = ref Unsafe.As<float, Vector3>(ref shape.HalfWidth);
+            var clampedPoint = Vector3.Min(extent, Vector3.Max(-extent, point));
+            return point == clampedPoint;
         }
     }
 
@@ -88,7 +98,8 @@ namespace Demos.SpecializedTests
             if (Math.Abs(a) > 1e-5f)
             {
                 var ratio = a / b;
-                return ratio < 1.1f && ratio > 1f / 1.1f;
+                const float threshold = 0.01f;
+                return ratio < (1 + threshold) && ratio > 1f / (1 + threshold);
             }
             return Math.Abs(b) <= 1e-5;
         }
@@ -97,16 +108,21 @@ namespace Demos.SpecializedTests
         {
             var random = new Random(5);
             const int shapeTrials = 32;
-            //for (int i = 0; i < shapeTrials; ++i)
-            //{
-            //    var sphere = new Sphere(0.01f + (float)random.NextDouble() * 10);
-            //    CheckInertia<Sphere, SphereInertiaTester>(ref sphere);
-            //}
+            for (int i = 0; i < shapeTrials; ++i)
+            {
+                var sphere = new Sphere(0.01f + (float)random.NextDouble() * 10);
+                CheckInertia<Sphere, SphereInertiaTester>(ref sphere);
+            }
             for (int i = 0; i < shapeTrials; ++i)
             {
                 var capsule = new Capsule(0.01f + (float)random.NextDouble() * 10, 0.01f + (float)random.NextDouble() * 10);
-                capsule = new Capsule(5f, 10);
                 CheckInertia<Capsule, CapsuleInertiaTester>(ref capsule);
+            }
+            for (int i = 0; i < shapeTrials; ++i)
+            {
+                var box = new Box(0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble());
+                CheckInertia<Box, BoxInertiaTester>(ref box);
+
             }
         }
     }
