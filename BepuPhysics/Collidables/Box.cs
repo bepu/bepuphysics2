@@ -124,9 +124,14 @@ namespace BepuPhysics.Collidables
             var offset = origin - pose.Position;
             Matrix3x3.CreateFromQuaternion(ref pose.Orientation, out var orientation);
             Matrix3x3.TransformTranspose(ref offset, ref orientation, out var localOffset);
-            Matrix3x3.TransformTranspose(ref direction, ref orientation, out var localDirection);
-            //TODO: divide by zero must be handled.
-            var offsetToTScale = new Vector3(-1) / localDirection;
+            Matrix3x3.TransformTranspose(ref direction, ref orientation, out var localDirection);  
+            //Note that this division has two odd properties:
+            //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
+            //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
+            //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
+            //2) To compensate for the clamp and abs, we reintroduce the sign in the numerator. Note that it has the reverse sign since it will be applied to the offset to get the T value.
+            var offsetToTScale = 
+                new Vector3(localDirection.X < 0 ? 1 : -1, localDirection.Y < 0 ? 1 : -1, localDirection.Z < 0 ? 1 : -1) / Vector3.Max(new Vector3(1e-15f), Vector3.Abs(localDirection));
 
             //Compute impact times for each pair of planes in local space.
             var halfExtent = new Vector3(HalfWidth, HalfHeight, HalfLength);
@@ -140,6 +145,13 @@ namespace BepuPhysics.Collidables
             var earliestExit = exitT.X < exitT.Y ? exitT.X : exitT.Y;
             if (exitT.Z < earliestExit)
                 earliestExit = exitT.Z;
+            //The interval of ray-box intersection goes from latestEntry to earliestExit. If earliestExit is negative, then the ray is pointing away from the box.
+            if (earliestExit < 0)
+            {
+                t = 0;
+                normal = new Vector3();
+                return false;
+            }
             float latestEntry;
             if (entryT.X > entryT.Y)
             {
@@ -170,11 +182,11 @@ namespace BepuPhysics.Collidables
 
             if (earliestExit < latestEntry)
             {
+                //At no point is the ray in all three slabs at once.
                 t = 0;
                 normal = new Vector3();
                 return false;
             }
-            //TODO: this doesn't actually handle the case where the ray is outside and pointing away properly.
             t = latestEntry < 0 ? 0 : latestEntry;
             //The normal should point away from the center of the box.
             if (Vector3.Dot(normal, localOffset) < 0)

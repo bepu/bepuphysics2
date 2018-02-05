@@ -2,7 +2,13 @@
 
 namespace BepuPhysics.CollisionDetection
 {
-    public struct ConvexContact2ManifoldWide
+    public struct Convex1ContactManifoldWide
+    {
+        public Vector3Wide OffsetA0;
+        public Vector3Wide ContactNormal;
+        public Vector<float> Depth;
+    }
+    public struct Convex2ContactManifoldWide
     {
         public Vector3Wide OffsetA0;
         public Vector3Wide OffsetA1;
@@ -11,7 +17,7 @@ namespace BepuPhysics.CollisionDetection
         public Vector<int> Count;
     }
 
-    public struct ConvexContact4ManifoldWide
+    public struct Convex4ContactManifoldWide
     {
         public Vector3Wide OffsetA0;
         public Vector3Wide OffsetA1;

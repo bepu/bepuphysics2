@@ -107,6 +107,66 @@ namespace Demos.SpecializedTests
         }
     }
 
+    public struct BoxRayTester : IRayTester<Box>
+    {
+        public void GetRandomShape(Random random, out Box shape)
+        {
+            const float sizeMin = 0.1f;
+            const float sizeSpan = 200;
+            shape = new Box(sizeMin + sizeSpan * (float)random.NextDouble(), sizeMin * sizeSpan * (float)random.NextDouble(), sizeMin * sizeSpan * (float)random.NextDouble());
+        }
+        public void GetPointInVolume(Random random, float innerMargin, ref Box box, out Vector3 localPoint)
+        {
+            var min = new Vector3(box.HalfWidth - innerMargin, box.HalfHeight - innerMargin, box.HalfLength - innerMargin);
+            var span = min * 2;
+            min = -min;
+            localPoint = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+        }
+
+        public void GetSurface(Random random, ref Box box, out Vector3 localPoint, out Vector3 localNormal)
+        {
+            var a = (float)random.NextDouble();
+            var b = (float)random.NextDouble();
+            var axisSign = (float)(random.Next(2) * 2 - 1);
+            Vector3 x, y, z;
+            switch (random.Next(3))
+            {
+                case 0:
+                    x = new Vector3(box.HalfWidth, 0, 0);
+                    y = new Vector3(0, box.HalfHeight, 0);
+                    localNormal = new Vector3(0, 0, axisSign);
+                    z = localNormal * box.HalfLength;
+                    break;
+                case 1:
+                    x = new Vector3(0, box.HalfHeight, 0);
+                    y = new Vector3(0, 0, box.HalfLength);
+                    localNormal = new Vector3(axisSign, 0, 0);
+                    z = localNormal * box.HalfWidth;
+                    break;
+                default:
+                    x = new Vector3(0, 0, box.HalfLength);
+                    y = new Vector3(box.HalfWidth, 0, 0);
+                    localNormal = new Vector3(0, axisSign, 0);
+                    z = localNormal * box.HalfHeight;
+                    break;
+            }
+            localPoint = (2 * a - 1) * x + (2 * b - 1) * y + z;
+        }
+
+        public bool PointIsOnSurface(ref Box box, ref Vector3 localPoint)
+        {
+            //Cast a ray against the box's bounding planes from the local origin using the local point as the direction.
+            //In effect, all we're doing here is making sure that the closest plane impact has an offset similar to its box extent.
+            var halfExtents = new Vector3(box.HalfWidth, box.HalfHeight, box.HalfLength);
+            var t = (halfExtents * halfExtents) / Vector3.Max(new Vector3(1e-15f), Vector3.Abs(localPoint)) - halfExtents;
+            var minT = t.X < t.Y ? t.X : t.Y;
+            if (t.Z < minT)
+                minT = t.Z;
+            return Math.Abs(minT) < 1e-3f * Math.Max(box.HalfWidth, Math.Max(box.HalfHeight, box.HalfLength));
+        }
+    }
+
+
     public static class RayTesting
     {
         internal static void GetUnitDirection(Random random, out Vector3 direction)

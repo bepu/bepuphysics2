@@ -16,7 +16,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public static void Test(
             ref CapsuleWide a, ref CapsuleWide b,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
-            out ConvexContact2ManifoldWide manifold)
+            out Convex1ContactManifoldWide manifold)
         {
             //Compute the closest points between the two line segments. No clamping to begin with.
             //We want to minimize distance = ||(a + da * ta) - (b + db * tb)||.
@@ -70,8 +70,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var negativeOffsetFromA = manifold.Depth * 0.5f - a.Radius;
             Vector3Wide.Scale(ref manifold.ContactNormal, ref negativeOffsetFromA, out manifold.OffsetA0);
             Vector3Wide.Add(ref manifold.OffsetA0, ref closestPointOnA, out manifold.OffsetA0);
-
-            manifold.Count = Vector<int>.One;
+            
+            //TODO: In the future, you may want to actually take advantage of two contacts in the parallel or coplanar axes case. That can help avoid instabilities that could arise from
+            //a contact jumping across the length of the segment.
+            //This is primarily useful in some pretty weird corner cases, so we're ignoring it for the early versions.
+            //As far as an implementation goes: replace parallel case midpoint contact with two contacts at the borders of the B-on-A region. Can generalize to nonparallel but coplanar case:
+            //depth of each contact computed by unprojecting the B-on-A endpoints back onto B, and then dotting those offsets with the normal.
+            //(That unprojection process is just two line-plane tests with shared calculations.)
         }
     }
 
@@ -103,7 +108,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             QuaternionWide aOrientation;
             QuaternionWide bOrientation;
             Vector3Wide offsetB;
-            ConvexContact2ManifoldWide manifoldWide;
+            Convex1ContactManifoldWide manifoldWide;
 
             for (int i = 0; i < batch.Count; i += Vector<float>.Count)
             {

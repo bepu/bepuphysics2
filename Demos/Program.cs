@@ -16,9 +16,10 @@ namespace Demos
     {
         static void Main(string[] args)
         {
+            RayTesting.Test<Box, BoxRayTester>();
+            RayTesting.Test<Capsule, CapsuleRayTester>();
+            RayTesting.Test<Sphere, SphereRayTester>();
             InertiaTensorTests.Test();
-            //RayTesting.Test<Capsule, CapsuleRayTester>();
-            //RayTesting.Test<Sphere, SphereRayTester>();
             //HeadlessDemo.Test<ReactivateTests>(0, 1024);
             //OperatorCodegenTests.Test();
             //ConstraintDescriptionMappingTests.Test();
