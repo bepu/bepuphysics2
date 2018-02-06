@@ -243,7 +243,7 @@ namespace BepuPhysics.CollisionDetection
         }
     }
 
-    struct RigidPair
+    public struct RigidPair
     {
         /// <summary>
         /// Stores whether the types involved in pair require that the resulting contact manifold be flipped to be consistent with the user-requested pair order.
@@ -257,7 +257,7 @@ namespace BepuPhysics.CollisionDetection
     //Writes by the narrowphase write shape data without type knowledge, so they can't easily operate on regular packing rules. Emulate this with a pack of 1.
     //This allows the reader to still have a quick way to interpret data rather than casting individual shapes.
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    struct RigidPair<TShapeA, TShapeB>
+    public struct RigidPair<TShapeA, TShapeB>
             where TShapeA : struct, IShape where TShapeB : struct, IShape
     {
         public TShapeA A;

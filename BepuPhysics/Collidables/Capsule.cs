@@ -10,11 +10,6 @@ using BepuUtilities;
 
 namespace BepuPhysics.Collidables
 {
-    public struct CapsuleWide
-    {
-        public Vector<float> Radius;
-        public Vector<float> HalfLength;
-    }
 
     /// <summary>
     /// Collision shape representing a sphere-expanded line segment.
@@ -208,5 +203,17 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public const int Id = 1;
         public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+    }
+
+    public struct CapsuleWide : IShapeWide<Capsule, CapsuleWide>
+    {
+        public Vector<float> Radius;
+        public Vector<float> HalfLength;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Gather(ref Capsule source, ref CapsuleWide target)
+        {
+            Unsafe.As<Vector<float>, float>(ref target.Radius) = source.Radius;
+            Unsafe.As<Vector<float>, float>(ref target.HalfLength) = source.HalfLength;
+        }
     }
 }

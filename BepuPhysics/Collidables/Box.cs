@@ -10,13 +10,6 @@ using BepuUtilities;
 
 namespace BepuPhysics.Collidables
 {
-    public struct BoxWide
-    {
-        public Vector<float> HalfWidth;
-        public Vector<float> HalfHeight;
-        public Vector<float> HalfLength;
-    }
-
     /// <summary>
     /// Collision shape representing a solid cuboid.
     /// </summary>
@@ -214,5 +207,20 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public const int Id = 2;
         public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
+    }
+
+
+    public struct BoxWide : IShapeWide<Box, BoxWide>
+    {
+        public Vector<float> HalfWidth;
+        public Vector<float> HalfHeight;
+        public Vector<float> HalfLength;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Gather(ref Box source, ref BoxWide target)
+        {
+            Unsafe.As<Vector<float>, float>(ref target.HalfWidth) = source.HalfWidth;
+            Unsafe.As<Vector<float>, float>(ref target.HalfHeight) = source.HalfHeight;
+            Unsafe.As<Vector<float>, float>(ref target.HalfLength) = source.HalfLength;
+        }
     }
 }
