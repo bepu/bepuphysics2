@@ -79,7 +79,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetPoseOffset(ref TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair, out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref PositionB, ref PositionB, out offsetB);
+            Vector3Wide.Subtract(ref pair.PositionB, ref pair.PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source, ref TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> target)
@@ -157,7 +157,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetPoseOffset(ref UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair, out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref PositionB, ref PositionB, out offsetB);
+            Vector3Wide.Subtract(ref pair.PositionB, ref pair.PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source, ref UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> target)
@@ -235,7 +235,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetPoseOffset(ref OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair, out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref PositionB, ref PositionB, out offsetB);
+            Vector3Wide.Subtract(ref pair.PositionB, ref pair.PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source, ref OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> target)
@@ -305,7 +305,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetPoseOffset(ref NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair, out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref PositionB, ref PositionB, out offsetB);
+            Vector3Wide.Subtract(ref pair.PositionB, ref pair.PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source, ref NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> target)
@@ -326,9 +326,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         //Note that, while the interface requires all three of these implementations, concrete implementers will only ever have one defined or called.
         //Including the other unused functions is just here to simplify its use in the batch execution loop.
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, out TManifoldWideType manifoldWide);
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out TManifoldWideType manifoldWide);
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, out TManifoldWideType manifoldWide);
+        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, out TManifoldWideType manifold);
+        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out TManifoldWideType manifold);
+        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, out TManifoldWideType manifold);
     }
 
     public interface IContactManifoldWide<TContactManifoldWide> where TContactManifoldWide : IContactManifoldWide<TContactManifoldWide>
@@ -341,7 +341,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     class CollisionBatchExecutors
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ExecuteBatch<TContinuations, TFilters, TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide, TManifoldWide, TPairTester>
+        public static unsafe void ExecuteBatch<TContinuations, TFilters, TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide, TManifoldWide, TPairTester>
             (ref UntypedList batch, ref StreamingBatcher batcher, ref TContinuations continuations, ref TFilters filters)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
             where TShapeWideA : struct, IShapeWide<TShapeA, TShapeWideA> where TShapeWideB : struct, IShapeWide<TShapeB, TShapeWideB>
@@ -414,9 +414,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 for (int j = 0; j < countInBundle; ++j)
                 {
-                    ref var offsetFloatStart = ref Unsafe.Add(ref Unsafe.As<TManifoldWide, float>(ref manifoldWide), j);
-                    ref var source = ref Unsafe.As<float, TManifoldWide>(ref offsetFloatStart);
-                    default(TManifoldWide).Scatter(ref source, ref offsetB, ref manifold);
+                    //TODO: You could just use the vector indexer here. Far more likely to work in the long run; use it if the performance is comparable.
+                    ref var manifoldAsFloat = ref Unsafe.Add(ref Unsafe.As<TManifoldWide, float>(ref manifoldWide), j);
+                    ref var manifoldSource = ref Unsafe.As<float, TManifoldWide>(ref manifoldAsFloat);
+                    ref var offsetAsFloat = ref Unsafe.Add(ref Unsafe.As<Vector3Wide, float>(ref offsetB), j);
+                    ref var offsetSource = ref Unsafe.As<float, Vector3Wide>(ref offsetAsFloat);
+                    default(TManifoldWide).Scatter(ref manifoldSource, ref offsetSource, ref manifold);
                     continuations.Notify(Unsafe.Add(ref bundleStart, j).Shared.Continuation, &manifold);
                     if (typeof(TManifoldWide) == typeof(Convex1ContactManifoldWide))
                     {

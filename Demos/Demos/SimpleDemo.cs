@@ -35,9 +35,9 @@ namespace Demos
             sphereInertia.InverseMass = 1;
             shape.ComputeLocalInverseInertia(sphereInertia.InverseMass, out sphereInertia.InverseInertiaTensor);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 16;
-            const int height = 16;
-            const int length = 16;
+            const int width = 4;
+            const int height = 4;
+            const int length = 4;
             var latticeSpacing = 1.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
@@ -87,6 +87,8 @@ namespace Demos
         int frameIndex;
         public override void Update(Input input, float dt)
         {
+            if (input.WasPushed(OpenTK.Input.Key.P))
+                Console.WriteLine("asdf");
             base.Update(input, dt);
         }
 
