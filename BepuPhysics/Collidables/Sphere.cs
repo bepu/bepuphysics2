@@ -113,13 +113,13 @@ namespace BepuPhysics.Collidables
         public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
-    public struct SphereWide : IShapeWide<Sphere, SphereWide>
+    public struct SphereWide : IShapeWide<Sphere>
     {
         public Vector<float> Radius;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref Sphere source, ref SphereWide target)
+        public void Gather(ref Sphere source)
         {
-            Unsafe.As<Vector<float>, float>(ref target.Radius) = source.Radius;
+            Unsafe.As<Vector<float>, float>(ref Radius) = source.Radius;
         }        
     }
 

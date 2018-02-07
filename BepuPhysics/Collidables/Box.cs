@@ -117,13 +117,13 @@ namespace BepuPhysics.Collidables
             var offset = origin - pose.Position;
             Matrix3x3.CreateFromQuaternion(ref pose.Orientation, out var orientation);
             Matrix3x3.TransformTranspose(ref offset, ref orientation, out var localOffset);
-            Matrix3x3.TransformTranspose(ref direction, ref orientation, out var localDirection);  
+            Matrix3x3.TransformTranspose(ref direction, ref orientation, out var localDirection);
             //Note that this division has two odd properties:
             //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
             //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
             //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
             //2) To compensate for the clamp and abs, we reintroduce the sign in the numerator. Note that it has the reverse sign since it will be applied to the offset to get the T value.
-            var offsetToTScale = 
+            var offsetToTScale =
                 new Vector3(localDirection.X < 0 ? 1 : -1, localDirection.Y < 0 ? 1 : -1, localDirection.Z < 0 ? 1 : -1) / Vector3.Max(new Vector3(1e-15f), Vector3.Abs(localDirection));
 
             //Compute impact times for each pair of planes in local space.
@@ -210,17 +210,17 @@ namespace BepuPhysics.Collidables
     }
 
 
-    public struct BoxWide : IShapeWide<Box, BoxWide>
+    public struct BoxWide : IShapeWide<Box>
     {
         public Vector<float> HalfWidth;
         public Vector<float> HalfHeight;
         public Vector<float> HalfLength;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref Box source, ref BoxWide target)
+        public void Gather(ref Box source)
         {
-            Unsafe.As<Vector<float>, float>(ref target.HalfWidth) = source.HalfWidth;
-            Unsafe.As<Vector<float>, float>(ref target.HalfHeight) = source.HalfHeight;
-            Unsafe.As<Vector<float>, float>(ref target.HalfLength) = source.HalfLength;
+            Unsafe.As<Vector<float>, float>(ref HalfWidth) = source.HalfWidth;
+            Unsafe.As<Vector<float>, float>(ref HalfHeight) = source.HalfHeight;
+            Unsafe.As<Vector<float>, float>(ref HalfLength) = source.HalfLength;
         }
     }
 }

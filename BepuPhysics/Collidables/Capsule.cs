@@ -205,15 +205,15 @@ namespace BepuPhysics.Collidables
         public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
-    public struct CapsuleWide : IShapeWide<Capsule, CapsuleWide>
+    public struct CapsuleWide : IShapeWide<Capsule>
     {
         public Vector<float> Radius;
         public Vector<float> HalfLength;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref Capsule source, ref CapsuleWide target)
+        public void Gather(ref Capsule source)
         {
-            Unsafe.As<Vector<float>, float>(ref target.Radius) = source.Radius;
-            Unsafe.As<Vector<float>, float>(ref target.HalfLength) = source.HalfLength;
+            Unsafe.As<Vector<float>, float>(ref Radius) = source.Radius;
+            Unsafe.As<Vector<float>, float>(ref HalfLength) = source.HalfLength;
         }
     }
 }

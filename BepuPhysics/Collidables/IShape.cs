@@ -33,16 +33,15 @@ namespace BepuPhysics.Collidables
         int TypeId { get; }
     }
 
-    public interface IShapeWide<TShape, TShapeWide> where TShape : IShape where TShapeWide : IShapeWide<TShape, TShapeWide>
+    public interface IShapeWide<TShape> where TShape : IShape
     {
         /// <summary>
-        /// Places the specified AOS-formatted shape into the first lane of the wide reference.
+        /// Places the specified AOS-formatted shape into the first lane of the wide 'this' reference.
         /// </summary>
         /// <remarks>Note that we are effectively using the TShapeWide as a stride.
         /// The base address is offset by the user of this function, so the implementation only ever considers the first slot.</remarks>
-        /// <param name="source">AOS-formatted shape to gather.</param>
-        /// <param name="target">AOSOA-formatted instance to deposit the gathered data in.</param>
-        void Gather(ref TShape source, ref TShapeWide target);
+        /// <param name="source">AOS-formatted shape to gather from.</param>
+        void Gather(ref TShape source);
     }
 
 }

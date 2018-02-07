@@ -10,23 +10,24 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public interface ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide>
         where TShapeA : struct, IShape where TShapeB : struct, IShape
-        where TShapeWideA : struct, IShapeWide<TShapeA, TShapeWideA> where TShapeWideB : struct, IShapeWide<TShapeB, TShapeWideB>
+        where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
     {
         bool HasFlipMask { get; }
         int OrientationCount { get; }
+        void GetPoseOffset(out Vector3Wide offsetB);
+        //Note the pair parameter. This is just to get around the fact that you cannot ref return struct fields like you can with classes, at least right now
         ref Vector<int> GetFlipMask(ref TPairWide pair);
-        void GetPoseOffset(ref TPairWide pair, out Vector3Wide offsetB);
         ref TShapeWideA GetShapeA(ref TPairWide pair);
         ref TShapeWideB GetShapeB(ref TPairWide pair);
         ref QuaternionWide GetOrientationA(ref TPairWide pair);
         ref QuaternionWide GetOrientationB(ref TPairWide pair);
-        void Gather(ref TestPair<TShapeA, TShapeB> source, ref TPairWide target);
+        void Gather(ref TestPair<TShapeA, TShapeB> source);
 
     }
 
     public struct TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> : ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB>>
         where TShapeA : struct, IShape where TShapeB : struct, IShape
-        where TShapeWideA : struct, IShapeWide<TShapeA, TShapeWideA> where TShapeWideB : struct, IShapeWide<TShapeB, TShapeWideB>
+        where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
     {
         public TShapeWideA A;
         public TShapeWideB B;
@@ -77,36 +78,36 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
         //TODO: This looks a bit too simple to have a function dedicated to it, but it is intentionally separated out in case we end up changing the pose representation.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPoseOffset(ref TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair, out Vector3Wide offsetB)
+        public void GetPoseOffset(out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref pair.PositionB, ref pair.PositionA, out offsetB);
+            Vector3Wide.Subtract(ref PositionB, ref PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref TestPair<TShapeA, TShapeB> source, ref TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> target)
+        public void Gather(ref TestPair<TShapeA, TShapeB> source)
         {
-            default(TShapeWideA).Gather(ref source.A, ref target.A);
-            default(TShapeWideB).Gather(ref source.B, ref target.B);
+            A.Gather(ref source.A);
+            B.Gather(ref source.B);
             ref var shared = ref source.Shared;
-            Unsafe.As<Vector<int>, int>(ref target.FlipMask) = shared.FlipMask;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.X) = shared.PoseA.Position.X;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.Y) = shared.PoseA.Position.Y;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.Z) = shared.PoseA.Position.Z;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationA.X) = shared.PoseA.Orientation.X;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationA.Y) = shared.PoseA.Orientation.Y;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationA.Z) = shared.PoseA.Orientation.Z;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationA.W) = shared.PoseA.Orientation.W;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.X) = shared.PoseB.Position.X;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.Y) = shared.PoseB.Position.Y;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.Z) = shared.PoseB.Position.Z;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.X) = shared.PoseB.Orientation.X;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.Y) = shared.PoseB.Orientation.Y;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.Z) = shared.PoseB.Orientation.Z;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.W) = shared.PoseB.Orientation.W;
+            Unsafe.As<Vector<int>, int>(ref FlipMask) = shared.FlipMask;
+            Unsafe.As<Vector<float>, float>(ref PositionA.X) = shared.PoseA.Position.X;
+            Unsafe.As<Vector<float>, float>(ref PositionA.Y) = shared.PoseA.Position.Y;
+            Unsafe.As<Vector<float>, float>(ref PositionA.Z) = shared.PoseA.Position.Z;
+            Unsafe.As<Vector<float>, float>(ref OrientationA.X) = shared.PoseA.Orientation.X;
+            Unsafe.As<Vector<float>, float>(ref OrientationA.Y) = shared.PoseA.Orientation.Y;
+            Unsafe.As<Vector<float>, float>(ref OrientationA.Z) = shared.PoseA.Orientation.Z;
+            Unsafe.As<Vector<float>, float>(ref OrientationA.W) = shared.PoseA.Orientation.W;
+            Unsafe.As<Vector<float>, float>(ref PositionB.X) = shared.PoseB.Position.X;
+            Unsafe.As<Vector<float>, float>(ref PositionB.Y) = shared.PoseB.Position.Y;
+            Unsafe.As<Vector<float>, float>(ref PositionB.Z) = shared.PoseB.Position.Z;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.X) = shared.PoseB.Orientation.X;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.Y) = shared.PoseB.Orientation.Y;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.Z) = shared.PoseB.Orientation.Z;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.W) = shared.PoseB.Orientation.W;
         }
     }
     public struct UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> : ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB>>
         where TShapeA : struct, IShape where TShapeB : struct, IShape
-        where TShapeWideA : struct, IShapeWide<TShapeA, TShapeWideA> where TShapeWideB : struct, IShapeWide<TShapeB, TShapeWideB>
+        where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
     {
         public TShapeWideA A;
         public TShapeWideB B;
@@ -127,7 +128,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return 2; }
         }
-        
+
         public ref Vector<int> GetFlipMask(ref UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
         {
             throw new NotImplementedException();
@@ -155,35 +156,35 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
         //TODO: This looks a bit too simple to have a function dedicated to it, but it is intentionally separated out in case we end up changing the pose representation.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPoseOffset(ref UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair, out Vector3Wide offsetB)
+        public void GetPoseOffset(out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref pair.PositionB, ref pair.PositionA, out offsetB);
+            Vector3Wide.Subtract(ref PositionB, ref PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref TestPair<TShapeA, TShapeB> source, ref UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> target)
+        public void Gather(ref TestPair<TShapeA, TShapeB> source)
         {
-            default(TShapeWideA).Gather(ref source.A, ref target.A);
-            default(TShapeWideB).Gather(ref source.B, ref target.B);
+            A.Gather(ref source.A);
+            B.Gather(ref source.B);
             ref var shared = ref source.Shared;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.X) = shared.PoseA.Position.X;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.Y) = shared.PoseA.Position.Y;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.Z) = shared.PoseA.Position.Z;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationA.X) = shared.PoseA.Orientation.X;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationA.Y) = shared.PoseA.Orientation.Y;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationA.Z) = shared.PoseA.Orientation.Z;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationA.W) = shared.PoseA.Orientation.W;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.X) = shared.PoseB.Position.X;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.Y) = shared.PoseB.Position.Y;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.Z) = shared.PoseB.Position.Z;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.X) = shared.PoseB.Orientation.X;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.Y) = shared.PoseB.Orientation.Y;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.Z) = shared.PoseB.Orientation.Z;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.W) = shared.PoseB.Orientation.W;
+            Unsafe.As<Vector<float>, float>(ref PositionA.X) = shared.PoseA.Position.X;
+            Unsafe.As<Vector<float>, float>(ref PositionA.Y) = shared.PoseA.Position.Y;
+            Unsafe.As<Vector<float>, float>(ref PositionA.Z) = shared.PoseA.Position.Z;
+            Unsafe.As<Vector<float>, float>(ref OrientationA.X) = shared.PoseA.Orientation.X;
+            Unsafe.As<Vector<float>, float>(ref OrientationA.Y) = shared.PoseA.Orientation.Y;
+            Unsafe.As<Vector<float>, float>(ref OrientationA.Z) = shared.PoseA.Orientation.Z;
+            Unsafe.As<Vector<float>, float>(ref OrientationA.W) = shared.PoseA.Orientation.W;
+            Unsafe.As<Vector<float>, float>(ref PositionB.X) = shared.PoseB.Position.X;
+            Unsafe.As<Vector<float>, float>(ref PositionB.Y) = shared.PoseB.Position.Y;
+            Unsafe.As<Vector<float>, float>(ref PositionB.Z) = shared.PoseB.Position.Z;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.X) = shared.PoseB.Orientation.X;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.Y) = shared.PoseB.Orientation.Y;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.Z) = shared.PoseB.Orientation.Z;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.W) = shared.PoseB.Orientation.W;
         }
     }
     public struct OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> : ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB>>
         where TShapeA : struct, IShape where TShapeB : struct, IShape
-        where TShapeWideA : struct, IShapeWide<TShapeA, TShapeWideA> where TShapeWideB : struct, IShapeWide<TShapeB, TShapeWideB>
+        where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
     {
         public TShapeWideA A;
         public TShapeWideB B;
@@ -233,33 +234,33 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
         //TODO: This looks a bit too simple to have a function dedicated to it, but it is intentionally separated out in case we end up changing the pose representation.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPoseOffset(ref OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair, out Vector3Wide offsetB)
+        public void GetPoseOffset(out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref pair.PositionB, ref pair.PositionA, out offsetB);
+            Vector3Wide.Subtract(ref PositionB, ref PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref TestPair<TShapeA, TShapeB> source, ref OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> target)
+        public void Gather(ref TestPair<TShapeA, TShapeB> source)
         {
-            default(TShapeWideA).Gather(ref source.A, ref target.A);
-            default(TShapeWideB).Gather(ref source.B, ref target.B);
+            A.Gather(ref source.A);
+            B.Gather(ref source.B);
             ref var shared = ref source.Shared;
-            Unsafe.As<Vector<int>, int>(ref target.FlipMask) = shared.FlipMask;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.X) = shared.PoseA.Position.X;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.Y) = shared.PoseA.Position.Y;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.Z) = shared.PoseA.Position.Z;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.X) = shared.PoseB.Position.X;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.Y) = shared.PoseB.Position.Y;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.Z) = shared.PoseB.Position.Z;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.X) = shared.PoseB.Orientation.X;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.Y) = shared.PoseB.Orientation.Y;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.Z) = shared.PoseB.Orientation.Z;
-            Unsafe.As<Vector<float>, float>(ref target.OrientationB.W) = shared.PoseB.Orientation.W;
+            Unsafe.As<Vector<int>, int>(ref FlipMask) = shared.FlipMask;
+            Unsafe.As<Vector<float>, float>(ref PositionA.X) = shared.PoseA.Position.X;
+            Unsafe.As<Vector<float>, float>(ref PositionA.Y) = shared.PoseA.Position.Y;
+            Unsafe.As<Vector<float>, float>(ref PositionA.Z) = shared.PoseA.Position.Z;
+            Unsafe.As<Vector<float>, float>(ref PositionB.X) = shared.PoseB.Position.X;
+            Unsafe.As<Vector<float>, float>(ref PositionB.Y) = shared.PoseB.Position.Y;
+            Unsafe.As<Vector<float>, float>(ref PositionB.Z) = shared.PoseB.Position.Z;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.X) = shared.PoseB.Orientation.X;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.Y) = shared.PoseB.Orientation.Y;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.Z) = shared.PoseB.Orientation.Z;
+            Unsafe.As<Vector<float>, float>(ref OrientationB.W) = shared.PoseB.Orientation.W;
         }
     }
     public struct NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> :
         ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB>>
         where TShapeA : struct, IShape where TShapeB : struct, IShape
-        where TShapeWideA : struct, IShapeWide<TShapeA, TShapeWideA> where TShapeWideB : struct, IShapeWide<TShapeB, TShapeWideB>
+        where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
     {
         public TShapeWideA A;
         public TShapeWideB B;
@@ -303,22 +304,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
         //TODO: This looks a bit too simple to have a function dedicated to it, but it is intentionally separated out in case we end up changing the pose representation.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPoseOffset(ref NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair, out Vector3Wide offsetB)
+        public void GetPoseOffset(out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref pair.PositionB, ref pair.PositionA, out offsetB);
+            Vector3Wide.Subtract(ref PositionB, ref PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref TestPair<TShapeA, TShapeB> source, ref NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> target)
+        public void Gather(ref TestPair<TShapeA, TShapeB> source)
         {
-            default(TShapeWideA).Gather(ref source.A, ref target.A);
-            default(TShapeWideB).Gather(ref source.B, ref target.B);
+            A.Gather(ref source.A);
+            B.Gather(ref source.B);
             ref var shared = ref source.Shared;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.X) = shared.PoseA.Position.X;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.Y) = shared.PoseA.Position.Y;
-            Unsafe.As<Vector<float>, float>(ref target.PositionA.Z) = shared.PoseA.Position.Z;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.X) = shared.PoseB.Position.X;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.Y) = shared.PoseB.Position.Y;
-            Unsafe.As<Vector<float>, float>(ref target.PositionB.Z) = shared.PoseB.Position.Z;
+            Unsafe.As<Vector<float>, float>(ref PositionA.X) = shared.PoseA.Position.X;
+            Unsafe.As<Vector<float>, float>(ref PositionA.Y) = shared.PoseA.Position.Y;
+            Unsafe.As<Vector<float>, float>(ref PositionA.Z) = shared.PoseA.Position.Z;
+            Unsafe.As<Vector<float>, float>(ref PositionB.X) = shared.PoseB.Position.X;
+            Unsafe.As<Vector<float>, float>(ref PositionB.Y) = shared.PoseB.Position.Y;
+            Unsafe.As<Vector<float>, float>(ref PositionB.Z) = shared.PoseB.Position.Z;
         }
     }
 
@@ -344,16 +345,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public static unsafe void ExecuteBatch<TContinuations, TFilters, TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide, TManifoldWide, TPairTester>
             (ref UntypedList batch, ref StreamingBatcher batcher, ref TContinuations continuations, ref TFilters filters)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
-            where TShapeWideA : struct, IShapeWide<TShapeA, TShapeWideA> where TShapeWideB : struct, IShapeWide<TShapeB, TShapeWideB>
+            where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
             where TPairWide : struct, ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide>
             where TPairTester : struct, IPairTester<TShapeWideA, TShapeWideB, TManifoldWide>
             where TManifoldWide : IContactManifoldWide<TManifoldWide>
             where TContinuations : IContinuations
         {
             ref var start = ref Unsafe.As<byte, TestPair<TShapeA, TShapeB>>(ref batch.Buffer[0]);
-            var pairWide = default(TPairWide); //With any luck, the compiler will get rid of the unnecessary zero init.
-            default(TManifoldWide).PrepareManifoldForScatter(out var manifold);
-            TManifoldWide manifoldWide;
+            //With any luck, the compiler will eventually get rid of these unnecessary zero inits. 
+            //Might be able to get rid of manifoldWide and defaultPairTester with some megahacks, but it comes with significant forward danger and questionable benefit.
+            var pairWide = default(TPairWide);
+            var manifoldWide = default(TManifoldWide);
+            var defaultPairTester = default(TPairTester);
+            manifoldWide.PrepareManifoldForScatter(out var manifold);
 
             for (int i = 0; i < batch.Count; i += Vector<float>.Count)
             {
@@ -368,48 +372,48 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //Reposition the wide reference so that the first lane of the alias matches the target lane in the underlying memory.
                     ref var offsetFloatStart = ref Unsafe.Add(ref Unsafe.As<TPairWide, float>(ref pairWide), j);
                     ref var target = ref Unsafe.As<float, TPairWide>(ref offsetFloatStart);
-                    default(TPairWide).Gather(ref Unsafe.Add(ref bundleStart, j), ref target);
+                    target.Gather(ref Unsafe.Add(ref bundleStart, j));
                 }
 
-                default(TPairWide).GetPoseOffset(ref pairWide, out var offsetB);
-                if (default(TPairWide).OrientationCount == 2)
+                pairWide.GetPoseOffset(out var offsetB);
+                if (pairWide.OrientationCount == 2)
                 {
-                    default(TPairTester).Test(
-                        ref default(TPairWide).GetShapeA(ref pairWide),
-                        ref default(TPairWide).GetShapeB(ref pairWide),
+                    defaultPairTester.Test(
+                        ref pairWide.GetShapeA(ref pairWide),
+                        ref pairWide.GetShapeB(ref pairWide),
                         ref offsetB,
-                        ref default(TPairWide).GetOrientationA(ref pairWide),
-                        ref default(TPairWide).GetOrientationB(ref pairWide),
+                        ref pairWide.GetOrientationA(ref pairWide),
+                        ref pairWide.GetOrientationB(ref pairWide),
                         out manifoldWide);
                 }
-                else if (default(TPairWide).OrientationCount == 1)
+                else if (pairWide.OrientationCount == 1)
                 {
                     //Note that, in the event that there is only one orientation, it belongs to the second shape.
                     //The only shape that doesn't need orientation is a sphere, and it will be in slot A by convention.
                     Debug.Assert(typeof(TShapeWideA) == typeof(SphereWide));
-                    default(TPairTester).Test(
-                        ref default(TPairWide).GetShapeA(ref pairWide),
-                        ref default(TPairWide).GetShapeB(ref pairWide),
+                    defaultPairTester.Test(
+                        ref pairWide.GetShapeA(ref pairWide),
+                        ref pairWide.GetShapeB(ref pairWide),
                         ref offsetB,
-                        ref default(TPairWide).GetOrientationB(ref pairWide),
+                        ref pairWide.GetOrientationB(ref pairWide),
                         out manifoldWide);
                 }
                 else
                 {
-                    Debug.Assert(default(TPairWide).OrientationCount == 0);
+                    Debug.Assert(pairWide.OrientationCount == 0);
                     Debug.Assert(typeof(TShapeWideA) == typeof(SphereWide) && typeof(TShapeWideB) == typeof(SphereWide), "No orientation implies a special case involving two spheres.");
                     //Really, this could be made into a direct special case, but eh.
-                    default(TPairTester).Test(
-                        ref default(TPairWide).GetShapeA(ref pairWide),
-                        ref default(TPairWide).GetShapeB(ref pairWide),
+                    defaultPairTester.Test(
+                        ref pairWide.GetShapeA(ref pairWide),
+                        ref pairWide.GetShapeB(ref pairWide),
                         ref offsetB,
                         out manifoldWide);
                 }
 
                 //Flip back any contacts associated with pairs which had to be flipped for shape order.
-                if (default(TPairWide).HasFlipMask)
+                if (pairWide.HasFlipMask)
                 {
-                    default(TManifoldWide).ApplyFlipMask(ref manifoldWide, ref offsetB, ref default(TPairWide).GetFlipMask(ref pairWide));
+                    manifoldWide.ApplyFlipMask(ref manifoldWide, ref offsetB, ref pairWide.GetFlipMask(ref pairWide));
                 }
 
                 for (int j = 0; j < countInBundle; ++j)
@@ -419,7 +423,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref var manifoldSource = ref Unsafe.As<float, TManifoldWide>(ref manifoldAsFloat);
                     ref var offsetAsFloat = ref Unsafe.Add(ref Unsafe.As<Vector3Wide, float>(ref offsetB), j);
                     ref var offsetSource = ref Unsafe.As<float, Vector3Wide>(ref offsetAsFloat);
-                    default(TManifoldWide).Scatter(ref manifoldSource, ref offsetSource, ref manifold);
+                    manifoldWide.Scatter(ref manifoldSource, ref offsetSource, ref manifold);
                     continuations.Notify(Unsafe.Add(ref bundleStart, j).Shared.Continuation, &manifold);
                     if (typeof(TManifoldWide) == typeof(Convex1ContactManifoldWide))
                     {
