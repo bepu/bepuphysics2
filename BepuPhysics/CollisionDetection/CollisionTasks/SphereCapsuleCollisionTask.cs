@@ -59,7 +59,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         //Every single collision task type will mirror this general layout.
         public unsafe override void ExecuteBatch<TContinuations, TFilters>(ref UntypedList batch, ref StreamingBatcher batcher, ref TContinuations continuations, ref TFilters filters)
         {
-            ref var start = ref Unsafe.As<byte, RigidPair<Sphere, Capsule>>(ref batch.Buffer[0]);
+            ref var start = ref Unsafe.As<byte, TestPair<Sphere, Capsule>>(ref batch.Buffer[0]);
             var manifolds = stackalloc ContactManifold[Vector<float>.Count];
             var trustMeThisManifoldIsTotallyInitialized = &manifolds;
             //Note that this is hoisted out of the loop. The notification function is not allowed to modify the manifold passed in, so we can do it once up front.
@@ -86,20 +86,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //TODO: In the future, once we have some more codegen options, we should try to change this- probably into an intrinsic.
                 //Or maybe an explicit AOS->(AOSOA|SOA) transition during add time- in other words, we never store the AOS representation.
                 //(That's still a gather, just moving it around a bit in the hope that it is more centralized.)
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref spheres, ref bundleStart.A.Radius, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsules.Radius, ref bundleStart.B.Radius, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsules.HalfLength, ref bundleStart.B.HalfLength, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref spherePosition.X, ref bundleStart.Shared.PoseA.Position.X, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref spherePosition.Y, ref bundleStart.Shared.PoseA.Position.Y, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref spherePosition.Z, ref bundleStart.Shared.PoseA.Position.Z, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsulePosition.X, ref bundleStart.Shared.PoseB.Position.X, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsulePosition.Y, ref bundleStart.Shared.PoseB.Position.Y, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsulePosition.Z, ref bundleStart.Shared.PoseB.Position.Z, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsuleOrientation.X, ref bundleStart.Shared.PoseB.Orientation.X, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsuleOrientation.Y, ref bundleStart.Shared.PoseB.Orientation.Y, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsuleOrientation.Z, ref bundleStart.Shared.PoseB.Orientation.Z, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Sphere, Capsule>>(ref capsuleOrientation.W, ref bundleStart.Shared.PoseB.Orientation.W, countInBundle);
-                GatherScatter.Gather<int, RigidPair<Sphere, Capsule>>(ref flipMask, ref bundleStart.Shared.FlipMask, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref spheres, ref bundleStart.A.Radius, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref capsules.Radius, ref bundleStart.B.Radius, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref capsules.HalfLength, ref bundleStart.B.HalfLength, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref spherePosition.X, ref bundleStart.Shared.PoseA.Position.X, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref spherePosition.Y, ref bundleStart.Shared.PoseA.Position.Y, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref spherePosition.Z, ref bundleStart.Shared.PoseA.Position.Z, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref capsulePosition.X, ref bundleStart.Shared.PoseB.Position.X, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref capsulePosition.Y, ref bundleStart.Shared.PoseB.Position.Y, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref capsulePosition.Z, ref bundleStart.Shared.PoseB.Position.Z, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref capsuleOrientation.X, ref bundleStart.Shared.PoseB.Orientation.X, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref capsuleOrientation.Y, ref bundleStart.Shared.PoseB.Orientation.Y, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref capsuleOrientation.Z, ref bundleStart.Shared.PoseB.Orientation.Z, countInBundle);
+                GatherScatter.Gather<float, TestPair<Sphere, Capsule>>(ref capsuleOrientation.W, ref bundleStart.Shared.PoseB.Orientation.W, countInBundle);
+                GatherScatter.Gather<int, TestPair<Sphere, Capsule>>(ref flipMask, ref bundleStart.Shared.FlipMask, countInBundle);
 
                 Vector3Wide.Subtract(ref capsulePosition, ref spherePosition, out offsetB);
                 SphereCapsuleTester.Test(ref spheres, ref capsules, ref offsetB, ref capsuleOrientation, out contactPosition, out contactNormal, out depth);

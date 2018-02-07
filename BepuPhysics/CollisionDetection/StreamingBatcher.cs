@@ -243,7 +243,7 @@ namespace BepuPhysics.CollisionDetection
         }
     }
 
-    public struct RigidPair
+    public struct TestPair
     {
         /// <summary>
         /// Stores whether the types involved in pair require that the resulting contact manifold be flipped to be consistent with the user-requested pair order.
@@ -257,12 +257,12 @@ namespace BepuPhysics.CollisionDetection
     //Writes by the narrowphase write shape data without type knowledge, so they can't easily operate on regular packing rules. Emulate this with a pack of 1.
     //This allows the reader to still have a quick way to interpret data rather than casting individual shapes.
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct RigidPair<TShapeA, TShapeB>
+    public struct TestPair<TShapeA, TShapeB>
             where TShapeA : struct, IShape where TShapeB : struct, IShape
     {
         public TShapeA A;
         public TShapeB B;
-        public RigidPair Shared;
+        public TestPair Shared;
     }
 
 
@@ -307,7 +307,7 @@ namespace BepuPhysics.CollisionDetection
             var pairData = batch.AllocateUnsafely();
             Unsafe.CopyBlockUnaligned(pairData, shapeA, (uint)shapeSizeA);
             Unsafe.CopyBlockUnaligned(pairData += shapeSizeA, shapeB, (uint)shapeSizeB);
-            var poses = (RigidPair*)(pairData += shapeSizeB);
+            var poses = (TestPair*)(pairData += shapeSizeB);
             Debug.Assert(continuationId.Exists);
             poses->FlipMask = flipMask;
             poses->Continuation = continuationId;
@@ -337,7 +337,7 @@ namespace BepuPhysics.CollisionDetection
                 return;
             }
             ref var batch = ref batches[reference.TaskIndex];
-            var pairSize = shapeSizeA + shapeSizeB + Unsafe.SizeOf<RigidPair>();
+            var pairSize = shapeSizeA + shapeSizeB + Unsafe.SizeOf<TestPair>();
             if (!batch.Buffer.Allocated)
             {
                 batch = new UntypedList(pairSize, reference.BatchSize, pool);
@@ -367,7 +367,7 @@ namespace BepuPhysics.CollisionDetection
             where TFilters : struct, ICollisionSubtaskFilters
         {
             ref var batch = ref batches[reference.TaskIndex];
-            ref var pairData = ref batch.AllocateUnsafely<RigidPair<TShapeA, TShapeB>>();
+            ref var pairData = ref batch.AllocateUnsafely<TestPair<TShapeA, TShapeB>>();
             pairData.A = shapeA;
             pairData.B = shapeB;
             Debug.Assert(continuationId.Exists);
@@ -400,7 +400,7 @@ namespace BepuPhysics.CollisionDetection
             ref var batch = ref batches[reference.TaskIndex];
             if (!batch.Buffer.Allocated)
             {
-                batch = new UntypedList(Unsafe.SizeOf<RigidPair<TShapeA, TShapeB>>(), reference.BatchSize, pool);
+                batch = new UntypedList(Unsafe.SizeOf<TestPair<TShapeA, TShapeB>>(), reference.BatchSize, pool);
                 if (minimumBatchIndex > reference.TaskIndex)
                     minimumBatchIndex = reference.TaskIndex;
                 if (maximumBatchIndex < reference.TaskIndex)

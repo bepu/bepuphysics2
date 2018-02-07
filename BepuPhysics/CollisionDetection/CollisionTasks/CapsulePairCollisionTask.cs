@@ -57,18 +57,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(ref db, ref tb, out var closestPointOnB);
             Vector3Wide.Add(ref closestPointOnB, ref offsetB, out closestPointOnB);
             //Note that normals are calibrated to point from B to A by convention.
-            Vector3Wide.Subtract(ref closestPointOnA, ref closestPointOnB, out manifold.ContactNormal);
-            Vector3Wide.Length(ref manifold.ContactNormal, out var distance);
+            Vector3Wide.Subtract(ref closestPointOnA, ref closestPointOnB, out manifold.Normal);
+            Vector3Wide.Length(ref manifold.Normal, out var distance);
             var inverseDistance = Vector<float>.One / distance;
-            Vector3Wide.Scale(ref manifold.ContactNormal, ref inverseDistance, out manifold.ContactNormal);
+            Vector3Wide.Scale(ref manifold.Normal, ref inverseDistance, out manifold.Normal);
             //In the event that the line segments are touching, the normal doesn't exist and we need an alternative. Any direction along the local horizontal (XZ) plane of either capsule
             //is valid. (Normals along the local Y axes are not guaranteed to be as quick of a path to separation due to nonzero line length.)
             var normalIsValid = Vector.GreaterThan(distance, new Vector<float>(1e-7f));
-            Vector3Wide.ConditionalSelect(ref normalIsValid, ref manifold.ContactNormal, ref xa, out manifold.ContactNormal);
+            Vector3Wide.ConditionalSelect(ref normalIsValid, ref manifold.Normal, ref xa, out manifold.Normal);
 
             manifold.Depth = a.Radius + b.Radius - distance;
             var negativeOffsetFromA = manifold.Depth * 0.5f - a.Radius;
-            Vector3Wide.Scale(ref manifold.ContactNormal, ref negativeOffsetFromA, out manifold.OffsetA0);
+            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA, out manifold.OffsetA0);
             Vector3Wide.Add(ref manifold.OffsetA0, ref closestPointOnA, out manifold.OffsetA0);
             
             //TODO: In the future, you may want to actually take advantage of two contacts in the parallel or coplanar axes case. That can help avoid instabilities that could arise from
@@ -93,7 +93,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         //Every single collision task type will mirror this general layout.
         public unsafe override void ExecuteBatch<TContinuations, TFilters>(ref UntypedList batch, ref StreamingBatcher batcher, ref TContinuations continuations, ref TFilters filters)
         {
-            ref var start = ref Unsafe.As<byte, RigidPair<Capsule, Capsule>>(ref batch.Buffer[0]);
+            ref var start = ref Unsafe.As<byte, TestPair<Capsule, Capsule>>(ref batch.Buffer[0]);
             var manifolds = stackalloc ContactManifold[Vector<float>.Count];
             var trustMeThisManifoldIsTotallyInitialized = &manifolds;
             //Note that this is hoisted out of the loop. The notification function is not allowed to modify the manifold passed in, so we can do it once up front.
@@ -120,24 +120,24 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //TODO: In the future, once we have some more codegen options, we should try to change this- probably into an intrinsic.
                 //Or maybe an explicit AOS->(AOSOA|SOA) transition during add time- in other words, we never store the AOS representation.
                 //(That's still a gather, just moving it around a bit in the hope that it is more centralized.)
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref a.Radius, ref bundleStart.A.Radius, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref a.HalfLength, ref bundleStart.A.HalfLength, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref b.Radius, ref bundleStart.B.Radius, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref b.HalfLength, ref bundleStart.B.HalfLength, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref aPosition.X, ref bundleStart.Shared.PoseA.Position.X, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref aPosition.Y, ref bundleStart.Shared.PoseA.Position.Y, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref aPosition.Z, ref bundleStart.Shared.PoseA.Position.Z, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref aOrientation.X, ref bundleStart.Shared.PoseA.Orientation.X, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref aOrientation.Y, ref bundleStart.Shared.PoseA.Orientation.Y, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref aOrientation.Z, ref bundleStart.Shared.PoseA.Orientation.Z, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref aOrientation.W, ref bundleStart.Shared.PoseA.Orientation.W, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref bPosition.X, ref bundleStart.Shared.PoseB.Position.X, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref bPosition.Y, ref bundleStart.Shared.PoseB.Position.Y, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref bPosition.Z, ref bundleStart.Shared.PoseB.Position.Z, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref bOrientation.X, ref bundleStart.Shared.PoseB.Orientation.X, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref bOrientation.Y, ref bundleStart.Shared.PoseB.Orientation.Y, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref bOrientation.Z, ref bundleStart.Shared.PoseB.Orientation.Z, countInBundle);
-                GatherScatter.Gather<float, RigidPair<Capsule, Capsule>>(ref bOrientation.W, ref bundleStart.Shared.PoseB.Orientation.W, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref a.Radius, ref bundleStart.A.Radius, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref a.HalfLength, ref bundleStart.A.HalfLength, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref b.Radius, ref bundleStart.B.Radius, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref b.HalfLength, ref bundleStart.B.HalfLength, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aPosition.X, ref bundleStart.Shared.PoseA.Position.X, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aPosition.Y, ref bundleStart.Shared.PoseA.Position.Y, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aPosition.Z, ref bundleStart.Shared.PoseA.Position.Z, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aOrientation.X, ref bundleStart.Shared.PoseA.Orientation.X, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aOrientation.Y, ref bundleStart.Shared.PoseA.Orientation.Y, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aOrientation.Z, ref bundleStart.Shared.PoseA.Orientation.Z, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aOrientation.W, ref bundleStart.Shared.PoseA.Orientation.W, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bPosition.X, ref bundleStart.Shared.PoseB.Position.X, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bPosition.Y, ref bundleStart.Shared.PoseB.Position.Y, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bPosition.Z, ref bundleStart.Shared.PoseB.Position.Z, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bOrientation.X, ref bundleStart.Shared.PoseB.Orientation.X, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bOrientation.Y, ref bundleStart.Shared.PoseB.Orientation.Y, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bOrientation.Z, ref bundleStart.Shared.PoseB.Orientation.Z, countInBundle);
+                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bOrientation.W, ref bundleStart.Shared.PoseB.Orientation.W, countInBundle);
 
                 Vector3Wide.Subtract(ref bPosition, ref aPosition, out offsetB);
                 CapsulePairTester.Test(ref a, ref b, ref offsetB, ref aOrientation, ref bOrientation, out manifoldWide);
@@ -149,9 +149,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.OffsetA0.Y, ref manifolds->Offset0.Y, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.OffsetA0.Z, ref manifolds->Offset0.Z, countInBundle);
                 GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.Depth, ref manifolds->Depth0, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.ContactNormal.X, ref manifolds->Normal0.X, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.ContactNormal.Y, ref manifolds->Normal0.Y, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.ContactNormal.Z, ref manifolds->Normal0.Z, countInBundle);
+                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.Normal.X, ref manifolds->Normal0.X, countInBundle);
+                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.Normal.Y, ref manifolds->Normal0.Y, countInBundle);
+                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.Normal.Z, ref manifolds->Normal0.Z, countInBundle);
                 for (int j = 0; j < countInBundle; ++j)
                 {
                     continuations.Notify(Unsafe.Add(ref bundleStart, j).Shared.Continuation, manifolds + j);
