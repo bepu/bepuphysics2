@@ -86,6 +86,13 @@ namespace BepuPhysics
             result.Y = v.X * m.X.Y + v.Y * m.Y.Y + v.Z * m.Z.Y;
             result.Z = v.X * m.X.Z + v.Y * m.Y.Z + v.Z * m.Z.Z;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void TransformByTransposedWithoutOverlap(ref Vector3Wide v, ref Matrix3x3Wide m, out Vector3Wide result)
+        {
+            result.X = v.X * m.X.X + v.Y * m.X.Y + v.Z * m.X.Z;
+            result.Y = v.X * m.Y.X + v.Y * m.Y.Y + v.Z * m.Y.Z;
+            result.Z = v.X * m.Z.X + v.Y * m.Z.Y + v.Z * m.Z.Z;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Transform(ref Vector3Wide v, ref Matrix3x3Wide m, out Vector3Wide result)

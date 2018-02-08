@@ -23,6 +23,7 @@ namespace BepuPhysics
             defaultTaskRegistry = new CollisionTaskRegistry();
             defaultTaskRegistry.Register(new SpherePairCollisionTask());
             defaultTaskRegistry.Register(new SphereCapsuleCollisionTask());
+            defaultTaskRegistry.Register(new SphereBoxCollisionTask());
             defaultTaskRegistry.Register(new CapsulePairCollisionTask());
         }
     }

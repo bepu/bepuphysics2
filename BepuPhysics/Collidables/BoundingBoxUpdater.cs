@@ -173,7 +173,7 @@ namespace BepuPhysics.Collidables
 
         public void FlushAndDispose()
         {
-            for (int typeIndex = 0; typeIndex < batchesPerType.Length; ++typeIndex)
+            for (int typeIndex = 0; typeIndex < shapes.RegisteredTypeSpan; ++typeIndex)
             {
                 ref var batch = ref batchesPerType[typeIndex];
                 if (batch.Span.Allocated)
