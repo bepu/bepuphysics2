@@ -323,7 +323,7 @@ namespace BepuPhysics.Collidables
                 }
                 batches.Count = typeId + 1;
             }
-            if(batches[typeId] == null)
+            if (batches[typeId] == null)
             {
                 batches[typeId] = new ShapeBatch<TShape>(pool, InitialCapacityPerTypeBatch);
             }
@@ -346,7 +346,8 @@ namespace BepuPhysics.Collidables
         {
             for (int i = 0; i < batches.Count; ++i)
             {
-                batches[i].Clear();
+                if (batches[i] != null)
+                    batches[i].Clear();
             }
         }
 
@@ -362,7 +363,8 @@ namespace BepuPhysics.Collidables
         {
             for (int i = 0; i < batches.Count; ++i)
             {
-                batches[i].EnsureCapacity(shapeCapacity);
+                if (batches[i] != null)
+                    batches[i].EnsureCapacity(shapeCapacity);
             }
         }
 
@@ -374,7 +376,8 @@ namespace BepuPhysics.Collidables
         {
             for (int i = 0; i < batches.Count; ++i)
             {
-                batches[i].Resize(shapeCapacity);
+                if (batches[i] != null)
+                    batches[i].Resize(shapeCapacity);
             }
         }
 
@@ -385,7 +388,8 @@ namespace BepuPhysics.Collidables
         {
             for (int i = 0; i < batches.Count; ++i)
             {
-                batches[i].Dispose();
+                if (batches[i] != null)
+                    batches[i].Dispose();
             }
         }
     }

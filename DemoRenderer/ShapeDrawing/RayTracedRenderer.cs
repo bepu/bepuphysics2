@@ -127,6 +127,7 @@ namespace DemoRenderer.ShapeDrawing
                 instances.Dispose();
                 indices.Dispose();
                 vertexConstants.Dispose();
+                pixelConstants.Dispose();
             }
         }
 

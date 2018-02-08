@@ -13,12 +13,14 @@ namespace DemoRenderer.ShapeDrawing
         //For now, we only have spheres. Later, once other shapes exist, this will be responsible for bucketing the different shape types and when necessary caching shape models.
         internal QuickList<SphereInstance, Array<SphereInstance>> spheres;
         internal QuickList<CapsuleInstance, Array<CapsuleInstance>> capsules;
+        internal QuickList<BoxInstance, Array<BoxInstance>> boxes;
 
         ParallelLooper looper;
         public ShapesExtractor(ParallelLooper looper, int initialCapacityPerShapeType = 1024)
         {
             QuickList<SphereInstance, Array<SphereInstance>>.Create(new PassthroughArrayPool<SphereInstance>(), initialCapacityPerShapeType, out spheres);
             QuickList<CapsuleInstance, Array<CapsuleInstance>>.Create(new PassthroughArrayPool<CapsuleInstance>(), initialCapacityPerShapeType, out capsules);
+            QuickList<BoxInstance, Array<BoxInstance>>.Create(new PassthroughArrayPool<BoxInstance>(), initialCapacityPerShapeType, out boxes);
             this.looper = looper;
         }
 
@@ -26,6 +28,7 @@ namespace DemoRenderer.ShapeDrawing
         {
             spheres.Count = 0;
             capsules.Count = 0;
+            boxes.Count = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -53,6 +56,19 @@ namespace DemoRenderer.ShapeDrawing
                         instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
                         instance.PackedColor = Helpers.PackColor(ref color);
                         capsules.Add(ref instance, new PassthroughArrayPool<CapsuleInstance>());
+                    }
+                    break;
+                case Box.Id:
+                    {
+                        BoxInstance instance;
+                        instance.Position = pose.Position;
+                        ref var box = ref shapes.GetShape<Box>(shapeIndex.Index);
+                        instance.PackedColor = Helpers.PackColor(ref color);
+                        instance.Orientation = pose.Orientation;
+                        instance.HalfWidth = box.HalfWidth;
+                        instance.HalfHeight = box.HalfHeight;
+                        instance.HalfLength = box.HalfLength;
+                        boxes.Add(ref instance, new PassthroughArrayPool<BoxInstance>());
                     }
                     break;
             }

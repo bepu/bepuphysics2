@@ -79,15 +79,6 @@ cbuffer PixelConstants : register(b1)
 	float2 PixelSizeAtUnitPlane;
 };
 
-
-float GetProjectedDepth(float linearDepth, float near, float far)
-{
-	//Note the reversal of near and far relative to a standard depth projection.
-	//We use 0 to mean furthest, and 1 to mean closest.
-	float dn = linearDepth * near;
-	return (far * near - dn) / (linearDepth * far - dn);
-}
-
 bool RayCastSphere(float3 rayDirection, float3 spherePosition, float radius,
 	out float t, out float3 hitLocation, out float3 hitNormal)
 {
@@ -119,7 +110,6 @@ PSOutput PSMain(PSInput input)
 	float3 hitLocation, hitNormal;
 	if (RayCastSphere(input.ToAABB, input.Sphere.Position, input.Sphere.Radius, t, hitLocation, hitNormal))
 	{
-		float3 baseColor = UnpackR11G11B10_UNorm(input.Sphere.PackedColor);
 		float4 orientation = UnpackOrientation(input.Sphere.PackedOrientation);
 		float3 dpdx, dpdy;
 		GetScreenspaceDerivatives(hitLocation, hitNormal, input.ToAABB, CameraRightPS, CameraUpPS, CameraBackwardPS, PixelSizeAtUnitPlane, dpdx, dpdy);

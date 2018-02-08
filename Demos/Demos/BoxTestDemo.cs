@@ -27,11 +27,11 @@ namespace Demos
             shape.ComputeLocalInverseInertia(localInertia.InverseMass, out localInertia.InverseInertiaTensor);
             //capsuleInertia.InverseInertiaTensor = new Triangular3x3();
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 4;
-            const int height = 4;
-            const int length = 4;
+            const int width = 16;
+            const int height = 16;
+            const int length = 16;
             var latticeSpacing = 1.1f;
-            var latticeOffset =  -0.5f * width * latticeSpacing;
+            var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
                 new RegularGridBuilder(new Vector3(latticeSpacing, 2.1f, latticeSpacing), new Vector3(latticeOffset, 5, latticeOffset), localInertia, shapeIndex),
                 new ConstraintlessLatticeBuilder(),
@@ -40,11 +40,11 @@ namespace Demos
             Simulation.Deterministic = false;
 
 
-            var staticShape = new Box(100f, 1, 100);
+            var staticShape = new Box(16, 4, 16);
             var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
-            const int staticGridWidth = 1;
-            const float staticSpacing = 6;
-            var gridOffset = 0;// -0.5f * staticGridWidth * staticSpacing;
+            const int staticGridWidth = 16;
+            const float staticSpacing = 12;
+            var gridOffset = -0.5f * staticGridWidth * staticSpacing;
             for (int i = 0; i < staticGridWidth; ++i)
             {
                 for (int j = 0; j < staticGridWidth; ++j)
@@ -63,8 +63,8 @@ namespace Demos
                             gridOffset + i * staticSpacing,
                             -4,
                             gridOffset + j * staticSpacing),
-                            Orientation = BepuUtilities.Quaternion.Identity
-                            //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)
+                            //Orientation = BepuUtilities.Quaternion.Identity
+                            Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)
                         }
                     };
                     Simulation.Statics.Add(ref staticDescription);

@@ -24,6 +24,7 @@ namespace DemoRenderer
         //They'll likely be stored in an array indexed by a shape type rather than just being a swarm of properties.
         public RayTracedRenderer<SphereInstance> SphereRenderer { get; private set; }
         public RayTracedRenderer<CapsuleInstance> CapsuleRenderer { get; private set; }
+        public BoxRenderer BoxRenderer { get; private set; }
         public ShapesExtractor Shapes { get; private set; }
         public LineRenderer LineRenderer { get; private set; }
         public LineExtractor Lines { get; private set; }
@@ -64,6 +65,7 @@ namespace DemoRenderer
             Shapes = new ShapesExtractor(looper);
             SphereRenderer = new RayTracedRenderer<SphereInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderSpheres.hlsl");
             CapsuleRenderer = new RayTracedRenderer<CapsuleInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderCapsules.hlsl");
+            BoxRenderer = new BoxRenderer(surface.Device, ShaderCache);
             Lines = new LineExtractor(looper);
             LineRenderer = new LineRenderer(surface.Device, ShaderCache);
             Background = new BackgroundRenderer(surface.Device, ShaderCache);
@@ -77,7 +79,7 @@ namespace DemoRenderer
             OnResize();
             var rasterizerStateDescription = RasterizerStateDescription.Default();
             rasterizerStateDescription.IsFrontCounterClockwise = true;
-            rasterizerStateDescription.CullMode = CullMode.None;
+            rasterizerStateDescription.CullMode = CullMode.Back;
             rasterizerState = new RasterizerState(Surface.Device, rasterizerStateDescription);
             rasterizerState.DebugName = "Default Rasterizer State";
 
@@ -204,6 +206,7 @@ namespace DemoRenderer
 
             SphereRenderer.Render(context, camera, Surface.Resolution, Shapes.spheres.Span.Memory, 0, Shapes.spheres.Count);
             CapsuleRenderer.Render(context, camera, Surface.Resolution, Shapes.capsules.Span.Memory, 0, Shapes.capsules.Count);
+            BoxRenderer.Render(context, camera, Surface.Resolution, Shapes.boxes.Span.Memory, 0, Shapes.boxes.Count);
             LineRenderer.Render(context, camera, Surface.Resolution, Lines.lines.Span.Memory, 0, Lines.lines.Count);
 
             Background.Render(context, camera);

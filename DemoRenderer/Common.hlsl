@@ -209,3 +209,11 @@ float3 ShadeSurface(float3 surfacePosition, float3 surfaceNormal, float3 surface
 	float3 compositedColor = grid.xyz + surfaceColor * (1 - grid.w);
 	return compositedColor * AccumulateLight(surfaceNormal);
 }
+
+float GetProjectedDepth(float linearDepth, float near, float far)
+{
+	//Note the reversal of near and far relative to a standard depth projection.
+	//We use 0 to mean furthest, and 1 to mean closest.
+	float dn = linearDepth * near;
+	return (far * near - dn) / (linearDepth * far - dn);
+}
