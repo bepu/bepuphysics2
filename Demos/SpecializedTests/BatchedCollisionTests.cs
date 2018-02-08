@@ -77,7 +77,7 @@ namespace Demos.SpecializedTests
             var sphere = new Sphere(1);
             var poseA = new RigidPose { Position = new Vector3(0, 0, 0), Orientation = BepuUtilities.Quaternion.Identity };
             var poseB = new RigidPose { Position = new Vector3(0, 1, 0), Orientation = BepuUtilities.Quaternion.Identity };
-            Action<int> action = iterationCount =>
+            void action(int iterationCount)
             {
                 var batcher = new StreamingBatcher(pool, registry);
                 for (int i = 0; i < iterationCount; ++i)
@@ -88,7 +88,7 @@ namespace Demos.SpecializedTests
                     batcher.Add(ref sphere, ref sphere, ref poseA, ref poseB, new ContinuationIndex(), ref continuations, ref filters);
                 }
                 batcher.Flush(ref continuations, ref filters);
-            };
+            }
             var time0 = Test(action, 1<<25);
             Console.WriteLine($"Completed count: {continuations.Count}, time (ms): {1e3 * time0}");
             Console.ReadKey();

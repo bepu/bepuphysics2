@@ -332,14 +332,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, out TManifoldWideType manifold);
     }
 
-    public interface IContactManifoldWide<TContactManifoldWide> where TContactManifoldWide : IContactManifoldWide<TContactManifoldWide>
+    public interface IContactManifoldWide
     {
-        void ApplyFlipMask(ref TContactManifoldWide manifold, ref Vector3Wide offsetB, ref Vector<int> flipMask);
+        void ApplyFlipMask(ref Vector3Wide offsetB, ref Vector<int> flipMask);
         void PrepareManifoldForScatter(out ContactManifold manifold);
-        void Scatter(ref TContactManifoldWide source, ref Vector3Wide offsetB, ref ContactManifold target);
+        void Scatter(ref Vector3Wide offsetB, ref ContactManifold target);
     }
 
-    class CollisionBatchExecutors
+    class CollisionTaskCommon
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void ExecuteBatch<TContinuations, TFilters, TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide, TManifoldWide, TPairTester>
@@ -348,7 +348,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
             where TPairWide : struct, ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide>
             where TPairTester : struct, IPairTester<TShapeWideA, TShapeWideB, TManifoldWide>
-            where TManifoldWide : IContactManifoldWide<TManifoldWide>
+            where TManifoldWide : IContactManifoldWide
             where TContinuations : IContinuations
         {
             ref var start = ref Unsafe.As<byte, TestPair<TShapeA, TShapeB>>(ref batch.Buffer[0]);
@@ -413,7 +413,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Flip back any contacts associated with pairs which had to be flipped for shape order.
                 if (pairWide.HasFlipMask)
                 {
-                    manifoldWide.ApplyFlipMask(ref manifoldWide, ref offsetB, ref pairWide.GetFlipMask(ref pairWide));
+                    manifoldWide.ApplyFlipMask(ref offsetB, ref pairWide.GetFlipMask(ref pairWide));
                 }
 
                 for (int j = 0; j < countInBundle; ++j)
@@ -423,7 +423,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref var manifoldSource = ref Unsafe.As<float, TManifoldWide>(ref manifoldAsFloat);
                     ref var offsetAsFloat = ref Unsafe.Add(ref Unsafe.As<Vector3Wide, float>(ref offsetB), j);
                     ref var offsetSource = ref Unsafe.As<float, Vector3Wide>(ref offsetAsFloat);
-                    manifoldWide.Scatter(ref manifoldSource, ref offsetSource, ref manifold);
+                    manifoldSource.Scatter(ref offsetSource, ref manifold);
                     continuations.Notify(Unsafe.Add(ref bundleStart, j).Shared.Continuation, &manifold);
                     if (typeof(TManifoldWide) == typeof(Convex1ContactManifoldWide))
                     {

@@ -1,19 +1,15 @@
 ﻿using BepuPhysics.Collidables;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     //Individual pair testers are designed to be used outside of the narrow phase. They need to be usable for queries and such, so all necessary data must be gathered externally.
-    public struct CapsulePairTester
+    public struct CapsulePairTester : IPairTester<CapsuleWide, CapsuleWide, Convex1ContactManifoldWide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Test(
+        public void Test(
             ref CapsuleWide a, ref CapsuleWide b,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Convex1ContactManifoldWide manifold)
@@ -70,13 +66,23 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var negativeOffsetFromA = manifold.Depth * 0.5f - a.Radius;
             Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA, out manifold.OffsetA0);
             Vector3Wide.Add(ref manifold.OffsetA0, ref closestPointOnA, out manifold.OffsetA0);
-            
+
             //TODO: In the future, you may want to actually take advantage of two contacts in the parallel or coplanar axes case. That can help avoid instabilities that could arise from
             //a contact jumping across the length of the segment.
             //This is primarily useful in some pretty weird corner cases, so we're ignoring it for the early versions.
             //As far as an implementation goes: replace parallel case midpoint contact with two contacts at the borders of the B-on-A region. Can generalize to nonparallel but coplanar case:
             //depth of each contact computed by unprojecting the B-on-A endpoints back onto B, and then dotting those offsets with the normal.
             //(That unprojection process is just two line-plane tests with shared calculations.)
+        }
+
+        public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector3Wide offsetB, out Convex1ContactManifoldWide manifold)
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -93,72 +99,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         //Every single collision task type will mirror this general layout.
         public unsafe override void ExecuteBatch<TContinuations, TFilters>(ref UntypedList batch, ref StreamingBatcher batcher, ref TContinuations continuations, ref TFilters filters)
         {
-            ref var start = ref Unsafe.As<byte, TestPair<Capsule, Capsule>>(ref batch.Buffer[0]);
-            var manifolds = stackalloc ContactManifold[Vector<float>.Count];
-            var trustMeThisManifoldIsTotallyInitialized = &manifolds;
-            //Note that this is hoisted out of the loop. The notification function is not allowed to modify the manifold passed in, so we can do it once up front.
-            for (int i = 0; i < Vector<float>.Count; ++i)
-            {
-                manifolds[i].SetConvexityAndCount(1, true);
-            }
-            CapsuleWide a;
-            CapsuleWide b;
-            Vector3Wide aPosition;
-            Vector3Wide bPosition;
-            QuaternionWide aOrientation;
-            QuaternionWide bOrientation;
-            Vector3Wide offsetB;
-            Convex1ContactManifoldWide manifoldWide;
-
-            for (int i = 0; i < batch.Count; i += Vector<float>.Count)
-            {
-                ref var bundleStart = ref Unsafe.Add(ref start, i);
-                int countInBundle = batch.Count - i;
-                if (countInBundle > Vector<float>.Count)
-                    countInBundle = Vector<float>.Count;
-
-                //TODO: In the future, once we have some more codegen options, we should try to change this- probably into an intrinsic.
-                //Or maybe an explicit AOS->(AOSOA|SOA) transition during add time- in other words, we never store the AOS representation.
-                //(That's still a gather, just moving it around a bit in the hope that it is more centralized.)
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref a.Radius, ref bundleStart.A.Radius, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref a.HalfLength, ref bundleStart.A.HalfLength, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref b.Radius, ref bundleStart.B.Radius, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref b.HalfLength, ref bundleStart.B.HalfLength, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aPosition.X, ref bundleStart.Shared.PoseA.Position.X, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aPosition.Y, ref bundleStart.Shared.PoseA.Position.Y, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aPosition.Z, ref bundleStart.Shared.PoseA.Position.Z, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aOrientation.X, ref bundleStart.Shared.PoseA.Orientation.X, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aOrientation.Y, ref bundleStart.Shared.PoseA.Orientation.Y, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aOrientation.Z, ref bundleStart.Shared.PoseA.Orientation.Z, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref aOrientation.W, ref bundleStart.Shared.PoseA.Orientation.W, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bPosition.X, ref bundleStart.Shared.PoseB.Position.X, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bPosition.Y, ref bundleStart.Shared.PoseB.Position.Y, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bPosition.Z, ref bundleStart.Shared.PoseB.Position.Z, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bOrientation.X, ref bundleStart.Shared.PoseB.Orientation.X, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bOrientation.Y, ref bundleStart.Shared.PoseB.Orientation.Y, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bOrientation.Z, ref bundleStart.Shared.PoseB.Orientation.Z, countInBundle);
-                GatherScatter.Gather<float, TestPair<Capsule, Capsule>>(ref bOrientation.W, ref bundleStart.Shared.PoseB.Orientation.W, countInBundle);
-
-                Vector3Wide.Subtract(ref bPosition, ref aPosition, out offsetB);
-                CapsulePairTester.Test(ref a, ref b, ref offsetB, ref aOrientation, ref bOrientation, out manifoldWide);
-
-                GatherScatter.Scatter<float, ContactManifold>(ref offsetB.X, ref manifolds->OffsetB.X, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref offsetB.Y, ref manifolds->OffsetB.Y, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref offsetB.Z, ref manifolds->OffsetB.Z, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.OffsetA0.X, ref manifolds->Offset0.X, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.OffsetA0.Y, ref manifolds->Offset0.Y, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.OffsetA0.Z, ref manifolds->Offset0.Z, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.Depth, ref manifolds->Depth0, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.Normal.X, ref manifolds->Normal0.X, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.Normal.Y, ref manifolds->Normal0.Y, countInBundle);
-                GatherScatter.Scatter<float, ContactManifold>(ref manifoldWide.Normal.Z, ref manifolds->Normal0.Z, countInBundle);
-                for (int j = 0; j < countInBundle; ++j)
-                {
-                    continuations.Notify(Unsafe.Add(ref bundleStart, j).Shared.Continuation, manifolds + j);
-                    Debug.Assert(manifolds[j].ContactCount == 1 && manifolds[j].Convex, "The notify function should not modify the provided manifold reference.");
-                }
-            }
-
+            CollisionTaskCommon.ExecuteBatch
+                <TContinuations, TFilters,
+                Capsule, CapsuleWide, Capsule, CapsuleWide, UnflippableTestPairWide<Capsule, CapsuleWide, Capsule, CapsuleWide>,
+                Convex1ContactManifoldWide, CapsulePairTester>(ref batch, ref batcher, ref continuations, ref filters);
         }
     }
 }
