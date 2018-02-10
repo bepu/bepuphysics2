@@ -327,12 +327,10 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Conjugate(ref QuaternionWide quaternion, out QuaternionWide result)
         {
-            result.X = -quaternion.X;
-            result.Y = -quaternion.Y;
-            result.Z = -quaternion.Z;
-            result.W = quaternion.W;
+            result.X = quaternion.X;
+            result.Y = quaternion.Y;
+            result.Z = quaternion.Z;
+            result.W = -quaternion.W;
         }
-
-
     }
 }
