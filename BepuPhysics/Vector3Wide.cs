@@ -114,6 +114,20 @@ namespace BepuPhysics
             result.Y = Vector.Max(s, v.Y);
             result.Z = Vector.Max(s, v.Z);
         }
+        /// <summary>
+        /// Computes the per-component maximum of two vectors.
+        /// </summary>
+        /// <param name="a">First vector whose components will be compared.</param>
+        /// <param name="b">Second vector whose components will be compared.</param>
+        /// <param name="result">Vector with components matching the larger of the scalar value and the input vector.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Max(ref Vector3Wide a, ref Vector3Wide b, out Vector3Wide result)
+        {
+            result.X = Vector.Max(a.X, b.X);
+            result.Y = Vector.Max(a.Y, b.Y);
+            result.Z = Vector.Max(a.Z, b.Z);
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Scale(ref Vector3Wide vector, ref Vector<float> scalar, out Vector3Wide result)

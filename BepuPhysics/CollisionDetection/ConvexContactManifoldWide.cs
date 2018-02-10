@@ -50,7 +50,10 @@ namespace BepuPhysics.CollisionDetection
         public Vector3Wide Normal;
         public Vector<float> Depth0;
         public Vector<float> Depth1;
+        public Vector<int> FeatureId0;
+        public Vector<int> FeatureId1;
         public Vector<int> Count;
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ApplyFlipMask(ref Vector3Wide offsetB, ref Vector<int> flipMask)
