@@ -4,6 +4,8 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using Quaternion = BepuUtilities.Quaternion;
+using static BepuPhysics.GatherScatter;
 namespace BepuPhysics.Constraints.Contact
 {
     public struct Contact1 : IConstraintDescription<Contact1>
@@ -15,76 +17,63 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
+
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
-            //We assume a contiguous block of Vector<T> types, where T is a 32 bit type. It is unlikely that future runtime changes will introduce
-            //packing on the fields, since each of them are a Vector<T> in size- which will tend to be 16, 32, or in the future, 64 bytes.
-            //That said, relying on non-explicit memory layouts is still a risk.
-
-            //TODO: Note that this is a maintenance nightmare. There's always going to be a bit of maintenance nightmare, but this is pretty much maximizing it.
-            //We can only justify this by saying that contact manifolds are highly performance sensitive, but other constraints that don't undergo constant modification
-            //should probably use a somewhat less gross option. For example, while it's still a nightmare, aligning the description's memory layout such that it matches a lane
-            //(except the lane has a longer stride between elements) would allow a *relatively* clean and reusable helper that simply loops across the lane.
-            //At the end of the day, the important thing is that this mapping is kept localized so that not every system needs to be aware of it.
-
-            //Note that we use an unsafe cast.
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var lane = ref GatherScatter.Get(ref Buffer<Contact1PrestepData>.Get(ref batch.PrestepData, bundleIndex).OffsetA0.X, innerIndex);
-            lane = Contact0.OffsetA.X;
-            Unsafe.Add(ref lane, Vector<float>.Count) = Contact0.OffsetA.Y;
-            Unsafe.Add(ref lane, 2 * Vector<float>.Count) = Contact0.OffsetA.Z;
+            ref var target = ref GetOffsetInstance(ref Buffer<Contact1PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            GetFirst(ref target.OffsetA0.X) = Contact0.OffsetA.X;
+            GetFirst(ref target.OffsetA0.Y) = Contact0.OffsetA.Y;
+            GetFirst(ref target.OffsetA0.Z) = Contact0.OffsetA.Z;
 
-            Unsafe.Add(ref lane, 3 * Vector<float>.Count) = OffsetB.X;
-            Unsafe.Add(ref lane, 4 * Vector<float>.Count) = OffsetB.Y;
-            Unsafe.Add(ref lane, 5 * Vector<float>.Count) = OffsetB.Z;
+            GetFirst(ref target.OffsetB.X) = OffsetB.X;
+            GetFirst(ref target.OffsetB.Y) = OffsetB.Y;
+            GetFirst(ref target.OffsetB.Z) = OffsetB.Z;
 
-            Unsafe.Add(ref lane, 6 * Vector<float>.Count) = FrictionCoefficient;
+            GetFirst(ref target.FrictionCoefficient) = FrictionCoefficient;
 
-            Unsafe.Add(ref lane, 7 * Vector<float>.Count) = Normal.X;
-            Unsafe.Add(ref lane, 8 * Vector<float>.Count) = Normal.Y;
-            Unsafe.Add(ref lane, 9 * Vector<float>.Count) = Normal.Z;
+            GetFirst(ref target.Normal.X) = Normal.X;
+            GetFirst(ref target.Normal.Y) = Normal.Y;
+            GetFirst(ref target.Normal.Z) = Normal.Z;
 
-            Unsafe.Add(ref lane, 10 * Vector<float>.Count) = SpringSettings.NaturalFrequency;
-            Unsafe.Add(ref lane, 11 * Vector<float>.Count) = SpringSettings.DampingRatio;
-            Unsafe.Add(ref lane, 12 * Vector<float>.Count) = MaximumRecoveryVelocity;
+            GetFirst(ref target.SpringSettings.NaturalFrequency) = SpringSettings.NaturalFrequency;
+            GetFirst(ref target.SpringSettings.DampingRatio) = SpringSettings.DampingRatio;
+            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
 
-            Unsafe.Add(ref lane, 13 * Vector<float>.Count) = Contact0.PenetrationDepth;
+            GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact1 description)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var lane = ref GatherScatter.Get(ref Buffer<Contact1PrestepData>.Get(ref batch.PrestepData, bundleIndex).OffsetA0.X, innerIndex);
-            description.Contact0.OffsetA.X = lane;
-            description.Contact0.OffsetA.Y = Unsafe.Add(ref lane, Vector<float>.Count);
-            description.Contact0.OffsetA.Z = Unsafe.Add(ref lane, 2 * Vector<float>.Count);
+            ref var source = ref GetOffsetInstance(ref Buffer<Contact1PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            description.Contact0.OffsetA.X = GetFirst(ref source.OffsetA0.X);
+            description.Contact0.OffsetA.Y = GetFirst(ref source.OffsetA0.Y);
+            description.Contact0.OffsetA.Z = GetFirst(ref source.OffsetA0.Z);
 
-            description.OffsetB.X = Unsafe.Add(ref lane, 3 * Vector<float>.Count);
-            description.OffsetB.Y = Unsafe.Add(ref lane, 4 * Vector<float>.Count);
-            description.OffsetB.Z = Unsafe.Add(ref lane, 5 * Vector<float>.Count);
+            description.OffsetB.X = GetFirst(ref source.OffsetB.X);
+            description.OffsetB.Y = GetFirst(ref source.OffsetB.Y);
+            description.OffsetB.Z = GetFirst(ref source.OffsetB.Z);
 
-            description.FrictionCoefficient = Unsafe.Add(ref lane, 6 * Vector<float>.Count);
+            description.FrictionCoefficient = GetFirst(ref source.FrictionCoefficient);
 
-            description.Normal.X = Unsafe.Add(ref lane, 7 * Vector<float>.Count);
-            description.Normal.Y = Unsafe.Add(ref lane, 8 * Vector<float>.Count);
-            description.Normal.Z = Unsafe.Add(ref lane, 9 * Vector<float>.Count);
+            description.Normal.X = GetFirst(ref source.Normal.X);
+            description.Normal.Y = GetFirst(ref source.Normal.Y);
+            description.Normal.Z = GetFirst(ref source.Normal.Z);
 
-            description.SpringSettings.NaturalFrequency = Unsafe.Add(ref lane, 10 * Vector<float>.Count);
-            description.SpringSettings.DampingRatio = Unsafe.Add(ref lane, 11 * Vector<float>.Count);
-            description.MaximumRecoveryVelocity = Unsafe.Add(ref lane, 12 * Vector<float>.Count);
+            description.SpringSettings.NaturalFrequency = GetFirst(ref source.SpringSettings.NaturalFrequency);
+            description.SpringSettings.DampingRatio = GetFirst(ref source.SpringSettings.DampingRatio);
+            description.MaximumRecoveryVelocity = GetFirst(ref source.MaximumRecoveryVelocity);
 
-            description.Contact0.PenetrationDepth = Unsafe.Add(ref lane, 13 * Vector<float>.Count);
+            description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
 
         }
 
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return Contact1TypeProcessor.BatchTypeId;
-            }
+            get => Contact1TypeProcessor.BatchTypeId;
         }
 
         public Type BatchType => typeof(Contact1TypeProcessor);

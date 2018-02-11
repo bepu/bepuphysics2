@@ -28,8 +28,18 @@ namespace Demos.SpecializedTests
                 Unsafe.Add(ref bytes, i) = (byte)random.Next(256);
             }
         }
-        public static void Test<T>(Simulation simulation, Random random, int constraintTypeBodyCount) where T : struct, IConstraintDescription<T>
+        public static void Test<T>(BufferPool pool, Random random, int constraintTypeBodyCount) where T : struct, IConstraintDescription<T>
         {
+            var simulation = Simulation.Create(pool, new TestCallbacks());
+
+
+            const int bodyCount = 2048;
+            for (int i = 0; i < bodyCount; ++i)
+            {
+                var bodyDescription = new BodyDescription { LocalInertia = new BodyInertia { InverseMass = 1 }, Pose = new RigidPose { Orientation = BepuUtilities.Quaternion.Identity } };
+                simulation.Bodies.Add(ref bodyDescription);
+            }
+
             int constraintTestCount = Vector<float>.Count * 128;
 
             int[] constraintBodyHandles = new int[constraintTypeBodyCount];
@@ -63,8 +73,8 @@ namespace Demos.SpecializedTests
                 var aValue = (ValueType)description;
                 var bValue = (ValueType)sources[constraintTestIndex];
                 CheckEquality(typeof(T).Name, typeof(T), aValue, bValue);
-                simulation.Solver.Remove(constraintHandles[constraintTestIndex]);
             }
+            simulation.Dispose();
         }
 
         static bool CheckEquality(string parentString, Type type, ValueType a, ValueType b)
@@ -92,21 +102,13 @@ namespace Demos.SpecializedTests
 
         public static void Test()
         {
-            var pool = new BufferPool();
-            var simulation = Simulation.Create(pool, new TestCallbacks());
-
-
-            const int bodyCount = 2048;
-            for (int i = 0; i < bodyCount; ++i)
-            {
-                var bodyDescription = new BodyDescription { LocalInertia = new BodyInertia { InverseMass = 1 }, Pose = new RigidPose { Orientation = BepuUtilities.Quaternion.Identity } };
-                simulation.Bodies.Add(ref bodyDescription);
-            }
+            var pool = new BufferPool();            
             var random = new Random(5);
-            Test<Contact1OneBody>(simulation, random, 1);
-            Test<Contact1>(simulation, random, 2);
-            Test<Contact4>(simulation, random, 2);
-            Test<BallSocket>(simulation, random, 2);
+            Test<Contact1OneBody>(pool, random, 1);
+            Test<Contact1>(pool, random, 2);
+            Test<Contact2>(pool, random, 2);
+            Test<Contact4>(pool, random, 2);
+            Test<BallSocket>(pool, random, 2);
 
             pool.Clear();
         }

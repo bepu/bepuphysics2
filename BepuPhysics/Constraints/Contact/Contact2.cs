@@ -8,43 +8,27 @@ using Quaternion = BepuUtilities.Quaternion;
 using static BepuPhysics.GatherScatter;
 namespace BepuPhysics.Constraints.Contact
 {
-
-    public struct ManifoldContactData
-    {
-        //TODO: Arguably storing this to match the prestep layout would be a better idea for contiguity. Consider it later.
-        public Vector3 OffsetA;
-        public float PenetrationDepth;
-    }
-
-
-    public struct Contact4 : IConstraintDescription<Contact4>
+    public struct Contact2 : IConstraintDescription<Contact2>
     {
         public ManifoldContactData Contact0;
         public ManifoldContactData Contact1;
-        public ManifoldContactData Contact2;
-        public ManifoldContactData Contact3;
         public Vector3 OffsetB;
         public float FrictionCoefficient;
         public Vector3 Normal;
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
 
+
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var target = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var target = ref GetOffsetInstance(ref Buffer<Contact2PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             GetFirst(ref target.OffsetA0.X) = Contact0.OffsetA.X;
             GetFirst(ref target.OffsetA0.Y) = Contact0.OffsetA.Y;
             GetFirst(ref target.OffsetA0.Z) = Contact0.OffsetA.Z;
             GetFirst(ref target.OffsetA1.X) = Contact1.OffsetA.X;
             GetFirst(ref target.OffsetA1.Y) = Contact1.OffsetA.Y;
             GetFirst(ref target.OffsetA1.Z) = Contact1.OffsetA.Z;
-            GetFirst(ref target.OffsetA2.X) = Contact2.OffsetA.X;
-            GetFirst(ref target.OffsetA2.Y) = Contact2.OffsetA.Y;
-            GetFirst(ref target.OffsetA2.Z) = Contact2.OffsetA.Z;
-            GetFirst(ref target.OffsetA3.X) = Contact3.OffsetA.X;
-            GetFirst(ref target.OffsetA3.Y) = Contact3.OffsetA.Y;
-            GetFirst(ref target.OffsetA3.Z) = Contact3.OffsetA.Z;
 
             GetFirst(ref target.OffsetB.X) = OffsetB.X;
             GetFirst(ref target.OffsetB.Y) = OffsetB.Y;
@@ -62,27 +46,19 @@ namespace BepuPhysics.Constraints.Contact
 
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
             GetFirst(ref target.PenetrationDepth1) = Contact1.PenetrationDepth;
-            GetFirst(ref target.PenetrationDepth2) = Contact2.PenetrationDepth;
-            GetFirst(ref target.PenetrationDepth3) = Contact3.PenetrationDepth;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact4 description)
+        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact2 description)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var source = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var source = ref GetOffsetInstance(ref Buffer<Contact2PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             description.Contact0.OffsetA.X = GetFirst(ref source.OffsetA0.X);
             description.Contact0.OffsetA.Y = GetFirst(ref source.OffsetA0.Y);
             description.Contact0.OffsetA.Z = GetFirst(ref source.OffsetA0.Z);
             description.Contact1.OffsetA.X = GetFirst(ref source.OffsetA1.X);
             description.Contact1.OffsetA.Y = GetFirst(ref source.OffsetA1.Y);
             description.Contact1.OffsetA.Z = GetFirst(ref source.OffsetA1.Z);
-            description.Contact2.OffsetA.X = GetFirst(ref source.OffsetA2.X);
-            description.Contact2.OffsetA.Y = GetFirst(ref source.OffsetA2.Y);
-            description.Contact2.OffsetA.Z = GetFirst(ref source.OffsetA2.Z);
-            description.Contact3.OffsetA.X = GetFirst(ref source.OffsetA3.X);
-            description.Contact3.OffsetA.Y = GetFirst(ref source.OffsetA3.Y);
-            description.Contact3.OffsetA.Z = GetFirst(ref source.OffsetA3.Z);
 
             description.OffsetB.X = GetFirst(ref source.OffsetB.X);
             description.OffsetB.Y = GetFirst(ref source.OffsetB.Y);
@@ -100,18 +76,16 @@ namespace BepuPhysics.Constraints.Contact
 
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
             description.Contact1.PenetrationDepth = GetFirst(ref source.PenetrationDepth1);
-            description.Contact2.PenetrationDepth = GetFirst(ref source.PenetrationDepth2);
-            description.Contact3.PenetrationDepth = GetFirst(ref source.PenetrationDepth3);
 
         }
 
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => Contact4TypeProcessor.BatchTypeId;
+            get => Contact2TypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact4TypeProcessor);
+        public Type BatchType => typeof(Contact2TypeProcessor);
     }
 
 }

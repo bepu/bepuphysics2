@@ -16,6 +16,7 @@ namespace Demos
     {
         static void Main(string[] args)
         {
+            ConstraintDescriptionMappingTests.Test();
             //RayTesting.Test<Box, BoxRayTester>();
             //RayTesting.Test<Capsule, CapsuleRayTester>();
             //RayTesting.Test<Sphere, SphereRayTester>();

@@ -4,7 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-
+using static BepuPhysics.GatherScatter;
 namespace BepuPhysics.Constraints
 {
 
@@ -28,29 +28,29 @@ namespace BepuPhysics.Constraints
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var lane = ref GatherScatter.Get(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex).LocalOffsetA.X, innerIndex);
-            lane = LocalOffsetA.X;
-            Unsafe.Add(ref lane, Vector<float>.Count) = LocalOffsetA.Y;
-            Unsafe.Add(ref lane, 2 * Vector<float>.Count) = LocalOffsetA.Z;
-            Unsafe.Add(ref lane, 3 * Vector<float>.Count) = LocalOffsetB.X;
-            Unsafe.Add(ref lane, 4 * Vector<float>.Count) = LocalOffsetB.Y;
-            Unsafe.Add(ref lane, 5 * Vector<float>.Count) = LocalOffsetB.Z;
-            Unsafe.Add(ref lane, 6 * Vector<float>.Count) = SpringSettings.NaturalFrequency;
-            Unsafe.Add(ref lane, 7 * Vector<float>.Count) = SpringSettings.DampingRatio;
+            ref var target = ref GatherScatter.GetOffsetInstance(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            GetFirst(ref target.LocalOffsetA.X) = LocalOffsetA.X;
+            GetFirst(ref target.LocalOffsetA.Y) = LocalOffsetA.Y;
+            GetFirst(ref target.LocalOffsetA.Z) = LocalOffsetA.Z;
+            GetFirst(ref target.LocalOffsetB.X) = LocalOffsetB.X;
+            GetFirst(ref target.LocalOffsetB.Y) = LocalOffsetB.Y;
+            GetFirst(ref target.LocalOffsetB.Z) = LocalOffsetB.Z;
+            GetFirst(ref target.SpringSettings.NaturalFrequency) = SpringSettings.NaturalFrequency;
+            GetFirst(ref target.SpringSettings.DampingRatio) = SpringSettings.DampingRatio;
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out BallSocket description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var lane = ref GatherScatter.Get(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex).LocalOffsetA.X, innerIndex);
-            description.LocalOffsetA.X = lane;
-            description.LocalOffsetA.Y = Unsafe.Add(ref lane, Vector<float>.Count);
-            description.LocalOffsetA.Z = Unsafe.Add(ref lane, 2 * Vector<float>.Count);
-            description.LocalOffsetB.X = Unsafe.Add(ref lane, 3 * Vector<float>.Count);
-            description.LocalOffsetB.Y = Unsafe.Add(ref lane, 4 * Vector<float>.Count);
-            description.LocalOffsetB.Z = Unsafe.Add(ref lane, 5 * Vector<float>.Count);
-            description.SpringSettings.NaturalFrequency = Unsafe.Add(ref lane, 6 * Vector<float>.Count);
-            description.SpringSettings.DampingRatio = Unsafe.Add(ref lane, 7 * Vector<float>.Count);
+            ref var source = ref GatherScatter.GetOffsetInstance(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            description.LocalOffsetA.X = GetFirst(ref source.LocalOffsetA.X);
+            description.LocalOffsetA.Y = GetFirst(ref source.LocalOffsetA.Y);
+            description.LocalOffsetA.Z = GetFirst(ref source.LocalOffsetA.Z);
+            description.LocalOffsetB.X = GetFirst(ref source.LocalOffsetB.X);
+            description.LocalOffsetB.Y = GetFirst(ref source.LocalOffsetB.Y);
+            description.LocalOffsetB.Z = GetFirst(ref source.LocalOffsetB.Z);
+            description.SpringSettings.NaturalFrequency = GetFirst(ref source.SpringSettings.NaturalFrequency);
+            description.SpringSettings.DampingRatio = GetFirst(ref source.SpringSettings.DampingRatio);
         }
     }
 
@@ -71,7 +71,7 @@ namespace BepuPhysics.Constraints
         public BodyInertias InertiaA;
         public BodyInertias InertiaB;
     }
-    
+
     public struct BallSocketFunctions : IConstraintFunctions<BallSocketPrestepData, BallSocketProjection, Vector3Wide>
     {
         //TODO: There may be an argument for some extra level of abstraction here. If we gave the prestep function the data it needed (i.e. pose and inertia)
