@@ -36,8 +36,8 @@ namespace BepuPhysics.Constraints.Contact
         public BodyInertias InertiaB;
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
-        public TangentFrictionProjection Tangent;
-        public PenetrationLimit1Projection Penetration;
+        public TangentFriction.Projection Tangent;
+        public PenetrationLimit1.Projection Penetration;
         public Vector<float> PremultipliedTwistFrictionCoefficient;
         public TwistFrictionProjection Twist;
     }

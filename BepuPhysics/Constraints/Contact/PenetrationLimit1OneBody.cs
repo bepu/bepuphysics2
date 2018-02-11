@@ -20,9 +20,6 @@ namespace BepuPhysics.Constraints.Contact
     /// </summary>
     public static class PenetrationLimit1OneBody
     {
-        /// <summary>
-        /// Data required to project world space velocities into a constraint impulse.
-        /// </summary>
         public struct Projection
         {
             //Note that the data is interleaved to match the access order. We solve each constraint one at a time internally.
@@ -30,6 +27,7 @@ namespace BepuPhysics.Constraints.Contact
             public PenetrationLimitOneBodyProjection Penetration0;
             public Vector<float> SoftnessImpulseScale;
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Prestep(ref BodyInertias inertiaA, ref Vector3Wide normal, ref Contact1OneBodyPrestepData prestep, float dt, float inverseDt,
             out Projection projection)

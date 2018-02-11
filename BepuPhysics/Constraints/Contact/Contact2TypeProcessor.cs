@@ -48,8 +48,8 @@ namespace BepuPhysics.Constraints.Contact
         public BodyInertias InertiaB;
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
-        public TangentFrictionProjection Tangent;
-        public PenetrationLimit2Projection Penetration;
+        public TangentFriction.Projection Tangent;
+        public PenetrationLimit2.Projection Penetration;
         //Lever arms aren't included in the twist projection because the number of arms required varies independently of the twist projection itself.
         public Vector<float> LeverArm0;
         public Vector<float> LeverArm1;

@@ -15,19 +15,6 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> BiasVelocity;
     }
 
-    /// <summary>
-    /// Data required to project world space velocities into a constraint impulse.
-    /// </summary>
-    public struct PenetrationLimit4Projection
-    {
-        //Note that the data is interleaved to match the access order. We solve each constraint one at a time internally.
-        //Also, the normal and inertias are shared across all constraints.
-        public PenetrationLimitProjection Penetration0;
-        public Vector<float> SoftnessImpulseScale;
-        public PenetrationLimitProjection Penetration1;
-        public PenetrationLimitProjection Penetration2;
-        public PenetrationLimitProjection Penetration3;
-    }
 
 
     /// <summary>
@@ -36,9 +23,23 @@ namespace BepuPhysics.Constraints.Contact
     /// </summary>
     public static class PenetrationLimit4
     {
+        /// <summary>
+        /// Data required to project world space velocities into a constraint impulse.
+        /// </summary>
+        public struct Projection
+        {
+            //Note that the data is interleaved to match the access order. We solve each constraint one at a time internally.
+            //Also, the normal and inertias are shared across all constraints.
+            public PenetrationLimitProjection Penetration0;
+            public Vector<float> SoftnessImpulseScale;
+            public PenetrationLimitProjection Penetration1;
+            public PenetrationLimitProjection Penetration2;
+            public PenetrationLimitProjection Penetration3;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal, ref Contact4PrestepData prestep, float dt, float inverseDt,
-            out PenetrationLimit4Projection projection)
+            out Projection projection)
         {
             //We directly take the prestep data here since the jacobians and error don't undergo any processing.
 
@@ -138,7 +139,7 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WarmStart(
-            ref PenetrationLimit4Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal,
+            ref Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal,
             ref Vector<float> accumulatedImpulse0,
             ref Vector<float> accumulatedImpulse1,
             ref Vector<float> accumulatedImpulse2,
@@ -172,7 +173,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref PenetrationLimit4Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal,
+        public static void Solve(ref Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal,
             ref Vector<float> accumulatedImpulse0,
             ref Vector<float> accumulatedImpulse1,
             ref Vector<float> accumulatedImpulse2,

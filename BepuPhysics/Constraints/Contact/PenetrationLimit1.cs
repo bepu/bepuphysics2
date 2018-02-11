@@ -6,17 +6,6 @@ using System.Runtime.InteropServices;
 namespace BepuPhysics.Constraints.Contact
 {
 
-    /// <summary>
-    /// Data required to project world space velocities into a constraint impulse.
-    /// </summary>
-    public struct PenetrationLimit1Projection
-    {
-        //Note that the data is interleaved to match the access order. We solve each constraint one at a time internally.
-        //Also, the normal and inertias are shared across all constraints.
-        public PenetrationLimitProjection Penetration0;
-        public Vector<float> SoftnessImpulseScale;
-    }
-
 
     /// <summary>
     /// Four convex-sourced contact penetration limits solved together. Internally implemented using SI solver. 
@@ -24,9 +13,15 @@ namespace BepuPhysics.Constraints.Contact
     /// </summary>
     public static class PenetrationLimit1
     {
+        public struct Projection
+        {
+            public PenetrationLimitProjection Penetration0;
+            public Vector<float> SoftnessImpulseScale;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal, ref Contact1PrestepData prestep, float dt, float inverseDt, 
-            out PenetrationLimit1Projection projection)
+            out Projection projection)
         {
             //We directly take the prestep data here since the jacobians and error don't undergo any processing.
 
@@ -106,7 +101,7 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WarmStart(
-            ref PenetrationLimit1Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal,
+            ref Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal,
             ref Vector<float> accumulatedImpulse0, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
             ApplyImpulse(ref projection.Penetration0, ref inertiaA, ref inertiaB, ref normal, ref accumulatedImpulse0, ref wsvA, ref wsvB);
@@ -134,7 +129,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref PenetrationLimit1Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal,
+        public static void Solve(ref Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal,
             ref Vector<float> accumulatedImpulse0, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
             ComputeCorrectiveImpulse(ref wsvA, ref wsvB, ref projection.Penetration0, ref normal, ref projection.SoftnessImpulseScale, ref accumulatedImpulse0, out var correctiveCSI0);

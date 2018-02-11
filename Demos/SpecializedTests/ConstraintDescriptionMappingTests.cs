@@ -105,6 +105,7 @@ namespace Demos.SpecializedTests
             var pool = new BufferPool();            
             var random = new Random(5);
             Test<Contact1OneBody>(pool, random, 1);
+            Test<Contact2OneBody>(pool, random, 1);
             Test<Contact1>(pool, random, 2);
             Test<Contact2>(pool, random, 2);
             Test<Contact4>(pool, random, 2);

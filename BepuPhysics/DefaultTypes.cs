@@ -17,6 +17,7 @@ namespace BepuPhysics
         {
             solver.Register<BallSocket>();
             solver.Register<Contact1OneBody>();
+            solver.Register<Contact2OneBody>();
             solver.Register<Contact1>();
             solver.Register<Contact2>();
             solver.Register<Contact4>();

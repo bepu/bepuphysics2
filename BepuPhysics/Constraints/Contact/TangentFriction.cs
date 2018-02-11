@@ -4,24 +4,21 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Constraints.Contact
 {
-    //For in depth explanations of constraints, check the Inequality1DOF.cs implementation.
-    //The details are omitted for brevity in other implementations.
-
-    public struct TangentFrictionProjection
-    {
-        //Jacobians are generated on the fly from the tangents and offsets.
-        //The tangents are reconstructed from the surface basis.
-        //This saves 11 floats per constraint relative to the seminaive baseline of two shared linear jacobians and four angular jacobians. 
-        public Vector3Wide OffsetA;
-        public Vector3Wide OffsetB;
-        public Triangular2x2Wide EffectiveMass;
-    }
-
     /// <summary>
     /// Handles the tangent friction implementation.
     /// </summary>
     public static class TangentFriction
     {
+        public struct Projection
+        {
+            //Jacobians are generated on the fly from the tangents and offsets.
+            //The tangents are reconstructed from the surface basis.
+            //This saves 11 floats per constraint relative to the seminaive baseline of two shared linear jacobians and four angular jacobians. 
+            public Vector3Wide OffsetA;
+            public Vector3Wide OffsetB;
+            public Triangular2x2Wide EffectiveMass;
+        }
+
         public struct Jacobians
         {
             public Matrix2x3Wide LinearA;
@@ -68,7 +65,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Prestep(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Vector3Wide offsetA, ref Vector3Wide offsetB,
             ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            out TangentFrictionProjection projection)
+            out TangentFriction.Projection projection)
         {
             ComputeJacobians(ref tangentX, ref tangentY, ref offsetA, ref offsetB, out var jacobians);
             //Compute effective mass matrix contributions.
@@ -111,7 +108,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WarmStart(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref TangentFrictionProjection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
+        public static void WarmStart(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref TangentFriction.Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
             ref Vector2Wide accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
             ComputeJacobians(ref tangentX, ref tangentY, ref projection.OffsetA, ref projection.OffsetB, out var jacobians);
@@ -121,7 +118,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref TangentFrictionProjection data, ref Jacobians jacobians,
+        public static void ComputeCorrectiveImpulse(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref TangentFriction.Projection data, ref Jacobians jacobians,
             ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, out Vector2Wide correctiveCSI)
         {
             Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.LinearVelocity, ref jacobians.LinearA, out var csvaLinear);
@@ -151,7 +148,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref TangentFrictionProjection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public static void Solve(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref TangentFriction.Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
             ComputeJacobians(ref tangentX, ref tangentY, ref projection.OffsetA, ref projection.OffsetB, out var jacobians);
             ComputeCorrectiveImpulse(ref wsvA, ref wsvB, ref projection, ref jacobians, ref maximumImpulse, ref accumulatedImpulse, out var correctiveCSI);
