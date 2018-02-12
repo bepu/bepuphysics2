@@ -50,8 +50,8 @@ namespace BepuPhysics.CollisionDetection
             this.pool = pool;
             this.minimumPerTypeCapacity = minimumPerTypeCapacity;
             const float previousCountMultiplier = 1.25f;
-            pool.SpecializeFor<UntypedList>().Take((int)(minimumSizesPerConstraintType.Count * previousCountMultiplier), out constraintCaches);
-            pool.SpecializeFor<UntypedList>().Take((int)(minimumSizesPerCollisionType.Count * previousCountMultiplier), out collisionCaches);
+            pool.SpecializeFor<UntypedList>().Take(PairCache.CollisionConstraintTypeCount, out constraintCaches);
+            pool.SpecializeFor<UntypedList>().Take(PairCache.CollisionTypeCount, out collisionCaches);
             for (int i = 0; i < minimumSizesPerConstraintType.Count; ++i)
             {
                 ref var sizes = ref minimumSizesPerConstraintType[i];

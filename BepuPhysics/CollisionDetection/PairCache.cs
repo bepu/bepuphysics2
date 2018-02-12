@@ -408,7 +408,9 @@ namespace BepuPhysics.CollisionDetection
             return constraintTypeId < 16;
         }
 
-
+        //TODO: This kind of duplicate enormous switch statement isn't practical in the long run, and it's almost certainly not even the fastest option.
+        //This and the narrow phase pending constraint adder should be redesigned to avoid as much hardcoding as possible and, when hardcoding is unavoidable,
+        //focus on making it easily verifiable and not as hideously error prone as the current design.
 
         //TODO: If we add in nonconvex manifolds with up to 8 contacts, this will need to change- we preallocate enough space to hold all possible narrowphase generated types.
         public const int CollisionConstraintTypeCount = 16;
@@ -438,6 +440,8 @@ namespace BepuPhysics.CollisionDetection
                 case 1:
                     {
                         //2 contacts
+                        ref var bundle = ref Buffer<Contact2AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
+                        GatherScatter.GetLane(ref bundle.Penetration0, inner, ref *oldImpulses, 2);
                     }
                     break;
                 case 2:
@@ -484,6 +488,8 @@ namespace BepuPhysics.CollisionDetection
                 case 8 + 1:
                     {
                         //2 contacts
+                        ref var bundle = ref Buffer<Contact2AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
+                        GatherScatter.GetLane(ref bundle.Penetration0, inner, ref *oldImpulses, 2);
                     }
                     break;
                 case 8 + 2:
@@ -547,6 +553,8 @@ namespace BepuPhysics.CollisionDetection
                 case 1:
                     {
                         //2 contacts
+                        ref var bundle = ref Buffer<Contact2AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
+                        GatherScatter.SetLane(ref bundle.Penetration0, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), 2);
                     }
                     break;
                 case 2:
@@ -592,6 +600,8 @@ namespace BepuPhysics.CollisionDetection
                 case 8 + 1:
                     {
                         //2 contacts
+                        ref var bundle = ref Buffer<Contact2AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
+                        GatherScatter.SetLane(ref bundle.Penetration0, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), 2);
                     }
                     break;
                 case 8 + 2:

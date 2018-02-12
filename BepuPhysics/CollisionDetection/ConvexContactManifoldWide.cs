@@ -86,12 +86,14 @@ namespace BepuPhysics.CollisionDetection
             target.Offset0.Y = OffsetA0.Y[0];
             target.Offset0.Z = OffsetA0.Z[0];
             target.Depth0 = Depth0[0];
+            target.FeatureId0 = FeatureId0[0];
             if (count > 1)
             {
                 target.Offset1.X = OffsetA1.X[0];
                 target.Offset1.Y = OffsetA1.Y[0];
                 target.Offset1.Z = OffsetA1.Z[0];
                 target.Depth1 = Depth1[0];
+                target.FeatureId1 = FeatureId1[0];
             }
             target.ConvexNormal.X = Normal.X[0];
             target.ConvexNormal.Y = Normal.Y[0];
@@ -110,6 +112,10 @@ namespace BepuPhysics.CollisionDetection
         public Vector<float> Depth1;
         public Vector<float> Depth2;
         public Vector<float> Depth3;
+        public Vector<int> FeatureId0;
+        public Vector<int> FeatureId1;
+        public Vector<int> FeatureId2;
+        public Vector<int> FeatureId3;
         public Vector<int> Count;
 
 
@@ -148,24 +154,28 @@ namespace BepuPhysics.CollisionDetection
             target.Offset0.Y = OffsetA0.Y[0];
             target.Offset0.Z = OffsetA0.Z[0];
             target.Depth0 = Depth0[0];
+            target.FeatureId0 = FeatureId0[0];
             if (count > 1)
             {
                 target.Offset1.X = OffsetA1.X[0];
                 target.Offset1.Y = OffsetA1.Y[0];
                 target.Offset1.Z = OffsetA1.Z[0];
                 target.Depth1 = Depth1[0];
+                target.FeatureId1 = FeatureId1[0];
                 if (count > 2)
                 {
                     target.Offset2.X = OffsetA2.X[0];
                     target.Offset2.Y = OffsetA2.Y[0];
                     target.Offset2.Z = OffsetA2.Z[0];
                     target.Depth2 = Depth2[0];
+                    target.FeatureId2 = FeatureId2[0];
                     if (count > 3)
                     {
                         target.Offset2.X = OffsetA2.X[0];
                         target.Offset2.Y = OffsetA2.Y[0];
                         target.Offset2.Z = OffsetA2.Z[0];
                         target.Depth2 = Depth3[0];
+                        target.FeatureId3 = FeatureId3[0];
                     }
                 }
             }

@@ -4,6 +4,7 @@ using BepuPhysics.CollisionDetection;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using BepuUtilities;
 
 namespace BepuPhysics.Collidables
 {
@@ -107,7 +108,7 @@ namespace BepuPhysics.Collidables
             3) The largest displacement along any axis, at any time, is the distance from the starting position to the position at dt. Note that this only holds because of the clamp: 
             if the angle was allowed to wrap around, it the distance would start to go down again.
             4) position(time) = {radius * sin(angular speed * time), radius * cos(angular speed * time)}
-            5) largest expansion required = position(dt) - position(0) = sqrt(R^2 - 2 * R * cos(angular speed * time) + 1)
+            5) largest expansion required = ||position(dt) - position(0)|| = sqrt(2 * radius^2 * (1 - cos(dt * w)))
             6) Don't have any true SIMD sin function, but we can approximate it using a taylor series, like: cos(x) = 1 - x^2 / 2! + x^4 / 4! - x^6 / 6!
             7) Note that the cosine approximation should stop at a degree where it is smaller than the true value of cosine for the interval 0 to pi/3: this guarantees that the distance,
             which is larger when the cosine is smaller, is conservative and fully bounds the angular motion.
@@ -119,15 +120,15 @@ namespace BepuPhysics.Collidables
             2) Shrinking the bounding box reduces the number of collision pairs. Collision pairs are expensive- many times more expensive than the cost of shrinking the bounding box.
             */
             Vector3Wide.Length(ref velocities.AngularVelocity, out var angularVelocityMagnitude);
-            var a = angularVelocityMagnitude * vectorDt;
+            var a = Vector.Min(angularVelocityMagnitude * vectorDt, new Vector<float>(MathHelper.Pi / 3f));
             var a2 = a * a;
             var a4 = a2 * a2;
             var a6 = a4 * a2;
-            var cosAngle = Vector<float>.One - a2 * new Vector<float>(1f / 2f) + a4 * new Vector<float>(1f / 24f) - a6 * new Vector<float>(1f / 720f);
+            var cosAngleMinusOne = a2 * new Vector<float>(-1f / 2f) + a4 * new Vector<float>(1f / 24f) - a6 * new Vector<float>(1f / 720f);
             //Note that it's impossible for angular motion to cause an increase in bounding box size beyond (maximumRadius-minimumRadius) on any given axis.
             //That value, or a conservative approximation, is stored as the maximum angular expansion.
             var angularExpansion = Vector.Min(maximumAngularExpansion,
-                Vector.SquareRoot(maximumRadius * maximumRadius - new Vector<float>(2) * maximumRadius * cosAngle + Vector<float>.One));
+                Vector.SquareRoot(new Vector<float>(-2f) * maximumRadius * maximumRadius * cosAngleMinusOne));
             Vector3Wide.Subtract(ref minDisplacement, ref angularExpansion, out minDisplacement);
             Vector3Wide.Add(ref maxDisplacement, ref angularExpansion, out maxDisplacement);
 

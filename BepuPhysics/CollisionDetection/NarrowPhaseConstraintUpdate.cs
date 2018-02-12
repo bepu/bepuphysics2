@@ -172,6 +172,7 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
+        //TODO: If you end up changing the NarrowPhasePendingConstraintAdds and PairCache hardcoded type handling, you should change this too. This is getting silly.
         unsafe void UpdateConstraintForManifold<TCollisionCache, TBodyHandles>(int workerIndex, ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache,
             ref PairMaterialProperties material, TBodyHandles bodyHandles)
             where TCollisionCache : IPairCacheEntry
@@ -213,6 +214,21 @@ namespace BepuPhysics.CollisionDetection
                     }
                     break;
                 case 1:
+                    {
+                        Contact2OneBody description;
+                        description.Contact0.OffsetA = manifold->Offset0;
+                        description.Contact0.PenetrationDepth = manifold->Depth0;
+                        description.Contact1.OffsetA = manifold->Offset1;
+                        description.Contact1.PenetrationDepth = manifold->Depth1;
+                        description.FrictionCoefficient = material.FrictionCoefficient;
+                        description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
+                        description.SpringSettings = material.SpringSettings;
+                        description.Normal = manifold->ConvexNormal;
+
+                        //TODO: Check init hack.
+                        UpdateConstraint<TBodyHandles, Contact2OneBody, ContactImpulses2, TCollisionCache, ConstraintCache2>(
+                            workerIndex, ref pair, manifold, manifoldTypeAsConstraintType, ref collisionCache, ref *&description, bodyHandles);
+                    }
                     break;
                 case 2:
                     break;
@@ -246,6 +262,22 @@ namespace BepuPhysics.CollisionDetection
                     }
                     break;
                 case 8 + 1:
+                    {
+                        Contact2 description;
+                        description.Contact0.OffsetA = manifold->Offset0;
+                        description.Contact0.PenetrationDepth = manifold->Depth0;
+                        description.Contact1.OffsetA = manifold->Offset1;
+                        description.Contact1.PenetrationDepth = manifold->Depth1;
+                        description.OffsetB = manifold->OffsetB;
+                        description.FrictionCoefficient = material.FrictionCoefficient;
+                        description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
+                        description.SpringSettings = material.SpringSettings;
+                        description.Normal = manifold->ConvexNormal;
+
+                        //TODO: Check init hack.
+                        UpdateConstraint<TBodyHandles, Contact2, ContactImpulses2, TCollisionCache, ConstraintCache2>(
+                            workerIndex, ref pair, manifold, manifoldTypeAsConstraintType, ref collisionCache, ref *&description, bodyHandles);
+                    }
                     break;
                 case 8 + 2:
                     break;
