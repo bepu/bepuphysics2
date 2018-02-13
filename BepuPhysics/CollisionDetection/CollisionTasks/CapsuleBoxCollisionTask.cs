@@ -68,7 +68,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //We can effectively split this implementation into two tests- exterior and interior.
             //The interior test only needs to be run if one of the subpairs happens to be deeply intersecting, which should be ~never in practice.
             //That's fortunate, because computing an accurate interior normal is painful!
-            if (Vector.LessThanAny(minLengthSquared, new Vector<float>(1e-10f)))
+            var useInterior = Vector.LessThan(minLengthSquared, new Vector<float>(1e-10f));
+            if (Vector.EqualsAny(useInterior, new Vector<int>(-1)))
             {
                 //There are six possible separating axes when the capsule's internal line segment intersects the box:
                 //box.X
@@ -81,9 +82,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //By working in the box's local space, box.X/Y/Z become simply (1,0,0), (0,1,0), and (0,0,1). This cancels out a whole bunch of arithmetic.
 
                 //Note that these depths will not take into account the radius until the very end. We pretend that the capsule is simply a line until then, since the radius changes nothing.
-                var faceDepthX = b.HalfWidth - localOffsetA.X - Vector.Abs(capsuleAxis.X * a.HalfLength);
-                var faceDepthY = b.HalfHeight - localOffsetA.Y - Vector.Abs(capsuleAxis.Y * a.HalfLength);
-                var faceDepthZ = b.HalfLength - localOffsetA.Z - Vector.Abs(capsuleAxis.Z * a.HalfLength);
+                var faceDepthX = b.HalfWidth - localOffsetA.X + Vector.Abs(capsuleAxis.X * a.HalfLength);
+                var faceDepthY = b.HalfHeight - localOffsetA.Y + Vector.Abs(capsuleAxis.Y * a.HalfLength);
+                var faceDepthZ = b.HalfLength - localOffsetA.Z + Vector.Abs(capsuleAxis.Z * a.HalfLength);
                 var faceDepth = Vector.Min(Vector.Min(faceDepthX, faceDepthY), faceDepthZ);
                 var useFaceX = Vector.Equals(faceDepth, faceDepthX);
                 var useFaceY = Vector.AndNot(Vector.Equals(faceDepth, faceDepthY), useFaceX);
@@ -128,14 +129,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 edgeNormal.Z = Vector.ConditionalSelect(useEdgeX, -capsuleAxis.Y, Vector.ConditionalSelect(useEdgeY, -capsuleAxis.X, Vector<float>.Zero));
 
                 var useEdge = Vector.LessThan(edgeDepth, faceDepth);
-                Vector3Wide.ConditionalSelect(ref useEdge, ref edgeNormal, ref faceNormal, out localNormal);
+                Vector3Wide.ConditionalSelect(ref useEdge, ref edgeNormal, ref faceNormal, out var interiorNormal);
 
                 //Calibrate the normal such that it points from B to A.
-                Vector3Wide.Dot(ref localNormal, ref offsetB, out var dot);
+                Vector3Wide.Dot(ref interiorNormal, ref offsetB, out var dot);
                 var shouldNegateNormal = Vector.GreaterThan(dot, Vector<float>.Zero);
-                localNormal.X = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.X, localNormal.X);
-                localNormal.Y = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.Y, localNormal.Y);
-                localNormal.Z = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.Z, localNormal.Z);
+                interiorNormal.X = Vector.ConditionalSelect(shouldNegateNormal, -interiorNormal.X, interiorNormal.X);
+                interiorNormal.Y = Vector.ConditionalSelect(shouldNegateNormal, -interiorNormal.Y, interiorNormal.Y);
+                interiorNormal.Z = Vector.ConditionalSelect(shouldNegateNormal, -interiorNormal.Z, interiorNormal.Z);
+
+                //The interior normal doesn't check all possible separating axes in the non-segment-intersecting case.
+                //It would be wrong to overwrite the initial test if the interior test was unnecessary.
+                Vector3Wide.ConditionalSelect(ref useInterior, ref interiorNormal, ref localNormal, out localNormal);
             }
 
             //We now have Normal, OffsetA0, and OffsetA1. We may have explicitly calculated depths as a part of that process, but each contact may have its own depth.
