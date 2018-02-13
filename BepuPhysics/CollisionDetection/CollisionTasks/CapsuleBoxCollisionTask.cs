@@ -19,70 +19,25 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             QuaternionWide.ConcatenateWithoutOverlap(ref orientationA, ref toLocalB, out var boxLocalOrientationA);
             QuaternionWide.TransformUnitY(ref boxLocalOrientationA, out var capsuleAxis);
 
-            //For each face of the box, clip the capsule axis against its bounding planes and then clamp the result to the box's extent along that axis.
-            //The face which has the largest clipped interval of the capsule line segment will be picked as the representative.
-            var positive = Vector<float>.One;
-            var negative = -positive;
-            var divisionGuard = new Vector<float>(1e-15f);
-            //Division by zero is hacked away by clamping the magnitude to some nonzero value and recovering the sign in the numerator.
-            //The resulting interval will tend to be enormous and properly signed, so it serves the necessary purpose.
-            var inverseCapsuleAxisX = Vector.ConditionalSelect(Vector.LessThan(capsuleAxis.X, Vector<float>.Zero), negative, positive) / Vector.Max(Vector.Abs(capsuleAxis.X), divisionGuard);
-            var inverseCapsuleAxisY = Vector.ConditionalSelect(Vector.LessThan(capsuleAxis.Y, Vector<float>.Zero), negative, positive) / Vector.Max(Vector.Abs(capsuleAxis.Y), divisionGuard);
-            var inverseCapsuleAxisZ = Vector.ConditionalSelect(Vector.LessThan(capsuleAxis.Z, Vector<float>.Zero), negative, positive) / Vector.Max(Vector.Abs(capsuleAxis.Z), divisionGuard);
-            Vector3Wide scaledExtents, scaledOffset;
-            scaledExtents.X = b.HalfWidth * Vector.Abs(inverseCapsuleAxisX);
-            scaledExtents.Y = b.HalfHeight * Vector.Abs(inverseCapsuleAxisY);
-            scaledExtents.Z = b.HalfLength * Vector.Abs(inverseCapsuleAxisZ);
-            scaledOffset.X = localOffsetA.X * inverseCapsuleAxisX;
-            scaledOffset.Y = localOffsetA.Y * inverseCapsuleAxisY;
-            scaledOffset.Z = localOffsetA.Z * inverseCapsuleAxisZ;
-            Vector3Wide.Subtract(ref scaledOffset, ref scaledExtents, out var tCandidateMin);
-            var negativeHalfLength = -a.HalfLength;
-            Vector3Wide.Max(ref negativeHalfLength, ref tCandidateMin, out tCandidateMin);
-            Vector3Wide.Add(ref scaledOffset, ref scaledExtents, out var tCandidateMax);
-            Vector3Wide.Min(ref a.HalfLength, ref tCandidateMax, out tCandidateMax);
-
-            //We now have clipped intervals for all faces. The faces along axis X, for example, use interval max(tMin.Y, tMin.Z) to min(tMax.Y, tMax.Z).
-            //Find the longest interval. Note that it's possible for the interval length to be negative when a line segment does not enter the face's voronoi region.
-            //It may be negative for all axes, even; that can happen when the line segment is outside all face voronoi regions. That's fine, though.
-            //It's simply a signal that the line segment is in one of the face-adjacent voronoi regions, and clamping the endpoints will provide the closest point on the box to the segment.
-            var intervalMaxX = Vector.Min(tCandidateMax.Y, tCandidateMax.Z);
-            var intervalMaxY = Vector.Min(tCandidateMax.X, tCandidateMax.Z);
-            var intervalMaxZ = Vector.Min(tCandidateMax.X, tCandidateMax.Y);
-            var intervalMinX = Vector.Max(tCandidateMin.Y, tCandidateMin.Z);
-            var intervalMinY = Vector.Max(tCandidateMin.X, tCandidateMin.Z);
-            var intervalMinZ = Vector.Max(tCandidateMin.X, tCandidateMin.Y);
-            var intervalLengthX = intervalMaxX - intervalMinX;
-            var intervalLengthY = intervalMaxY - intervalMinY;
-            var intervalLengthZ = intervalMaxZ - intervalMinZ;
-            var maxLength = Vector.Max(intervalLengthX, Vector.Max(intervalLengthY, intervalLengthZ));
-            var useX = Vector.Equals(intervalLengthX, maxLength);
-            var useY = Vector.Equals(intervalLengthY, maxLength);
-            var tMin = Vector.ConditionalSelect(useX, intervalMinX, Vector.ConditionalSelect(useY, intervalMinY, intervalMinZ));
-            var tMax = Vector.ConditionalSelect(useX, intervalMaxX, Vector.ConditionalSelect(useY, intervalMaxY, intervalMaxZ));
-
-            Vector3Wide.Scale(ref capsuleAxis, ref tMin, out var capsuleStart);
-            Vector3Wide.Scale(ref capsuleAxis, ref tMax, out var capsuleEnd);
-            Vector3Wide.Add(ref localOffsetA, ref capsuleStart, out capsuleStart);
-            Vector3Wide.Add(ref localOffsetA, ref capsuleEnd, out capsuleEnd);
-
-            //Clamp the start and end to the box. Note that we haven't kept track of which axis we're working on, so we just do clamping on all three axes. Two axes will be wasted,
-            //but it's easier to do this than to try to reconstruct which axis is the one we're supposed to work on.
+            //Clamp the endpoints of the capsule's internal line segment against the box.
+            Vector3Wide.Scale(ref capsuleAxis, ref a.HalfLength, out var capsuleExtent);
+            Vector3Wide.Subtract(ref localOffsetA, ref capsuleExtent, out var capsule0);
+            Vector3Wide.Add(ref localOffsetA, ref capsuleExtent, out var capsule1);
             Vector3Wide boxStart, boxEnd;
-            boxStart.X = Vector.Max(Vector.Min(capsuleStart.X, b.HalfWidth), -b.HalfWidth);
-            boxStart.Y = Vector.Max(Vector.Min(capsuleStart.Y, b.HalfHeight), -b.HalfHeight);
-            boxStart.Z = Vector.Max(Vector.Min(capsuleStart.Z, b.HalfLength), -b.HalfLength);
-            boxEnd.X = Vector.Max(Vector.Min(capsuleEnd.X, b.HalfWidth), -b.HalfWidth);
-            boxEnd.Y = Vector.Max(Vector.Min(capsuleEnd.Y, b.HalfHeight), -b.HalfHeight);
-            boxEnd.Z = Vector.Max(Vector.Min(capsuleEnd.Z, b.HalfLength), -b.HalfLength);
+            boxStart.X = Vector.Min(Vector.Max(capsule0.X, -b.HalfWidth), b.HalfWidth);
+            boxStart.Y = Vector.Min(Vector.Max(capsule0.Y, -b.HalfHeight), b.HalfHeight);
+            boxStart.Z = Vector.Min(Vector.Max(capsule0.Z, -b.HalfLength), b.HalfLength);
+            boxEnd.X = Vector.Min(Vector.Max(capsule1.X, -b.HalfWidth), b.HalfWidth);
+            boxEnd.Y = Vector.Min(Vector.Max(capsule1.Y, -b.HalfHeight), b.HalfHeight);
+            boxEnd.Z = Vector.Min(Vector.Max(capsule1.Z, -b.HalfLength), b.HalfLength);
 
             //Compute the closest point on the line segment to the clamped start and end.
             Vector3Wide.Subtract(ref boxStart, ref localOffsetA, out var aToBoxStart);
             Vector3Wide.Subtract(ref boxEnd, ref localOffsetA, out var aToBoxEnd);
             Vector3Wide.Dot(ref capsuleAxis, ref aToBoxStart, out var dotStart);
             Vector3Wide.Dot(ref capsuleAxis, ref aToBoxEnd, out var dotEnd);
-            dotStart = Vector.Max(Vector.Min(dotStart, a.HalfLength), negativeHalfLength);
-            dotEnd = Vector.Max(Vector.Min(dotEnd, a.HalfLength), negativeHalfLength);
+            dotStart = Vector.Max(Vector.Min(dotStart, a.HalfLength), -a.HalfLength);
+            dotEnd = Vector.Max(Vector.Min(dotEnd, a.HalfLength), -a.HalfLength);
 
             //Now compute the distances. The normal will be defined by the shorter of the two offsets.
             Vector3Wide.Scale(ref capsuleAxis, ref dotStart, out var closestFromBoxStart);
@@ -98,13 +53,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             var minLengthSquared = Vector.Min(startLengthSquared, endLengthSquared);
             var useStart = Vector.Equals(minLengthSquared, startLengthSquared);
-            Vector3Wide.ConditionalSelect(ref useStart, ref startOffset, ref endOffset, out manifold.Normal);
+            Vector3Wide.ConditionalSelect(ref useStart, ref startOffset, ref endOffset, out var localNormal);
             var inverseLength = Vector<float>.One / Vector.SquareRoot(minLengthSquared);
-            Vector3Wide.Scale(ref manifold.Normal, ref inverseLength, out manifold.Normal);
+            Vector3Wide.Scale(ref localNormal, ref inverseLength, out localNormal);
 
             //Note that we defer contact position offseting by the normal * depth until later when we know the normal isn't going to change.
-            Vector3Wide.Subtract(ref closestFromBoxStart, ref localOffsetA, out manifold.OffsetA0);
-            Vector3Wide.Subtract(ref closestFromBoxEnd, ref localOffsetA, out manifold.OffsetA1);
+            Vector3Wide.Subtract(ref closestFromBoxStart, ref localOffsetA, out var localA0);
+            Vector3Wide.Subtract(ref closestFromBoxEnd, ref localOffsetA, out var localA1);
             manifold.FeatureId0 = Vector<int>.Zero;
             manifold.FeatureId1 = Vector<int>.One;
 
@@ -160,9 +115,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var epsilon = new Vector<float>(1e-9f);
                 //If the capsule internal segment and the edge are parallel, we ignore the edge by replacing its depth with ~infinity.
                 //Such parallel axes are guaranteed to do no better than one of the face directions since this path is only relevant during segment-box deep collisions.
-                edgeXDepth = Vector.ConditionalSelect(Vector.LessThan(edgeXLength, divisionGuard), infiniteDepth, edgeXDepth);
-                edgeYDepth = Vector.ConditionalSelect(Vector.LessThan(edgeYLength, divisionGuard), infiniteDepth, edgeYDepth);
-                edgeZDepth = Vector.ConditionalSelect(Vector.LessThan(edgeZLength, divisionGuard), infiniteDepth, edgeZDepth);
+                edgeXDepth = Vector.ConditionalSelect(Vector.LessThan(edgeXLength, epsilon), infiniteDepth, edgeXDepth);
+                edgeYDepth = Vector.ConditionalSelect(Vector.LessThan(edgeYLength, epsilon), infiniteDepth, edgeYDepth);
+                edgeZDepth = Vector.ConditionalSelect(Vector.LessThan(edgeZLength, epsilon), infiniteDepth, edgeZDepth);
 
                 var edgeDepth = Vector.Min(Vector.Min(edgeXDepth, edgeYDepth), edgeZDepth);
                 var useEdgeX = Vector.Equals(edgeDepth, edgeXDepth);
@@ -173,24 +128,30 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 edgeNormal.Z = Vector.ConditionalSelect(useEdgeX, -capsuleAxis.Y, Vector.ConditionalSelect(useEdgeY, -capsuleAxis.X, Vector<float>.Zero));
 
                 var useEdge = Vector.LessThan(edgeDepth, faceDepth);
-                Vector3Wide.ConditionalSelect(ref useEdge, ref edgeNormal, ref faceNormal, out manifold.Normal);
+                Vector3Wide.ConditionalSelect(ref useEdge, ref edgeNormal, ref faceNormal, out localNormal);
 
                 //Calibrate the normal such that it points from B to A.
-                Vector3Wide.Dot(ref manifold.Normal, ref offsetB, out var dot);
+                Vector3Wide.Dot(ref localNormal, ref offsetB, out var dot);
                 var shouldNegateNormal = Vector.GreaterThan(dot, Vector<float>.Zero);
-                manifold.Normal.X = Vector.ConditionalSelect(shouldNegateNormal, -manifold.Normal.X, manifold.Normal.X);
-                manifold.Normal.Y = Vector.ConditionalSelect(shouldNegateNormal, -manifold.Normal.Y, manifold.Normal.Y);
-                manifold.Normal.Z = Vector.ConditionalSelect(shouldNegateNormal, -manifold.Normal.Z, manifold.Normal.Z);
+                localNormal.X = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.X, localNormal.X);
+                localNormal.Y = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.Y, localNormal.Y);
+                localNormal.Z = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.Z, localNormal.Z);
             }
 
             //We now have Normal, OffsetA0, and OffsetA1. We may have explicitly calculated depths as a part of that process, but each contact may have its own depth.
             //Imagine a face collision- if the capsule axis isn't fully parallel with the plane's surface, it would be strange to use the same depth for both contacts.
             //Compute the interval of the box on the normal. Note that the normal is already calibrated to point from B to A (box to capsule).
-            var boxExtreme = Vector.Abs(manifold.Normal.X * b.HalfWidth) + Vector.Abs(manifold.Normal.Y * b.HalfHeight) + Vector.Abs(manifold.Normal.Z * b.HalfLength);
-            Vector3Wide.Dot(ref manifold.Normal, ref closestFromBoxStart, out var dot0);
-            Vector3Wide.Dot(ref manifold.Normal, ref closestFromBoxEnd, out var dot1);
+            var boxExtreme = Vector.Abs(localNormal.X * b.HalfWidth) + Vector.Abs(localNormal.Y * b.HalfHeight) + Vector.Abs(localNormal.Z * b.HalfLength);
+            Vector3Wide.Dot(ref localNormal, ref closestFromBoxStart, out var dot0);
+            Vector3Wide.Dot(ref localNormal, ref closestFromBoxEnd, out var dot1);
             manifold.Depth0 = a.Radius + boxExtreme - dot0;
             manifold.Depth1 = a.Radius + boxExtreme - dot1;
+
+            //Transform A0, A1, and the normal into world space.
+            Matrix3x3Wide.CreateFromQuaternion(ref orientationB, out var orientationMatrixB);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref orientationMatrixB, out manifold.Normal);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localA0, ref orientationMatrixB, out manifold.OffsetA0);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localA1, ref orientationMatrixB, out manifold.OffsetA1);
 
             //Apply the normal offset to the contact positions.           
             var negativeOffsetFromA0 = manifold.Depth0 * 0.5f - a.Radius;

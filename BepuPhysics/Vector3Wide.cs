@@ -100,7 +100,19 @@ namespace BepuPhysics
             result.Y = Vector.Min(s, v.Y);
             result.Z = Vector.Min(s, v.Z);
         }
-
+        /// <summary>
+        /// Computes the per-component minimum of two vectors.
+        /// </summary>
+        /// <param name="a">First vector whose components will be compared.</param>
+        /// <param name="b">Second vector whose components will be compared.</param>
+        /// <param name="result">Vector with components matching the smaller of the two input vectors.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Min(ref Vector3Wide a, ref Vector3Wide b, out Vector3Wide result)
+        {
+            result.X = Vector.Min(a.X, b.X);
+            result.Y = Vector.Min(a.Y, b.Y);
+            result.Z = Vector.Min(a.Z, b.Z);
+        }
         /// <summary>
         /// Computes the per-component maximum between a scalar value and the components of a vector.
         /// </summary>
@@ -119,7 +131,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="a">First vector whose components will be compared.</param>
         /// <param name="b">Second vector whose components will be compared.</param>
-        /// <param name="result">Vector with components matching the larger of the scalar value and the input vector.</param>
+        /// <param name="result">Vector with components matching the larger of the two input vectors.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Max(ref Vector3Wide a, ref Vector3Wide b, out Vector3Wide result)
         {

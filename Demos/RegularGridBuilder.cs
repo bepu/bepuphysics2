@@ -27,7 +27,7 @@ namespace Demos
                 {
                     Position = new Vector3(columnIndex, rowIndex, sliceIndex) * Spacing + Origin,
                     //Orientation = BepuUtilities.Quaternion.Identity
-                    Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(1,0,0), MathHelper.PiOver2)
+                    Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2)
                 },
                 LocalInertia = LocalInertia,
                 Collidable = new CollidableDescription
@@ -42,6 +42,7 @@ namespace Demos
                     MinimumTimestepCountUnderThreshold = 32
                 },
                 //Velocity = new BodyVelocity { Angular = new Vector3(0, (rowIndex % 2 - 0.5f) * 20, 0) }
+                //Velocity = new BodyVelocity { Angular = new Vector3(1, 0, 0) }
             };
 
         }

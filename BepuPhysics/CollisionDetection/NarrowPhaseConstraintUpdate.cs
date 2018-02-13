@@ -137,13 +137,10 @@ namespace BepuPhysics.CollisionDetection
                 else
                 {
                     //There exists a constraint, but it's a different type. This is more complex:
-                    //1) The new manifold's constraint must be added, but upon the adder's return the solver is not guaranteed to contain the constraint- it may be deferred.
-                    //(This allows a custom adder to implement deferred approaches. For example, determinism requires a consistent order of solver constraint addition, and a post-sort 
-                    //can be used to guarantee that consistent order. We can also defer smaller batches for the sake of limiting sync overheads. 4-16 adds within a single lock
-                    //means a 4-16x reduction in lock-related overhead, assuming no contests.)
+                    //1) The new manifold's constraint must be added, but upon the adder's return the solver does not yet contain the constraint. They are deferred.
                     //2) The old constraint must be removed.
                     PairCache.Update(workerIndex, index, ref pointers, ref collisionCache, ref newConstraintCache);
-                    RequestAddConstraint(workerIndex, manifoldTypeAsConstraintType, ref pair, constraintCacheIndex, ref newImpulses, ref description, bodyHandles);
+                    RequestAddConstraint(workerIndex, manifoldTypeAsConstraintType, ref pair, pointers.ConstraintCache, ref newImpulses, ref description, bodyHandles);
                     ConstraintRemover.EnqueueRemoval(workerIndex, constraintHandle);
                 }
             }
