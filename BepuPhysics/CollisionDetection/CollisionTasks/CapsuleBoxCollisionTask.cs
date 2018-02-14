@@ -7,8 +7,163 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct CapsuleBoxTester : IPairTester<CapsuleWide, BoxWide, Convex2ContactManifoldWide>
     {
+        //Hideous parameter list because this function is used with swizzled vectors.
+        //It's built to handle the Z edge hardcoded, so we just reorient things at the point of use to handle X and Y.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void TestBoxEdge(
+            ref Vector<float> offsetAX, ref Vector<float> offsetAY, ref Vector<float> offsetAZ,
+            ref Vector<float> capsuleAxisX, ref Vector<float> capsuleAxisY, ref Vector<float> capsuleAxisZ,
+            ref Vector<float> capsuleHalfLength,
+            ref Vector<float> boxEdgeCenterX, ref Vector<float> boxEdgeCenterY, ref Vector<float> boxEdgeHalfLength,
+            out Vector<float> ta, out Vector<float> squaredDistance, out Vector<float> nX, out Vector<float> nY, out Vector<float> nZ)
+
+        {
+            //From CapsulePairCollisionTask, point of closest approach along the capsule axis, unbounded:
+            //ta = (da * (b - a) + (db * (a - b)) * (da * db)) / (1 - ((da * db) * (da * db))  
+            //where da = capsuleAxis, db = (0,0,1), a = offsetA, b = (boxEdgeCenterX, boxEdgeCenterY, 0)
+            //so da * db is simply capsuleAxis.Z.
+            var abX = boxEdgeCenterX - offsetAX;
+            var abY = boxEdgeCenterY - offsetAY;
+            var daOffsetB = capsuleAxisX * abX + capsuleAxisY * abY - capsuleAxisZ * offsetAZ;
+            //Note potential division by zero. We protect against this later with a conditional select.
+            ta = (daOffsetB + offsetAZ * capsuleAxisZ) / (Vector<float>.One - capsuleAxisZ * capsuleAxisZ);
+            //tb = ta * (da * db) - db * (b - a)
+            var tb = ta * capsuleAxisZ + offsetAZ;
+
+            //Clamp solution to valid regions on edge line segment.
+            //B onto A: +-BHalfLength * (da * db) + da * offsetB
+            //A onto B: +-AHalfLength * (da * db) + db * offsetA
+            var absdadb = Vector.Abs(capsuleAxisZ);
+            var bOntoAOffset = boxEdgeHalfLength * absdadb;
+            var aOntoBOffset = capsuleHalfLength * absdadb;
+            var aMin = Vector.Max(-capsuleHalfLength, Vector.Min(capsuleHalfLength, daOffsetB - bOntoAOffset));
+            var aMax = Vector.Min(capsuleHalfLength, Vector.Max(-capsuleHalfLength, daOffsetB + bOntoAOffset));
+            var bMin = Vector.Max(-boxEdgeHalfLength, Vector.Min(boxEdgeHalfLength, offsetAZ - aOntoBOffset));
+            var bMax = Vector.Min(boxEdgeHalfLength, Vector.Max(-boxEdgeHalfLength, offsetAZ + aOntoBOffset));
+            ta = Vector.Min(Vector.Max(ta, aMin), aMax);
+            tb = Vector.Min(Vector.Max(tb, bMin), bMax);
+
+            //In the event that the axes are parallel, we select the midpoints of the potential solution region as the closest points.
+            var parallel = Vector.GreaterThan(absdadb, new Vector<float>(1f - 1e-7f));
+            var half = new Vector<float>(0.5f);
+            ta = Vector.ConditionalSelect(parallel, half * (aMin + aMax), ta);
+            tb = Vector.ConditionalSelect(parallel, half * (bMin + bMax), tb);
+
+            //Note that we leave the normal above unit length. If this turns out to be zero length, we will have to resort to the interior test for the normal.
+            //We can, however, still make use the interval information for position.
+            nX = ta * capsuleAxisX + offsetAX - boxEdgeCenterX;
+            nY = ta * capsuleAxisY + offsetAY - boxEdgeCenterY;
+            nZ = ta * capsuleAxisZ + offsetAZ - tb;
+            squaredDistance = nX * nX + nY * nY + nZ * nZ;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(
+            ref CapsuleWide a, ref BoxWide b,
+            ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+            out Convex2ContactManifoldWide manifold)
+        {
+            QuaternionWide.Conjugate(ref orientationB, out var toLocalB);
+            QuaternionWide.TransformWithoutOverlap(ref offsetB, ref toLocalB, out var localOffsetA);
+            Vector3Wide.Negate(ref localOffsetA);
+            QuaternionWide.ConcatenateWithoutOverlap(ref orientationA, ref toLocalB, out var boxLocalOrientationA);
+            QuaternionWide.TransformUnitY(ref boxLocalOrientationA, out var capsuleAxis);
+
+            //Get the capsule-axis-perpendicular offset from the box to the capsule and use it to choose which edges to test.
+            //(Pointless to test the other 9; they're guaranteed to be further away.)
+            Vector3Wide.Dot(ref localOffsetA, ref capsuleAxis, out var axisOffsetADot);
+            Vector3Wide.Scale(ref capsuleAxis, ref axisOffsetADot, out var toRemove);
+            Vector3Wide.Subtract(ref localOffsetA, ref toRemove, out var perpendicularOffset);
+            Vector3Wide edgeCenters;
+            edgeCenters.X = Vector.ConditionalSelect(Vector.LessThan(perpendicularOffset.X, Vector<float>.Zero), -b.HalfWidth, b.HalfWidth);
+            edgeCenters.Y = Vector.ConditionalSelect(Vector.LessThan(perpendicularOffset.Y, Vector<float>.Zero), -b.HalfHeight, b.HalfHeight);
+            edgeCenters.Z = Vector.ConditionalSelect(Vector.LessThan(perpendicularOffset.Z, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+
+            //Swizzle XYZ -> YZX
+            Vector3Wide localOffset;
+            TestBoxEdge(ref localOffsetA.Y, ref localOffsetA.Z, ref localOffsetA.X,
+                ref capsuleAxis.Y, ref capsuleAxis.Z, ref capsuleAxis.X,
+                ref a.HalfLength,
+                ref edgeCenters.Y, ref edgeCenters.Z, ref b.HalfWidth,
+                out var ta, out var squaredDistance, out localOffset.Y, out localOffset.Z, out localOffset.X);
+            //Swizzle XYZ -> ZXY
+            TestBoxEdge(ref localOffsetA.Z, ref localOffsetA.X, ref localOffsetA.Y,
+                ref capsuleAxis.Z, ref capsuleAxis.X, ref capsuleAxis.Y,
+                ref a.HalfLength,
+                ref edgeCenters.Z, ref edgeCenters.X, ref b.HalfHeight,
+                out var eyta, out var eySquaredDistance, out var eynZ, out var eynX, out var eynY);
+            var useY = Vector.LessThan(eySquaredDistance, squaredDistance);
+            ta = Vector.ConditionalSelect(useY, eyta, ta);
+            squaredDistance = Vector.ConditionalSelect(useY, eySquaredDistance, squaredDistance);
+            localOffset.X = Vector.ConditionalSelect(useY, eynX, localOffset.X);
+            localOffset.Y = Vector.ConditionalSelect(useY, eynY, localOffset.Y);
+            localOffset.Z = Vector.ConditionalSelect(useY, eynZ, localOffset.Z);
+            //Swizzle XYZ -> XYZ
+            TestBoxEdge(ref localOffsetA.X, ref localOffsetA.Y, ref localOffsetA.Z,
+                ref capsuleAxis.X, ref capsuleAxis.Y, ref capsuleAxis.Z,
+                ref a.HalfLength,
+                ref edgeCenters.X, ref edgeCenters.Y, ref b.HalfLength,
+                out var ezta, out var ezSquaredDistance, out var eznX, out var eznY, out var eznZ);
+            var useZ = Vector.LessThan(ezSquaredDistance, squaredDistance);
+            ta = Vector.ConditionalSelect(useZ, ezta, ta);
+            squaredDistance = Vector.ConditionalSelect(useZ, ezSquaredDistance, squaredDistance);
+            localOffset.X = Vector.ConditionalSelect(useZ, eznX, localOffset.X);
+            localOffset.Y = Vector.ConditionalSelect(useZ, eznY, localOffset.Y);
+            localOffset.Z = Vector.ConditionalSelect(useZ, eznZ, localOffset.Z);
+
+            //Compute closest points on box to capsule endpoints.
+            Vector3Wide.Scale(ref capsuleAxis, ref a.HalfLength, out var endpointOffset);
+            Vector3Wide.Subtract(ref localOffsetA, ref endpointOffset, out var a0);
+            Vector3Wide.Add(ref localOffsetA, ref endpointOffset, out var a1);
+            Vector3Wide clampedA0, clampedA1;
+            clampedA0.X = Vector.Min(Vector.Max(a0.X, -b.HalfWidth), b.HalfWidth);
+            clampedA0.Y = Vector.Min(Vector.Max(a0.Y, -b.HalfHeight), b.HalfHeight);
+            clampedA0.Z = Vector.Min(Vector.Max(a0.Z, -b.HalfLength), b.HalfLength);
+            clampedA1.X = Vector.Min(Vector.Max(a1.X, -b.HalfWidth), b.HalfWidth);
+            clampedA1.Y = Vector.Min(Vector.Max(a1.Y, -b.HalfHeight), b.HalfHeight);
+            clampedA1.Z = Vector.Min(Vector.Max(a1.Z, -b.HalfLength), b.HalfLength);
+
+            Vector3Wide.Subtract(ref a0, ref clampedA0, out var offsetA0);
+            Vector3Wide.Subtract(ref a1, ref clampedA1, out var offsetA1);
+            Vector3Wide.LengthSquared(ref offsetA0, out var squaredDistanceA0);
+            Vector3Wide.LengthSquared(ref offsetA1, out var squaredDistanceA1);
+            var useA0 = Vector.LessThan(squaredDistanceA0, squaredDistance);
+            ta = Vector.ConditionalSelect(useA0, -a.HalfLength, ta);
+            squaredDistance = Vector.ConditionalSelect(useA0, squaredDistanceA0, squaredDistance);
+            localOffset.X = Vector.ConditionalSelect(useA0, offsetA0.X, localOffset.X);
+            localOffset.Y = Vector.ConditionalSelect(useA0, offsetA0.Y, localOffset.Y);
+            localOffset.Z = Vector.ConditionalSelect(useA0, offsetA0.Z, localOffset.Z);
+            var useA1 = Vector.LessThan(squaredDistanceA1, squaredDistance);
+            ta = Vector.ConditionalSelect(useA1, a.HalfLength, ta);
+            squaredDistance = Vector.ConditionalSelect(useA1, squaredDistanceA1, squaredDistance);
+            localOffset.X = Vector.ConditionalSelect(useA1, offsetA1.X, localOffset.X);
+            localOffset.Y = Vector.ConditionalSelect(useA1, offsetA1.Y, localOffset.Y);
+            localOffset.Z = Vector.ConditionalSelect(useA1, offsetA1.Z, localOffset.Z);
+
+            var distance = Vector.SquareRoot(squaredDistance);
+            var inverseDistance = Vector<float>.One / distance;
+            Vector3Wide.Scale(ref localOffset, ref inverseDistance, out var localNormal);
+
+            Vector3Wide.Scale(ref capsuleAxis, ref ta, out var localA0);
+            manifold.Depth0 = a.Radius - distance;
+            manifold.FeatureId0 = Vector<int>.Zero;
+
+            //Transform A0, A1, and the normal into world space.
+            Matrix3x3Wide.CreateFromQuaternion(ref orientationB, out var orientationMatrixB);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref orientationMatrixB, out manifold.Normal);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localA0, ref orientationMatrixB, out manifold.OffsetA0);
+
+            //Apply the normal offset to the contact positions.           
+            var negativeOffsetFromA0 = manifold.Depth0 * 0.5f - a.Radius;
+            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA0, out var normalPush0);
+            Vector3Wide.Add(ref manifold.OffsetA0, ref normalPush0, out manifold.OffsetA0);
+
+            manifold.Count = Vector<int>.One;
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Test2(
             ref CapsuleWide a, ref BoxWide b,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Convex2ContactManifoldWide manifold)
@@ -119,50 +274,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.FeatureId0 = Vector<int>.Zero;
             manifold.FeatureId1 = Vector<int>.One;
 
-            ////Clamp the endpoints of the capsule's internal line segment against the box.
-            //Vector3Wide.Scale(ref capsuleAxis, ref a.HalfLength, out var capsuleExtent);
-            //Vector3Wide.Subtract(ref localOffsetA, ref capsuleExtent, out var capsule0);
-            //Vector3Wide.Add(ref localOffsetA, ref capsuleExtent, out var capsule1);
-            //Vector3Wide boxStart, boxEnd;
-            //boxStart.X = Vector.Min(Vector.Max(capsule0.X, -b.HalfWidth), b.HalfWidth);
-            //boxStart.Y = Vector.Min(Vector.Max(capsule0.Y, -b.HalfHeight), b.HalfHeight);
-            //boxStart.Z = Vector.Min(Vector.Max(capsule0.Z, -b.HalfLength), b.HalfLength);
-            //boxEnd.X = Vector.Min(Vector.Max(capsule1.X, -b.HalfWidth), b.HalfWidth);
-            //boxEnd.Y = Vector.Min(Vector.Max(capsule1.Y, -b.HalfHeight), b.HalfHeight);
-            //boxEnd.Z = Vector.Min(Vector.Max(capsule1.Z, -b.HalfLength), b.HalfLength);
-
-            ////Compute the closest point on the line segment to the clamped start and end.
-            //Vector3Wide.Subtract(ref boxStart, ref localOffsetA, out var aToBoxStart);
-            //Vector3Wide.Subtract(ref boxEnd, ref localOffsetA, out var aToBoxEnd);
-            //Vector3Wide.Dot(ref capsuleAxis, ref aToBoxStart, out var dotStart);
-            //Vector3Wide.Dot(ref capsuleAxis, ref aToBoxEnd, out var dotEnd);
-            //dotStart = Vector.Max(Vector.Min(dotStart, a.HalfLength), -a.HalfLength);
-            //dotEnd = Vector.Max(Vector.Min(dotEnd, a.HalfLength), -a.HalfLength);
-
-            ////Now compute the distances. The normal will be defined by the shorter of the two offsets.
-            //Vector3Wide.Scale(ref capsuleAxis, ref dotStart, out var closestFromBoxStart);
-            //Vector3Wide.Scale(ref capsuleAxis, ref dotEnd, out var closestFromBoxEnd);
-            //Vector3Wide.Add(ref closestFromBoxStart, ref localOffsetA, out closestFromBoxStart);
-            //Vector3Wide.Add(ref closestFromBoxEnd, ref localOffsetA, out closestFromBoxEnd);
-            ////Note that these offsets are pointing from the box to the capsule (B to A), matching contact normal convention.
-            //Vector3Wide.Subtract(ref closestFromBoxStart, ref boxStart, out var startOffset);
-            //Vector3Wide.Subtract(ref closestFromBoxEnd, ref boxEnd, out var endOffset);
-
-            //Vector3Wide.LengthSquared(ref startOffset, out var startLengthSquared);
-            //Vector3Wide.LengthSquared(ref endOffset, out var endLengthSquared);
-
-            //var minLengthSquared = Vector.Min(startLengthSquared, endLengthSquared);
-            //var useStart = Vector.Equals(minLengthSquared, startLengthSquared);
-            //Vector3Wide.ConditionalSelect(ref useStart, ref startOffset, ref endOffset, out var localNormal);
-            //var inverseLength = Vector<float>.One / Vector.SquareRoot(minLengthSquared);
-            //Vector3Wide.Scale(ref localNormal, ref inverseLength, out localNormal);
-
-            ////Note that we defer contact position offseting by the normal * depth until later when we know the normal isn't going to change.
-            //Vector3Wide.Subtract(ref closestFromBoxStart, ref localOffsetA, out var localA0);
-            //Vector3Wide.Subtract(ref closestFromBoxEnd, ref localOffsetA, out var localA1);
-            //manifold.FeatureId0 = Vector<int>.Zero;
-            //manifold.FeatureId1 = Vector<int>.One;
-
             //Capsule-box has an extremely important property:
             //Capsule internal line segments almost never intersect the box due to the capsule's radius.
             //We can effectively split this implementation into two tests- exterior and interior.
@@ -246,7 +357,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //The interior normal doesn't check all possible separating axes in the non-segment-intersecting case.
                 //It would be wrong to overwrite the initial test if the interior test was unnecessary.
                 Vector3Wide.ConditionalSelect(ref useInterior, ref interiorNormal, ref localNormal, out localNormal);
-            }            
+            }
 
             //Transform A0, A1, and the normal into world space.
             Matrix3x3Wide.CreateFromQuaternion(ref orientationB, out var orientationMatrixB);

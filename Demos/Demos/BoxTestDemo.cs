@@ -60,11 +60,12 @@ namespace Demos
                         Pose = new RigidPose
                         {
                             Position = new Vector3(
-                                2 + gridOffset + i * staticSpacing,
+                                2f + gridOffset + i * staticSpacing,
                                 -4,
-                                2 + gridOffset + j * staticSpacing),
+                                0 + gridOffset + j * staticSpacing),
                             //Orientation = BepuUtilities.Quaternion.Identity
-                            Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4 * 1e-3f)
+                            //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.Pi + MathHelper.PiOver4 * 1e-1f)
+                            Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0, 1, 0)), -MathHelper.PiOver4)
                         }
                     };
                     Simulation.Statics.Add(ref staticDescription);
