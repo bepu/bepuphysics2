@@ -4,7 +4,7 @@ This is the repo for the bepuphysics v2 library, a complete rewrite of the C# 3d
 
 *The library is still early in development. Many important features are missing, and many bugs likely remain. Nothing is guaranteed to build or be usable.*
 
-You can keep an eye on incremental progress in the [issues](issues). 
+You can keep an eye on incremental progress in the [issues](../../issues). 
 
 Check the [roadmap](Documentation/roadmap.md) for a high level look at where things are going.
 
