@@ -106,7 +106,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             const float upperThresholdAngle = 0.005f;
             const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
             const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
-            var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, new Vector<float>(lowerThreshold) - squaredAngle) * new Vector<float>(1f / (lowerThreshold - upperThreshold)));
+            var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));
             var weightedTa = ta - ta * intervalWeight;
             taMin = intervalWeight * taMin + weightedTa;
             taMax = intervalWeight * taMax + weightedTa;
@@ -114,15 +114,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TestBoxFace(ref Vector<float> offsetAZ,
-            ref Vector<float> capsuleAxisZ,
+            ref Vector<float> capsuleAxisZ, ref Vector<float> capsuleHalfLength,
             ref Vector<float> tCandidateMinX, ref Vector<float> tCandidateMaxX, ref Vector<float> tCandidateMinY, ref Vector<float> tCandidateMaxY,
-            ref Vector<float> halfLength,
+            ref Vector<float> boxHalfLength,
             out Vector<float> depth, out Vector<float> taMin, out Vector<float> taMax, out Vector<float> normalSign)
         {
             taMin = Vector.Max(tCandidateMinX, tCandidateMinY);
             taMax = Vector.Min(tCandidateMaxX, tCandidateMaxY);
             normalSign = Vector.ConditionalSelect(Vector.GreaterThan(offsetAZ, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f));
-            depth = halfLength - Vector.Min(normalSign * (offsetAZ + capsuleAxisZ * taMin), normalSign * (offsetAZ + capsuleAxisZ * taMax));
+            depth = boxHalfLength + Vector.Abs(capsuleAxisZ) * capsuleHalfLength - normalSign * offsetAZ;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -201,9 +201,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var scaleY = Vector.ConditionalSelect(Vector.LessThan(capsuleAxis.Y, Vector<float>.Zero), positive, negative) / Vector.Max(Vector.Abs(capsuleAxis.Y), divisionGuard);
             var scaleZ = Vector.ConditionalSelect(Vector.LessThan(capsuleAxis.Z, Vector<float>.Zero), positive, negative) / Vector.Max(Vector.Abs(capsuleAxis.Z), divisionGuard);
             Vector3Wide scaledExtents, scaledOffset;
-            scaledExtents.X = b.HalfWidth * Vector.Abs(scaleX);
-            scaledExtents.Y = b.HalfHeight * Vector.Abs(scaleY);
-            scaledExtents.Z = b.HalfLength * Vector.Abs(scaleZ);
+            //Clip slightly beyond the actual face limit to avoid pointlessly cutting the interval for near-edge-parallel capsules.
+            var epsilonScale = new Vector<float>(1f + 1e-6f);
+            scaledExtents.X = epsilonScale * b.HalfWidth * Vector.Abs(scaleX);
+            scaledExtents.Y = epsilonScale * b.HalfHeight * Vector.Abs(scaleY);
+            scaledExtents.Z = epsilonScale * b.HalfLength * Vector.Abs(scaleZ);
             scaledOffset.X = localOffsetA.X * scaleX;
             scaledOffset.Y = localOffsetA.Y * scaleY;
             scaledOffset.Z = localOffsetA.Z * scaleZ;
@@ -217,7 +219,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var zero = Vector<float>.Zero;
             //Face X
             TestBoxFace(ref localOffsetA.X,
-                ref capsuleAxis.X,
+                ref capsuleAxis.X, ref a.HalfLength,
                 ref tCandidateMin.Y, ref tCandidateMax.Y, ref tCandidateMin.Z, ref tCandidateMax.Z,
                 ref b.HalfWidth,
                 out var fxDepth, out var fxtaMin, out var fxtaMax, out var fxn);
@@ -225,7 +227,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref fxDepth, ref fxtaMin, ref fxtaMax, ref fxn, ref zero, ref zero);
             //Face Y
             TestBoxFace(ref localOffsetA.Y,
-                ref capsuleAxis.Y,
+                ref capsuleAxis.Y, ref a.HalfLength,
                 ref tCandidateMin.X, ref tCandidateMax.X, ref tCandidateMin.Z, ref tCandidateMax.Z,
                 ref b.HalfHeight,
                 out var fyDepth, out var fytaMin, out var fytaMax, out var fyn);
@@ -233,7 +235,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref fyDepth, ref fytaMin, ref fytaMax, ref zero, ref fyn, ref zero);
             //Face Z
             TestBoxFace(ref localOffsetA.Z,
-                ref capsuleAxis.Z,
+                ref capsuleAxis.Z, ref a.HalfLength,
                 ref tCandidateMin.X, ref tCandidateMax.X, ref tCandidateMin.Y, ref tCandidateMax.Y,
                 ref b.HalfLength,
                 out var fzDepth, out var fztaMin, out var fztaMax, out var fzn);

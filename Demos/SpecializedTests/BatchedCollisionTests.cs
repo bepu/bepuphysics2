@@ -70,11 +70,16 @@ namespace Demos.SpecializedTests
         {
             var pool = new BufferPool();
             var registry = new CollisionTaskRegistry();
-            var task = new SpherePairCollisionTask();
-            registry.Register(task);
+            registry.Register(new SpherePairCollisionTask());
+            registry.Register(new SphereCapsuleCollisionTask());
+            registry.Register(new SphereBoxCollisionTask());
+            registry.Register(new CapsulePairCollisionTask());
+            registry.Register(new CapsuleBoxCollisionTask());
             var continuations = new ContinuationsTest();
             var filters = new SubtaskFiltersTest();
             var sphere = new Sphere(1);
+            var capsule = new Capsule(0.5f, 1f);
+            var box = new Box(1f, 1f, 1f);
             var poseA = new RigidPose { Position = new Vector3(0, 0, 0), Orientation = BepuUtilities.Quaternion.Identity };
             var poseB = new RigidPose { Position = new Vector3(0, 1, 0), Orientation = BepuUtilities.Quaternion.Identity };
             void action(int iterationCount)
@@ -82,10 +87,10 @@ namespace Demos.SpecializedTests
                 var batcher = new StreamingBatcher(pool, registry);
                 for (int i = 0; i < iterationCount; ++i)
                 {
-                    batcher.Add(ref sphere, ref sphere, ref poseA, ref poseB, new ContinuationIndex(), ref continuations, ref filters);
-                    batcher.Add(ref sphere, ref sphere, ref poseA, ref poseB, new ContinuationIndex(), ref continuations, ref filters);
-                    batcher.Add(ref sphere, ref sphere, ref poseA, ref poseB, new ContinuationIndex(), ref continuations, ref filters);
-                    batcher.Add(ref sphere, ref sphere, ref poseA, ref poseB, new ContinuationIndex(), ref continuations, ref filters);
+                    batcher.Add(ref capsule, ref capsule, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
+                    batcher.Add(ref capsule, ref capsule, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
+                    batcher.Add(ref capsule, ref capsule, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
+                    batcher.Add(ref capsule, ref capsule, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
                 }
                 batcher.Flush(ref continuations, ref filters);
             }
