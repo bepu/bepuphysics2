@@ -87,7 +87,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //As the capsule axis drifts away from coplanarity, the accepted interval rapidly narrows to zero length, centered on ta.
             //We rate the degree of coplanarity based on the angle between the capsule axis and the plane defined by the box edge and contact normal:
             //sin(angle) = dot(capsuleAxis, planeNormal)
-            //Rather than explicitly calculating a planeNormal with a cross product, we can do something similar by removing any of the capsuleAxis which point along the 
+            //Rather than explicitly calculating a planeNormal with a cross product, we can do something similar by removing any of the capsuleAxis which points along the 
             //contact normal or the box edge, noting that box edge is (0,0,1):
             //axisRemainderX = capsuleAxis.X - contactNormal.X * (dot(capsuleAxis, contactNormal) / ||contactNormal||^2)
             //axisRemainderY = capsuleAxis.Y - contactNormal.Y * (dot(capsuleAxis, contactNormal) / ||contactNormal||^2)

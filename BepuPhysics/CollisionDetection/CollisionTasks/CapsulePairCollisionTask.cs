@@ -5,14 +5,13 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    //Individual pair testers are designed to be used outside of the narrow phase. They need to be usable for queries and such, so all necessary data must be gathered externally.
-    public struct CapsulePairTester : IPairTester<CapsuleWide, CapsuleWide, Convex1ContactManifoldWide>
+    public struct CapsulePairTester : IPairTester<CapsuleWide, CapsuleWide, Convex2ContactManifoldWide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(
             ref CapsuleWide a, ref CapsuleWide b,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
-            out Convex1ContactManifoldWide manifold)
+            out Convex2ContactManifoldWide manifold)
         {
             //Compute the closest points between the two line segments. No clamping to begin with.
             //We want to minimize distance = ||(a + da * ta) - (b + db * tb)||.
@@ -23,8 +22,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(ref da, ref offsetB, out var daOffsetB);
             Vector3Wide.Dot(ref db, ref offsetB, out var dbOffsetB);
             Vector3Wide.Dot(ref da, ref db, out var dadb);
-            //Note potential division by zero when the capsule axes are parallel. We conditional select on dadb later to avoid keeping bad results.
-            var ta = (daOffsetB - dbOffsetB * dadb) / (Vector<float>.One - dadb * dadb);
+            //Note potential division by zero when the axes are parallel. Arbitrarily clamp; near zero values will instead produce extreme values which get clamped to reasonable results.
+            var ta = (daOffsetB - dbOffsetB * dadb) / Vector.Max(new Vector<float>(1e-15f), Vector<float>.One - dadb * dadb);
             //tb = ta * (da * db) - db * (b - a)
             var tb = ta * dadb - dbOffsetB;
 
@@ -38,16 +37,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var aOntoBOffset = a.HalfLength * absdadb;
             var aMin = Vector.Max(-a.HalfLength, Vector.Min(a.HalfLength, daOffsetB - bOntoAOffset));
             var aMax = Vector.Min(a.HalfLength, Vector.Max(-a.HalfLength, daOffsetB + bOntoAOffset));
-            var bMin = Vector.Max(-b.HalfLength, Vector.Min(b.HalfLength, -bOntoAOffset - dbOffsetB));
-            var bMax = Vector.Min(b.HalfLength, Vector.Max(-b.HalfLength, bOntoAOffset - dbOffsetB));
+            var bMin = Vector.Max(-b.HalfLength, Vector.Min(b.HalfLength, -aOntoBOffset - dbOffsetB));
+            var bMax = Vector.Min(b.HalfLength, Vector.Max(-b.HalfLength, aOntoBOffset - dbOffsetB));
             ta = Vector.Min(Vector.Max(ta, aMin), aMax);
             tb = Vector.Min(Vector.Max(tb, bMin), bMax);
-
-            //In the event that the axes are parallel, we select the midpoints of the potential solution region as the closest points.
-            var parallel = Vector.GreaterThan(absdadb, new Vector<float>(1f - 1e-7f));
-            var half = new Vector<float>(0.5f);
-            ta = Vector.ConditionalSelect(parallel, half * (aMin + aMax), ta);
-            tb = Vector.ConditionalSelect(parallel, half * (bMin + bMax), tb);
 
             Vector3Wide.Scale(ref da, ref ta, out var closestPointOnA);
             Vector3Wide.Scale(ref db, ref tb, out var closestPointOnB);
@@ -62,25 +55,76 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var normalIsValid = Vector.GreaterThan(distance, new Vector<float>(1e-7f));
             Vector3Wide.ConditionalSelect(ref normalIsValid, ref manifold.Normal, ref xa, out manifold.Normal);
 
-            manifold.Depth = a.Radius + b.Radius - distance;
-            var negativeOffsetFromA = manifold.Depth * 0.5f - a.Radius;
-            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA, out manifold.OffsetA0);
-            Vector3Wide.Add(ref manifold.OffsetA0, ref closestPointOnA, out manifold.OffsetA0);
+            //In the event that the two capsule axes are coplanar, we accept the whole interval as a source of contact.
+            //As the axes drift away from coplanarity, the accepted interval rapidly narrows to zero length, centered on ta and tb.
+            //We rate the degree of coplanarity based on the angle between the capsule axis and the plane defined by the box edge and contact normal:
+            //sin(angle) = dot(da, (db x normal)/||db x normal||)
+            //Finally, note that we are dealing with extremely small angles, and for small angles sin(angle) ~= angle,
+            //and also that fade behavior is completely arbitrary, so we can directly use squared angle without any concern.
+            //angle^2 ~= dot(da, (db x normal))^2 / ||db x normal||^2
+            //Note that if ||db x normal|| is the zero, then any da should be accepted as being coplanar because there is no restriction. ConditionalSelect away the discontinuity.
+            Vector3Wide.CrossWithoutOverlap(ref db, ref manifold.Normal, out var planeNormal);
+            Vector3Wide.LengthSquared(ref planeNormal, out var planeNormalLengthSquared);
+            Vector3Wide.Dot(ref da, ref planeNormal, out var squaredAngle);
+            squaredAngle = Vector.ConditionalSelect(Vector.LessThan(planeNormalLengthSquared, new Vector<float>(1e-10f)), Vector<float>.Zero, squaredAngle / planeNormalLengthSquared);
 
-            //TODO: In the future, you may want to actually take advantage of two contacts in the parallel or coplanar axes case. That can help avoid instabilities that could arise from
-            //a contact jumping across the length of the segment.
-            //This is primarily useful in some pretty weird corner cases, so we're ignoring it for the early versions.
-            //As far as an implementation goes: replace parallel case midpoint contact with two contacts at the borders of the B-on-A region. Can generalize to nonparallel but coplanar case:
-            //depth of each contact computed by unprojecting the B-on-A endpoints back onto B, and then dotting those offsets with the normal.
-            //(That unprojection process is just two line-plane tests with shared calculations.)
+            //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
+            const float lowerThresholdAngle = 0.001f;
+            const float upperThresholdAngle = 0.005f;
+            const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
+            const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
+            var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));
+            var weightedTa = ta - ta * intervalWeight;
+            aMin = intervalWeight * aMin + weightedTa;
+            aMax = intervalWeight * aMax + weightedTa;
+
+            Vector3Wide.Scale(ref da, ref aMin, out manifold.OffsetA0);
+            Vector3Wide.Scale(ref da, ref aMax, out manifold.OffsetA1);
+
+            //In the coplanar case, there are two points. We need a method of computing depth which gives a reasonable result to the second contact.
+            //Note that one of the two contacts should end up with a distance equal to the previously computed segment distance, so we're doing some redundant work here.
+            //It's just easier to do that extra work than it would be to track which endpoint contributed the lower distance.
+            //Unproject the final interval endpoints from a back onto b.
+            //dot(offsetB + db * tb0, da) = ta0
+            //tb0 = (ta0 - daOffsetB) / dadb
+            //distance0 = dot(a0 - (offsetB + tb0 * db), normal)
+            //distance1 = dot(a1 - (offsetB + tb1 * db), normal)
+            Vector3Wide.Dot(ref db, ref manifold.Normal, out var dbNormal);
+            Vector3Wide.Subtract(ref manifold.OffsetA0, ref offsetB, out var offsetB0);
+            Vector3Wide.Subtract(ref manifold.OffsetA1, ref offsetB, out var offsetB1);
+            //Note potential division by zero. In that case, treat both projected points as the closest point. (Handled by the conditional select that chooses the previously computed distance.)
+            var inverseDadb = Vector<float>.One / dadb;
+            var projectedTb0 = Vector.Max(bMin, Vector.Min(bMax, (aMin - daOffsetB) * inverseDadb));
+            var projectedTb1 = Vector.Max(bMin, Vector.Min(bMax, (aMax - daOffsetB) * inverseDadb));
+            Vector3Wide.Dot(ref offsetB0, ref manifold.Normal, out var b0Normal);
+            Vector3Wide.Dot(ref offsetB1, ref manifold.Normal, out var b1Normal);
+            var capsulesArePerpendicular = Vector.LessThan(Vector.Abs(dadb), new Vector<float>(1e-7f));
+            var distance0 = Vector.ConditionalSelect(capsulesArePerpendicular, distance, b0Normal - dbNormal * projectedTb0);
+            var distance1 = Vector.ConditionalSelect(capsulesArePerpendicular, distance, b1Normal - dbNormal * projectedTb1);
+
+            manifold.Depth0 = a.Radius + b.Radius - distance0;
+            manifold.Depth1 = a.Radius + b.Radius - distance1;
+            //Apply the normal offset to the contact positions.           
+            var negativeOffsetFromA0 = manifold.Depth0 * 0.5f - a.Radius;
+            var negativeOffsetFromA1 = manifold.Depth1 * 0.5f - a.Radius;
+            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA0, out var normalPush0);
+            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA1, out var normalPush1);
+            Vector3Wide.Add(ref manifold.OffsetA0, ref normalPush0, out manifold.OffsetA0);
+            Vector3Wide.Add(ref manifold.OffsetA1, ref normalPush1, out manifold.OffsetA1);
+            manifold.FeatureId0 = Vector<int>.Zero;
+            manifold.FeatureId1 = Vector<int>.One;
+            manifold.Count = Vector.ConditionalSelect(Vector.LessThan(aMax - aMin, new Vector<float>(1e-7f) * a.HalfLength), Vector<int>.One, new Vector<int>(2));
+
+            //TODO: Since we added in the complexity of 2 contact support, this is probably large enough to benefit from working in the local space of one of the capsules.
+            //Worth looking into later.
         }
 
-        public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
+        public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector3Wide offsetB, out Convex1ContactManifoldWide manifold)
+        public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector3Wide offsetB, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
@@ -102,7 +146,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             CollisionTaskCommon.ExecuteBatch
                 <TContinuations, TFilters,
                 Capsule, CapsuleWide, Capsule, CapsuleWide, UnflippableTestPairWide<Capsule, CapsuleWide, Capsule, CapsuleWide>,
-                Convex1ContactManifoldWide, CapsulePairTester>(ref batch, ref batcher, ref continuations, ref filters);
+                Convex2ContactManifoldWide, CapsulePairTester>(ref batch, ref batcher, ref continuations, ref filters);
         }
     }
 }

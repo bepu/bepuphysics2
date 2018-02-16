@@ -26,7 +26,7 @@ namespace Demos
             //ConstraintDescriptionMappingTests.Test();
             //CollidablePairComparerTests.Test();
             //HeadlessDemo.Simple();
-            BatchedCollisionTests.Test();
+            //BatchedCollisionTests.Test();
             //TypeIdCodeGenTests.Test();
             //DeterminismTest.Test();
             //return;
