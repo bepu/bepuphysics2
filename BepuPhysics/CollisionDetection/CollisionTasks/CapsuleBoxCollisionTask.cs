@@ -86,21 +86,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //In the event that the edge and capsule axis are coplanar, we accept the whole interval as a source of contact.
             //As the capsule axis drifts away from coplanarity, the accepted interval rapidly narrows to zero length, centered on ta.
             //We rate the degree of coplanarity based on the angle between the capsule axis and the plane defined by the box edge and contact normal:
-            //sin(angle) = dot(capsuleAxis, planeNormal)
-            //Rather than explicitly calculating a planeNormal with a cross product, we can do something similar by removing any of the capsuleAxis which points along the 
-            //contact normal or the box edge, noting that box edge is (0,0,1):
-            //axisRemainderX = capsuleAxis.X - contactNormal.X * (dot(capsuleAxis, contactNormal) / ||contactNormal||^2)
-            //axisRemainderY = capsuleAxis.Y - contactNormal.Y * (dot(capsuleAxis, contactNormal) / ||contactNormal||^2)
-            //axisRemainderZ = 0
-            //So, to restate in the original form:
-            //sin(angle) = dot(capsuleAxis, planeNormal) = ||axisRemainder||
-            //Finally, note that we are dealing with extremely small angles, and for small angles sin(angle) ~= angle:
-            //angle^2 ~= dot(axisRemainder, axisRemainder)
-            //Since fade behavior is completely arbitrary, we can directly use squared angle without any concern.
-            var removalScale = (capsuleAxisX * nX + capsuleAxisY * nY + capsuleAxisZ * nZ) / squaredLength;
-            var axisRemainderX = capsuleAxisX - nX * removalScale;
-            var axisRemainderY = capsuleAxisY - nY * removalScale;
-            var squaredAngle = axisRemainderX * axisRemainderX + axisRemainderY * axisRemainderY;
+            //sin(angle) = dot(capsuleAxis, planeNormal) = dot(capsuleAxis, contactNormal x edgeAxis) / ||contactNormal x edgeAxis||
+            //Finally, note that we are dealing with extremely small angles, and for small angles sin(angle) ~= angle,
+            //and also that we can simply use squared angle since the thresholds are arbitrary:
+            //angle^2 ~= dot(capsuleAxis, contactNormal x edgeAxis)^2 / ||contactNormal x edgeAxis||^2
+            var capsuleAxisDotPlaneNormal = capsuleAxisX * nY - capsuleAxisY * nX;
+            var planeNormalLengthSquared = nX * nX + nY * nY;
+            //If the plane normal length is zero, then the normal and edge axis are parallel and any capsule axis will satisfy coplanarity, so just use zero.
+            var squaredAngle = Vector.ConditionalSelect(Vector.LessThan(planeNormalLengthSquared, epsilon), Vector<float>.Zero, capsuleAxisDotPlaneNormal * capsuleAxisDotPlaneNormal / planeNormalLengthSquared);
             //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
             const float lowerThresholdAngle = 0.001f;
             const float upperThresholdAngle = 0.005f;

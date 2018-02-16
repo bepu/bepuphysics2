@@ -74,13 +74,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
             const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
             var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));
+            //If the line segments intersect, even if they're coplanar, we would ideally stick to using a single point. Would be easy enough,
+            //but we don't bother because it's such a weird and extremely temporary corner case. Not really worth handling.
             var weightedTa = ta - ta * intervalWeight;
             aMin = intervalWeight * aMin + weightedTa;
             aMax = intervalWeight * aMax + weightedTa;
 
             Vector3Wide.Scale(ref da, ref aMin, out manifold.OffsetA0);
             Vector3Wide.Scale(ref da, ref aMax, out manifold.OffsetA1);
-
             //In the coplanar case, there are two points. We need a method of computing depth which gives a reasonable result to the second contact.
             //Note that one of the two contacts should end up with a distance equal to the previously computed segment distance, so we're doing some redundant work here.
             //It's just easier to do that extra work than it would be to track which endpoint contributed the lower distance.
@@ -101,9 +102,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var capsulesArePerpendicular = Vector.LessThan(Vector.Abs(dadb), new Vector<float>(1e-7f));
             var distance0 = Vector.ConditionalSelect(capsulesArePerpendicular, distance, b0Normal - dbNormal * projectedTb0);
             var distance1 = Vector.ConditionalSelect(capsulesArePerpendicular, distance, b1Normal - dbNormal * projectedTb1);
+            var combinedRadius = a.Radius + b.Radius;
+            manifold.Depth0 = combinedRadius - distance0;
+            manifold.Depth1 = combinedRadius - distance1;
 
-            manifold.Depth0 = a.Radius + b.Radius - distance0;
-            manifold.Depth1 = a.Radius + b.Radius - distance1;
             //Apply the normal offset to the contact positions.           
             var negativeOffsetFromA0 = manifold.Depth0 * 0.5f - a.Radius;
             var negativeOffsetFromA1 = manifold.Depth1 * 0.5f - a.Radius;
