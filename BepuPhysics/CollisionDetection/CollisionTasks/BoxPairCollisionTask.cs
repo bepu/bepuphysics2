@@ -99,10 +99,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Convex4ContactManifoldWide manifold)
         {
-            QuaternionWide.Conjugate(ref orientationA, out var toLocalA);
-            QuaternionWide.TransformWithoutOverlap(ref offsetB, ref toLocalA, out var localOffsetB);
-            QuaternionWide.ConcatenateWithoutOverlap(ref orientationB, ref toLocalA, out var localOrientationB);
-            Matrix3x3Wide.CreateFromQuaternion(ref localOrientationB, out var rB);
+            Matrix3x3Wide.CreateFromQuaternion(ref orientationA, out var worldRA);
+            Matrix3x3Wide.CreateFromQuaternion(ref orientationB, out var worldRB);
+            Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(ref worldRB, ref worldRA, out var rB);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offsetB, ref worldRA, out var localOffsetB);
 
             Vector3Wide localNormal;
             //b.X: XYZ -> YZX
@@ -159,6 +159,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             localNormal.X = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.X, localNormal.X);
             localNormal.Y = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.Y, localNormal.Y);
             localNormal.Z = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.Z, localNormal.Z);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref worldRA, out manifold.Normal);
 
             //Contact generation always assumes face-face clipping. Other forms of contact generation are just special cases of face-face, and since we pay
             //for all code paths, there's no point in handling them separately.
@@ -169,6 +170,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //We represent each face as a center position, its two tangent axes, and the length along those axes.
             //Technically, we could leave A's tangents implicit by swizzling components, but that complicates things a little bit for not much gain.
+            //Since we're not taking advantage of the dimension reduction of working in A's local space from here on out, just use the world axes to avoid a final retransform.
             var minDepthA = Vector.Min(faceAXDepth, Vector.Min(faceAYDepth, faceAZDepth));
             var useAX = Vector.Equals(minDepthA, faceAXDepth);
             var useAY = Vector.AndNot(Vector.Equals(minDepthA, faceAYDepth), useAX);
@@ -176,15 +178,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide tangentAX, tangentAY, normalA;
             Vector<float> halfSpanAX, halfSpanAY, halfSpanAZ;
             Vector<int> axisIdAX, axisIdAY, axisIdAZ;
-            normalA.X = Vector.ConditionalSelect(useAX, Vector<float>.One, Vector<float>.Zero);
-            normalA.Y = Vector.ConditionalSelect(useAY, Vector<float>.One, Vector<float>.Zero);
-            normalA.Z = Vector.ConditionalSelect(useAZ, Vector<float>.One, Vector<float>.Zero);
-            tangentAX.X = Vector.ConditionalSelect(useAY, Vector<float>.One, Vector<float>.Zero);
-            tangentAX.Y = Vector.ConditionalSelect(useAZ, Vector<float>.One, Vector<float>.Zero);
-            tangentAX.Z = Vector.ConditionalSelect(useAX, Vector<float>.One, Vector<float>.Zero);
-            tangentAY.X = Vector.ConditionalSelect(useAZ, Vector<float>.One, Vector<float>.Zero);
-            tangentAY.Y = Vector.ConditionalSelect(useAX, Vector<float>.One, Vector<float>.Zero);
-            tangentAY.Z = Vector.ConditionalSelect(useAY, Vector<float>.One, Vector<float>.Zero);
+            Vector3Wide.ConditionalSelect(ref useAX, ref worldRA.X, ref worldRA.Z, out normalA);
+            Vector3Wide.ConditionalSelect(ref useAY, ref worldRA.Y, ref normalA, out normalA);
+            Vector3Wide.ConditionalSelect(ref useAX, ref worldRA.Z, ref worldRA.Y, out tangentAX);
+            Vector3Wide.ConditionalSelect(ref useAY, ref worldRA.X, ref tangentAX, out tangentAX);
+            Vector3Wide.ConditionalSelect(ref useAX, ref worldRA.Y, ref worldRA.X, out tangentAY);
+            Vector3Wide.ConditionalSelect(ref useAY, ref worldRA.Z, ref tangentAY, out tangentAY);
             halfSpanAX = Vector.ConditionalSelect(useAX, a.HalfLength, Vector.ConditionalSelect(useAY, a.HalfWidth, a.HalfHeight));
             halfSpanAY = Vector.ConditionalSelect(useAX, a.HalfHeight, Vector.ConditionalSelect(useAY, a.HalfLength, a.HalfWidth));
             halfSpanAZ = Vector.ConditionalSelect(useAX, a.HalfWidth, Vector.ConditionalSelect(useAY, a.HalfHeight, a.HalfLength));
@@ -203,12 +202,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide tangentBX, tangentBY, normalB;
             Vector<float> halfSpanBX, halfSpanBY, halfSpanBZ;
             Vector<int> axisIdBX, axisIdBY, axisIdBZ;
-            Vector3Wide.ConditionalSelect(ref useBX, ref rB.X, ref rB.Z, out normalB);
-            Vector3Wide.ConditionalSelect(ref useBY, ref rB.Y, ref normalB, out normalB);
-            Vector3Wide.ConditionalSelect(ref useBX, ref rB.Z, ref rB.Y, out tangentBX);
-            Vector3Wide.ConditionalSelect(ref useBY, ref rB.X, ref tangentBX, out tangentBX);
-            Vector3Wide.ConditionalSelect(ref useBX, ref rB.Y, ref rB.X, out tangentBY);
-            Vector3Wide.ConditionalSelect(ref useBY, ref rB.Z, ref tangentBY, out tangentBY);
+            Vector3Wide.ConditionalSelect(ref useBX, ref worldRB.X, ref worldRB.Z, out normalB);
+            Vector3Wide.ConditionalSelect(ref useBY, ref worldRB.Y, ref normalB, out normalB);
+            Vector3Wide.ConditionalSelect(ref useBX, ref worldRB.Z, ref worldRB.Y, out tangentBX);
+            Vector3Wide.ConditionalSelect(ref useBY, ref worldRB.X, ref tangentBX, out tangentBX);
+            Vector3Wide.ConditionalSelect(ref useBX, ref worldRB.Y, ref worldRB.X, out tangentBY);
+            Vector3Wide.ConditionalSelect(ref useBY, ref worldRB.Z, ref tangentBY, out tangentBY);
             halfSpanBX = Vector.ConditionalSelect(useBX, b.HalfLength, Vector.ConditionalSelect(useBY, b.HalfWidth, b.HalfHeight));
             halfSpanBY = Vector.ConditionalSelect(useBX, b.HalfHeight, Vector.ConditionalSelect(useBY, b.HalfLength, b.HalfWidth));
             halfSpanBZ = Vector.ConditionalSelect(useBX, b.HalfWidth, Vector.ConditionalSelect(useBY, b.HalfHeight, b.HalfLength));
@@ -245,7 +244,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 out var bY0Min, out var bY0Max, out var bY1Min, out var bY1Max);
 
             //Note that we only allocate up to 8 candidates. It is not possible for this process to generate more than 8 (unless there are numerical problems, which we guard against).
-            var buffer = stackalloc byte[Unsafe.SizeOf<Candidate>() * 8];
+            int byteCount = Unsafe.SizeOf<Candidate>() * 8;
+            var buffer = stackalloc byte[byteCount];
             ref var candidates = ref Unsafe.As<byte, Candidate>(ref *buffer);
 
             var negativeHalfSpanBY = -halfSpanBY;
@@ -324,15 +324,52 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref tangentBX, ref tangentBY, ref halfSpanBX, ref halfSpanBY,
                 ref candidates, ref rawContactCount);
 
-            //Per-contact depths can be computed using dot(abs(normal), halfExtentsB) - dot(normal, vertexPosition - localOffsetB), because we projected all contacts
-            //onto the representative face of A.
 
-            //Reduce the manifold.
-            //If deepest - shallowest is large, then pick the deepest candidate as the first contact.
-            //If there is not a significant depth disparity between contacts, then attempting to use the deepest contact would result in an unstable manifold- 
-            //the represented features would be inconsistent and the solver would often lose history for some contacts if the raw manifold had more than 4 contacts.
+            //There are up to 8 contacts in the raw set. That's too many; four is plenty. We should choose how to get rid of the extra ones.
+            //It's important to keep the deepest contact if there's any significant depth disparity, so we need to calculate depths before reduction.
+            //Conceptually, we project the points from the surface of face B down onto face A, then measure the separation of those two points along the normal:
+            //depth = dot(pointOnFaceB - faceCenterA, faceNormalA) / dot(faceNormalA, normal)
+            //dotAxis = faceNormalA / dot(faceNormalA, normal)
+            //depth = dot(pointOnFaceB - faceCenterA, dotAxis)
+            //depth = dot(faceCenterB + tangentBX * candidate.X + tangentBY * candidate.Y - faceCenterA, dotAxis)
+            //depth = dot(faceCenterB - faceCenterA, dotAxis) + dot(tangentBX, dotAxis) * candidate.X + dot(tangentBY, dotAxis) * candidate.Y
+            Vector3Wide.Dot(ref normalA, ref manifold.Normal, out var axisScale);
+            axisScale = Vector<float>.One / axisScale;
+            Vector3Wide.Scale(ref normalA, ref axisScale, out var dotAxis);
+            Vector3Wide.Subtract(ref faceCenterB, ref faceCenterA, out var faceAToFaceB);
+            Vector3Wide.Dot(ref faceAToFaceB, ref dotAxis, out var baseDot);
+            Vector3Wide.Dot(ref tangentBX, ref dotAxis, out var xDot);
+            Vector3Wide.Dot(ref tangentBY, ref dotAxis, out var yDot);
+            //minor todo: don't really need to waste time initializing to an invalid value.
+            var minDepth = new Vector<float>(float.MaxValue);
+            var maxDepth = new Vector<float>(-float.MaxValue);
+            var maxX = new Vector<float>(-float.MaxValue);
+            var deepestIndex = new Vector<int>();
+            var extremeXIndex = new Vector<int>();
+            for (int i = 0; i < 8; ++i)
+            {
+                ref var rawContact = ref Unsafe.Add(ref candidates, i);
+                rawContact.Depth = baseDot + rawContact.X * xDot + rawContact.Y * yDot;
+                var minDepthCandidate = Vector.Min(minDepth, rawContact.Depth);
+                var maxDepthCandidate = Vector.Max(maxDepth, rawContact.Depth);
+                var maxXCandidate = Vector.Max(maxX, rawContact.X);
+                var index = new Vector<int>(i);
+                var indexIsValid = Vector.LessThan(index, rawContactCount);
+                deepestIndex = Vector.ConditionalSelect(Vector.BitwiseAnd(indexIsValid, Vector.Equals(maxDepthCandidate, rawContact.Depth)), index, deepestIndex);
+                extremeXIndex = Vector.ConditionalSelect(Vector.BitwiseAnd(indexIsValid, Vector.Equals(maxXCandidate, rawContact.X)), index, extremeXIndex);
+                minDepth = Vector.ConditionalSelect(indexIsValid, minDepthCandidate, minDepth);
+                maxDepth = Vector.ConditionalSelect(indexIsValid, maxDepthCandidate, maxDepth);
+                maxX = Vector.ConditionalSelect(indexIsValid, maxXCandidate, maxX);
+            }
 
-            //Transform the normal and reduced manifold positions back into world space.
+            //Choose the starting point for the contact reduction. Two options:
+            //If depth disparity is high, use the deepest index.
+            //If depth disparity is too small, use the extreme X index to avoid flickering between manifold start locations.
+            var useDepthIndex = Vector.GreaterThan(maxDepth - minDepth, new Vector<float>(1e-2f) * Vector.Max(halfSpanAX, Vector.Max(halfSpanAY, halfSpanAZ)));
+            var startIndex = Vector.ConditionalSelect(useDepthIndex, deepestIndex, extremeXIndex);
+
+            
+
 
         }
 
@@ -384,7 +421,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //Note that the candidates are stored in terms of locations on the face of B along the tangentBX and tangentBY.
             Candidate candidate;
-            candidate.X = candidateMinY;
+            candidate.X = candidateMinX;
             candidate.Y = candidateMinY;
             //Note that we use only the edge id of B, regardless of which face bounds contributed to the contact. This is a little permissive, since changes to the 
             //contributors from A won't affect accumulated impulse reuse. I suspect it won't cause any serious issues.
@@ -449,6 +486,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             public Vector<float> X;
             public Vector<float> Y;
+            public Vector<float> Depth;
             public Vector<int> FeatureId;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
