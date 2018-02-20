@@ -175,6 +175,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useAZ = Vector.OnesComplement(Vector.BitwiseOr(useAX, useAY));
             Vector3Wide tangentAX, tangentAY, normalA;
             Vector<float> halfSpanAX, halfSpanAY, halfSpanAZ;
+            Vector<int> axisIdAX, axisIdAY, axisIdAZ;
             normalA.X = Vector.ConditionalSelect(useAX, Vector<float>.One, Vector<float>.Zero);
             normalA.Y = Vector.ConditionalSelect(useAY, Vector<float>.One, Vector<float>.Zero);
             normalA.Z = Vector.ConditionalSelect(useAZ, Vector<float>.One, Vector<float>.Zero);
@@ -187,12 +188,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             halfSpanAX = Vector.ConditionalSelect(useAX, a.HalfLength, Vector.ConditionalSelect(useAY, a.HalfWidth, a.HalfHeight));
             halfSpanAY = Vector.ConditionalSelect(useAX, a.HalfHeight, Vector.ConditionalSelect(useAY, a.HalfLength, a.HalfWidth));
             halfSpanAZ = Vector.ConditionalSelect(useAX, a.HalfWidth, Vector.ConditionalSelect(useAY, a.HalfHeight, a.HalfLength));
+            //We'll construct vertex feature ids from axis ids. 
+            //Vertex ids will be constructed by setting or not setting the relevant bit for each axis.
+            var localXId = new Vector<int>(1);
+            var localYId = new Vector<int>(4);
+            var localZId = new Vector<int>(16);
+            axisIdAX = Vector.ConditionalSelect(useAX, localZId, Vector.ConditionalSelect(useAY, localXId, localYId));
+            axisIdAY = Vector.ConditionalSelect(useAX, localYId, Vector.ConditionalSelect(useAY, localZId, localXId));
+            axisIdAZ = Vector.ConditionalSelect(useAX, localXId, Vector.ConditionalSelect(useAY, localYId, localZId));
 
             var minDepthB = Vector.Min(faceBXDepth, Vector.Min(faceBYDepth, faceBZDepth));
             var useBX = Vector.Equals(minDepthB, faceBXDepth);
             var useBY = Vector.AndNot(Vector.Equals(minDepthB, faceBYDepth), useBX);
             Vector3Wide tangentBX, tangentBY, normalB;
             Vector<float> halfSpanBX, halfSpanBY, halfSpanBZ;
+            Vector<int> axisIdBX, axisIdBY, axisIdBZ;
             Vector3Wide.ConditionalSelect(ref useBX, ref rB.X, ref rB.Z, out normalB);
             Vector3Wide.ConditionalSelect(ref useBY, ref rB.Y, ref normalB, out normalB);
             Vector3Wide.ConditionalSelect(ref useBX, ref rB.Z, ref rB.Y, out tangentBX);
@@ -202,32 +212,69 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             halfSpanBX = Vector.ConditionalSelect(useBX, b.HalfLength, Vector.ConditionalSelect(useBY, b.HalfWidth, b.HalfHeight));
             halfSpanBY = Vector.ConditionalSelect(useBX, b.HalfHeight, Vector.ConditionalSelect(useBY, b.HalfLength, b.HalfWidth));
             halfSpanBZ = Vector.ConditionalSelect(useBX, b.HalfWidth, Vector.ConditionalSelect(useBY, b.HalfHeight, b.HalfLength));
+            //We'll construct edge feature ids from axis ids. 
+            //Edge ids will be 6 bits total, representing 3 possible states (-1, 0, 1) for each of the 3 axes. Multiply the axis id by 1, 2, or 3 to get the edge id contribution for the axis.
+            axisIdBX = Vector.ConditionalSelect(useBX, localZId, Vector.ConditionalSelect(useBY, localXId, localYId));
+            axisIdBY = Vector.ConditionalSelect(useBX, localYId, Vector.ConditionalSelect(useBY, localZId, localXId));
+            axisIdBZ = Vector.ConditionalSelect(useBX, localXId, Vector.ConditionalSelect(useBY, localYId, localZId));
 
-            //Collect contact points. There are a maximum of 8 possible contacts as a result of this process, but we will consider a total of 12 candidates.
+            //Calibrate normalB to face toward A, and normalA to face toward B.
+            Vector3Wide.Dot(ref normalA, ref offsetB, out var normalAOffsetB);
+            var shouldNegateNormalA = Vector.LessThan(normalAOffsetB, Vector<float>.Zero);
+            normalA.X = Vector.ConditionalSelect(shouldNegateNormalA, -normalA.X, normalA.X);
+            normalA.Y = Vector.ConditionalSelect(shouldNegateNormalA, -normalA.Y, normalA.Y);
+            normalA.Z = Vector.ConditionalSelect(shouldNegateNormalA, -normalA.Z, normalA.Z);
+            Vector3Wide.Dot(ref normalB, ref offsetB, out var normalBOffsetB);
+            var shouldNegateNormalB = Vector.GreaterThan(normalBOffsetB, Vector<float>.Zero);
+            normalB.X = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.X, normalB.X);
+            normalB.Y = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Y, normalB.Y);
+            normalB.Z = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Z, normalB.Z);
+
+            //Clip edges of B against the face bounds of A to collect all edge-bound contacts.           
+            Vector3Wide.Dot(ref tangentAX, ref tangentBX, out var axbx);
+            Vector3Wide.Dot(ref tangentAY, ref tangentBX, out var aybx);
+            Vector3Wide.Dot(ref tangentAX, ref tangentBY, out var axby);
+            Vector3Wide.Dot(ref tangentAY, ref tangentBY, out var ayby);
+
+            Vector3Wide.Scale(ref normalB, ref halfSpanBZ, out var faceCenterB);
+            Vector3Wide.Scale(ref tangentBY, ref halfSpanBY, out var edgeOffsetBX);
+            Vector3Wide.Scale(ref tangentBX, ref halfSpanBX, out var edgeOffsetBY);
+            GetEdgeVersusFaceBoundsIntervals(ref tangentAX, ref tangentAY, ref halfSpanAX, ref halfSpanAY, ref axbx, ref aybx, ref faceCenterB, ref halfSpanAX, ref edgeOffsetBX,
+                out var bX0Min, out var bX0Max, out var bX1Min, out var bX1Max);
+            GetEdgeVersusFaceBoundsIntervals(ref tangentAX, ref tangentAY, ref halfSpanAX, ref halfSpanAY, ref axby, ref ayby, ref faceCenterB, ref halfSpanAY, ref edgeOffsetBY,
+                out var bY0Min, out var bY0Max, out var bY1Min, out var bY1Max);
+
+            //Note that we only allocate up to 8 candidates. It is not possible for this process to generate more than 8 (unless there are numerical problems, which we guard against).
             var buffer = stackalloc byte[Unsafe.SizeOf<Candidate>() * 8];
             ref var candidates = ref Unsafe.As<byte, Candidate>(ref *buffer);
 
-            //Two phases:
-            //1) Intersect face edges of B with face planes of A. 
-            //If -halfSpan<min<halfSpan for an edge, use the min intersection as a contact.
-            //If -halfSpan<max<=halfSpan && (max-min)>epsilon*halfSpan, use the max intersection as a contact.
-            //Note the comparisons: if the max lies on a face vertex, it is used, but if the min lies on a face vertex, it is not. This avoids redundant entries.
-            //2) Test vertices of face A against the bounds of B projected onto face A's plane.
+            var negativeHalfSpanBY = -halfSpanBY;
+            var rawContactCount = Vector<int>.Zero;
+            var three = new Vector<int>(3);
+            var twiceAxisIdBX = axisIdBX * new Vector<int>(2);
+            var axisZEdgeIdContribution = axisIdBZ * three;
+            var edgeIdBX0 = twiceAxisIdBX + axisIdBY + axisZEdgeIdContribution;
+            AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref bX0Min, ref bX0Max,
+                ref bX0Min, ref negativeHalfSpanBY, ref bX0Max, ref negativeHalfSpanBY, ref edgeIdBX0);
+            var edgeIdBX1 = twiceAxisIdBX + axisIdBY * three + axisZEdgeIdContribution;
+            AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref bX1Min, ref bX1Max,
+                ref bX1Min, ref halfSpanBY, ref bX1Max, ref halfSpanBY, ref edgeIdBX1);
 
-            //Edge ids use 6 bits per. This has lots of redundancy, but it's easy to construct edge ids from axis ids.
-            //The only combinations that are used are those which have 1 value in the intermediate state and 2 values in extreme states (12 edges).
-            //x: 1, 2, 3 (2 bits)
-            //y: 4, 8, 12 (2 bits)
-            //z: 16, 32, 48 (2 bits)
+            var negativeHalfSpanBX = -halfSpanBX;
+            var twiceAxisIdBY = axisIdBY * new Vector<int>(2);
+            var edgeIdBY0 = axisIdBX + twiceAxisIdBY + axisZEdgeIdContribution;
+            AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref bY0Min, ref bY0Max,
+                ref bY0Min, ref negativeHalfSpanBX, ref bY0Max, ref negativeHalfSpanBX, ref edgeIdBY0);
+            var edgeIdBY1 = axisIdBX * three + twiceAxisIdBY + axisZEdgeIdContribution;
+            AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref bY1Min, ref bY1Max,
+                ref bY1Min, ref halfSpanBY, ref bY1Max, ref halfSpanBY, ref edgeIdBY1);
 
-            //Vertex ids just use 3 bits, representing the 8 possible corners.
-            //+x: 1
-            //+y: 2
-            //+z: 4
 
-            //Its feature id is aEdgeId << 6 + bEdgeId. (We don't have shifts, so just multiply by 1<<6.)
+            //Test vertices of face A against the bounds of B projected onto face A's plane.
 
-            //Its feature id is simply the negative vertex's feature id. The negation disambiguates between edge-edge pairs and vertex contacts.
+
+            //Vertex ids only have two states per axis, so scale id by 0 or 1 before adding. Equivalent to conditional or.          
+            //Note that the feature id is negated. This disambiguates between edge-edge contacts and vertex contacts.
 
             //While we explicitly used an epsilon earlier during edge contact generation, there is a risk of buffer overrun during the face vertex phase.
             //Rather than assuming our numerical epsilon is guaranteed to always work, explicitly clamp the count. This should essentially never be needed,
@@ -244,6 +291,81 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Transform the normal and reduced manifold positions back into world space.
 
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void AddEdgeContacts(
+            ref Candidate candidates, ref Vector<int> rawContactCount,
+            ref Vector<float> halfSpanBX,
+            ref Vector<float> tMin, ref Vector<float> tMax,
+            ref Vector<float> candidateMinX, ref Vector<float> candidateMinY,
+            ref Vector<float> candidateMaxX, ref Vector<float> candidateMaxY,
+            ref Vector<int> edgeIdB)
+        {
+            //If -halfSpan<min<halfSpan for an edge, use the min intersection as a contact.
+            //If -halfSpan<max<=halfSpan && (max-min)>epsilon*halfSpan, use the max intersection as a contact.
+            //Note the comparisons: if the max lies on a face vertex, it is used, but if the min lies on a face vertex, it is not. This avoids redundant entries.
+
+            //Note that the candidates are stored in terms of locations on the face of B along the tangentBX and tangentBY.
+            Candidate candidate;
+            candidate.X = candidateMinY;
+            candidate.Y = candidateMinY;
+            //Note that we use only the edge id of B, regardless of which face bounds contributed to the contact. This is a little permissive, since changes to the 
+            //contributors from A won't affect accumulated impulse reuse. I suspect it won't cause any serious issues.
+            candidate.FeatureId = edgeIdB;
+            var newContactExists = Vector.BitwiseAnd(Vector.GreaterThan(tMin, -halfSpanBX), Vector.LessThan(tMin, halfSpanBX));
+            AddContactCandidate(ref candidates, ref candidate, ref newContactExists, ref rawContactCount);
+            candidate.X = candidateMaxX;
+            candidate.Y = candidateMaxY;
+            candidate.FeatureId = edgeIdB + new Vector<int>(64);
+            newContactExists = Vector.BitwiseAnd(Vector.BitwiseAnd(
+                Vector.GreaterThan(tMax, -halfSpanBX),
+                Vector.LessThanOrEqual(tMax, halfSpanBX)),
+                Vector.GreaterThan(tMax - tMin, new Vector<float>(1e-5f) * halfSpanBX));
+            AddContactCandidate(ref candidates, ref candidate, ref newContactExists, ref rawContactCount);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe void GetEdgeVersusBoundsIntersections(ref Vector3Wide tangentA, ref Vector<float> halfSpanA,
+          ref Vector<float> tangentDotBoundsNormal, ref Vector3Wide faceCenterB, ref Vector3Wide edgeOffsetB,
+          out Vector<float> t00, out Vector<float> t01, out Vector<float> t10, out Vector<float> t11)
+        {
+            //Intersect both tangentB edges against the planes with normal equal to tangentA.
+            //By protecting against division by zero while maintaining sign, the resulting intervals will still be usable.
+            Vector3Wide.Subtract(ref faceCenterB, ref edgeOffsetB, out var edgeCenter0);
+            Vector3Wide.Add(ref faceCenterB, ref edgeOffsetB, out var edgeCenter1);
+            Vector3Wide.Dot(ref edgeCenter0, ref tangentA, out var taEdgeCenter0);
+            Vector3Wide.Dot(ref edgeCenter1, ref tangentA, out var taEdgeCenter1);
+            var inverseTangentBoundsNormal = Vector.ConditionalSelect(Vector.LessThan(tangentDotBoundsNormal, Vector<float>.Zero), -Vector<float>.One, Vector<float>.One) /
+                Vector.Max(new Vector<float>(1e-15f), Vector.Abs(tangentDotBoundsNormal));
+            var axbxScaledHalfSpanAX = halfSpanA * inverseTangentBoundsNormal;
+            var axbxScaledAXEdgeCenterX0 = -taEdgeCenter0 * inverseTangentBoundsNormal;
+            var axbxScaledAXEdgeCenterX1 = -taEdgeCenter1 * inverseTangentBoundsNormal;
+            //These are the t values for intersection between tangentB edges and the tangentA bounding planes.
+            //01 refers to the negative offset edge on B, and the positive offset bounding plane on A.
+            //Note that they are left unclamped against the edge's extents. We defer that until later to avoid duplicate work.
+            t00 = axbxScaledAXEdgeCenterX0 - axbxScaledHalfSpanAX;
+            t01 = axbxScaledAXEdgeCenterX0 + axbxScaledHalfSpanAX;
+            t10 = axbxScaledAXEdgeCenterX1 - axbxScaledHalfSpanAX;
+            t11 = axbxScaledAXEdgeCenterX1 + axbxScaledHalfSpanAX;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe void GetEdgeVersusFaceBoundsIntervals(ref Vector3Wide tangentAX, ref Vector3Wide tangentAY, ref Vector<float> halfSpanAX, ref Vector<float> halfSpanAY,
+            ref Vector<float> axb, ref Vector<float> ayb, ref Vector3Wide faceCenterB, ref Vector<float> halfSpanB, ref Vector3Wide edgeOffsetB,
+            out Vector<float> b0Min, out Vector<float> b0Max, out Vector<float> b1Min, out Vector<float> b1Max)
+        {
+            GetEdgeVersusBoundsIntersections(ref tangentAX, ref halfSpanAX, ref axb, ref faceCenterB, ref edgeOffsetB,
+                out var tAX00, out var tAX01, out var tAX10, out var tAX11);
+            GetEdgeVersusBoundsIntersections(ref tangentAY, ref halfSpanAY, ref ayb, ref faceCenterB, ref edgeOffsetB,
+                out var tAY00, out var tAY01, out var tAY10, out var tAY11);
+            var negativeHalfSpanB = -halfSpanB;
+            //Note that we explicitly do not clamp both sides of the interval. We want to preserve any interval where the max is below -halfSpanB, or the min is above halfSpanB.
+            //Such cases correspond to no contacts.
+            b0Min = Vector.Max(negativeHalfSpanB, Vector.Min(tAX00, Vector.Min(tAX01, Vector.Min(tAY00, tAY01))));
+            b0Max = Vector.Min(halfSpanB, Vector.Max(tAX00, Vector.Max(tAX01, Vector.Max(tAY00, tAY01))));
+            b1Min = Vector.Max(negativeHalfSpanB, Vector.Min(tAX10, Vector.Min(tAX11, Vector.Min(tAY10, tAY11))));
+            b1Max = Vector.Min(halfSpanB, Vector.Max(tAX10, Vector.Max(tAX11, Vector.Max(tAY10, tAY11))));
+        }
+
 
 
         struct Candidate
@@ -263,7 +385,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //targetIndices = count * stride + laneIndices;
             //Scatter(ref candidate.X, ref Unsafe.As<Vector<float>, float>(ref candidates[0].X), count)
             //Scatter(ref candidate.Y, ref Unsafe.As<Vector<float>, float>(ref candidates[0].Y), count)
-            //Scatter(ref candidate.Z, ref Unsafe.As<Vector<float>, float>(ref candidates[0].Z), count)
             //Scatter(ref candidate.FeatureId, ref Unsafe.As<Vector<int>, float>(ref candidates[0].FeatureId), count)
             //But we don't have scatter at the moment. We have two options:
             //1) Maintain the vectorized pipeline and emulate the scatters as well as we can with scalar operations. Some risk for running into undefined behavior or compiler issues.
