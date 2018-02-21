@@ -104,6 +104,19 @@ namespace BepuPhysics.CollisionDetection
         //The majority of type pairs, however, only require a constraint handle.
         public PairCache PairCache;
 
+        ContactConstraintAccessor[] contactConstraintAccessors;
+        public void RegisterContactConstraintAccessor(ContactConstraintAccessor contactConstraintAccessor)
+        {
+            var id = contactConstraintAccessor.ConstraintTypeId;
+            if (contactConstraintAccessors == null || contactConstraintAccessors.Length <= id)
+                contactConstraintAccessors = new ContactConstraintAccessor[id + 1];
+            if(contactConstraintAccessors[id] != null)
+            {
+                throw new InvalidOperationException($"Cannot register accessor for type id {id}; it is already registered by {contactConstraintAccessors[id]}.");
+            }
+            contactConstraintAccessors[id] = contactConstraintAccessor;
+        }
+
         protected NarrowPhase()
         {
             flushWorkerLoop = FlushWorkerLoop;
@@ -231,6 +244,7 @@ namespace BepuPhysics.CollisionDetection
     public partial class NarrowPhase<TCallbacks> : NarrowPhase where TCallbacks : struct, INarrowPhaseCallbacks
     {
         public TCallbacks Callbacks;
+
 
         public NarrowPhase(Simulation simulation, CollisionTaskRegistry collisionTaskRegistry, TCallbacks callbacks,
              int initialSetCapacity, int minimumMappingSize = 2048, int minimumPendingSize = 128, int minimumPerTypeCapacity = 128)

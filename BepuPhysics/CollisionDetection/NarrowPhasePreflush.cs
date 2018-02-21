@@ -93,7 +93,7 @@ namespace BepuPhysics.CollisionDetection
 
     public partial class NarrowPhase<TCallbacks>
     {
-        internal struct SortConstraintTarget
+        public struct SortConstraintTarget
         {
             public int WorkerIndex;
             public int ByteIndexInCache;

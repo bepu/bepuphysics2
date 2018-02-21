@@ -21,7 +21,7 @@ namespace BepuPhysics.CollisionDetection
     /// </summary>
     public partial class NarrowPhase<TCallbacks>
     {
-        internal struct PendingConstraintAddCache
+        public struct PendingConstraintAddCache
         {
             BufferPool pool;
             struct PendingConstraint<TBodyHandles, TDescription, TContactImpulses> where TDescription : IConstraintDescription<TDescription>
@@ -63,7 +63,7 @@ namespace BepuPhysics.CollisionDetection
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static unsafe void SequentialAddToSimulation<TBodyHandles, TDescription, TContactImpulses>(ref UntypedList list, int narrowPhaseConstraintTypeId, Simulation simulation, PairCache pairCache)
+            public static unsafe void SequentialAddToSimulation<TBodyHandles, TDescription, TContactImpulses>(ref UntypedList list, int narrowPhaseConstraintTypeId, Simulation simulation, PairCache pairCache)
                 where TDescription : IConstraintDescription<TDescription>
             {
                 if (list.Buffer.Allocated)
@@ -156,7 +156,8 @@ namespace BepuPhysics.CollisionDetection
 
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            unsafe void SequentialAddToSimulationSpeculative<TBodyHandles, TDescription, TContactImpulses>(ref UntypedList list, int narrowPhaseConstraintTypeId, Simulation simulation, ref PairCache pairCache)
+            public static unsafe void SequentialAddToSimulationSpeculative<TBodyHandles, TDescription, TContactImpulses>(
+                ref UntypedList list, int narrowPhaseConstraintTypeId, ref Buffer<Buffer<ushort>> speculativeBatchIndices, Simulation simulation, PairCache pairCache)
                 where TDescription : IConstraintDescription<TDescription>
             {
                 if (list.Buffer.Allocated)
@@ -188,16 +189,16 @@ namespace BepuPhysics.CollisionDetection
                 //convex vs nonconvex: 0x4
                 //1 body versus 2 body: 0x8
                 //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-                SequentialAddToSimulationSpeculative<int, Contact1OneBody, ContactImpulses1>(ref pendingConstraintsByType[0 + 0 + 0], 0 + 0 + 0, simulation, ref pairCache);
-                SequentialAddToSimulationSpeculative<int, Contact2OneBody, ContactImpulses2>(ref pendingConstraintsByType[0 + 0 + 1], 0 + 0 + 1, simulation, ref pairCache);
-                SequentialAddToSimulationSpeculative<TwoBodyHandles, Contact1, ContactImpulses1>(ref pendingConstraintsByType[8 + 0 + 0], 8 + 0 + 0, simulation, ref pairCache);
-                SequentialAddToSimulationSpeculative<TwoBodyHandles, Contact2, ContactImpulses2>(ref pendingConstraintsByType[8 + 0 + 1], 8 + 0 + 1, simulation, ref pairCache);
-                SequentialAddToSimulationSpeculative<TwoBodyHandles, Contact4, ContactImpulses4>(ref pendingConstraintsByType[8 + 0 + 3], 8 + 0 + 3, simulation, ref pairCache);
+                SequentialAddToSimulationSpeculative<int, Contact1OneBody, ContactImpulses1>(ref pendingConstraintsByType[0 + 0 + 0], 0 + 0 + 0, ref speculativeBatchIndices, simulation, pairCache);
+                SequentialAddToSimulationSpeculative<int, Contact2OneBody, ContactImpulses2>(ref pendingConstraintsByType[0 + 0 + 1], 0 + 0 + 1, ref speculativeBatchIndices, simulation, pairCache);
+                SequentialAddToSimulationSpeculative<TwoBodyHandles, Contact1, ContactImpulses1>(ref pendingConstraintsByType[8 + 0 + 0], 8 + 0 + 0, ref speculativeBatchIndices, simulation, pairCache);
+                SequentialAddToSimulationSpeculative<TwoBodyHandles, Contact2, ContactImpulses2>(ref pendingConstraintsByType[8 + 0 + 1], 8 + 0 + 1, ref speculativeBatchIndices, simulation, pairCache);
+                SequentialAddToSimulationSpeculative<TwoBodyHandles, Contact4, ContactImpulses4>(ref pendingConstraintsByType[8 + 0 + 3], 8 + 0 + 3, ref speculativeBatchIndices, simulation, pairCache);
             }
 
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static unsafe void DeterministicAdd<TBodyHandles, TDescription, TContactImpulses>(
+            public static unsafe void DeterministicAdd<TBodyHandles, TDescription, TContactImpulses>(
                 int typeIndex, ref SortConstraintTarget target, OverlapWorker[] overlapWorkers, Simulation simulation, ref PairCache pairCache)
                 where TDescription : IConstraintDescription<TDescription>
             {

@@ -13,7 +13,7 @@ namespace BepuPhysics.CollisionDetection
     /// <summary>
     /// Associated with a pair of two collidables that each are controlled by bodies.
     /// </summary>
-    struct TwoBodyHandles
+    public struct TwoBodyHandles
     {
         public int A;
         public int B;
@@ -86,7 +86,7 @@ namespace BepuPhysics.CollisionDetection
             AddConstraint(workerIndex, manifoldConstraintType, ref pair, constraintCacheIndex, ref newImpulses, bodyHandles, ref description);
         }
 
-        unsafe void UpdateConstraint<TBodyHandles, TDescription, TContactImpulses, TCollisionCache, TConstraintCache>(int workerIndex, ref CollidablePair pair,
+        public unsafe void UpdateConstraint<TBodyHandles, TDescription, TContactImpulses, TCollisionCache, TConstraintCache>(int workerIndex, ref CollidablePair pair,
             ContactManifold* manifold, int manifoldTypeAsConstraintType, ref TCollisionCache collisionCache, ref TDescription description, TBodyHandles bodyHandles)
             where TConstraintCache : IPairCacheEntry
             where TCollisionCache : IPairCacheEntry
@@ -181,7 +181,6 @@ namespace BepuPhysics.CollisionDetection
             //However, we cannot return the type knowledge we extract from the constraint cache index. Instead, we make use of the information in-place.
 
             //TODO: Should check codegen and alternatives here.
-            //TODO: Descriptions will be changing to not have redundant B offsets, this will have to change to match.
             Debug.Assert(manifold->ContactCount > 0);
             //Constraint types only use 3 bits, since their contact count can never be zero.
             //1-4 contacts: 0x3

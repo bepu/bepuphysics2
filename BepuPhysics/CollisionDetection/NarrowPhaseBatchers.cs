@@ -16,7 +16,7 @@ namespace BepuPhysics.CollisionDetection
     public partial class NarrowPhase<TCallbacks> where TCallbacks : struct, INarrowPhaseCallbacks
     {
 
-        internal struct BatcherFilters : ICollisionSubtaskFilters
+        public struct BatcherFilters : ICollisionSubtaskFilters
         {
             NarrowPhase<TCallbacks> narrowPhase;
             int workerIndex;
@@ -40,7 +40,7 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        internal struct OverlapWorker
+        public struct OverlapWorker
         {
             public StreamingBatcher Batcher;
             public BatcherFilters Filters;

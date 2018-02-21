@@ -96,8 +96,9 @@ namespace BepuPhysics
             }
 
             var simulation = new Simulation(bufferPool, initialAllocationSizes.Value);
-            DefaultTypes.Register(simulation.Solver, out var defaultTaskRegistry);
-            var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation, defaultTaskRegistry, narrowPhaseCallbacks, initialAllocationSizes.Value.Islands + 1);
+            var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation, DefaultTypes.CreateDefaultCollisionTaskRegistry(),
+                narrowPhaseCallbacks, initialAllocationSizes.Value.Islands + 1);
+            DefaultTypes.RegisterDefaults(simulation.Solver, narrowPhase);
             simulation.NarrowPhase = narrowPhase;
             simulation.Sleeper.pairCache = narrowPhase.PairCache;
             simulation.Awakener.pairCache = narrowPhase.PairCache;

@@ -27,9 +27,9 @@ namespace Demos
             shape.ComputeLocalInverseInertia(localInertia.InverseMass, out localInertia.InverseInertiaTensor);
             //capsuleInertia.InverseInertiaTensor = new Triangular3x3();
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 32;
-            const int height = 32;
-            const int length = 32;
+            const int width = 4;
+            const int height = 4;
+            const int length = 4;
             var latticeSpacing = 1.1f;
             var latticeOffset = 0;// -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
