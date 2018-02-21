@@ -432,9 +432,27 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //If there is no min, then the fourth contact should just get put into the third slot. Note that we only had to deal with this now (and not on the previous two contacts)
             //because the existence of the second contact depended on the first, and the third upon the second.
-            //But we don't know ahead of time whether there exists min or max signed area contacts.
+            //But we don't know ahead of time whether there exist min or max signed area contacts.
             var maxShouldGoIntoThirdSlot = Vector.AndNot(maxExists, minExists);
             ConditionalSelect(ref maxShouldGoIntoThirdSlot, ref contact3, ref contact2, ref contact2);
+
+            //Transform the contacts into the manifold.
+            TransformContactToManifold(ref contact0, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA0, ref manifold.Depth0, ref manifold.FeatureId0);
+            TransformContactToManifold(ref contact1, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA1, ref manifold.Depth1, ref manifold.FeatureId1);
+            TransformContactToManifold(ref contact2, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA2, ref manifold.Depth2, ref manifold.FeatureId2);
+            TransformContactToManifold(ref contact3, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA3, ref manifold.Depth3, ref manifold.FeatureId3);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void TransformContactToManifold(ref Candidate rawContact, ref Vector3Wide faceCenterB, ref Vector3Wide tangentBX, ref Vector3Wide tangentBY, 
+            ref Vector3Wide manifoldOffsetA, ref Vector<float> manifoldDepth, ref Vector<int> manifoldFeatureId)
+        {
+            Vector3Wide.Scale(ref tangentBX, ref rawContact.X, out manifoldOffsetA);
+            Vector3Wide.Scale(ref tangentBY, ref rawContact.Y, out var y);
+            Vector3Wide.Add(ref manifoldOffsetA, ref y, out manifoldOffsetA);
+            Vector3Wide.Add(ref manifoldOffsetA, ref faceCenterB, out manifoldOffsetA);
+            manifoldDepth = rawContact.Depth;
+            manifoldFeatureId = rawContact.FeatureId;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -444,21 +462,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             result.Y = Vector.ConditionalSelect(useA, a.Y, b.Y);
             result.Depth = Vector.ConditionalSelect(useA, a.Depth, b.Depth);
             result.FeatureId = Vector.ConditionalSelect(useA, a.FeatureId, b.FeatureId);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void GatherCandidate(ref Candidate candidates, ref Vector<int> index, out Candidate candidate)
-        {
-            for (int i = 0; i < Vector<float>.Count; ++i)
-            {
-                var instanceIndex = index[i];
-                ref var source = ref GetOffsetInstance(ref Unsafe.Add(ref candidates, instanceIndex), i);
-                ref var target = ref GetOffsetInstance(ref candidate, i);
-                GetFirst(ref target.X) = source.X[0];
-                GetFirst(ref target.Y) = source.Y[0];
-                GetFirst(ref target.Depth) = source.Depth[0];
-                GetFirst(ref target.FeatureId) = source.FeatureId[0];
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
