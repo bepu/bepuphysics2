@@ -342,35 +342,123 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(ref tangentBY, ref dotAxis, out var yDot);
             //minor todo: don't really need to waste time initializing to an invalid value.
             var minDepth = new Vector<float>(float.MaxValue);
-            var maxDepth = new Vector<float>(-float.MaxValue);
-            var maxX = new Vector<float>(-float.MaxValue);
-            var deepestIndex = new Vector<int>();
-            var extremeXIndex = new Vector<int>();
+            var maxExtreme = new Vector<float>(-float.MaxValue);
+            Candidate deepest, extreme;
+            //minor todo: could try with a horizontal min on counts to avoid checking all 8 if no manifolds have all 8.
             for (int i = 0; i < 8; ++i)
             {
-                ref var rawContact = ref Unsafe.Add(ref candidates, i);
-                rawContact.Depth = baseDot + rawContact.X * xDot + rawContact.Y * yDot;
-                var minDepthCandidate = Vector.Min(minDepth, rawContact.Depth);
-                var maxDepthCandidate = Vector.Max(maxDepth, rawContact.Depth);
-                var maxXCandidate = Vector.Max(maxX, rawContact.X);
+                ref var candidate = ref Unsafe.Add(ref candidates, i);
+                candidate.Depth = baseDot + candidate.X * xDot + candidate.Y * yDot;
+                //Note X+Y instead of X or Y alone. Boxes are very often stacked in a nonrandom way; choosing +x or +y alone would lead to near-ties in such cases.
+                //This is a pretty small detail, but it is cheap enough that there's no reason not to take advantage of it.
                 var index = new Vector<int>(i);
-                var indexIsValid = Vector.LessThan(index, rawContactCount);
-                deepestIndex = Vector.ConditionalSelect(Vector.BitwiseAnd(indexIsValid, Vector.Equals(maxDepthCandidate, rawContact.Depth)), index, deepestIndex);
-                extremeXIndex = Vector.ConditionalSelect(Vector.BitwiseAnd(indexIsValid, Vector.Equals(maxXCandidate, rawContact.X)), index, extremeXIndex);
-                minDepth = Vector.ConditionalSelect(indexIsValid, minDepthCandidate, minDepth);
-                maxDepth = Vector.ConditionalSelect(indexIsValid, maxDepthCandidate, maxDepth);
-                maxX = Vector.ConditionalSelect(indexIsValid, maxXCandidate, maxX);
+                var indexIsValid = Vector.LessThan(new Vector<int>(i), rawContactCount);
+                var candidateIsDeepest = Vector.GreaterThan(candidate.Depth, deepest.Depth);
+                //Note that we gather the candidate into a local variable rather than storing an index. This avoids the need for a gather (or scalar gather emulation).
+                //May be worth doing deeper testing on whether that's worth it, but it'll be a minor difference regardless.
+                ConditionalSelect(ref candidateIsDeepest, ref candidate, ref deepest, ref deepest);
+                var extremeCandidate = Vector.Max(maxExtreme, candidate.X + candidate.Y);
+                var candidateIsMostExtreme = Vector.GreaterThan(extremeCandidate, maxExtreme);
+                ConditionalSelect(ref candidateIsMostExtreme, ref candidate, ref extreme, ref extreme);
+                minDepth = Vector.ConditionalSelect(indexIsValid, Vector.Min(candidate.Depth, minDepth), minDepth);
+                maxExtreme = Vector.ConditionalSelect(indexIsValid, extremeCandidate, maxExtreme);
             }
 
             //Choose the starting point for the contact reduction. Two options:
             //If depth disparity is high, use the deepest index.
             //If depth disparity is too small, use the extreme X index to avoid flickering between manifold start locations.
-            var useDepthIndex = Vector.GreaterThan(maxDepth - minDepth, new Vector<float>(1e-2f) * Vector.Max(halfSpanAX, Vector.Max(halfSpanAY, halfSpanAZ)));
-            var startIndex = Vector.ConditionalSelect(useDepthIndex, deepestIndex, extremeXIndex);
+            var useDepthIndex = Vector.GreaterThan(deepest.Depth - minDepth, new Vector<float>(1e-2f) * Vector.Max(halfSpanAX, Vector.Max(halfSpanAY, halfSpanAZ)));
+            Candidate contact0;
+            ConditionalSelect(ref useDepthIndex, ref deepest, ref extreme, ref contact0);
+            var contact0Exists = Vector.GreaterThan(rawContactCount, Vector<int>.Zero);
+            manifold.Count = Vector.ConditionalSelect(contact0Exists, Vector<int>.One, Vector<int>.Zero);
 
-            
+            //Find the most distant point from the starting contact.
+            var maxDistanceSquared = Vector<float>.Zero;
+            Candidate contact1;
+            for (int i = 0; i < 8; ++i)
+            {
+                ref var candidate = ref Unsafe.Add(ref candidates, i);
+                var offsetX = candidate.X - contact0.X;
+                var offsetY = candidate.Y - contact0.Y;
+                var distanceSquared = offsetX * offsetX + offsetY * offsetY;
+                var candidateIsMostDistant = Vector.BitwiseAnd(Vector.GreaterThan(distanceSquared, maxDistanceSquared), Vector.LessThan(new Vector<int>(i), rawContactCount));
+                maxDistanceSquared = Vector.ConditionalSelect(candidateIsMostDistant, distanceSquared, maxDistanceSquared);
+                ConditionalSelect(ref candidateIsMostDistant, ref candidate, ref contact1, ref contact1);
+            }
+            //Note that using a raw absolute epsilon would have a varying effect based on the scale of the involved boxes.
+            //The minimum across the maxes is intended to avoid cases like a huge box being used as a plane, causing a massive size disparity.
+            //Using its sizes as a threshold would tend to kill off perfectly valid contacts.
+            var epsilonScale = Vector.Min(Vector.Max(halfSpanAX, Vector.Max(halfSpanAY, halfSpanAZ)), Vector.Max(halfSpanBX, Vector.Max(halfSpanBY, halfSpanBZ)));
+            //There's no point in additional contacts if the distance between the first and second candidates is zero. Note that this captures the case where there is 0 or 1 contact.
+            var contact1Exists = Vector.GreaterThan(maxDistanceSquared, epsilonScale * epsilonScale * new Vector<float>(1e-6f));
+            manifold.Count = Vector.ConditionalSelect(contact1Exists, manifold.Count + Vector<int>.One, manifold.Count);
 
+            //Now identify two more points. Using the two existing contacts as a starting edge, pick the points which, when considered as a triangle with the edge,
+            //have the largest magnitude negative and positive signed areas.
+            var edgeOffsetX = contact1.X - contact0.X;
+            var edgeOffsetY = contact1.Y - contact0.Y;
+            var minSignedArea = Vector<float>.Zero;
+            var maxSignedArea = Vector<float>.Zero;
+            Candidate contact2, contact3;
+            for (int i = 0; i < 8; ++i)
+            {
+                //The area of a triangle is proportional to the magnitude of the cross product of two of its edge offsets. 
+                //To retain sign, we will conceptually dot against the face's normal. Since we're working on the surface of face B, the arithmetic simplifies heavily to a perp-dot product.
+                ref var candidate = ref Unsafe.Add(ref candidates, i);
+                var candidateOffsetX = candidate.X - contact0.X;
+                var candidateOffsetY = candidate.Y - contact0.Y;
+                var signedArea = candidateOffsetX * edgeOffsetY - candidateOffsetY * edgeOffsetX;
 
+                var indexIsValid = Vector.LessThan(new Vector<int>(i), rawContactCount);
+                var isMinArea = Vector.BitwiseAnd(Vector.LessThan(signedArea, minSignedArea), indexIsValid);
+                minSignedArea = Vector.ConditionalSelect(isMinArea, signedArea, minSignedArea);
+                ConditionalSelect(ref isMinArea, ref candidate, ref contact2, ref contact2);
+                var isMaxArea = Vector.BitwiseAnd(Vector.GreaterThan(signedArea, maxSignedArea), indexIsValid);
+                maxSignedArea = Vector.ConditionalSelect(isMaxArea, signedArea, maxSignedArea);
+                ConditionalSelect(ref isMaxArea, ref candidate, ref contact3, ref contact3);
+            }
+
+            //Area can be appropximated as a box for the purposes of an epsilon test: (edgeLength0 * span)^2 = (edgeLength0 * edgeLength0 * span * span).
+            //This comparison is basically checking if 'span' is irrelevantly small, so we can change this to:
+            //edgeLength0 * edgeLength0 * (edgeLength0 * tinyNumber) * (edgeLength0 * tinyNumber) = (edgeLength0^2) * (edgelength0^2) * (tinyNumber^2)
+            var epsilon = maxDistanceSquared * maxDistanceSquared * new Vector<float>(1e-6f);
+            //Note that minSignedArea is guaranteed to be zero or lower by construction, so it's safe to square for magnitude comparison.
+            //Note that these epsilons capture the case where there are two or less raw contacts.
+            var minExists = Vector.GreaterThan(minSignedArea * minSignedArea, epsilon);
+            manifold.Count = Vector.ConditionalSelect(minExists, manifold.Count + Vector<int>.One, manifold.Count);
+            var maxExists = Vector.GreaterThan(maxSignedArea * maxSignedArea, epsilon);
+            manifold.Count = Vector.ConditionalSelect(maxExists, manifold.Count + Vector<int>.One, manifold.Count);
+
+            //If there is no min, then the fourth contact should just get put into the third slot. Note that we only had to deal with this now (and not on the previous two contacts)
+            //because the existence of the second contact depended on the first, and the third upon the second.
+            //But we don't know ahead of time whether there exists min or max signed area contacts.
+            var maxShouldGoIntoThirdSlot = Vector.AndNot(maxExists, minExists);
+            ConditionalSelect(ref maxShouldGoIntoThirdSlot, ref contact3, ref contact2, ref contact2);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ConditionalSelect(ref Vector<int> useA, ref Candidate a, ref Candidate b, ref Candidate result)
+        {
+            result.X = Vector.ConditionalSelect(useA, a.X, b.X);
+            result.Y = Vector.ConditionalSelect(useA, a.Y, b.Y);
+            result.Depth = Vector.ConditionalSelect(useA, a.Depth, b.Depth);
+            result.FeatureId = Vector.ConditionalSelect(useA, a.FeatureId, b.FeatureId);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void GatherCandidate(ref Candidate candidates, ref Vector<int> index, out Candidate candidate)
+        {
+            for (int i = 0; i < Vector<float>.Count; ++i)
+            {
+                var instanceIndex = index[i];
+                ref var source = ref GetOffsetInstance(ref Unsafe.Add(ref candidates, instanceIndex), i);
+                ref var target = ref GetOffsetInstance(ref candidate, i);
+                GetFirst(ref target.X) = source.X[0];
+                GetFirst(ref target.Y) = source.Y[0];
+                GetFirst(ref target.Depth) = source.Depth[0];
+                GetFirst(ref target.FeatureId) = source.FeatureId[0];
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
