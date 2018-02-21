@@ -229,15 +229,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             normalB.Y = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Y, normalB.Y);
             normalB.Z = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Z, normalB.Z);
 
-            //Clip edges of B against the face bounds of A to collect all edge-bound contacts.           
+            //Clip edges of B against the face bounds of A to collect all edge-bound contacts.         
+
+            Vector3Wide.Scale(ref normalB, ref halfSpanBZ, out var faceCenterB);
+            Vector3Wide.Add(ref faceCenterB, ref offsetB, out faceCenterB);
+            Vector3Wide.Scale(ref tangentBY, ref halfSpanBY, out var edgeOffsetBX);
+            Vector3Wide.Scale(ref tangentBX, ref halfSpanBX, out var edgeOffsetBY);
             Vector3Wide.Dot(ref tangentAX, ref tangentBX, out var axbx);
             Vector3Wide.Dot(ref tangentAY, ref tangentBX, out var aybx);
             Vector3Wide.Dot(ref tangentAX, ref tangentBY, out var axby);
             Vector3Wide.Dot(ref tangentAY, ref tangentBY, out var ayby);
-
-            Vector3Wide.Scale(ref normalB, ref halfSpanBZ, out var faceCenterB);
-            Vector3Wide.Scale(ref tangentBY, ref halfSpanBY, out var edgeOffsetBX);
-            Vector3Wide.Scale(ref tangentBX, ref halfSpanBX, out var edgeOffsetBY);
             GetEdgeVersusFaceBoundsIntervals(ref tangentAX, ref tangentAY, ref halfSpanAX, ref halfSpanAY, ref axbx, ref aybx, ref faceCenterB, ref halfSpanAX, ref edgeOffsetBX,
                 out var bX0Min, out var bX0Max, out var bX1Min, out var bX1Max);
             GetEdgeVersusFaceBoundsIntervals(ref tangentAX, ref tangentAY, ref halfSpanAX, ref halfSpanAY, ref axby, ref ayby, ref faceCenterB, ref halfSpanAY, ref edgeOffsetBY,
@@ -344,6 +345,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var minDepth = new Vector<float>(float.MaxValue);
             var maxExtreme = new Vector<float>(-float.MaxValue);
             Candidate deepest, extreme;
+            deepest.Depth = new Vector<float>(-float.MaxValue);
             //minor todo: could try with a horizontal min on counts to avoid checking all 8 if no manifolds have all 8.
             for (int i = 0; i < 8; ++i)
             {
@@ -444,7 +446,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void TransformContactToManifold(ref Candidate rawContact, ref Vector3Wide faceCenterB, ref Vector3Wide tangentBX, ref Vector3Wide tangentBY, 
+        private static void TransformContactToManifold(ref Candidate rawContact, ref Vector3Wide faceCenterB, ref Vector3Wide tangentBX, ref Vector3Wide tangentBY,
             ref Vector3Wide manifoldOffsetA, ref Vector<float> manifoldDepth, ref Vector<int> manifoldFeatureId)
         {
             Vector3Wide.Scale(ref tangentBX, ref rawContact.X, out manifoldOffsetA);
@@ -500,13 +502,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void AddEdgeContacts(
             ref Candidate candidates, ref Vector<int> rawContactCount,
-            ref Vector<float> halfSpanBX,
+            ref Vector<float> halfSpanB,
             ref Vector<float> tMin, ref Vector<float> tMax,
             ref Vector<float> candidateMinX, ref Vector<float> candidateMinY,
             ref Vector<float> candidateMaxX, ref Vector<float> candidateMaxY,
             ref Vector<int> edgeIdB)
         {
-            //If -halfSpan<min<halfSpan for an edge, use the min intersection as a contact.
+            //If -halfSpan<min<halfSpan && max>min for an edge, use the min intersection as a contact.
             //If -halfSpan<max<=halfSpan && (max-min)>epsilon*halfSpan, use the max intersection as a contact.
             //Note the comparisons: if the max lies on a face vertex, it is used, but if the min lies on a face vertex, it is not. This avoids redundant entries.
 
@@ -517,22 +519,25 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Note that we use only the edge id of B, regardless of which face bounds contributed to the contact. This is a little permissive, since changes to the 
             //contributors from A won't affect accumulated impulse reuse. I suspect it won't cause any serious issues.
             candidate.FeatureId = edgeIdB;
-            var newContactExists = Vector.BitwiseAnd(Vector.GreaterThan(tMin, -halfSpanBX), Vector.LessThan(tMin, halfSpanBX));
-            AddContactCandidate(ref candidates, ref candidate, ref newContactExists, ref rawContactCount);
+            var minContactExists = Vector.BitwiseAnd(Vector.BitwiseAnd(
+                Vector.GreaterThanOrEqual(tMax, tMin),
+                Vector.GreaterThan(tMin, -halfSpanB)),
+                Vector.LessThan(tMin, halfSpanB));
+            AddContactCandidate(ref candidates, ref candidate, ref minContactExists, ref rawContactCount);
             candidate.X = candidateMaxX;
             candidate.Y = candidateMaxY;
             candidate.FeatureId = edgeIdB + new Vector<int>(64);
-            newContactExists = Vector.BitwiseAnd(Vector.BitwiseAnd(
-                Vector.GreaterThan(tMax, -halfSpanBX),
-                Vector.LessThanOrEqual(tMax, halfSpanBX)),
-                Vector.GreaterThan(tMax - tMin, new Vector<float>(1e-5f) * halfSpanBX));
-            AddContactCandidate(ref candidates, ref candidate, ref newContactExists, ref rawContactCount);
+            var maxContactExists = Vector.BitwiseAnd(Vector.BitwiseAnd(
+                Vector.GreaterThan(tMax, -halfSpanB),
+                Vector.LessThanOrEqual(tMax, halfSpanB)),
+                Vector.GreaterThan(tMax - tMin, new Vector<float>(1e-5f) * halfSpanB));
+            AddContactCandidate(ref candidates, ref candidate, ref maxContactExists, ref rawContactCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe void GetEdgeVersusBoundsIntersections(ref Vector3Wide tangentA, ref Vector<float> halfSpanA,
           ref Vector<float> tangentDotBoundsNormal, ref Vector3Wide faceCenterB, ref Vector3Wide edgeOffsetB,
-          out Vector<float> t00, out Vector<float> t01, out Vector<float> t10, out Vector<float> t11)
+          out Vector<float> t0Min, out Vector<float> t0Max, out Vector<float> t1Min, out Vector<float> t1Max)
         {
             //Intersect both tangentB edges against the planes with normal equal to tangentA.
             //By protecting against division by zero while maintaining sign, the resulting intervals will still be usable.
@@ -548,10 +553,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //These are the t values for intersection between tangentB edges and the tangentA bounding planes.
             //01 refers to the negative offset edge on B, and the positive offset bounding plane on A.
             //Note that they are left unclamped against the edge's extents. We defer that until later to avoid duplicate work.
-            t00 = axbxScaledAXEdgeCenterX0 - axbxScaledHalfSpanAX;
-            t01 = axbxScaledAXEdgeCenterX0 + axbxScaledHalfSpanAX;
-            t10 = axbxScaledAXEdgeCenterX1 - axbxScaledHalfSpanAX;
-            t11 = axbxScaledAXEdgeCenterX1 + axbxScaledHalfSpanAX;
+            var t00 = axbxScaledAXEdgeCenterX0 - axbxScaledHalfSpanAX;
+            var t01 = axbxScaledAXEdgeCenterX0 + axbxScaledHalfSpanAX;
+            var t10 = axbxScaledAXEdgeCenterX1 - axbxScaledHalfSpanAX;
+            var t11 = axbxScaledAXEdgeCenterX1 + axbxScaledHalfSpanAX;
+            t0Min = Vector.Min(t00, t01);
+            t0Max = Vector.Max(t00, t01);
+            t1Min = Vector.Min(t10, t11);
+            t1Max = Vector.Max(t10, t11);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe void GetEdgeVersusFaceBoundsIntervals(ref Vector3Wide tangentAX, ref Vector3Wide tangentAY, ref Vector<float> halfSpanAX, ref Vector<float> halfSpanAY,
@@ -559,19 +568,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             out Vector<float> b0Min, out Vector<float> b0Max, out Vector<float> b1Min, out Vector<float> b1Max)
         {
             GetEdgeVersusBoundsIntersections(ref tangentAX, ref halfSpanAX, ref axb, ref faceCenterB, ref edgeOffsetB,
-                out var tAX00, out var tAX01, out var tAX10, out var tAX11);
+                out var tAX0Min, out var tAX0Max, out var tAX1Min, out var tAX1Max);
             GetEdgeVersusBoundsIntersections(ref tangentAY, ref halfSpanAY, ref ayb, ref faceCenterB, ref edgeOffsetB,
-                out var tAY00, out var tAY01, out var tAY10, out var tAY11);
+                out var tAY0Min, out var tAY0Max, out var tAY1Min, out var tAY1Max);
             var negativeHalfSpanB = -halfSpanB;
+            //Note that we are computing the intersection of the two intervals.
+            //If they overlap, then the minimum is the greater of the two minimums, and the maximum is the lesser of the two maximums.
+            //After applying those filters, if the min is greater than the max, then the interval has no actual overlap.
             //Note that we explicitly do not clamp both sides of the interval. We want to preserve any interval where the max is below -halfSpanB, or the min is above halfSpanB.
             //Such cases correspond to no contacts.
-            b0Min = Vector.Max(negativeHalfSpanB, Vector.Min(tAX00, Vector.Min(tAX01, Vector.Min(tAY00, tAY01))));
-            b0Max = Vector.Min(halfSpanB, Vector.Max(tAX00, Vector.Max(tAX01, Vector.Max(tAY00, tAY01))));
-            b1Min = Vector.Max(negativeHalfSpanB, Vector.Min(tAX10, Vector.Min(tAX11, Vector.Min(tAY10, tAY11))));
-            b1Max = Vector.Min(halfSpanB, Vector.Max(tAX10, Vector.Max(tAX11, Vector.Max(tAY10, tAY11))));
+            //(Note that we do clamp the maximum to the halfSpan. If an interval maximum reaches the end of the interval, it is used to create a contact representing the associated B vertex.
+            //There is no need for a lower bound on the minimums, because they do not generate vertex contacts.)
+            b0Min = Vector.Max(tAX0Min, tAY0Min);
+            b0Max = Vector.Min(halfSpanB, Vector.Min(tAX0Max, tAY0Max));
+            b1Min = Vector.Max(tAX1Min, tAY1Min);
+            b1Max = Vector.Min(halfSpanB, Vector.Min(tAX1Max, tAY1Max));
         }
-
-
 
         struct Candidate
         {
@@ -580,6 +592,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             public Vector<float> Depth;
             public Vector<int> FeatureId;
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void AddContactCandidate(ref Candidate candidates, ref Candidate candidate, ref Vector<int> newContactExists, ref Vector<int> count)
         {
