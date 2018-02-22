@@ -48,10 +48,10 @@ namespace BepuPhysics.CollisionDetection
         public abstract void DeterministicallyAdd<TCallbacks>(
             int typeIndex, NarrowPhase<TCallbacks>.OverlapWorker[] overlapWorkers,
             ref QuickList<NarrowPhase<TCallbacks>.SortConstraintTarget, Buffer<NarrowPhase<TCallbacks>.SortConstraintTarget>> constraintsOfType,
-            Simulation simulation, ref PairCache pairCache) where TCallbacks : struct, INarrowPhaseCallbacks;
+            Simulation simulation, PairCache pairCache) where TCallbacks : struct, INarrowPhaseCallbacks;
 
         public abstract void FlushWithSpeculativeBatches<TCallbacks>(ref UntypedList list, int narrowPhaseConstraintTypeId,
-            ref Buffer<Buffer<ushort>> speculativeBatchIndices, Simulation simulation, ref PairCache pairCache)
+            ref Buffer<Buffer<ushort>> speculativeBatchIndices, Simulation simulation, PairCache pairCache)
             where TCallbacks : struct, INarrowPhaseCallbacks;
 
         public abstract void FlushSequentially<TCallbacks>(ref UntypedList list, int narrowPhaseConstraintTypeId, Simulation simulation, PairCache pairCache)
@@ -85,7 +85,7 @@ namespace BepuPhysics.CollisionDetection
         }
         public override void DeterministicallyAdd<TCallbacks>(int typeIndex, NarrowPhase<TCallbacks>.OverlapWorker[] overlapWorkers,
             ref QuickList<NarrowPhase<TCallbacks>.SortConstraintTarget, Buffer<NarrowPhase<TCallbacks>.SortConstraintTarget>> constraintsOfType,
-            Simulation simulation, ref PairCache pairCache)
+            Simulation simulation, PairCache pairCache)
         {
             for (int i = 0; i < constraintsOfType.Count; ++i)
             {
@@ -99,7 +99,7 @@ namespace BepuPhysics.CollisionDetection
                 ref list, narrowPhaseConstraintTypeId, simulation, pairCache);
         }
 
-        public override void FlushWithSpeculativeBatches<TCallbacks>(ref UntypedList list, int narrowPhaseConstraintTypeId, ref Buffer<Buffer<ushort>> speculativeBatchIndices, Simulation simulation, ref PairCache pairCache)
+        public override void FlushWithSpeculativeBatches<TCallbacks>(ref UntypedList list, int narrowPhaseConstraintTypeId, ref Buffer<Buffer<ushort>> speculativeBatchIndices, Simulation simulation, PairCache pairCache)
         {
             NarrowPhase<TCallbacks>.PendingConstraintAddCache.SequentialAddToSimulationSpeculative<TBodyHandles, TConstraintDescription, TContactImpulses>(
                 ref list, narrowPhaseConstraintTypeId, ref speculativeBatchIndices, simulation, pairCache);

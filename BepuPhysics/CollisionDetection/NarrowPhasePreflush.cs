@@ -228,9 +228,9 @@ namespace BepuPhysics.CollisionDetection
                     break;
                 case PreflushJobType.DeterministicConstraintAdd:
                     {
-                        for (int typeIndex = 0; typeIndex < PairCache.CollisionConstraintTypeCount; ++typeIndex)
+                        for (int typeIndex = 0; typeIndex < contactConstraintAccessors.Length; ++typeIndex)
                         {
-                            PendingConstraintAddCache.DeterministicallyAddType(typeIndex, overlapWorkers, ref sortedConstraints[typeIndex], Simulation, ref PairCache);
+                            contactConstraintAccessors[typeIndex]?.DeterministicallyAdd(typeIndex, overlapWorkers, ref sortedConstraints[typeIndex], Simulation, PairCache);
                         }
                     }
                     break;

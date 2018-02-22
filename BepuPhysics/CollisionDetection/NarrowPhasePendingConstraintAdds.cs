@@ -75,7 +75,7 @@ namespace BepuPhysics.CollisionDetection
                     {
                         ref var add = ref Unsafe.Add(ref start, i);
                         var handle = simulation.Solver.Add(ref Unsafe.As<TBodyHandles, int>(ref add.BodyHandles), typeof(TBodyHandles) == typeof(TwoBodyHandles) ? 2 : 1, ref add.ConstraintDescription);
-                        pairCache.CompleteConstraintAdd(simulation.Solver, ref add.Impulses, add.ConstraintCacheIndex, handle, ref add.Pair);
+                        pairCache.CompleteConstraintAdd(simulation.NarrowPhase, simulation.Solver, ref add.Impulses, add.ConstraintCacheIndex, handle, ref add.Pair);
                     }
                 }
             }
@@ -86,21 +86,11 @@ namespace BepuPhysics.CollisionDetection
             /// </summary>
             internal void FlushSequentially(Simulation simulation, PairCache pairCache)
             {
-                //This is going to be pretty horrible!
-                //There is no type information beyond the index of the cache.
-                //In other words, we basically have to do a switch statement (or equivalently manually unrolled loop) to gather objects of the proper type from it. 
-
-                //This follows the same convention as the GatherOldImpulses and ScatterNewImpulses of the PairCache.
-                //Constraints cover 16 possible cases:
-                //1-4 contacts: 0x3
-                //convex vs nonconvex: 0x4
-                //1 body versus 2 body: 0x8
-                //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-                SequentialAddToSimulation<int, Contact1OneBody, ContactImpulses1>(ref pendingConstraintsByType[0 + 0 + 0], 0 + 0 + 0, simulation, pairCache);
-                SequentialAddToSimulation<int, Contact2OneBody, ContactImpulses2>(ref pendingConstraintsByType[0 + 0 + 1], 0 + 0 + 1, simulation, pairCache);
-                SequentialAddToSimulation<TwoBodyHandles, Contact1, ContactImpulses1>(ref pendingConstraintsByType[8 + 0 + 0], 8 + 0 + 0, simulation, pairCache);
-                SequentialAddToSimulation<TwoBodyHandles, Contact2, ContactImpulses2>(ref pendingConstraintsByType[8 + 0 + 1], 8 + 0 + 1, simulation, pairCache);
-                SequentialAddToSimulation<TwoBodyHandles, Contact4, ContactImpulses4>(ref pendingConstraintsByType[8 + 0 + 3], 8 + 0 + 3, simulation, pairCache);
+                var accessors = simulation.NarrowPhase.contactConstraintAccessors;
+                for (int i = 0; i < accessors.Length; ++i)
+                {
+                    accessors[i]?.FlushSequentially<TCallbacks>(ref pendingConstraintsByType[i], i, simulation, pairCache);
+                }
             }
 
 
@@ -150,7 +140,7 @@ namespace BepuPhysics.CollisionDetection
                     Debug.Assert(bLocation.SetIndex == 0, "By the time we flush new constraints into the solver, all associated islands should have be awake.");
                     simulation.Bodies.AddConstraint(bLocation.Index, constraintHandle, 1);
                 }
-                pairCache.CompleteConstraintAdd(simulation.Solver, ref constraint.Impulses, constraint.ConstraintCacheIndex, constraintHandle, ref constraint.Pair);
+                pairCache.CompleteConstraintAdd(simulation.NarrowPhase, simulation.Solver, ref constraint.Impulses, constraint.ConstraintCacheIndex, constraintHandle, ref constraint.Pair);
             }
 
 
@@ -179,21 +169,11 @@ namespace BepuPhysics.CollisionDetection
             /// </summary>
             internal void FlushWithSpeculativeBatches(Simulation simulation, ref PairCache pairCache)
             {
-                //This is going to be pretty horrible!
-                //There is no type information beyond the index of the cache.
-                //In other words, we basically have to do a switch statement (or equivalently manually unrolled loop) to gather objects of the proper type from it. 
-
-                //This follows the same convention as the GatherOldImpulses and ScatterNewImpulses of the PairCache.
-                //Constraints cover 16 possible cases:
-                //1-4 contacts: 0x3
-                //convex vs nonconvex: 0x4
-                //1 body versus 2 body: 0x8
-                //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-                SequentialAddToSimulationSpeculative<int, Contact1OneBody, ContactImpulses1>(ref pendingConstraintsByType[0 + 0 + 0], 0 + 0 + 0, ref speculativeBatchIndices, simulation, pairCache);
-                SequentialAddToSimulationSpeculative<int, Contact2OneBody, ContactImpulses2>(ref pendingConstraintsByType[0 + 0 + 1], 0 + 0 + 1, ref speculativeBatchIndices, simulation, pairCache);
-                SequentialAddToSimulationSpeculative<TwoBodyHandles, Contact1, ContactImpulses1>(ref pendingConstraintsByType[8 + 0 + 0], 8 + 0 + 0, ref speculativeBatchIndices, simulation, pairCache);
-                SequentialAddToSimulationSpeculative<TwoBodyHandles, Contact2, ContactImpulses2>(ref pendingConstraintsByType[8 + 0 + 1], 8 + 0 + 1, ref speculativeBatchIndices, simulation, pairCache);
-                SequentialAddToSimulationSpeculative<TwoBodyHandles, Contact4, ContactImpulses4>(ref pendingConstraintsByType[8 + 0 + 3], 8 + 0 + 3, ref speculativeBatchIndices, simulation, pairCache);
+                var accessors = simulation.NarrowPhase.contactConstraintAccessors;
+                for (int i = 0; i < accessors.Length; ++i)
+                {
+                    accessors[i]?.FlushWithSpeculativeBatches<TCallbacks>(ref pendingConstraintsByType[i], i, ref speculativeBatchIndices, simulation, pairCache);
+                }
             }
 
 
@@ -210,81 +190,6 @@ namespace BepuPhysics.CollisionDetection
                 //If you're willing to bitpack, we could use 10-12 bits for worker index and 20-22 bits for index. 4096 workers and a million new constraints is likely sufficient...
                 var index = target.ByteIndexInCache / Unsafe.SizeOf<PendingConstraint<TBodyHandles, TDescription, TContactImpulses>>();
                 AddToSimulationSpeculative(ref constraint, cache.speculativeBatchIndices[typeIndex][index], simulation, pairCache);
-            }
-
-            internal unsafe static void DeterministicallyAddType(
-                int typeIndex, OverlapWorker[] overlapWorkers, ref QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>> constraintsOfType,
-                Simulation simulation, ref PairCache pairCache)
-            {
-                //By hoisting the switch statement outside of the loop, a bunch of pointless branching is avoided and we have have type information with a one time test.
-
-                //This follows the same convention as the GatherOldImpulses and ScatterNewImpulses of the PairCache.
-                //Constraints cover 16 possible cases:
-                //1-4 contacts: 0x3
-                //convex vs nonconvex: 0x4
-                //1 body versus 2 body: 0x8
-                //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-                switch (typeIndex)
-                {
-                    //One body
-                    //Convex
-                    case 0:
-                        for (int i = 0; i < constraintsOfType.Count; ++i)
-                        {
-                            DeterministicAdd<int, Contact1OneBody, ContactImpulses1>(typeIndex, ref constraintsOfType[i], overlapWorkers, simulation, ref pairCache);
-                        }
-                        break;
-                    case 1:
-                        for (int i = 0; i < constraintsOfType.Count; ++i)
-                        {
-                            DeterministicAdd<int, Contact2OneBody, ContactImpulses2>(typeIndex, ref constraintsOfType[i], overlapWorkers, simulation, ref pairCache);
-                        }
-                        break;
-                    case 2:
-                        break;
-                    case 3:
-                        break;
-                    //Nonconvex
-                    case 4 + 0:
-                        break;
-                    case 4 + 1:
-                        break;
-                    case 4 + 2:
-                        break;
-                    case 4 + 3:
-                        break;
-                    //Two body
-                    //Convex
-                    case 8 + 0:
-                        for (int i = 0; i < constraintsOfType.Count; ++i)
-                        {
-                            DeterministicAdd<TwoBodyHandles, Contact1, ContactImpulses1>(typeIndex, ref constraintsOfType[i], overlapWorkers, simulation, ref pairCache);
-                        }
-                        break;
-                    case 8 + 1:
-                        for (int i = 0; i < constraintsOfType.Count; ++i)
-                        {
-                            DeterministicAdd<TwoBodyHandles, Contact2, ContactImpulses2>(typeIndex, ref constraintsOfType[i], overlapWorkers, simulation, ref pairCache);
-                        }
-                        break;
-                    case 8 + 2:
-                        break;
-                    case 8 + 3:
-                        for (int i = 0; i < constraintsOfType.Count; ++i)
-                        {
-                            DeterministicAdd<TwoBodyHandles, Contact4, ContactImpulses4>(typeIndex, ref constraintsOfType[i], overlapWorkers, simulation, ref pairCache);
-                        }
-                        break;
-                    //Nonconvex
-                    case 8 + 4 + 0:
-                        break;
-                    case 8 + 4 + 1:
-                        break;
-                    case 8 + 4 + 2:
-                        break;
-                    case 8 + 4 + 3:
-                        break;
-                }
             }
 
 

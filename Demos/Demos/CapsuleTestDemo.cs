@@ -21,7 +21,7 @@ namespace Demos
             //camera.Pitch = MathHelper.Pi * 0.1f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
-            var shape = new Capsule(.5f, .5f);
+            var shape = new Capsule(.5f, 3.5f);
             BodyInertia localInertia;
             localInertia.InverseMass = 1f;
             shape.ComputeLocalInverseInertia(localInertia.InverseMass, out localInertia.InverseInertiaTensor);

@@ -407,239 +407,11 @@ namespace BepuPhysics.CollisionDetection
             //TODO: If the nonconvex contact count expands to 8, this will have to change.
             return constraintTypeId < 16;
         }
-
-        //TODO: This kind of duplicate enormous switch statement isn't practical in the long run, and it's almost certainly not even the fastest option.
-        //This and the narrow phase pending constraint adder should be redesigned to avoid as much hardcoding as possible and, when hardcoding is unavoidable,
-        //focus on making it easily verifiable and not as hideously error prone as the current design.
-
+        
         //TODO: If we add in nonconvex manifolds with up to 8 contacts, this will need to change- we preallocate enough space to hold all possible narrowphase generated types.
         public const int CollisionConstraintTypeCount = 16;
         public const int CollisionTypeCount = 16;
-        internal unsafe void GatherOldImpulses(ref ConstraintReference constraintReference, float* oldImpulses)
-        {
-            //Constraints cover 16 possible cases:
-            //1-4 contacts: 0x3
-            //convex vs nonconvex: 0x4
-            //1 body versus 2 body: 0x8
-            //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
 
-            //TODO: Note that we do not modify the friction accumulated impulses. This is just for simplicity- the impact of accumulated impulses on friction *should* be relatively
-            //hard to notice compared to penetration impulses. We should, however, test this assumption.
-            BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var inner);
-            switch (constraintReference.TypeBatch.TypeId)
-            {
-                //1 body
-                //Convex
-                case 0:
-                    {
-                        //1 contact
-                        ref var bundle = ref Buffer<Contact1AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
-                        GatherScatter.GetLane(ref bundle.Penetration0, inner, ref *oldImpulses, 1);
-                    }
-                    break;
-                case 1:
-                    {
-                        //2 contacts
-                        ref var bundle = ref Buffer<Contact2AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
-                        GatherScatter.GetLane(ref bundle.Penetration0, inner, ref *oldImpulses, 2);
-                    }
-                    break;
-                case 2:
-                    {
-                        //3 contacts
-                    }
-                    break;
-                case 3:
-                    {
-                        //4 contacts
-                    }
-                    break;
-                //Nonconvex
-                case 4 + 0:
-                    {
-                        //1 contact
-                    }
-                    break;
-
-                case 4 + 1:
-                    {
-                        //2 contacts
-                    }
-                    break;
-                case 4 + 2:
-                    {
-                        //3 contacts
-                    }
-                    break;
-                case 4 + 3:
-                    {
-                        //4 contacts
-                    }
-                    break;
-                //2 body
-                //Convex
-                case 8 + 0:
-                    {
-                        //1 contact
-                        ref var bundle = ref Buffer<Contact1AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
-                        GatherScatter.GetLane(ref bundle.Penetration0, inner, ref *oldImpulses, 1);
-                    }
-                    break;
-                case 8 + 1:
-                    {
-                        //2 contacts
-                        ref var bundle = ref Buffer<Contact2AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
-                        GatherScatter.GetLane(ref bundle.Penetration0, inner, ref *oldImpulses, 2);
-                    }
-                    break;
-                case 8 + 2:
-                    {
-                        //3 contacts
-                    }
-                    break;
-                case 8 + 3:
-                    {
-                        //4 contacts
-                        ref var bundle = ref Buffer<Contact4AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
-                        GatherScatter.GetLane(ref bundle.Penetration0, inner, ref *oldImpulses, 4);
-                    }
-                    break;
-                //Nonconvex
-                case 8 + 4 + 0:
-                    {
-                        //1 contact
-                    }
-                    break;
-                case 8 + 4 + 1:
-                    {
-                        //2 contacts
-                    }
-                    break;
-                case 8 + 4 + 2:
-                    {
-                        //3 contacts
-                    }
-                    break;
-                case 8 + 4 + 3:
-                    {
-                        //4 contacts
-                    }
-                    break;
-            }
-        }
-
-        internal void ScatterNewImpulses<TContactImpulses>(ref ConstraintReference constraintReference, ref TContactImpulses contactImpulses)
-        {
-            //Constraints cover 16 possible cases:
-            //1-4 contacts: 0x3
-            //convex vs nonconvex: 0x4
-            //1 body versus 2 body: 0x8
-            //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-
-            //TODO: Note that we do not modify the friction accumulated impulses. This is just for simplicity- the impact of accumulated impulses on friction *should* be relatively
-            //hard to notice compared to penetration impulses. We should, however, test this assumption.
-            BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var inner);
-            switch (constraintReference.TypeBatch.TypeId)
-            {
-                //1 body
-                //Convex
-                case 0:
-                    {
-                        //1 contact
-                        ref var bundle = ref Buffer<Contact1AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
-                        GatherScatter.SetLane(ref bundle.Penetration0, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), 1);
-                    }
-                    break;
-                case 1:
-                    {
-                        //2 contacts
-                        ref var bundle = ref Buffer<Contact2AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
-                        GatherScatter.SetLane(ref bundle.Penetration0, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), 2);
-                    }
-                    break;
-                case 2:
-                    {
-                        //3 contacts
-                    }
-                    break;
-                case 3:
-                    {
-                        //4 contacts
-                    }
-                    break;
-                //Nonconvex
-                case 4 + 0:
-                    {
-                        //1 contact
-                    }
-                    break;
-                case 4 + 1:
-                    {
-                        //2 contacts
-                    }
-                    break;
-                case 4 + 2:
-                    {
-                        //3 contacts
-                    }
-                    break;
-                case 4 + 3:
-                    {
-                        //4 contacts
-                    }
-                    break;
-                //2 body
-                //Convex
-                case 8 + 0:
-                    {
-                        //1 contact
-                        ref var bundle = ref Buffer<Contact1AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
-                        GatherScatter.SetLane(ref bundle.Penetration0, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), 1);
-                    }
-                    break;
-                case 8 + 1:
-                    {
-                        //2 contacts
-                        ref var bundle = ref Buffer<Contact2AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
-                        GatherScatter.SetLane(ref bundle.Penetration0, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), 2);
-                    }
-                    break;
-                case 8 + 2:
-                    {
-                        //3 contacts
-                    }
-                    break;
-                case 8 + 3:
-                    {
-                        //4 contacts
-                        ref var bundle = ref Buffer<Contact4AccumulatedImpulses>.Get(ref constraintReference.TypeBatch.AccumulatedImpulses, bundleIndex);
-                        GatherScatter.SetLane(ref bundle.Penetration0, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), 4);
-                    }
-                    break;
-                //Nonconvex
-                case 8 + 4 + 0:
-                    {
-                        //1 contact
-                    }
-                    break;
-                case 8 + 4 + 1:
-                    {
-                        //2 contacts
-                    }
-                    break;
-                case 8 + 4 + 2:
-                    {
-                        //3 contacts
-                    }
-                    break;
-                case 8 + 4 + 3:
-                    {
-                        //4 contacts
-                    }
-                    break;
-            }
-
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe void* GetOldConstraintCachePointer(int pairIndex)
@@ -659,20 +431,21 @@ namespace BepuPhysics.CollisionDetection
         /// Completes the addition of a constraint by filling in the narrowphase's pointer to the constraint and by distributing accumulated impulses.
         /// </summary>
         /// <typeparam name="TContactImpulses">Count-specialized type containing cached accumulated impulses.</typeparam>
+        /// <param name="narrowPhase">Narrow phase that triggered the constraint add.</param>
         /// <param name="solver">Solver containing the constraint to set the impulses of.</param>
         /// <param name="impulses">Warm starting impulses to apply to the contact constraint.</param>
         /// <param name="constraintCacheIndex">Index of the constraint cache to update.</param>
         /// <param name="constraintHandle">Constraint handle associated with the constraint cache being updated.</param>
         /// <param name="pair">Collidable pair associated with the new constraint.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe void CompleteConstraintAdd<TContactImpulses>(Solver solver, ref TContactImpulses impulses, PairCacheIndex constraintCacheIndex,
+        internal unsafe void CompleteConstraintAdd<TContactImpulses>(NarrowPhase narrowPhase, Solver solver, ref TContactImpulses impulses, PairCacheIndex constraintCacheIndex,
             int constraintHandle, ref CollidablePair pair)
         {
             //Note that the update is being directed to the *next* worker caches. We have not yet performed the flush that swaps references.
             //Note that this assumes that the constraint handle is stored in the first 4 bytes of the constraint cache.
             *(int*)NextWorkerCaches[constraintCacheIndex.Cache].GetConstraintCachePointer(constraintCacheIndex) = constraintHandle;
             solver.GetConstraintReference(constraintHandle, out var reference);
-            ScatterNewImpulses(ref reference, ref impulses);
+            narrowPhase.contactConstraintAccessors[constraintCacheIndex.Type].ScatterNewImpulses(ref reference, ref impulses);
             //This mapping entry had to be deferred until now because no constraint handle was known until now. Now that we have it,
             //we can fill in the pointers back to the overlap mapping.
             ConstraintHandleToPair[constraintHandle].Pair = pair;

@@ -104,7 +104,7 @@ namespace BepuPhysics.CollisionDetection
         //The majority of type pairs, however, only require a constraint handle.
         public PairCache PairCache;
 
-        ContactConstraintAccessor[] contactConstraintAccessors;
+        internal ContactConstraintAccessor[] contactConstraintAccessors;
         public void RegisterContactConstraintAccessor(ContactConstraintAccessor contactConstraintAccessor)
         {
             var id = contactConstraintAccessor.ConstraintTypeId;

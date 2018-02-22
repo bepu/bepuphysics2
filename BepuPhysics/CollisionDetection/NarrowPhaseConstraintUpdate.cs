@@ -103,6 +103,7 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(pointers.ConstraintCache.Exists, "If a pair was persisted in the narrow phase, there should be a constraint associated with it.");
 
                 var constraintCacheIndex = pointers.ConstraintCache;
+                var accessor = contactConstraintAccessors[constraintCacheIndex.Type];
                 var constraintCachePointer = PairCache.GetOldConstraintCachePointer(index);
                 var constraintHandle = *(int*)constraintCachePointer;
                 Solver.GetConstraintReference(constraintHandle, out var constraintReference);
@@ -111,13 +112,13 @@ namespace BepuPhysics.CollisionDetection
                 var newImpulses = default(TContactImpulses);
                 if (typeof(TConstraintCache) == typeof(ConstraintCache1))
                 {
-                    PairCache.GatherOldImpulses(ref constraintReference, (float*)Unsafe.AsPointer(ref newImpulses));
+                    accessor.GatherOldImpulses(ref constraintReference, (float*)Unsafe.AsPointer(ref newImpulses));
                 }
                 else
                 {
                     var oldContactCount = PairCache.GetContactCount(constraintCacheIndex.Type);
                     var oldImpulses = stackalloc float[oldContactCount];
-                    PairCache.GatherOldImpulses(ref constraintReference, oldImpulses);
+                    accessor.GatherOldImpulses(ref constraintReference, oldImpulses);
                     //The first slot in the constraint cache is the constraint handle; the following slots are feature ids.
                     RedistributeImpulses(oldContactCount, oldImpulses, (int*)constraintCachePointer + 1, manifold, ref newImpulses);
                 }
@@ -132,7 +133,7 @@ namespace BepuPhysics.CollisionDetection
                     PairCache.Update(workerIndex, index, ref pointers, ref collisionCache, ref newConstraintCache);
                     //There exists a constraint and it has the same type as the manifold. Directly apply the new description and impulses.
                     Solver.ApplyDescription(ref constraintReference, ref description);
-                    PairCache.ScatterNewImpulses(ref constraintReference, ref newImpulses);
+                    accessor.ScatterNewImpulses(ref constraintReference, ref newImpulses);
                 }
                 else
                 {
@@ -177,12 +178,7 @@ namespace BepuPhysics.CollisionDetection
             //Note that this function has two responsibilities:
             //1) Create the description of the constraint that should represent the new manifold.
             //2) Add that constraint (or update an existing constraint) with that description, updating any accumulated impulses as needed.
-            //Conceptually, it would be nicer to have a single function for each of these- create a description, and then apply it.
-            //However, we cannot return the type knowledge we extract from the constraint cache index. Instead, we make use of the information in-place.
-
-            //TODO: Should check codegen and alternatives here.
             Debug.Assert(manifold->ContactCount > 0);
-            //Constraint types only use 3 bits, since their contact count can never be zero.
             //1-4 contacts: 0x3
             //nonconvex: 0x4
             //1 body versus 2 body: 0x8
@@ -190,128 +186,7 @@ namespace BepuPhysics.CollisionDetection
             var manifoldTypeAsConstraintType = ((manifold->PackedConvexityAndContactCount >> 1) & 4) | ((manifold->PackedConvexityAndContactCount & 7) - 1);
             if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
                 manifoldTypeAsConstraintType |= 0x8;
-            switch (manifoldTypeAsConstraintType)
-            {
-                //One body
-                //Convex
-                case 0:
-                    {
-                        Contact1OneBody description;
-                        description.Contact0.OffsetA = manifold->Offset0;
-                        description.Contact0.PenetrationDepth = manifold->Depth0;
-                        description.FrictionCoefficient = material.FrictionCoefficient;
-                        description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-                        description.SpringSettings = material.SpringSettings;
-                        description.Normal = manifold->ConvexNormal;
-
-                        //TODO: Check init hack.
-                        UpdateConstraint<TBodyHandles, Contact1OneBody, ContactImpulses1, TCollisionCache, ConstraintCache1>(
-                            workerIndex, ref pair, manifold, manifoldTypeAsConstraintType, ref collisionCache, ref *&description, bodyHandles);
-                    }
-                    break;
-                case 1:
-                    {
-                        Contact2OneBody description;
-                        description.Contact0.OffsetA = manifold->Offset0;
-                        description.Contact0.PenetrationDepth = manifold->Depth0;
-                        description.Contact1.OffsetA = manifold->Offset1;
-                        description.Contact1.PenetrationDepth = manifold->Depth1;
-                        description.FrictionCoefficient = material.FrictionCoefficient;
-                        description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-                        description.SpringSettings = material.SpringSettings;
-                        description.Normal = manifold->ConvexNormal;
-
-                        //TODO: Check init hack.
-                        UpdateConstraint<TBodyHandles, Contact2OneBody, ContactImpulses2, TCollisionCache, ConstraintCache2>(
-                            workerIndex, ref pair, manifold, manifoldTypeAsConstraintType, ref collisionCache, ref *&description, bodyHandles);
-                    }
-                    break;
-                case 2:
-                    break;
-                case 3:
-                    break;
-                //Nonconvex
-                case 4 + 0:
-                    break;
-                case 4 + 1:
-                    break;
-                case 4 + 2:
-                    break;
-                case 4 + 3:
-                    break;
-                //Two body
-                //Convex
-                case 8 + 0:
-                    {
-                        Contact1 description;
-                        description.Contact0.OffsetA = manifold->Offset0;
-                        description.Contact0.PenetrationDepth = manifold->Depth0;
-                        description.OffsetB = manifold->OffsetB;
-                        description.FrictionCoefficient = material.FrictionCoefficient;
-                        description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-                        description.SpringSettings = material.SpringSettings;
-                        description.Normal = manifold->ConvexNormal;
-
-                        //TODO: Check init hack.
-                        UpdateConstraint<TBodyHandles, Contact1, ContactImpulses1, TCollisionCache, ConstraintCache1>(
-                            workerIndex, ref pair, manifold, manifoldTypeAsConstraintType, ref collisionCache, ref *&description, bodyHandles);
-                    }
-                    break;
-                case 8 + 1:
-                    {
-                        Contact2 description;
-                        description.Contact0.OffsetA = manifold->Offset0;
-                        description.Contact0.PenetrationDepth = manifold->Depth0;
-                        description.Contact1.OffsetA = manifold->Offset1;
-                        description.Contact1.PenetrationDepth = manifold->Depth1;
-                        description.OffsetB = manifold->OffsetB;
-                        description.FrictionCoefficient = material.FrictionCoefficient;
-                        description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-                        description.SpringSettings = material.SpringSettings;
-                        description.Normal = manifold->ConvexNormal;
-
-                        //TODO: Check init hack.
-                        UpdateConstraint<TBodyHandles, Contact2, ContactImpulses2, TCollisionCache, ConstraintCache2>(
-                            workerIndex, ref pair, manifold, manifoldTypeAsConstraintType, ref collisionCache, ref *&description, bodyHandles);
-                    }
-                    break;
-                case 8 + 2:
-                    break;
-                case 8 + 3:
-                    {
-                        Contact4 description;
-                        var descriptionContacts = &description.Contact0;
-                        var offsets = &manifold->Offset0;
-                        var depths = &manifold->Depth0;
-                        for (int i = 0; i < 4; ++i)
-                        {
-                            ref var descriptionContact = ref descriptionContacts[i];
-                            descriptionContact.OffsetA = offsets[i];
-                            descriptionContact.PenetrationDepth = depths[i];
-                        }
-                        description.OffsetB = manifold->OffsetB;
-                        description.FrictionCoefficient = material.FrictionCoefficient;
-                        description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-                        description.SpringSettings = material.SpringSettings;
-                        description.Normal = manifold->ConvexNormal;
-
-                        //TODO: Check init hack.
-                        UpdateConstraint<TBodyHandles, Contact4, ContactImpulses4, TCollisionCache, ConstraintCache4>(
-                            workerIndex, ref pair, manifold, manifoldTypeAsConstraintType, ref collisionCache, ref *&description, bodyHandles);
-                    }
-                    break;
-                //Nonconvex
-                case 8 + 4 + 0:
-                    break;
-                case 8 + 4 + 1:
-                    break;
-                case 8 + 4 + 2:
-                    break;
-                case 8 + 4 + 3:
-                    break;
-
-            }
-
+            contactConstraintAccessors[manifoldTypeAsConstraintType].UpdateConstraintForManifold(this, manifoldTypeAsConstraintType, workerIndex, ref pair, manifold, ref collisionCache, ref material, bodyHandles);
         }
 
         public unsafe void UpdateConstraintsForPair<TCollisionCache>(int workerIndex, ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache) where TCollisionCache : IPairCacheEntry
