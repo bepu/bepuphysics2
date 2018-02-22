@@ -107,21 +107,13 @@ namespace BepuPhysics.CollisionDetection
                 var constraintCachePointer = PairCache.GetOldConstraintCachePointer(index);
                 var constraintHandle = *(int*)constraintCachePointer;
                 Solver.GetConstraintReference(constraintHandle, out var constraintReference);
-                //TODO: Check codegen; this if statement should JIT to a single path.
-                //We specialize the 1-contact case since the 'redistribution' is automatic.
+                Debug.Assert(constraintReference.typeBatchPointer != null);
                 var newImpulses = default(TContactImpulses);
-                if (typeof(TConstraintCache) == typeof(ConstraintCache1))
-                {
-                    accessor.GatherOldImpulses(ref constraintReference, (float*)Unsafe.AsPointer(ref newImpulses));
-                }
-                else
-                {
-                    var oldContactCount = PairCache.GetContactCount(constraintCacheIndex.Type);
-                    var oldImpulses = stackalloc float[oldContactCount];
-                    accessor.GatherOldImpulses(ref constraintReference, oldImpulses);
-                    //The first slot in the constraint cache is the constraint handle; the following slots are feature ids.
-                    RedistributeImpulses(oldContactCount, oldImpulses, (int*)constraintCachePointer + 1, manifold, ref newImpulses);
-                }
+                var oldContactCount = PairCache.GetContactCount(constraintCacheIndex.Type);
+                var oldImpulses = stackalloc float[oldContactCount];
+                accessor.GatherOldImpulses(ref constraintReference, oldImpulses);
+                //The first slot in the constraint cache is the constraint handle; the following slots are feature ids.
+                RedistributeImpulses(oldContactCount, oldImpulses, (int*)constraintCachePointer + 1, manifold, ref newImpulses);
 
                 if (manifoldTypeAsConstraintType == constraintReference.TypeBatch.TypeId)
                 {

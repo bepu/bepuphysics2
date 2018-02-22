@@ -171,10 +171,10 @@ namespace BepuPhysics.CollisionDetection
                     target.FeatureId2 = FeatureId2[0];
                     if (count > 3)
                     {
-                        target.Offset2.X = OffsetA2.X[0];
-                        target.Offset2.Y = OffsetA2.Y[0];
-                        target.Offset2.Z = OffsetA2.Z[0];
-                        target.Depth2 = Depth3[0];
+                        target.Offset3.X = OffsetA3.X[0];
+                        target.Offset3.Y = OffsetA3.Y[0];
+                        target.Offset3.Z = OffsetA3.Z[0];
+                        target.Depth3 = Depth3[0];
                         target.FeatureId3 = FeatureId3[0];
                     }
                 }

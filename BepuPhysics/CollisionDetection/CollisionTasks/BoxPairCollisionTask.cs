@@ -23,7 +23,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var z2 = rBZ.Z * rBZ.Z;
             {
                 //A.X x B.Z
-                var length = Vector.SquareRoot(x2 + y2);
+                var length = Vector.SquareRoot(y2 + z2);
                 var inverseLength = Vector<float>.One / length;
                 localNormalAX = Vector<float>.Zero;
                 localNormalAY = rBZ.Z * inverseLength;
@@ -55,7 +55,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             {
                 //A.Z x B.Z
-                var length = Vector.SquareRoot(y2 + z2);
+                var length = Vector.SquareRoot(x2 + y2);
                 var inverseLength = Vector<float>.One / length;
                 var nX = rBZ.Y * inverseLength;
                 var nY = -rBZ.X * inverseLength;
@@ -369,7 +369,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Choose the starting point for the contact reduction. Two options:
             //If depth disparity is high, use the deepest index.
             //If depth disparity is too small, use the extreme X index to avoid flickering between manifold start locations.
-            var useDepthIndex = Vector.GreaterThan(deepest.Depth - minDepth, new Vector<float>(1e-2f) * Vector.Max(halfSpanAX, Vector.Max(halfSpanAY, halfSpanAZ)));
+            //Note that using a raw absolute epsilon would have a varying effect based on the scale of the involved boxes.
+            //The minimum across the maxes is intended to avoid cases like a huge box being used as a plane, causing a massive size disparity.
+            //Using its sizes as a threshold would tend to kill off perfectly valid contacts.
+            var epsilonScale = Vector.Min(Vector.Max(halfSpanAX, Vector.Max(halfSpanAY, halfSpanAZ)), Vector.Max(halfSpanBX, Vector.Max(halfSpanBY, halfSpanBZ)));
+            var useDepthIndex = Vector.GreaterThan(deepest.Depth - minDepth, new Vector<float>(1e-2f) * epsilonScale);
             Candidate contact0;
             ConditionalSelect(ref useDepthIndex, ref deepest, ref extreme, ref contact0);
             var contact0Exists = Vector.GreaterThan(rawContactCount, Vector<int>.Zero);
@@ -388,10 +392,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 maxDistanceSquared = Vector.ConditionalSelect(candidateIsMostDistant, distanceSquared, maxDistanceSquared);
                 ConditionalSelect(ref candidateIsMostDistant, ref candidate, ref contact1, ref contact1);
             }
-            //Note that using a raw absolute epsilon would have a varying effect based on the scale of the involved boxes.
-            //The minimum across the maxes is intended to avoid cases like a huge box being used as a plane, causing a massive size disparity.
-            //Using its sizes as a threshold would tend to kill off perfectly valid contacts.
-            var epsilonScale = Vector.Min(Vector.Max(halfSpanAX, Vector.Max(halfSpanAY, halfSpanAZ)), Vector.Max(halfSpanBX, Vector.Max(halfSpanBY, halfSpanBZ)));
             //There's no point in additional contacts if the distance between the first and second candidates is zero. Note that this captures the case where there is 0 or 1 contact.
             var contact1Exists = Vector.GreaterThan(maxDistanceSquared, epsilonScale * epsilonScale * new Vector<float>(1e-6f));
             manifold.Count = Vector.ConditionalSelect(contact1Exists, manifold.Count + Vector<int>.One, manifold.Count);
