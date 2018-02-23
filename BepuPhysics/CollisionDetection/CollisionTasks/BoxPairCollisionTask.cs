@@ -154,7 +154,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Select(ref depth, ref localNormal, ref faceBZDepth, ref rB.Z.X, ref rB.Z.Y, ref rB.Z.Z);
 
             //Calibrate the normal to point from B to A, matching convention.
-            Vector3Wide.Dot(ref localNormal, ref offsetB, out var normalDotOffsetB);
+            Vector3Wide.Dot(ref localNormal, ref localOffsetB, out var normalDotOffsetB);
             var shouldNegateNormal = Vector.GreaterThan(normalDotOffsetB, Vector<float>.Zero);
             localNormal.X = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.X, localNormal.X);
             localNormal.Y = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.Y, localNormal.Y);

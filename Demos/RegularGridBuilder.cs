@@ -27,7 +27,7 @@ namespace Demos
                 {
                     Position = new Vector3(columnIndex, rowIndex, sliceIndex) * Spacing + Origin,
                     //Orientation = BepuUtilities.Quaternion.Identity
-                    Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathHelper.PiOver4)
+                    Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathHelper.PiOver2)
                 },
                 LocalInertia = LocalInertia,
                 Collidable = new CollidableDescription
