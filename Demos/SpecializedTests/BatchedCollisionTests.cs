@@ -95,8 +95,6 @@ namespace Demos.SpecializedTests
             registry.Register(new CapsulePairCollisionTask());
             registry.Register(new CapsuleBoxCollisionTask());
             registry.Register(new BoxPairCollisionTask());
-            var continuations = new ContinuationsTest();
-            var filters = new SubtaskFiltersTest();
             var sphere = new Sphere(1);
             var capsule = new Capsule(0.5f, 1f);
             var box = new Box(1f, 1f, 1f);
