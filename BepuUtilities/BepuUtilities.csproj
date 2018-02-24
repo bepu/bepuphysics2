@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Condition="'$(Configuration)'=='ReleaseStrip'" Command="dotnet &quot;$(SolutionDir)Dependencies\ilopt\ilopt.dll&quot; &quot;$(TargetPath)&quot;" />
+    <Exec Condition="'$(Configuration)'=='ReleaseStrip'" Command="dotnet &quot;$(ProjectDir)..\Dependencies\ilopt\ilopt.dll&quot; &quot;$(TargetPath)&quot;" />
   </Target>
     
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
