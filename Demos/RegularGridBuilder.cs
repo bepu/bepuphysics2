@@ -26,14 +26,15 @@ namespace Demos
                 Pose = new RigidPose
                 {
                     Position = new Vector3(columnIndex, rowIndex, sliceIndex) * Spacing + Origin,
-                    //Orientation = BepuUtilities.Quaternion.Identity
-                    Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathHelper.PiOver4 * 0.83f)
+                    Orientation = BepuUtilities.Quaternion.Identity
+                    //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathHelper.PiOver4 * 9.83f)
+                    //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0, 1, 0)), rowIndex * MathHelper.Pi * 0.1f)
                 },
                 LocalInertia = LocalInertia,
                 Collidable = new CollidableDescription
                 {
                     Continuity = new ContinuousDetectionSettings(),
-                    SpeculativeMargin = 0.1f,
+                    SpeculativeMargin = 0.2f,
                     Shape = ShapeIndex
                 },
                 Activity = new BodyActivityDescription

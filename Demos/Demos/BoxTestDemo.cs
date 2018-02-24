@@ -15,7 +15,7 @@ namespace Demos
     {
         public unsafe override void Initialize(Camera camera)
         {
-            camera.Position = new Vector3(-4, -2, -4);
+            camera.Position = new Vector3(-30, 15, -30);
             //camera.Yaw = MathHelper.Pi ; 
             camera.Yaw = MathHelper.Pi * 3f / 4;
             //camera.Pitch = MathHelper.Pi * 0.1f;
@@ -27,25 +27,25 @@ namespace Demos
             shape.ComputeLocalInverseInertia(localInertia.InverseMass, out localInertia.InverseInertiaTensor);
             //capsuleInertia.InverseInertiaTensor = new Triangular3x3();
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 1;
-            const int height = 1;
-            const int length = 1;
+            const int width = 4;
+            const int height = 64;
+            const int length = 4;
             var latticeSpacing = 1.1f;
             var latticeOffset = 0;// -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
-                new RegularGridBuilder(new Vector3(latticeSpacing, 2.1f, 2.25f * latticeSpacing), new Vector3(latticeOffset, 5, latticeOffset), localInertia, shapeIndex),
+                new RegularGridBuilder(new Vector3(latticeSpacing, 1.0f, latticeSpacing), new Vector3(latticeOffset, 0.5f, latticeOffset), localInertia, shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -50, 0);
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
             Simulation.Deterministic = false;
             //Simulation.Bodies.ActiveSet.Velocities[0].Linear = new Vector3(-2, 0, 0);
+            //Simulation.Solver.IterationCount = 4;
 
-
-            var staticShape = new Box(10, 1, 10);
+            var staticShape = new Box(1, 1, 1);
             var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
-            const int staticGridWidth = 1;
+            const int staticGridWidth = 100;
             const float staticSpacing = 1.2f;
-            var gridOffset = 0;// -0.5f * staticGridWidth * staticSpacing;
+            var gridOffset = -0.5f * staticGridWidth * staticSpacing;
             for (int i = 0; i < staticGridWidth; ++i)
             {
                 for (int j = 0; j < staticGridWidth; ++j)
@@ -61,12 +61,12 @@ namespace Demos
                         Pose = new RigidPose
                         {
                             Position = new Vector3(
-                                0f + gridOffset + i * staticSpacing,
-                                -4,
-                                0f + gridOffset + j * staticSpacing),
-                            Orientation = BepuUtilities.Quaternion.Identity
-                            //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1 + i, i * j % 10, -10 + -j)), (i ^ j) * 0.5f * (MathHelper.PiOver4))
-                            //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 0)), MathHelper.PiOver2)
+                                0 + gridOffset + i * staticSpacing,
+                                -0.5f,
+                                0 + gridOffset + j * staticSpacing),
+                            //Orientation = BepuUtilities.Quaternion.Identity
+                            Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1 + i, i * j % 10, -10 + -j)), (i ^ j) * 0.5f * (MathHelper.PiOver4))
+                            //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0, 0, 1)), MathHelper.Pi)
                         }
                     };
                     Simulation.Statics.Add(ref staticDescription);

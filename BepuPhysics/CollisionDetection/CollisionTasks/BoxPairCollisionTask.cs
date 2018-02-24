@@ -281,7 +281,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var flippedBX1Max = -bX1Min;
             var edgeIdBX1 = twiceAxisIdBX + axisIdBY * three + axisZEdgeIdContribution;
             AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref epsilonScale, ref flippedBX1Min, ref flippedBX1Max,
-                ref bX1Min, ref halfSpanBY, ref bX1Max, ref halfSpanBY, ref edgeIdBX1);
+                ref bX1Max, ref halfSpanBY, ref bX1Min, ref halfSpanBY, ref edgeIdBX1);
 
             var negativeHalfSpanBX = -halfSpanBX;
             var twiceAxisIdBY = axisIdBY * new Vector<int>(2);
@@ -291,7 +291,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var flippedBY0Max = -bY0Min;
             var edgeIdBY0 = axisIdBX + twiceAxisIdBY + axisZEdgeIdContribution;
             AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref epsilonScale, ref flippedBY0Min, ref flippedBY0Max,
-                ref negativeHalfSpanBX, ref bY0Min, ref negativeHalfSpanBX, ref bY0Max, ref edgeIdBY0);
+                ref negativeHalfSpanBX, ref bY0Max, ref negativeHalfSpanBX, ref bY0Min, ref edgeIdBY0);
             //Edge BY, +x offset
             var edgeIdBY1 = axisIdBX * three + twiceAxisIdBY + axisZEdgeIdContribution;
             AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref epsilonScale, ref bY1Min, ref bY1Max,
