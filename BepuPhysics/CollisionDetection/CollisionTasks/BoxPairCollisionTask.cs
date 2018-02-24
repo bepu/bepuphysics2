@@ -108,14 +108,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offsetB, ref worldRA, out var localOffsetB);
 
             Vector3Wide localNormal;
-            //b.X: XYZ -> YZX
+            //b.X
             TestEdgeEdge(
                 ref a.HalfWidth, ref a.HalfHeight, ref a.HalfLength,
                 ref b.HalfWidth, ref b.HalfHeight, ref b.HalfLength,
                 ref localOffsetB.X, ref localOffsetB.Y, ref localOffsetB.Z,
                 ref rB.X, ref rB.Y, ref rB.Z, ref rB.X,
                 out var depth, out localNormal.X, out localNormal.Y, out localNormal.Z);
-            //b.Y: XYZ -> XZY
+            //b.Y
             TestEdgeEdge(
                 ref a.HalfWidth, ref a.HalfHeight, ref a.HalfLength,
                 ref b.HalfWidth, ref b.HalfHeight, ref b.HalfLength,
@@ -124,7 +124,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 out var edgeYDepth, out var edgeYNX, out var edgeYNY, out var edgeYNZ);
             Select(ref depth, ref localNormal,
                 ref edgeYDepth, ref edgeYNX, ref edgeYNY, ref edgeYNZ);
-            //b.Z: XYZ -> XYZ
+            //b.Z
             TestEdgeEdge(
                 ref a.HalfWidth, ref a.HalfHeight, ref a.HalfLength,
                 ref b.HalfWidth, ref b.HalfHeight, ref b.HalfLength,
@@ -230,13 +230,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             axisIdBZ = Vector.ConditionalSelect(useBX, localXId, Vector.ConditionalSelect(useBY, localYId, localZId));
 
             //Calibrate normalB to face toward A, and normalA to face toward B.
-            Vector3Wide.Dot(ref normalA, ref offsetB, out var normalAOffsetB);
-            var shouldNegateNormalA = Vector.LessThan(normalAOffsetB, Vector<float>.Zero);
+            Vector3Wide.Dot(ref normalA, ref manifold.Normal, out var calibrationDotA);
+            var shouldNegateNormalA = Vector.GreaterThan(calibrationDotA, Vector<float>.Zero);
             normalA.X = Vector.ConditionalSelect(shouldNegateNormalA, -normalA.X, normalA.X);
             normalA.Y = Vector.ConditionalSelect(shouldNegateNormalA, -normalA.Y, normalA.Y);
             normalA.Z = Vector.ConditionalSelect(shouldNegateNormalA, -normalA.Z, normalA.Z);
-            Vector3Wide.Dot(ref normalB, ref offsetB, out var normalBOffsetB);
-            var shouldNegateNormalB = Vector.GreaterThan(normalBOffsetB, Vector<float>.Zero);
+            Vector3Wide.Dot(ref normalB, ref manifold.Normal, out var calibrationDotB);
+            var shouldNegateNormalB = Vector.LessThan(calibrationDotB, Vector<float>.Zero);
             normalB.X = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.X, normalB.X);
             normalB.Y = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Y, normalB.Y);
             normalB.Z = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Z, normalB.Z);

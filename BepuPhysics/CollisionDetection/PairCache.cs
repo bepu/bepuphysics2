@@ -289,7 +289,7 @@ namespace BepuPhysics.CollisionDetection
 #if DEBUG
             if (NextWorkerCaches.Span.Allocated)
             {
-                for (int i = 0; i < NextWorkerCaches.Span.Length; ++i)
+                for (int i = 0; i < NextWorkerCaches.Count; ++i)
                 {
                     Debug.Assert(NextWorkerCaches[i].Equals(default(WorkerPairCache)), "Outside of the execution of the narrow phase, the 'next' caches should not be allocated.");
                 }
@@ -307,7 +307,7 @@ namespace BepuPhysics.CollisionDetection
 #if DEBUG
             if (NextWorkerCaches.Span.Allocated)
             {
-                for (int i = 0; i < NextWorkerCaches.Span.Length; ++i)
+                for (int i = 0; i < NextWorkerCaches.Count; ++i)
                 {
                     Debug.Assert(NextWorkerCaches[i].Equals(default(WorkerPairCache)), "Outside of the execution of the narrow phase, the 'next' caches should not be allocated.");
                 }

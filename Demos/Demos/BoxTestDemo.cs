@@ -15,7 +15,7 @@ namespace Demos
     {
         public unsafe override void Initialize(Camera camera)
         {
-            camera.Position = new Vector3(-7, -2, -7);
+            camera.Position = new Vector3(-4, -2, -4);
             //camera.Yaw = MathHelper.Pi ; 
             camera.Yaw = MathHelper.Pi * 3f / 4;
             //camera.Pitch = MathHelper.Pi * 0.1f;
@@ -36,9 +36,9 @@ namespace Demos
                 new RegularGridBuilder(new Vector3(latticeSpacing, 2.1f, 2.25f * latticeSpacing), new Vector3(latticeOffset, 5, latticeOffset), localInertia, shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -50, 0);
             Simulation.Deterministic = false;
-            //Simulation.Bodies.ActiveSet.Velocities[0].Linear = new Vector3(-1, 0, 0);
+            //Simulation.Bodies.ActiveSet.Velocities[0].Linear = new Vector3(-2, 0, 0);
 
 
             var staticShape = new Box(10, 1, 10);
@@ -61,7 +61,7 @@ namespace Demos
                         Pose = new RigidPose
                         {
                             Position = new Vector3(
-                                5f + gridOffset + i * staticSpacing,
+                                0f + gridOffset + i * staticSpacing,
                                 -4,
                                 0f + gridOffset + j * staticSpacing),
                             Orientation = BepuUtilities.Quaternion.Identity
