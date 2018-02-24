@@ -14,38 +14,40 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref Vector<float> halfWidthB, ref Vector<float> halfHeightB, ref Vector<float> halfLengthB,
             ref Vector<float> offsetBX, ref Vector<float> offsetBY, ref Vector<float> offsetBZ,
             ref Vector3Wide rBX, ref Vector3Wide rBY, ref Vector3Wide rBZ,
+            ref Vector3Wide edgeBDirection,
             out Vector<float> depth, out Vector<float> localNormalAX, out Vector<float> localNormalAY, out Vector<float> localNormalAZ)
         {
-
-            //Tests one axis of B, passed as rBZ, against all three axes of A.
-            var x2 = rBZ.X * rBZ.X;
-            var y2 = rBZ.Y * rBZ.Y;
-            var z2 = rBZ.Z * rBZ.Z;
+            //Tests one axis of B against all three axes of A.
+            var x2 = edgeBDirection.X * edgeBDirection.X;
+            var y2 = edgeBDirection.Y * edgeBDirection.Y;
+            var z2 = edgeBDirection.Z * edgeBDirection.Z;
             {
-                //A.X x B.Z
+                //A.X x edgeB
                 var length = Vector.SquareRoot(y2 + z2);
                 var inverseLength = Vector<float>.One / length;
                 localNormalAX = Vector<float>.Zero;
-                localNormalAY = rBZ.Z * inverseLength;
-                localNormalAZ = -rBZ.Y * inverseLength;
-                var extremeA = Vector.Abs(localNormalAY) * halfHeightA + Vector.Abs(localNormalAZ) * halfLengthB;
+                localNormalAY = edgeBDirection.Z * inverseLength;
+                localNormalAZ = -edgeBDirection.Y * inverseLength;
+                var extremeA = Vector.Abs(localNormalAY) * halfHeightA + Vector.Abs(localNormalAZ) * halfLengthA;
                 var nBX = localNormalAY * rBX.Y + localNormalAZ * rBX.Z;
                 var nBY = localNormalAY * rBY.Y + localNormalAZ * rBY.Z;
-                var extremeB = Vector.Abs(nBX) * halfWidthB + Vector.Abs(nBY) * halfHeightB;
-                depth = extremeA + extremeB - Vector.Abs(offsetBY * localNormalAY) - Vector.Abs(offsetBZ * localNormalAZ);
+                var nBZ = localNormalAY * rBZ.Y + localNormalAZ * rBZ.Z;
+                var extremeB = Vector.Abs(nBX) * halfWidthB + Vector.Abs(nBY) * halfHeightB + Vector.Abs(nBZ) * halfLengthB;
+                depth = extremeA + extremeB - Vector.Abs(offsetBY * localNormalAY + offsetBZ * localNormalAZ);
                 depth = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-7f)), new Vector<float>(float.MaxValue), depth);
             }
             {
-                //A.Y x B.Z
+                //A.Y x edgeB
                 var length = Vector.SquareRoot(x2 + z2);
                 var inverseLength = Vector<float>.One / length;
-                var nX = rBZ.Z * inverseLength;
-                var nZ = -rBZ.X * inverseLength;
+                var nX = edgeBDirection.Z * inverseLength;
+                var nZ = -edgeBDirection.X * inverseLength;
                 var extremeA = Vector.Abs(nX) * halfWidthA + Vector.Abs(nZ) * halfLengthA;
                 var nBX = nX * rBX.X + nZ * rBX.Z;
                 var nBY = nX * rBY.X + nZ * rBY.Z;
-                var extremeB = Vector.Abs(nBX) * halfWidthB + Vector.Abs(nBY) * halfHeightB;
-                var d = extremeA + extremeB - Vector.Abs(offsetBX * nX) - Vector.Abs(offsetBZ * nZ);
+                var nBZ = nX * rBZ.X + nZ * rBZ.Z;
+                var extremeB = Vector.Abs(nBX) * halfWidthB + Vector.Abs(nBY) * halfHeightB + Vector.Abs(nBZ) * halfLengthB;
+                var d = extremeA + extremeB - Vector.Abs(offsetBX * nX + offsetBZ * nZ);
                 d = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-7f)), new Vector<float>(float.MaxValue), d);
                 var useY = Vector.LessThan(d, depth);
                 depth = Vector.ConditionalSelect(useY, d, depth);
@@ -54,16 +56,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 localNormalAZ = Vector.ConditionalSelect(useY, nZ, localNormalAZ);
             }
             {
-                //A.Z x B.Z
+                //A.Z x edgeB
                 var length = Vector.SquareRoot(x2 + y2);
                 var inverseLength = Vector<float>.One / length;
-                var nX = rBZ.Y * inverseLength;
-                var nY = -rBZ.X * inverseLength;
+                var nX = edgeBDirection.Y * inverseLength;
+                var nY = -edgeBDirection.X * inverseLength;
                 var extremeA = Vector.Abs(nX) * halfWidthA + Vector.Abs(nY) * halfHeightA;
                 var nBX = nX * rBX.X + nY * rBX.Y;
                 var nBY = nX * rBY.X + nY * rBY.Y;
-                var extremeB = Vector.Abs(nBX) * halfWidthB + Vector.Abs(nBY) * halfHeightB;
-                var d = extremeA + extremeB - Vector.Abs(offsetBX * nX) - Vector.Abs(offsetBY * nY);
+                var nBZ = nX * rBZ.X + nY * rBZ.Y;
+                var extremeB = Vector.Abs(nBX) * halfWidthB + Vector.Abs(nBY) * halfHeightB + Vector.Abs(nBZ) * halfLengthB;
+                var d = extremeA + extremeB - Vector.Abs(offsetBX * nX + offsetBY * nY);
                 d = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-7f)), new Vector<float>(float.MaxValue), d);
                 var useZ = Vector.LessThan(d, depth);
                 depth = Vector.ConditionalSelect(useZ, d, depth);
@@ -108,16 +111,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //b.X: XYZ -> YZX
             TestEdgeEdge(
                 ref a.HalfWidth, ref a.HalfHeight, ref a.HalfLength,
-                ref b.HalfHeight, ref b.HalfLength, ref b.HalfWidth,
+                ref b.HalfWidth, ref b.HalfHeight, ref b.HalfLength,
                 ref localOffsetB.X, ref localOffsetB.Y, ref localOffsetB.Z,
-                ref rB.Y, ref rB.Z, ref rB.X,
+                ref rB.X, ref rB.Y, ref rB.Z, ref rB.X,
                 out var depth, out localNormal.X, out localNormal.Y, out localNormal.Z);
             //b.Y: XYZ -> XZY
             TestEdgeEdge(
                 ref a.HalfWidth, ref a.HalfHeight, ref a.HalfLength,
-                ref b.HalfWidth, ref b.HalfLength, ref b.HalfHeight,
+                ref b.HalfWidth, ref b.HalfHeight, ref b.HalfLength,
                 ref localOffsetB.X, ref localOffsetB.Y, ref localOffsetB.Z,
-                ref rB.X, ref rB.Z, ref rB.Y,
+                ref rB.X, ref rB.Y, ref rB.Z, ref rB.Y,
                 out var edgeYDepth, out var edgeYNX, out var edgeYNY, out var edgeYNZ);
             Select(ref depth, ref localNormal,
                 ref edgeYDepth, ref edgeYNX, ref edgeYNY, ref edgeYNZ);
@@ -126,7 +129,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref a.HalfWidth, ref a.HalfHeight, ref a.HalfLength,
                 ref b.HalfWidth, ref b.HalfHeight, ref b.HalfLength,
                 ref localOffsetB.X, ref localOffsetB.Y, ref localOffsetB.Z,
-                ref rB.X, ref rB.Y, ref rB.Z,
+                ref rB.X, ref rB.Y, ref rB.Z, ref rB.Z,
                 out var edgeZDepth, out var edgeZNX, out var edgeZNY, out var edgeZNZ);
             Select(ref depth, ref localNormal,
                 ref edgeZDepth, ref edgeZNX, ref edgeZNY, ref edgeZNZ);
@@ -164,17 +167,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Contact generation always assumes face-face clipping. Other forms of contact generation are just special cases of face-face, and since we pay
             //for all code paths, there's no point in handling them separately.
             //We just have to guarantee that the face chosen on each box is guaranteed to include the deepest feature along the contact normal.
-            //To do this, choose the face on each box associated with the minimal depth of all of its face axes.
-            //Note that there are other options- choosing the face normal with greatest dot with the collision normal would also provide the same guarantee,
-            //but the depth choice sometimes chooses more appropriate faces.
+            //To do this, choose the face on each box associated with the maximum axis dot with the collision normal.
 
             //We represent each face as a center position, its two tangent axes, and the length along those axes.
             //Technically, we could leave A's tangents implicit by swizzling components, but that complicates things a little bit for not much gain.
             //Since we're not taking advantage of the dimension reduction of working in A's local space from here on out, just use the world axes to avoid a final retransform.
-            var minDepthA = Vector.Min(faceAXDepth, Vector.Min(faceAYDepth, faceAZDepth));
-            var useAX = Vector.Equals(minDepthA, faceAXDepth);
-            var useAY = Vector.AndNot(Vector.Equals(minDepthA, faceAYDepth), useAX);
-            var useAZ = Vector.OnesComplement(Vector.BitwiseOr(useAX, useAY));
+            Vector3Wide.Dot(ref manifold.Normal, ref worldRA.X, out var axDot);
+            Vector3Wide.Dot(ref manifold.Normal, ref worldRA.Y, out var ayDot);
+            Vector3Wide.Dot(ref manifold.Normal, ref worldRA.Z, out var azDot);
+            var absAXDot = Vector.Abs(axDot);
+            var absAYDot = Vector.Abs(ayDot);
+            var absAZDot = Vector.Abs(azDot);
+            var maxADot = Vector.Max(absAXDot, Vector.Max(absAYDot, absAZDot));
+            var useAX = Vector.Equals(maxADot, absAXDot);
+            var useAY = Vector.AndNot(Vector.Equals(maxADot, absAYDot), useAX);
             Vector3Wide tangentAX, tangentAY, normalA;
             Vector<float> halfSpanAX, halfSpanAY, halfSpanAZ;
             Vector<int> axisIdAX, axisIdAY, axisIdAZ;
@@ -196,9 +202,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             axisIdAY = Vector.ConditionalSelect(useAX, localYId, Vector.ConditionalSelect(useAY, localZId, localXId));
             axisIdAZ = Vector.ConditionalSelect(useAX, localXId, Vector.ConditionalSelect(useAY, localYId, localZId));
 
-            var minDepthB = Vector.Min(faceBXDepth, Vector.Min(faceBYDepth, faceBZDepth));
-            var useBX = Vector.Equals(minDepthB, faceBXDepth);
-            var useBY = Vector.AndNot(Vector.Equals(minDepthB, faceBYDepth), useBX);
+            Vector3Wide.Dot(ref manifold.Normal, ref worldRB.X, out var bxDot);
+            Vector3Wide.Dot(ref manifold.Normal, ref worldRB.Y, out var byDot);
+            Vector3Wide.Dot(ref manifold.Normal, ref worldRB.Z, out var bzDot);
+            var absBXDot = Vector.Abs(bxDot);
+            var absBYDot = Vector.Abs(byDot);
+            var absBZDot = Vector.Abs(bzDot);
+            var maxBDot = Vector.Max(absBXDot, Vector.Max(absBYDot, absBZDot));
+            var useBX = Vector.Equals(maxBDot, absBXDot);
+            var useBY = Vector.AndNot(Vector.Equals(maxBDot, absBYDot), useBX);
             Vector3Wide tangentBX, tangentBY, normalB;
             Vector<float> halfSpanBX, halfSpanBY, halfSpanBZ;
             Vector<int> axisIdBX, axisIdBY, axisIdBZ;
@@ -229,12 +241,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             normalB.Y = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Y, normalB.Y);
             normalB.Z = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Z, normalB.Z);
 
-            //Clip edges of B against the face bounds of A to collect all edge-bound contacts.         
-
+            //Clip edges of B against the face bounds of A to collect all edge-bound contacts.       
             Vector3Wide.Scale(ref normalB, ref halfSpanBZ, out var faceCenterB);
             Vector3Wide.Add(ref faceCenterB, ref offsetB, out faceCenterB);
             Vector3Wide.Scale(ref tangentBY, ref halfSpanBY, out var edgeOffsetBX);
-            Vector3Wide.Scale(ref tangentBX, ref halfSpanBX, out var edgeOffsetBY);
+            Vector3Wide.Scale(ref tangentBX, ref halfSpanBX, out var edgeOffsetBY);        
             Vector3Wide.Dot(ref tangentAX, ref tangentBX, out var axbx);
             Vector3Wide.Dot(ref tangentAY, ref tangentBX, out var aybx);
             Vector3Wide.Dot(ref tangentAX, ref tangentBY, out var axby);
@@ -475,18 +486,23 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref Vector3Wide tangentBX, ref Vector3Wide tangentBY, ref Vector<float> halfSpanBX, ref Vector<float> halfSpanBY,
             ref Candidate candidates, ref Vector<int> rawContactCount)
         {
-            //Get the closest point on face B to vertex A. Note that this may generate contacts even if the projected vertex would be outside of face B.
+            //Get the closest point on face B to vertex A.
+            //Note that contacts outside of face B are not added; that could generate contacts outside of either representative face, which can cause some poor contact choices.
             Candidate candidate;
             candidate.FeatureId = vertexId;
             Vector3Wide.Dot(ref faceCenterBToVertexA, ref tangentBX, out candidate.X);
             Vector3Wide.Dot(ref faceCenterBToVertexA, ref tangentBY, out candidate.Y);
-            candidate.X = Vector.Min(Vector.Max(candidate.X, -halfSpanBX), halfSpanBX);
-            candidate.Y = Vector.Min(Vector.Max(candidate.Y, -halfSpanBY), halfSpanBY);
+            var containedInFaceB = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(Vector.GreaterThanOrEqual(candidate.X, -halfSpanBX), Vector.LessThanOrEqual(candidate.X, halfSpanBX)),
+                Vector.BitwiseAnd(Vector.GreaterThanOrEqual(candidate.Y, -halfSpanBY), Vector.LessThanOrEqual(candidate.Y, halfSpanBY)));
+            //candidate.X = Vector.Min(Vector.Max(candidate.X, -halfSpanBX), halfSpanBX);
+            //candidate.Y = Vector.Min(Vector.Max(candidate.Y, -halfSpanBY), halfSpanBY);
             //While we explicitly used an epsilon during edge contact generation, there is a risk of buffer overrun during the face vertex phase.
             //Rather than assuming our numerical epsilon is guaranteed to always work, explicitly clamp the count. This should essentially never be needed,
             //but it is very cheap and guarantees no memory stomping with a pretty reasonable fallback.
             var belowBufferCapacity = Vector.LessThan(rawContactCount, new Vector<int>(8));
-            AddContactCandidate(ref candidates, ref candidate, ref belowBufferCapacity, ref rawContactCount);
+            var contactExists = Vector.BitwiseAnd(containedInFaceB, belowBufferCapacity);
+            AddContactCandidate(ref candidates, ref candidate, ref contactExists, ref rawContactCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
