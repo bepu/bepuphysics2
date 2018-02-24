@@ -16,38 +16,10 @@ namespace Demos
     {
         static void Main(string[] args)
         {
-            ConstraintDescriptionMappingTests.Test();
-            //RayTesting.Test<Box, BoxRayTester>();
-            //RayTesting.Test<Capsule, CapsuleRayTester>();
-            //RayTesting.Test<Sphere, SphereRayTester>();
-            //InertiaTensorTests.Test();
-            //HeadlessDemo.Test<ReactivateTests>(0, 1024);
-            //OperatorCodegenTests.Test();
             //ConstraintDescriptionMappingTests.Test();
-            //CollidablePairComparerTests.Test();
-            //HeadlessDemo.Simple();
-            //BatchedCollisionTests.Test();
-            //TypeIdCodeGenTests.Test();
-            //DeterminismTest.Test();
-            //return;
-            //ScalarWideTests.Test();
-            //DenseFlagTests.Test();
-            //VirtualOverheadTest.Test();
-            //TreeTest.Test();
-            //ReinterpretVectorRepro.Test();
-            //TriangularTests.Test();
-            //LocalsinitCodegen.Test();
-            //InterlockedOverheadTests.Test();
-            //LocalsinitCodegen.Test();
-            //AutoTester.Test();
-            //BallSocketConvergenceTests.Test();
-            //MemoryResizeTests.Test();
-            //DisposeTests.Test();
-            //ConstraintCacheOptimizationTests.Test();
-            //SortTest.Test();
-            //SpanCodegenTests.Test();
-            //IntertreeThreadingTests.Test();
-            //return;
+
+            BatchedCollisionTests.Test();
+
 
             //Console.ReadKey();
             var window = new Window("pretty cool multicolored window",

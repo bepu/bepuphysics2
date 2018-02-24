@@ -57,7 +57,7 @@ namespace BepuPhysics.Constraints.Contact
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact3 description)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var source = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var source = ref GetOffsetInstance(ref Buffer<Contact3PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             description.Contact0.OffsetA.X = GetFirst(ref source.OffsetA0.X);
             description.Contact0.OffsetA.Y = GetFirst(ref source.OffsetA0.Y);
             description.Contact0.OffsetA.Z = GetFirst(ref source.OffsetA0.Z);

@@ -34,7 +34,7 @@ namespace Demos
                 Collidable = new CollidableDescription
                 {
                     Continuity = new ContinuousDetectionSettings(),
-                    SpeculativeMargin = 0.2f,
+                    SpeculativeMargin = 0.04f,
                     Shape = ShapeIndex
                 },
                 Activity = new BodyActivityDescription

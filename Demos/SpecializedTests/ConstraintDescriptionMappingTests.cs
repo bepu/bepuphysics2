@@ -106,8 +106,11 @@ namespace Demos.SpecializedTests
             var random = new Random(5);
             Test<Contact1OneBody>(pool, random, 1);
             Test<Contact2OneBody>(pool, random, 1);
+            Test<Contact3OneBody>(pool, random, 1);
+            Test<Contact4OneBody>(pool, random, 1);
             Test<Contact1>(pool, random, 2);
             Test<Contact2>(pool, random, 2);
+            Test<Contact3>(pool, random, 2);
             Test<Contact4>(pool, random, 2);
             Test<BallSocket>(pool, random, 2);
 

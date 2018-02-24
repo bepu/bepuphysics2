@@ -48,20 +48,39 @@ namespace Demos.SpecializedTests
             {
                 return true;
             }
-            
+
             public unsafe void Configure(CollidablePair parent, int childA, int childB, ContactManifold* manifold)
             {
             }
         }
 
-        static double Test(Action<int> action, int iterationCount)
+        static void TestPair<TA, TB>(ref TA a, ref TB b, ref RigidPose poseA, ref RigidPose poseB,
+            ref ContinuationsTest continuations, ref SubtaskFiltersTest filters, BufferPool pool, CollisionTaskRegistry registry, int iterationCount)
+            where TA : struct, IShape where TB : struct, IShape
         {
-            action(64);
+            var batcher = new StreamingBatcher(pool, registry);
+            for (int i = 0; i < iterationCount; ++i)
+            {
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
+            }
+            batcher.Flush(ref continuations, ref filters);
+        }
 
+        static void Test<TA, TB>(ref TA a, ref TB b, ref RigidPose poseA, ref RigidPose poseB,
+            BufferPool pool, CollisionTaskRegistry registry, int iterationCount)
+                        where TA : struct, IShape where TB : struct, IShape
+        {
+            var continuations = new ContinuationsTest();
+            var filters = new SubtaskFiltersTest();
+            TestPair(ref a, ref b, ref poseA, ref poseB, ref continuations, ref filters, pool, registry, 64);
             var start = Stopwatch.GetTimestamp();
-            action(iterationCount);
+            TestPair(ref a, ref b, ref poseA, ref poseB, ref continuations, ref filters, pool, registry, iterationCount);
             var end = Stopwatch.GetTimestamp();
-            return (end - start) / (double)Stopwatch.Frequency;
+            var time = (end - start) / (double)Stopwatch.Frequency;
+            Console.WriteLine($"Completed {continuations.Count} {typeof(TA).Name}-{typeof(TB).Name} pairs, time (ms): {1e3 * time}, time per pair (ns): {1e9 * time / continuations.Count}");
         }
 
 
@@ -75,6 +94,7 @@ namespace Demos.SpecializedTests
             registry.Register(new SphereBoxCollisionTask());
             registry.Register(new CapsulePairCollisionTask());
             registry.Register(new CapsuleBoxCollisionTask());
+            registry.Register(new BoxPairCollisionTask());
             var continuations = new ContinuationsTest();
             var filters = new SubtaskFiltersTest();
             var sphere = new Sphere(1);
@@ -82,20 +102,13 @@ namespace Demos.SpecializedTests
             var box = new Box(1f, 1f, 1f);
             var poseA = new RigidPose { Position = new Vector3(0, 0, 0), Orientation = BepuUtilities.Quaternion.Identity };
             var poseB = new RigidPose { Position = new Vector3(0, 1, 0), Orientation = BepuUtilities.Quaternion.Identity };
-            void action(int iterationCount)
-            {
-                var batcher = new StreamingBatcher(pool, registry);
-                for (int i = 0; i < iterationCount; ++i)
-                {
-                    batcher.Add(ref capsule, ref capsule, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
-                    batcher.Add(ref capsule, ref capsule, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
-                    batcher.Add(ref capsule, ref capsule, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
-                    batcher.Add(ref capsule, ref capsule, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
-                }
-                batcher.Flush(ref continuations, ref filters);
-            }
-            var time0 = Test(action, 1<<25);
-            Console.WriteLine($"Completed count: {continuations.Count}, time (ms): {1e3 * time0}");
+
+            Test(ref sphere, ref sphere, ref poseA, ref poseB, pool, registry, 1 << 25);
+            Test(ref sphere, ref capsule, ref poseA, ref poseB, pool, registry, 1 << 25);
+            Test(ref sphere, ref box, ref poseA, ref poseB, pool, registry, 1 << 25);
+            Test(ref capsule, ref capsule, ref poseA, ref poseB, pool, registry, 1 << 25);
+            Test(ref capsule, ref box, ref poseA, ref poseB, pool, registry, 1 << 25);
+            Test(ref box, ref box, ref poseA, ref poseB, pool, registry, 1 << 25);
             Console.ReadKey();
         }
     }
