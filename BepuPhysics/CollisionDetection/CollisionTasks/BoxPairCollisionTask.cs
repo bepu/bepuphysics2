@@ -245,7 +245,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(ref normalB, ref halfSpanBZ, out var faceCenterB);
             Vector3Wide.Add(ref faceCenterB, ref offsetB, out faceCenterB);
             Vector3Wide.Scale(ref tangentBY, ref halfSpanBY, out var edgeOffsetBX);
-            Vector3Wide.Scale(ref tangentBX, ref halfSpanBX, out var edgeOffsetBY);        
+            Vector3Wide.Scale(ref tangentBX, ref halfSpanBX, out var edgeOffsetBY);
             Vector3Wide.Dot(ref tangentAX, ref tangentBX, out var axbx);
             Vector3Wide.Dot(ref tangentAY, ref tangentBX, out var aybx);
             Vector3Wide.Dot(ref tangentAX, ref tangentBY, out var axby);
@@ -290,11 +290,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var flippedBY0Min = -bY0Max;
             var flippedBY0Max = -bY0Min;
             var edgeIdBY0 = axisIdBX + twiceAxisIdBY + axisZEdgeIdContribution;
-            AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref epsilonScale, ref flippedBY0Min, ref flippedBY0Max,
+            AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBY, ref epsilonScale, ref flippedBY0Min, ref flippedBY0Max,
                 ref negativeHalfSpanBX, ref bY0Max, ref negativeHalfSpanBX, ref bY0Min, ref edgeIdBY0);
             //Edge BY, +x offset
             var edgeIdBY1 = axisIdBX * three + twiceAxisIdBY + axisZEdgeIdContribution;
-            AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref epsilonScale, ref bY1Min, ref bY1Max,
+            AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBY, ref epsilonScale, ref bY1Min, ref bY1Max,
                 ref halfSpanBX, ref bY1Min, ref halfSpanBX, ref bY1Max, ref edgeIdBY1);
 
             Vector3Wide.Scale(ref normalA, ref halfSpanAZ, out var faceCenterA);
@@ -366,6 +366,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Candidate deepest, extreme;
             deepest.Depth = new Vector<float>(-float.MaxValue);
             //minor todo: could try with a horizontal min on counts to avoid checking all 8 if no manifolds have all 8.
+
             for (int i = 0; i < 8; ++i)
             {
                 ref var candidate = ref Unsafe.Add(ref candidates, i);
