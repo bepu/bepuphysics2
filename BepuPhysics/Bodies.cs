@@ -477,8 +477,8 @@ namespace BepuPhysics
                 //TODO: remove this once the fix is in. It blocks inlining.
                 var hiPleaseDontRemoveThisWithoutTestingOrEverythingMightExplode = stackalloc byte[1];
             }
-            ref var targetInertiaBaseA = ref Unsafe.As<Vector<float>, float>(ref inertiaA.InverseInertiaTensor.M11);
-            ref var targetInertiaBaseB = ref Unsafe.As<Vector<float>, float>(ref inertiaB.InverseInertiaTensor.M11);
+            ref var targetInertiaBaseA = ref Unsafe.As<Vector<float>, float>(ref inertiaA.InverseInertiaTensor.XX);
+            ref var targetInertiaBaseB = ref Unsafe.As<Vector<float>, float>(ref inertiaB.InverseInertiaTensor.XX);
             Vector3Wide positionA, positionB;
             ref var targetPositionBaseA = ref Unsafe.As<Vector<float>, float>(ref positionA.X);
             ref var targetPositionBaseB = ref Unsafe.As<Vector<float>, float>(ref positionB.X);
@@ -518,8 +518,8 @@ namespace BepuPhysics
         internal void GatherInertia(ref TwoBodyReferences references, int count,
             out BodyInertias inertiaA, out BodyInertias inertiaB)
         {
-            ref var targetInertiaBaseA = ref Unsafe.As<Vector<float>, float>(ref inertiaA.InverseInertiaTensor.M11);
-            ref var targetInertiaBaseB = ref Unsafe.As<Vector<float>, float>(ref inertiaB.InverseInertiaTensor.M11);
+            ref var targetInertiaBaseA = ref Unsafe.As<Vector<float>, float>(ref inertiaA.InverseInertiaTensor.XX);
+            ref var targetInertiaBaseB = ref Unsafe.As<Vector<float>, float>(ref inertiaB.InverseInertiaTensor.XX);
 
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -537,7 +537,7 @@ namespace BepuPhysics
         internal void GatherInertia(ref Vector<int> references, int count,
             out BodyInertias inertiaA)
         {
-            ref var targetInertiaBaseA = ref Unsafe.As<Vector<float>, float>(ref inertiaA.InverseInertiaTensor.M11);
+            ref var targetInertiaBaseA = ref Unsafe.As<Vector<float>, float>(ref inertiaA.InverseInertiaTensor.XX);
 
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references);

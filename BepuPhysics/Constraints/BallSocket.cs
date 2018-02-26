@@ -124,9 +124,9 @@ namespace BepuPhysics.Constraints
 
             //Linear contributions are simply I * inverseMass * I, which is just boosting the diagonal.
             var linearContribution = projection.InertiaA.InverseMass + projection.InertiaB.InverseMass;
-            inverseEffectiveMass.M11 += linearContribution;
-            inverseEffectiveMass.M22 += linearContribution;
-            inverseEffectiveMass.M33 += linearContribution;
+            inverseEffectiveMass.XX += linearContribution;
+            inverseEffectiveMass.YY += linearContribution;
+            inverseEffectiveMass.ZZ += linearContribution;
             Triangular3x3Wide.SymmetricInvert(ref inverseEffectiveMass, out projection.EffectiveMass);
             Springiness.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Triangular3x3Wide.Scale(ref projection.EffectiveMass, ref effectiveMassCFMScale, out projection.EffectiveMass);

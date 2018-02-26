@@ -14,27 +14,27 @@ namespace BepuPhysics
         /// <summary>
         /// First row, first column of the matrix.
         /// </summary>
-        public Vector<float> M11;
+        public Vector<float> XX;
         /// <summary>
         /// Second row, first column of the matrix.
         /// </summary>
-        public Vector<float> M21;
+        public Vector<float> YX;
         /// <summary>
         /// Second row, second column of the matrix.
         /// </summary>
-        public Vector<float> M22;
+        public Vector<float> YY;
         /// <summary>
         /// Third row, first column of the matrix.
         /// </summary>
-        public Vector<float> M31;
+        public Vector<float> ZX;
         /// <summary>
         /// Third row, second column of the matrix.
         /// </summary>
-        public Vector<float> M32;
+        public Vector<float> ZY;
         /// <summary>
         /// Third row, third column of the matrix.
         /// </summary>
-        public Vector<float> M33;
+        public Vector<float> ZZ;
 
         /// <summary>
         /// Inverts the matrix as if it is a symmetric matrix where M32 == M23, M13 == M31, and M21 == M12.
@@ -44,60 +44,60 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SymmetricInvert(ref Triangular3x3Wide m, out Triangular3x3Wide inverse)
         {
-            var m11 = m.M22 * m.M33 - m.M32 * m.M32;
-            var m21 = m.M32 * m.M31 - m.M33 * m.M21;
-            var m31 = m.M21 * m.M32 - m.M31 * m.M22;
-            var determinantInverse = Vector<float>.One / (m11 * m.M11 + m21 * m.M21 + m31 * m.M31);
+            var xx = m.YY * m.ZZ - m.ZY * m.ZY;
+            var yx = m.ZY * m.ZX - m.ZZ * m.YX;
+            var zx = m.YX * m.ZY - m.ZX * m.YY;
+            var determinantInverse = Vector<float>.One / (xx * m.XX + yx * m.YX + zx * m.ZX);
 
-            var m22 = m.M33 * m.M11 - m.M31 * m.M31;
-            var m32 = m.M31 * m.M21 - m.M11 * m.M32;
+            var yy = m.ZZ * m.XX - m.ZX * m.ZX;
+            var zy = m.ZX * m.YX - m.XX * m.ZY;
 
-            var m33 = m.M11 * m.M22 - m.M21 * m.M21;
+            var zz = m.XX * m.YY - m.YX * m.YX;
 
-            inverse.M11 = m11 * determinantInverse;
-            inverse.M21 = m21 * determinantInverse;
-            inverse.M31 = m31 * determinantInverse;
-            inverse.M22 = m22 * determinantInverse;
-            inverse.M32 = m32 * determinantInverse;
-            inverse.M33 = m33 * determinantInverse;
+            inverse.XX = xx * determinantInverse;
+            inverse.YX = yx * determinantInverse;
+            inverse.ZX = zx * determinantInverse;
+            inverse.YY = yy * determinantInverse;
+            inverse.ZY = zy * determinantInverse;
+            inverse.ZZ = zz * determinantInverse;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Add(ref Triangular3x3Wide a, ref Triangular3x3Wide b, out Triangular3x3Wide sum)
         {
-            sum.M11 = a.M11 + b.M11;
-            sum.M21 = a.M21 + b.M21;
-            sum.M22 = a.M22 + b.M22;
-            sum.M31 = a.M31 + b.M31;
-            sum.M32 = a.M32 + b.M32;
-            sum.M33 = a.M33 + b.M33;
+            sum.XX = a.XX + b.XX;
+            sum.YX = a.YX + b.YX;
+            sum.YY = a.YY + b.YY;
+            sum.ZX = a.ZX + b.ZX;
+            sum.ZY = a.ZY + b.ZY;
+            sum.ZZ = a.ZZ + b.ZZ;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Scale(ref Triangular3x3Wide m, ref Vector<float> scale, out Triangular3x3Wide result)
         {
-            result.M11 = m.M11 * scale;
-            result.M21 = m.M21 * scale;
-            result.M22 = m.M22 * scale;
-            result.M31 = m.M31 * scale;
-            result.M32 = m.M32 * scale;
-            result.M33 = m.M33 * scale;
+            result.XX = m.XX * scale;
+            result.YX = m.YX * scale;
+            result.YY = m.YY * scale;
+            result.ZX = m.ZX * scale;
+            result.ZY = m.ZY * scale;
+            result.ZZ = m.ZZ * scale;
         }
 
         //If you ever need a triangular invert, a couple of options:
         //For matrices of the form:
-        //[ 1   0   0 ]
-        //[ M21 1   0 ]
-        //[ M31 M32 1 ]
+        //[ 1  0  0 ]
+        //[ YX 1  0 ]
+        //[ ZX ZY 1 ]
         //The inverse is simply:
-        //       [ 1                0     0 ]
-        //M^-1 = [ -M21             1     0 ]
-        //       [ M21 * M32 - M31  -M32  1 ]
+        //       [ 1               0   0 ]
+        //M^-1 = [ -YX             1   0 ]
+        //       [ YX * ZY - ZX   -ZY  1 ]
 
         //For a matrix with an arbitrary diagonal (that's still invertible):
-        //       [ 1/M11                               0               0     ]
-        //M^-1 = [ -M21/(M11*M22)                      1/M22           0     ]
-        //       [ -(M22*M31 - M21*M32)/(M11*M22*M33)  -M32/(M22*M33)  1/M33 ]
+        //       [ 1/XX                         0               0    ]
+        //M^-1 = [ -YX/(XX*YY)                  1/M22           0    ]
+        //       [ -(YY*ZX - YX*ZY)/(XX*YY*ZZ)  -ZY/(YY*ZZ)     1/ZZ ]
         //And with some refiddling, you could make all the denominators the same to avoid repeated divisions.
 
         /// <summary>
@@ -111,25 +111,25 @@ namespace BepuPhysics
         public static void SkewSandwichWithoutOverlap(ref Vector3Wide v, ref Triangular3x3Wide m, out Triangular3x3Wide sandwich)
         {
             //27 muls, 15 adds.
-            var x32 = v.X * m.M32;
-            var y31 = v.Y * m.M31;
-            var z21 = v.Z * m.M21;
-            var i11 = y31 - z21;
-            var i12 = v.Y * m.M32 - v.Z * m.M22;
-            var i13 = v.Y * m.M33 - v.Z * m.M32;
-            var i21 = v.Z * m.M11 - v.X * m.M31;
-            var i22 = z21 - x32;
-            var i23 = v.Z * m.M31 - v.X * m.M33;
-            var i31 = v.X * m.M21 - v.Y * m.M11;
-            var i32 = v.X * m.M22 - v.Y * m.M21;
-            var i33 = x32 - y31;
+            var xzy = v.X * m.ZY;
+            var yzx = v.Y * m.ZX;
+            var zyx = v.Z * m.YX;
+            var ixx = yzx - zyx;
+            var ixy = v.Y * m.ZY - v.Z * m.YY;
+            var ixz = v.Y * m.ZZ - v.Z * m.ZY;
+            var iyx = v.Z * m.XX - v.X * m.ZX;
+            var iyy = zyx - xzy;
+            var iyz = v.Z * m.ZX - v.X * m.ZZ;
+            var izx = v.X * m.YX - v.Y * m.XX;
+            var izy = v.X * m.YY - v.Y * m.YX;
+            var izz = xzy - yzx;
 
-            sandwich.M11 = v.Y * i13 - v.Z * i12;
-            sandwich.M21 = v.Y * i23 - v.Z * i22;
-            sandwich.M22 = v.Z * i21 - v.X * i23;
-            sandwich.M31 = v.Y * i33 - v.Z * i32;
-            sandwich.M32 = v.Z * i31 - v.X * i33;
-            sandwich.M33 = v.X * i32 - v.Y * i31;
+            sandwich.XX = v.Y * ixz - v.Z * ixy;
+            sandwich.YX = v.Y * iyz - v.Z * iyy;
+            sandwich.YY = v.Z * iyx - v.X * iyz;
+            sandwich.ZX = v.Y * izz - v.Z * izy;
+            sandwich.ZY = v.Z * izx - v.X * izz;
+            sandwich.ZZ = v.X * izy - v.Y * izx;
         }
 
         /// <summary>
@@ -144,9 +144,9 @@ namespace BepuPhysics
         {
             //This isn't actually fewer flops than the equivalent explicit operation, but it does avoid some struct locals and it's a pretty common operation.
             //(And at the moment, avoiding struct locals is unfortunately helpful for codegen reasons.)
-            var x = v.X * m.M11 + v.Y * m.M21 + v.Z * m.M31;
-            var y = v.X * m.M21 + v.Y * m.M22 + v.Z * m.M32;
-            var z = v.X * m.M31 + v.Y * m.M32 + v.Z * m.M33;
+            var x = v.X * m.XX + v.Y * m.YX + v.Z * m.ZX;
+            var y = v.X * m.YX + v.Y * m.YY + v.Z * m.ZY;
+            var z = v.X * m.ZX + v.Y * m.ZY + v.Z * m.ZZ;
             sandwich = x * v.X + y * v.Y + z * v.Z;
         }
         /// <summary>
@@ -158,24 +158,24 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void RotationSandwich(ref Matrix3x3Wide r, ref Triangular3x3Wide m, out Triangular3x3Wide sandwich)
         {
-            var i11 = r.X.X * m.M11 + r.Y.X * m.M21 + r.Z.X * m.M31;
-            var i12 = r.X.X * m.M21 + r.Y.X * m.M22 + r.Z.X * m.M32;
-            var i13 = r.X.X * m.M31 + r.Y.X * m.M32 + r.Z.X * m.M33;
+            var ixx = r.X.X * m.XX + r.Y.X * m.YX + r.Z.X * m.ZX;
+            var ixy = r.X.X * m.YX + r.Y.X * m.YY + r.Z.X * m.ZY;
+            var ixz = r.X.X * m.ZX + r.Y.X * m.ZY + r.Z.X * m.ZZ;
 
-            var i21 = r.X.Y * m.M11 + r.Y.Y * m.M21 + r.Z.Y * m.M31;
-            var i22 = r.X.Y * m.M21 + r.Y.Y * m.M22 + r.Z.Y * m.M32;
-            var i23 = r.X.Y * m.M31 + r.Y.Y * m.M32 + r.Z.Y * m.M33;
+            var iyx = r.X.Y * m.XX + r.Y.Y * m.YX + r.Z.Y * m.ZX;
+            var iyy = r.X.Y * m.YX + r.Y.Y * m.YY + r.Z.Y * m.ZY;
+            var iyz = r.X.Y * m.ZX + r.Y.Y * m.ZY + r.Z.Y * m.ZZ;
 
-            var i31 = r.X.Z * m.M11 + r.Y.Z * m.M21 + r.Z.Z * m.M31;
-            var i32 = r.X.Z * m.M21 + r.Y.Z * m.M22 + r.Z.Z * m.M32;
-            var i33 = r.X.Z * m.M31 + r.Y.Z * m.M32 + r.Z.Z * m.M33;
+            var izx = r.X.Z * m.XX + r.Y.Z * m.YX + r.Z.Z * m.ZX;
+            var izy = r.X.Z * m.YX + r.Y.Z * m.YY + r.Z.Z * m.ZY;
+            var izz = r.X.Z * m.ZX + r.Y.Z * m.ZY + r.Z.Z * m.ZZ;
 
-            sandwich.M11 = i11 * r.X.X + i12 * r.Y.X + i13 * r.Z.X;
-            sandwich.M21 = i21 * r.X.X + i22 * r.Y.X + i23 * r.Z.X;
-            sandwich.M22 = i21 * r.X.Y + i22 * r.Y.Y + i23 * r.Z.Y;
-            sandwich.M31 = i31 * r.X.X + i32 * r.Y.X + i33 * r.Z.X;
-            sandwich.M32 = i31 * r.X.Y + i32 * r.Y.Y + i33 * r.Z.Y;
-            sandwich.M33 = i31 * r.X.Z + i32 * r.Y.Z + i33 * r.Z.Z;
+            sandwich.XX = ixx * r.X.X + ixy * r.Y.X + ixz * r.Z.X;
+            sandwich.YX = iyx * r.X.X + iyy * r.Y.X + iyz * r.Z.X;
+            sandwich.YY = iyx * r.X.Y + iyy * r.Y.Y + iyz * r.Z.Y;
+            sandwich.ZX = izx * r.X.X + izy * r.Y.X + izz * r.Z.X;
+            sandwich.ZY = izx * r.X.Y + izy * r.Y.Y + izz * r.Z.Y;
+            sandwich.ZZ = izx * r.X.Z + izy * r.Y.Z + izz * r.Z.Z;
         }
 
         /// <summary>
@@ -187,12 +187,12 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void MultiplyBySymmetricWithoutOverlap(ref Matrix2x3Wide a, ref Triangular3x3Wide b, out Matrix2x3Wide result)
         {
-            result.X.X = a.X.X * b.M11 + a.X.Y * b.M21 + a.X.Z * b.M31;
-            result.X.Y = a.X.X * b.M21 + a.X.Y * b.M22 + a.X.Z * b.M32;
-            result.X.Z = a.X.X * b.M31 + a.X.Y * b.M32 + a.X.Z * b.M33;
-            result.Y.X = a.Y.X * b.M11 + a.Y.Y * b.M21 + a.Y.Z * b.M31;
-            result.Y.Y = a.Y.X * b.M21 + a.Y.Y * b.M22 + a.Y.Z * b.M32;
-            result.Y.Z = a.Y.X * b.M31 + a.Y.Y * b.M32 + a.Y.Z * b.M33;
+            result.X.X = a.X.X * b.XX + a.X.Y * b.YX + a.X.Z * b.ZX;
+            result.X.Y = a.X.X * b.YX + a.X.Y * b.YY + a.X.Z * b.ZY;
+            result.X.Z = a.X.X * b.ZX + a.X.Y * b.ZY + a.X.Z * b.ZZ;
+            result.Y.X = a.Y.X * b.XX + a.Y.Y * b.YX + a.Y.Z * b.ZX;
+            result.Y.Y = a.Y.X * b.YX + a.Y.Y * b.YY + a.Y.Z * b.ZY;
+            result.Y.Z = a.Y.X * b.ZX + a.Y.Y * b.ZY + a.Y.Z * b.ZZ;
         }
 
         /// <summary>
@@ -204,23 +204,23 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void MatrixSandwich(ref Matrix2x3Wide m, ref Triangular3x3Wide t, out Triangular2x2Wide result)
         {
-            var i11 = m.X.X * t.M11 + m.X.Y * t.M21 + m.X.Z * t.M31;
-            var i12 = m.X.X * t.M21 + m.X.Y * t.M22 + m.X.Z * t.M32;
-            var i13 = m.X.X * t.M31 + m.X.Y * t.M32 + m.X.Z * t.M33;
-            var i21 = m.Y.X * t.M11 + m.Y.Y * t.M21 + m.Y.Z * t.M31;
-            var i22 = m.Y.X * t.M21 + m.Y.Y * t.M22 + m.Y.Z * t.M32;
-            var i23 = m.Y.X * t.M31 + m.Y.Y * t.M32 + m.Y.Z * t.M33;
-            result.M11 = i11 * m.X.X + i12 * m.X.Y + i13 * m.X.Z;
-            result.M21 = i21 * m.X.X + i22 * m.X.Y + i23 * m.X.Z;
-            result.M22 = i21 * m.Y.X + i22 * m.Y.Y + i23 * m.Y.Z;
+            var ixx = m.X.X * t.XX + m.X.Y * t.YX + m.X.Z * t.ZX;
+            var ixy = m.X.X * t.YX + m.X.Y * t.YY + m.X.Z * t.ZY;
+            var ixz = m.X.X * t.ZX + m.X.Y * t.ZY + m.X.Z * t.ZZ;
+            var iyx = m.Y.X * t.XX + m.Y.Y * t.YX + m.Y.Z * t.ZX;
+            var iyy = m.Y.X * t.YX + m.Y.Y * t.YY + m.Y.Z * t.ZY;
+            var iyz = m.Y.X * t.ZX + m.Y.Y * t.ZY + m.Y.Z * t.ZZ;
+            result.XX = ixx * m.X.X + ixy * m.X.Y + ixz * m.X.Z;
+            result.YX = iyx * m.X.X + iyy * m.X.Y + iyz * m.X.Z;
+            result.YY = iyx * m.Y.X + iyy * m.Y.Y + iyz * m.Y.Z;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void TransformBySymmetricWithoutOverlap(ref Vector3Wide v, ref Triangular3x3Wide m, out Vector3Wide result)
         {
-            result.X = v.X * m.M11 + v.Y * m.M21 + v.Z * m.M31;
-            result.Y = v.X * m.M21 + v.Y * m.M22 + v.Z * m.M32;
-            result.Z = v.X * m.M31 + v.Y * m.M32 + v.Z * m.M33;
+            result.X = v.X * m.XX + v.Y * m.YX + v.Z * m.ZX;
+            result.Y = v.X * m.YX + v.Y * m.YY + v.Z * m.ZY;
+            result.Z = v.X * m.ZX + v.Y * m.ZY + v.Z * m.ZZ;
         }
 
 

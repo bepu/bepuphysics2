@@ -55,12 +55,12 @@ namespace Demos.SpecializedTests
             {
                 throw new Exception("Matrix not symmetric; shouldn't compare against a symmetric triangular matrix.");
             }
-            var e11 = MeasureError(m.X.X, t.M11[0]);
-            var e21 = MeasureError(m.Y.X, t.M21[0]);
-            var e22 = MeasureError(m.Y.Y, t.M22[0]);
-            var e31 = MeasureError(m.Z.X, t.M31[0]);
-            var e32 = MeasureError(m.Z.Y, t.M32[0]);
-            var e33 = MeasureError(m.Z.Z, t.M33[0]);
+            var e11 = MeasureError(m.X.X, t.XX[0]);
+            var e21 = MeasureError(m.Y.X, t.YX[0]);
+            var e22 = MeasureError(m.Y.Y, t.YY[0]);
+            var e31 = MeasureError(m.Z.X, t.ZX[0]);
+            var e32 = MeasureError(m.Z.Y, t.ZY[0]);
+            var e33 = MeasureError(m.Z.Z, t.ZZ[0]);
             if (e11 > epsilon ||
                 e21 > epsilon ||
                 e22 > epsilon ||
@@ -78,9 +78,9 @@ namespace Demos.SpecializedTests
             {
                 throw new Exception("Matrix not symmetric; shouldn't compare against a symmetric triangular matrix.");
             }
-            var e11 = MeasureError(m.X.X[0], t.M11[0]);
-            var e21 = MeasureError(m.Y.X[0], t.M21[0]);
-            var e22 = MeasureError(m.Y.Y[0], t.M22[0]);
+            var e11 = MeasureError(m.X.X[0], t.XX[0]);
+            var e21 = MeasureError(m.Y.X[0], t.YX[0]);
+            var e22 = MeasureError(m.Y.Y[0], t.YY[0]);
             if (e11 > epsilon ||
                 e21 > epsilon ||
                 e22 > epsilon)
@@ -334,12 +334,12 @@ namespace Demos.SpecializedTests
                     M33 = (float)random.NextDouble() * 2 + 1,
                 };
                 Triangular3x3Wide triangularWide;
-                triangularWide.M11 = new Vector<float>(triangular.M11);
-                triangularWide.M21 = new Vector<float>(triangular.M21);
-                triangularWide.M22 = new Vector<float>(triangular.M22);
-                triangularWide.M31 = new Vector<float>(triangular.M31);
-                triangularWide.M32 = new Vector<float>(triangular.M32);
-                triangularWide.M33 = new Vector<float>(triangular.M33);
+                triangularWide.XX = new Vector<float>(triangular.M11);
+                triangularWide.YX = new Vector<float>(triangular.M21);
+                triangularWide.YY = new Vector<float>(triangular.M22);
+                triangularWide.ZX = new Vector<float>(triangular.M31);
+                triangularWide.ZY = new Vector<float>(triangular.M32);
+                triangularWide.ZZ = new Vector<float>(triangular.M33);
 
                 var symmetric = new Matrix3x3
                 {
