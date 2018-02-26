@@ -122,8 +122,8 @@ namespace BepuPhysics.Constraints
             //Triangular2x2Wide.InvertWithoutOverlap(ref inverseEffectiveMass, out var effectiveMass);
 
             //This computes the effective mass using the usual (J * M^-1 * JT)^-1 formulation, but we actually make use of the intermediate result J * M^-1 so we compute it directly.
-            Triangular3x3Wide.Multiply(ref jacobianA, ref inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
-            Triangular3x3Wide.Multiply(ref jacobianA, ref inertiaB.InverseInertiaTensor, out projection.ImpulseToVelocityA);
+            Triangular3x3Wide.MultiplyBySymmetricWithoutOverlap(ref jacobianA, ref inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
+            Triangular3x3Wide.MultiplyBySymmetricWithoutOverlap(ref jacobianA, ref inertiaB.InverseInertiaTensor, out projection.ImpulseToVelocityA);
             Triangular2x2Wide.CompleteMatrixSandwich(ref projection.ImpulseToVelocityA, ref jacobianA, out var angularA);
             Triangular2x2Wide.CompleteMatrixSandwich(ref projection.ImpulseToVelocityB, ref jacobianA, out var angularB);
             Triangular2x2Wide.Add(ref angularA, ref angularB, out var inverseEffectiveMass);
@@ -132,7 +132,7 @@ namespace BepuPhysics.Constraints
 
             Springiness.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Triangular2x2Wide.Scale(ref effectiveMass, ref effectiveMassCFMScale, out effectiveMass);
-            Triangular2x2Wide.MultiplyTransposed(ref jacobianA, ref effectiveMass, out projection.VelocityToImpulseA);
+            Triangular2x2Wide.MultiplyTransposedBySymmetric(ref jacobianA, ref effectiveMass, out projection.VelocityToImpulseA);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             Vector2Wide error;

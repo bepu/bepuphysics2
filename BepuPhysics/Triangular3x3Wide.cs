@@ -178,10 +178,21 @@ namespace BepuPhysics
             sandwich.M33 = i31 * r.X.Z + i32 * r.Y.Z + i33 * r.Z.Z;
         }
 
+        /// <summary>
+        /// Computes result = a * b, assuming that b represents a symmetric 3x3 matrix. Assumes that input parameters and output result do not overlap.
+        /// </summary>
+        /// <param name="a">First matrix of the pair to multiply.</param>
+        /// <param name="b">Matrix to be reinterpreted as symmetric for the multiply.</param>
+        /// <param name="result">Result of multiplying a * b.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void MultiplyBySymmetricWithoutOverlap(ref Matrix2x3Wide a, ref Triangular3x3Wide t, out Matrix2x3Wide result)
+        public static void MultiplyBySymmetricWithoutOverlap(ref Matrix2x3Wide a, ref Triangular3x3Wide b, out Matrix2x3Wide result)
         {
-            result.X = 
+            result.X.X = a.X.X * b.M11 + a.X.Y * b.M21 + a.X.Z * b.M31;
+            result.X.Y = a.X.X * b.M21 + a.X.Y * b.M22 + a.X.Z * b.M32;
+            result.X.Z = a.X.X * b.M31 + a.X.Y * b.M32 + a.X.Z * b.M33;
+            result.Y.X = a.Y.X * b.M11 + a.Y.Y * b.M21 + a.Y.Z * b.M31;
+            result.Y.Y = a.Y.X * b.M21 + a.Y.Y * b.M22 + a.Y.Z * b.M32;
+            result.Y.Z = a.Y.X * b.M31 + a.Y.Y * b.M32 + a.Y.Z * b.M33;
         }
 
         /// <summary>
