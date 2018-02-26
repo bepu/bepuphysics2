@@ -459,7 +459,7 @@ namespace BepuPhysics
         //In order to support other absolute positions, we'll need alternate implementations of this and other functions.
         //But for the most part, we don't want to pay the overhead of an abstract invocation within the inner loop of the solver. 
         //Given the current limits of C# and the compiler, the best option seems to be a interface implementing struct that provides this functionality.
-        //The users would be type specialized by the compiler, avoiding virtual invocation. 
+        //The users would be type specialized by the compiler, avoiding virtual invocation. Or just conditional compilation.
         [MethodImpl(MethodImplOptions.AggressiveInlining)] //Note that this doesn't do anything at the moment- the stackalloc hack blocks inlining.
         internal void GatherInertiaAndPose(ref TwoBodyReferences references, int count,
             out Vector3Wide localPositionB, out QuaternionWide orientationA, out QuaternionWide orientationB,
@@ -555,8 +555,8 @@ namespace BepuPhysics
             Debug.Assert(count <= Vector<float>.Count);
             ref var targetPositionBase = ref Unsafe.As<Vector<float>, float>(ref poses.Position.X);
             ref var targetOrientationBase = ref Unsafe.As<Vector<float>, float>(ref poses.Orientation.X);
-            ref var targetLinearBase = ref Unsafe.As<Vector<float>, float>(ref velocities.LinearVelocity.X);
-            ref var targetAngularBase = ref Unsafe.As<Vector<float>, float>(ref velocities.AngularVelocity.X);
+            ref var targetLinearBase = ref Unsafe.As<Vector<float>, float>(ref velocities.Linear.X);
+            ref var targetAngularBase = ref Unsafe.As<Vector<float>, float>(ref velocities.Angular.X);
             ref var targetShapeBase = ref Unsafe.As<Vector<int>, int>(ref shapeIndices);
             ref var targetExpansionBase = ref Unsafe.As<Vector<float>, float>(ref maximumExpansion);
             ref var activeSet = ref ActiveSet;

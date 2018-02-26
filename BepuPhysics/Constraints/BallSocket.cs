@@ -156,17 +156,17 @@ namespace BepuPhysics.Constraints
         {
             Vector3Wide.CrossWithoutOverlap(ref projection.OffsetA, ref csi, out var wsi);
             Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref wsi, ref projection.InertiaA.InverseInertiaTensor, out var change);
-            Vector3Wide.Add(ref velocityA.AngularVelocity, ref change, out velocityA.AngularVelocity);
+            Vector3Wide.Add(ref velocityA.Angular, ref change, out velocityA.Angular);
 
             Vector3Wide.Scale(ref csi, ref projection.InertiaA.InverseMass, out change);
-            Vector3Wide.Add(ref velocityA.LinearVelocity, ref change, out velocityA.LinearVelocity);
+            Vector3Wide.Add(ref velocityA.Linear, ref change, out velocityA.Linear);
 
             Vector3Wide.CrossWithoutOverlap(ref csi, ref projection.OffsetB, out wsi); //note flip-negation
             Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref wsi, ref projection.InertiaB.InverseInertiaTensor, out change);
-            Vector3Wide.Add(ref velocityB.AngularVelocity, ref change, out velocityB.AngularVelocity);
+            Vector3Wide.Add(ref velocityB.Angular, ref change, out velocityB.Angular);
 
             Vector3Wide.Scale(ref csi, ref projection.InertiaB.InverseMass, out change);
-            Vector3Wide.Subtract(ref velocityB.LinearVelocity, ref change, out velocityB.LinearVelocity); //note subtraction; the jacobian is -I
+            Vector3Wide.Subtract(ref velocityB.Linear, ref change, out velocityB.Linear); //note subtraction; the jacobian is -I
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -180,11 +180,11 @@ namespace BepuPhysics.Constraints
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             //Note subtraction; jLinearB = -I.
-            Vector3Wide.Subtract(ref velocityA.LinearVelocity, ref velocityB.LinearVelocity, out var csv);
-            Vector3Wide.CrossWithoutOverlap(ref velocityA.AngularVelocity, ref projection.OffsetA, out var angularCSV);
+            Vector3Wide.Subtract(ref velocityA.Linear, ref velocityB.Linear, out var csv);
+            Vector3Wide.CrossWithoutOverlap(ref velocityA.Angular, ref projection.OffsetA, out var angularCSV);
             Vector3Wide.Add(ref csv, ref angularCSV, out csv);
             //Note reversed cross order; matches the jacobian -CrossMatrix(offsetB).
-            Vector3Wide.CrossWithoutOverlap(ref projection.OffsetB, ref velocityB.AngularVelocity, out angularCSV);
+            Vector3Wide.CrossWithoutOverlap(ref projection.OffsetB, ref velocityB.Angular, out angularCSV);
             Vector3Wide.Add(ref csv, ref angularCSV, out csv);
             Vector3Wide.Subtract(ref projection.BiasVelocity, ref csv, out csv);
 

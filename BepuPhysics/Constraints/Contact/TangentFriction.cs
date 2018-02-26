@@ -79,7 +79,7 @@ namespace BepuPhysics.Constraints.Contact
             Triangular2x2Wide.Add(ref linearContributionA, ref linearContributionB, out var linear);
             Triangular2x2Wide.Add(ref angularContributionA, ref angularContributionB, out var angular);
             Triangular2x2Wide.Add(ref linear, ref angular, out var inverseEffectiveMass);
-            Triangular2x2Wide.InvertWithoutOverlap(ref inverseEffectiveMass, out projection.EffectiveMass);
+            Triangular2x2Wide.SymmetricInvertWithoutOverlap(ref inverseEffectiveMass, out projection.EffectiveMass);
             projection.OffsetA = offsetA;
             projection.OffsetB = offsetB;
 
@@ -97,14 +97,14 @@ namespace BepuPhysics.Constraints.Contact
             Matrix2x3Wide.Transform(ref correctiveImpulse, ref jacobians.AngularA, out var angularImpulseA);
             Matrix2x3Wide.Transform(ref correctiveImpulse, ref jacobians.AngularB, out var angularImpulseB);
             BodyVelocities correctiveVelocityA, correctiveVelocityB;
-            Vector3Wide.Scale(ref linearImpulseA, ref inertiaA.InverseMass, out correctiveVelocityA.LinearVelocity);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref angularImpulseA, ref inertiaA.InverseInertiaTensor, out correctiveVelocityA.AngularVelocity);
-            Vector3Wide.Scale(ref linearImpulseA, ref inertiaB.InverseMass, out correctiveVelocityB.LinearVelocity);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref angularImpulseB, ref inertiaB.InverseInertiaTensor, out correctiveVelocityB.AngularVelocity);
-            Vector3Wide.Add(ref wsvA.LinearVelocity, ref correctiveVelocityA.LinearVelocity, out wsvA.LinearVelocity);
-            Vector3Wide.Add(ref wsvA.AngularVelocity, ref correctiveVelocityA.AngularVelocity, out wsvA.AngularVelocity);
-            Vector3Wide.Subtract(ref wsvB.LinearVelocity, ref correctiveVelocityB.LinearVelocity, out wsvB.LinearVelocity); //note subtract- we based it on the LinearA jacobian.
-            Vector3Wide.Add(ref wsvB.AngularVelocity, ref correctiveVelocityB.AngularVelocity, out wsvB.AngularVelocity);
+            Vector3Wide.Scale(ref linearImpulseA, ref inertiaA.InverseMass, out correctiveVelocityA.Linear);
+            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref angularImpulseA, ref inertiaA.InverseInertiaTensor, out correctiveVelocityA.Angular);
+            Vector3Wide.Scale(ref linearImpulseA, ref inertiaB.InverseMass, out correctiveVelocityB.Linear);
+            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref angularImpulseB, ref inertiaB.InverseInertiaTensor, out correctiveVelocityB.Angular);
+            Vector3Wide.Add(ref wsvA.Linear, ref correctiveVelocityA.Linear, out wsvA.Linear);
+            Vector3Wide.Add(ref wsvA.Angular, ref correctiveVelocityA.Angular, out wsvA.Angular);
+            Vector3Wide.Subtract(ref wsvB.Linear, ref correctiveVelocityB.Linear, out wsvB.Linear); //note subtract- we based it on the LinearA jacobian.
+            Vector3Wide.Add(ref wsvB.Angular, ref correctiveVelocityB.Angular, out wsvB.Angular);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -121,10 +121,10 @@ namespace BepuPhysics.Constraints.Contact
         public static void ComputeCorrectiveImpulse(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref TangentFriction.Projection data, ref Jacobians jacobians,
             ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, out Vector2Wide correctiveCSI)
         {
-            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.LinearVelocity, ref jacobians.LinearA, out var csvaLinear);
-            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.AngularVelocity, ref jacobians.AngularA, out var csvaAngular);
-            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvB.LinearVelocity, ref jacobians.LinearA, out var csvbLinear);
-            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvB.AngularVelocity, ref jacobians.AngularB, out var csvbAngular);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.Linear, ref jacobians.LinearA, out var csvaLinear);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.Angular, ref jacobians.AngularA, out var csvaAngular);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvB.Linear, ref jacobians.LinearA, out var csvbLinear);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvB.Angular, ref jacobians.AngularB, out var csvbAngular);
             //Note that the velocity in constraint space is (csvaLinear - csvbLinear + csvaAngular + csvbAngular).
             //The subtraction there is due to sharing the linear jacobian between both bodies.
             //In the following, we need to compute the constraint space *violating* velocity- which is the negation of the above velocity in constraint space.

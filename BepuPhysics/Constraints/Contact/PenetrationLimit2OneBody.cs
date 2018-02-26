@@ -82,8 +82,8 @@ namespace BepuPhysics.Constraints.Contact
             Vector3Wide.Scale(ref projection.AngularA, ref correctiveImpulse, out var correctiveAngularImpulseA);
             Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref correctiveAngularImpulseA, ref inertiaA.InverseInertiaTensor, out var correctiveVelocityAAngularVelocity);
 
-            Vector3Wide.Add(ref wsvA.LinearVelocity, ref correctiveVelocityALinearVelocity, out wsvA.LinearVelocity);
-            Vector3Wide.Add(ref wsvA.AngularVelocity, ref correctiveVelocityAAngularVelocity, out wsvA.AngularVelocity);
+            Vector3Wide.Add(ref wsvA.Linear, ref correctiveVelocityALinearVelocity, out wsvA.Linear);
+            Vector3Wide.Add(ref wsvA.Angular, ref correctiveVelocityAAngularVelocity, out wsvA.Angular);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -103,8 +103,8 @@ namespace BepuPhysics.Constraints.Contact
             ref Vector<float> accumulatedImpulse, out Vector<float> correctiveCSI)
         {
             //Note that we do NOT use pretransformed jacobians here; the linear jacobian sharing (normal) meant that we had the effective mass anyway.
-            Vector3Wide.Dot(ref wsvA.LinearVelocity, ref normal, out var csvaLinear);
-            Vector3Wide.Dot(ref wsvA.AngularVelocity, ref projection.AngularA, out var csvaAngular);
+            Vector3Wide.Dot(ref wsvA.Linear, ref normal, out var csvaLinear);
+            Vector3Wide.Dot(ref wsvA.Angular, ref projection.AngularA, out var csvaAngular);
             //Compute negated version to avoid the need for an explicit negate.
             var negatedCSI = accumulatedImpulse * softnessImpulseScale + (csvaLinear + csvaAngular - projection.BiasVelocity) * projection.EffectiveMass;
 

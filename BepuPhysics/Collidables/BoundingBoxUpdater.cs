@@ -92,7 +92,7 @@ namespace BepuPhysics.Collidables
             */
 
             Vector<float> vectorDt = new Vector<float>(dt);
-            Vector3Wide.Scale(ref velocities.LinearVelocity, ref vectorDt, out var linearDisplacement);
+            Vector3Wide.Scale(ref velocities.Linear, ref vectorDt, out var linearDisplacement);
 
             var zero = Vector<float>.Zero;
             Vector3Wide.Min(ref zero, ref linearDisplacement, out var minDisplacement);
@@ -119,7 +119,7 @@ namespace BepuPhysics.Collidables
             An extra few dozen ALU cycles is unlikely to meaningfully change the execution time.
             2) Shrinking the bounding box reduces the number of collision pairs. Collision pairs are expensive- many times more expensive than the cost of shrinking the bounding box.
             */
-            Vector3Wide.Length(ref velocities.AngularVelocity, out var angularVelocityMagnitude);
+            Vector3Wide.Length(ref velocities.Angular, out var angularVelocityMagnitude);
             var a = Vector.Min(angularVelocityMagnitude * vectorDt, new Vector<float>(MathHelper.Pi / 3f));
             var a2 = a * a;
             var a4 = a2 * a2;

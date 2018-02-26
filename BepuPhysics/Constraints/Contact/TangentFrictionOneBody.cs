@@ -45,7 +45,7 @@ namespace BepuPhysics.Constraints.Contact
 
             //No softening; this constraint is rigid by design. (It does support a maximum force, but that is distinct from a proper damping ratio/natural frequency.)
             Triangular2x2Wide.Add(ref linearContributionA, ref angularContributionA, out var inverseEffectiveMass);
-            Triangular2x2Wide.InvertWithoutOverlap(ref inverseEffectiveMass, out projection.EffectiveMass);
+            Triangular2x2Wide.SymmetricInvertWithoutOverlap(ref inverseEffectiveMass, out projection.EffectiveMass);
             projection.OffsetA = offsetA;
 
             //Note that friction constraints have no bias velocity. They target zero velocity.
@@ -61,10 +61,10 @@ namespace BepuPhysics.Constraints.Contact
             Matrix2x3Wide.Transform(ref correctiveImpulse, ref jacobians.LinearA, out var linearImpulseA);
             Matrix2x3Wide.Transform(ref correctiveImpulse, ref jacobians.AngularA, out var angularImpulseA);
             BodyVelocities correctiveVelocityA;
-            Vector3Wide.Scale(ref linearImpulseA, ref inertiaA.InverseMass, out correctiveVelocityA.LinearVelocity);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref angularImpulseA, ref inertiaA.InverseInertiaTensor, out correctiveVelocityA.AngularVelocity);
-            Vector3Wide.Add(ref wsvA.LinearVelocity, ref correctiveVelocityA.LinearVelocity, out wsvA.LinearVelocity);
-            Vector3Wide.Add(ref wsvA.AngularVelocity, ref correctiveVelocityA.AngularVelocity, out wsvA.AngularVelocity);
+            Vector3Wide.Scale(ref linearImpulseA, ref inertiaA.InverseMass, out correctiveVelocityA.Linear);
+            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref angularImpulseA, ref inertiaA.InverseInertiaTensor, out correctiveVelocityA.Angular);
+            Vector3Wide.Add(ref wsvA.Linear, ref correctiveVelocityA.Linear, out wsvA.Linear);
+            Vector3Wide.Add(ref wsvA.Angular, ref correctiveVelocityA.Angular, out wsvA.Angular);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -81,8 +81,8 @@ namespace BepuPhysics.Constraints.Contact
         public static void ComputeCorrectiveImpulse(ref BodyVelocities wsvA, ref Projection data, ref Jacobians jacobians,
             ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, out Vector2Wide correctiveCSI)
         {
-            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.LinearVelocity, ref jacobians.LinearA, out var csvaLinear);
-            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.AngularVelocity, ref jacobians.AngularA, out var csvaAngular);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.Linear, ref jacobians.LinearA, out var csvaLinear);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.Angular, ref jacobians.AngularA, out var csvaAngular);
             Vector2Wide.Add(ref csvaLinear, ref csvaAngular, out var csv);
             //Required corrective velocity is the negation of the current constraint space velocity.
             Triangular2x2Wide.TransformBySymmetricWithoutOverlap(ref csv, ref data.EffectiveMass, out var negativeCSI);

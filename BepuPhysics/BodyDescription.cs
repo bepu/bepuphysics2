@@ -120,8 +120,8 @@ namespace BepuPhysics
 
     public struct BodyVelocities
     {
-        public Vector3Wide LinearVelocity;
-        public Vector3Wide AngularVelocity;
+        public Vector3Wide Linear;
+        public Vector3Wide Angular;
     }
 
     public struct BodyInertias

@@ -318,14 +318,14 @@ namespace BepuPhysics.Constraints
             //That world space impulse is then converted to a corrective velocity change by scaling the impulse by the inverse mass/inertia.
             //As an optimization for constraints with smaller jacobians, the jacobian * (inertia or mass) transform is precomputed.
             BodyVelocities correctiveVelocityA, correctiveVelocityB;
-            Vector3Wide.Scale(ref data.CSIToWSVLinearA, ref correctiveImpulse, out correctiveVelocityA.LinearVelocity);
-            Vector3Wide.Scale(ref data.CSIToWSVAngularA, ref correctiveImpulse, out correctiveVelocityA.AngularVelocity);
-            Vector3Wide.Scale(ref data.CSIToWSVLinearB, ref correctiveImpulse, out correctiveVelocityB.LinearVelocity);
-            Vector3Wide.Scale(ref data.CSIToWSVAngularB, ref correctiveImpulse, out correctiveVelocityB.AngularVelocity);
-            Vector3Wide.Add(ref correctiveVelocityA.LinearVelocity, ref wsvA.LinearVelocity, out wsvA.LinearVelocity);
-            Vector3Wide.Add(ref correctiveVelocityA.AngularVelocity, ref wsvA.AngularVelocity, out wsvA.AngularVelocity);
-            Vector3Wide.Add(ref correctiveVelocityB.LinearVelocity, ref wsvB.LinearVelocity, out wsvB.LinearVelocity);
-            Vector3Wide.Add(ref correctiveVelocityB.AngularVelocity, ref wsvB.AngularVelocity, out wsvB.AngularVelocity);
+            Vector3Wide.Scale(ref data.CSIToWSVLinearA, ref correctiveImpulse, out correctiveVelocityA.Linear);
+            Vector3Wide.Scale(ref data.CSIToWSVAngularA, ref correctiveImpulse, out correctiveVelocityA.Angular);
+            Vector3Wide.Scale(ref data.CSIToWSVLinearB, ref correctiveImpulse, out correctiveVelocityB.Linear);
+            Vector3Wide.Scale(ref data.CSIToWSVAngularB, ref correctiveImpulse, out correctiveVelocityB.Angular);
+            Vector3Wide.Add(ref correctiveVelocityA.Linear, ref wsvA.Linear, out wsvA.Linear);
+            Vector3Wide.Add(ref correctiveVelocityA.Angular, ref wsvA.Angular, out wsvA.Angular);
+            Vector3Wide.Add(ref correctiveVelocityB.Linear, ref wsvB.Linear, out wsvB.Linear);
+            Vector3Wide.Add(ref correctiveVelocityB.Angular, ref wsvB.Angular, out wsvB.Angular);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -345,10 +345,10 @@ namespace BepuPhysics.Constraints
             //So we are multiplying v * JT.)
             //Then, transform it into an impulse by applying the effective mass.
             //Here, we combine the projection and impulse conversion into a precomputed value, i.e. v * (JT * softenedEffectiveMass).
-            Vector3Wide.Dot(ref wsvA.LinearVelocity, ref projection.WSVtoCSILinearA, out var csiaLinear);
-            Vector3Wide.Dot(ref wsvA.AngularVelocity, ref projection.WSVtoCSIAngularA, out var csiaAngular);
-            Vector3Wide.Dot(ref wsvB.LinearVelocity, ref projection.WSVtoCSILinearB, out var csibLinear);
-            Vector3Wide.Dot(ref wsvB.AngularVelocity, ref projection.WSVtoCSIAngularB, out var csibAngular);
+            Vector3Wide.Dot(ref wsvA.Linear, ref projection.WSVtoCSILinearA, out var csiaLinear);
+            Vector3Wide.Dot(ref wsvA.Angular, ref projection.WSVtoCSIAngularA, out var csiaAngular);
+            Vector3Wide.Dot(ref wsvB.Linear, ref projection.WSVtoCSILinearB, out var csibLinear);
+            Vector3Wide.Dot(ref wsvB.Angular, ref projection.WSVtoCSIAngularB, out var csibAngular);
             //Combine it all together, following:
             //constraint space impulse = (targetVelocity - currentVelocity) * softenedEffectiveMass
             //constraint space impulse = (bias - accumulatedImpulse * softness - wsv * JT) * softenedEffectiveMass

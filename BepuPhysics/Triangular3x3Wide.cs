@@ -178,8 +178,14 @@ namespace BepuPhysics
             sandwich.M33 = i31 * r.X.Z + i32 * r.Y.Z + i33 * r.Z.Z;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void MultiplyBySymmetricWithoutOverlap(ref Matrix2x3Wide a, ref Triangular3x3Wide t, out Matrix2x3Wide result)
+        {
+            result.X = 
+        }
+
         /// <summary>
-        /// Computes m * t * mT for a symmetric matrix t and a matrix m. Assumes that the input and output do not overlap.
+        /// Computes m * t * mT for a symmetric matrix t and a matrix m.
         /// </summary>
         /// <param name="m">Matrix to use as the sandwich bread.</param>
         /// <param name="t">Succulent interior symmetric matrix.</param>

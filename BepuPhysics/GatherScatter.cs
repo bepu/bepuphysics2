@@ -192,8 +192,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> velocities, ref TwoBodyReferences references, int count, out BodyVelocities velocitiesA, out BodyVelocities velocitiesB)
         {
-            ref var targetLinearAX = ref Unsafe.As<Vector<float>, float>(ref velocitiesA.LinearVelocity.X);
-            ref var targetLinearBX = ref Unsafe.As<Vector<float>, float>(ref velocitiesB.LinearVelocity.X);
+            ref var targetLinearAX = ref Unsafe.As<Vector<float>, float>(ref velocitiesA.Linear.X);
+            ref var targetLinearBX = ref Unsafe.As<Vector<float>, float>(ref velocitiesB.Linear.X);
 
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -230,10 +230,10 @@ namespace BepuPhysics
         public static unsafe void ScatterVelocities(ref Buffer<BodyVelocity> velocities, ref TwoBodyReferences references, int count, ref BodyVelocities velocitiesA, ref BodyVelocities velocitiesB)
         {
             ref var baseTargetIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
-            ref var baseSourceLinearAX = ref Unsafe.As<Vector<float>, float>(ref velocitiesA.LinearVelocity.X);
+            ref var baseSourceLinearAX = ref Unsafe.As<Vector<float>, float>(ref velocitiesA.Linear.X);
 
             ref var baseTargetIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
-            ref var baseSourceLinearBX = ref Unsafe.As<Vector<float>, float>(ref velocitiesB.LinearVelocity.X);
+            ref var baseSourceLinearBX = ref Unsafe.As<Vector<float>, float>(ref velocitiesB.Linear.X);
 
             for (int i = 0; i < count; ++i)
             {
@@ -278,7 +278,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> velocities, ref Vector<int> references, int count, out BodyVelocities velocitiesA)
         {
-            ref var targetLinearAX = ref Unsafe.As<Vector<float>, float>(ref velocitiesA.LinearVelocity.X);
+            ref var targetLinearAX = ref Unsafe.As<Vector<float>, float>(ref velocitiesA.Linear.X);
 
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
             ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references);
@@ -303,7 +303,7 @@ namespace BepuPhysics
         public static unsafe void ScatterVelocities(ref Buffer<BodyVelocity> velocities, ref Vector<int> references, int count, ref BodyVelocities velocitiesA)
         {
             ref var baseTargetIndexA = ref Unsafe.As<Vector<int>, int>(ref references);
-            ref var baseSourceLinearAX = ref Unsafe.As<Vector<float>, float>(ref velocitiesA.LinearVelocity.X);            
+            ref var baseSourceLinearAX = ref Unsafe.As<Vector<float>, float>(ref velocitiesA.Linear.X);            
 
             for (int i = 0; i < count; ++i)
             {

@@ -40,7 +40,7 @@ namespace BepuPhysics.Constraints.Contact
         {
             Vector3Wide.Scale(ref angularJacobianA, ref correctiveImpulse, out var worldCorrectiveImpulseA);
             Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref worldCorrectiveImpulseA, ref inertiaA.InverseInertiaTensor, out var worldCorrectiveVelocityA);
-            Vector3Wide.Add(ref wsvA.AngularVelocity, ref worldCorrectiveVelocityA, out wsvA.AngularVelocity);
+            Vector3Wide.Add(ref wsvA.Angular, ref worldCorrectiveVelocityA, out wsvA.Angular);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -55,7 +55,7 @@ namespace BepuPhysics.Constraints.Contact
             ref BodyVelocities wsvA, ref Vector<float> maximumImpulse,
             ref Vector<float> accumulatedImpulse, out Vector<float> correctiveCSI)
         {
-            Vector3Wide.Dot(ref wsvA.AngularVelocity, ref angularJacobianA, out var csvA);
+            Vector3Wide.Dot(ref wsvA.Angular, ref angularJacobianA, out var csvA);
             var negativeCSI = csvA * projection.EffectiveMass; //Since there is no bias or softness to give us the negative, we just do it when we apply to the accumulated impulse.
 
             var previousAccumulated = accumulatedImpulse;

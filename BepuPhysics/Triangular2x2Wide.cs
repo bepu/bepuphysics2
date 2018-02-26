@@ -46,7 +46,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void InvertWithoutOverlap(ref Triangular2x2Wide m, out Triangular2x2Wide inverse)
+        public static void SymmetricInvertWithoutOverlap(ref Triangular2x2Wide m, out Triangular2x2Wide inverse)
         {
             var denom = Vector<float>.One / (m.M21 * m.M21 - m.M11 * m.M22);
             inverse.M11 = -m.M22 * denom;
