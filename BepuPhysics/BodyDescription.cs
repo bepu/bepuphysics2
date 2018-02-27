@@ -1,5 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics
 {
@@ -7,6 +8,13 @@ namespace BepuPhysics
     {
         public Vector3 Position;
         public BepuUtilities.Quaternion Orientation;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Transform(ref Vector3 v, ref RigidPose pose, out Vector3 result)
+        {
+            BepuUtilities.Quaternion.Transform(ref v, ref pose.Orientation, out result);
+            result += pose.Position;
+        }
     }
 
     public struct BodyVelocity

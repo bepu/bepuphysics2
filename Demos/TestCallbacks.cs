@@ -43,11 +43,6 @@ namespace Demos
             return true;
         }
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Flush(IThreadDispatcher threadDispatcher)
-        {
-        }
-
         public void Dispose()
         {
         }

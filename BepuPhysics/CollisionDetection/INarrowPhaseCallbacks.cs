@@ -20,6 +20,7 @@ namespace BepuPhysics.CollisionDetection
         public float DampingRatio;
     }
 
+    //TODO: We've made some modifications to the way callbacks are used. You should reconsider whether initialize and dispose still make any sense for this type.
     public unsafe interface INarrowPhaseCallbacks
     {
         void Initialize(Simulation simulation);
@@ -68,13 +69,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="manifold">Set of contacts detected between the collidables.</param>
         /// <returns>True if this manifold should be considered for constraint generation, false otherwise.</returns>
         bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ContactManifold* manifold);
-
-        /// <summary>
-        /// Performs any post-narrowphase execution tasks.
-        /// </summary>
-        /// <param name="threadDispatcher">Thread dispatcher for use in the flush.</param>
-        void Flush(IThreadDispatcher threadDispatcher);
-
+        
         /// <summary>
         /// Releases any resources held by the callbacks. Called by the owning narrow phase when it is being disposed.
         /// </summary>

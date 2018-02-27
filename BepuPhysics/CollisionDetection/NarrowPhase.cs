@@ -276,7 +276,6 @@ namespace BepuPhysics.CollisionDetection
             //Here, we are disposing them late- that means we suffer a little more wasted memory use. 
             //If you actually wanted to address this, you could add in an OnPreflush or similar.
             DisposeConstraintGenerators(threadDispatcher == null ? 1 : threadDispatcher.ThreadCount);
-            Callbacks.Flush(threadDispatcher);
         }
 
         protected override void OnDispose()
