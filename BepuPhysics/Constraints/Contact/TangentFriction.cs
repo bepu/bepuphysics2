@@ -79,7 +79,7 @@ namespace BepuPhysics.Constraints.Contact
             Triangular2x2Wide.Add(ref linearContributionA, ref linearContributionB, out var linear);
             Triangular2x2Wide.Add(ref angularContributionA, ref angularContributionB, out var angular);
             Triangular2x2Wide.Add(ref linear, ref angular, out var inverseEffectiveMass);
-            Triangular2x2Wide.SymmetricInvertWithoutOverlap(ref inverseEffectiveMass, out projection.EffectiveMass);
+            Triangular2x2Wide.InvertSymmetricWithoutOverlap(ref inverseEffectiveMass, out projection.EffectiveMass);
             projection.OffsetA = offsetA;
             projection.OffsetB = offsetB;
 

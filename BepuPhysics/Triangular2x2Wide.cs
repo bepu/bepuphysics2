@@ -53,7 +53,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SymmetricInvertWithoutOverlap(ref Triangular2x2Wide m, out Triangular2x2Wide inverse)
+        public static void InvertSymmetricWithoutOverlap(ref Triangular2x2Wide m, out Triangular2x2Wide inverse)
         {
             var denom = Vector<float>.One / (m.YX * m.YX - m.XX * m.YY);
             inverse.XX = -m.YY * denom;
@@ -78,10 +78,10 @@ namespace BepuPhysics
         public static void MultiplyTransposedBySymmetric(ref Matrix2x3Wide a, ref Triangular2x2Wide b, out Matrix2x3Wide result)
         {
             result.X.X = a.X.X * b.XX + a.Y.X * b.YX;
-            result.X.Y = a.X.X * b.YX + a.Y.X * b.YY;
-            result.X.Z = a.X.Y * b.XX + a.Y.Y * b.YX;
-            result.Y.X = a.X.Y * b.YX + a.Y.Y * b.YY;
-            result.Y.Y = a.X.Z * b.XX + a.Y.Z * b.YX;
+            result.X.Y = a.X.Y * b.XX + a.Y.Y * b.YX;
+            result.X.Z = a.X.Z * b.XX + a.Y.Z * b.YX;
+            result.Y.X = a.X.X * b.YX + a.Y.X * b.YY;
+            result.Y.Y = a.X.Y * b.YX + a.Y.Y * b.YY;
             result.Y.Z = a.X.Z * b.YX + a.Y.Z * b.YY;
         }
 

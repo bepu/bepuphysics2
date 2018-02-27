@@ -110,7 +110,7 @@ namespace Demos
                 Collidable = new CollidableDescription
                 {
                     Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                    SpeculativeMargin = .01f,
+                    SpeculativeMargin = .1f,
                     //Note that this always registers a new shape instance. You could be more clever/efficient and share shapes, but the goal here is to show the most basic option.
                     //Also, the cost of registering different shapes isn't that high for tiny implicit shapes.
                     Shape = simulation.Shapes.Add(ref shape)

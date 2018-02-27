@@ -45,7 +45,7 @@ namespace BepuPhysics.Constraints.Contact
 
             //No softening; this constraint is rigid by design. (It does support a maximum force, but that is distinct from a proper damping ratio/natural frequency.)
             Triangular2x2Wide.Add(ref linearContributionA, ref angularContributionA, out var inverseEffectiveMass);
-            Triangular2x2Wide.SymmetricInvertWithoutOverlap(ref inverseEffectiveMass, out projection.EffectiveMass);
+            Triangular2x2Wide.InvertSymmetricWithoutOverlap(ref inverseEffectiveMass, out projection.EffectiveMass);
             projection.OffsetA = offsetA;
 
             //Note that friction constraints have no bias velocity. They target zero velocity.

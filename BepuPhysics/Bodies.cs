@@ -29,7 +29,6 @@ namespace BepuPhysics
     /// </summary>
     public class Bodies
     {
-
         /// <summary>
         /// Remaps a body handle to the actual array index of the body.
         /// The backing array index may change in response to cache optimization.
@@ -54,12 +53,12 @@ namespace BepuPhysics
         /// It is only updated once during the frame. It should be treated as ephemeral information.
         /// </summary>
         public Buffer<BodyInertia> Inertias;
-        protected internal BufferPool pool;
+        internal BufferPool pool;
 
-        protected internal IslandAwakener awakener;
-        protected internal Shapes shapes;
-        protected internal BroadPhase broadPhase;
-        protected internal Solver solver;
+        internal IslandAwakener awakener;
+        internal Shapes shapes;
+        internal BroadPhase broadPhase;
+        internal Solver solver;
 
         /// <summary>
         /// Gets or sets the minimum constraint capacity for each body. Future resizes or allocations will obey this minimum, but changing this does not immediately resize existing lists.

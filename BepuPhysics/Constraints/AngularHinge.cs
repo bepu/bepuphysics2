@@ -75,7 +75,7 @@ namespace BepuPhysics.Constraints
         public Vector2Wide BiasImpulse;
         public Vector<float> SoftnessImpulseScale;
         public Matrix2x3Wide ImpulseToVelocityA;
-        public Matrix2x3Wide ImpulseToVelocityB;
+        public Matrix2x3Wide NegatedImpulseToVelocityB;
     }
 
     public struct AngularHingeFunctions : IConstraintFunctions<AngularHingePrestepData, AngularHingeProjection, Vector2Wide>
@@ -116,28 +116,31 @@ namespace BepuPhysics.Constraints
             Vector3Wide.CrossWithoutOverlap(ref constrainedAxisY, ref hingeAxis, out jacobianA.Y);
 
             //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
-            //Triangular3x3Wide.MatrixSandwich(ref jacobianA, ref inertiaA.InverseInertiaTensor, out var angularA);
-            //Triangular3x3Wide.MatrixSandwich(ref jacobianA, ref inertiaB.InverseInertiaTensor, out var angularB);
-            //Triangular2x2Wide.Add(ref angularA, ref angularB, out var inverseEffectiveMass);
-            //Triangular2x2Wide.InvertWithoutOverlap(ref inverseEffectiveMass, out var effectiveMass);
+            Triangular3x3Wide.MatrixSandwich(ref jacobianA, ref inertiaA.InverseInertiaTensor, out var angularAt);
+            Triangular3x3Wide.MatrixSandwich(ref jacobianA, ref inertiaB.InverseInertiaTensor, out var angularBt);
+            Triangular2x2Wide.Add(ref angularAt, ref angularBt, out var inverseEffectiveMasst);
+            Triangular2x2Wide.InvertSymmetricWithoutOverlap(ref inverseEffectiveMasst, out var effectiveMasst);
 
             //This computes the effective mass using the usual (J * M^-1 * JT)^-1 formulation, but we actually make use of the intermediate result J * M^-1 so we compute it directly.
             Triangular3x3Wide.MultiplyBySymmetricWithoutOverlap(ref jacobianA, ref inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
-            Triangular3x3Wide.MultiplyBySymmetricWithoutOverlap(ref jacobianA, ref inertiaB.InverseInertiaTensor, out projection.ImpulseToVelocityA);
+            //Note that we don't use -jacobianA here, so we're actually storing out the negated version of the transform. That's fine; we'll simply subtract in the iteration.
+            Triangular3x3Wide.MultiplyBySymmetricWithoutOverlap(ref jacobianA, ref inertiaB.InverseInertiaTensor, out projection.NegatedImpulseToVelocityB);
             Triangular2x2Wide.CompleteMatrixSandwich(ref projection.ImpulseToVelocityA, ref jacobianA, out var angularA);
-            Triangular2x2Wide.CompleteMatrixSandwich(ref projection.ImpulseToVelocityB, ref jacobianA, out var angularB);
+            Triangular2x2Wide.CompleteMatrixSandwich(ref projection.NegatedImpulseToVelocityB, ref jacobianA, out var angularB);
             Triangular2x2Wide.Add(ref angularA, ref angularB, out var inverseEffectiveMass);
-            Triangular2x2Wide.SymmetricInvertWithoutOverlap(ref inverseEffectiveMass, out var effectiveMass);
+            Triangular2x2Wide.InvertSymmetricWithoutOverlap(ref inverseEffectiveMass, out var effectiveMass);
 
 
             Springiness.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Triangular2x2Wide.Scale(ref effectiveMass, ref effectiveMassCFMScale, out effectiveMass);
             Triangular2x2Wide.MultiplyTransposedBySymmetric(ref jacobianA, ref effectiveMass, out projection.VelocityToImpulseA);
 
-            //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
+            //Compute the position error and bias velocities.
             Vector2Wide error;
             Vector3Wide.Dot(ref hingeAxis, ref constrainedAxisX, out error.X);
             Vector3Wide.Dot(ref hingeAxis, ref constrainedAxisY, out error.Y);
+            //Note the negation: we want to oppose the separation. TODO: arguably, should bake the negation into positionErrorToVelocity, given its name.
+            positionErrorToVelocity = -positionErrorToVelocity;
             Vector2Wide.Scale(ref error, ref positionErrorToVelocity, out var biasVelocity);
             Triangular2x2Wide.TransformBySymmetricWithoutOverlap(ref biasVelocity, ref effectiveMass, out projection.BiasImpulse);
 
@@ -148,8 +151,8 @@ namespace BepuPhysics.Constraints
         {
             Matrix2x3Wide.Transform(ref csi, ref projection.ImpulseToVelocityA, out var velocityChangeA);
             Vector3Wide.Add(ref angularVelocityA, ref velocityChangeA, out angularVelocityA);
-            Matrix2x3Wide.Transform(ref csi, ref projection.ImpulseToVelocityB, out var velocityChangeB);
-            Vector3Wide.Add(ref angularVelocityB, ref velocityChangeB, out angularVelocityA);
+            Matrix2x3Wide.Transform(ref csi, ref projection.NegatedImpulseToVelocityB, out var negatedVelocityChangeB);
+            Vector3Wide.Subtract(ref angularVelocityB, ref negatedVelocityChangeB, out angularVelocityB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -169,6 +172,8 @@ namespace BepuPhysics.Constraints
             Vector2Wide.Add(ref softnessContribution, ref csi, out csi);
             Vector2Wide.Subtract(ref projection.BiasImpulse, ref csi, out csi);
 
+            Vector2Wide.Add(ref accumulatedImpulse, ref csi, out accumulatedImpulse);
+
             ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, ref projection, ref csi);
         }
 
@@ -179,3 +184,4 @@ namespace BepuPhysics.Constraints
         public const int BatchTypeId = 17;
     }
 }
+

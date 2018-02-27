@@ -16,6 +16,7 @@ namespace BepuPhysics
         public static void RegisterDefaults(Solver solver, NarrowPhase narrowPhase)
         {
             solver.Register<BallSocket>();
+            solver.Register<AngularHinge>();
             solver.Register<Contact1OneBody>();
             solver.Register<Contact2OneBody>();
             solver.Register<Contact3OneBody>();

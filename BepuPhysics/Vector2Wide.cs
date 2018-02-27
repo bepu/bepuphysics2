@@ -48,5 +48,11 @@ namespace BepuPhysics
         {
             length = Vector.SquareRoot(v.X * v.X + v.Y * v.Y);
         }
+
+        
+        public override string ToString()
+        {
+            return $"<{X}, {Y}>";
+        }
     }
 }
