@@ -8,6 +8,7 @@ using System;
 using BepuPhysics.CollisionDetection;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using BepuPhysics.Constraints;
 
 namespace Demos
 {
@@ -156,17 +157,40 @@ namespace Demos
             maskB ^= 1ul << (localBodyIndexA + 16);
         }
 
-        static void AddArm(float sign, Vector3 localShoulder, int chestHandle, int chestLocalIndex, ref ulong chestMask,
-            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyCollisionMasks masks, Simulation simulation)
+        static void AddArm(float sign, Vector3 localShoulder, RigidPose localChestPose, int chestHandle, int chestLocalIndex, ref ulong chestMask,
+            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyCollisionMasks masks, SpringSettings constraintSpringSettings, Simulation simulation)
         {
-            var localElbow = localShoulder + new Vector3(sign * 0.6f, 0, 0);
-            var localWrist = localElbow + new Vector3(sign * 0.6f, 0, 0);
-            var localHand = localWrist + new Vector3(sign * 0.1f, 0, 0);
-            GetCapsuleForLineSegment(localShoulder, localElbow, 0.13f, out var upperArmShape, out var upperArmPosition, out var upperArmOrientation);
+            var localElbow = localShoulder + new Vector3(sign * 0.45f, 0, 0);
+            var localWrist = localElbow + new Vector3(sign * 0.45f, 0, 0);
+            var handPosition = localWrist + new Vector3(sign * 0.1f, 0, 0);
+            GetCapsuleForLineSegment(localShoulder, localElbow, 0.1f, out var upperArmShape, out var upperArmPosition, out var upperArmOrientation);
             var upperArm = AddBody(upperArmShape, 5, GetWorldPose(upperArmPosition, upperArmOrientation, ragdollPose), simulation);
-            GetCapsuleForLineSegment(localElbow, localWrist, 0.1f, out var lowerArmShape, out var lowerArmPosition, out var lowerArmOrientation);
+            GetCapsuleForLineSegment(localElbow, localWrist, 0.09f, out var lowerArmShape, out var lowerArmPosition, out var lowerArmOrientation);
             var lowerArm = AddBody(lowerArmShape, 5, GetWorldPose(lowerArmPosition, lowerArmOrientation, ragdollPose), simulation);
-            var hand = AddBody(new Box(0.2f, 0.1f, 0.2f), 2, GetWorldPose(localHand, Quaternion.Identity, ragdollPose), simulation);
+            var hand = AddBody(new Box(0.2f, 0.1f, 0.2f), 2, GetWorldPose(handPosition, Quaternion.Identity, ragdollPose), simulation);
+
+            //Create joints between limb pieces.
+            var shoulderBallSocket = new BallSocket
+            {
+                LocalOffsetA = Quaternion.Transform(localShoulder - localChestPose.Position, Quaternion.Conjugate(localChestPose.Orientation)),
+                LocalOffsetB = Quaternion.Transform(localShoulder - upperArmPosition, Quaternion.Conjugate(upperArmOrientation)),
+                SpringSettings = constraintSpringSettings
+            };
+            simulation.Solver.Add(chestHandle, upperArm, ref shoulderBallSocket);
+            var elbowBallSocket = new BallSocket
+            {
+                LocalOffsetA = Quaternion.Transform(localElbow - upperArmPosition, Quaternion.Conjugate(upperArmOrientation)),
+                LocalOffsetB = Quaternion.Transform(localElbow - lowerArmPosition, Quaternion.Conjugate(lowerArmOrientation)),
+                SpringSettings = constraintSpringSettings
+            };
+            simulation.Solver.Add(upperArm, lowerArm, ref elbowBallSocket);
+            var wristBallSocket = new BallSocket
+            {
+                LocalOffsetA = Quaternion.Transform(localWrist - lowerArmPosition, Quaternion.Conjugate(lowerArmOrientation)),
+                LocalOffsetB = localWrist - handPosition,
+                SpringSettings = constraintSpringSettings
+            };
+            simulation.Solver.Add(lowerArm, hand, ref wristBallSocket);
 
             //Disable collisions between connected ragdoll pieces.
             var upperArmLocalIndex = limbBaseBitIndex;
@@ -183,17 +207,40 @@ namespace Demos
             masks[hand] = handMask;
         }
 
-        static void AddLeg(Vector3 localHip, int hipsHandle, int hipsLocalIndex, ref ulong hipsMask,
-            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyCollisionMasks masks, Simulation simulation)
+        static void AddLeg(Vector3 localHip, RigidPose localHipsPose, int hipsHandle, int hipsLocalIndex, ref ulong hipsMask,
+            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyCollisionMasks masks, SpringSettings constraintSpringSettings, Simulation simulation)
         {
-            var localKnee = localHip - new Vector3(0, 0.6f, 0);
-            var localAnkle = localKnee - new Vector3(0, 0.6f, 0);
-            var localFoot = localAnkle + new Vector3(0, -0.075f, 0.15f);
-            GetCapsuleForLineSegment(localHip, localKnee, 0.17f, out var upperLegShape, out var upperArmPosition, out var upperArmOrientation);
-            var upperLeg = AddBody(upperLegShape, 5, GetWorldPose(upperArmPosition, upperArmOrientation, ragdollPose), simulation);
-            GetCapsuleForLineSegment(localKnee, localAnkle, 0.13f, out var lowerLegShape, out var lowerArmPosition, out var lowerArmOrientation);
-            var lowerLeg = AddBody(lowerLegShape, 5, GetWorldPose(lowerArmPosition, lowerArmOrientation, ragdollPose), simulation);
+            var localKnee = localHip - new Vector3(0, 0.5f, 0);
+            var localAnkle = localKnee - new Vector3(0, 0.5f, 0);
+            var localFoot = localAnkle + new Vector3(0, -0.075f, 0.05f);
+            GetCapsuleForLineSegment(localHip, localKnee, 0.12f, out var upperLegShape, out var upperLegPosition, out var upperLegOrientation);
+            var upperLeg = AddBody(upperLegShape, 5, GetWorldPose(upperLegPosition, upperLegOrientation, ragdollPose), simulation);
+            GetCapsuleForLineSegment(localKnee, localAnkle, 0.11f, out var lowerLegShape, out var lowerLegPosition, out var lowerLegOrientation);
+            var lowerLeg = AddBody(lowerLegShape, 5, GetWorldPose(lowerLegPosition, lowerLegOrientation, ragdollPose), simulation);
             var foot = AddBody(new Box(0.2f, 0.15f, 0.3f), 2, GetWorldPose(localFoot, Quaternion.Identity, ragdollPose), simulation);
+
+            //Create joints between limb pieces.
+            var hipBallSocket = new BallSocket
+            {
+                LocalOffsetA = Quaternion.Transform(localHip - localHipsPose.Position, Quaternion.Conjugate(localHipsPose.Orientation)),
+                LocalOffsetB = Quaternion.Transform(localHip - upperLegPosition, Quaternion.Conjugate(upperLegOrientation)),
+                SpringSettings = constraintSpringSettings
+            };
+            simulation.Solver.Add(hipsHandle, upperLeg, ref hipBallSocket);
+            var kneeBallSocket = new BallSocket
+            {
+                LocalOffsetA = Quaternion.Transform(localKnee - upperLegPosition, Quaternion.Conjugate(upperLegOrientation)),
+                LocalOffsetB = Quaternion.Transform(localKnee - lowerLegPosition, Quaternion.Conjugate(lowerLegOrientation)),
+                SpringSettings = constraintSpringSettings
+            };
+            simulation.Solver.Add(upperLeg, lowerLeg, ref kneeBallSocket);
+            var ankleBallSocket = new BallSocket
+            {
+                LocalOffsetA = Quaternion.Transform(localAnkle - lowerLegPosition, Quaternion.Conjugate(lowerLegOrientation)),
+                LocalOffsetB = localAnkle - localFoot,
+                SpringSettings = constraintSpringSettings
+            };
+            simulation.Solver.Add(lowerLeg, foot, ref ankleBallSocket);
 
             //Disable collisions between connected ragdoll pieces.
             var upperLegLocalIndex = limbBaseBitIndex;
@@ -214,12 +261,41 @@ namespace Demos
         {
             var ragdollPose = new RigidPose { Position = position, Orientation = orientation };
             var horizontalOrientation = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathHelper.PiOver2);
-            var hipsPosition = new Vector3(0, 1.1f, 0);
-            var hips = AddBody(new Capsule(0.25f, 0.3f), 8, GetWorldPose(hipsPosition, horizontalOrientation, ragdollPose), simulation);
-            var abdomen = AddBody(new Capsule(0.25f, 0.25f), 7, GetWorldPose(new Vector3(0, 1.35f, 0), horizontalOrientation, ragdollPose), simulation);
-            var chestPosition = new Vector3(0, 1.7f, 0);
-            var chest = AddBody(new Capsule(0.3f, 0.35f), 10, GetWorldPose(chestPosition, horizontalOrientation, ragdollPose), simulation);
-            var head = AddBody(new Sphere(0.3f), 5, GetWorldPose(new Vector3(0, 2.5f, 0), Quaternion.Identity, ragdollPose), simulation);
+            var hipsPose = new RigidPose { Position = new Vector3(0, 1.1f, 0), Orientation = horizontalOrientation };
+            var hips = AddBody(new Capsule(0.17f, 0.25f), 8, GetWorldPose(hipsPose.Position, hipsPose.Orientation, ragdollPose), simulation);
+            var abdomenPose = new RigidPose { Position = new Vector3(0, 1.3f, 0), Orientation = horizontalOrientation };
+            var abdomen = AddBody(new Capsule(0.17f, 0.22f), 7, GetWorldPose(abdomenPose.Position, abdomenPose.Orientation, ragdollPose), simulation);
+            var chestPose = new RigidPose { Position = new Vector3(0, 1.6f, 0), Orientation = horizontalOrientation };
+            var chest = AddBody(new Capsule(0.21f, 0.3f), 10, GetWorldPose(chestPose.Position, chestPose.Orientation, ragdollPose), simulation);
+            var headPose = new RigidPose { Position = new Vector3(0, 2.05f, 0), Orientation = Quaternion.Identity };
+            var head = AddBody(new Sphere(0.2f), 5, GetWorldPose(headPose.Position, headPose.Orientation, ragdollPose), simulation);
+
+            //Attach constraints between torso pieces.
+            var springSettings = new SpringSettings { DampingRatio = 1f, NaturalFrequency = MathHelper.Pi * 30f };
+            var lowerSpine = (hipsPose.Position + abdomenPose.Position) * 0.5f;
+            var lowerSpineBallSocket = new BallSocket
+            {
+                LocalOffsetA = Quaternion.Transform(lowerSpine - hipsPose.Position, Quaternion.Conjugate(hipsPose.Orientation)),
+                LocalOffsetB = Quaternion.Transform(lowerSpine - abdomenPose.Position, Quaternion.Conjugate(abdomenPose.Orientation)),
+                SpringSettings = springSettings
+            };
+            simulation.Solver.Add(hips, abdomen, ref lowerSpineBallSocket);
+            var upperSpine = (abdomenPose.Position + chestPose.Position) * 0.5f;
+            var upperSpineBallSocket = new BallSocket
+            {
+                LocalOffsetA = Quaternion.Transform(upperSpine - abdomenPose.Position, Quaternion.Conjugate(abdomenPose.Orientation)),
+                LocalOffsetB = Quaternion.Transform(upperSpine - chestPose.Position, Quaternion.Conjugate(chestPose.Orientation)),
+                SpringSettings = springSettings
+            };
+            simulation.Solver.Add(abdomen, chest, ref upperSpineBallSocket);
+            var neck = (headPose.Position + chestPose.Position) * 0.5f;
+            var neckBallSocket = new BallSocket
+            {
+                LocalOffsetA = Quaternion.Transform(neck - chestPose.Position, Quaternion.Conjugate(chestPose.Orientation)),
+                LocalOffsetB = neck - headPose.Position,
+                SpringSettings = springSettings
+            };
+            simulation.Solver.Add(chest, head, ref neckBallSocket);
 
             var hipsLocalIndex = 0;
             var abdomenLocalIndex = 1;
@@ -235,10 +311,10 @@ namespace Demos
             DisableCollision(ref chestMask, chestLocalIndex, ref headMask, headLocalIndex);
 
             //Build all the limbs. Setting the masks is delayed until after the limbs have been created and have disabled collisions with the chest/hips.
-            AddArm(1, chestPosition + new Vector3(0.75f, 0.3f, 0), chest, chestLocalIndex, ref chestMask, 4, ragdollIndex, ragdollPose, masks, simulation);
-            AddArm(-1, chestPosition + new Vector3(-0.75f, 0.3f, 0), chest, chestLocalIndex, ref chestMask, 7, ragdollIndex, ragdollPose, masks, simulation);
-            AddLeg(hipsPosition + new Vector3(-0.4f, -0.3f, 0), hips, hipsLocalIndex, ref hipsMask, 10, ragdollIndex, ragdollPose, masks, simulation);
-            AddLeg(hipsPosition + new Vector3(0.4f, -0.3f, 0), hips, hipsLocalIndex, ref hipsMask, 13, ragdollIndex, ragdollPose, masks, simulation);
+            AddArm(1, chestPose.Position + new Vector3(0.4f, 0.1f, 0), chestPose, chest, chestLocalIndex, ref chestMask, 4, ragdollIndex, ragdollPose, masks, springSettings, simulation);
+            AddArm(-1, chestPose.Position + new Vector3(-0.4f, 0.1f, 0), chestPose, chest, chestLocalIndex, ref chestMask, 7, ragdollIndex, ragdollPose, masks, springSettings, simulation);
+            AddLeg(hipsPose.Position + new Vector3(-0.17f, -0.2f, 0), hipsPose, hips, hipsLocalIndex, ref hipsMask, 10, ragdollIndex, ragdollPose, masks, springSettings, simulation);
+            AddLeg(hipsPose.Position + new Vector3(0.17f, -0.2f, 0), hipsPose, hips, hipsLocalIndex, ref hipsMask, 13, ragdollIndex, ragdollPose, masks, springSettings, simulation);
 
             masks[hips] = hipsMask;
             masks[abdomen] = abdomenMask;
@@ -258,7 +334,17 @@ namespace Demos
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             int ragdollIndex = 0;
-            AddRagdoll(new Vector3(0, 10, 0), Quaternion.Identity, ragdollIndex, masks, Simulation);
+            var spacing = new Vector3(5, 0, 3);
+            int width = 4;
+            int length = 4;
+            var origin = -0.5f * spacing * new Vector3(width, 0, length) + new Vector3(0, 10, 0);
+            for (int i = 0; i < width; ++i)
+            {
+                for (int j = 0; j < length; ++j)
+                {
+                    AddRagdoll(origin + spacing * new Vector3(i, 0, j), Quaternion.Identity, ragdollIndex++, masks, Simulation);
+                }
+            }
 
 
             var staticShape = new Box(100, 1, 100);
