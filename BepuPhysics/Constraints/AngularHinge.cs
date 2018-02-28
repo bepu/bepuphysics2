@@ -116,10 +116,6 @@ namespace BepuPhysics.Constraints
             Vector3Wide.CrossWithoutOverlap(ref constrainedAxisY, ref hingeAxis, out jacobianA.Y);
 
             //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
-            Triangular3x3Wide.MatrixSandwich(ref jacobianA, ref inertiaA.InverseInertiaTensor, out var angularAt);
-            Triangular3x3Wide.MatrixSandwich(ref jacobianA, ref inertiaB.InverseInertiaTensor, out var angularBt);
-            Triangular2x2Wide.Add(ref angularAt, ref angularBt, out var inverseEffectiveMasst);
-            Triangular2x2Wide.InvertSymmetricWithoutOverlap(ref inverseEffectiveMasst, out var effectiveMasst);
 
             //This computes the effective mass using the usual (J * M^-1 * JT)^-1 formulation, but we actually make use of the intermediate result J * M^-1 so we compute it directly.
             Triangular3x3Wide.MultiplyBySymmetricWithoutOverlap(ref jacobianA, ref inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
