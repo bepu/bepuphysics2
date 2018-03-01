@@ -9,8 +9,7 @@ namespace BepuPhysics.Constraints
 {
     public struct AngularHinge : IConstraintDescription<AngularHinge>
     {
-        public Vector3 ConstrainedAxisXLocalA;
-        public Vector3 ConstrainedAxisYLocalA;
+        public Vector3 HingeAxisLocalA;
         public Vector3 HingeAxisLocalB;
         public SpringSettings SpringSettings;
 
@@ -29,12 +28,9 @@ namespace BepuPhysics.Constraints
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<AngularHingePrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            GetFirst(ref target.ConstrainedAxisXLocalA.X) = ConstrainedAxisXLocalA.X;
-            GetFirst(ref target.ConstrainedAxisXLocalA.Y) = ConstrainedAxisXLocalA.Y;
-            GetFirst(ref target.ConstrainedAxisXLocalA.Z) = ConstrainedAxisXLocalA.Z;
-            GetFirst(ref target.ConstrainedAxisYLocalA.X) = ConstrainedAxisYLocalA.X;
-            GetFirst(ref target.ConstrainedAxisYLocalA.Y) = ConstrainedAxisYLocalA.Y;
-            GetFirst(ref target.ConstrainedAxisYLocalA.Z) = ConstrainedAxisYLocalA.Z;
+            GetFirst(ref target.HingeAxisLocalA.X) = HingeAxisLocalA.X;
+            GetFirst(ref target.HingeAxisLocalA.Y) = HingeAxisLocalA.Y;
+            GetFirst(ref target.HingeAxisLocalA.Z) = HingeAxisLocalA.Z;
             GetFirst(ref target.HingeAxisLocalB.X) = HingeAxisLocalB.X;
             GetFirst(ref target.HingeAxisLocalB.Y) = HingeAxisLocalB.Y;
             GetFirst(ref target.HingeAxisLocalB.Z) = HingeAxisLocalB.Z;
@@ -46,12 +42,9 @@ namespace BepuPhysics.Constraints
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<AngularHingePrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            description.ConstrainedAxisXLocalA.X = GetFirst(ref source.ConstrainedAxisXLocalA.X);
-            description.ConstrainedAxisXLocalA.Y = GetFirst(ref source.ConstrainedAxisXLocalA.Y);
-            description.ConstrainedAxisXLocalA.Z = GetFirst(ref source.ConstrainedAxisXLocalA.Z);
-            description.ConstrainedAxisYLocalA.X = GetFirst(ref source.ConstrainedAxisYLocalA.X);
-            description.ConstrainedAxisYLocalA.Y = GetFirst(ref source.ConstrainedAxisYLocalA.Y);
-            description.ConstrainedAxisYLocalA.Z = GetFirst(ref source.ConstrainedAxisYLocalA.Z);
+            description.HingeAxisLocalA.X = GetFirst(ref source.HingeAxisLocalA.X);
+            description.HingeAxisLocalA.Y = GetFirst(ref source.HingeAxisLocalA.Y);
+            description.HingeAxisLocalA.Z = GetFirst(ref source.HingeAxisLocalA.Z);
             description.HingeAxisLocalB.X = GetFirst(ref source.HingeAxisLocalB.X);
             description.HingeAxisLocalB.Y = GetFirst(ref source.HingeAxisLocalB.Y);
             description.HingeAxisLocalB.Z = GetFirst(ref source.HingeAxisLocalB.Z);
@@ -62,8 +55,7 @@ namespace BepuPhysics.Constraints
 
     public struct AngularHingePrestepData
     {
-        public Vector3Wide ConstrainedAxisXLocalA;
-        public Vector3Wide ConstrainedAxisYLocalA;
+        public Vector3Wide HingeAxisLocalA;
         public Vector3Wide HingeAxisLocalB;
         public SpringSettingsWide SpringSettings;
     }
@@ -107,13 +99,46 @@ namespace BepuPhysics.Constraints
             //Now, we choose the storage representation. The default approach would be to store JA, the effective mass, and both inverse inertias, requiring 6 + 4 + 6 + 6 scalars.  
             //The alternative is to store JAT * effectiveMass, and then also JA * inverseInertiaTensor(A/B), requiring only 6 + 6 + 6 scalars.
             //So, overall, prebaking saves us 4 scalars and a bit of iteration-time ALU.
+            //Note that we build the basis in local space first. This helps keep the basis consistent during rotation.
+            Helpers.BuildOrthnormalBasis(ref prestep.HingeAxisLocalA, out var localAX, out var localAY);
             Matrix3x3Wide.CreateFromQuaternion(ref orientationA, out var orientationMatrixA);
-            Matrix3x3Wide.TransformWithoutOverlap(ref prestep.ConstrainedAxisXLocalA, ref orientationMatrixA, out var constrainedAxisX);
-            Matrix3x3Wide.TransformWithoutOverlap(ref prestep.ConstrainedAxisYLocalA, ref orientationMatrixA, out var constrainedAxisY);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localAX, ref orientationMatrixA, out var constrainedAxisX);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localAY, ref orientationMatrixA, out var constrainedAxisY);
             QuaternionWide.TransformWithoutOverlap(ref prestep.HingeAxisLocalB, ref orientationB, out var hingeAxis);
             Matrix2x3Wide jacobianA;
             Vector3Wide.CrossWithoutOverlap(ref constrainedAxisX, ref hingeAxis, out jacobianA.X);
             Vector3Wide.CrossWithoutOverlap(ref constrainedAxisY, ref hingeAxis, out jacobianA.Y);
+            //If hingeB is on the constraint axis plane, the jacobians lose independence. Arbitrarily use fallback axes.
+            Vector3Wide.CrossWithoutOverlap(ref jacobianA.X, ref jacobianA.Y, out var crossTest);
+            //Note that this causes a discontinuity in jacobian length. We just don't worry about it.
+            Vector3Wide.Dot(ref crossTest, ref crossTest, out var crossTestLengthSquared);
+            var useFallback = Vector.LessThan(crossTestLengthSquared, new Vector<float>(1e-10f));
+            Vector3Wide.ConditionalSelect(ref useFallback, ref constrainedAxisY, ref jacobianA.X, out jacobianA.X);
+            Vector3Wide.ConditionalSelect(ref useFallback, ref constrainedAxisX, ref jacobianA.Y, out jacobianA.Y);
+
+            ////ALTERNATIVE FORMULATION
+            ////C = atan2(dot(constraintAxisAX, hingeAxisB), dot(hingeAxisA, hingeAxisB)) = 0
+            ////JAX = ((constraintAxisAX * hingeAxisB) * (hingeAxisA x hingeAxisB) - (hingeAxisA * hingeAxisB) * (constraintAxisAX x hingeAxisB)) * denom
+            ////denom = 1 / ((hingeAxisA * hingeAxisB)^2 + (constraintAxisAX * hingeAxisB)^2)
+            //Vector3Wide.CrossWithoutOverlap(ref constrainedAxisX, ref constrainedAxisY, out var hingeAxisA);
+            //Vector3Wide.Dot(ref hingeAxisA, ref hingeAxis, out var hahb);
+            //Vector3Wide.Dot(ref constrainedAxisX, ref hingeAxis, out var caxhb);
+            //var denomX = Vector<float>.One / (hahb * hahb + caxhb * caxhb);
+            //Vector3Wide.CrossWithoutOverlap(ref hingeAxisA, ref hingeAxis, out var haxhb);
+            //Vector3Wide.CrossWithoutOverlap(ref constrainedAxisX, ref hingeAxis, out var caxxhb);
+            //Vector3Wide.Scale(ref haxhb, ref caxhb, out var leftX);
+            //Vector3Wide.Scale(ref caxxhb, ref hahb, out var rightX);
+            //Vector3Wide.Subtract(ref leftX, ref rightX, out var numeratorX);
+            //Vector3Wide.Scale(ref numeratorX, ref denomX, out var alternativeJacobianAX);
+            
+            //Vector3Wide.Dot(ref constrainedAxisY, ref hingeAxis, out var cayhb);
+            //var denomY = Vector<float>.One / (hahb * hahb + cayhb * cayhb);
+            //Vector3Wide.CrossWithoutOverlap(ref constrainedAxisY, ref hingeAxis, out var cayxhb);
+            //Vector3Wide.Scale(ref haxhb, ref cayhb, out var leftY);
+            //Vector3Wide.Scale(ref cayxhb, ref hahb, out var rightY);
+            //Vector3Wide.Subtract(ref leftY, ref rightY, out var numeratorY);
+            //Vector3Wide.Scale(ref numeratorY, ref denomY, out var alternativeJacobianAY);
+
 
             //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
 

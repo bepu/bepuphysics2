@@ -17,6 +17,8 @@ namespace BepuPhysics
         {
             solver.Register<BallSocket>();
             solver.Register<AngularHinge>();
+            solver.Register<AngularSwivelHinge>();
+            solver.Register<SwingLimit>();
             solver.Register<Contact1OneBody>();
             solver.Register<Contact2OneBody>();
             solver.Register<Contact3OneBody>();

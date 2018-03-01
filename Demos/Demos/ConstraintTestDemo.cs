@@ -43,27 +43,42 @@ namespace Demos
             //camera.Pitch = MathHelper.PiOver2 * 0.999f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, 0, 0);
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
             Simulation.Deterministic = false;
             var a = AddBody(new Box(3, 1, 1), 1, new RigidPose { Position = new Vector3(0, 10, 0), Orientation = BepuUtilities.Quaternion.Identity }, Simulation);
-            var b = AddBody(new Box(3, 1, 1), 1, new RigidPose { Position = new Vector3(4, 10, 0), Orientation = BepuUtilities.Quaternion.Identity }, Simulation);
-            a.Velocity.Angular = new Vector3(1, 1, 1);
-            var springSettings = new BepuPhysics.CollisionDetection.SpringSettings { DampingRatio = 1f, NaturalFrequency = MathHelper.Pi * 30f };
+            var b = AddBody(new Box(3, 1, 1), 0, new RigidPose { Position = new Vector3(5, 10, 0), Orientation = BepuUtilities.Quaternion.Identity }, Simulation);
+            //a.Velocity.Angular = new Vector3(1f, 0f, 0f);
+            //a.Pose.Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathHelper.PiOver4);
+            var springSettings = new BepuPhysics.CollisionDetection.SpringSettings { DampingRatio = 10f, NaturalFrequency = MathHelper.Pi * 30 };
             var ballSocket = new BallSocket
             {
-                LocalOffsetA = new Vector3(2, 0, 0),
-                LocalOffsetB = new Vector3(-2, 0, 0),
+                LocalOffsetA = new Vector3(2.5f, 0, 0),
+                LocalOffsetB = new Vector3(-2.5f, 0, 0),
                 SpringSettings = springSettings
             };
             Simulation.Solver.Add(a.Handle, b.Handle, ref ballSocket);
             var angularHinge = new AngularHinge
             {
-                ConstrainedAxisXLocalA = new Vector3(1, 0, 0),
-                ConstrainedAxisYLocalA = new Vector3(0, 0, 1),
-                HingeAxisLocalB = new Vector3(0, 1, 0),
+                HingeAxisLocalA = new Vector3(0, 0, 1),
+                HingeAxisLocalB = Vector3.Normalize(new Vector3(1, 1, 0)),
                 SpringSettings = springSettings
             };
             Simulation.Solver.Add(a.Handle, b.Handle, ref angularHinge);
+            //var swivelHinge = new AngularSwivelHinge
+            //{
+            //    SwivelAxisLocalA = new Vector3(1, 0, 0),
+            //    HingeAxisLocalB = new Vector3(0, 1, 0),
+            //    SpringSettings = springSettings
+            //};
+            //Simulation.Solver.Add(a.Handle, b.Handle, ref swivelHinge);
+            //var swingLimit = new SwingLimit
+            //{
+            //    AxisLocalA = new Vector3(1, 0, 0),
+            //    AxisLocalB = new Vector3(1, 0, 0),
+            //    MinimumDot = -0.5f,
+            //    SpringSettings = new BepuPhysics.CollisionDetection.SpringSettings { DampingRatio = 1f, NaturalFrequency = MathHelper.Pi * 30 }
+            //};
+            //Simulation.Solver.Add(a.Handle, b.Handle, ref swingLimit);
 
             var staticShape = new Box(100, 1, 100);
             var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);

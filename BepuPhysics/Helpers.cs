@@ -29,5 +29,17 @@ namespace BepuPhysics
             t2.Y = sign * t1.X;
             t2.Z = -sign * normal.X;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void FindPerpendicular(ref Vector3Wide normal, out Vector3Wide perpendicular)
+        {
+            var sign = Vector.ConditionalSelect(Vector.LessThan(normal.Z, Vector<float>.Zero), -Vector<float>.One, Vector<float>.One);
+            
+            var scale = -Vector<float>.One / (sign + normal.Z);
+            perpendicular.X = normal.X * normal.Y * scale;
+            perpendicular.Y = sign + normal.Y * normal.Y * scale;
+            perpendicular.Z = -normal.Y;
+            
+        }
     }
 }
