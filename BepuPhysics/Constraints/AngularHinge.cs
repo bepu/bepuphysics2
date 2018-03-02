@@ -1,4 +1,5 @@
 ﻿using BepuPhysics.CollisionDetection;
+using BepuUtilities;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
@@ -70,8 +71,19 @@ namespace BepuPhysics.Constraints
         public Matrix2x3Wide NegatedImpulseToVelocityB;
     }
 
+
     public struct AngularHingeFunctions : IConstraintFunctions<AngularHingePrestepData, AngularHingeProjection, Vector2Wide>
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void ApproximateAcos(ref Vector<float> x, out Vector<float> acos)
+        {
+            //acos(x) ~= (pi / (2 * sqrt(2))) * sqrt(2 - 2 * x), for 0<=x<=1
+            //acos(x) ~= pi - (pi / (2 * sqrt(2))) * sqrt(2 + 2 * x), for -1<=x<=0
+            var two = new Vector<float>(2f);
+            acos = new Vector<float>(1.11072073454f) * Vector.SquareRoot(Vector.Max(Vector<float>.Zero, two - two * Vector.Abs(x)));
+            acos = Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), new Vector<float>(MathHelper.Pi) - acos, acos);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref AngularHingePrestepData prestep,
             out AngularHingeProjection projection)
@@ -80,68 +92,57 @@ namespace BepuPhysics.Constraints
                 out var localPositionB, out var orientationA, out var orientationB,
                 out var inertiaA, out var inertiaB);
 
-            //The free rotation axis attached to B is stopped from leaning in the direction of ConstrainedAxisX or ConstrainedAxisY attached to A, yielding a 2DOF constraint:
-            //C = [dot(hingeAxisB, constrainedAX)] = [0]
-            //    [dot(hingeAxisB, constrainedAY)]   [0]
-            //C' = [dot(d/dt(hingeAxisB), constrainedAX) + dot(hingeAxisB, d/dt(constrainedAX))] = [0]
-            //     [dot(d/dt(hingeAxisB), constrainedAY) + dot(hingeAxisB, d/dt(constrainedAY))]   [0]
-            //C' = [dot(angularVelocityB x hingeAxisB, constrainedAX) + dot(hingeAxisB, angularVelocityA x constrainedAX)] = [0]
-            //     [dot(angularVelocityB x hingeAxisB, constrainedAY) + dot(hingeAxisB, angularVelocityA x constrainedAY)]   [0]
-            //C' = [dot(hingeAxisB x constrainedAX, angularVelocityB) + dot(angularVelocityA, constrainedAX x hingeAxisB)] = [0]
-            //     [dot(hingeAxisB x constrainedAY, angularVelocityB) + dot(angularVelocityA, constrainedAY x hingeAxisB)]   [0]
-            //Providing jacobians of:
-            //JA = [constrainedAxisAX x hingeAxisB]
-            //     [constrainedAxisAY x hingeAxisB]
-            //JB = [hingeAxisB x constrainedAxisAX]
-            //     [hingeAxisB x constrainedAxisAY]
-            //a x b == -b x a, so JB == -JA.
-
-            //Now, we choose the storage representation. The default approach would be to store JA, the effective mass, and both inverse inertias, requiring 6 + 4 + 6 + 6 scalars.  
-            //The alternative is to store JAT * effectiveMass, and then also JA * inverseInertiaTensor(A/B), requiring only 6 + 6 + 6 scalars.
-            //So, overall, prebaking saves us 4 scalars and a bit of iteration-time ALU.
-            //Note that we build the basis in local space first. This helps keep the basis consistent during rotation.
+            //Note that we build the tangents in local space first to avoid inconsistencies.
             Helpers.BuildOrthnormalBasis(ref prestep.HingeAxisLocalA, out var localAX, out var localAY);
             Matrix3x3Wide.CreateFromQuaternion(ref orientationA, out var orientationMatrixA);
-            Matrix3x3Wide.TransformWithoutOverlap(ref localAX, ref orientationMatrixA, out var constrainedAxisX);
-            Matrix3x3Wide.TransformWithoutOverlap(ref localAY, ref orientationMatrixA, out var constrainedAxisY);
-            QuaternionWide.TransformWithoutOverlap(ref prestep.HingeAxisLocalB, ref orientationB, out var hingeAxis);
+            Matrix3x3Wide.TransformWithoutOverlap(ref prestep.HingeAxisLocalA, ref orientationMatrixA, out var hingeAxisA);
             Matrix2x3Wide jacobianA;
-            Vector3Wide.CrossWithoutOverlap(ref constrainedAxisX, ref hingeAxis, out jacobianA.X);
-            Vector3Wide.CrossWithoutOverlap(ref constrainedAxisY, ref hingeAxis, out jacobianA.Y);
-            //If hingeB is on the constraint axis plane, the jacobians lose independence. Arbitrarily use fallback axes.
-            Vector3Wide.CrossWithoutOverlap(ref jacobianA.X, ref jacobianA.Y, out var crossTest);
-            //Note that this causes a discontinuity in jacobian length. We just don't worry about it.
-            Vector3Wide.Dot(ref crossTest, ref crossTest, out var crossTestLengthSquared);
-            var useFallback = Vector.LessThan(crossTestLengthSquared, new Vector<float>(1e-10f));
-            Vector3Wide.ConditionalSelect(ref useFallback, ref constrainedAxisY, ref jacobianA.X, out jacobianA.X);
-            Vector3Wide.ConditionalSelect(ref useFallback, ref constrainedAxisX, ref jacobianA.Y, out jacobianA.Y);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localAX, ref orientationMatrixA, out jacobianA.X);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localAY, ref orientationMatrixA, out jacobianA.Y);
+            QuaternionWide.TransformWithoutOverlap(ref prestep.HingeAxisLocalB, ref orientationB, out var hingeAxisB);
 
-            ////ALTERNATIVE FORMULATION
-            ////C = atan2(dot(constraintAxisAX, hingeAxisB), dot(hingeAxisA, hingeAxisB)) = 0
-            ////JAX = ((constraintAxisAX * hingeAxisB) * (hingeAxisA x hingeAxisB) - (hingeAxisA * hingeAxisB) * (constraintAxisAX x hingeAxisB)) * denom
-            ////denom = 1 / ((hingeAxisA * hingeAxisB)^2 + (constraintAxisAX * hingeAxisB)^2)
-            //Vector3Wide.CrossWithoutOverlap(ref constrainedAxisX, ref constrainedAxisY, out var hingeAxisA);
-            //Vector3Wide.Dot(ref hingeAxisA, ref hingeAxis, out var hahb);
-            //Vector3Wide.Dot(ref constrainedAxisX, ref hingeAxis, out var caxhb);
-            //var denomX = Vector<float>.One / (hahb * hahb + caxhb * caxhb);
-            //Vector3Wide.CrossWithoutOverlap(ref hingeAxisA, ref hingeAxis, out var haxhb);
-            //Vector3Wide.CrossWithoutOverlap(ref constrainedAxisX, ref hingeAxis, out var caxxhb);
-            //Vector3Wide.Scale(ref haxhb, ref caxhb, out var leftX);
-            //Vector3Wide.Scale(ref caxxhb, ref hahb, out var rightX);
-            //Vector3Wide.Subtract(ref leftX, ref rightX, out var numeratorX);
-            //Vector3Wide.Scale(ref numeratorX, ref denomX, out var alternativeJacobianAX);
-            
-            //Vector3Wide.Dot(ref constrainedAxisY, ref hingeAxis, out var cayhb);
-            //var denomY = Vector<float>.One / (hahb * hahb + cayhb * cayhb);
-            //Vector3Wide.CrossWithoutOverlap(ref constrainedAxisY, ref hingeAxis, out var cayxhb);
-            //Vector3Wide.Scale(ref haxhb, ref cayhb, out var leftY);
-            //Vector3Wide.Scale(ref cayxhb, ref hahb, out var rightY);
-            //Vector3Wide.Subtract(ref leftY, ref rightY, out var numeratorY);
-            //Vector3Wide.Scale(ref numeratorY, ref denomY, out var alternativeJacobianAY);
+            //We project hingeAxisB onto the planes defined by A's axis X and and axis Y, and treat them as constant with respect to A's velocity. 
+            //This hand waves away a bit of complexity related to the fact that A's axes have velocity too, but it works out pretty nicely in the end.
+            //hingeAxisBOnPlaneX = hingeAxisB - dot(constraintAxisX, hingeAxisB) * constraintAxisX
+            //hingeAxisBOnPlaneY = hingeAxisB - dot(constraintAxisY, hingeAxisB) * constraintAxisY
+            //Note that we actually make use of inverse trig here. This is largely for the sake of the formulation, and the derivative will end up collapsing nicely.
+            //C = [atan(dot(hingeAxisBOnPlaneX, hingeAxisA), dot(hingeAxisBOnPlaneX, constraintAxisAY))] = [0]
+            //    [atan(dot(hingeAxisBOnPlaneY, hingeAxisA), dot(hingeAxisBOnPlaneY, constraintAxisAX))]   [0]
+            //Focusing on the hingeAxisOnPlaneX jacobian:
+            //C' = (dot(hingeAxisBOnPlaneX, hingeAxisA) * d/dt(dot(hingeAxisBOnPlaneX, constraintAxisAY)) - 
+            //      d/dt(dot(hingeAxisBOnPlaneX, hingeAxisA)) * dot(hingeAxisBOnPlaneX, constraintAxisAY)) * denom
+            //where denom = 1f / (dot(hingeAxisBOnPlaneX, hingeAxisA)^2 + dot(hingeAxisBOnPlaneX, constraintAxisAY)^2)
+            //C' = (dot(hingeAxisBOnPlaneX, hingeAxisA) * (dot(d/dt(hingeAxisBOnPlaneX), constraintAxisAY) + dot(hingeAxisBOnPlaneX, d/dt(constraintAxisAY))) - 
+            //     (dot(d/dt(hingeAxisBOnPlaneX), hingeAxisA) + dot(hingeAxisBOnPlaneX, d/dt(hingeAxisA))) * dot(hingeAxisBOnPlaneX, constraintAxisAY)) * denom
+            //C' = (dot(hingeAxisBOnPlaneX, hingeAxisA) * (dot(wB x hingeAxisBOnPlaneX, constraintAxisAY) + dot(hingeAxisBOnPlaneX, wA x constraintAxisAY)) - 
+            //     (dot(wB x hingeAxisBOnPlaneX, hingeAxisA) + dot(hingeAxisBOnPlaneX, wA x hingeAxisA)) * dot(hingeAxisBOnPlaneX, constraintAxisAY)) * denom
+            //C' = (dot(hingeAxisBOnPlaneX, hingeAxisA) * (dot(hingeAxisBOnPlaneX x constraintAxisAY, wB) + dot(wA, constraintAxisAY x hingeAxisBOnPlaneX)) - 
+            //     (dot(hingeAxisBOnPlaneX x hingeAxisA, wB) + dot(wA, hingeAxisA x hingeAxisBOnPlaneX)) * dot(hingeAxisBOnPlaneX, constraintAxisAY)) * denom
+            //C' = ((dot(dot(hingeAxisBOnPlaneX, hingeAxisA) * (hingeAxisBOnPlaneX x constraintAxisAY), wB) + dot(wA, dot(hingeAxisBOnPlaneX, hingeAxisA) * (constraintAxisAY x hingeAxisBOnPlaneX))) - 
+            //      (dot((hingeAxisBOnPlaneX x hingeAxisA) * dot(hingeAxisBOnPlaneX, constraintAxisAY), wB) + dot(wA, (hingeAxisA x hingeAxisBOnPlaneX) * dot(hingeAxisBOnPlaneX, constraintAxisAY)))) * denom
 
+            //C' = ((dot(dot(hingeAxisBOnPlaneX, hingeAxisA) * (hingeAxisBOnPlaneX x constraintAxisAY) - (hingeAxisBOnPlaneX x hingeAxisA) * dot(hingeAxisBOnPlaneX, constraintAxisAY), wB) + 
+            //       dot(wA, dot(hingeAxisBOnPlaneX, hingeAxisA) * (constraintAxisAY x hingeAxisBOnPlaneX) - (hingeAxisA x hingeAxisBOnPlaneX) * dot(hingeAxisBOnPlaneX, constraintAxisAY)))) * denom
+            //C' = (dot(wB, dot(hingeAxisBOnPlaneX, hingeAxisA) * (hingeAxisBOnPlaneX x constraintAxisAY) - 
+            //              dot(hingeAxisBOnPlaneX, constraintAxisAY) * (hingeAxisBOnPlaneX x hingeAxisA) + 
+            //      dot(wA, dot(hingeAxisBOnPlaneX, hingeAxisA) * (constraintAxisAY x hingeAxisBOnPlaneX) - 
+            //              dot(hingeAxisBOnPlaneX, constraintAxisAY) * (hingeAxisA x hingeAxisBOnPlaneX)) * denom
+            //Note that both contributing vectors of jacobian A, constraintAxisAY x hingeAxisBOnPlaneX and hingeAxisA x hingeAxisBOnPlaneX, are aligned with constraintAxisAX.
+            //The only remaining question is the scale. Measure it by dotting with the constraintAxisAX.
+            //(Switching notation for conciseness here: a = hingeAxisA, b = hingeAxisBOnPlaneX, x = constraintAxisAX, y = constraintAxisAY)
+            //(dot(b, a) * cross(y, b) - dot(b, y) * cross(a, b)) / (dot(b, a)^2 + dot(b,y)^2)
+            //scale = dot((dot(b, a) * cross(y, b) - dot(b, y) * cross(a, b)) / (dot(b, a)^2 + dot(b,y)^2), x)
+            //scale = (dot(b, a) * dot(x, cross(y, b)) - dot(b, y) * dot(x, cross(a, b))) / (dot(b, a)^2 + dot(b,y)^2)
+            //scale = (dot(b, a) * dot(b, cross(x, y)) - dot(b, y) * dot(b, cross(x, a))) / (dot(b, a)^2 + dot(b,y)^2)
+            //scale = (dot(b, a) * dot(b, a) - dot(b, y) * dot(b, -y)) / (dot(b, a)^2 + dot(b,y)^2)
+            //scale = (dot(b, a) * dot(b, a) + dot(b, y) * dot(b, y)) / (dot(b, a)^2 + dot(b,y)^2)
+            //scale = 1
+            //How convenient!
+            //jacobianA = [constraintAxisAX]
+            //            [constraintAxisAY]
+            //jacobianB = -jacobianA
 
             //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
-
             //This computes the effective mass using the usual (J * M^-1 * JT)^-1 formulation, but we actually make use of the intermediate result J * M^-1 so we compute it directly.
             Triangular3x3Wide.MultiplyBySymmetricWithoutOverlap(ref jacobianA, ref inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
             //Note that we don't use -jacobianA here, so we're actually storing out the negated version of the transform. That's fine; we'll simply subtract in the iteration.
@@ -151,18 +152,49 @@ namespace BepuPhysics.Constraints
             Triangular2x2Wide.Add(ref angularA, ref angularB, out var inverseEffectiveMass);
             Triangular2x2Wide.InvertSymmetricWithoutOverlap(ref inverseEffectiveMass, out var effectiveMass);
 
-
             Springiness.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Triangular2x2Wide.Scale(ref effectiveMass, ref effectiveMassCFMScale, out effectiveMass);
             Triangular2x2Wide.MultiplyTransposedBySymmetric(ref jacobianA, ref effectiveMass, out projection.VelocityToImpulseA);
 
             //Compute the position error and bias velocities.
-            Vector2Wide error;
-            Vector3Wide.Dot(ref hingeAxis, ref constrainedAxisX, out error.X);
-            Vector3Wide.Dot(ref hingeAxis, ref constrainedAxisY, out error.Y);
+            //Now we just have the slight annoyance that our error function contains inverse trigonometry.
+            //We'll just use:
+            //atan(dot(hingeAxisBOnPlaneX, hingeAxisA), dot(hingeAxisBOnPlaneX, constraintAxisAY)) = 
+            //sign(dot(hingeAxisBOnPlaneX, constraintAxisAY)) * acos(dot(hingeAxisA, hingeAxisBOnPlaneX / ||hingeAxisBOnPlaneX||))
+            //TODO: You could probably speed this up a bunch with some alternative approximations if you're willing to accept more error.
+            //V1 abandoned the inverse trig and just used a dot product equivalent, which... had issues, but hey it's cheap.
+            Vector3Wide.Dot(ref hingeAxisB, ref jacobianA.X, out var hingeAxisBDotX);
+            Vector3Wide.Dot(ref hingeAxisB, ref jacobianA.Y, out var hingeAxisBDotY);
+            Vector3Wide.Scale(ref jacobianA.X, ref hingeAxisBDotX, out var toRemoveX);
+            Vector3Wide.Scale(ref jacobianA.Y, ref hingeAxisBDotY, out var toRemoveY);
+            Vector3Wide.Subtract(ref hingeAxisB, ref toRemoveX, out var hingeAxisBOnPlaneX);
+            Vector3Wide.Subtract(ref hingeAxisB, ref toRemoveY, out var hingeAxisBOnPlaneY);
+            Vector3Wide.Length(ref hingeAxisBOnPlaneX, out var xLength);
+            Vector3Wide.Length(ref hingeAxisBOnPlaneY, out var yLength);
+            var scaleX = Vector<float>.One / xLength;
+            var scaleY = Vector<float>.One / yLength;
+            Vector3Wide.Scale(ref hingeAxisBOnPlaneX, ref scaleX, out hingeAxisBOnPlaneX);
+            Vector3Wide.Scale(ref hingeAxisBOnPlaneY, ref scaleY, out hingeAxisBOnPlaneY);
+            //If the axis is parallel with the normal of the plane, just arbitrarily pick 0 angle.
+            var epsilon = new Vector<float>(1e-7f);
+            var useFallbackX = Vector.LessThan(xLength, epsilon);
+            var useFallbackY = Vector.LessThan(yLength, epsilon);
+            Vector3Wide.ConditionalSelect(ref useFallbackX, ref hingeAxisA, ref hingeAxisBOnPlaneX, out hingeAxisBOnPlaneX);
+            Vector3Wide.ConditionalSelect(ref useFallbackY, ref hingeAxisA, ref hingeAxisBOnPlaneY, out hingeAxisBOnPlaneY);
+
+            Vector3Wide.Dot(ref hingeAxisBOnPlaneX, ref hingeAxisA, out var hbxha);
+            Vector3Wide.Dot(ref hingeAxisBOnPlaneY, ref hingeAxisA, out var hbyha);
+            Vector2Wide errorAngle;
+            //We could probably get away with an acos approximation of something like (1 - x) * pi/2, but we'll do just a little more work:
+            ApproximateAcos(ref hbxha, out errorAngle.X);
+            ApproximateAcos(ref hbyha, out errorAngle.Y);
+            Vector3Wide.Dot(ref hingeAxisBOnPlaneX, ref jacobianA.Y, out var hbxay);
+            Vector3Wide.Dot(ref hingeAxisBOnPlaneY, ref jacobianA.X, out var hbyax);
+            errorAngle.X = Vector.ConditionalSelect(Vector.LessThan(hbxay, Vector<float>.Zero), errorAngle.X, -errorAngle.X);
+            errorAngle.Y = Vector.ConditionalSelect(Vector.LessThan(hbyax, Vector<float>.Zero), -errorAngle.Y, errorAngle.Y);
             //Note the negation: we want to oppose the separation. TODO: arguably, should bake the negation into positionErrorToVelocity, given its name.
             positionErrorToVelocity = -positionErrorToVelocity;
-            Vector2Wide.Scale(ref error, ref positionErrorToVelocity, out var biasVelocity);
+            Vector2Wide.Scale(ref errorAngle, ref positionErrorToVelocity, out var biasVelocity);
             Triangular2x2Wide.TransformBySymmetricWithoutOverlap(ref biasVelocity, ref effectiveMass, out projection.BiasImpulse);
 
         }
