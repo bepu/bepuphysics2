@@ -106,7 +106,7 @@ namespace Demos
             shape.ComputeLocalInverseInertia(inertia.InverseMass, out inertia.InverseInertiaTensor);
             var description = new BodyDescription
             {
-                Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
+                Activity = new BodyActivityDescription { SleepThreshold = 0.00f, MinimumTimestepCountUnderThreshold = 32 },
                 Collidable = new CollidableDescription
                 {
                     Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
@@ -176,21 +176,52 @@ namespace Demos
                 LocalOffsetB = Quaternion.Transform(localShoulder - upperArmPosition, Quaternion.Conjugate(upperArmOrientation)),
                 SpringSettings = constraintSpringSettings
             };
+            var shoulderSwingLimit = new SwingLimit
+            {
+                AxisLocalA = Quaternion.Transform(Vector3.Normalize(new Vector3(sign, 0, 1)), Quaternion.Conjugate(localChestPose.Orientation)),
+                AxisLocalB = Quaternion.Transform(new Vector3(sign, 0, 0), Quaternion.Conjugate(upperArmOrientation)),
+                MinimumDot = -.2f,
+                SpringSettings = constraintSpringSettings
+            };
             simulation.Solver.Add(chestHandle, upperArm, ref shoulderBallSocket);
+            simulation.Solver.Add(chestHandle, upperArm, ref shoulderSwingLimit);
             var elbowBallSocket = new BallSocket
             {
                 LocalOffsetA = Quaternion.Transform(localElbow - upperArmPosition, Quaternion.Conjugate(upperArmOrientation)),
                 LocalOffsetB = Quaternion.Transform(localElbow - lowerArmPosition, Quaternion.Conjugate(lowerArmOrientation)),
                 SpringSettings = constraintSpringSettings
             };
+            var elbowSwivelHinge = new AngularSwivelHinge
+            {
+                SwivelAxisLocalA = new Vector3(1, 0, 0),
+                HingeAxisLocalB = new Vector3(0, 1, 0),
+                SpringSettings = constraintSpringSettings
+            };
+            var elbowSwingLimit = new SwingLimit
+            {
+                AxisLocalA = new Vector3(0, 1, 0),
+                AxisLocalB = new Vector3(sign, 0, 0),
+                MinimumDot = 0,
+                SpringSettings = constraintSpringSettings
+            };
             simulation.Solver.Add(upperArm, lowerArm, ref elbowBallSocket);
+            simulation.Solver.Add(upperArm, lowerArm, ref elbowSwivelHinge);
+            simulation.Solver.Add(upperArm, lowerArm, ref elbowSwingLimit);
             var wristBallSocket = new BallSocket
             {
                 LocalOffsetA = Quaternion.Transform(localWrist - lowerArmPosition, Quaternion.Conjugate(lowerArmOrientation)),
                 LocalOffsetB = localWrist - handPosition,
                 SpringSettings = constraintSpringSettings
             };
+            var wristSwingLimit = new SwingLimit
+            {
+                AxisLocalA = Quaternion.Transform(new Vector3(sign, 0, 0), Quaternion.Conjugate(lowerArmOrientation)),
+                AxisLocalB = new Vector3(sign, 0, 0),
+                MinimumDot = 0,
+                SpringSettings = constraintSpringSettings
+            };
             simulation.Solver.Add(lowerArm, hand, ref wristBallSocket);
+            simulation.Solver.Add(lowerArm, hand, ref wristSwingLimit);
 
             //Disable collisions between connected ragdoll pieces.
             var upperArmLocalIndex = limbBaseBitIndex;
@@ -226,21 +257,52 @@ namespace Demos
                 LocalOffsetB = Quaternion.Transform(localHip - upperLegPosition, Quaternion.Conjugate(upperLegOrientation)),
                 SpringSettings = constraintSpringSettings
             };
+            var hipSwingLimit = new SwingLimit
+            {
+                AxisLocalA = Quaternion.Transform(Vector3.Normalize(new Vector3(Math.Sign(localHip.X), -1, 0)), Quaternion.Conjugate(localHipsPose.Orientation)),
+                AxisLocalB = Quaternion.Transform(new Vector3(0, -1, 0), Quaternion.Conjugate(upperLegOrientation)),
+                MinimumDot = 0f,
+                SpringSettings = constraintSpringSettings
+            };
             simulation.Solver.Add(hipsHandle, upperLeg, ref hipBallSocket);
+            simulation.Solver.Add(hipsHandle, upperLeg, ref hipSwingLimit);
             var kneeBallSocket = new BallSocket
             {
                 LocalOffsetA = Quaternion.Transform(localKnee - upperLegPosition, Quaternion.Conjugate(upperLegOrientation)),
                 LocalOffsetB = Quaternion.Transform(localKnee - lowerLegPosition, Quaternion.Conjugate(lowerLegOrientation)),
                 SpringSettings = constraintSpringSettings
             };
+            var kneeHinge = new AngularHinge
+            {
+                HingeAxisLocalA = Quaternion.Transform(new Vector3(1, 0, 0), Quaternion.Conjugate(upperLegOrientation)),
+                HingeAxisLocalB = Quaternion.Transform(new Vector3(1, 0, 0), Quaternion.Conjugate(lowerLegOrientation)),
+                SpringSettings = constraintSpringSettings
+            };
+            var kneeSwingLimit = new SwingLimit
+            {
+                AxisLocalA = Quaternion.Transform(new Vector3(0, 0, 1), Quaternion.Conjugate(upperLegOrientation)),
+                AxisLocalB = Quaternion.Transform(new Vector3(0, 1, 0), Quaternion.Conjugate(lowerLegOrientation)),
+                MinimumDot = 0,
+                SpringSettings = constraintSpringSettings
+            };
             simulation.Solver.Add(upperLeg, lowerLeg, ref kneeBallSocket);
+            simulation.Solver.Add(upperLeg, lowerLeg, ref kneeHinge);
+            simulation.Solver.Add(upperLeg, lowerLeg, ref kneeSwingLimit);
             var ankleBallSocket = new BallSocket
             {
                 LocalOffsetA = Quaternion.Transform(localAnkle - lowerLegPosition, Quaternion.Conjugate(lowerLegOrientation)),
                 LocalOffsetB = localAnkle - localFoot,
                 SpringSettings = constraintSpringSettings
             };
+            var ankleSwingLimit = new SwingLimit
+            {
+                AxisLocalA = Quaternion.Transform(new Vector3(0, 1, 0), Quaternion.Conjugate(lowerLegOrientation)),
+                AxisLocalB = new Vector3(0, 1, 0),
+                MinimumDot = .5f,
+                SpringSettings = constraintSpringSettings
+            };
             simulation.Solver.Add(lowerLeg, foot, ref ankleBallSocket);
+            simulation.Solver.Add(lowerLeg, foot, ref ankleSwingLimit);
 
             //Disable collisions between connected ragdoll pieces.
             var upperLegLocalIndex = limbBaseBitIndex;
@@ -279,7 +341,15 @@ namespace Demos
                 LocalOffsetB = Quaternion.Transform(lowerSpine - abdomenPose.Position, Quaternion.Conjugate(abdomenPose.Orientation)),
                 SpringSettings = springSettings
             };
+            var lowerSpineSwingLimit = new SwingLimit
+            {
+                AxisLocalA = Quaternion.Transform(new Vector3(0, 1, 0), Quaternion.Conjugate(hipsPose.Orientation)),
+                AxisLocalB = Quaternion.Transform(new Vector3(0, 1, 0), Quaternion.Conjugate(abdomenPose.Orientation)),
+                MinimumDot = 0.65f,
+                SpringSettings = springSettings
+            };
             simulation.Solver.Add(hips, abdomen, ref lowerSpineBallSocket);
+            simulation.Solver.Add(hips, abdomen, ref lowerSpineSwingLimit);
             var upperSpine = (abdomenPose.Position + chestPose.Position) * 0.5f;
             var upperSpineBallSocket = new BallSocket
             {
@@ -287,7 +357,15 @@ namespace Demos
                 LocalOffsetB = Quaternion.Transform(upperSpine - chestPose.Position, Quaternion.Conjugate(chestPose.Orientation)),
                 SpringSettings = springSettings
             };
+            var upperSpineSwingLimit = new SwingLimit
+            {
+                AxisLocalA = Quaternion.Transform(new Vector3(0, 1, 0), Quaternion.Conjugate(abdomenPose.Orientation)),
+                AxisLocalB = Quaternion.Transform(new Vector3(0, 1, 0), Quaternion.Conjugate(chestPose.Orientation)),
+                MinimumDot = 0.65f,
+                SpringSettings = springSettings
+            };
             simulation.Solver.Add(abdomen, chest, ref upperSpineBallSocket);
+            simulation.Solver.Add(abdomen, chest, ref upperSpineSwingLimit);
             var neck = (headPose.Position + chestPose.Position) * 0.5f;
             var neckBallSocket = new BallSocket
             {
@@ -295,7 +373,15 @@ namespace Demos
                 LocalOffsetB = neck - headPose.Position,
                 SpringSettings = springSettings
             };
+            var neckSwingLimit = new SwingLimit
+            {
+                AxisLocalA = Quaternion.Transform(new Vector3(0, 1, 0), Quaternion.Conjugate(chestPose.Orientation)),
+                AxisLocalB = new Vector3(0, 1, 0),
+                MinimumDot = 0.1f,
+                SpringSettings = springSettings
+            };
             simulation.Solver.Add(chest, head, ref neckBallSocket);
+            simulation.Solver.Add(chest, head, ref neckSwingLimit);
 
             var hipsLocalIndex = 0;
             var abdomenLocalIndex = 1;
@@ -332,6 +418,7 @@ namespace Demos
             var callbacks = new RagdollCallbacks { Masks = masks };
             Simulation = Simulation.Create(BufferPool, callbacks);
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            //Simulation.Solver.IterationCount = 100;
 
             int ragdollIndex = 0;
             var spacing = new Vector3(5, 0, 3);
