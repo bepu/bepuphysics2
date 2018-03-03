@@ -235,6 +235,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Select(ref depth, ref taMin, ref taMax, ref localNormal.X, ref localNormal.Y, ref localNormal.Z,
                 ref fzDepth, ref fztaMin, ref fztaMax, ref zero, ref zero, ref fzn);
 
+            //While the above chooses a minimal depth, edge-edge contact will frequently produce interval lengths of 0 and end up overwriting near-equivalent face intervals.
+            //One option would be to bias the comparison to accept face contacts more readily, but we can do something a little less fragile: 
+            //choose a box representative box face based on the collision normal detected above, and expand the interval to the associated face interval.
+            //This will never remove an edge-edge contact- it can only add a second contact.
+            var xDot = localNormal.X * fxn;
+            var yDot = localNormal.Y * fyn;
+            var zDot = localNormal.Z * fzn;
+            var useX = Vector.GreaterThan(xDot, Vector.Max(yDot, zDot));
+            var useY = Vector.AndNot(Vector.GreaterThan(yDot, zDot), useX);
+            var representativeMin = Vector.ConditionalSelect(useX, fxtaMin, Vector.ConditionalSelect(useY, fytaMin, fztaMin));
+            var representativeMax = Vector.ConditionalSelect(useX, fxtaMax, Vector.ConditionalSelect(useY, fytaMax, fztaMax));
+            taMin = Vector.Min(representativeMin, taMin);
+            taMax = Vector.Max(representativeMax, taMax);
+
             //Each contact may have its own depth.
             //Imagine a face collision- if the capsule axis isn't fully parallel with the plane's surface, it would be strange to use the same depth for both contacts.
             //Compute the interval of the box on the normal. Note that the normal is already calibrated to point from B to A (box to capsule).

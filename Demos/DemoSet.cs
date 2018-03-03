@@ -38,7 +38,7 @@ namespace Demos
         {
             AddOption<ConstraintTestDemo>();
             AddOption<BasicRagdollDemo>();
-            AddOption<BoxTestDemo>();
+            AddOption<ShapePileDemo>();
             AddOption<CapsuleTestDemo>();
             AddOption<SimpleDemo>();
             AddOption<FountainStressTestDemo>();
