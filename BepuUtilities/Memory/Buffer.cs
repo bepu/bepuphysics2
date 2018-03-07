@@ -72,7 +72,7 @@ namespace BepuUtilities.Memory
         public Buffer<T> Slice(int start, int count)
         {
             ValidateRegion(start, count);
-            return new Buffer<T>(Memory + Unsafe.SizeOf<T>() * start, count);
+            return new Buffer<T>(Memory + Unsafe.SizeOf<T>() * start, count, Id);
         }
         
         public int Length

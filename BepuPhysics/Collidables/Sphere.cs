@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace BepuPhysics.Collidables
 {
-    public struct Sphere : IShape
+    public struct Sphere : IConvexShape
     {
         public float Radius;
 
@@ -104,6 +104,11 @@ namespace BepuPhysics.Collidables
             localInverseInertia.M31 = 0;
             localInverseInertia.M32 = 0;
             localInverseInertia.M33 = localInverseInertia.M11;
+        }
+
+        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
+        {
+            return new ConvexShapeBatch<Sphere>(pool, initialCapacity);
         }
 
         /// <summary>

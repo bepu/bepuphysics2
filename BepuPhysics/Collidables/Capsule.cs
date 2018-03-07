@@ -14,7 +14,7 @@ namespace BepuPhysics.Collidables
     /// <summary>
     /// Collision shape representing a sphere-expanded line segment.
     /// </summary>
-    public struct Capsule : IShape
+    public struct Capsule : IConvexShape
     {
         /// <summary>
         /// Spherical expansion applied to the internal line segment.
@@ -179,7 +179,6 @@ namespace BepuPhysics.Collidables
 
         public void ComputeLocalInverseInertia(float inverseMass, out Triangular3x3 localInverseInertia)
         {
-
             var r2 = Radius * Radius;
             var h2 = HalfLength * HalfLength;
             var cylinderVolume = 2 * HalfLength * r2 * MathHelper.Pi;
@@ -197,6 +196,13 @@ namespace BepuPhysics.Collidables
             localInverseInertia.M32 = 0;
             localInverseInertia.M33 = localInverseInertia.M11;            
         }
+
+        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        {
+            return new ConvexShapeBatch<Capsule>(pool, initialCapacity);
+        }
+
+
 
         /// <summary>
         /// Type id of capsule shapes.

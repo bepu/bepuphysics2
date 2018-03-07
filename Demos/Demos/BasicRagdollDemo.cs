@@ -99,26 +99,27 @@ namespace Demos
 
     public class BasicRagdollDemo : Demo
     {
-        static int AddBody<TShape>(TShape shape, float mass, RigidPose pose, Simulation simulation) where TShape : struct, IShape
+        static BodyReference AddBody<TShape>(TShape shape, float mass, RigidPose pose, Simulation simulation) where TShape : struct, IShape
         {
             BodyInertia inertia;
-            inertia.InverseMass = 1f / mass;
-            shape.ComputeLocalInverseInertia(inertia.InverseMass, out inertia.InverseInertiaTensor);
+            inertia.InverseMass = mass > 0 ? 1f / mass : 0;
+            var shapeIndex = simulation.Shapes.Add(ref shape);
+            simulation.Shapes.ComputeLocalInverseInertia(shapeIndex, inertia.InverseMass, out inertia.InverseInertiaTensor);
             var description = new BodyDescription
             {
-                Activity = new BodyActivityDescription { SleepThreshold = 0.00f, MinimumTimestepCountUnderThreshold = 32 },
+                Activity = new BodyActivityDescription { SleepThreshold = 0, MinimumTimestepCountUnderThreshold = 32 },
                 Collidable = new CollidableDescription
                 {
                     Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
                     SpeculativeMargin = .1f,
                     //Note that this always registers a new shape instance. You could be more clever/efficient and share shapes, but the goal here is to show the most basic option.
                     //Also, the cost of registering different shapes isn't that high for tiny implicit shapes.
-                    Shape = simulation.Shapes.Add(ref shape)
+                    Shape = shapeIndex
                 },
                 LocalInertia = inertia,
                 Pose = pose
             };
-            return simulation.Bodies.Add(ref description);
+            return new BodyReference(simulation.Bodies.Add(ref description), simulation.Bodies);
         }
 
         static RigidPose GetWorldPose(Vector3 localPosition, Quaternion localOrientation, RigidPose ragdollPose)
@@ -183,8 +184,8 @@ namespace Demos
                 MinimumDot = -.2f,
                 SpringSettings = constraintSpringSettings
             };
-            simulation.Solver.Add(chestHandle, upperArm, ref shoulderBallSocket);
-            simulation.Solver.Add(chestHandle, upperArm, ref shoulderSwingLimit);
+            simulation.Solver.Add(chestHandle, upperArm.Handle, ref shoulderBallSocket);
+            simulation.Solver.Add(chestHandle, upperArm.Handle, ref shoulderSwingLimit);
             var elbowBallSocket = new BallSocket
             {
                 LocalOffsetA = Quaternion.Transform(localElbow - upperArmPosition, Quaternion.Conjugate(upperArmOrientation)),
@@ -204,9 +205,9 @@ namespace Demos
                 MinimumDot = 0,
                 SpringSettings = constraintSpringSettings
             };
-            simulation.Solver.Add(upperArm, lowerArm, ref elbowBallSocket);
-            simulation.Solver.Add(upperArm, lowerArm, ref elbowSwivelHinge);
-            simulation.Solver.Add(upperArm, lowerArm, ref elbowSwingLimit);
+            simulation.Solver.Add(upperArm.Handle, lowerArm.Handle, ref elbowBallSocket);
+            simulation.Solver.Add(upperArm.Handle, lowerArm.Handle, ref elbowSwivelHinge);
+            simulation.Solver.Add(upperArm.Handle, lowerArm.Handle, ref elbowSwingLimit);
             var wristBallSocket = new BallSocket
             {
                 LocalOffsetA = Quaternion.Transform(localWrist - lowerArmPosition, Quaternion.Conjugate(lowerArmOrientation)),
@@ -220,8 +221,8 @@ namespace Demos
                 MinimumDot = 0,
                 SpringSettings = constraintSpringSettings
             };
-            simulation.Solver.Add(lowerArm, hand, ref wristBallSocket);
-            simulation.Solver.Add(lowerArm, hand, ref wristSwingLimit);
+            simulation.Solver.Add(lowerArm.Handle, hand.Handle, ref wristBallSocket);
+            simulation.Solver.Add(lowerArm.Handle, hand.Handle, ref wristSwingLimit);
 
             //Disable collisions between connected ragdoll pieces.
             var upperArmLocalIndex = limbBaseBitIndex;
@@ -233,9 +234,9 @@ namespace Demos
             DisableCollision(ref chestMask, chestLocalIndex, ref upperArmMask, upperArmLocalIndex);
             DisableCollision(ref upperArmMask, upperArmLocalIndex, ref lowerArmMask, lowerArmLocalIndex);
             DisableCollision(ref lowerArmMask, lowerArmLocalIndex, ref handMask, handLocalIndex);
-            masks[upperArm] = upperArmMask;
-            masks[lowerArm] = lowerArmMask;
-            masks[hand] = handMask;
+            masks[upperArm.Handle] = upperArmMask;
+            masks[lowerArm.Handle] = lowerArmMask;
+            masks[hand.Handle] = handMask;
         }
 
         static void AddLeg(Vector3 localHip, RigidPose localHipsPose, int hipsHandle, int hipsLocalIndex, ref ulong hipsMask,
@@ -264,8 +265,8 @@ namespace Demos
                 MinimumDot = 0f,
                 SpringSettings = constraintSpringSettings
             };
-            simulation.Solver.Add(hipsHandle, upperLeg, ref hipBallSocket);
-            simulation.Solver.Add(hipsHandle, upperLeg, ref hipSwingLimit);
+            simulation.Solver.Add(hipsHandle, upperLeg.Handle, ref hipBallSocket);
+            simulation.Solver.Add(hipsHandle, upperLeg.Handle, ref hipSwingLimit);
             var kneeBallSocket = new BallSocket
             {
                 LocalOffsetA = Quaternion.Transform(localKnee - upperLegPosition, Quaternion.Conjugate(upperLegOrientation)),
@@ -285,9 +286,9 @@ namespace Demos
                 MinimumDot = 0,
                 SpringSettings = constraintSpringSettings
             };
-            simulation.Solver.Add(upperLeg, lowerLeg, ref kneeBallSocket);
-            simulation.Solver.Add(upperLeg, lowerLeg, ref kneeHinge);
-            simulation.Solver.Add(upperLeg, lowerLeg, ref kneeSwingLimit);
+            simulation.Solver.Add(upperLeg.Handle, lowerLeg.Handle, ref kneeBallSocket);
+            simulation.Solver.Add(upperLeg.Handle, lowerLeg.Handle, ref kneeHinge);
+            simulation.Solver.Add(upperLeg.Handle, lowerLeg.Handle, ref kneeSwingLimit);
             var ankleBallSocket = new BallSocket
             {
                 LocalOffsetA = Quaternion.Transform(localAnkle - lowerLegPosition, Quaternion.Conjugate(lowerLegOrientation)),
@@ -301,8 +302,8 @@ namespace Demos
                 MinimumDot = .5f,
                 SpringSettings = constraintSpringSettings
             };
-            simulation.Solver.Add(lowerLeg, foot, ref ankleBallSocket);
-            simulation.Solver.Add(lowerLeg, foot, ref ankleSwingLimit);
+            simulation.Solver.Add(lowerLeg.Handle, foot.Handle, ref ankleBallSocket);
+            simulation.Solver.Add(lowerLeg.Handle, foot.Handle, ref ankleSwingLimit);
 
             //Disable collisions between connected ragdoll pieces.
             var upperLegLocalIndex = limbBaseBitIndex;
@@ -314,9 +315,9 @@ namespace Demos
             DisableCollision(ref hipsMask, hipsLocalIndex, ref upperLegMask, upperLegLocalIndex);
             DisableCollision(ref upperLegMask, upperLegLocalIndex, ref lowerLegMask, lowerLegLocalIndex);
             DisableCollision(ref lowerLegMask, lowerLegLocalIndex, ref footMask, footLocalIndex);
-            masks[upperLeg] = upperLegMask;
-            masks[lowerLeg] = lowerLegMask;
-            masks[foot] = footMask;
+            masks[upperLeg.Handle] = upperLegMask;
+            masks[lowerLeg.Handle] = lowerLegMask;
+            masks[foot.Handle] = footMask;
         }
 
         static void AddRagdoll(Vector3 position, Quaternion orientation, int ragdollIndex, BodyCollisionMasks masks, Simulation simulation)
@@ -348,8 +349,8 @@ namespace Demos
                 MinimumDot = 0.65f,
                 SpringSettings = springSettings
             };
-            simulation.Solver.Add(hips, abdomen, ref lowerSpineBallSocket);
-            simulation.Solver.Add(hips, abdomen, ref lowerSpineSwingLimit);
+            simulation.Solver.Add(hips.Handle, abdomen.Handle, ref lowerSpineBallSocket);
+            simulation.Solver.Add(hips.Handle, abdomen.Handle, ref lowerSpineSwingLimit);
             var upperSpine = (abdomenPose.Position + chestPose.Position) * 0.5f;
             var upperSpineBallSocket = new BallSocket
             {
@@ -364,8 +365,8 @@ namespace Demos
                 MinimumDot = 0.65f,
                 SpringSettings = springSettings
             };
-            simulation.Solver.Add(abdomen, chest, ref upperSpineBallSocket);
-            simulation.Solver.Add(abdomen, chest, ref upperSpineSwingLimit);
+            simulation.Solver.Add(abdomen.Handle, chest.Handle, ref upperSpineBallSocket);
+            simulation.Solver.Add(abdomen.Handle, chest.Handle, ref upperSpineSwingLimit);
             var neck = (headPose.Position + chestPose.Position) * 0.5f;
             var neckBallSocket = new BallSocket
             {
@@ -380,8 +381,8 @@ namespace Demos
                 MinimumDot = 0.1f,
                 SpringSettings = springSettings
             };
-            simulation.Solver.Add(chest, head, ref neckBallSocket);
-            simulation.Solver.Add(chest, head, ref neckSwingLimit);
+            simulation.Solver.Add(chest.Handle, head.Handle, ref neckBallSocket);
+            simulation.Solver.Add(chest.Handle, head.Handle, ref neckSwingLimit);
 
             var hipsLocalIndex = 0;
             var abdomenLocalIndex = 1;
@@ -397,15 +398,15 @@ namespace Demos
             DisableCollision(ref chestMask, chestLocalIndex, ref headMask, headLocalIndex);
 
             //Build all the limbs. Setting the masks is delayed until after the limbs have been created and have disabled collisions with the chest/hips.
-            AddArm(1, chestPose.Position + new Vector3(0.4f, 0.1f, 0), chestPose, chest, chestLocalIndex, ref chestMask, 4, ragdollIndex, ragdollPose, masks, springSettings, simulation);
-            AddArm(-1, chestPose.Position + new Vector3(-0.4f, 0.1f, 0), chestPose, chest, chestLocalIndex, ref chestMask, 7, ragdollIndex, ragdollPose, masks, springSettings, simulation);
-            AddLeg(hipsPose.Position + new Vector3(-0.17f, -0.2f, 0), hipsPose, hips, hipsLocalIndex, ref hipsMask, 10, ragdollIndex, ragdollPose, masks, springSettings, simulation);
-            AddLeg(hipsPose.Position + new Vector3(0.17f, -0.2f, 0), hipsPose, hips, hipsLocalIndex, ref hipsMask, 13, ragdollIndex, ragdollPose, masks, springSettings, simulation);
+            AddArm(1, chestPose.Position + new Vector3(0.4f, 0.1f, 0), chestPose, chest.Handle, chestLocalIndex, ref chestMask, 4, ragdollIndex, ragdollPose, masks, springSettings, simulation);
+            AddArm(-1, chestPose.Position + new Vector3(-0.4f, 0.1f, 0), chestPose, chest.Handle, chestLocalIndex, ref chestMask, 7, ragdollIndex, ragdollPose, masks, springSettings, simulation);
+            AddLeg(hipsPose.Position + new Vector3(-0.17f, -0.2f, 0), hipsPose, hips.Handle, hipsLocalIndex, ref hipsMask, 10, ragdollIndex, ragdollPose, masks, springSettings, simulation);
+            AddLeg(hipsPose.Position + new Vector3(0.17f, -0.2f, 0), hipsPose, hips.Handle, hipsLocalIndex, ref hipsMask, 13, ragdollIndex, ragdollPose, masks, springSettings, simulation);
 
-            masks[hips] = hipsMask;
-            masks[abdomen] = abdomenMask;
-            masks[chest] = chestMask;
-            masks[head] = headMask;
+            masks[hips.Handle] = hipsMask;
+            masks[abdomen.Handle] = abdomenMask;
+            masks[chest.Handle] = chestMask;
+            masks[head.Handle] = headMask;
         }
 
         public unsafe override void Initialize(Camera camera)

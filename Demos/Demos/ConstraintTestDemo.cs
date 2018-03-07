@@ -18,7 +18,8 @@ namespace Demos
         {
             BodyInertia inertia;
             inertia.InverseMass = mass > 0 ? 1f / mass : 0;
-            shape.ComputeLocalInverseInertia(inertia.InverseMass, out inertia.InverseInertiaTensor);
+            var shapeIndex = simulation.Shapes.Add(ref shape);
+            simulation.Shapes.ComputeLocalInverseInertia(shapeIndex, inertia.InverseMass, out inertia.InverseInertiaTensor);
             var description = new BodyDescription
             {
                 Activity = new BodyActivityDescription { SleepThreshold = 0, MinimumTimestepCountUnderThreshold = 32 },
@@ -28,7 +29,7 @@ namespace Demos
                     SpeculativeMargin = .1f,
                     //Note that this always registers a new shape instance. You could be more clever/efficient and share shapes, but the goal here is to show the most basic option.
                     //Also, the cost of registering different shapes isn't that high for tiny implicit shapes.
-                    Shape = simulation.Shapes.Add(ref shape)
+                    Shape = shapeIndex
                 },
                 LocalInertia = inertia,
                 Pose = pose

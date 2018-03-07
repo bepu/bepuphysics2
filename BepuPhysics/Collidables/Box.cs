@@ -13,7 +13,7 @@ namespace BepuPhysics.Collidables
     /// <summary>
     /// Collision shape representing a solid cuboid.
     /// </summary>
-    public struct Box : IShape
+    public struct Box : IConvexShape
     {
         public float HalfWidth;
         public float HalfHeight;
@@ -40,11 +40,11 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Gather(ref Buffer<Box> shapes, ref Vector<int> shapeIndices, int count, out BoxWide capsules)
+        public static void Gather(ref Buffer<Box> shapes, ref Vector<int> shapeIndices, int count, out BoxWide boxes)
         {
-            ref var halfWidthBase = ref Unsafe.As<Vector<float>, float>(ref capsules.HalfWidth);
-            ref var halfHeightBase = ref Unsafe.As<Vector<float>, float>(ref capsules.HalfHeight);
-            ref var halfLengthBase = ref Unsafe.As<Vector<float>, float>(ref capsules.HalfLength);
+            ref var halfWidthBase = ref Unsafe.As<Vector<float>, float>(ref boxes.HalfWidth);
+            ref var halfHeightBase = ref Unsafe.As<Vector<float>, float>(ref boxes.HalfHeight);
+            ref var halfLengthBase = ref Unsafe.As<Vector<float>, float>(ref boxes.HalfLength);
             ref var shapeIndicesBase = ref Unsafe.As<Vector<int>, int>(ref shapeIndices);
             Debug.Assert(count <= Vector<float>.Count);
             for (int i = 0; i < count; ++i)
@@ -200,6 +200,11 @@ namespace BepuPhysics.Collidables
             localInverseInertia.M31 = 0;
             localInverseInertia.M32 = 0;
             localInverseInertia.M33 = inverseMass * 3 / (x2 + y2);
+        }
+
+        public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
+        {
+            return new ConvexShapeBatch<Box>(pool, initialCapacity);
         }
 
         /// <summary>

@@ -218,7 +218,7 @@ namespace Demos.SpecializedTests
         }
 
 
-        public static void Test<TShape, TTester>() where TShape : IShape where TTester : IRayTester<TShape>
+        public static void Test<TShape, TTester>() where TShape : IConvexShape where TTester : IRayTester<TShape>
         {
             const int shapeIterations = 1000;
             const int transformIterations = 100;

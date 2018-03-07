@@ -43,7 +43,7 @@ namespace Demos.SpecializedTests
 
     public static class InertiaTensorTests
     {
-        static void CheckInertia<TShape, TInertiaTester>(ref TShape shape) where TShape : IShape where TInertiaTester : IInertiaTester<TShape>
+        static void CheckInertia<TShape, TInertiaTester>(ref TShape shape) where TShape : IConvexShape where TInertiaTester : IInertiaTester<TShape>
         {
             var orientation = BepuUtilities.Quaternion.Identity;
             shape.GetBounds(ref orientation, out var min, out var max);
