@@ -326,26 +326,26 @@ namespace Demos.SpecializedTests
 
                 var triangular = new Triangular3x3
                 {
-                    M11 = (float)random.NextDouble() * 2 + 1,
-                    M21 = (float)random.NextDouble() * 1 + 1,
-                    M22 = (float)random.NextDouble() * 2 + 1,
-                    M31 = (float)random.NextDouble() * 1 + 1,
-                    M32 = (float)random.NextDouble() * 1 + 1,
-                    M33 = (float)random.NextDouble() * 2 + 1,
+                    XX = (float)random.NextDouble() * 2 + 1,
+                    YX = (float)random.NextDouble() * 1 + 1,
+                    YY = (float)random.NextDouble() * 2 + 1,
+                    ZX = (float)random.NextDouble() * 1 + 1,
+                    ZY = (float)random.NextDouble() * 1 + 1,
+                    ZZ = (float)random.NextDouble() * 2 + 1,
                 };
                 Triangular3x3Wide triangularWide;
-                triangularWide.XX = new Vector<float>(triangular.M11);
-                triangularWide.YX = new Vector<float>(triangular.M21);
-                triangularWide.YY = new Vector<float>(triangular.M22);
-                triangularWide.ZX = new Vector<float>(triangular.M31);
-                triangularWide.ZY = new Vector<float>(triangular.M32);
-                triangularWide.ZZ = new Vector<float>(triangular.M33);
+                triangularWide.XX = new Vector<float>(triangular.XX);
+                triangularWide.YX = new Vector<float>(triangular.YX);
+                triangularWide.YY = new Vector<float>(triangular.YY);
+                triangularWide.ZX = new Vector<float>(triangular.ZX);
+                triangularWide.ZY = new Vector<float>(triangular.ZY);
+                triangularWide.ZZ = new Vector<float>(triangular.ZZ);
 
                 var symmetric = new Matrix3x3
                 {
-                    X = new Vector3(triangular.M11, triangular.M21, triangular.M31),
-                    Y = new Vector3(triangular.M21, triangular.M22, triangular.M32),
-                    Z = new Vector3(triangular.M31, triangular.M32, triangular.M33),
+                    X = new Vector3(triangular.XX, triangular.YX, triangular.ZX),
+                    Y = new Vector3(triangular.YX, triangular.YY, triangular.ZY),
+                    Z = new Vector3(triangular.ZX, triangular.ZY, triangular.ZZ),
                 };
                 Matrix3x3Wide symmetricWide;
                 Vector3Wide.CreateFrom(ref symmetric.X, out symmetricWide.X);

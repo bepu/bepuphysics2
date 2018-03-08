@@ -15,27 +15,27 @@ namespace BepuPhysics
         /// <summary>
         /// First row, first column of the matrix.
         /// </summary>
-        public float M11;
+        public float XX;
         /// <summary>
         /// Second row, first column of the matrix.
         /// </summary>
-        public float M21;
+        public float YX;
         /// <summary>
         /// Second row, second column of the matrix.
         /// </summary>
-        public float M22;
+        public float YY;
         /// <summary>
         /// Third row, first column of the matrix.
         /// </summary>
-        public float M31;
+        public float ZX;
         /// <summary>
         /// Third row, second column of the matrix.
         /// </summary>
-        public float M32;
+        public float ZY;
         /// <summary>
         /// Third row, third column of the matrix.
         /// </summary>
-        public float M33;
+        public float ZZ;
 
         /// <summary>
         /// Computes rT * m * r for a symmetric matrix m and a rotation matrix R.
@@ -49,24 +49,24 @@ namespace BepuPhysics
             //TODO: We just copied this from the wide implementation. There are a lot of ways to improve this, should it be necessary.
             //(There's virtually no chance that optimizing this to a serious degree would be worth it- at the time of writing, it's only called by the pose integrator, which is 
             //horribly memory bound anyway.)
-            var i11 = r.X.X * m.M11 + r.Y.X * m.M21 + r.Z.X * m.M31;
-            var i12 = r.X.X * m.M21 + r.Y.X * m.M22 + r.Z.X * m.M32;
-            var i13 = r.X.X * m.M31 + r.Y.X * m.M32 + r.Z.X * m.M33;
+            var i11 = r.X.X * m.XX + r.Y.X * m.YX + r.Z.X * m.ZX;
+            var i12 = r.X.X * m.YX + r.Y.X * m.YY + r.Z.X * m.ZY;
+            var i13 = r.X.X * m.ZX + r.Y.X * m.ZY + r.Z.X * m.ZZ;
 
-            var i21 = r.X.Y * m.M11 + r.Y.Y * m.M21 + r.Z.Y * m.M31;
-            var i22 = r.X.Y * m.M21 + r.Y.Y * m.M22 + r.Z.Y * m.M32;
-            var i23 = r.X.Y * m.M31 + r.Y.Y * m.M32 + r.Z.Y * m.M33;
+            var i21 = r.X.Y * m.XX + r.Y.Y * m.YX + r.Z.Y * m.ZX;
+            var i22 = r.X.Y * m.YX + r.Y.Y * m.YY + r.Z.Y * m.ZY;
+            var i23 = r.X.Y * m.ZX + r.Y.Y * m.ZY + r.Z.Y * m.ZZ;
 
-            var i31 = r.X.Z * m.M11 + r.Y.Z * m.M21 + r.Z.Z * m.M31;
-            var i32 = r.X.Z * m.M21 + r.Y.Z * m.M22 + r.Z.Z * m.M32;
-            var i33 = r.X.Z * m.M31 + r.Y.Z * m.M32 + r.Z.Z * m.M33;
+            var i31 = r.X.Z * m.XX + r.Y.Z * m.YX + r.Z.Z * m.ZX;
+            var i32 = r.X.Z * m.YX + r.Y.Z * m.YY + r.Z.Z * m.ZY;
+            var i33 = r.X.Z * m.ZX + r.Y.Z * m.ZY + r.Z.Z * m.ZZ;
 
-            sandwich.M11 = i11 * r.X.X + i12 * r.Y.X + i13 * r.Z.X;
-            sandwich.M21 = i21 * r.X.X + i22 * r.Y.X + i23 * r.Z.X;
-            sandwich.M22 = i21 * r.X.Y + i22 * r.Y.Y + i23 * r.Z.Y;
-            sandwich.M31 = i31 * r.X.X + i32 * r.Y.X + i33 * r.Z.X;
-            sandwich.M32 = i31 * r.X.Y + i32 * r.Y.Y + i33 * r.Z.Y;
-            sandwich.M33 = i31 * r.X.Z + i32 * r.Y.Z + i33 * r.Z.Z;
+            sandwich.XX = i11 * r.X.X + i12 * r.Y.X + i13 * r.Z.X;
+            sandwich.YX = i21 * r.X.X + i22 * r.Y.X + i23 * r.Z.X;
+            sandwich.YY = i21 * r.X.Y + i22 * r.Y.Y + i23 * r.Z.Y;
+            sandwich.ZX = i31 * r.X.X + i32 * r.Y.X + i33 * r.Z.X;
+            sandwich.ZY = i31 * r.X.Y + i32 * r.Y.Y + i33 * r.Z.Y;
+            sandwich.ZZ = i31 * r.X.Z + i32 * r.Y.Z + i33 * r.Z.Z;
         }
         
         /// <summary>
@@ -77,22 +77,39 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void SymmetricInvert(ref Triangular3x3 m, out Triangular3x3 inverse)
         {
-            var m11 = m.M22 * m.M33 - m.M32 * m.M32;
-            var m21 = m.M32 * m.M31 - m.M33 * m.M21;
-            var m31 = m.M21 * m.M32 - m.M31 * m.M22;
-            var determinantInverse = 1f / (m11 * m.M11 + m21 * m.M21 + m31 * m.M31);
+            var m11 = m.YY * m.ZZ - m.ZY * m.ZY;
+            var m21 = m.ZY * m.ZX - m.ZZ * m.YX;
+            var m31 = m.YX * m.ZY - m.ZX * m.YY;
+            var determinantInverse = 1f / (m11 * m.XX + m21 * m.YX + m31 * m.ZX);
 
-            var m22 = m.M33 * m.M11 - m.M31 * m.M31;
-            var m32 = m.M31 * m.M21 - m.M11 * m.M32;
+            var m22 = m.ZZ * m.XX - m.ZX * m.ZX;
+            var m32 = m.ZX * m.YX - m.XX * m.ZY;
 
-            var m33 = m.M11 * m.M22 - m.M21 * m.M21;
+            var m33 = m.XX * m.YY - m.YX * m.YX;
 
-            inverse.M11 = m11 * determinantInverse;
-            inverse.M21 = m21 * determinantInverse;
-            inverse.M31 = m31 * determinantInverse;
-            inverse.M22 = m22 * determinantInverse;
-            inverse.M32 = m32 * determinantInverse;
-            inverse.M33 = m33 * determinantInverse;
+            inverse.XX = m11 * determinantInverse;
+            inverse.YX = m21 * determinantInverse;
+            inverse.ZX = m31 * determinantInverse;
+            inverse.YY = m22 * determinantInverse;
+            inverse.ZY = m32 * determinantInverse;
+            inverse.ZZ = m33 * determinantInverse;
+        }
+
+        /// <summary>
+        /// Adds the components of two matrices together.
+        /// </summary>
+        /// <param name="a">First matrix to add.</param>
+        /// <param name="b">Second matrix to add.</param>
+        /// <param name="result">Matrix with components equal to the components of the two input matrices added together.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Add(ref Triangular3x3 a, ref Triangular3x3 b, out Triangular3x3 result)
+        {
+            result.XX = a.XX + b.XX;
+            result.YX = a.YX + b.YX;
+            result.YY = a.YY + b.YY;
+            result.ZX = a.ZX + b.ZX;
+            result.ZY = a.ZY + b.ZY;
+            result.ZZ = a.ZZ + b.ZZ;
         }
 
         /// <summary>
@@ -104,12 +121,12 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Scale(ref Triangular3x3 m, float scale, out Triangular3x3 scaled)
         {
-            scaled.M11 = m.M11 * scale;
-            scaled.M21 = m.M21 * scale;
-            scaled.M22 = m.M22 * scale;
-            scaled.M31 = m.M31 * scale;
-            scaled.M32 = m.M32 * scale;
-            scaled.M33 = m.M33 * scale;
+            scaled.XX = m.XX * scale;
+            scaled.YX = m.YX * scale;
+            scaled.YY = m.YY * scale;
+            scaled.ZX = m.ZX * scale;
+            scaled.ZY = m.ZY * scale;
+            scaled.ZZ = m.ZZ * scale;
         }
     }
 }

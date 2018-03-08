@@ -98,12 +98,12 @@ namespace BepuPhysics.Collidables
 
         public void ComputeLocalInverseInertia(float inverseMass, out Triangular3x3 localInverseInertia)
         {
-            localInverseInertia.M11 = inverseMass / ((2f / 5f) * Radius * Radius);
-            localInverseInertia.M21 = 0;
-            localInverseInertia.M22 = localInverseInertia.M11;
-            localInverseInertia.M31 = 0;
-            localInverseInertia.M32 = 0;
-            localInverseInertia.M33 = localInverseInertia.M11;
+            localInverseInertia.XX = inverseMass / ((2f / 5f) * Radius * Radius);
+            localInverseInertia.YX = 0;
+            localInverseInertia.YY = localInverseInertia.XX;
+            localInverseInertia.ZX = 0;
+            localInverseInertia.ZY = 0;
+            localInverseInertia.ZZ = localInverseInertia.XX;
         }
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)

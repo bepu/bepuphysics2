@@ -263,12 +263,12 @@ namespace BepuPhysics
         public static bool IsKinematic(ref BodyInertia inertia)
         {
             return inertia.InverseMass == 0 &&
-                   inertia.InverseInertiaTensor.M11 == 0 &&
-                   inertia.InverseInertiaTensor.M21 == 0 &&
-                   inertia.InverseInertiaTensor.M22 == 0 &&
-                   inertia.InverseInertiaTensor.M31 == 0 &&
-                   inertia.InverseInertiaTensor.M32 == 0 &&
-                   inertia.InverseInertiaTensor.M33 == 0;
+                   inertia.InverseInertiaTensor.XX == 0 &&
+                   inertia.InverseInertiaTensor.YX == 0 &&
+                   inertia.InverseInertiaTensor.YY == 0 &&
+                   inertia.InverseInertiaTensor.ZX == 0 &&
+                   inertia.InverseInertiaTensor.ZY == 0 &&
+                   inertia.InverseInertiaTensor.ZZ == 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -412,12 +412,12 @@ namespace BepuPhysics
         private void GatherInertiaForBody(ref BodyInertia source, ref float targetInertiaBase, int targetLaneIndex)
         {
             ref var targetSlot = ref Unsafe.Add(ref targetInertiaBase, targetLaneIndex);
-            targetSlot = source.InverseInertiaTensor.M11;
-            Unsafe.Add(ref targetSlot, Vector<float>.Count) = source.InverseInertiaTensor.M21;
-            Unsafe.Add(ref targetSlot, 2 * Vector<float>.Count) = source.InverseInertiaTensor.M22;
-            Unsafe.Add(ref targetSlot, 3 * Vector<float>.Count) = source.InverseInertiaTensor.M31;
-            Unsafe.Add(ref targetSlot, 4 * Vector<float>.Count) = source.InverseInertiaTensor.M32;
-            Unsafe.Add(ref targetSlot, 5 * Vector<float>.Count) = source.InverseInertiaTensor.M33;
+            targetSlot = source.InverseInertiaTensor.XX;
+            Unsafe.Add(ref targetSlot, Vector<float>.Count) = source.InverseInertiaTensor.YX;
+            Unsafe.Add(ref targetSlot, 2 * Vector<float>.Count) = source.InverseInertiaTensor.YY;
+            Unsafe.Add(ref targetSlot, 3 * Vector<float>.Count) = source.InverseInertiaTensor.ZX;
+            Unsafe.Add(ref targetSlot, 4 * Vector<float>.Count) = source.InverseInertiaTensor.ZY;
+            Unsafe.Add(ref targetSlot, 5 * Vector<float>.Count) = source.InverseInertiaTensor.ZZ;
             Unsafe.Add(ref targetSlot, 6 * Vector<float>.Count) = source.InverseMass;
         }
 

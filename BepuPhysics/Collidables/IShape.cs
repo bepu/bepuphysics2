@@ -40,9 +40,7 @@ namespace BepuPhysics.Collidables
         //Note that compound shapes have no wide GetBounds function. Compounds, by virtue of containing shapes of different types, cannot be usefully vectorized over.
         //Instead, their children are added to other computation batches.
         void GetBounds(ref BepuUtilities.Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max);
-
-        void ComputeLocalInverseInertia(float inverseMass, Shapes shapeBatches, out Triangular3x3 localInverseInertia);
-
+        
         //Compound shapes may require indirections into other shape batches. This isn't wonderfully fast, but this scalar path is designed more for convenience than performance anyway.
         //For performance, a batched and vectorized codepath should be used.
         bool RayTest(ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, Shapes shapeBatches, out float t, out Vector3 normal);

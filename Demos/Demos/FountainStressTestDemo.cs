@@ -212,9 +212,9 @@ namespace Demos
                 };
 
                 var inverseInertia = description.LocalInertia.InverseMass * (1f / (shape.Radius * shape.Radius * 2 / 3));
-                description.LocalInertia.InverseInertiaTensor.M11 = inverseInertia;
-                description.LocalInertia.InverseInertiaTensor.M22 = inverseInertia;
-                description.LocalInertia.InverseInertiaTensor.M33 = inverseInertia;
+                description.LocalInertia.InverseInertiaTensor.XX = inverseInertia;
+                description.LocalInertia.InverseInertiaTensor.YY = inverseInertia;
+                description.LocalInertia.InverseInertiaTensor.ZZ = inverseInertia;
 
 
                 description.Velocity.Linear = new Vector3(-20 + 40 * (float)random.NextDouble(), 75, -20 + 40 * (float)random.NextDouble());

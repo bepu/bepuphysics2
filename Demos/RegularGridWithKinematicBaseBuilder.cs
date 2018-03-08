@@ -42,9 +42,9 @@ namespace Demos
             };
 
             var inverseInertia = bodyDescription.LocalInertia.InverseMass * InverseInertiaMultiplier;
-            bodyDescription.LocalInertia.InverseInertiaTensor.M11 = inverseInertia;
-            bodyDescription.LocalInertia.InverseInertiaTensor.M22 = inverseInertia;
-            bodyDescription.LocalInertia.InverseInertiaTensor.M33 = inverseInertia;
+            bodyDescription.LocalInertia.InverseInertiaTensor.XX = inverseInertia;
+            bodyDescription.LocalInertia.InverseInertiaTensor.YY = inverseInertia;
+            bodyDescription.LocalInertia.InverseInertiaTensor.ZZ = inverseInertia;
 
         }
     }

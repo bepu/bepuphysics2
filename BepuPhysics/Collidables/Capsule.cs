@@ -187,14 +187,14 @@ namespace BepuPhysics.Collidables
             //Volume is in units of the capsule's whole volume.
             cylinderVolume *= inverseTotal;
             sphereVolume *= inverseTotal;
-            localInverseInertia.M11 = inverseMass / (
+            localInverseInertia.XX = inverseMass / (
                 cylinderVolume * ((3f / 12f) * r2 + (4f / 12f) * h2) +
                 sphereVolume * ((2f / 5f) * r2 + (6f / 8f) * Radius * HalfLength + h2));
-            localInverseInertia.M21 = 0;
-            localInverseInertia.M22 = inverseMass / (cylinderVolume * (1f / 2f) * r2 + sphereVolume * (2f / 5f) * r2);
-            localInverseInertia.M31 = 0;
-            localInverseInertia.M32 = 0;
-            localInverseInertia.M33 = localInverseInertia.M11;            
+            localInverseInertia.YX = 0;
+            localInverseInertia.YY = inverseMass / (cylinderVolume * (1f / 2f) * r2 + sphereVolume * (2f / 5f) * r2);
+            localInverseInertia.ZX = 0;
+            localInverseInertia.ZY = 0;
+            localInverseInertia.ZZ = localInverseInertia.XX;            
         }
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)

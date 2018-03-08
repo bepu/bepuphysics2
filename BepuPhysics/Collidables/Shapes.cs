@@ -88,6 +88,11 @@ namespace BepuPhysics.Collidables
         public int Capacity { get { return shapesData.Length / shapeDataSize; } }
         protected BufferPool pool;
         protected IdPool<Buffer<int>> idPool;
+        /// <summary>
+        /// Gets whether this shape batch's contained type potentially contains children of different types.
+        /// </summary>
+        public bool Compound { get; protected set; }
+
         [Conditional("DEBUG")]
         protected abstract void ValidateRemoval(int index);
 
@@ -99,7 +104,6 @@ namespace BepuPhysics.Collidables
 
         public abstract void ComputeBounds<TBundleSource>(ref TBundleSource source, float dt) where TBundleSource : ICollidableBundleSource;
         public abstract void ComputeBounds(int shapeIndex, ref RigidPose pose, out Vector3 min, out Vector3 max);
-        public abstract void ComputeLocalInverseInertia(int shapeIndex, float inverseMass, out Triangular3x3 inverseInertiaTensor);
 
         /// <summary>
         /// Gets a raw untyped pointer to a shape's data.
@@ -278,11 +282,6 @@ namespace BepuPhysics.Collidables
             min += pose.Position;
             max += pose.Position;
         }
-
-        public override void ComputeLocalInverseInertia(int shapeIndex, float inverseMass, out Triangular3x3 inverseInertiaTensor)
-        {
-            this[shapeIndex].ComputeLocalInverseInertia(inverseMass, out inverseInertiaTensor);
-        }
     }
 
     public class CompoundShapeBatch<TShape> : ShapeBatch<TShape> where TShape : struct, ICompoundShape
@@ -292,6 +291,7 @@ namespace BepuPhysics.Collidables
         public CompoundShapeBatch(BufferPool pool, int initialShapeCount, Shapes shapeBatches) : base(pool, initialShapeCount)
         {
             this.shapeBatches = shapeBatches;
+            Compound = true;
         }
        
 
@@ -306,12 +306,7 @@ namespace BepuPhysics.Collidables
             min += pose.Position;
             max += pose.Position;
         }
-
-        public override void ComputeLocalInverseInertia(int shapeIndex, float inverseMass, out Triangular3x3 inverseInertiaTensor)
-        {
-            this[shapeIndex].ComputeLocalInverseInertia(inverseMass, shapeBatches, out inverseInertiaTensor);
-        }
-    }
+            }
 
 
     public class Shapes
@@ -347,18 +342,6 @@ namespace BepuPhysics.Collidables
         {
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
             batches[shapeIndex.Type].ComputeBounds(shapeIndex.Index, ref pose, out bounds.Min, out bounds.Max);
-        }
-
-        /// <summary>
-        /// Computes the local inertia tensor for a shape.
-        /// </summary>
-        /// <param name="shapeIndex">Index of the shape to compute the inertia of.</param>
-        /// <param name="inverseMass">Inverse mass to scale the inertia tensor with.</param>
-        /// <param name="inverseInertiaTensor">Inverse inertia of the shape in its local space.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeLocalInverseInertia(TypedIndex shapeIndex, float inverseMass, out Triangular3x3 inverseInertiaTensor)
-        {
-            batches[shapeIndex.Type].ComputeLocalInverseInertia(shapeIndex.Index, inverseMass, out inverseInertiaTensor);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

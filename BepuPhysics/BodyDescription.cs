@@ -99,12 +99,12 @@ namespace BepuPhysics
             get
             {
                 return (LocalInertia.InverseMass == 0 &&
-                        LocalInertia.InverseInertiaTensor.M11 == 0 &&
-                        LocalInertia.InverseInertiaTensor.M21 == 0 &&
-                        LocalInertia.InverseInertiaTensor.M22 == 0 &&
-                        LocalInertia.InverseInertiaTensor.M31 == 0 &&
-                        LocalInertia.InverseInertiaTensor.M32 == 0 &&
-                        LocalInertia.InverseInertiaTensor.M33 == 0) ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
+                        LocalInertia.InverseInertiaTensor.XX == 0 &&
+                        LocalInertia.InverseInertiaTensor.YX == 0 &&
+                        LocalInertia.InverseInertiaTensor.YY == 0 &&
+                        LocalInertia.InverseInertiaTensor.ZX == 0 &&
+                        LocalInertia.InverseInertiaTensor.ZY == 0 &&
+                        LocalInertia.InverseInertiaTensor.ZZ == 0) ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
             }
         }
 

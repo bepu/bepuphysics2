@@ -194,12 +194,12 @@ namespace BepuPhysics.Collidables
             var x2 = HalfWidth * HalfWidth;
             var y2 = HalfHeight * HalfHeight;
             var z2 = HalfLength * HalfLength;
-            localInverseInertia.M11 = inverseMass * 3 / (y2 + z2);
-            localInverseInertia.M21 = 0;
-            localInverseInertia.M22 = inverseMass * 3 / (x2 + z2);
-            localInverseInertia.M31 = 0;
-            localInverseInertia.M32 = 0;
-            localInverseInertia.M33 = inverseMass * 3 / (x2 + y2);
+            localInverseInertia.XX = inverseMass * 3 / (y2 + z2);
+            localInverseInertia.YX = 0;
+            localInverseInertia.YY = inverseMass * 3 / (x2 + z2);
+            localInverseInertia.ZX = 0;
+            localInverseInertia.ZY = 0;
+            localInverseInertia.ZZ = inverseMass * 3 / (x2 + y2);
         }
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)

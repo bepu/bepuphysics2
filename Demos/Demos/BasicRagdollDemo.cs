@@ -99,12 +99,12 @@ namespace Demos
 
     public class BasicRagdollDemo : Demo
     {
-        static BodyReference AddBody<TShape>(TShape shape, float mass, RigidPose pose, Simulation simulation) where TShape : struct, IShape
+        static BodyReference AddBody<TShape>(TShape shape, float mass, RigidPose pose, Simulation simulation) where TShape : struct, IConvexShape
         {
             BodyInertia inertia;
             inertia.InverseMass = mass > 0 ? 1f / mass : 0;
             var shapeIndex = simulation.Shapes.Add(ref shape);
-            simulation.Shapes.ComputeLocalInverseInertia(shapeIndex, inertia.InverseMass, out inertia.InverseInertiaTensor);
+            shape.ComputeLocalInverseInertia(inertia.InverseMass, out inertia.InverseInertiaTensor);
             var description = new BodyDescription
             {
                 Activity = new BodyActivityDescription { SleepThreshold = 0, MinimumTimestepCountUnderThreshold = 32 },
