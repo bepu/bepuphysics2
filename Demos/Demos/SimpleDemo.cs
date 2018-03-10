@@ -44,7 +44,7 @@ namespace Demos
                 new RegularGridBuilder(new Vector3(latticeSpacing, 1.1f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), sphereInertia, shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -1, 0);
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, 0, 0);
             Simulation.Deterministic = false;
 
             var staticShape = new Sphere(4);

@@ -217,12 +217,15 @@ namespace BepuPhysics
             ref var instancesBase = ref batch[0];
             ref var activeSet = ref bodies.ActiveSet;
 
-            for (int bundleStartIndex = 0; bundleStartIndex < batch.Count; ++bundleStartIndex)
+            for (int bundleStartIndex = 0; bundleStartIndex < batch.Count; bundleStartIndex += Vector<float>.Count)
             {
                 int countInBundle = batch.Count - bundleStartIndex;
                 if (countInBundle > Vector<float>.Count)
                     countInBundle = Vector<float>.Count;
                 ref var bundleInstancesStart = ref Unsafe.Add(ref instancesBase, bundleStartIndex);
+                //Note that doing a gather-scatter to enable vectorized bundle execution isn't worth it for some shape types.
+                //We're just ignoring that fact for simplicity. Bounding box updates aren't a huge concern overall. That said,
+                //if you want to optimize this further, the shape batches could choose between vectorized and gatherless scalar implementations on a per-type basis.
                 for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
                 {
                     ref var instance = ref Unsafe.Add(ref bundleInstancesStart, innerIndex);
