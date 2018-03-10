@@ -22,12 +22,6 @@ namespace BepuPhysics.Collidables
     //I don't predict ever needing it, but such an implementation could be added...
     public interface IConvexShape : IShape
     {
-        //Note that the shape gathering required for get bounds is also useful for narrow phase calculations.
-        //However, exposing it in a type-safe way isn't trivial. So instead, we just choose at the API level to bundle the gather and AABB calculation together.
-        void GetBounds<TShape>(ref Buffer<TShape> shapes, ref Vector<int> shapeIndices, int count, ref QuaternionWide orientations,
-            out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
-            where TShape : struct, IShape;
-
         void GetBounds(ref BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max);
 
         void ComputeLocalInverseInertia(float inverseMass, out Triangular3x3 localInverseInertia);
@@ -56,6 +50,8 @@ namespace BepuPhysics.Collidables
         /// The base address is offset by the user of this function, so the implementation only ever considers the first slot.</remarks>
         /// <param name="source">AOS-formatted shape to gather from.</param>
         void Gather(ref TShape source);
+
+        void GetBounds(ref QuaternionWide orientations, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max);
     }
 
 }

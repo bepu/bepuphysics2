@@ -115,6 +115,33 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Gathers values from a quaternion and places them into the first indices of the target wide quaternion.
+        /// </summary>
+        /// <param name="source">Quaternion to copy values from.</param>
+        /// <param name="targetSlot">Wide quaternion to place values into.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GatherSlot(ref BepuUtilities.Quaternion source, ref QuaternionWide targetSlot)
+        {
+            GetFirst(ref targetSlot.X) = source.X;
+            GetFirst(ref targetSlot.Y) = source.Y;
+            GetFirst(ref targetSlot.Z) = source.Z;
+            GetFirst(ref targetSlot.W) = source.W;
+        }
+
+        /// <summary>
+        /// Gathers values from a vector and places them into the first indices of the target vector.
+        /// </summary>
+        /// <param name="source">Vector to copy values from.</param>
+        /// <param name="targetSlot">Wide vectorto place values into.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GatherSlot(ref Vector3 source, ref Vector3Wide targetSlot)
+        {
+            GetFirst(ref targetSlot.X) = source.X;
+            GetFirst(ref targetSlot.Y) = source.Y;
+            GetFirst(ref targetSlot.Z) = source.Z;
+        }
+
+        /// <summary>
         /// Swaps lanes between two bundles. The bundle type must be a contiguous block of Vector types.
         /// </summary>
         /// <typeparam name="T">Type of the swapped bundles.</typeparam>
@@ -141,7 +168,7 @@ namespace BepuPhysics
                 b = oldA;
             }
         }
-        
+
         /// <summary>
         /// Clears a bundle lane using the default value of the specified type. The bundle must be a contiguous block of Vector types, all sharing the same type,
         /// and the first vector must start at the address pointed to by the bundle reference.
@@ -303,7 +330,7 @@ namespace BepuPhysics
         public static unsafe void ScatterVelocities(ref Buffer<BodyVelocity> velocities, ref Vector<int> references, int count, ref BodyVelocities velocitiesA)
         {
             ref var baseTargetIndexA = ref Unsafe.As<Vector<int>, int>(ref references);
-            ref var baseSourceLinearAX = ref Unsafe.As<Vector<float>, float>(ref velocitiesA.Linear.X);            
+            ref var baseSourceLinearAX = ref Unsafe.As<Vector<float>, float>(ref velocitiesA.Linear.X);
 
             for (int i = 0; i < count; ++i)
             {
