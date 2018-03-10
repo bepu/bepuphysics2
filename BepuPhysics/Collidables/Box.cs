@@ -43,24 +43,10 @@ namespace BepuPhysics.Collidables
         public void GetBounds(ref Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(ref orientation, out var basis);
-            //Compute the extreme point along each axis in local space. We use the transposed basis as a source of local axes- the world axes tranformed into local space.
-            Vector3 localX, localY, localZ;
-            //TODO: There is likely some significantly better alternative to this in a variety of platform intrinsics. Not a big deal, though.
-            localX.X = basis.X.X < 0 ? -HalfWidth : HalfWidth;
-            localX.Y = basis.Y.X < 0 ? -HalfHeight : HalfHeight;
-            localX.Z = basis.Z.X < 0 ? -HalfLength : HalfLength;
-            localY.X = basis.X.Y < 0 ? -HalfWidth : HalfWidth;
-            localY.Y = basis.Y.Y < 0 ? -HalfHeight : HalfHeight;
-            localY.Z = basis.Z.Y < 0 ? -HalfLength : HalfLength;
-            localZ.X = basis.X.Z < 0 ? -HalfWidth : HalfWidth;
-            localZ.Y = basis.Y.Z < 0 ? -HalfHeight : HalfHeight;
-            localZ.Z = basis.Z.Z < 0 ? -HalfLength : HalfLength;
-
-            //Now move those extreme points into world space. Note that we're only interested in the extent for a given point along the axis it was created for.
-            max.X = localX.X * basis.X.X + localX.Y * basis.Y.X + localX.Z * basis.Z.X;
-            max.Y = localY.X * basis.X.Y + localY.Y * basis.Y.Y + localY.Z * basis.Z.Y;
-            max.Z = localZ.X * basis.X.Z + localZ.Y * basis.Y.Z + localZ.Z * basis.Z.Z;
-            max = Vector3.Abs(max);
+            var x = HalfWidth * basis.X;
+            var y = HalfHeight * basis.Y;
+            var z = HalfLength * basis.Z;
+            max = Vector3.Abs(x) + Vector3.Abs(y) + Vector3.Abs(z);
             min = -max;
         }
 
@@ -180,26 +166,13 @@ namespace BepuPhysics.Collidables
             Unsafe.As<Vector<float>, float>(ref HalfLength) = source.HalfLength;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetBounds(ref QuaternionWide orientations, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
             Matrix3x3Wide.CreateFromQuaternion(ref orientations, out var basis);
-            //Compute the extreme point along each axis in local space. We use the transposed basis as a source of local axes- the world axes tranformed into local space.
-            Vector3Wide localX, localY, localZ;
-            //TODO: There is likely some significantly better alternative to this in a variety of platform intrinsics. Not a big deal, though.
-            localX.X = Vector.ConditionalSelect(Vector.LessThan(basis.X.X, Vector<float>.Zero), -HalfWidth, HalfWidth);
-            localX.Y = Vector.ConditionalSelect(Vector.LessThan(basis.Y.X, Vector<float>.Zero), -HalfHeight, HalfHeight);
-            localX.Z = Vector.ConditionalSelect(Vector.LessThan(basis.Z.X, Vector<float>.Zero), -HalfLength, HalfLength);
-            localY.X = Vector.ConditionalSelect(Vector.LessThan(basis.X.Y, Vector<float>.Zero), -HalfWidth, HalfWidth);
-            localY.Y = Vector.ConditionalSelect(Vector.LessThan(basis.Y.Y, Vector<float>.Zero), -HalfHeight, HalfHeight);
-            localY.Z = Vector.ConditionalSelect(Vector.LessThan(basis.Z.Y, Vector<float>.Zero), -HalfLength, HalfLength);
-            localZ.X = Vector.ConditionalSelect(Vector.LessThan(basis.X.Z, Vector<float>.Zero), -HalfWidth, HalfWidth);
-            localZ.Y = Vector.ConditionalSelect(Vector.LessThan(basis.Y.Z, Vector<float>.Zero), -HalfHeight, HalfHeight);
-            localZ.Z = Vector.ConditionalSelect(Vector.LessThan(basis.Z.Z, Vector<float>.Zero), -HalfLength, HalfLength);
-
-            //Now move those extreme points into world space. Note that we're only interested in the extent for a given point along the axis it was created for.
-            max.X = Vector.Abs(localX.X * basis.X.X + localX.Y * basis.Y.X + localX.Z * basis.Z.X);
-            max.Y = Vector.Abs(localY.X * basis.X.Y + localY.Y * basis.Y.Y + localY.Z * basis.Z.Y);
-            max.Z = Vector.Abs(localZ.X * basis.X.Z + localZ.Y * basis.Y.Z + localZ.Z * basis.Z.Z);
+            max.X = Vector.Abs(HalfWidth * basis.X.X) + Vector.Abs(HalfHeight * basis.Y.X) + Vector.Abs(HalfLength * basis.Z.X);
+            max.Y = Vector.Abs(HalfWidth * basis.X.Y) + Vector.Abs(HalfHeight * basis.Y.Y) + Vector.Abs(HalfLength * basis.Z.Y);
+            max.Z = Vector.Abs(HalfWidth * basis.X.Z) + Vector.Abs(HalfHeight * basis.Y.Z) + Vector.Abs(HalfLength * basis.Z.Z);
 
             Vector3Wide.Negate(ref max, out min);
 
