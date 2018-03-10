@@ -55,7 +55,7 @@ namespace BepuPhysics
             Triangular3x3.RotationSandwich(ref orientationMatrix, ref localInverseInertiaTensor, out rotatedInverseInertiaTensor);
         }
 
-        unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, ref BoundingBoxUpdater boundingBoxUpdater)
+        unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher)
         {
             ref var basePoses = ref bodies.ActiveSet.Poses[0];
             ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
@@ -151,8 +151,8 @@ namespace BepuPhysics
                 //when it comes time to actually compute bounding boxes.
 
                 //Note that any collidable that lacks a collidable, or any reference that is beyond the set of collidables, will have a specially formed index.
-                //The accumulator will detect that and not try to add a nonexistent collidable- hence, "TryAdd".
-                boundingBoxUpdater.TryAdd(i);
+                //The accumulator will detect that and not try to add a nonexistent collidable.
+                boundingBoxBatcher.Add(i);
 
                 //It's helpful to do the bounding box update here in the pose integrator because they share information. If the phases were split, there could be a penalty
                 //associated with loading all the body poses and velocities from memory again. Even if the L3 cache persisted, it would still be worse than looking into L1 or L2.
@@ -173,7 +173,7 @@ namespace BepuPhysics
         int availableJobCount;
         void Worker(int workerIndex)
         {
-            var boundingBoxUpdater = new BoundingBoxUpdater(bodies, shapes, broadPhase, threadDispatcher.GetThreadMemoryPool(workerIndex), cachedDt);
+            var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, threadDispatcher.GetThreadMemoryPool(workerIndex), cachedDt);
             var bodyCount = bodies.ActiveSet.Count;
             while (true)
             {
@@ -189,7 +189,7 @@ namespace BepuPhysics
                 IntegrateBodies(start, exclusiveEnd, cachedDt, ref boundingBoxUpdater);
 
             }
-            boundingBoxUpdater.FlushAndDispose();
+            boundingBoxUpdater.Flush();
 
         }
         public void Update(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
@@ -226,9 +226,9 @@ namespace BepuPhysics
             }
             else
             {
-                var boundingBoxUpdater = new BoundingBoxUpdater(bodies, shapes, broadPhase, pool, dt);
+                var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, pool, dt);
                 IntegrateBodies(0, bodies.ActiveSet.Count, dt, ref boundingBoxUpdater);
-                boundingBoxUpdater.FlushAndDispose();
+                boundingBoxUpdater.Flush();
             }
 
         }

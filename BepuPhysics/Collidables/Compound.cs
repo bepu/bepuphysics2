@@ -27,6 +27,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Compound(Buffer<CompoundChild> children)
         {
+            Debug.Assert(children.Length > 0, "Compounds must have a nonzero number of children.");
             Children = children;
         }
 
@@ -39,15 +40,43 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public void GetBounds<TShape>(ref Buffer<TShape> shapes, ref Vector<int> shapeIndices, int count, ref QuaternionWide orientations,
-            out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max) where TShape : struct, IShape
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void GetRotatedChildPose(ref RigidPose localPose, ref Quaternion orientation, out RigidPose rotatedChildPose)
         {
-            throw new NotImplementedException();
+            Quaternion.ConcatenateWithoutOverlap(ref orientation, ref localPose.Orientation, out rotatedChildPose.Orientation);
+            Quaternion.Transform(ref localPose.Position, ref orientation, out rotatedChildPose.Position);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void ComputeChildBounds(ref CompoundChild child, ref Quaternion orientation, Shapes shapeBatches, out Vector3 childMin, out Vector3 childMax)
+        {
+            GetRotatedChildPose(ref child.LocalPose, ref orientation, out var childPose);
+            shapeBatches[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, ref childPose, out childMin, out childMax);
         }
 
         public void GetBounds(ref Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
         {
-            throw new NotImplementedException();
+            ComputeChildBounds(ref Children[0], ref orientation, shapeBatches, out min, out max);
+            for (int i = 1; i < Children.Length; ++i)
+            {
+                ref var child = ref Children[i];
+                ComputeChildBounds(ref Children[i], ref orientation, shapeBatches, out var childMin, out var childMax);
+                BoundingBox.CreateMerged(ref min, ref max, ref childMin, ref childMax, out min, out max);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddChildBoundsToBatcher(ref BoundingBoxBatcher batcher, ref RigidPose pose, ref BodyVelocity velocity, int bodyIndex)
+        {
+            for (int i = 0; i < Children.Length; ++i)
+            {
+                ref var child = ref Children[i];
+                GetRotatedChildPose(ref child.LocalPose, ref pose.Orientation, out var childPose);
+                //TODO: This is an area that has to be updated for high precision poses. May be able to centralize positional work
+                //by deferring it until the final bounds scatter step. Would require looking up the position then, but could be worth simplicity.
+                childPose.Position += pose.Position;
+                batcher.AddCompoundChild(bodyIndex, Children[i].ShapeIndex, ref childPose, ref velocity);
+            }
         }
 
         public bool RayTest(ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, Shapes shapeBatches, out float t, out Vector3 normal)
@@ -55,10 +84,12 @@ namespace BepuPhysics.Collidables
             throw new NotImplementedException();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
         {
             return new CompoundShapeBatch<Compound>(pool, initialCapacity, shapes);
         }
+
 
         /// <summary>
         /// Type id of compound shapes.
@@ -134,7 +165,7 @@ namespace BepuPhysics.Collidables
         /// <param name="pose">Pose of the contribution being accumulated.</param>
         /// <param name="mass">Mass of the contribution.</param>
         /// <param name="localInertiaTensor">Local inertia tensor of the contribution being accumulated.</param>
-        public void Add(ref RigidPose pose, float mass, ref Triangular3x3 localInertiaTensor) 
+        public void Add(ref RigidPose pose, float mass, ref Triangular3x3 localInertiaTensor)
         {
             PoseIntegrator.RotateInverseInertia(ref localInertiaTensor, ref pose.Orientation, out var rotatedInertia);
             Add(ref pose.Position, mass, ref rotatedInertia);

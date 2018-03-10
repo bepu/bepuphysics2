@@ -89,6 +89,10 @@ namespace BepuPhysics.Collidables
         protected BufferPool pool;
         protected IdPool<Buffer<int>> idPool;
         /// <summary>
+        /// Gets the type id of the shape type in this batch.
+        /// </summary>
+        public int TypeId { get; protected set; }
+        /// <summary>
         /// Gets whether this shape batch's contained type potentially contains children of different types.
         /// </summary>
         public bool Compound { get; protected set; }
@@ -102,7 +106,7 @@ namespace BepuPhysics.Collidables
             idPool.Return(index, pool.SpecializeFor<int>());
         }
 
-        public abstract void ComputeBounds<TBundleSource>(ref TBundleSource source, float dt) where TBundleSource : ICollidableBundleSource;
+        public abstract void ComputeBounds(ref BoundingBoxBatcher batcher);
         public abstract void ComputeBounds(int shapeIndex, ref RigidPose pose, out Vector3 min, out Vector3 max);
 
         /// <summary>
@@ -166,6 +170,7 @@ namespace BepuPhysics.Collidables
         protected ShapeBatch(BufferPool pool, int initialShapeCount)
         {
             this.pool = pool;
+            TypeId = default(TShape).TypeId;
             InternalResize(initialShapeCount, 0);
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialShapeCount, out idPool);
         }
@@ -193,7 +198,7 @@ namespace BepuPhysics.Collidables
             shapes[shapeIndex] = shape;
             return shapeIndex;
         }
-        
+
 
         void InternalResize(int shapeCount, int oldCopyLength)
         {
@@ -203,7 +208,7 @@ namespace BepuPhysics.Collidables
             var newShapes = newShapesData.As<TShape>();
 #if DEBUG
             //In debug mode, unused slots are kept at the default value. This helps catch misuse.
-            if(newShapes.Length > shapes.Length)
+            if (newShapes.Length > shapes.Length)
                 newShapes.Clear(shapes.Length, newShapes.Length - shapes.Length);
 #endif
             if (shapesData.Allocated)
@@ -249,31 +254,19 @@ namespace BepuPhysics.Collidables
             idPool.Dispose(pool.SpecializeFor<int>());
         }
     }
-    
 
-    public class ConvexShapeBatch<TShape> : ShapeBatch<TShape> where TShape : struct, IConvexShape
+
+    public class ConvexShapeBatch<TShape, TShapeWide> : ShapeBatch<TShape>
+        where TShape : struct, IConvexShape
+        where TShapeWide : struct, IShapeWide<TShape>
     {
         public ConvexShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
         {
         }
 
-        public override void ComputeBounds<TBundleSource>(ref TBundleSource source, float dt)
+        public override void ComputeBounds(ref BoundingBoxBatcher batcher)
         {
-            for (int i = 0; i < source.Count; i += Vector<float>.Count)
-            {
-                int count = source.Count - i;
-                if (count > Vector<float>.Count)
-                    count = Vector<float>.Count;
-                source.GatherCollidableBundle(i, count, out var shapeIndices, out var maximumExpansions, out var poses, out var velocities);
-
-                //Note that this outputs a bundle, which we turn around and immediately use. Considering only this function in isolation, they could be combined.
-                //However, in the narrow phase, it's useful to be able to gather shapes, and you don't want to do bounds computation at the same time.
-                default(TShape).GetBounds(ref shapes, ref shapeIndices, count, ref poses.Orientation, out var maximumRadius, out var maximumAngularExpansion, out var min, out var max);
-                Vector3Wide.Add(ref min, ref poses.Position, out min);
-                Vector3Wide.Add(ref max, ref poses.Position, out max);
-                BoundingBoxUpdater.ExpandBoundingBoxes(ref min, ref max, ref velocities, dt, ref maximumRadius, ref maximumAngularExpansion, ref maximumExpansions);
-                source.ScatterBounds(ref min, ref max, i, count);
-            }
+            batcher.ExecuteConvexBatch(this);
         }
 
         public override void ComputeBounds(int shapeIndex, ref RigidPose pose, out Vector3 min, out Vector3 max)
@@ -293,11 +286,10 @@ namespace BepuPhysics.Collidables
             this.shapeBatches = shapeBatches;
             Compound = true;
         }
-       
 
-        public override void ComputeBounds<TBundleSource>(ref TBundleSource source, float dt)
+        public override void ComputeBounds(ref BoundingBoxBatcher batcher)
         {
-            
+            batcher.ExecuteCompoundBatch(this);
         }
 
         public override void ComputeBounds(int shapeIndex, ref RigidPose pose, out Vector3 min, out Vector3 max)
@@ -306,7 +298,7 @@ namespace BepuPhysics.Collidables
             min += pose.Position;
             max += pose.Position;
         }
-            }
+    }
 
 
     public class Shapes

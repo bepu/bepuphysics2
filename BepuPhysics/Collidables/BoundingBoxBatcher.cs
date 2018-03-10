@@ -26,14 +26,14 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return (int)packed;
+                return (int)(packed & 0x7FFFFFFF);
             }
         }
 
         /// <summary>
-        /// Gets whether this continuation is associated with a compound.
+        /// Gets whether this continuation is associated with a compound's child.
         /// </summary>
-        public bool Compound
+        public bool CompoundChild
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
@@ -48,7 +48,7 @@ namespace BepuPhysics
         /// <param name="bodyIndex">Index of the body to set the bounding box of.</param>
         public static BoundsContinuation CreateContinuation(int bodyIndex)
         {
-            Debug.Assert(bodyIndex > 0);
+            Debug.Assert(bodyIndex >= 0);
             BoundsContinuation toReturn;
             toReturn.packed = (uint)bodyIndex;
             return toReturn;
@@ -57,9 +57,9 @@ namespace BepuPhysics
         /// Creates a bounding box calculation continuation for a given compound body.
         /// </summary>
         /// <param name="compoundBodyIndex">Index of the compound body to set the bounding box of.</param>
-        public static BoundsContinuation CreateCompoundContinuation(int compoundBodyIndex)
+        public static BoundsContinuation CreateCompoundChildContinuation(int compoundBodyIndex)
         {
-            Debug.Assert(compoundBodyIndex > 0);
+            Debug.Assert(compoundBodyIndex >= 0);
             BoundsContinuation toReturn;
             toReturn.packed = (1u << 31) | (uint)compoundBodyIndex;
             return toReturn;
@@ -83,8 +83,7 @@ namespace BepuPhysics
         public BodyVelocities Velocities;
     }
 
-    public struct BoundingBoxBatcher<TContinuation>
-        where TContinuation : struct
+    public struct BoundingBoxBatcher
     {
         internal BufferPool pool;
         internal Shapes shapes;
@@ -211,11 +210,10 @@ namespace BepuPhysics
             Vector3Wide.Add(ref max, ref maxDisplacement, out max);
         }
 
-        public unsafe void ExecuteConvexBundle<TShape, TShapeWide>(ConvexShapeBatch<TShape> shapeBatch) where TShape : struct, IConvexShape where TShapeWide : struct, IShapeWide<TShape>
+        public unsafe void ExecuteConvexBatch<TShape, TShapeWide>(ConvexShapeBatch<TShape, TShapeWide> shapeBatch) where TShape : struct, IConvexShape where TShapeWide : struct, IShapeWide<TShape>
         {
-            var shape = default(TShape);
             var instanceBundle = default(BoundingBoxInstanceWide<TShape, TShapeWide>);
-            ref var batch = ref batches[shape.TypeId];
+            ref var batch = ref batches[shapeBatch.TypeId];
             ref var instancesBase = ref batch[0];
             ref var activeSet = ref bodies.ActiveSet;
 
@@ -254,7 +252,7 @@ namespace BepuPhysics
                     //Note that we merge with the existing bounding box if the body is compound. This requires compounds to be initialized to (maxvalue, -maxvalue).
                     //TODO: We bite the bullet on quite a bit of complexity to avoid merging on non-compounds. Could be better overall to simply merge on all bodies. Certainly simpler.
                     //Worth checking the performance; if it's undetectable, just swap to the simpler version.
-                    if (instance.Continuation.Compound)
+                    if (instance.Continuation.CompoundChild)
                     {
                         var min = new Vector3(sourceBundleMin.X[0], sourceBundleMin.Y[0], sourceBundleMin.Z[0]);
                         var max = new Vector3(sourceBundleMax.X[0], sourceBundleMax.Y[0], sourceBundleMax.Z[0]);
@@ -269,7 +267,58 @@ namespace BepuPhysics
             }
         }
 
-        public void TryAdd(int bodyIndex)
+        public unsafe void ExecuteCompoundBatch<TShape>(CompoundShapeBatch<TShape> shapeBatch) where TShape : struct, ICompoundShape
+        {
+            ref var batch = ref batches[shapeBatch.TypeId];
+            ref var activeSet = ref bodies.ActiveSet;
+            var minValue = new Vector3(float.MaxValue);
+            var maxValue = new Vector3(-float.MaxValue);
+            for (int i = 0; i < batch.Count; ++i)
+            {
+                ref var instance = ref batch[i];
+                var bodyIndex = instance.Continuation.BodyIndex;
+                //We have to clear out the bounds used by compounds, since each contributing body will merge their contribution into the whole.
+                broadPhase.GetActiveBoundsPointers(activeSet.Collidables[bodyIndex].BroadPhaseIndex, out var min, out var max);
+                *min = minValue;
+                *max = maxValue;
+                shapeBatch.shapes[instance.ShapeIndex].AddChildBoundsToBatcher(ref this, ref instance.Pose, ref instance.Velocities, bodyIndex);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void Add(TypedIndex shapeIndex, ref RigidPose pose, ref BodyVelocity velocity, BoundsContinuation continuation)
+        {
+            var typeIndex = shapeIndex.Type;
+            Debug.Assert(typeIndex >= 0 && typeIndex < batches.Length, "The preallocated type batch array should be able to hold every type index. Is the type index broken?");
+            ref var batchSlot = ref batches[typeIndex];
+            if (!batchSlot.Span.Allocated)
+            {
+                //No list exists for this type yet.
+                QuickList<BoundingBoxInstance, Buffer<BoundingBoxInstance>>.Create(pool.SpecializeFor<BoundingBoxInstance>(), CollidablesPerFlush, out batchSlot);
+                if (typeIndex < minimumBatchIndex)
+                    minimumBatchIndex = typeIndex;
+                if (typeIndex > maximumBatchIndex)
+                    maximumBatchIndex = typeIndex;
+            }
+            //TODO: Arguably, batching up compounds is silly. 
+            //It technically opens the door for vectorizing their child pose calculations, but those are almost certainly not worth vectorizing anyway.
+            //May want to consider directly triggering a bounds dispatch for compounds here. 
+            //(Doing so WOULD be more complicated, though.)
+            ref var instance = ref batchSlot.AllocateUnsafely();
+            var shapeBatch = shapes[typeIndex];
+            instance.Pose = pose;
+            instance.Velocities = velocity;
+            instance.ShapeIndex = shapeIndex.Index;
+            instance.Continuation = continuation;
+
+            if (batchSlot.Count == CollidablesPerFlush)
+            {
+                shapeBatch.ComputeBounds(ref this);
+                batchSlot.Count = 0;
+            }
+        }
+
+        public void Add(int bodyIndex)
         {
             //For convenience, this function handles the case where the collidable reference points to nothing.
             //Note that this touches the memory associated with the full collidable. That's okay- we'll be reading the rest of it shortly if it has a collidable.
@@ -280,31 +329,12 @@ namespace BepuPhysics
             //Even if it was 50%, the cache benefit of executing alongside the just-touched data source would outweigh the misprediction.
             if (collidable.Shape.Exists)
             {
-                var typeIndex = collidable.Shape.Type;
-                Debug.Assert(typeIndex >= 0 && typeIndex < batches.Length, "The preallocated type batch array should be able to hold every type index. Is the type index broken?");
-                ref var batchSlot = ref batches[typeIndex];
-                if (!batchSlot.Span.Allocated)
-                {
-                    //No list exists for this type yet.
-                    QuickList<BoundingBoxInstance, Buffer<BoundingBoxInstance>>.Create(pool.SpecializeFor<BoundingBoxInstance>(), CollidablesPerFlush, out batchSlot);
-                }
-                //TODO: Arguably, batching up compounds is silly. 
-                //It technically opens the door for vectorizing their child pose calculations, but those are almost certainly not worth vectorizing anyway.
-                //May want to consider directly triggering a bounds dispatch for compounds here. 
-                //(Doing so WOULD be more complicated, though.)
-                ref var instance = ref batchSlot.AllocateUnsafely();
-                var shapeBatch = shapes[typeIndex];
-                instance.Pose = activeSet.Poses[bodyIndex];
-                instance.Velocities = activeSet.Velocities[bodyIndex];
-                instance.ShapeIndex = collidable.Shape.Index;
-                instance.Continuation = shapeBatch.Compound ? BoundsContinuation.CreateCompoundContinuation(bodyIndex) : BoundsContinuation.CreateContinuation(bodyIndex);
-
-                if (batchSlot.Count == CollidablesPerFlush)
-                {
-                    shapeBatch.ComputeBounds(ref this);
-                    batchSlot.Count = 0;
-                }
+                Add(collidable.Shape, ref activeSet.Poses[bodyIndex], ref activeSet.Velocities[bodyIndex], BoundsContinuation.CreateContinuation(bodyIndex));
             }
+        }
+        public void AddCompoundChild(int bodyIndex, TypedIndex shapeIndex, ref RigidPose pose, ref BodyVelocity velocity)
+        {
+            Add(shapeIndex, ref pose, ref velocity, BoundsContinuation.CreateCompoundChildContinuation(bodyIndex));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
