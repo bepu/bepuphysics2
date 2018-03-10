@@ -81,7 +81,21 @@ namespace BepuPhysics.Collidables
 
         public bool RayTest(ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, Shapes shapeBatches, out float t, out Vector3 normal)
         {
-            throw new NotImplementedException();
+            t = float.MaxValue;
+            normal = new Vector3();
+            for (int i = 0; i < Children.Length; ++i)
+            {
+                ref var child = ref Children[i];
+                GetRotatedChildPose(ref child.LocalPose, ref pose.Orientation, out var childPose);
+                //TODO: This is an area that has to be updated for high precision poses.
+                childPose.Position += pose.Position;
+                if (shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, ref childPose, ref origin, ref direction, out var childT, out var childNormal) && childT < t)
+                {
+                    t = childT;
+                    normal = childNormal;
+                }
+            }
+            return t < float.MaxValue;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

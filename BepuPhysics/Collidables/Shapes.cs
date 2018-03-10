@@ -108,6 +108,7 @@ namespace BepuPhysics.Collidables
 
         public abstract void ComputeBounds(ref BoundingBoxBatcher batcher);
         public abstract void ComputeBounds(int shapeIndex, ref RigidPose pose, out Vector3 min, out Vector3 max);
+        public abstract bool RayTest(int shapeIndex, ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, out float t, out Vector3 normal);
 
         /// <summary>
         /// Gets a raw untyped pointer to a shape's data.
@@ -275,6 +276,10 @@ namespace BepuPhysics.Collidables
             min += pose.Position;
             max += pose.Position;
         }
+        public override bool RayTest(int shapeIndex, ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, out float t, out Vector3 normal)
+        {
+            return shapes[shapeIndex].RayTest(ref pose, ref origin, ref direction, out t, out normal);
+        }
     }
 
     public class CompoundShapeBatch<TShape> : ShapeBatch<TShape> where TShape : struct, ICompoundShape
@@ -297,6 +302,10 @@ namespace BepuPhysics.Collidables
             shapes[shapeIndex].GetBounds(ref pose.Orientation, shapeBatches, out min, out max);
             min += pose.Position;
             max += pose.Position;
+        }
+        public override bool RayTest(int shapeIndex, ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, out float t, out Vector3 normal)
+        {
+            return shapes[shapeIndex].RayTest(ref pose, ref origin, ref direction, shapeBatches, out t, out normal);
         }
     }
 
