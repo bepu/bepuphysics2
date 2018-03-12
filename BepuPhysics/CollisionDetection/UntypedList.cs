@@ -108,7 +108,7 @@ namespace BepuPhysics.CollisionDetection
                     //This will bump up to the next allocated block size, so we don't have to worry about constant micro-resizes.
                     pool.Take(newSize, out var newBuffer);
                     Unsafe.CopyBlockUnaligned(newBuffer.Memory, Buffer.Memory, (uint)Buffer.Length);
-                    pool.ReturnUnsafely(ref Buffer);
+                    pool.ReturnUnsafely(Buffer.Id);
                     Buffer = newBuffer;
                 }
             }

@@ -36,6 +36,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<CompoundTestDemo>();
             AddOption<ConstraintTestDemo>();
             AddOption<BasicRagdollDemo>();
             AddOption<ShapePileDemo>();

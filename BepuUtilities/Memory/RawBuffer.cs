@@ -15,7 +15,7 @@ namespace BepuUtilities.Memory
         //so making use of the last 4 bytes to speed up the case where the raw buffer is taken from a pool (which is basically always) is a good option.
 
         /// <summary>
-        /// Implementation specific identifier of the raw buffer set by its source. If taken from a BufferPool, Id represents the index in the power pool from which it was taken.
+        /// Implementation specific identifier of the raw buffer set by its source. If taken from a BufferPool, Id represents the packed power and internal power pool index from which it was taken.
         /// </summary>
         public int Id;
 

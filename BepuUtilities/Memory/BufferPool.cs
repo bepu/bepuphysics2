@@ -116,6 +116,7 @@ namespace BepuUtilities.Memory
             public readonly int BlockSize;
             public int BlockCount;
 
+            internal const int IdPowerShift = 26;
 
             public PowerPool(int power, int minimumBlockSize, int expectedPooledCount)
             {
@@ -176,7 +177,8 @@ namespace BepuUtilities.Memory
                 }
 
                 var indexInBlock = slot & SuballocationsPerBlockMask;
-                buffer = new RawBuffer(Blocks[blockIndex].Allocate(indexInBlock, SuballocationSize), SuballocationSize, slot);
+                buffer = new RawBuffer(Blocks[blockIndex].Allocate(indexInBlock, SuballocationSize), SuballocationSize, (Power << IdPowerShift) | slot);
+                Debug.Assert(buffer.Id >= 0 && Power >= 0 && Power < 32, "Slot/power should be safely encoded in a 32 bit integer.");
 #if DEBUG
                 const int maximumOutstandingCapacity = 1 << 29;
                 Debug.Assert(outstandingIds.Count * SuballocationSize <= maximumOutstandingCapacity,
@@ -195,19 +197,36 @@ namespace BepuUtilities.Memory
 #endif
             }
 
-            public unsafe void Return(ref RawBuffer buffer)
+            [Conditional("DEBUG")]
+            internal unsafe void ValidateBufferIsContained(ref RawBuffer buffer)
+            {
+                //There are a lot of ways to screw this up. Try to catch as many as possible!
+                var slotIndex = buffer.Id & ((1 << IdPowerShift) - 1);
+                var blockIndex = slotIndex >> SuballocationsPerBlockShift;
+                var indexInAllocatorBlock = slotIndex & SuballocationsPerBlockMask;
+                Debug.Assert(buffer.Length == SuballocationSize,
+                  "A buffer taken from a pool should have a specific size.");
+                Debug.Assert(blockIndex >= 0 && blockIndex < BlockCount,
+                    "The block pointed to by a returned buffer should actually exist within the pool.");
+                var memoryOffset = buffer.Memory - Blocks[blockIndex].Pointer;
+                Debug.Assert(memoryOffset >= 0 && memoryOffset < Blocks[blockIndex].Array.Length,
+                    "If a raw buffer points to a given block as its source, the address should be within the block's memory region.");
+                Debug.Assert(Blocks[blockIndex].Pointer + indexInAllocatorBlock * SuballocationSize == buffer.Memory,
+                    "The implied address of a buffer in its block should match its actual address.");
+                Debug.Assert(buffer.Length + indexInAllocatorBlock * SuballocationSize <= Blocks[blockIndex].Array.Length,
+                    "The extent of the buffer should fit within the block.");
+            }
+
+            public unsafe void Return(int slotIndex)
             {
 #if DEBUG 
-                //There are a lot of ways to screw this up. Try to catch as many as possible!
-                var blockIndex = buffer.Id >> SuballocationsPerBlockShift;
-                var indexInAllocatorBlock = buffer.Id & SuballocationsPerBlockMask;
-                Debug.Assert(outstandingIds.Remove(buffer.Id),
+                Debug.Assert(outstandingIds.Remove(slotIndex),
                     "This buffer id must have been taken from the pool previously.");
 #if LEAKDEBUG
                 bool found = false;
                 foreach (var pair in outstandingAllocators)
                 {
-                    if (pair.Value.Remove(buffer.Id))
+                    if (pair.Value.Remove(slotIndex))
                     {
                         found = true;
                         if (pair.Value.Count == 0)
@@ -219,19 +238,8 @@ namespace BepuUtilities.Memory
                 }
                 Debug.Assert(found, "Allocator set must contain the buffer id.");
 #endif
-                Debug.Assert(buffer.Length == SuballocationSize,
-                    "A buffer taken from a pool should have a specific size.");
-                Debug.Assert(blockIndex >= 0 && blockIndex < BlockCount,
-                    "The block pointed to by a returned buffer should actually exist within the pool.");
-                var memoryOffset = buffer.Memory - Blocks[blockIndex].Pointer;
-                Debug.Assert(memoryOffset >= 0 && memoryOffset < Blocks[blockIndex].Array.Length,
-                    "If a raw buffer points to a given block as its source, the address should be within the block's memory region.");
-                Debug.Assert(Blocks[blockIndex].Pointer + indexInAllocatorBlock * SuballocationSize == buffer.Memory,
-                    "The implied address of a buffer in its block should match its actual address.");
-                Debug.Assert(buffer.Length + indexInAllocatorBlock * SuballocationSize <= Blocks[blockIndex].Array.Length,
-                    "The extent of the buffer should fit within the block.");
 #endif
-                Slots.Return(buffer.Id, new PassthroughArrayPool<int>());
+                Slots.Return(slotIndex, new PassthroughArrayPool<int>());
             }
 
             public void Clear()
@@ -322,18 +330,26 @@ namespace BepuUtilities.Memory
             pools[power].Take(out buffer);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void DecomposeId(int bufferId, out int powerIndex, out int slotIndex)
+        {
+            powerIndex = bufferId >> PowerPool.IdPowerShift;
+            slotIndex = bufferId & ((1 << PowerPool.IdPowerShift) - 1);
+        }
+
         /// <summary>
-        /// Returns a buffer to the pool without clearing the reference.
+        /// Returns a buffer to the pool by id.
         /// </summary>
         /// <param name="buffer">Buffer to return to the pool.</param>
         /// <remarks>Typed buffer pools zero out the passed-in buffer by convention.
         /// This costs very little and avoids a wide variety of bugs (either directly or by forcing fast failure). For consistency, BufferPool.Return does the same thing.
         /// This "Unsafe" overload should be used only in cases where there's a reason to bypass the clear; the naming is intended to dissuade casual use.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ReturnUnsafely(ref RawBuffer buffer)
+        public unsafe void ReturnUnsafely(int id)
         {
             ValidatePinnedState(true);
-            pools[SpanHelper.GetContainingPowerOf2(buffer.Length)].Return(ref buffer);
+            DecomposeId(id, out var powerIndex, out var slotIndex);
+            pools[powerIndex].Return(slotIndex);
         }
 
         /// <summary>
@@ -343,7 +359,11 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Return(ref RawBuffer buffer)
         {
-            ReturnUnsafely(ref buffer);
+#if DEBUG
+            DecomposeId(buffer.Id, out var powerIndex, out var slotIndex);
+            pools[powerIndex].ValidateBufferIsContained(ref buffer);
+#endif
+            ReturnUnsafely(buffer.Id);
             buffer = new RawBuffer();
         }
 
@@ -366,7 +386,7 @@ namespace BepuUtilities.Memory
                     //Don't bother copying from or re-pooling empty buffers. They're uninitialized.
                     Debug.Assert(copyCount <= targetSize);
                     Unsafe.CopyBlockUnaligned(newBuffer.Memory, buffer.Memory, (uint)copyCount);
-                    ReturnUnsafely(ref buffer);
+                    ReturnUnsafely(buffer.Id);
                 }
                 else
                 {
@@ -541,10 +561,7 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Return(ref Buffer<T> span)
         {
-            //Note that we have to rederive the original allocation size, since the size of T might not have allowed size * count to equal the original byte count.
-            Debug.Assert(span.Length > 0, "If this span has zero length, then it can't be an original request, and so isn't a valid buffer to return.");
-            var rawBuffer = new RawBuffer(span.Memory, 1 << SpanHelper.GetContainingPowerOf2(Unsafe.SizeOf<T>() * span.Length), span.Id);
-            Raw.ReturnUnsafely(ref rawBuffer);
+            Raw.ReturnUnsafely(span.Id);
             span = new Buffer<T>();
         }
 

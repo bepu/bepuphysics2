@@ -71,6 +71,17 @@ namespace DemoRenderer.ShapeDrawing
                         boxes.Add(ref instance, new PassthroughArrayPool<BoxInstance>());
                     }
                     break;
+                case Compound.Id:
+                    {
+                        ref var compound = ref shapes.GetShape<Compound>(shapeIndex.Index);
+                        for (int i = 0; i < compound.Children.Length; ++i)
+                        {
+                            ref var child = ref compound.Children[i];
+                            Compound.GetWorldPose(ref child.LocalPose, ref pose, out var childPose);
+                            AddShape(shapes, child.ShapeIndex, ref childPose, ref color);
+                        }
+                    }
+                    break;
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
