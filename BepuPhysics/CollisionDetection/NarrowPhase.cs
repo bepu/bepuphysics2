@@ -373,9 +373,8 @@ namespace BepuPhysics.CollisionDetection
             else
             {
                 //This pair uses no CCD beyond its speculative margin.
-                var continuation = overlapWorker.ConstraintGenerators.AddDiscrete(ref pair, speculativeMargin);
-                overlapWorker.Batcher.Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapePointerA, shapePointerB, ref poseA, ref poseB, continuation,
-                    ref overlapWorker.ConstraintGenerators, ref overlapWorker.Filters);
+                var continuation = overlapWorker.Batcher.Continuations.AddDiscrete(ref pair, speculativeMargin);
+                overlapWorker.Batcher.Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapePointerA, shapePointerB, ref poseA, ref poseB, continuation);
             }
             ////Pull the velocity information for all involved bodies. We will request a number of steps that will cover the motion path.
             ////number of substeps = min(maximum substep count, 1 + floor(estimated displacement / step length)), where

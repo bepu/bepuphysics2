@@ -75,7 +75,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="batch">Batch of pairs to test.</param>
         /// <param name="continuations">Continuations to invoke upon completion of a top level pair.</param>
         /// <param name="filters">Filters to use to influence execution of the collision tasks.</param>
-        public abstract void ExecuteBatch<TContinuations, TFilters>(ref UntypedList batch, ref StreamingBatcher batcher, ref TContinuations continuations, ref TFilters filters)
+        public abstract void ExecuteBatch<TContinuations, TFilters>(ref UntypedList batch, ref StreamingBatcher<TFilters, TContinuations> batcher)
             where TContinuations : struct, IContinuations
             where TFilters : struct, ICollisionSubtaskFilters;
 
@@ -266,26 +266,27 @@ namespace BepuPhysics.CollisionDetection
     }
 
 
-    public struct StreamingBatcher
+    public struct StreamingBatcher<TFilters, TContinuations> where TFilters : struct, ICollisionSubtaskFilters where TContinuations : struct, IContinuations
     {
         //The streaming batcher contains batches for pending work submitted by the user.
         //This pending work can be top level pairs like sphere versus sphere, but it may also be subtasks of submitted work.
         //Consider two compound bodies colliding. The pair will decompose into a set of potentially many convex subpairs.
-        //Similarly, a hull-hull collision test could spawn many subtasks, but those subtasks may not be of the same type as any top level pair.
 
         CollisionTaskRegistry typeMatrix;
         internal BufferPool pool;
-
+        public TFilters Filters;
+        public TContinuations Continuations;
 
         int minimumBatchIndex, maximumBatchIndex;
         Buffer<UntypedList> batches;
         //A subset of collision tasks require a place to return information.
         Buffer<UntypedList> localContinuations;
 
-
-        public unsafe StreamingBatcher(BufferPool pool, CollisionTaskRegistry collisionTypeMatrix)
+        public unsafe StreamingBatcher(BufferPool pool, CollisionTaskRegistry collisionTypeMatrix, TFilters filters, TContinuations continuations)
         {
             this.pool = pool;
+            Filters = filters;
+            Continuations = continuations;
             typeMatrix = collisionTypeMatrix;
             pool.SpecializeFor<UntypedList>().Take(collisionTypeMatrix.tasks.Length, out batches);
             pool.SpecializeFor<UntypedList>().Take(collisionTypeMatrix.tasks.Length, out localContinuations);
@@ -297,11 +298,9 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void Add<TContinuations, TFilters>(ref CollisionTaskReference reference,
+        unsafe void Add(ref CollisionTaskReference reference,
             int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            int flipMask, ContinuationIndex continuationId, ref TContinuations continuations, ref TFilters filters)
-            where TContinuations : struct, IContinuations
-            where TFilters : struct, ICollisionSubtaskFilters
+            int flipMask, ContinuationIndex continuationId)
         {
             ref var batch = ref batches[reference.TaskIndex];
             var pairData = batch.AllocateUnsafely();
@@ -315,25 +314,23 @@ namespace BepuPhysics.CollisionDetection
             poses->PoseB = poseB;
             if (batch.Count == reference.BatchSize)
             {
-                typeMatrix[reference.TaskIndex].ExecuteBatch(ref batch, ref this, ref continuations, ref filters);
+                typeMatrix[reference.TaskIndex].ExecuteBatch(ref batch, ref this);
                 batch.Count = 0;
                 batch.ByteCount = 0;
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add<TContinuations, TFilters>(
+        public unsafe void Add(
             int shapeTypeIdA, int shapeTypeIdB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            ContinuationIndex continuationId, ref TContinuations continuations, ref TFilters filters)
-            where TContinuations : struct, IContinuations
-            where TFilters : struct, ICollisionSubtaskFilters
+            ContinuationIndex continuationId)
         {
             ref var reference = ref typeMatrix.GetTaskReference(shapeTypeIdA, shapeTypeIdB);
             if (reference.TaskIndex < 0)
             {
                 //There is no task for this shape type pair. Immediately respond with an empty manifold.
                 var manifold = new ContactManifold();
-                continuations.Notify(continuationId, &manifold);
+                Continuations.Notify(continuationId, &manifold);
                 return;
             }
             ref var batch = ref batches[reference.TaskIndex];
@@ -350,21 +347,19 @@ namespace BepuPhysics.CollisionDetection
             if (shapeTypeIdA != reference.ExpectedFirstTypeId)
             {
                 //The inputs need to be reordered to guarantee that the collision tasks are handed data in the proper order.
-                Add(ref reference, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, -1, continuationId, ref continuations, ref filters);
+                Add(ref reference, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, -1, continuationId);
             }
             else
             {
-                Add(ref reference, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, 0, continuationId, ref continuations, ref filters);
+                Add(ref reference, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, 0, continuationId);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Add<TShapeA, TShapeB, TContinuations, TFilters>(ref CollisionTaskReference reference,
+        void Add<TShapeA, TShapeB>(ref CollisionTaskReference reference,
             ref TShapeA shapeA, ref TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            int flipMask, ContinuationIndex continuationId, ref TContinuations continuations, ref TFilters filters)
+            int flipMask, ContinuationIndex continuationId)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
-            where TContinuations : struct, IContinuations
-            where TFilters : struct, ICollisionSubtaskFilters
         {
             ref var batch = ref batches[reference.TaskIndex];
             ref var pairData = ref batch.AllocateUnsafely<TestPair<TShapeA, TShapeB>>();
@@ -377,24 +372,22 @@ namespace BepuPhysics.CollisionDetection
             pairData.Shared.PoseB = poseB;
             if (batch.Count == reference.BatchSize)
             {
-                typeMatrix[reference.TaskIndex].ExecuteBatch(ref batch, ref this, ref continuations, ref filters);
+                typeMatrix[reference.TaskIndex].ExecuteBatch(ref batch, ref this);
                 batch.Count = 0;
                 batch.ByteCount = 0;
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add<TShapeA, TShapeB, TContinuations, TFilters>(ref TShapeA shapeA, ref TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            ContinuationIndex continuationId, ref TContinuations continuations, ref TFilters filters)
+        public unsafe void Add<TShapeA, TShapeB>(ref TShapeA shapeA, ref TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB,
+            ContinuationIndex continuationId)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
-            where TContinuations : struct, IContinuations
-            where TFilters : struct, ICollisionSubtaskFilters
         {
             ref var reference = ref typeMatrix.GetTaskReference<TShapeA, TShapeB>();
             if (reference.TaskIndex < 0)
             {
                 //There is no task for this shape type pair. Immediately respond with an empty manifold.
                 var manifold = new ContactManifold();
-                continuations.Notify(continuationId, &manifold);
+                Continuations.Notify(continuationId, &manifold);
                 return;
             }
             ref var batch = ref batches[reference.TaskIndex];
@@ -410,18 +403,16 @@ namespace BepuPhysics.CollisionDetection
             if (typeof(TShapeA) != typeof(TShapeB) && default(TShapeA).TypeId != reference.ExpectedFirstTypeId)
             {
                 //The inputs need to be reordered to guarantee that the collision tasks are handed data in the proper order.
-                Add(ref reference, ref shapeB, ref shapeA, ref poseB, ref poseA, -1, continuationId, ref continuations, ref filters);
+                Add(ref reference, ref shapeB, ref shapeA, ref poseB, ref poseA, -1, continuationId);
             }
             else
             {
-                Add(ref reference, ref shapeA, ref shapeB, ref poseA, ref poseB, 0, continuationId, ref continuations, ref filters);
+                Add(ref reference, ref shapeA, ref shapeB, ref poseA, ref poseB, 0, continuationId);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Flush<TContinuations, TFilters>(ref TContinuations continuations, ref TFilters filters)
-            where TContinuations : struct, IContinuations
-            where TFilters : struct, ICollisionSubtaskFilters
+        public void Flush()
         {
             //The collision task registry guarantees that tasks which create work for other tasks always appear sooner in the task array than their child tasks.
             //Since there are no cycles, only one flush pass is required.
@@ -430,7 +421,7 @@ namespace BepuPhysics.CollisionDetection
                 ref var batch = ref batches[i];
                 if (batch.Count > 0)
                 {
-                    typeMatrix.tasks[i].ExecuteBatch(ref batch, ref this, ref continuations, ref filters);
+                    typeMatrix.tasks[i].ExecuteBatch(ref batch, ref this);
                 }
                 //Dispose of the batch and any associated buffers; since the flush is one pass, we won't be needing this again.
                 if (batch.Buffer.Allocated)
@@ -447,5 +438,49 @@ namespace BepuPhysics.CollisionDetection
             listPool.Return(ref batches);
             listPool.Return(ref localContinuations);
         }
+
+        /// <summary>
+        /// Describes the flow control to apply to a convex-convex pair report.
+        /// </summary>
+        enum PairReportType : byte
+        {
+            /// <summary>
+            /// Marks a pair as requiring no further processing before being reported to the user supplied continuations.
+            /// </summary>
+            Direct,
+            /// <summary>
+            /// Marks a pair as part of a set of a higher (potentially multi-manifold) pair, potentially requiring contact reduction.
+            /// </summary>
+            NonconvexReduction, 
+            //TODO: We don't yet support boundary smoothing for meshes or convexes. Most likely, boundary smoothed convexes won't make it into the first release of the engine at all;
+            //they're a pretty experimental feature with limited applications.
+            ///// <summary>
+            ///// Marks a pair as a part of a set of mesh-convex collisions, potentially requiring mesh boundary smoothing.
+            ///// </summary>
+            //BoundarySmoothedMesh,
+            ///// <summary>
+            ///// Marks a pair as a part of a set of convex-convex collisions, potentially requiring general convex boundary smoothing.
+            ///// </summary>
+            //BoundarySmoothedConvexes,           
+
+        }
+
+        struct PairReport
+        {
+            public CollidablePair Pair;
+            public int ChildA;
+            public int ChildB;
+            public PairReportType Type;
+        }
+
+
+        //public unsafe void Report(ContactManifold* manifold, ref PairReport report)
+        //{
+        //    if (report.Type != PairReportType.Direct)
+        //    {
+        //        Filters.Configure(report.Pair, report.ChildA, report.ChildB, manifold);
+        //    }
+        //    Continuations.Notify(continuationId, 
+        //}
     }
 }

@@ -58,15 +58,15 @@ namespace Demos.SpecializedTests
             ref ContinuationsTest continuations, ref SubtaskFiltersTest filters, BufferPool pool, CollisionTaskRegistry registry, int iterationCount)
             where TA : struct, IShape where TB : struct, IShape
         {
-            var batcher = new StreamingBatcher(pool, registry);
+            var batcher = new StreamingBatcher<SubtaskFiltersTest, ContinuationsTest>(pool, registry, filters, continuations);
             for (int i = 0; i < iterationCount; ++i)
             {
-                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
-                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
-                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
-                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0), ref continuations, ref filters);
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0));
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0));
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0));
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0));
             }
-            batcher.Flush(ref continuations, ref filters);
+            batcher.Flush();
         }
 
         static void Test<TA, TB>(ref TA a, ref TB b, ref RigidPose poseA, ref RigidPose poseB,

@@ -97,7 +97,7 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
             ref var worker = ref narrowPhase.overlapWorkers[workerIndex];
-            worker.Batcher.Flush(ref worker.ConstraintGenerators, ref worker.Filters);
+            worker.Batcher.Flush();
         }
 
         public override void DispatchOverlaps(IThreadDispatcher threadDispatcher = null)
@@ -137,7 +137,7 @@ namespace BepuPhysics.CollisionDetection
                 var intertreeHandler = new IntertreeOverlapHandler(broadPhase.activeLeaves, broadPhase.staticLeaves, narrowPhase, 0);
                 broadPhase.ActiveTree.GetOverlaps(broadPhase.StaticTree, ref intertreeHandler);
                 ref var worker = ref narrowPhase.overlapWorkers[0];
-                worker.Batcher.Flush(ref worker.ConstraintGenerators, ref worker.Filters);
+                worker.Batcher.Flush();
 
             }
 

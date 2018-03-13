@@ -42,17 +42,15 @@ namespace BepuPhysics.CollisionDetection
 
         public struct OverlapWorker
         {
-            public StreamingBatcher Batcher;
-            public BatcherFilters Filters;
-            public ConstraintGenerators ConstraintGenerators;
+            public StreamingBatcher<BatcherFilters, ConstraintGenerators> Batcher;
             public PendingConstraintAddCache PendingConstraints;
             public QuickList<int, Buffer<int>> PendingSetAwakenings;
 
             public OverlapWorker(int workerIndex, BufferPool pool, NarrowPhase<TCallbacks> narrowPhase)
             {
-                Batcher = new StreamingBatcher(pool, narrowPhase.CollisionTaskRegistry);
-                Filters = new BatcherFilters(workerIndex, narrowPhase);
-                ConstraintGenerators = new ConstraintGenerators(workerIndex, pool, narrowPhase);
+                //Note that we give ownership of the 
+                Batcher = new StreamingBatcher<BatcherFilters, ConstraintGenerators>(pool, narrowPhase.CollisionTaskRegistry, 
+                    new BatcherFilters(workerIndex, narrowPhase), new ConstraintGenerators(workerIndex, pool, narrowPhase));
                 PendingConstraints = new PendingConstraintAddCache(pool);
                 QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out PendingSetAwakenings);
             }
@@ -79,7 +77,7 @@ namespace BepuPhysics.CollisionDetection
         {
             for (int i = 0; i < threadCount; ++i)
             {
-                overlapWorkers[i].ConstraintGenerators.Dispose();
+                overlapWorkers[i].Batcher.Continuations.Dispose();
             }
 
         }
