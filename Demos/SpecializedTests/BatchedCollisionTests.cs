@@ -55,10 +55,10 @@ namespace Demos.SpecializedTests
 
 
         static void TestPair<TA, TB>(ref TA a, ref TB b, ref RigidPose poseA, ref RigidPose poseB,
-            ref TestCollisionCallbacks callbacks, BufferPool pool, CollisionTaskRegistry registry, int iterationCount)
+            ref TestCollisionCallbacks callbacks, BufferPool pool, Shapes shapes, CollisionTaskRegistry registry, int iterationCount)
             where TA : struct, IShape where TB : struct, IShape
         {
-            var batcher = new CollisionBatcher<TestCollisionCallbacks>(pool, registry, callbacks);
+            var batcher = new CollisionBatcher<TestCollisionCallbacks>(pool, shapes, registry, callbacks);
             for (int i = 0; i < iterationCount; ++i)
             {
                 batcher.Add(ref a, ref b, ref poseA, ref poseB, 0);
@@ -70,13 +70,13 @@ namespace Demos.SpecializedTests
         }
 
         static void Test<TA, TB>(ref TA a, ref TB b, ref RigidPose poseA, ref RigidPose poseB,
-            BufferPool pool, CollisionTaskRegistry registry, int iterationCount)
+            BufferPool pool, Shapes shapes, CollisionTaskRegistry registry, int iterationCount)
                         where TA : struct, IShape where TB : struct, IShape
         {
             var callbacks = new TestCollisionCallbacks();
-            TestPair(ref a, ref b, ref poseA, ref poseB, ref callbacks, pool, registry, 64);
+            TestPair(ref a, ref b, ref poseA, ref poseB, ref callbacks, pool, shapes, registry, 64);
             var start = Stopwatch.GetTimestamp();
-            TestPair(ref a, ref b, ref poseA, ref poseB, ref callbacks, pool, registry, iterationCount);
+            TestPair(ref a, ref b, ref poseA, ref poseB, ref callbacks, pool, shapes, registry, iterationCount);
             var end = Stopwatch.GetTimestamp();
             var time = (end - start) / (double)Stopwatch.Frequency;
             Console.WriteLine($"Completed {callbacks.Count} {typeof(TA).Name}-{typeof(TB).Name} pairs, time (ms): {1e3 * time}, time per pair (ns): {1e9 * time / callbacks.Count}");
@@ -99,13 +99,14 @@ namespace Demos.SpecializedTests
             var box = new Box(1f, 1f, 1f);
             var poseA = new RigidPose { Position = new Vector3(0, 0, 0), Orientation = BepuUtilities.Quaternion.Identity };
             var poseB = new RigidPose { Position = new Vector3(0, 1, 0), Orientation = BepuUtilities.Quaternion.Identity };
+            Shapes shapes = new Shapes(pool, 32);
 
-            Test(ref sphere, ref sphere, ref poseA, ref poseB, pool, registry, 1 << 25);
-            Test(ref sphere, ref capsule, ref poseA, ref poseB, pool, registry, 1 << 25);
-            Test(ref sphere, ref box, ref poseA, ref poseB, pool, registry, 1 << 25);
-            Test(ref capsule, ref capsule, ref poseA, ref poseB, pool, registry, 1 << 25);
-            Test(ref capsule, ref box, ref poseA, ref poseB, pool, registry, 1 << 25);
-            Test(ref box, ref box, ref poseA, ref poseB, pool, registry, 1 << 25);
+            Test(ref sphere, ref sphere, ref poseA, ref poseB, pool, shapes, registry, 1 << 25);
+            Test(ref sphere, ref capsule, ref poseA, ref poseB, pool, shapes, registry, 1 << 25);
+            Test(ref sphere, ref box, ref poseA, ref poseB, pool, shapes, registry, 1 << 25);
+            Test(ref capsule, ref capsule, ref poseA, ref poseB, pool, shapes, registry, 1 << 25);
+            Test(ref capsule, ref box, ref poseA, ref poseB, pool, shapes, registry, 1 << 25);
+            Test(ref box, ref box, ref poseA, ref poseB, pool, shapes, registry, 1 << 25);
             Console.ReadKey();
         }
     }

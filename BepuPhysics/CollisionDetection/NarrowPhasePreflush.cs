@@ -272,7 +272,7 @@ namespace BepuPhysics.CollisionDetection
             uniqueAwakeningsSet.Dispose(Pool);
             for (int i = 0; i < threadCount; ++i)
             {
-                overlapWorkers[i].PendingSetAwakenings.Dispose(overlapWorkers[i].Batcher.pool.SpecializeFor<int>());
+                overlapWorkers[i].PendingSetAwakenings.Dispose(overlapWorkers[i].Batcher.Pool.SpecializeFor<int>());
             }
             (int awakenerPhaseOneJobCount, int awakenerPhaseTwoJobCount) = Simulation.Awakener.PrepareJobs(ref setsToAwaken, false, threadCount);
             if (threadCount > 1)

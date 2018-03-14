@@ -73,8 +73,9 @@ namespace BepuPhysics.CollisionDetection
         //This pending work can be top level pairs like sphere versus sphere, but it may also be subtasks of submitted work.
         //Consider two compound bodies colliding. The pair will decompose into a set of potentially many convex subpairs.
 
+        public BufferPool Pool;
+        public Shapes Shapes;
         CollisionTaskRegistry typeMatrix;
-        internal BufferPool pool;
         public TCallbacks Callbacks;
 
         int minimumBatchIndex, maximumBatchIndex;
@@ -82,9 +83,10 @@ namespace BepuPhysics.CollisionDetection
         //A subset of collision tasks require a place to return information.
         Buffer<UntypedList> localContinuations;
 
-        public unsafe CollisionBatcher(BufferPool pool, CollisionTaskRegistry collisionTypeMatrix, TCallbacks callbacks)
+        public unsafe CollisionBatcher(BufferPool pool, Shapes shapes, CollisionTaskRegistry collisionTypeMatrix, TCallbacks callbacks)
         {
-            this.pool = pool;
+            Pool = pool;
+            Shapes = shapes;
             Callbacks = callbacks;
             typeMatrix = collisionTypeMatrix;
             pool.SpecializeFor<UntypedList>().Take(collisionTypeMatrix.tasks.Length, out batches);
@@ -118,12 +120,13 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
-            int shapeTypeIdA, int shapeTypeIdB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            int pairId)
+            int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
+            int pairId, int childA = 0, int childB = 0, PairReportType reportType = PairReportType.Direct)
         {
-            ref var reference = ref typeMatrix.GetTaskReference(shapeTypeIdA, shapeTypeIdB);
+            ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
             if (reference.TaskIndex < 0)
             {
                 //There is no task for this shape type pair. Immediately respond with an empty manifold.
@@ -135,14 +138,14 @@ namespace BepuPhysics.CollisionDetection
             var pairSize = shapeSizeA + shapeSizeB + Unsafe.SizeOf<TestPair>();
             if (!batch.Buffer.Allocated)
             {
-                batch = new UntypedList(pairSize, reference.BatchSize, pool);
+                batch = new UntypedList(pairSize, reference.BatchSize, Pool);
                 if (minimumBatchIndex > reference.TaskIndex)
                     minimumBatchIndex = reference.TaskIndex;
                 if (maximumBatchIndex < reference.TaskIndex)
                     maximumBatchIndex = reference.TaskIndex;
             }
             Debug.Assert(batch.Buffer.Allocated && batch.ElementSizeInBytes > 0 && batch.ElementSizeInBytes < 131072, "How'd the batch get corrupted?");
-            if (shapeTypeIdA != reference.ExpectedFirstTypeId)
+            if (shapeTypeA != reference.ExpectedFirstTypeId)
             {
                 //The inputs need to be reordered to guarantee that the collision tasks are handed data in the proper order.
                 Add(ref reference, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, -1, pairId);
@@ -151,6 +154,17 @@ namespace BepuPhysics.CollisionDetection
             {
                 Add(ref reference, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, 0, pairId);
             }
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void Add(
+            TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB,
+            int pairId, int childA = 0, int childB = 0, PairReportType reportType = PairReportType.Direct)
+        {
+            var shapeTypeA = shapeIndexA.Type;
+            var shapeTypeB = shapeIndexB.Type;
+            Shapes[shapeIndexA.Type].GetShapeData(shapeIndexA.Index, out var shapeA, out var shapeSizeA);
+            Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
+            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, pairId, childA, childB, reportType);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -190,7 +204,7 @@ namespace BepuPhysics.CollisionDetection
             ref var batch = ref batches[reference.TaskIndex];
             if (!batch.Buffer.Allocated)
             {
-                batch = new UntypedList(Unsafe.SizeOf<TestPair<TShapeA, TShapeB>>(), reference.BatchSize, pool);
+                batch = new UntypedList(Unsafe.SizeOf<TestPair<TShapeA, TShapeB>>(), reference.BatchSize, Pool);
                 if (minimumBatchIndex > reference.TaskIndex)
                     minimumBatchIndex = reference.TaskIndex;
                 if (maximumBatchIndex < reference.TaskIndex)
@@ -223,21 +237,18 @@ namespace BepuPhysics.CollisionDetection
                 //Dispose of the batch and any associated buffers; since the flush is one pass, we won't be needing this again.
                 if (batch.Buffer.Allocated)
                 {
-                    pool.Return(ref batch.Buffer);
+                    Pool.Return(ref batch.Buffer);
                 }
                 //Note that the local continuations are not guaranteed to be allocated when the batch is; many tasks don't have any associated continuations.
                 if (localContinuations[i].Buffer.Allocated)
                 {
-                    pool.Return(ref localContinuations[i].Buffer);
+                    Pool.Return(ref localContinuations[i].Buffer);
                 }
             }
-            var listPool = pool.SpecializeFor<UntypedList>();
+            var listPool = Pool.SpecializeFor<UntypedList>();
             listPool.Return(ref batches);
             listPool.Return(ref localContinuations);
         }
-
-
-
 
         public unsafe void ProcessConvexResult(ContactManifold* manifold, ref TestPairSource report)
         {

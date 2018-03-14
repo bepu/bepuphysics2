@@ -252,7 +252,7 @@ namespace BepuPhysics.CollisionDetection
             public OverlapWorker(int workerIndex, BufferPool pool, NarrowPhase<TCallbacks> narrowPhase)
             {
                 //Note that we give ownership of the 
-                Batcher = new CollisionBatcher<CollisionCallbacks>(pool, narrowPhase.CollisionTaskRegistry,
+                Batcher = new CollisionBatcher<CollisionCallbacks>(pool, narrowPhase.Shapes, narrowPhase.CollisionTaskRegistry,
                     new CollisionCallbacks(workerIndex, pool, narrowPhase));
                 PendingConstraints = new PendingConstraintAddCache(pool);
                 QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out PendingSetAwakenings);
@@ -371,10 +371,6 @@ namespace BepuPhysics.CollisionDetection
             ref RigidPose poseA, ref RigidPose poseB, ref BodyVelocity velocityA, ref BodyVelocity velocityB)
         {
             Debug.Assert(pair.A.Packed != pair.B.Packed);
-            var shapeTypeA = aCollidable.Shape.Type;
-            var shapeTypeB = bCollidable.Shape.Type;
-            Shapes[shapeTypeA].GetShapeData(aCollidable.Shape.Index, out var shapePointerA, out var shapeSizeA);
-            Shapes[shapeTypeB].GetShapeData(bCollidable.Shape.Index, out var shapePointerB, out var shapeSizeB);
             //Note that we never create 'unilateral' CCD pairs. That is, if either collidable in a pair enables a CCD feature, we just act like both are using it.
             //That keeps things a little simpler. Unlike v1, we don't have to worry about the implications of 'motion clamping' here- no need for deeper configuration.
             var useSubstepping = aCollidable.Continuity.UseSubstepping || bCollidable.Continuity.UseSubstepping;
@@ -401,7 +397,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 //This pair uses no CCD beyond its speculative margin.
                 var continuation = overlapWorker.Batcher.Callbacks.AddDiscrete(ref pair, speculativeMargin);
-                overlapWorker.Batcher.Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapePointerA, shapePointerB, ref poseA, ref poseB, (int)continuation.Packed);
+                overlapWorker.Batcher.Add(aCollidable.Shape, bCollidable.Shape, ref poseA, ref poseB, (int)continuation.Packed);
             }
             ////Pull the velocity information for all involved bodies. We will request a number of steps that will cover the motion path.
             ////number of substeps = min(maximum substep count, 1 + floor(estimated displacement / step length)), where

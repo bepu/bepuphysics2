@@ -49,7 +49,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         
         public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
         {
-            CollisionTaskCommon.ExecuteBatch
+            ConvexCollisionTaskCommon.ExecuteBatch
                 <TCallbacks, 
                 Sphere, SphereWide, Sphere, SphereWide, NoOrientationTestPairWide<Sphere, SphereWide, Sphere, SphereWide>,
                 Convex1ContactManifoldWide, SpherePairTester>(ref batch, ref batcher);

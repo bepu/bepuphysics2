@@ -339,7 +339,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         void Scatter(ref Vector3Wide offsetB, ref ContactManifold target);
     }
 
-    class CollisionTaskCommon
+    class ConvexCollisionTaskCommon
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void ExecuteBatch<TCallbacks, TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide, TManifoldWide, TPairTester>
