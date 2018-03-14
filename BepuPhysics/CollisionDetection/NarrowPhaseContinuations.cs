@@ -37,12 +37,15 @@ namespace BepuPhysics.CollisionDetection
             SubstepWithLinear = 3
         }
 
-        public struct ConstraintGenerators : IContinuations
+        public struct CollisionCallbacks : ICollisionCallbacks
         {
             int workerIndex;
             BufferPool pool;
             NarrowPhase<TCallbacks> narrowPhase;
 
+            //TODO: Arguably, this could be handled within the streaming batcher. The main advantage of doing so would be CCD-like queries being available.
+            //On the other hand, we may want to simply modularize it. Something like a low level convex batcher, which is used by the more general purpose discrete batcher
+            //(which handles compounds, meshes, and boundary smoothing), which is used by the CCD batcher.
             unsafe static void ResolveLinearManifold(ContactManifold* mainManifold, ContactManifold* linearManifold, ContactManifold* outManifold)
             {
                 var linearCount = linearManifold->ContactCount;
@@ -419,7 +422,7 @@ namespace BepuPhysics.CollisionDetection
             ContinuationCache<SubstepPair> substep;
             ContinuationCache<SubstepWithLinearPair> substepWithLinear;
 
-            public ConstraintGenerators(int workerIndex, BufferPool pool, NarrowPhase<TCallbacks> narrowPhase)
+            public CollisionCallbacks(int workerIndex, BufferPool pool, NarrowPhase<TCallbacks> narrowPhase)
             {
                 this.pool = pool;
                 this.workerIndex = workerIndex;
@@ -490,6 +493,11 @@ namespace BepuPhysics.CollisionDetection
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private unsafe void ReduceDistantContacts(ContactManifold* manifold, float speculativeMargin, ContactManifold* outputManifold)
             {
+                //TODO: There's a pretty strong argument for not generating contacts beyond speculative limits to begin with.
+                //It's likely that we'll make the convex test batcher aware of speculative margins when we implement more complex nonconvex pairs;
+                //pruning out irrelevant contacts is critical for performance in such cases.
+                //Pushing this responsibility to the individual convex handlers would also open up opportunities for vectorization that we can't easily take advantage of once we've 
+                //entered this scalar processing phase.
                 var contactCount = manifold->ContactCount;
                 var sourceDepths = &manifold->Depth0;
                 //Negative depths correspond to separation.
@@ -551,9 +559,10 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
 
-            public unsafe void Notify(ContinuationIndex continuationId, ContactManifold* manifold)
+            public unsafe void OnPairCompleted(int pairId, ContactManifold* manifold)
             {
                 var todoTestCollisionCache = default(EmptyCollisionCache);
+                ContinuationIndex continuationId = new ContinuationIndex(pairId);
                 Debug.Assert(continuationId.Exists);
                 var continuationIndex = continuationId.Index;
                 switch ((ConstraintGeneratorType)continuationId.Type)
@@ -654,6 +663,40 @@ namespace BepuPhysics.CollisionDetection
                 }
 
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            CollidablePair GetCollidablePair(int pairId)
+            {
+                var continuation = new ContinuationIndex(pairId);
+                Debug.Assert(continuation.Exists);
+                var index = continuation.Index;
+                switch ((ConstraintGeneratorType)continuation.Type)
+                {
+                    case ConstraintGeneratorType.Discrete:
+                            return discrete.Caches[index].Pair;
+                    case ConstraintGeneratorType.Linear:
+                        return linear.Caches[index].Pair;
+                    case ConstraintGeneratorType.Substep:
+                        return substep.Caches[index].Pair;
+                    case ConstraintGeneratorType.SubstepWithLinear:
+                        return substepWithLinear.Caches[index].Pair;
+                }
+                Debug.Fail("Invalid collision continuation type. Corrupted data?");
+                return new CollidablePair();
+
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool AllowCollisionTesting(int pairId, int childA, int childB)
+            {
+                return narrowPhase.Callbacks.AllowContactGeneration(workerIndex, GetCollidablePair(pairId), childA, childB);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ContactManifold* manifold)
+            {
+                narrowPhase.Callbacks.ConfigureContactManifold(workerIndex, GetCollidablePair(pairId), childA, childB, manifold);
+            }          
 
             internal void Dispose()
             {

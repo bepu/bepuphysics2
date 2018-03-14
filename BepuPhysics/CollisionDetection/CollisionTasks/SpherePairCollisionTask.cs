@@ -47,10 +47,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ShapeTypeIndexB = ShapeTypeIndexA;
         }
         
-        public unsafe override void ExecuteBatch<TContinuations, TFilters>(ref UntypedList batch, ref StreamingBatcher<TFilters, TContinuations> batcher)
+        public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
         {
             CollisionTaskCommon.ExecuteBatch
-                <TContinuations, TFilters, 
+                <TCallbacks, 
                 Sphere, SphereWide, Sphere, SphereWide, NoOrientationTestPairWide<Sphere, SphereWide, Sphere, SphereWide>,
                 Convex1ContactManifoldWide, SpherePairTester>(ref batch, ref batcher);
         }

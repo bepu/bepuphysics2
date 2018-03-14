@@ -342,15 +342,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     class CollisionTaskCommon
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void ExecuteBatch<TContinuations, TFilters, TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide, TManifoldWide, TPairTester>
-            (ref UntypedList batch, ref StreamingBatcher<TFilters, TContinuations> batcher)
+        public static unsafe void ExecuteBatch<TCallbacks, TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide, TManifoldWide, TPairTester>
+            (ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
             where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
             where TPairWide : struct, ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide>
             where TPairTester : struct, IPairTester<TShapeWideA, TShapeWideB, TManifoldWide>
             where TManifoldWide : IContactManifoldWide
-            where TFilters : struct, ICollisionSubtaskFilters
-            where TContinuations : struct, IContinuations
+            where TCallbacks : struct, ICollisionCallbacks
         {
             ref var start = ref Unsafe.As<byte, TestPair<TShapeA, TShapeB>>(ref batch.Buffer[0]);
             //With any luck, the compiler will eventually get rid of these unnecessary zero inits. 
@@ -425,7 +424,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref var offsetAsFloat = ref Unsafe.Add(ref Unsafe.As<Vector3Wide, float>(ref offsetB), j);
                     ref var offsetSource = ref Unsafe.As<float, Vector3Wide>(ref offsetAsFloat);
                     manifoldSource.Scatter(ref offsetSource, ref manifold);
-                    batcher.Continuations.Notify(Unsafe.Add(ref bundleStart, j).Shared.Continuation, &manifold);
+                    batcher.ProcessConvexResult(&manifold, ref Unsafe.Add(ref bundleStart, j).Shared.Source);
                     if (typeof(TManifoldWide) == typeof(Convex1ContactManifoldWide))
                     {
                         Debug.Assert(manifold.ContactCount == 1 && manifold.Convex, "The notify function should not modify the provided manifold reference.");

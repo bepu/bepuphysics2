@@ -60,10 +60,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
 
         //Every single collision task type will mirror this general layout.
-        public unsafe override void ExecuteBatch<TContinuations, TFilters>(ref UntypedList batch, ref StreamingBatcher<TFilters, TContinuations> batcher)
+        public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
         {
             CollisionTaskCommon.ExecuteBatch
-                <TContinuations, TFilters,
+                <TCallbacks,
                 Sphere, SphereWide, Capsule, CapsuleWide, OneOrientationTestPairWide<Sphere, SphereWide, Capsule, CapsuleWide>,
                 Convex1ContactManifoldWide, SphereCapsuleTester>(ref batch, ref batcher);
         }

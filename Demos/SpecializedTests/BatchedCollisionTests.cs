@@ -15,12 +15,12 @@ namespace Demos.SpecializedTests
 {
     public static class BatchedCollisionTests
     {
-        struct ContinuationsTest : IContinuations
+        struct TestCollisionCallbacks : ICollisionCallbacks
         {
             public int Count;
-            public unsafe void Notify(ContinuationIndex continuationId, ContactManifold* manifold)
-            {
-                //Console.WriteLine($"Completed {continuationId}:");
+
+            public unsafe void OnPairCompleted(int pairId, ContactManifold* manifold)
+            {                //Console.WriteLine($"Completed {continuationId}:");
                 //var normals = &manifold->Normal0;
                 //var offsets = &manifold->Offset0;
                 //var depths = &manifold->Depth0;
@@ -41,30 +41,30 @@ namespace Demos.SpecializedTests
                 var extra = 1e-16 * (manifold->Depth0 + manifold->Offset0.X + manifold->Normal0.X);
                 Count += 1 + (int)extra;
             }
-        }
-        struct SubtaskFiltersTest : ICollisionSubtaskFilters
-        {
-            public bool AllowCollisionTesting(CollidablePair parent, int childA, int childB)
+
+            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ContactManifold* manifold)
+            {
+            }
+
+            public bool AllowCollisionTesting(int pairId, int childA, int childB)
             {
                 return true;
             }
 
-            public unsafe void Configure(CollidablePair parent, int childA, int childB, ContactManifold* manifold)
-            {
-            }
         }
 
+
         static void TestPair<TA, TB>(ref TA a, ref TB b, ref RigidPose poseA, ref RigidPose poseB,
-            ref ContinuationsTest continuations, ref SubtaskFiltersTest filters, BufferPool pool, CollisionTaskRegistry registry, int iterationCount)
+            ref TestCollisionCallbacks callbacks, BufferPool pool, CollisionTaskRegistry registry, int iterationCount)
             where TA : struct, IShape where TB : struct, IShape
         {
-            var batcher = new StreamingBatcher<SubtaskFiltersTest, ContinuationsTest>(pool, registry, filters, continuations);
+            var batcher = new CollisionBatcher<TestCollisionCallbacks>(pool, registry, callbacks);
             for (int i = 0; i < iterationCount; ++i)
             {
-                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0));
-                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0));
-                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0));
-                batcher.Add(ref a, ref b, ref poseA, ref poseB, new ContinuationIndex(0, 0, 0));
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, 0);
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, 0);
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, 0);
+                batcher.Add(ref a, ref b, ref poseA, ref poseB, 0);
             }
             batcher.Flush();
         }
@@ -73,14 +73,13 @@ namespace Demos.SpecializedTests
             BufferPool pool, CollisionTaskRegistry registry, int iterationCount)
                         where TA : struct, IShape where TB : struct, IShape
         {
-            var continuations = new ContinuationsTest();
-            var filters = new SubtaskFiltersTest();
-            TestPair(ref a, ref b, ref poseA, ref poseB, ref continuations, ref filters, pool, registry, 64);
+            var callbacks = new TestCollisionCallbacks();
+            TestPair(ref a, ref b, ref poseA, ref poseB, ref callbacks, pool, registry, 64);
             var start = Stopwatch.GetTimestamp();
-            TestPair(ref a, ref b, ref poseA, ref poseB, ref continuations, ref filters, pool, registry, iterationCount);
+            TestPair(ref a, ref b, ref poseA, ref poseB, ref callbacks, pool, registry, iterationCount);
             var end = Stopwatch.GetTimestamp();
             var time = (end - start) / (double)Stopwatch.Frequency;
-            Console.WriteLine($"Completed {continuations.Count} {typeof(TA).Name}-{typeof(TB).Name} pairs, time (ms): {1e3 * time}, time per pair (ns): {1e9 * time / continuations.Count}");
+            Console.WriteLine($"Completed {callbacks.Count} {typeof(TA).Name}-{typeof(TB).Name} pairs, time (ms): {1e3 * time}, time per pair (ns): {1e9 * time / callbacks.Count}");
         }
 
 

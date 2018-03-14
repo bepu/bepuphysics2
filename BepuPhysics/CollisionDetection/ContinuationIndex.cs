@@ -5,7 +5,7 @@ namespace BepuPhysics.CollisionDetection
 {
     public struct ContinuationIndex
     {
-        uint packed;
+        public uint Packed;
 
         //From least to most significant: 11 bits inner index, 13 bits continuation index, 7 bits type, 1 bit 'exists' flag.
 
@@ -16,7 +16,7 @@ namespace BepuPhysics.CollisionDetection
         public int InnerIndex
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (int)(packed & 0x7FF); }
+            get { return (int)(Packed & 0x7FF); }
         }
 
 
@@ -26,7 +26,7 @@ namespace BepuPhysics.CollisionDetection
         public int Index
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (int)((packed >> 11) & 0x1FFF); }
+            get { return (int)((Packed >> 11) & 0x1FFF); }
         }
 
 
@@ -36,7 +36,7 @@ namespace BepuPhysics.CollisionDetection
         public int Type
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (int)((packed >> 24) & 0x7F); }
+            get { return (int)((Packed >> 24) & 0x7F); }
         }
 
         /// <summary>
@@ -45,9 +45,10 @@ namespace BepuPhysics.CollisionDetection
         public bool Exists
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (packed & (1 << 31)) > 0; }
+            get { return (Packed & (1 << 31)) > 0; }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ContinuationIndex(int type, int index, int innerIndex)
         {
             Debug.Assert(type >= 0 && type < 128, "Do you really have that many type indices, or is the index corrupt?");
@@ -56,7 +57,12 @@ namespace BepuPhysics.CollisionDetection
             //Note the inclusion of a set bit in the most significant slot.
             //This encodes that the index was explicitly constructed, so it is a 'real' reference.
             //A default constructed TypeIndex will have a 0 in the MSB, so we can use the default constructor for empty references.
-            packed = (uint)((type << 24) | (index << 11) | (innerIndex) | (1u << 31));
+            Packed = (uint)((type << 24) | (index << 11) | (innerIndex) | (1u << 31));
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ContinuationIndex(int packed)
+        {
+            this.Packed = (uint)packed;
         }
 
         public override string ToString()
