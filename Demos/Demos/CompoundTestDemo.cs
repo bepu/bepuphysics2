@@ -30,7 +30,7 @@ namespace Demos
                 ShapesPerType = 1,
                 Statics = 1
             });
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, 0, 0);
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -1, 0);
 
             //Note that, in bepuphysics v2, there is no 'recentering'. The pose you pass in for a child is exactly the pose that the compound will use, 
             //even if the 'true' center of mass isn't at the local origin. (You can do the recentering like before by computing the weighted center of mass of the children,

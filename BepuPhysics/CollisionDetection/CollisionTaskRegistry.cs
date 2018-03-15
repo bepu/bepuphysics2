@@ -47,13 +47,9 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public int ShapeTypeIndexB { get; protected set; }
         /// <summary>
-        /// Gets the type ids of the specialized subtasks registered by this task.
+        /// Gets whether the task is capable of generating subtasks. Note that subtask generators cannot generate subtasks that are themselves subtask generators.
         /// </summary>
-        public int[] SubtaskIndices { get; protected set; }
-        /// <summary>
-        /// Gets the set of collision tasks that this task may produce as a part of execution.
-        /// </summary>
-        public CollisionTask[] Subtasks { get; protected set; }
+        public bool SubtaskGenerator { get; protected set; }
 
         //Note that we leave the details of input and output of a task's execution to be undefined.
         //A task can reach into the batcher and create new entries or trigger continuations as required.
@@ -110,9 +106,13 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
         }
-
-        void InsertTask(CollisionTask task, int index)
+        
+        public int Register(CollisionTask task)
         {
+            //Some tasks can generate tasks. Note that this can only be one level deep; nesting compounds is not allowed.
+            //All such generators will be placed at the beginning.
+            var index = task.SubtaskGenerator ? 0 : count;
+ 
             //This allocates a lot of garbage due to frequently resizing, but it does not matter- task registration a one time thing at program initialization.
             //Having tight bounds is more useful for performance in the end (by virtue of having a marginally simpler heap).
             int newCount = count + 1;
@@ -132,45 +132,11 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                 }
-                for (int i = index + 1; i < newCount; ++i)
-                {
-                    var t = tasks[i];
-                    if (t.SubtaskIndices != null)
-                    {
-                        for (int j = 0; j < t.SubtaskIndices.Length; ++j)
-                        {
-                            ref var subtaskIndex = ref t.SubtaskIndices[j];
-                            if (subtaskIndex >= index)
-                            {
-                                ++subtaskIndex;
-                            }
-                        }
-                    }
-                }
             }
 
             tasks[index] = task;
             count = newCount;
-        }
 
-
-        public int Register(CollisionTask task)
-        {
-            var index = count;
-            //This task may have some dependencies that are already present. In order for the batcher's flush to work with a single pass,
-            //the tasks must be stored in dependency order- any task that can create more subwork has to appear earlier in the list than the subwork's task.
-            //Where is the earliest one?
-            if (task.Subtasks != null)
-            {
-                for (int i = 0; i < task.Subtasks.Length; ++i)
-                {
-                    var subtaskIndex = Array.IndexOf(tasks, task.Subtasks[i], 0, count);
-                    if (subtaskIndex >= 0 && subtaskIndex < index)
-                        index = subtaskIndex;
-                }
-            }
-
-            InsertTask(task, index);
             var a = task.ShapeTypeIndexA;
             var b = task.ShapeTypeIndexB;
             var highestShapeIndex = a > b ? a : b;
@@ -188,33 +154,21 @@ namespace BepuPhysics.CollisionDetection
 
 #if DEBUG
             //Ensure that no task dependency cycles exist.
-            if (task.Subtasks != null)
+            bool encounteredNongenerator = false;
+            for (int i = 0; i < count; ++i)
             {
-                for (int i = 0; i < task.Subtasks.Length; ++i)
+                if(encounteredNongenerator)
                 {
-                    for (int j = i + 1; j < task.Subtasks.Length; ++j)
-                    {
-                        Debug.Assert(Array.IndexOf(tasks[j].Subtasks, tasks[i]) == -1,
-                            "Tasks must be stored in a strict order of work generation- if a task generates work for another task, the receiving task must appear later in the list. " +
-                            "No cycles can exist.");
-                    }
+                    Debug.Assert(!tasks[i].SubtaskGenerator, 
+                        "To avoid cycles, the tasks list should be partitioned into two contiguous groups: subtask generators, followed by non-subtask generators.");
+                }
+                else
+                {
+                    if (!tasks[i].SubtaskGenerator)
+                        encounteredNongenerator = true;
                 }
             }
-#endif
-            //Register any unregistered subtasks.
-            if (task.Subtasks != null)
-            {
-                for (int i = 0; i < task.Subtasks.Length; ++i)
-                {
-                    var subtaskIndex = Array.IndexOf(tasks, task.Subtasks[i], 0, count);
-                    if (subtaskIndex < 0)
-                    {
-                        subtaskIndex = Register(task);
-                    }
-                    task.SubtaskIndices[i] = subtaskIndex;
-                }
-            }
-            Debug.Assert(tasks[index] == task, "No subtask registrations should move the original task; that would imply a cycle in the dependency graph.");
+#endif           
             return index;
 
         }

@@ -14,7 +14,7 @@ namespace BepuPhysics.CollisionDetection
     /// <summary>
     /// Describes the flow control to apply to a convex-convex pair report.
     /// </summary>
-    public enum PairReportType : byte
+    public enum CollisionProcessingType : byte
     {
         /// <summary>
         /// Marks a pair as requiring no further processing before being reported to the user supplied continuations.
@@ -42,7 +42,7 @@ namespace BepuPhysics.CollisionDetection
         public int PairId;
         public int ChildA;
         public int ChildB;
-        public PairReportType Type;
+        public CollisionProcessingType Type;
     }
     public struct TestPair
     {
@@ -101,7 +101,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void Add(ref CollisionTaskReference reference,
             int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            int flipMask, int pairId)
+            int flipMask, int pairId, int childA, int childB, CollisionProcessingType processingType)
         {
             ref var batch = ref batches[reference.TaskIndex];
             var pairData = batch.AllocateUnsafely();
@@ -111,7 +111,10 @@ namespace BepuPhysics.CollisionDetection
             poses->FlipMask = flipMask;
             poses->PoseA = poseA;
             poses->PoseB = poseB;
-            poses->Source = new TestPairSource { PairId = pairId };
+            poses->Source.PairId = pairId;
+            poses->Source.ChildA = childA;
+            poses->Source.ChildB = childB;
+            poses->Source.Type = processingType;
             if (batch.Count == reference.BatchSize)
             {
                 typeMatrix[reference.TaskIndex].ExecuteBatch(ref batch, ref this);
@@ -124,7 +127,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
             int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            int pairId, int childA = 0, int childB = 0, PairReportType reportType = PairReportType.Direct)
+            int pairId, int childA = 0, int childB = 0, CollisionProcessingType processingType = CollisionProcessingType.Direct)
         {
             ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
             if (reference.TaskIndex < 0)
@@ -148,29 +151,29 @@ namespace BepuPhysics.CollisionDetection
             if (shapeTypeA != reference.ExpectedFirstTypeId)
             {
                 //The inputs need to be reordered to guarantee that the collision tasks are handed data in the proper order.
-                Add(ref reference, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, -1, pairId);
+                Add(ref reference, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, -1, pairId, childA, childB, processingType);
             }
             else
             {
-                Add(ref reference, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, 0, pairId);
+                Add(ref reference, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, 0, pairId, childA, childB, processingType);
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
             TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB,
-            int pairId, int childA = 0, int childB = 0, PairReportType reportType = PairReportType.Direct)
+            int pairId, int childA = 0, int childB = 0, CollisionProcessingType processingType = CollisionProcessingType.Direct)
         {
             var shapeTypeA = shapeIndexA.Type;
             var shapeTypeB = shapeIndexB.Type;
             Shapes[shapeIndexA.Type].GetShapeData(shapeIndexA.Index, out var shapeA, out var shapeSizeA);
             Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
-            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, pairId, childA, childB, reportType);
+            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, pairId, childA, childB, processingType);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Add<TShapeA, TShapeB>(ref CollisionTaskReference reference,
             ref TShapeA shapeA, ref TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            int flipMask, int pairId)
+            int flipMask, int pairId, int childA, int childB, CollisionProcessingType processingType)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
         {
             ref var batch = ref batches[reference.TaskIndex];
@@ -190,7 +193,7 @@ namespace BepuPhysics.CollisionDetection
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add<TShapeA, TShapeB>(ref TShapeA shapeA, ref TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            int pairId)
+            int pairId, int childA = 0, int childB = 0, CollisionProcessingType processingType = CollisionProcessingType.Direct)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
         {
             ref var reference = ref typeMatrix.GetTaskReference<TShapeA, TShapeB>();
@@ -214,11 +217,11 @@ namespace BepuPhysics.CollisionDetection
             if (typeof(TShapeA) != typeof(TShapeB) && default(TShapeA).TypeId != reference.ExpectedFirstTypeId)
             {
                 //The inputs need to be reordered to guarantee that the collision tasks are handed data in the proper order.
-                Add(ref reference, ref shapeB, ref shapeA, ref poseB, ref poseA, -1, pairId);
+                Add(ref reference, ref shapeB, ref shapeA, ref poseB, ref poseA, -1, pairId, childA, childB, processingType);
             }
             else
             {
-                Add(ref reference, ref shapeA, ref shapeB, ref poseA, ref poseB, 0, pairId);
+                Add(ref reference, ref shapeA, ref shapeB, ref poseA, ref poseB, 0, pairId, childA, childB, processingType);
             }
         }
 
@@ -252,7 +255,7 @@ namespace BepuPhysics.CollisionDetection
 
         public unsafe void ProcessConvexResult(ContactManifold* manifold, ref TestPairSource report)
         {
-            if (report.Type == PairReportType.Direct)
+            if (report.Type == CollisionProcessingType.Direct)
             {
                 //This result concerns a pair which had no higher level owner. Directly report the manifold result.
                 Callbacks.OnPairCompleted(report.PairId, manifold);
@@ -264,8 +267,9 @@ namespace BepuPhysics.CollisionDetection
                 Callbacks.OnChildPairCompleted(report.PairId, report.ChildA, report.ChildB, manifold);
                 switch (report.Type)
                 {
-                    case PairReportType.NonconvexReduction:
+                    case CollisionProcessingType.NonconvexReduction:
                         {
+
                         }
                         break;
                 }
