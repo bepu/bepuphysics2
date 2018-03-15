@@ -169,60 +169,17 @@ namespace BepuPhysics.CollisionDetection
             Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
             Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, pairId, childA, childB, processingType);
         }
-
+      
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Add<TShapeA, TShapeB>(ref CollisionTaskReference reference,
-            ref TShapeA shapeA, ref TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            int flipMask, int pairId, int childA, int childB, CollisionProcessingType processingType)
-            where TShapeA : struct, IShape where TShapeB : struct, IShape
-        {
-            ref var batch = ref batches[reference.TaskIndex];
-            ref var pairData = ref batch.AllocateUnsafely<TestPair<TShapeA, TShapeB>>();
-            pairData.A = shapeA;
-            pairData.B = shapeB;
-            pairData.Shared.FlipMask = flipMask;
-            pairData.Shared.PoseA = poseA;
-            pairData.Shared.PoseB = poseB;
-            pairData.Shared.Source = new TestPairSource { PairId = pairId };
-            if (batch.Count == reference.BatchSize)
-            {
-                typeMatrix[reference.TaskIndex].ExecuteBatch(ref batch, ref this);
-                batch.Count = 0;
-                batch.ByteCount = 0;
-            }
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add<TShapeA, TShapeB>(ref TShapeA shapeA, ref TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB,
+        public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB,
             int pairId, int childA = 0, int childB = 0, CollisionProcessingType processingType = CollisionProcessingType.Direct)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
         {
-            ref var reference = ref typeMatrix.GetTaskReference<TShapeA, TShapeB>();
-            if (reference.TaskIndex < 0)
-            {
-                //There is no task for this shape type pair. Immediately respond with an empty manifold.
-                var manifold = new ContactManifold();
-                Callbacks.OnPairCompleted(pairId, &manifold);
-                return;
-            }
-            ref var batch = ref batches[reference.TaskIndex];
-            if (!batch.Buffer.Allocated)
-            {
-                batch = new UntypedList(Unsafe.SizeOf<TestPair<TShapeA, TShapeB>>(), reference.BatchSize, Pool);
-                if (minimumBatchIndex > reference.TaskIndex)
-                    minimumBatchIndex = reference.TaskIndex;
-                if (maximumBatchIndex < reference.TaskIndex)
-                    maximumBatchIndex = reference.TaskIndex;
-            }
-            //The type comparison should be a compilation constant.
-            if (typeof(TShapeA) != typeof(TShapeB) && default(TShapeA).TypeId != reference.ExpectedFirstTypeId)
-            {
-                //The inputs need to be reordered to guarantee that the collision tasks are handed data in the proper order.
-                Add(ref reference, ref shapeB, ref shapeA, ref poseB, ref poseA, -1, pairId, childA, childB, processingType);
-            }
-            else
-            {
-                Add(ref reference, ref shapeA, ref shapeB, ref poseA, ref poseB, 0, pairId, childA, childB, processingType);
-            }
+            //Note that the shapes are passed by copy to avoid a GC hole. This isn't optimal, but it does allow a single code path, and the underlying function is the one
+            //that's actually used by the narrowphase (and which will likely be used for most performance sensitive cases).
+            //TODO: You could recover the performance and safety once generic pointers exist. By having pointers in the parameter list, we can require that the user handle GC safety.
+            //(We could also have an explicit 'unsafe' overload, but that API complexity doesn't seem worthwhile. My guess is nontrivial uses will all use the underlying function directly.)
+            Add(shapeA.TypeId, shapeB.TypeId, Unsafe.SizeOf<TShapeA>(), Unsafe.SizeOf<TShapeB>(), Unsafe.AsPointer(ref shapeA), Unsafe.AsPointer(ref shapeB), ref poseA, ref poseB, pairId, childA, childB, processingType);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
