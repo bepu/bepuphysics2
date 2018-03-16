@@ -14,7 +14,7 @@ namespace BepuPhysics.CollisionDetection
     /// <summary>
     /// Describes the flow control to apply to a convex-convex pair report.
     /// </summary>
-    public enum CollisionProcessingType : byte
+    public enum CollisionContinuationType : byte
     {
         /// <summary>
         /// Marks a pair as requiring no further processing before being reported to the user supplied continuations.
@@ -37,12 +37,31 @@ namespace BepuPhysics.CollisionDetection
 
     }
 
-    public struct TestPairSource
+    public struct PairContinuation
     {
         public int PairId;
         public int ChildA;
         public int ChildB;
-        public CollisionProcessingType Type;
+        public uint PackedTypeAndIndex;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public PairContinuation(int pairId, int childA, int childB, CollisionContinuationType continuationType, int continuationIndex)
+        {
+            PairId = pairId;
+            ChildA = childA;
+            ChildB = childB;
+            Debug.Assert(continuationIndex < (1 << 24));
+            PackedTypeAndIndex = (uint)(((int)continuationType << 24) | continuationIndex);
+        }
+        public PairContinuation(int pairId)
+        {
+            PairId = pairId;
+            ChildA = 0;
+            ChildB = 0;
+            PackedTypeAndIndex = 0;
+        }
+
+        public CollisionContinuationType Type { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (CollisionContinuationType)(PackedTypeAndIndex >> 24); } }
+        public int Index { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)(PackedTypeAndIndex & 0x00FFFFFF); } }
     }
     public struct TestPair
     {
@@ -52,7 +71,7 @@ namespace BepuPhysics.CollisionDetection
         public int FlipMask;
         public RigidPose PoseA;
         public RigidPose PoseB;
-        public TestPairSource Source;
+        public PairContinuation Continuation;
     }
 
     //Writes by the narrowphase write shape data without type knowledge, so they can't easily operate on regular packing rules. Emulate this with a pack of 1.
@@ -65,13 +84,112 @@ namespace BepuPhysics.CollisionDetection
         public TShapeB B;
         public TestPair Shared;
     }
+    public interface ICollisionTestContinuation
+    {
+        void Create(int slots, BufferPool pool);
+
+        unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
+            where TCallbacks : struct, ICollisionCallbacks;
+        unsafe void OnChildCompletedEmpty<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher)
+            where TCallbacks : struct, ICollisionCallbacks;
+    }
+
+    public struct BatcherContinuations<T> where T : ICollisionTestContinuation
+    {
+        public Buffer<T> Continuations;
+        public IdPool<Buffer<int>> IdPool;
+        const int InitialCapacity = 64;
+
+        public ref T CreateContinuation(int slotsInContinuation, BufferPool pool, out int index)
+        {
+            if (!Continuations.Allocated)
+            {
+                Debug.Assert(!IdPool.AvailableIds.Span.Allocated);
+                //Lazy initialization.
+                pool.Take(InitialCapacity, out Continuations);
+                IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), InitialCapacity, out IdPool);
+            }
+            index = IdPool.Take();
+            if (index >= Continuations.Length)
+            {
+                pool.Resize(ref Continuations, index, index - 1);
+            }
+            ref var continuation = ref Continuations[index];
+            continuation.Create(slotsInContinuation, pool);
+            return ref Continuations[index];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void ContributeChildToContinuation<TCallbacks>(ref PairContinuation continuation, ContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
+            where TCallbacks : struct, ICollisionCallbacks
+        {
+            Continuations[continuation.Index].OnChildCompleted(ref continuation, manifold, ref batcher);
+        }
+
+
+        internal void Dispose(BufferPool pool)
+        {
+            if (Continuations.Allocated)
+            {
+                pool.ReturnUnsafely(Continuations.Id);
+                Debug.Assert(IdPool.AvailableIds.Span.Allocated);
+                IdPool.Dispose(pool.SpecializeFor<int>());
+            }
+#if DEBUG
+            //Makes it a little easier to catch bad accesses.
+            this = new BatcherContinuations<T>();
+#endif
+        }
+    }
+
+    public struct NonconvexReduction : ICollisionTestContinuation
+    {
+        public int ChildManifoldCount;
+        public int CompletedChildManifoldCount;
+        public Buffer<ContactManifold> ChildManifolds;
+
+        public void Create(int childManifoldCount, BufferPool pool)
+        {
+            ChildManifoldCount = childManifoldCount;
+            CompletedChildManifoldCount = 0;
+            pool.Take(childManifoldCount, out ChildManifolds);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe void FlushIfCompleted<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
+        {
+            ++CompletedChildManifoldCount;
+            if (ChildManifoldCount == CompletedChildManifoldCount)
+            {
+                ContactManifold reducedManifold;
+                //TODO: Reduce the child manifolds into the final manifold.
+                batcher.Callbacks.OnPairCompleted(pairId, &reducedManifold);
+
+                batcher.Pool.ReturnUnsafely(ChildManifolds.Id);
+#if DEBUG
+                //This makes it a little easier to detect invalid accesses that occur after disposal.
+                this = new NonconvexReduction();
+#endif
+            }
+        }
+        public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
+            where TCallbacks : struct, ICollisionCallbacks
+        {
+            ChildManifolds[CompletedChildManifoldCount] = *manifold;
+            FlushIfCompleted(report.PairId, ref batcher);
+
+        }
+
+        public void OnChildCompletedEmpty<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
+        {
+            ChildManifolds[CompletedChildManifoldCount] = default(ContactManifold);
+            FlushIfCompleted(report.PairId, ref batcher);
+        }
+    }
 
 
     public struct CollisionBatcher<TCallbacks> where TCallbacks : struct, ICollisionCallbacks
     {
-        //The streaming batcher contains batches for pending work submitted by the user.
-        //This pending work can be top level pairs like sphere versus sphere, but it may also be subtasks of submitted work.
-        //Consider two compound bodies colliding. The pair will decompose into a set of potentially many convex subpairs.
 
         public BufferPool Pool;
         public Shapes Shapes;
@@ -79,9 +197,14 @@ namespace BepuPhysics.CollisionDetection
         public TCallbacks Callbacks;
 
         int minimumBatchIndex, maximumBatchIndex;
+        //The streaming batcher contains batches for pending work submitted by the user.
+        //This pending work can be top level pairs like sphere versus sphere, but it may also be subtasks of submitted work.
+        //Consider two compound bodies colliding. The pair will decompose into a set of potentially many convex subpairs.
         Buffer<UntypedList> batches;
-        //A subset of collision tasks require a place to return information.
-        Buffer<UntypedList> localContinuations;
+        //These collision tasks can then call upon some of the batcher's fixed function post processing stages.
+        //For example, compound collisions generate multiple convex-convex manifolds which need to be reduced and combined into a single nonconvex manifold for 
+        //efficiency in constraint solving.
+        public BatcherContinuations<NonconvexReduction> NonconvexReductions;
 
         public unsafe CollisionBatcher(BufferPool pool, Shapes shapes, CollisionTaskRegistry collisionTypeMatrix, TCallbacks callbacks)
         {
@@ -89,11 +212,10 @@ namespace BepuPhysics.CollisionDetection
             Shapes = shapes;
             Callbacks = callbacks;
             typeMatrix = collisionTypeMatrix;
-            pool.SpecializeFor<UntypedList>().Take(collisionTypeMatrix.tasks.Length, out batches);
-            pool.SpecializeFor<UntypedList>().Take(collisionTypeMatrix.tasks.Length, out localContinuations);
+            pool.Take(collisionTypeMatrix.tasks.Length, out batches);
             //Clearing is required ensure that we know when a batch needs to be created and when a batch needs to be disposed.
             batches.Clear(0, collisionTypeMatrix.tasks.Length);
-            localContinuations.Clear(0, collisionTypeMatrix.tasks.Length);
+            NonconvexReductions = new BatcherContinuations<NonconvexReduction>();
             minimumBatchIndex = collisionTypeMatrix.tasks.Length;
             maximumBatchIndex = -1;
         }
@@ -101,7 +223,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void Add(ref CollisionTaskReference reference,
             int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            int flipMask, int pairId, int childA, int childB, CollisionProcessingType processingType)
+            int flipMask, ref PairContinuation pairContinuationInfo)
         {
             ref var batch = ref batches[reference.TaskIndex];
             var pairData = batch.AllocateUnsafely();
@@ -111,10 +233,7 @@ namespace BepuPhysics.CollisionDetection
             poses->FlipMask = flipMask;
             poses->PoseA = poseA;
             poses->PoseB = poseB;
-            poses->Source.PairId = pairId;
-            poses->Source.ChildA = childA;
-            poses->Source.ChildB = childB;
-            poses->Source.Type = processingType;
+            poses->Continuation = pairContinuationInfo;
             if (batch.Count == reference.BatchSize)
             {
                 typeMatrix[reference.TaskIndex].ExecuteBatch(ref batch, ref this);
@@ -123,18 +242,18 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
             int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            int pairId, int childA = 0, int childB = 0, CollisionProcessingType processingType = CollisionProcessingType.Direct)
+            ref PairContinuation pairContinuationInfo)
         {
             ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
             if (reference.TaskIndex < 0)
             {
                 //There is no task for this shape type pair. Immediately respond with an empty manifold.
                 var manifold = new ContactManifold();
-                Callbacks.OnPairCompleted(pairId, &manifold);
+                Callbacks.OnPairCompleted(pairContinuationInfo.PairId, &manifold);
                 return;
             }
             ref var batch = ref batches[reference.TaskIndex];
@@ -151,35 +270,48 @@ namespace BepuPhysics.CollisionDetection
             if (shapeTypeA != reference.ExpectedFirstTypeId)
             {
                 //The inputs need to be reordered to guarantee that the collision tasks are handed data in the proper order.
-                Add(ref reference, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, -1, pairId, childA, childB, processingType);
+                Add(ref reference, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, -1, ref pairContinuationInfo);
             }
             else
             {
-                Add(ref reference, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, 0, pairId, childA, childB, processingType);
+                Add(ref reference, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, 0, ref pairContinuationInfo);
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
-            TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB,
-            int pairId, int childA = 0, int childB = 0, CollisionProcessingType processingType = CollisionProcessingType.Direct)
+           int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
+           int pairId)
+        {
+            var pairContinuationInfo = new PairContinuation(pairId);
+            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, ref pairContinuationInfo);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB, ref PairContinuation pairContinuationInfo)
         {
             var shapeTypeA = shapeIndexA.Type;
             var shapeTypeB = shapeIndexB.Type;
             Shapes[shapeIndexA.Type].GetShapeData(shapeIndexA.Index, out var shapeA, out var shapeSizeA);
             Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
-            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, pairId, childA, childB, processingType);
+            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, ref pairContinuationInfo);
         }
-      
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB,
-            int pairId, int childA = 0, int childB = 0, CollisionProcessingType processingType = CollisionProcessingType.Direct)
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB, int pairId)
+        {
+            var pairContinuationInfo = new PairContinuation(pairId);
+            Add(shapeIndexA, shapeIndexB, ref poseA, ref poseB, ref pairContinuationInfo);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB, int pairId)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
         {
             //Note that the shapes are passed by copy to avoid a GC hole. This isn't optimal, but it does allow a single code path, and the underlying function is the one
             //that's actually used by the narrowphase (and which will likely be used for most performance sensitive cases).
             //TODO: You could recover the performance and safety once generic pointers exist. By having pointers in the parameter list, we can require that the user handle GC safety.
             //(We could also have an explicit 'unsafe' overload, but that API complexity doesn't seem worthwhile. My guess is nontrivial uses will all use the underlying function directly.)
-            Add(shapeA.TypeId, shapeB.TypeId, Unsafe.SizeOf<TShapeA>(), Unsafe.SizeOf<TShapeB>(), Unsafe.AsPointer(ref shapeA), Unsafe.AsPointer(ref shapeB), ref poseA, ref poseB, pairId, childA, childB, processingType);
+            var continuation = new PairContinuation(pairId);
+            Add(shapeA.TypeId, shapeB.TypeId, Unsafe.SizeOf<TShapeA>(), Unsafe.SizeOf<TShapeB>(), Unsafe.AsPointer(ref shapeA), Unsafe.AsPointer(ref shapeB),
+                ref poseA, ref poseB, ref continuation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -199,20 +331,15 @@ namespace BepuPhysics.CollisionDetection
                 {
                     Pool.Return(ref batch.Buffer);
                 }
-                //Note that the local continuations are not guaranteed to be allocated when the batch is; many tasks don't have any associated continuations.
-                if (localContinuations[i].Buffer.Allocated)
-                {
-                    Pool.Return(ref localContinuations[i].Buffer);
-                }
             }
             var listPool = Pool.SpecializeFor<UntypedList>();
             listPool.Return(ref batches);
-            listPool.Return(ref localContinuations);
+            NonconvexReductions.Dispose(Pool);
         }
 
-        public unsafe void ProcessConvexResult(ContactManifold* manifold, ref TestPairSource report)
+        public unsafe void ProcessConvexResult(ContactManifold* manifold, ref PairContinuation report)
         {
-            if (report.Type == CollisionProcessingType.Direct)
+            if (report.Type == CollisionContinuationType.Direct)
             {
                 //This result concerns a pair which had no higher level owner. Directly report the manifold result.
                 Callbacks.OnPairCompleted(report.PairId, manifold);
@@ -224,9 +351,9 @@ namespace BepuPhysics.CollisionDetection
                 Callbacks.OnChildPairCompleted(report.PairId, report.ChildA, report.ChildB, manifold);
                 switch (report.Type)
                 {
-                    case CollisionProcessingType.NonconvexReduction:
+                    case CollisionContinuationType.NonconvexReduction:
                         {
-
+                            NonconvexReductions.ContributeChildToContinuation(ref report, manifold, ref this);
                         }
                         break;
                 }

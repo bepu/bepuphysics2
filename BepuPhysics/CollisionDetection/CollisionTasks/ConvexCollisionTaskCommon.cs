@@ -424,7 +424,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref var offsetAsFloat = ref Unsafe.Add(ref Unsafe.As<Vector3Wide, float>(ref offsetB), j);
                     ref var offsetSource = ref Unsafe.As<float, Vector3Wide>(ref offsetAsFloat);
                     manifoldSource.Scatter(ref offsetSource, ref manifold);
-                    batcher.ProcessConvexResult(&manifold, ref Unsafe.Add(ref bundleStart, j).Shared.Source);
+                    batcher.ProcessConvexResult(&manifold, ref Unsafe.Add(ref bundleStart, j).Shared.Continuation);
                     if (typeof(TManifoldWide) == typeof(Convex1ContactManifoldWide))
                     {
                         Debug.Assert(manifold.ContactCount == 1 && manifold.Convex, "The notify function should not modify the provided manifold reference.");

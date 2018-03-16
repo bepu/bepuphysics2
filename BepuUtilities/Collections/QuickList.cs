@@ -73,7 +73,6 @@ namespace BepuUtilities.Collections
         {
             pool.Take(minimumInitialCount, out list.Span);
             list.Count = 0;
-
         }
 
 
@@ -126,7 +125,7 @@ namespace BepuUtilities.Collections
         {
             ResizeForPower(SpanHelper.GetContainingPowerOf2(newSize), pool);
         }
-        
+
         /// <summary>
         /// Returns the resources associated with the list to pools. Any managed references still contained within the list are cleared (and some unmanaged resources may also be cleared).
         /// </summary>
@@ -141,7 +140,7 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
-        /// Ensures that the list has enough room to hold the specified number of elements.
+        /// Ensures that the list has enough room to hold the specified number of elements. Can be used to initialize a list.
         /// </summary>
         /// <typeparam name="TPool">Type of the pool to pull from.</typeparam>
         /// <param name="count">Number of elements to hold.</param>
@@ -149,10 +148,16 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnsureCapacity<TPool>(int count, TPool pool) where TPool : IMemoryPool<T, TSpan>
         {
-            Validate();
-            if (count > Span.Length)
+            if (Span.Allocated)
             {
-                Resize(count, pool);
+                if (count > Span.Length)
+                {
+                    Resize(count, pool);
+                }
+            }
+            else
+            {
+                pool.Take(count, out Span);
             }
         }
 

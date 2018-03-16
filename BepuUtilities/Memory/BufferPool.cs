@@ -317,6 +317,23 @@ namespace BepuUtilities.Memory
         {
             TakeForPower(SpanHelper.GetContainingPowerOf2(count), out buffer);
         }
+
+        /// <summary>
+        /// Takes a buffer large enough to contain a number of instances of a given type. Capacity may be larger than requested.
+        /// </summary>
+        /// <typeparam name="T">Type of the instances in the buffer.</typeparam>
+        /// <param name="count">Number of instances to request from the pool.</param>
+        /// <param name="buffer">Buffer large enough to contain the requested number of typed instances.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Take<T>(int count, out Buffer<T> buffer)
+        {
+            //Avoid returning a zero length span because 1 byte / Unsafe.SizeOf<T>() happens to be zero.
+            if (count == 0)
+                count = 1;
+            Take(count * Unsafe.SizeOf<T>(), out var rawBuffer);
+            buffer = rawBuffer.As<T>();
+        }
+
         /// <summary>
         /// Takes a buffer large enough to contain a number of bytes given by a power, where the number of bytes is 2^power.
         /// </summary>
@@ -370,9 +387,9 @@ namespace BepuUtilities.Memory
         /// <summary>
         /// Resizes a buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer.
         /// </summary>
+        /// <param name="buffer">Buffer reference to resize.</param>
         /// <param name="targetSize">Number of bytes to resize the buffer for.</param>
         /// <param name="copyCount">Number of bytes to copy into the new buffer from the old buffer.</param>
-        /// <param name="pool">Pool to return the old buffer to, if it actually exists, and to pull the new buffer from.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Resize(ref RawBuffer buffer, int targetSize, int copyCount)
         {
@@ -386,6 +403,35 @@ namespace BepuUtilities.Memory
                     //Don't bother copying from or re-pooling empty buffers. They're uninitialized.
                     Debug.Assert(copyCount <= targetSize);
                     Unsafe.CopyBlockUnaligned(newBuffer.Memory, buffer.Memory, (uint)copyCount);
+                    ReturnUnsafely(buffer.Id);
+                }
+                else
+                {
+                    Debug.Assert(copyCount == 0, "Should not be trying to copy elements from an empty span.");
+                }
+                buffer = newBuffer;
+            }
+        }
+
+        /// <summary>
+        /// Resizes a typed buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer.
+        /// </summary>
+        /// <typeparam name="T">Type of the buffer to resize.</typeparam>
+        /// <param name="buffer">Buffer reference to resize.</param>
+        /// <param name="targetSize">Number of elements to resize the buffer for.</param>
+        /// <param name="copyCount">Number of elements to copy into the new buffer from the old buffer.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Resize<T>(ref Buffer<T> buffer, int targetSize, int copyCount)
+        {
+            //Only do anything if the new size is actually different from the current size.
+            targetSize = BufferPool<T>.GetLowestContainingElementCount(targetSize);
+            if (buffer.Length != targetSize) //Note that we don't check for allocated status- for buffers, a length of 0 is the same as being unallocated.
+            {
+                Take(targetSize, out Buffer<T> newBuffer);
+                if (buffer.Length > 0)
+                {
+                    //Don't bother copying from or re-pooling empty buffers. They're uninitialized.
+                    buffer.CopyTo(0, ref newBuffer, 0, copyCount);
                     ReturnUnsafely(buffer.Id);
                 }
                 else
@@ -544,19 +590,14 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Take(int count, out Buffer<T> span)
         {
-            //Avoid returning a zero length span because 1 byte / Unsafe.SizeOf<T>() happens to be zero.
-            if (count == 0)
-                count = 1;
-            Raw.Take(Math.Max(1, count) * Unsafe.SizeOf<T>(), out var rawBuffer);
-            span = rawBuffer.As<T>();
+            Raw.Take(count, out span);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void TakeForPower(int power, out Buffer<T> span)
         {
             //Note that we can't directly use TakeForPower from the underlying pool- the actual power needed at the byte level differs!
             Debug.Assert(power >= 0 && power < 31, "Power must be positive and 2^power must fit within a signed integer.");
-            Raw.Take((1 << power) * Unsafe.SizeOf<T>(), out var rawBuffer);
-            span = rawBuffer.As<T>();
+            Raw.Take(1 << power, out span);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Return(ref Buffer<T> span)
@@ -565,34 +606,16 @@ namespace BepuUtilities.Memory
             span = new Buffer<T>();
         }
 
-
         /// <summary>
-        /// Resizes a buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer.
+        /// Resizes a typed buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer.
         /// </summary>
+        /// <param name="buffer">Buffer reference to resize.</param>
         /// <param name="targetSize">Number of elements to resize the buffer for.</param>
         /// <param name="copyCount">Number of elements to copy into the new buffer from the old buffer.</param>
-        /// <param name="pool">Pool to return the old buffer to, if it actually exists, and to pull the new buffer from.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Resize(ref Buffer<T> buffer, int targetSize, int copyCount)
         {
-            //Only do anything if the new size is actually different from the current size.
-            targetSize = GetLowestContainingElementCount(targetSize);
-            if (buffer.Length != targetSize) //Note that we don't check for allocated status- for buffers, a length of 0 is the same as being unallocated.
-            {
-                Take(targetSize, out var newBuffer);
-                if (buffer.Length > 0)
-                {
-                    //Don't bother copying from or re-pooling empty buffers. They're uninitialized.
-                    buffer.CopyTo(0, ref newBuffer, 0, copyCount);
-                    Return(ref buffer);
-                }
-                else
-                {
-                    Debug.Assert(copyCount == 0, "Should not be trying to copy elements from an empty span.");
-                }
-                buffer = newBuffer;
-            }
-
+            Raw.Resize(ref buffer, targetSize, copyCount);
         }
     }
 }
