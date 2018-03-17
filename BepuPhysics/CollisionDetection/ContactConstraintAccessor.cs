@@ -85,7 +85,7 @@ namespace BepuPhysics.CollisionDetection
             Debug.Assert((ContactCount + 3) * Unsafe.SizeOf<Vector<float>>() == Unsafe.SizeOf<TAccumulatedImpulses>(),
                 "The layout of accumulated impulses seems to have changed; the assumptions of contact accessors are probably no longer valid.");
             //Note that this test has to special case count == 1; 1 contact manifolds have no feature ids.
-            Debug.Assert(Unsafe.SizeOf<TConstraintCache>() == ((ContactCount == 1) ? sizeof(int) : sizeof(int) * (1 + ContactCount)) &&
+            Debug.Assert(Unsafe.SizeOf<TConstraintCache>() == sizeof(int) * (1 + ContactCount) &&
                 default(TConstraintCache).TypeId == ContactCount - 1,
                 "The type of the constraint cache should hold as many contacts as the contact impulses requires.");
             AccumulatedImpulseBundleStrideInBytes = Unsafe.SizeOf<TAccumulatedImpulses>();
@@ -135,28 +135,14 @@ namespace BepuPhysics.CollisionDetection
             var contactCount = constraintCache.TypeId + 1;
             //Contact data comes first in the constraint description memory layout.
             ref var targetContacts = ref Unsafe.As<TConstraintDescription, ConstraintContactData>(ref description);
-            if (typeof(TConstraintCache) != typeof(ConstraintCache1))
+            ref var targetFeatureIds = ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1);
+            for (int i = 0; i < contactCount; ++i)
             {
-                ref var targetFeatureIds = ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1);
-                for (int i = 0; i < contactCount; ++i)
-                {
-                    ref var sourceContact = ref Unsafe.Add(ref manifold.Contact0, i);
-                    ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
-                    Unsafe.Add(ref targetFeatureIds, i) = sourceContact.FeatureId;
-                    targetContact.OffsetA = sourceContact.Offset;
-                    targetContact.PenetrationDepth = sourceContact.Depth;
-                }
-            }
-            else
-            {
-                //Single contact constraints do not have any feature ids.
-                for (int i = 0; i < contactCount; ++i)
-                {
-                    ref var sourceContact = ref Unsafe.Add(ref manifold.Contact0, i);
-                    ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
-                    targetContact.OffsetA = sourceContact.Offset;
-                    targetContact.PenetrationDepth = sourceContact.Depth;
-                }
+                ref var sourceContact = ref Unsafe.Add(ref manifold.Contact0, i);
+                ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
+                Unsafe.Add(ref targetFeatureIds, i) = sourceContact.FeatureId;
+                targetContact.OffsetA = sourceContact.Offset;
+                targetContact.PenetrationDepth = sourceContact.Depth;
             }
         }
         protected static void CopyContactData(ref NonconvexContactManifold manifold, out TConstraintCache constraintCache, out TConstraintDescription description)
@@ -168,28 +154,14 @@ namespace BepuPhysics.CollisionDetection
             var contactCount = constraintCache.TypeId + 1;
             //Contact data comes first in the constraint description memory layout.
             ref var targetContacts = ref Unsafe.As<TConstraintDescription, ConstraintContactData>(ref description);
-            if (typeof(TConstraintCache) != typeof(ConstraintCache1))
+            ref var targetFeatureIds = ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1);
+            for (int i = 0; i < contactCount; ++i)
             {
-                ref var targetFeatureIds = ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1);
-                for (int i = 0; i < contactCount; ++i)
-                {
-                    ref var sourceContact = ref Unsafe.Add(ref manifold.Contact0, i);
-                    ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
-                    Unsafe.Add(ref targetFeatureIds, i) = sourceContact.FeatureId;
-                    targetContact.OffsetA = sourceContact.Offset;
-                    targetContact.PenetrationDepth = sourceContact.Depth;
-                }
-            }
-            else
-            {
-                //Single contact constraints do not have any feature ids.
-                for (int i = 0; i < contactCount; ++i)
-                {
-                    ref var sourceContact = ref Unsafe.Add(ref manifold.Contact0, i);
-                    ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
-                    targetContact.OffsetA = sourceContact.Offset;
-                    targetContact.PenetrationDepth = sourceContact.Depth;
-                }
+                ref var sourceContact = ref Unsafe.Add(ref manifold.Contact0, i);
+                ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
+                Unsafe.Add(ref targetFeatureIds, i) = sourceContact.FeatureId;
+                targetContact.OffsetA = sourceContact.Offset;
+                targetContact.PenetrationDepth = sourceContact.Depth;
             }
         }
     }
@@ -213,7 +185,7 @@ namespace BepuPhysics.CollisionDetection
         ContactConstraintAccessor<TConstraintDescription, TwoBodyHandles, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
         where TConstraintDescription : IConvexTwoBodyContactConstraintDescription<TConstraintDescription>
         where TConstraintCache : IPairCacheEntry
-    {        
+    {
         public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)

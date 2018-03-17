@@ -11,7 +11,8 @@ namespace BepuPhysics.CollisionDetection
     public struct ConstraintCache1 : IPairCacheEntry
     {
         public int ConstraintHandle;
-        //No need for feature ids in 1 contact constraints. Just assume the old impulse can be reused regardless. Reasonably good guess.
+        public int FeatureId0;
+
         public int TypeId => 0;
     }
     public struct ConstraintCache2 : IPairCacheEntry

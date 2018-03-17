@@ -10,6 +10,8 @@ namespace BepuPhysics.CollisionDetection
         public Vector3Wide OffsetA;
         public Vector3Wide Normal;
         public Vector<float> Depth;
+        //Note that there is no need for this manifold type to contain a feature id- it is used with pairs that only ever have 0 or 1 contacts.
+        //If a contact exists, it can immediately use the previous frame's accumulated impulse if any exists.
         public Vector<int> ContactExists;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
