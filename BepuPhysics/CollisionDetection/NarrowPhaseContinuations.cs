@@ -43,213 +43,66 @@ namespace BepuPhysics.CollisionDetection
             BufferPool pool;
             NarrowPhase<TCallbacks> narrowPhase;
 
+
             //TODO: Arguably, this could be handled within the streaming batcher. The main advantage of doing so would be CCD-like queries being available.
             //On the other hand, we may want to simply modularize it. Something like a low level convex batcher, which is used by the more general purpose discrete batcher
             //(which handles compounds, meshes, and boundary smoothing), which is used by the CCD batcher.
-            unsafe static void ResolveLinearManifold(ContactManifold* mainManifold, ContactManifold* linearManifold, ContactManifold* outManifold)
+            unsafe static void ResolveLinearManifold<TMainManifold>(void* mainManifoldPointer, ConvexContactManifold* linearManifold, NonconvexContactManifold* outManifold)
             {
-                var linearCount = linearManifold->ContactCount;
-                if (linearCount > 0)
+                //This function is responsible for prioritizing which contacts to include when there are more contacts than slots.
+                //Note that the linear manifold is constructed from sphere-convex tests whose depths are guaranteed to be less than the deepest contact
+                //of the main manifold by virtue of the contributing spheres being smaller than the containing shape.
+
+                //Further, while it's possible for the sphere-sourced contacts to be deeper than some of the main manifold contacts due to speculative contact generation,
+                //there is no strong reason to prefer the sphere source contacts just because their depth happens to be greater- in fact, if we trust the main manifold
+                //contact generation logic, they should tend to be more representative of the true manifold.
+
+                //In other words, we simply trust that all contacts in the main manifold are good choices, and the linear manifold's responsibility is simply to fill in gaps.
+                //If there are no gaps, then we don't use the linear manifold at all.
+
+                //So first, copy all main manifold contacts.
+                Debug.Assert(linearManifold->Count == 2, "Inner sphere derived contacts should only ever contribute one contact per involved body, no more, no less.");
+                var outContacts = &outManifold->Contact0;
+                if (typeof(TMainManifold) == typeof(ConvexContactManifold))
                 {
-                    Debug.Assert(linearCount <= 2, "Inner sphere derived contacts should only ever contribute one contact per involved body.");
-
-                    var mainCount = mainManifold->ContactCount;
-                    if (mainCount > 0)
+                    var mainManifold = (ConvexContactManifold*)mainManifoldPointer;
+                    outManifold->OffsetB = mainManifold->OffsetB;
+                    outManifold->Count = mainManifold->Count;
+                    var mainManifoldContacts = &mainManifold->Contact0;
+                    for (int i = 0; i < outManifold->Count; ++i)
                     {
-                        var totalCount = mainCount + linearCount;
-                        var contactsToPotentiallyReplaceCount = totalCount - 4;
-                        if (contactsToPotentiallyReplaceCount > 0)
-                        {
-                            //There are more contacts than slots. A subset must be prioritized.
-                            //We want the deepest set of contacts from all available manifolds. 
-                            //(This isn't necessarily an ideal heuristic- consider a bunch of deep  contacts all in the same place,
-                            //causing the removal of a distant but less redundant contact. In practice, though, it works okay.)
-
-                            //To find the deepest contacts, simply sort both sets and pop the minimums.
-                            //Rather than shuffling the contact manifold memory around, just sort indices.
-
-                            //TODO: This entire hardcoded sort is a bit gross and silly. You could do better.
-                            //TODO: It's not clear that this is actually even useful. It may be that just picking the deepest of the linear contacts and filling any open space
-                            //is the best and simplest option in the end.
-                            var linearIndices = stackalloc int[linearCount];
-                            var mainIndices = stackalloc int[mainCount];
-                            if (linearCount == 2)
-                            {
-                                if (linearManifold->Depth0 < linearManifold->Depth1)
-                                {
-                                    linearIndices[0] = 0;
-                                    linearIndices[1] = 1;
-                                }
-                                else
-                                {
-                                    linearIndices[0] = 0;
-                                    linearIndices[1] = 1;
-                                }
-                            }
-                            else
-                            {
-                                linearIndices[0] = 0;
-                            }
-
-                            for (int i = 0; i < mainCount; ++i)
-                                mainIndices[i] = i;
-
-                            outManifold->SetConvexityAndCount(totalCount, false);
-                            var mainDepths = &mainManifold->Depth0;
-                            for (int i = 1; i <= mainCount; ++i)
-                            {
-                                var originalIndex = mainIndices[i];
-                                var depth = mainDepths[originalIndex];
-                                int compareIndex;
-                                for (compareIndex = i - 1; compareIndex >= 0; --compareIndex)
-                                {
-                                    var compareDepth = mainDepths[compareIndex];
-                                    if (compareDepth < depth)
-                                    {
-                                        //Move the element up one slot.
-                                        var upperSlotIndex = compareIndex + 1;
-                                        mainIndices[upperSlotIndex] = mainIndices[compareIndex];
-                                    }
-                                    else
-                                        break;
-                                }
-                                var targetIndex = compareIndex + 1;
-                                if (targetIndex != i)
-                                {
-                                    //Move the original index down.
-                                    mainIndices[targetIndex] = originalIndex;
-                                }
-                            }
-
-                            var outIndex = 0;
-                            var mainIndex = 0;
-                            var linearIndex = 0;
-                            var outOffsets = &outManifold->Offset0;
-                            var outDepths = &outManifold->Depth0;
-                            var outBases = &outManifold->Normal0;
-                            var outIds = &outManifold->FeatureId0;
-                            var linearOffsets = &linearManifold->Offset0;
-                            var linearDepths = &linearManifold->Depth0;
-                            var linearBases = &linearManifold->Normal0;
-                            var linearIds = &linearManifold->FeatureId0;
-                            var mainOffsets = &mainManifold->Offset0;
-                            var mainIds = &mainManifold->FeatureId0;
-                            if (mainManifold->Convex)
-                            {
-                                //While the linear and output manifolds are nonconvex, the main one is convex.
-                                while (outIndex < 4)
-                                {
-                                    if (linearIndex == linearCount ||
-                                        (mainIndex < mainCount &&
-                                        mainDepths[mainIndex] > linearDepths[linearIndex]))
-                                    {
-                                        outOffsets[outIndex] = mainOffsets[mainIndex];
-                                        outDepths[outIndex] = mainDepths[mainIndex];
-                                        outBases[outIndex] = mainManifold->ConvexNormal;
-                                        outIds[outIndex] = mainIds[mainIndex];
-                                        ++mainIndex;
-                                    }
-                                    else
-                                    {
-                                        outOffsets[outIndex] = linearOffsets[linearIndex];
-                                        outDepths[outIndex] = linearDepths[linearIndex];
-                                        outBases[outIndex] = linearBases[linearIndex];
-                                        outIds[outIndex] = linearIds[linearIndex];
-                                        ++linearIndex;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                //Both manifolds are nonconvex.
-                                var mainBases = &mainManifold->Normal0;
-                                while (outIndex < 4)
-                                {
-                                    if (linearIndex == linearCount ||
-                                        (mainIndex < mainCount &&
-                                        mainDepths[mainIndex] > linearDepths[linearIndex]))
-                                    {
-                                        outOffsets[outIndex] = mainOffsets[mainIndex];
-                                        outDepths[outIndex] = mainDepths[mainIndex];
-                                        outBases[outIndex] = mainBases[mainIndex];
-                                        outIds[outIndex] = mainIds[mainIndex];
-                                        ++mainIndex;
-                                    }
-                                    else
-                                    {
-                                        outOffsets[outIndex] = linearOffsets[linearIndex];
-                                        outDepths[outIndex] = linearDepths[linearIndex];
-                                        outBases[outIndex] = linearBases[linearIndex];
-                                        outIds[outIndex] = linearIds[linearIndex];
-                                        ++linearIndex;
-                                    }
-                                    ++outIndex;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            //There is sufficient room in the manifold to include all the new contacts, so there is no need for prioritization.
-                            outManifold->SetConvexityAndCount(totalCount, false);
-                            //Add all existing contacts. Note that the use of inner sphere contacts forces the manifold to be nonconvex unconditionally.
-                            //While there are cases in which the normals could actually be planar, we don't spend the time figuring that out-
-                            //this state will be extremely brief regardless, and there isn't much value in trying to tease out convexity for one or two frames.
-                            var outOffsets = &outManifold->Offset0;
-                            var outDepths = &outManifold->Depth0;
-                            var outBases = &outManifold->Normal0;
-                            var outIds = &outManifold->FeatureId0;
-                            var mainOffsets = &mainManifold->Offset0;
-                            var mainDepths = &mainManifold->Depth0;
-                            var mainIds = &mainManifold->FeatureId0;
-                            if (mainManifold->Convex)
-                            {
-                                for (int i = 0; i < mainCount; ++i)
-                                {
-                                    outOffsets[i] = mainOffsets[i];
-                                    outDepths[i] = mainDepths[i];
-                                    outBases[i] = mainManifold->ConvexNormal;
-                                    outIds[i] = mainIds[i];
-                                }
-                            }
-                            else
-                            {
-                                var mainBases = &mainManifold->Normal0;
-                                for (int i = 0; i < mainCount; ++i)
-                                {
-                                    outOffsets[i] = mainOffsets[i];
-                                    outDepths[i] = mainDepths[i];
-                                    outBases[i] = mainBases[i];
-                                    outIds[i] = mainIds[i];
-                                }
-                            }
-                            //Now add the linear contacts. Both manifolds are known to be nonconvex. 
-                            var linearOffsets = &linearManifold->Offset0;
-                            var linearDepths = &linearManifold->Depth0;
-                            var linearBases = &linearManifold->Normal0;
-                            var linearIds = &linearManifold->FeatureId0;
-                            for (int linearIndex = 0; linearIndex < linearCount; ++linearIndex)
-                            {
-                                var outIndex = mainCount + linearIndex;
-                                outOffsets[outIndex] = linearOffsets[linearIndex];
-                                outDepths[outIndex] = linearDepths[linearIndex];
-                                outBases[outIndex] = linearBases[linearIndex];
-                                outIds[outIndex] = linearIds[linearIndex];
-                            }
-                        }
-                    }
-                    else
-                    {
-                        outManifold = linearManifold;
+                        ref var outContact = ref outContacts[i];
+                        ref var mainContact = ref mainManifoldContacts[i];
+                        outContact.Offset = mainContact.Offset;
+                        outContact.Depth = mainContact.Depth;
+                        outContact.Normal = mainManifold->Normal;
+                        outContact.FeatureId = mainContact.FeatureId;
                     }
                 }
                 else
                 {
-                    outManifold = mainManifold;
+                    Debug.Assert(typeof(TMainManifold) == typeof(NonconvexContactManifold));
+                    var mainManifold = (NonconvexContactManifold*)mainManifoldPointer;
+                    outManifold->OffsetB = mainManifold->OffsetB;
+                    outManifold->Count = mainManifold->Count;
+                    var mainManifoldContacts = &mainManifold->Contact0;
+                    for (int i = 0; i < outManifold->Count; ++i)
+                    {
+                        outContacts[i] = mainManifoldContacts[i];
+                    }
                 }
+
+                //Copy deepest contacts of linear manifold until no space remains.
+                //Note that 'space remaining' differs depending on what kind of manifold we're creating.
+                //If the source pair is a convex pair, then there is no reason to use more than four contacts.
+                //If the source pair is a nonconvex pair, there may be more.
+
+                //TODO: The dataflow between collision batcher and CCD handlers needs some work. This is left unfinished until we figure out those details.
+
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            unsafe static void ResolveSubstepManifold(ref SubstepManifolds substeps, ContactManifold* outManifold)
+            unsafe static void ResolveSubstepManifold(ref SubstepManifolds substeps, ConvexContactManifold* outManifold)
             {
                 //Scan the substeps looking for the first substep that contains any contacts.
                 //TODO: There are situations involving very high angular velocity where the first contacts are not the best choice. 
@@ -263,7 +116,7 @@ namespace BepuPhysics.CollisionDetection
                 for (int i = 0; i < substeps.Manifolds.Count; ++i)
                 {
                     ref var manifold = ref substeps.Manifolds[i];
-                    var contactCount = manifold.ContactCount;
+                    var contactCount = manifold.Count;
                     if (contactCount > 0)
                     {
                         *outManifold = manifold;
@@ -271,45 +124,31 @@ namespace BepuPhysics.CollisionDetection
                         //Since the contact position offsets are not rotated, all we have to do is add the offset from t=0 to the current time to each contact position
                         //and modify the penetration depths according to that offset along the normal.
                         var offset = substeps.RelativeOffsetChange * (i * inverseCount);
-                        var offsets = &outManifold->Offset0;
-                        var depths = &outManifold->Depth0;
-                        //TODO: these two TransformY's could be optimized with knowledge that it's unit length. 
-                        //That would be pretty useful generally- I'm not sure we've ever used those functions without it being unit length.
-                        //Pretty micro-optimizey, though.
-                        if (outManifold->Convex)
+                        var contacts = &outManifold->Contact0;
+                        var penetrationOffset = Vector3.Dot(offset, outManifold->Normal);
+                        for (int j = 0; j < contactCount; ++j)
                         {
-                            var penetrationOffset = Vector3.Dot(offset, outManifold->ConvexNormal);
-                            for (int j = 0; j < contactCount; ++j)
-                            {
-                                offsets[j] += offset;
-                                depths[j] += penetrationOffset;
-                            }
-                        }
-                        else
-                        {
-                            var normals = &outManifold->Normal0;
-                            for (int j = 0; j < contactCount; ++j)
-                            {
-                                var penetrationOffset = Vector3.Dot(offset, normals[j]);
-                                offsets[j] += offset;
-                                depths[j] += penetrationOffset;
-                            }
+                            ref var contact = ref contacts[j];
+                            contact.Offset += offset;
+                            contact.Depth += penetrationOffset;
                         }
                         return;
                     }
                 }
                 //If there are no contacts, then just return an empty manifold.
                 *outManifold = substeps.Manifolds[0];
+                //TODO: This does not properly handle nonconvexes. Dataflow between collision batcher and CCD needs a rework to make inner sphere CCD clean.
             }
 
             struct SubstepManifolds
             {
-                public QuickList<ContactManifold, Buffer<ContactManifold>> Manifolds;
+                //TODO: Only handles convexes for now; need to revisit later.
+                public QuickList<ConvexContactManifold, Buffer<ConvexContactManifold>> Manifolds;
                 public Vector3 RelativeOffsetChange;
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public void Initialize(BufferPool pool, int capacity)
                 {
-                    QuickList<ContactManifold, Buffer<ContactManifold>>.Create(pool.SpecializeFor<ContactManifold>(), capacity, out Manifolds);
+                    QuickList<ConvexContactManifold, Buffer<ConvexContactManifold>>.Create(pool.SpecializeFor<ConvexContactManifold>(), capacity, out Manifolds);
                 }
 
 
@@ -328,8 +167,9 @@ namespace BepuPhysics.CollisionDetection
             }
             struct LinearPair
             {
-                public ContactManifold DiscreteManifold;
-                public ContactManifold LinearManifold;
+                //TODO: Only handles convexes for now; need to revisit later.
+                public ConvexContactManifold DiscreteManifold;
+                public NonconvexContactManifold LinearManifold;
                 public CollidablePair Pair;
                 public float SpeculativeMargin;
                 public int ManifoldsReported;
@@ -340,7 +180,7 @@ namespace BepuPhysics.CollisionDetection
                     Pair = pair;
                     SpeculativeMargin = speculativeMargin;
                     ManifoldsReported = 0;
-                    LinearManifold.SetConvexityAndCount(2, false);
+                    LinearManifold.Count = 2;
                 }
             }
 
@@ -364,7 +204,8 @@ namespace BepuPhysics.CollisionDetection
             struct SubstepWithLinearPair
             {
                 public SubstepManifolds SubstepManifolds;
-                public ContactManifold LinearManifold;
+                //TODO: Only handles convexes for now; need to revisit later.
+                public NonconvexContactManifold LinearManifold;
                 public CollidablePair Pair;
                 public float SpeculativeMargin;
                 public int ManifoldsReported;
@@ -376,7 +217,7 @@ namespace BepuPhysics.CollisionDetection
                     Pair = pair;
                     ManifoldsReported = 0;
                     SpeculativeMargin = speculativeMargin;
-                    LinearManifold.SetConvexityAndCount(2, false);
+                    LinearManifold.Count = 2;
                 }
             }
 
@@ -465,101 +306,34 @@ namespace BepuPhysics.CollisionDetection
                 //Substeps are simply a series of discrete steps, so you don't want to offset them and make actual discrete contacts unshared.
             }
 
+            //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+            //private unsafe void FillLinearManifoldSlotA(ref ContactManifold linearManifold, ContactManifold* manifold)
+            //{
+            //    //Note that linear A is always in slot 0, and linear B is always in slot 1.
+            //    //This is allowed because a linear pair is guaranteed to have two contacts generated from CCD.
+            //    //There is no separation limit on inner sphere pairs, and you never just create one sphere-collidable pair- it's always bilateral.
+            //    //Also note that offsetB is only used from linear A, not linear B. They should be identical.                       
+            //    Debug.Assert(manifold->ContactCount == 1);
+            //    linearManifold.OffsetB = manifold->OffsetB;
+            //    linearManifold.Offset0 = manifold->Offset0;
+            //    linearManifold.Depth0 = manifold->Depth0;
+            //    linearManifold.FeatureId0 = CCDFeatureIdOffsets.LinearA;
+            //    linearManifold.Normal0 = manifold->Normal0;
+
+            //}
+            //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+            //private unsafe void FillLinearManifoldSlotB(ref ContactManifold linearManifold, ContactManifold* manifold)
+            //{
+            //    Debug.Assert(manifold->ContactCount == 1);
+            //    linearManifold.Offset1 = manifold->Offset0;
+            //    linearManifold.Depth1 = manifold->Depth0;
+            //    linearManifold.FeatureId1 = CCDFeatureIdOffsets.LinearB;
+            //    linearManifold.Normal1 = manifold->Normal0;
+            //}                       
+
+            //Generic pointers are not allowed, so we have to do a bit of hackery.
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private unsafe void FillLinearManifoldSlotA(ref ContactManifold linearManifold, ContactManifold* manifold)
-            {
-                //Note that linear A is always in slot 0, and linear B is always in slot 1.
-                //This is allowed because a linear pair is guaranteed to have two contacts generated from CCD.
-                //There is no separation limit on inner sphere pairs, and you never just create one sphere-collidable pair- it's always bilateral.
-                //Also note that offsetB is only used from linear A, not linear B. They should be identical.                       
-                Debug.Assert(manifold->ContactCount == 1);
-                linearManifold.OffsetB = manifold->OffsetB;
-                linearManifold.Offset0 = manifold->Offset0;
-                linearManifold.Depth0 = manifold->Depth0;
-                linearManifold.FeatureId0 = CCDFeatureIdOffsets.LinearA;
-                linearManifold.Normal0 = manifold->Normal0;
-
-            }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private unsafe void FillLinearManifoldSlotB(ref ContactManifold linearManifold, ContactManifold* manifold)
-            {
-                Debug.Assert(manifold->ContactCount == 1);
-                linearManifold.Offset1 = manifold->Offset0;
-                linearManifold.Depth1 = manifold->Depth0;
-                linearManifold.FeatureId1 = CCDFeatureIdOffsets.LinearB;
-                linearManifold.Normal1 = manifold->Normal0;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private unsafe void ReduceDistantContacts(ContactManifold* manifold, float speculativeMargin, ContactManifold* outputManifold)
-            {
-                //TODO: There's a pretty strong argument for not generating contacts beyond speculative limits to begin with.
-                //It's likely that we'll make the convex test batcher aware of speculative margins when we implement more complex nonconvex pairs;
-                //pruning out irrelevant contacts is critical for performance in such cases.
-                //Pushing this responsibility to the individual convex handlers would also open up opportunities for vectorization that we can't easily take advantage of once we've 
-                //entered this scalar processing phase.
-                var contactCount = manifold->ContactCount;
-                var sourceDepths = &manifold->Depth0;
-                //Negative depths correspond to separation.
-                Debug.Assert(speculativeMargin >= 0, "Negative speculative margins are nonsensical. Is something busted?");
-                speculativeMargin = -speculativeMargin;
-                if (manifold->Convex)
-                {
-                    int count = 0;
-                    var sourceOffsets = &manifold->Offset0;
-                    var sourceIds = &manifold->FeatureId0;
-                    var targetOffsets = &outputManifold->Offset0;
-                    var targetDepths = &outputManifold->Depth0;
-                    var targetIds = &outputManifold->FeatureId0;
-
-                    for (int i = 0; i < contactCount; ++i)
-                    {
-                        if (sourceDepths[i] >= speculativeMargin)
-                        {
-                            var index = count++;
-                            targetOffsets[index] = sourceOffsets[i];
-                            targetDepths[index] = sourceDepths[i];
-                            targetIds[index] = sourceIds[i];
-                        }
-                    }
-                    if (count > 0)
-                    {
-                        outputManifold->ConvexNormal = manifold->ConvexNormal;
-                        outputManifold->OffsetB = manifold->OffsetB;
-                    }
-                    outputManifold->SetConvexityAndCount(count, true);
-                }
-                else
-                {
-                    int count = 0;
-                    var sourceOffsets = &manifold->Offset0;
-                    var sourceIds = &manifold->FeatureId0;
-                    var sourceNormals = &manifold->Normal0;
-                    var targetOffsets = &outputManifold->Offset0;
-                    var targetDepths = &outputManifold->Depth0;
-                    var targetIds = &outputManifold->FeatureId0;
-                    var targetNormals = &outputManifold->Normal0;
-
-                    for (int i = 0; i < contactCount; ++i)
-                    {
-                        if (sourceDepths[i] >= speculativeMargin)
-                        {
-                            var index = count++;
-                            targetOffsets[index] = sourceOffsets[i];
-                            targetDepths[index] = sourceDepths[i];
-                            targetIds[index] = sourceIds[i];
-                            targetNormals[index] = sourceNormals[i];
-                        }
-                    }
-                    if (count > 0)
-                    {
-                        outputManifold->OffsetB = manifold->OffsetB;
-                    }
-                    outputManifold->SetConvexityAndCount(count, false);
-                }
-            }
-
-            public unsafe void OnPairCompleted(int pairId, ContactManifold* manifold)
+            unsafe void OnPairCompleted<TManifold>(int pairId, void* manifoldPointer)
             {
                 var todoTestCollisionCache = default(EmptyCollisionCache);
                 ContinuationIndex continuationId = new ContinuationIndex(pairId);
@@ -570,12 +344,8 @@ namespace BepuPhysics.CollisionDetection
                     case ConstraintGeneratorType.Discrete:
                         {
                             //Direct has no need for accumulating multiple reports; we can immediately dispatch.
-                            ref var continuation = ref discrete.Caches[continuationIndex];
-                            //Discrete manifolds should obey the speculative margin limitation on speculative contacts.
-                            //Note that we cannot modify the manifold provided to this function; we generate our own version.
-                            ContactManifold reducedManifold;
-                            ReduceDistantContacts(manifold, continuation.SpeculativeMargin, &reducedManifold);
-                            narrowPhase.UpdateConstraintsForPair(workerIndex, ref continuation.Pair, &reducedManifold, ref todoTestCollisionCache);
+                            ref var continuation = ref discrete.Caches[continuationIndex];                            
+                            narrowPhase.UpdateConstraintsForPair<TManifold, EmptyCollisionCache>(workerIndex, ref continuation.Pair, manifoldPointer, ref todoTestCollisionCache);
                             discrete.Return(continuationIndex, pool);
                         }
                         break;
@@ -584,84 +354,97 @@ namespace BepuPhysics.CollisionDetection
                     //and then fill the appropriate slot. However, this complicates the api- the user would then have to say 'okay im done' to trigger the flush.
                     case ConstraintGeneratorType.Linear:
                         {
-                            ref var continuation = ref linear.Caches[continuationIndex];
-                            Debug.Assert(continuation.ManifoldsReported < 2 || manifold->OffsetB == continuation.LinearManifold.OffsetB,
-                                "The offset from A to B should be the same in both LinearA and linearB. This requires a guarantee on the part of work submission; did you break that?");
-                            switch (continuationId.InnerIndex)
-                            {
-                                case 0:
-                                    //Discrete manifolds obey speculative margin limitations.
-                                    ReduceDistantContacts(manifold, continuation.SpeculativeMargin, (ContactManifold*)Unsafe.AsPointer(ref continuation.DiscreteManifold));
-                                    break;
-                                case 1:
-                                    FillLinearManifoldSlotA(ref continuation.LinearManifold, manifold);
-                                    break;
-                                case 2:
-                                    FillLinearManifoldSlotB(ref continuation.LinearManifold, manifold);
-                                    break;
-                            }
-                            ++continuation.ManifoldsReported;
+                            //TODO: Dataflow between collision batcher and CCD needs a rework.
+                            //ref var continuation = ref linear.Caches[continuationIndex];
+                            //Debug.Assert(continuation.ManifoldsReported < 2 || manifold->OffsetB == continuation.LinearManifold.OffsetB,
+                            //    "The offset from A to B should be the same in both LinearA and linearB. This requires a guarantee on the part of work submission; did you break that?");
+                            //switch (continuationId.InnerIndex)
+                            //{
+                            //    case 0:
+                            //        //Discrete manifolds obey speculative margin limitations.
+                            //        ReduceDistantContacts(manifold, continuation.SpeculativeMargin, (ContactManifold*)Unsafe.AsPointer(ref continuation.DiscreteManifold));
+                            //        break;
+                            //    case 1:
+                            //        FillLinearManifoldSlotA(ref continuation.LinearManifold, manifold);
+                            //        break;
+                            //    case 2:
+                            //        FillLinearManifoldSlotB(ref continuation.LinearManifold, manifold);
+                            //        break;
+                            //}
+                            //++continuation.ManifoldsReported;
 
-                            if (continuation.ManifoldsReported == 3)
-                            {
-                                var manifolds = (ContactManifold*)Unsafe.AsPointer(ref continuation.DiscreteManifold);
-                                ContactManifold combinedManifold;
-                                ResolveLinearManifold(manifolds, manifolds + 1, &combinedManifold);
-                                narrowPhase.UpdateConstraintsForPair(workerIndex, ref continuation.Pair, &combinedManifold, ref todoTestCollisionCache);
-                                linear.Return(continuationIndex, pool);
-                            }
+                            //if (continuation.ManifoldsReported == 3)
+                            //{
+                            //    var manifolds = (ContactManifold*)Unsafe.AsPointer(ref continuation.DiscreteManifold);
+                            //    ContactManifold combinedManifold;
+                            //    ResolveLinearManifold(manifolds, manifolds + 1, &combinedManifold);
+                            //    narrowPhase.UpdateConstraintsForPair(workerIndex, ref continuation.Pair, &combinedManifold, ref todoTestCollisionCache);
+                            //    linear.Return(continuationIndex, pool);
+                            //}
                         }
                         break;
                     case ConstraintGeneratorType.Substep:
                         {
-                            ref var continuation = ref substep.Caches[continuationId.Index];
-                            Debug.Assert(continuationId.InnerIndex >= 0 && continuationId.InnerIndex < continuation.Manifolds.Manifolds.Count);
-                            //Every substep manifold obeys speculative margin limitations. This ensures a decent substep is chosen when reducing substeps to a final manifold.
-                            ReduceDistantContacts(manifold, continuation.SpeculativeMargin, (ContactManifold*)Unsafe.AsPointer(ref continuation.Manifolds.Manifolds[continuationId.InnerIndex]));
-                            ++continuation.ManifoldsReported;
+                            //TODO: Dataflow between collision batcher and CCD needs a rework.
+                            //ref var continuation = ref substep.Caches[continuationId.Index];
+                            //Debug.Assert(continuationId.InnerIndex >= 0 && continuationId.InnerIndex < continuation.Manifolds.Manifolds.Count);
+                            ////Every substep manifold obeys speculative margin limitations. This ensures a decent substep is chosen when reducing substeps to a final manifold.
+                            //ReduceDistantContacts(manifold, continuation.SpeculativeMargin, (ContactManifold*)Unsafe.AsPointer(ref continuation.Manifolds.Manifolds[continuationId.InnerIndex]));
+                            //++continuation.ManifoldsReported;
 
-                            if (continuation.ManifoldsReported == continuation.Manifolds.Manifolds.Count)
-                            {
-                                ContactManifold resolvedManifold;
-                                ResolveSubstepManifold(ref continuation.Manifolds, &resolvedManifold);
-                                narrowPhase.UpdateConstraintsForPair(workerIndex, ref continuation.Pair, &resolvedManifold, ref todoTestCollisionCache);
-                                substep.Return(continuationIndex, pool);
-                            }
+                            //if (continuation.ManifoldsReported == continuation.Manifolds.Manifolds.Count)
+                            //{
+                            //    ContactManifold resolvedManifold;
+                            //    ResolveSubstepManifold(ref continuation.Manifolds, &resolvedManifold);
+                            //    narrowPhase.UpdateConstraintsForPair(workerIndex, ref continuation.Pair, &resolvedManifold, ref todoTestCollisionCache);
+                            //    substep.Return(continuationIndex, pool);
+                            //}
                         }
                         break;
                     case ConstraintGeneratorType.SubstepWithLinear:
                         {
-                            ref var continuation = ref this.substepWithLinear.Caches[continuationId.Index];
-                            var innerIndex = continuationId.InnerIndex;
-                            switch (innerIndex)
-                            {
-                                case 0:
-                                    FillLinearManifoldSlotA(ref continuation.LinearManifold, manifold);
-                                    break;
-                                case 1:
-                                    FillLinearManifoldSlotB(ref continuation.LinearManifold, manifold);
-                                    break;
-                                default:
-                                    var substepIndex = innerIndex - 2;
-                                    Debug.Assert(substepIndex >= 0 && substepIndex < continuation.SubstepManifolds.Manifolds.Count);
-                                    //Every substep manifold obeys speculative margin limitations. This ensures a decent substep is chosen when reducing substeps to a final manifold.
-                                    ReduceDistantContacts(manifold, continuation.SpeculativeMargin, (ContactManifold*)Unsafe.AsPointer(ref continuation.SubstepManifolds.Manifolds[substepIndex]));
-                                    break;
-                            }
-                            ++continuation.ManifoldsReported;
+                            //TODO: Dataflow between collision batcher and CCD needs a rework.
+                            //ref var continuation = ref this.substepWithLinear.Caches[continuationId.Index];
+                            //var innerIndex = continuationId.InnerIndex;
+                            //switch (innerIndex)
+                            //{
+                            //    case 0:
+                            //        FillLinearManifoldSlotA(ref continuation.LinearManifold, manifold);
+                            //        break;
+                            //    case 1:
+                            //        FillLinearManifoldSlotB(ref continuation.LinearManifold, manifold);
+                            //        break;
+                            //    default:
+                            //        var substepIndex = innerIndex - 2;
+                            //        Debug.Assert(substepIndex >= 0 && substepIndex < continuation.SubstepManifolds.Manifolds.Count);
+                            //        //Every substep manifold obeys speculative margin limitations. This ensures a decent substep is chosen when reducing substeps to a final manifold.
+                            //        ReduceDistantContacts(manifold, continuation.SpeculativeMargin, (ContactManifold*)Unsafe.AsPointer(ref continuation.SubstepManifolds.Manifolds[substepIndex]));
+                            //        break;
+                            //}
+                            //++continuation.ManifoldsReported;
 
-                            if (continuation.ManifoldsReported == continuation.SubstepManifolds.Manifolds.Count + 2)
-                            {
-                                ContactManifold substepManifold, completeManifold;
-                                ResolveSubstepManifold(ref continuation.SubstepManifolds, &substepManifold);
-                                ResolveLinearManifold(&substepManifold, (ContactManifold*)Unsafe.AsPointer(ref continuation.LinearManifold), &completeManifold);
-                                narrowPhase.UpdateConstraintsForPair(workerIndex, ref continuation.Pair, &completeManifold, ref todoTestCollisionCache);
-                                substepWithLinear.Return(continuationIndex, pool);
-                            }
+                            //if (continuation.ManifoldsReported == continuation.SubstepManifolds.Manifolds.Count + 2)
+                            //{
+                            //    ContactManifold substepManifold, completeManifold;
+                            //    ResolveSubstepManifold(ref continuation.SubstepManifolds, &substepManifold);
+                            //    ResolveLinearManifold(&substepManifold, (ContactManifold*)Unsafe.AsPointer(ref continuation.LinearManifold), &completeManifold);
+                            //    narrowPhase.UpdateConstraintsForPair(workerIndex, ref continuation.Pair, &completeManifold, ref todoTestCollisionCache);
+                            //    substepWithLinear.Return(continuationIndex, pool);
+                            //}
                         }
                         break;
                 }
 
+            }
+
+            public unsafe void OnPairCompleted(int pairId, NonconvexContactManifold* manifold)
+            {
+                OnPairCompleted<NonconvexContactManifold>(pairId, manifold);
+            }
+
+            public unsafe void OnPairCompleted(int pairId, ConvexContactManifold* manifold)
+            {
+                OnPairCompleted<ConvexContactManifold>(pairId, manifold);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -673,7 +456,7 @@ namespace BepuPhysics.CollisionDetection
                 switch ((ConstraintGeneratorType)continuation.Type)
                 {
                     case ConstraintGeneratorType.Discrete:
-                            return discrete.Caches[index].Pair;
+                        return discrete.Caches[index].Pair;
                     case ConstraintGeneratorType.Linear:
                         return linear.Caches[index].Pair;
                     case ConstraintGeneratorType.Substep:
@@ -693,10 +476,10 @@ namespace BepuPhysics.CollisionDetection
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ContactManifold* manifold)
+            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ConvexContactManifold* manifold)
             {
                 narrowPhase.Callbacks.ConfigureContactManifold(workerIndex, GetCollidablePair(pairId), childA, childB, manifold);
-            }          
+            }
 
             internal void Dispose()
             {

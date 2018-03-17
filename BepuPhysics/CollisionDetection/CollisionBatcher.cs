@@ -88,7 +88,7 @@ namespace BepuPhysics.CollisionDetection
     {
         void Create(int slots, BufferPool pool);
 
-        unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
+        unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ConvexContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
         unsafe void OnChildCompletedEmpty<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
@@ -120,7 +120,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ContributeChildToContinuation<TCallbacks>(ref PairContinuation continuation, ContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
+        public unsafe void ContributeChildToContinuation<TCallbacks>(ref PairContinuation continuation, ConvexContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
         {
             Continuations[continuation.Index].OnChildCompleted(ref continuation, manifold, ref batcher);
@@ -146,7 +146,7 @@ namespace BepuPhysics.CollisionDetection
     {
         public int ChildManifoldCount;
         public int CompletedChildManifoldCount;
-        public Buffer<ContactManifold> ChildManifolds;
+        public Buffer<ConvexContactManifold> ChildManifolds;
 
         public void Create(int childManifoldCount, BufferPool pool)
         {
@@ -161,7 +161,7 @@ namespace BepuPhysics.CollisionDetection
             ++CompletedChildManifoldCount;
             if (ChildManifoldCount == CompletedChildManifoldCount)
             {
-                ContactManifold reducedManifold;
+                NonconvexContactManifold reducedManifold;
                 //TODO: Reduce the child manifolds into the final manifold.
                 batcher.Callbacks.OnPairCompleted(pairId, &reducedManifold);
 
@@ -172,7 +172,7 @@ namespace BepuPhysics.CollisionDetection
 #endif
             }
         }
-        public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
+        public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ConvexContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
         {
             ChildManifolds[CompletedChildManifoldCount] = *manifold;
@@ -182,7 +182,7 @@ namespace BepuPhysics.CollisionDetection
 
         public void OnChildCompletedEmpty<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
         {
-            ChildManifolds[CompletedChildManifoldCount] = default(ContactManifold);
+            ChildManifolds[CompletedChildManifoldCount] = default(ConvexContactManifold);
             FlushIfCompleted(report.PairId, ref batcher);
         }
     }
@@ -252,7 +252,7 @@ namespace BepuPhysics.CollisionDetection
             if (reference.TaskIndex < 0)
             {
                 //There is no task for this shape type pair. Immediately respond with an empty manifold.
-                var manifold = new ContactManifold();
+                var manifold = new ConvexContactManifold();
                 Callbacks.OnPairCompleted(pairContinuationInfo.PairId, &manifold);
                 return;
             }
@@ -337,7 +337,7 @@ namespace BepuPhysics.CollisionDetection
             NonconvexReductions.Dispose(Pool);
         }
 
-        public unsafe void ProcessConvexResult(ContactManifold* manifold, ref PairContinuation report)
+        public unsafe void ProcessConvexResult(ConvexContactManifold* manifold, ref PairContinuation report)
         {
             if (report.Type == CollisionContinuationType.Direct)
             {

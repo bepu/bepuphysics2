@@ -341,34 +341,6 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe void FillNewConstraintCache<TConstraintCache>(int* featureIds, ref TConstraintCache cache)
-        {
-            //1 contact constraint caches do not store a feature id; it's pointless.
-            if (typeof(TConstraintCache) == typeof(ConstraintCache2))
-            {
-                ref var typedCache = ref Unsafe.As<TConstraintCache, ConstraintCache2>(ref cache);
-                typedCache.FeatureId0 = featureIds[0];
-                typedCache.FeatureId1 = featureIds[1];
-            }
-            else if (typeof(TConstraintCache) == typeof(ConstraintCache3))
-            {
-                ref var typedCache = ref Unsafe.As<TConstraintCache, ConstraintCache3>(ref cache);
-                typedCache.FeatureId0 = featureIds[0];
-                typedCache.FeatureId1 = featureIds[1];
-                typedCache.FeatureId2 = featureIds[2];
-            }
-            else if (typeof(TConstraintCache) == typeof(ConstraintCache4))
-            {
-                ref var typedCache = ref Unsafe.As<TConstraintCache, ConstraintCache4>(ref cache);
-                typedCache.FeatureId0 = featureIds[0];
-                typedCache.FeatureId1 = featureIds[1];
-                typedCache.FeatureId2 = featureIds[2];
-                typedCache.FeatureId3 = featureIds[3];
-            }
-            //TODO: In the event that higher contact count manifolds exist for the purposes of nonconvexes, this will need to be expanded.
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe PairCacheIndex Add<TConstraintCache, TCollisionCache>(int workerIndex, ref CollidablePair pair,
             ref TCollisionCache collisionCache, ref TConstraintCache constraintCache)
             where TConstraintCache : IPairCacheEntry
@@ -407,7 +379,7 @@ namespace BepuPhysics.CollisionDetection
             //TODO: If the nonconvex contact count expands to 8, this will have to change.
             return constraintTypeId < 16;
         }
-        
+
         //TODO: If we add in nonconvex manifolds with up to 8 contacts, this will need to change- we preallocate enough space to hold all possible narrowphase generated types.
         public const int CollisionConstraintTypeCount = 16;
         public const int CollisionTypeCount = 16;

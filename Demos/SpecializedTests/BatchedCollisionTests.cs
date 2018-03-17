@@ -19,30 +19,19 @@ namespace Demos.SpecializedTests
         {
             public int Count;
 
-            public unsafe void OnPairCompleted(int pairId, ContactManifold* manifold)
-            {                //Console.WriteLine($"Completed {continuationId}:");
-                //var normals = &manifold->Normal0;
-                //var offsets = &manifold->Offset0;
-                //var depths = &manifold->Depth0;
-                //if (manifold->Convex)
-                //{
-                //    for (int i = 0; i < manifold->ContactCount; ++i)
-                //    {
-                //        Console.WriteLine($"{i}: P: {offsets[i]}, N: {manifold->ConvexNormal}, D: {depths[i]}");
-                //    }
-                //}
-                //else
-                //{
-                //    for (int i = 0; i < manifold->ContactCount; ++i)
-                //    {
-                //        Console.WriteLine($"{i}: P: {offsets[i]}, N: {normals[i]}, D: {depths[i]}");
-                //    }
-                //}
-                var extra = 1e-16 * (manifold->Depth0 + manifold->Offset0.X + manifold->Normal0.X);
+            public unsafe void OnPairCompleted(int pairId, ConvexContactManifold* manifold)
+            {
+                ref var contact = ref manifold->Contact0;
+                var extra = 1e-16 * (contact.Depth + contact.Offset.X + manifold->Normal.X);
                 Count += 1 + (int)extra;
             }
-
-            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ContactManifold* manifold)
+            public unsafe void OnPairCompleted(int pairId, NonconvexContactManifold* manifold)
+            {
+                ref var contact = ref manifold->Contact0;
+                var extra = 1e-16 * (contact.Depth + contact.Offset.X + contact.Normal.X);
+                Count += 1 + (int)extra;
+            }
+            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ConvexContactManifold* manifold)
             {
             }
 

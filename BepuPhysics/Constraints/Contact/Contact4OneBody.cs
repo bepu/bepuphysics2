@@ -8,12 +8,12 @@ using Quaternion = BepuUtilities.Quaternion;
 using static BepuPhysics.GatherScatter;
 namespace BepuPhysics.Constraints.Contact
 {
-    public struct Contact4OneBody : IConstraintDescription<Contact4OneBody>
+    public struct Contact4OneBody : IConvexOneBodyContactConstraintDescription<Contact4OneBody>
     {
-        public ManifoldContactData Contact0;
-        public ManifoldContactData Contact1;
-        public ManifoldContactData Contact2;
-        public ManifoldContactData Contact3;
+        public ConstraintContactData Contact0;
+        public ConstraintContactData Contact1;
+        public ConstraintContactData Contact2;
+        public ConstraintContactData Contact3;
         public float FrictionCoefficient;
         public Vector3 Normal;
         public SpringSettings SpringSettings;
@@ -87,6 +87,15 @@ namespace BepuPhysics.Constraints.Contact
 
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void CopyManifoldWideProperties(ref Vector3 normal, ref PairMaterialProperties material)
+        {
+            FrictionCoefficient = material.FrictionCoefficient;
+            Normal = normal;
+            SpringSettings = material.SpringSettings;
+            MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
+        }
+
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -116,7 +125,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PenetrationDepth2;
         public Vector<float> PenetrationDepth3;
     }
-    
+
     //The key observation here is that we have 7DOFs worth of constraints that all share the exact same bodies.
     //Despite the potential premultiplication optimizations, we focus on a few big wins:
     //1) Sharing the inverse mass for the impulse->velocity projection across all constraints.

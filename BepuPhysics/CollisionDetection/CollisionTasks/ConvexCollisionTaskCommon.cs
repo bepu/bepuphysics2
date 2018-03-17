@@ -335,8 +335,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     public interface IContactManifoldWide
     {
         void ApplyFlipMask(ref Vector3Wide offsetB, ref Vector<int> flipMask);
-        void PrepareManifoldForScatter(out ContactManifold manifold);
-        void Scatter(ref Vector3Wide offsetB, ref ContactManifold target);
+        void Scatter(ref Vector3Wide offsetB, ref ConvexContactManifold target);
     }
 
     class ConvexCollisionTaskCommon
@@ -357,7 +356,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var pairWide = default(TPairWide);
             var manifoldWide = default(TManifoldWide);
             var defaultPairTester = default(TPairTester);
-            manifoldWide.PrepareManifoldForScatter(out var manifold);
+            var manifold = default(ConvexContactManifold);
 
             for (int i = 0; i < batch.Count; i += Vector<float>.Count)
             {
@@ -425,10 +424,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref var offsetSource = ref Unsafe.As<float, Vector3Wide>(ref offsetAsFloat);
                     manifoldSource.Scatter(ref offsetSource, ref manifold);
                     batcher.ProcessConvexResult(&manifold, ref Unsafe.Add(ref bundleStart, j).Shared.Continuation);
-                    if (typeof(TManifoldWide) == typeof(Convex1ContactManifoldWide))
-                    {
-                        Debug.Assert(manifold.ContactCount == 1 && manifold.Convex, "The notify function should not modify the provided manifold reference.");
-                    }
                 }
             }
 

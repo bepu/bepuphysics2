@@ -40,7 +40,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //The contact position relative to object A (the sphere) is computed as the average of the extreme point along the normal toward the opposing shape on each shape, averaged.
             //For capsule-sphere, this can be computed from the normal and depth.
             var negativeOffsetFromSphere = manifold.Depth * 0.5f - a.Radius;
-            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromSphere, out manifold.OffsetA0);
+            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromSphere, out manifold.OffsetA);
+            manifold.Count = new Vector<int>(1);
         }
 
         public void Test(ref SphereWide a, ref CapsuleWide b, ref Vector3Wide offsetB, out Convex1ContactManifoldWide manifold)

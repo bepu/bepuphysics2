@@ -29,15 +29,15 @@ namespace BepuPhysics
             solver.Register<Contact3>();
             solver.Register<Contact4>();
 
-            narrowPhase.RegisterContactConstraintAccessor(new Contact4Accessor());
-            narrowPhase.RegisterContactConstraintAccessor(new Contact3Accessor());
-            narrowPhase.RegisterContactConstraintAccessor(new Contact2Accessor());
-            narrowPhase.RegisterContactConstraintAccessor(new Contact1Accessor());
-            narrowPhase.RegisterContactConstraintAccessor(new Contact4OneBodyAccessor());
-            narrowPhase.RegisterContactConstraintAccessor(new Contact3OneBodyAccessor());
-            narrowPhase.RegisterContactConstraintAccessor(new Contact2OneBodyAccessor());
-            narrowPhase.RegisterContactConstraintAccessor(new Contact1OneBodyAccessor());
-            
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact4, Contact4AccumulatedImpulses, ContactImpulses4, ConstraintCache4>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact3, Contact3AccumulatedImpulses, ContactImpulses3, ConstraintCache3>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact2, Contact2AccumulatedImpulses, ContactImpulses2, ConstraintCache2>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact1, Contact1AccumulatedImpulses, ContactImpulses1, ConstraintCache1>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact4OneBody, Contact4AccumulatedImpulses, ContactImpulses4, ConstraintCache4>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact3OneBody, Contact3AccumulatedImpulses, ContactImpulses3, ConstraintCache3>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact2OneBody, Contact2AccumulatedImpulses, ContactImpulses2, ConstraintCache2>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact1OneBody, Contact1AccumulatedImpulses, ContactImpulses1, ConstraintCache1>());
+
         }
 
         /// <summary>

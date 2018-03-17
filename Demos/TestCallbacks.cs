@@ -28,17 +28,28 @@ namespace Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ContactManifold* manifold, out PairMaterialProperties pairMaterial)
+        void ConfigureMaterial(out PairMaterialProperties pairMaterial)
         {
             pairMaterial.FrictionCoefficient = 1;
-            pairMaterial.MaximumRecoveryVelocity = 2f;// float.MaxValue;
+            pairMaterial.MaximumRecoveryVelocity = 2f;
             pairMaterial.SpringSettings.NaturalFrequency = MathHelper.Pi * 60;
             pairMaterial.SpringSettings.DampingRatio = 1f;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
+        {
+            ConfigureMaterial(out pairMaterial);
+            return true;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
+        {
+            ConfigureMaterial(out pairMaterial);
             return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ContactManifold* manifold)
+        public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ConvexContactManifold* manifold)
         {
             return true;
         }

@@ -49,24 +49,66 @@ namespace BepuPhysics.CollisionDetection
         public float Impulse2;
         public float Impulse3;
     }
+    public struct ContactImpulses5
+    {
+        public float Impulse0;
+        public float Impulse1;
+        public float Impulse2;
+        public float Impulse3;
+        public float Impulse4;
+    }
+    public struct ContactImpulses6
+    {
+        public float Impulse0;
+        public float Impulse1;
+        public float Impulse2;
+        public float Impulse3;
+        public float Impulse4;
+        public float Impulse5;
+    }
+    public struct ContactImpulses7
+    {
+        public float Impulse0;
+        public float Impulse1;
+        public float Impulse2;
+        public float Impulse3;
+        public float Impulse4;
+        public float Impulse5;
+        public float Impulse6;
+    }
+    public struct ContactImpulses8
+    {
+        public float Impulse0;
+        public float Impulse1;
+        public float Impulse2;
+        public float Impulse3;
+        public float Impulse4;
+        public float Impulse5;
+        public float Impulse6;
+        public float Impulse7;
+    }
 
     public partial class NarrowPhase<TCallbacks> where TCallbacks : struct, INarrowPhaseCallbacks
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe void RedistributeImpulses<TContactImpulses>(int oldContactCount, float* oldImpulses, int* oldFeatureIds, ContactManifold* manifold, ref TContactImpulses newImpulsesContainer)
+        private unsafe void RedistributeImpulses<TContactImpulses>(
+            int oldContactCount, int* oldFeatureIds, float* oldImpulses,
+            int newContactCount, ref int newFeatureIds, ref TContactImpulses newImpulsesContainer)
         {
             //Map the new contacts to the old contacts.
-            var newFeatureIds = &manifold->FeatureId0;
-            var newContactCount = manifold->ContactCount;
             ref var newImpulses = ref Unsafe.As<TContactImpulses, float>(ref newImpulsesContainer);
+            //Note that the pointer casts below are not actually GC holes:
+            //contact manifolds passed down here from the collision batcher and friends are all stored either on the stack or in pinned buffers.
+
             for (int i = 0; i < newContactCount; ++i)
             {
                 Unsafe.Add(ref newImpulses, i) = 0;
                 for (int j = 0; j < oldContactCount; ++j)
                 {
-                    if (oldFeatureIds[j] == newFeatureIds[i])
+                    if (oldFeatureIds[j] == Unsafe.Add(ref newFeatureIds, i))
                     {
                         Unsafe.Add(ref newImpulses, i) = oldImpulses[j];
+                        break;
                     }
                 }
             }
@@ -87,14 +129,12 @@ namespace BepuPhysics.CollisionDetection
         }
 
         public unsafe void UpdateConstraint<TBodyHandles, TDescription, TContactImpulses, TCollisionCache, TConstraintCache>(int workerIndex, ref CollidablePair pair,
-            ContactManifold* manifold, int manifoldTypeAsConstraintType, ref TCollisionCache collisionCache, ref TDescription description, TBodyHandles bodyHandles)
+            int manifoldTypeAsConstraintType, ref TConstraintCache newConstraintCache, ref TCollisionCache collisionCache,
+            ref TDescription description, TBodyHandles bodyHandles)
             where TConstraintCache : IPairCacheEntry
             where TCollisionCache : IPairCacheEntry
             where TDescription : IConstraintDescription<TDescription>
         {
-            var newConstraintCache = default(TConstraintCache); //TODO: no need for this init; if blittable generics exist later, we can fix it easily
-            PairCache.FillNewConstraintCache(&manifold->FeatureId0, ref newConstraintCache);
-
             var index = PairCache.IndexOf(ref pair);
             if (index >= 0)
             {
@@ -104,8 +144,8 @@ namespace BepuPhysics.CollisionDetection
 
                 var constraintCacheIndex = pointers.ConstraintCache;
                 var accessor = contactConstraintAccessors[constraintCacheIndex.Type];
-                var constraintCachePointer = PairCache.GetOldConstraintCachePointer(index);
-                var constraintHandle = *(int*)constraintCachePointer;
+                var oldConstraintCachePointer = PairCache.GetOldConstraintCachePointer(index);
+                var constraintHandle = *(int*)oldConstraintCachePointer;
                 Solver.GetConstraintReference(constraintHandle, out var constraintReference);
                 Debug.Assert(constraintReference.typeBatchPointer != null);
                 var newImpulses = default(TContactImpulses);
@@ -113,7 +153,9 @@ namespace BepuPhysics.CollisionDetection
                 var oldImpulses = stackalloc float[oldContactCount];
                 accessor.GatherOldImpulses(ref constraintReference, oldImpulses);
                 //The first slot in the constraint cache is the constraint handle; the following slots are feature ids.
-                RedistributeImpulses(oldContactCount, oldImpulses, (int*)constraintCachePointer + 1, manifold, ref newImpulses);
+                RedistributeImpulses(
+                    oldContactCount, (int*)oldConstraintCachePointer + 1, oldImpulses,
+                    newConstraintCache.TypeId + 1, ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref newConstraintCache), 1), ref newImpulses);
 
                 if (manifoldTypeAsConstraintType == constraintReference.TypeBatch.TypeId)
                 {
@@ -163,25 +205,43 @@ namespace BepuPhysics.CollisionDetection
         }
 
         //TODO: If you end up changing the NarrowPhasePendingConstraintAdds and PairCache hardcoded type handling, you should change this too. This is getting silly.
-        unsafe void UpdateConstraintForManifold<TCollisionCache, TBodyHandles>(int workerIndex, ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache,
-            ref PairMaterialProperties material, TBodyHandles bodyHandles)
+        unsafe void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TBodyHandles>(
+            int workerIndex, ref CollidablePair pair, ref TContactManifold manifold, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TBodyHandles bodyHandles)
             where TCollisionCache : IPairCacheEntry
         {
             //Note that this function has two responsibilities:
             //1) Create the description of the constraint that should represent the new manifold.
             //2) Add that constraint (or update an existing constraint) with that description, updating any accumulated impulses as needed.
-            Debug.Assert(manifold->ContactCount > 0);
-            //1-4 contacts: 0x3
-            //nonconvex: 0x4
-            //1 body versus 2 body: 0x8
-            //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-            var manifoldTypeAsConstraintType = ((manifold->PackedConvexityAndContactCount >> 1) & 4) | ((manifold->PackedConvexityAndContactCount & 7) - 1);
-            if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
-                manifoldTypeAsConstraintType |= 0x8;
-            contactConstraintAccessors[manifoldTypeAsConstraintType].UpdateConstraintForManifold(this, manifoldTypeAsConstraintType, workerIndex, ref pair, manifold, ref collisionCache, ref material, bodyHandles);
+            int manifoldTypeAsConstraintType;
+            if (typeof(TContactManifold) == typeof(ConvexContactManifold))
+            {
+                //Convex constraints:
+                //1-4 contacts: 0x3
+                //2 body (unset is 1 body): 0x4
+                ref var convexManifold = ref Unsafe.As<TContactManifold, ConvexContactManifold>(ref manifold);
+                Debug.Assert(convexManifold.Count > 0);
+                manifoldTypeAsConstraintType = (convexManifold.Count - 1);
+                if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
+                    manifoldTypeAsConstraintType |= 0x4;
+            }
+            else
+            {
+                //Nonconvex constraints:
+                //1-8 contacts: 0x7
+                //2 body (unset is one body): 0x8
+                //then add 8 to jump over the convex ids.
+                Debug.Assert(typeof(TContactManifold) == typeof(NonconvexContactManifold));
+                ref var nonconvexManifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifold);
+                Debug.Assert(nonconvexManifold.Count > 0);
+                manifoldTypeAsConstraintType = (nonconvexManifold.Count - 1);
+                if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
+                    manifoldTypeAsConstraintType |= 0x8;
+                manifoldTypeAsConstraintType += 8;
+            }
+            contactConstraintAccessors[manifoldTypeAsConstraintType].UpdateConstraintForManifold(this, manifoldTypeAsConstraintType, workerIndex, ref pair, ref manifold, ref collisionCache, ref material, bodyHandles);
         }
 
-        public unsafe void UpdateConstraintsForPair<TCollisionCache>(int workerIndex, ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache) where TCollisionCache : IPairCacheEntry
+        public unsafe void UpdateConstraintsForPair<TContactManifold, TCollisionCache>(int workerIndex, ref CollidablePair pair, void* manifoldPointer, ref TCollisionCache collisionCache) where TCollisionCache : IPairCacheEntry
         {
             //Note that we do not check for the pair being between two statics before reporting it. The assumption is that, if the initial broadphase pair filter allowed such a pair
             //to reach this point, the user probably wants to receive some information about the resulting contact manifold.
@@ -189,26 +249,36 @@ namespace BepuPhysics.CollisionDetection
             var aMobility = pair.A.Mobility;
             var bMobility = pair.B.Mobility;
             Debug.Assert(aMobility != CollidableMobility.Static, "The broad phase should not generate static-static pairs ever, and any static collidable should be in slot B.");
-            if (Callbacks.ConfigureContactManifold(workerIndex, pair, manifold, out var pairMaterial) &&
+            bool allowConstraint;
+            PairMaterialProperties pairMaterial;
+            if (typeof(TContactManifold) == typeof(ConvexContactManifold))
+            {
+                var manifold = (ConvexContactManifold*)manifoldPointer;
+                allowConstraint = Callbacks.ConfigureContactManifold(workerIndex, pair, manifold, out pairMaterial) && manifold->Count > 0;
+            }
+            else
+            {
+                Debug.Assert(typeof(TContactManifold) == typeof(NonconvexContactManifold));
+                var manifold = (NonconvexContactManifold*)manifoldPointer;
+                allowConstraint = Callbacks.ConfigureContactManifold(workerIndex, pair, manifold, out pairMaterial) && manifold->Count > 0;
+            }
+            if (allowConstraint &&
                 //Note that, even if the callback says 'yeah sure create a constraint for those', it never makes sense to generate constraints between two nondynamics.
                 //It would just result in a bunch of NaNs when computing the effective mass.
                 (aMobility == CollidableMobility.Dynamic || bMobility == CollidableMobility.Dynamic))
             {
-                if (manifold->ContactCount > 0)
+                if (bMobility != CollidableMobility.Static)
                 {
-                    if (bMobility != CollidableMobility.Static)
-                    {
-                        //Two bodies.
-                        Debug.Assert(pair.A.Mobility != CollidableMobility.Static && pair.B.Mobility != CollidableMobility.Static);
-                        var bodyHandles = new TwoBodyHandles { A = pair.A.Handle, B = pair.B.Handle };
-                        UpdateConstraintForManifold(workerIndex, ref pair, manifold, ref collisionCache, ref pairMaterial, bodyHandles);
-                    }
-                    else
-                    {
-                        //One of the two collidables is static.
-                        Debug.Assert(pair.A.Mobility != CollidableMobility.Static && pair.B.Mobility == CollidableMobility.Static);
-                        UpdateConstraintForManifold(workerIndex, ref pair, manifold, ref collisionCache, ref pairMaterial, pair.A.Handle);
-                    }
+                    //Two bodies.
+                    Debug.Assert(pair.A.Mobility != CollidableMobility.Static && pair.B.Mobility != CollidableMobility.Static);
+                    var bodyHandles = new TwoBodyHandles { A = pair.A.Handle, B = pair.B.Handle };
+                    UpdateConstraintForManifold(workerIndex, ref pair, ref Unsafe.AsRef<TContactManifold>(manifoldPointer), ref collisionCache, ref pairMaterial, bodyHandles);
+                }
+                else
+                {
+                    //One of the two collidables is static.
+                    Debug.Assert(pair.A.Mobility != CollidableMobility.Static && pair.B.Mobility == CollidableMobility.Static);
+                    UpdateConstraintForManifold(workerIndex, ref pair, ref Unsafe.AsRef<TContactManifold>(manifoldPointer), ref collisionCache, ref pairMaterial, pair.A.Handle);
                 }
                 //In the event that there are no contacts in the new manifold, the pair is left in a stale state. It will be removed by the stale removal post process. 
             }

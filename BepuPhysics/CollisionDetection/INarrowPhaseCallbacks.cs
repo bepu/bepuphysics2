@@ -35,14 +35,23 @@ namespace BepuPhysics.CollisionDetection
 
 
         /// <summary>
-        /// Provides a notification that a manifold has been created. Offers an opportunity to change the manifold's details. 
+        /// Provides a notification that a manifold has been created for a pair. Offers an opportunity to change the manifold's details. 
         /// </summary>
         /// <param name="workerIndex">Index of the worker thread that created this manifold.</param>
         /// <param name="pair">Pair of collidables that the manifold was detected between.</param>
         /// <param name="manifold">Set of contacts detected between the collidables.</param>
         /// <param name="pairMaterial">Material properties of the manifold.</param>
         /// <returns>True if a constraint should be created for the manifold, false otherwise.</returns>
-        bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ContactManifold* manifold, out PairMaterialProperties pairMaterial);
+        bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial);
+        /// <summary>
+        /// Provides a notification that a manifold has been created for a pair. Offers an opportunity to change the manifold's details. 
+        /// </summary>
+        /// <param name="workerIndex">Index of the worker thread that created this manifold.</param>
+        /// <param name="pair">Pair of collidables that the manifold was detected between.</param>
+        /// <param name="manifold">Set of contacts detected between the collidables.</param>
+        /// <param name="pairMaterial">Material properties of the manifold.</param>
+        /// <returns>True if a constraint should be created for the manifold, false otherwise.</returns>
+        bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial);
 
         //TODO: There is an argument for finer grained material tuning, both per child and per contact. Need an efficient way to do this before we commit-
         //one possibility is a material per convex manifold. For nonconvex manifolds, there would be a material property per contact.
@@ -68,7 +77,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="childIndexB">Index of the child of collidable B in the pair. If collidable B is not compound, then this is always 0.</param>
         /// <param name="manifold">Set of contacts detected between the collidables.</param>
         /// <returns>True if this manifold should be considered for constraint generation, false otherwise.</returns>
-        bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ContactManifold* manifold);
+        bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ConvexContactManifold* manifold);
         
         /// <summary>
         /// Releases any resources held by the callbacks. Called by the owning narrow phase when it is being disposed.

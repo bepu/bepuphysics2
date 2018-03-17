@@ -42,4 +42,55 @@ namespace BepuPhysics.CollisionDetection
         public int TypeId => 3;
     }
 
+    public struct ConstraintCache5 : IPairCacheEntry
+    {
+        public int ConstraintHandle;
+        public int FeatureId0;
+        public int FeatureId1;
+        public int FeatureId2;
+        public int FeatureId3;
+        public int FeatureId4;
+
+        public int TypeId => 4;
+    }
+    public struct ConstraintCache6 : IPairCacheEntry
+    {
+        public int ConstraintHandle;
+        public int FeatureId0;
+        public int FeatureId1;
+        public int FeatureId2;
+        public int FeatureId3;
+        public int FeatureId4;
+        public int FeatureId5;
+
+        public int TypeId => 5;
+    }
+    public struct ConstraintCache7 : IPairCacheEntry
+    {
+        public int ConstraintHandle;
+        public int FeatureId0;
+        public int FeatureId1;
+        public int FeatureId2;
+        public int FeatureId3;
+        public int FeatureId4;
+        public int FeatureId5;
+        public int FeatureId6;
+
+        public int TypeId => 6;
+    }
+    public struct ConstraintCache8 : IPairCacheEntry
+    {
+        public int ConstraintHandle;
+        public int FeatureId0;
+        public int FeatureId1;
+        public int FeatureId2;
+        public int FeatureId3;
+        public int FeatureId4;
+        public int FeatureId5;
+        public int FeatureId6;
+        public int FeatureId7;
+
+        public int TypeId => 7;
+    }
+
 }

@@ -57,9 +57,9 @@ namespace BepuPhysics.CollisionDetection
         public abstract void FlushSequentially<TCallbacks>(ref UntypedList list, int narrowPhaseConstraintTypeId, Simulation simulation, PairCache pairCache)
             where TCallbacks : struct, INarrowPhaseCallbacks;
 
-        public abstract unsafe void UpdateConstraintForManifold<TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public abstract unsafe void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
-            ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
+            ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
             where TCallbacks : struct, INarrowPhaseCallbacks
             where TCollisionCache : IPairCacheEntry;
 
@@ -76,10 +76,18 @@ namespace BepuPhysics.CollisionDetection
                 typeof(TContactImpulses) == typeof(ContactImpulses1) ||
                 typeof(TContactImpulses) == typeof(ContactImpulses2) ||
                 typeof(TContactImpulses) == typeof(ContactImpulses3) ||
-                typeof(TContactImpulses) == typeof(ContactImpulses4));
+                typeof(TContactImpulses) == typeof(ContactImpulses4) ||
+                typeof(TContactImpulses) == typeof(ContactImpulses5) ||
+                typeof(TContactImpulses) == typeof(ContactImpulses6) ||
+                typeof(TContactImpulses) == typeof(ContactImpulses7) ||
+                typeof(TContactImpulses) == typeof(ContactImpulses8));
             ContactCount = Unsafe.SizeOf<TContactImpulses>() / Unsafe.SizeOf<float>();
             Debug.Assert((ContactCount + 3) * Unsafe.SizeOf<Vector<float>>() == Unsafe.SizeOf<TAccumulatedImpulses>(),
                 "The layout of accumulated impulses seems to have changed; the assumptions of contact accessors are probably no longer valid.");
+            //Note that this test has to special case count == 1; 1 contact manifolds have no feature ids.
+            Debug.Assert(Unsafe.SizeOf<TConstraintCache>() == ((ContactCount == 1) ? sizeof(int) : sizeof(int) * (1 + ContactCount)) &&
+                default(TConstraintCache).TypeId == ContactCount - 1,
+                "The type of the constraint cache should hold as many contacts as the contact impulses requires.");
             AccumulatedImpulseBundleStrideInBytes = Unsafe.SizeOf<TAccumulatedImpulses>();
             ConstraintTypeId = default(TConstraintDescription).ConstraintTypeId;
         }
@@ -108,182 +116,144 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static unsafe void UpdateConstraint<TCallbacks, TCollisionCache, TCallBodyHandles>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
-            ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache, ref TConstraintDescription description, TCallBodyHandles bodyHandles)
+            ref CollidablePair pair, ref TConstraintCache constraintCache, ref TCollisionCache collisionCache, ref TConstraintDescription description, TCallBodyHandles bodyHandles)
             where TCallbacks : struct, INarrowPhaseCallbacks where TCollisionCache : IPairCacheEntry
         {
             //Note that we let the user pass in a body handles type to a generic function, rather than requiring that the top level abstract class define the type.
             //That allows a type inconsistency, but it's easy to catch.
             Debug.Assert(typeof(TCallBodyHandles) == typeof(TBodyHandles), "Don't call an update with inconsistent body handle types.");
             narrowPhase.UpdateConstraint<TBodyHandles, TConstraintDescription, TContactImpulses, TCollisionCache, TConstraintCache>(
-                workerIndex, ref pair, manifold, manifoldTypeAsConstraintType, ref collisionCache, ref description, Unsafe.As<TCallBodyHandles, TBodyHandles>(ref bodyHandles));
+                workerIndex, ref pair, manifoldTypeAsConstraintType, ref constraintCache, ref collisionCache, ref description, Unsafe.As<TCallBodyHandles, TBodyHandles>(ref bodyHandles));
         }
-    }
 
-    //TODO: The following has a fairly goofy amount of redundancy. It's not as bad as the original version, but should you find yourself needing to make any significant changes
-    //to the layout, that would probably be a good time to bite the bullet and unify these. At least at the level of convex/nonconvex x onebody/twobody.
-    public class Contact1OneBodyAccessor : ContactConstraintAccessor<Contact1OneBody, int, Contact1AccumulatedImpulses, ContactImpulses1, ConstraintCache1>
-    {
-        public override unsafe void UpdateConstraintForManifold<TCollisionCache, TCallBodyHandles, TCallbacks>(
-            NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
-            ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
+        protected static void CopyContactData(ref ConvexContactManifold manifold, out TConstraintCache constraintCache, out TConstraintDescription description)
         {
-            Contact1OneBody description;
-            description.Contact0.OffsetA = manifold->Offset0;
-            description.Contact0.PenetrationDepth = manifold->Depth0;
-            description.FrictionCoefficient = material.FrictionCoefficient;
-            description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-            description.SpringSettings = material.SpringSettings;
-            description.Normal = manifold->ConvexNormal;
-
-            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, manifold, ref collisionCache, ref description, bodyHandles);
+            //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
+            constraintCache = default;
+            description = default;
+            //TODO: Check codegen. This should be a compilation time constant. If it's not, just use the ContactCount that we cached.
+            var contactCount = constraintCache.TypeId + 1;
+            //Contact data comes first in the constraint description memory layout.
+            ref var targetContacts = ref Unsafe.As<TConstraintDescription, ConstraintContactData>(ref description);
+            if (typeof(TConstraintCache) != typeof(ConstraintCache1))
+            {
+                ref var targetFeatureIds = ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1);
+                for (int i = 0; i < contactCount; ++i)
+                {
+                    ref var sourceContact = ref Unsafe.Add(ref manifold.Contact0, i);
+                    ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
+                    Unsafe.Add(ref targetFeatureIds, i) = sourceContact.FeatureId;
+                    targetContact.OffsetA = sourceContact.Offset;
+                    targetContact.PenetrationDepth = sourceContact.Depth;
+                }
+            }
+            else
+            {
+                //Single contact constraints do not have any feature ids.
+                for (int i = 0; i < contactCount; ++i)
+                {
+                    ref var sourceContact = ref Unsafe.Add(ref manifold.Contact0, i);
+                    ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
+                    targetContact.OffsetA = sourceContact.Offset;
+                    targetContact.PenetrationDepth = sourceContact.Depth;
+                }
+            }
         }
-    }
-    public class Contact2OneBodyAccessor : ContactConstraintAccessor<Contact2OneBody, int, Contact2AccumulatedImpulses, ContactImpulses2, ConstraintCache2>
-    {
-        public override unsafe void UpdateConstraintForManifold<TCollisionCache, TCallBodyHandles, TCallbacks>(
-            NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
-            ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
+        protected static void CopyContactData(ref NonconvexContactManifold manifold, out TConstraintCache constraintCache, out TConstraintDescription description)
         {
-            Contact2OneBody description;
-            description.Contact0.OffsetA = manifold->Offset0;
-            description.Contact0.PenetrationDepth = manifold->Depth0;
-            description.Contact1.OffsetA = manifold->Offset1;
-            description.Contact1.PenetrationDepth = manifold->Depth1;
-            description.FrictionCoefficient = material.FrictionCoefficient;
-            description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-            description.SpringSettings = material.SpringSettings;
-            description.Normal = manifold->ConvexNormal;
-
-            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, manifold, ref collisionCache, ref description, bodyHandles);
+            //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
+            constraintCache = default;
+            description = default;
+            //TODO: Check codegen. This should be a compilation time constant. If it's not, just use the ContactCount that we cached.
+            var contactCount = constraintCache.TypeId + 1;
+            //Contact data comes first in the constraint description memory layout.
+            ref var targetContacts = ref Unsafe.As<TConstraintDescription, ConstraintContactData>(ref description);
+            if (typeof(TConstraintCache) != typeof(ConstraintCache1))
+            {
+                ref var targetFeatureIds = ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1);
+                for (int i = 0; i < contactCount; ++i)
+                {
+                    ref var sourceContact = ref Unsafe.Add(ref manifold.Contact0, i);
+                    ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
+                    Unsafe.Add(ref targetFeatureIds, i) = sourceContact.FeatureId;
+                    targetContact.OffsetA = sourceContact.Offset;
+                    targetContact.PenetrationDepth = sourceContact.Depth;
+                }
+            }
+            else
+            {
+                //Single contact constraints do not have any feature ids.
+                for (int i = 0; i < contactCount; ++i)
+                {
+                    ref var sourceContact = ref Unsafe.Add(ref manifold.Contact0, i);
+                    ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
+                    targetContact.OffsetA = sourceContact.Offset;
+                    targetContact.PenetrationDepth = sourceContact.Depth;
+                }
+            }
         }
     }
-    public class Contact3OneBodyAccessor : ContactConstraintAccessor<Contact3OneBody, int, Contact3AccumulatedImpulses, ContactImpulses3, ConstraintCache3>
+    public class ConvexOneBodyAccessor<TConstraintDescription, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
+        ContactConstraintAccessor<TConstraintDescription, int, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+        where TConstraintDescription : IConvexOneBodyContactConstraintDescription<TConstraintDescription>
+        where TConstraintCache : IPairCacheEntry
     {
-        public override unsafe void UpdateConstraintForManifold<TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
-            ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
+            ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
-            Contact3OneBody description;
-            description.Contact0.OffsetA = manifold->Offset0;
-            description.Contact0.PenetrationDepth = manifold->Depth0;
-            description.Contact1.OffsetA = manifold->Offset1;
-            description.Contact1.PenetrationDepth = manifold->Depth1;
-            description.Contact2.OffsetA = manifold->Offset2;
-            description.Contact2.PenetrationDepth = manifold->Depth2;
-            description.FrictionCoefficient = material.FrictionCoefficient;
-            description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-            description.SpringSettings = material.SpringSettings;
-            description.Normal = manifold->ConvexNormal;
-
-            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, manifold, ref collisionCache, ref description, bodyHandles);
+            ref var manifold = ref Unsafe.As<TContactManifold, ConvexContactManifold>(ref manifoldPointer);
+            CopyContactData(ref manifold, out var constraintCache, out var description);
+            description.CopyManifoldWideProperties(ref manifold.Normal, ref material);
+            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
         }
     }
-    public class Contact4OneBodyAccessor : ContactConstraintAccessor<Contact4OneBody, int, Contact4AccumulatedImpulses, ContactImpulses4, ConstraintCache4>
+
+    public class ConvexTwoBodyAccessor<TConstraintDescription, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
+        ContactConstraintAccessor<TConstraintDescription, TwoBodyHandles, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+        where TConstraintDescription : IConvexTwoBodyContactConstraintDescription<TConstraintDescription>
+        where TConstraintCache : IPairCacheEntry
+    {        
+        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
+            NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
+            ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
+        {
+            ref var manifold = ref Unsafe.As<TContactManifold, ConvexContactManifold>(ref manifoldPointer);
+            CopyContactData(ref manifold, out var constraintCache, out var description);
+            description.CopyManifoldWideProperties(ref manifold.OffsetB, ref manifold.Normal, ref material);
+            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
+        }
+    }
+
+    public class NonconvexOneBodyAccessor<TConstraintDescription, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
+        ContactConstraintAccessor<TConstraintDescription, int, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+        where TConstraintDescription : INonconvexOneBodyContactConstraintDescription<TConstraintDescription>
+        where TConstraintCache : IPairCacheEntry
     {
-        public override unsafe void UpdateConstraintForManifold<TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
-            ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
+            ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
-            Contact4OneBody description;
-            description.Contact0.OffsetA = manifold->Offset0;
-            description.Contact0.PenetrationDepth = manifold->Depth0;
-            description.Contact1.OffsetA = manifold->Offset1;
-            description.Contact1.PenetrationDepth = manifold->Depth1;
-            description.Contact2.OffsetA = manifold->Offset2;
-            description.Contact2.PenetrationDepth = manifold->Depth2;
-            description.Contact3.OffsetA = manifold->Offset3;
-            description.Contact3.PenetrationDepth = manifold->Depth3;
-            description.FrictionCoefficient = material.FrictionCoefficient;
-            description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-            description.SpringSettings = material.SpringSettings;
-            description.Normal = manifold->ConvexNormal;
-
-            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, manifold, ref collisionCache, ref description, bodyHandles);
+            ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
+            CopyContactData(ref manifold, out var constraintCache, out var description);
+            description.CopyManifoldWideProperties(ref material);
+            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
         }
     }
-    public class Contact1Accessor : ContactConstraintAccessor<Contact1, TwoBodyHandles, Contact1AccumulatedImpulses, ContactImpulses1, ConstraintCache1>
+
+    public class NonconvexTwoBodyAccessor<TConstraintDescription, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
+        ContactConstraintAccessor<TConstraintDescription, TwoBodyHandles, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+        where TConstraintDescription : INonconvexTwoBodyContactConstraintDescription<TConstraintDescription>
+        where TConstraintCache : IPairCacheEntry
     {
-        public override unsafe void UpdateConstraintForManifold<TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
-            ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
+            ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
-            Contact1 description;
-            description.Contact0.OffsetA = manifold->Offset0;
-            description.Contact0.PenetrationDepth = manifold->Depth0;
-            description.OffsetB = manifold->OffsetB;
-            description.FrictionCoefficient = material.FrictionCoefficient;
-            description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-            description.SpringSettings = material.SpringSettings;
-            description.Normal = manifold->ConvexNormal;
-
-            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, manifold, ref collisionCache, ref description, bodyHandles);
+            ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
+            CopyContactData(ref manifold, out var constraintCache, out var description);
+            description.CopyManifoldWideProperties(ref manifold.OffsetB, ref material);
+            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
         }
     }
-    public class Contact2Accessor : ContactConstraintAccessor<Contact2, TwoBodyHandles, Contact2AccumulatedImpulses, ContactImpulses2, ConstraintCache2>
-    {
-        public override unsafe void UpdateConstraintForManifold<TCollisionCache, TCallBodyHandles, TCallbacks>(
-            NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
-            ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
-        {
-            Contact2 description;
-            description.Contact0.OffsetA = manifold->Offset0;
-            description.Contact0.PenetrationDepth = manifold->Depth0;
-            description.Contact1.OffsetA = manifold->Offset1;
-            description.Contact1.PenetrationDepth = manifold->Depth1;
-            description.OffsetB = manifold->OffsetB;
-            description.FrictionCoefficient = material.FrictionCoefficient;
-            description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-            description.SpringSettings = material.SpringSettings;
-            description.Normal = manifold->ConvexNormal;
-
-            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, manifold, ref collisionCache, ref description, bodyHandles);
-        }
-    }
-    public class Contact3Accessor : ContactConstraintAccessor<Contact3, TwoBodyHandles, Contact3AccumulatedImpulses, ContactImpulses3, ConstraintCache3>
-    {
-        public override unsafe void UpdateConstraintForManifold<TCollisionCache, TCallBodyHandles, TCallbacks>(
-            NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
-            ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
-        {
-            Contact3 description;
-            description.Contact0.OffsetA = manifold->Offset0;
-            description.Contact0.PenetrationDepth = manifold->Depth0;
-            description.Contact1.OffsetA = manifold->Offset1;
-            description.Contact1.PenetrationDepth = manifold->Depth1;
-            description.Contact2.OffsetA = manifold->Offset2;
-            description.Contact2.PenetrationDepth = manifold->Depth2;
-            description.OffsetB = manifold->OffsetB;
-            description.FrictionCoefficient = material.FrictionCoefficient;
-            description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-            description.SpringSettings = material.SpringSettings;
-            description.Normal = manifold->ConvexNormal;
-
-            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, manifold, ref collisionCache, ref description, bodyHandles);
-        }
-    }
-    public class Contact4Accessor : ContactConstraintAccessor<Contact4, TwoBodyHandles, Contact4AccumulatedImpulses, ContactImpulses4, ConstraintCache4>
-    {
-        public override unsafe void UpdateConstraintForManifold<TCollisionCache, TCallBodyHandles, TCallbacks>(
-            NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
-            ref CollidablePair pair, ContactManifold* manifold, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
-        {
-            Contact4 description;
-            description.Contact0.OffsetA = manifold->Offset0;
-            description.Contact0.PenetrationDepth = manifold->Depth0;
-            description.Contact1.OffsetA = manifold->Offset1;
-            description.Contact1.PenetrationDepth = manifold->Depth1;
-            description.Contact2.OffsetA = manifold->Offset2;
-            description.Contact2.PenetrationDepth = manifold->Depth2;
-            description.Contact3.OffsetA = manifold->Offset3;
-            description.Contact3.PenetrationDepth = manifold->Depth3;
-            description.OffsetB = manifold->OffsetB;
-            description.FrictionCoefficient = material.FrictionCoefficient;
-            description.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
-            description.SpringSettings = material.SpringSettings;
-            description.Normal = manifold->ConvexNormal;
-
-            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, manifold, ref collisionCache, ref description, bodyHandles);
-        }
-    }
-
 }

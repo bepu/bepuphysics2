@@ -8,21 +8,12 @@ using Quaternion = BepuUtilities.Quaternion;
 using static BepuPhysics.GatherScatter;
 namespace BepuPhysics.Constraints.Contact
 {
-
-    public struct ManifoldContactData
+    public struct Contact4 : IConvexTwoBodyContactConstraintDescription<Contact4>
     {
-        //TODO: Arguably storing this to match the prestep layout would be a better idea for contiguity. Consider it later.
-        public Vector3 OffsetA;
-        public float PenetrationDepth;
-    }
-
-
-    public struct Contact4 : IConstraintDescription<Contact4>
-    {
-        public ManifoldContactData Contact0;
-        public ManifoldContactData Contact1;
-        public ManifoldContactData Contact2;
-        public ManifoldContactData Contact3;
+        public ConstraintContactData Contact0;
+        public ConstraintContactData Contact1;
+        public ConstraintContactData Contact2;
+        public ConstraintContactData Contact3;
         public Vector3 OffsetB;
         public float FrictionCoefficient;
         public Vector3 Normal;
@@ -103,6 +94,16 @@ namespace BepuPhysics.Constraints.Contact
             description.Contact2.PenetrationDepth = GetFirst(ref source.PenetrationDepth2);
             description.Contact3.PenetrationDepth = GetFirst(ref source.PenetrationDepth3);
 
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void CopyManifoldWideProperties(ref Vector3 offsetB, ref Vector3 normal, ref PairMaterialProperties material)
+        {
+            OffsetB = offsetB;
+            FrictionCoefficient = material.FrictionCoefficient;
+            Normal = normal;
+            SpringSettings = material.SpringSettings;
+            MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
 
         public int ConstraintTypeId
@@ -257,6 +258,6 @@ namespace BepuPhysics.Constraints.Contact
         //UnposedTwoBodyTypeBatch<ContactManifold4PrestepData, ContactManifold4Projection, ContactManifold4AccumulatedImpulses, ContactManifold4>
         TwoBodyTypeProcessor<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses, Contact4Functions>
     {
-        public const int BatchTypeId = 11;
+        public const int BatchTypeId = 7;
     }
 }

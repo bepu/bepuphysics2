@@ -8,11 +8,11 @@ using Quaternion = BepuUtilities.Quaternion;
 using static BepuPhysics.GatherScatter;
 namespace BepuPhysics.Constraints.Contact
 {
-    public struct Contact3OneBody : IConstraintDescription<Contact3OneBody>
+    public struct Contact3OneBody : IConvexOneBodyContactConstraintDescription<Contact3OneBody>
     {
-        public ManifoldContactData Contact0;
-        public ManifoldContactData Contact1;
-        public ManifoldContactData Contact2;
+        public ConstraintContactData Contact0;
+        public ConstraintContactData Contact1;
+        public ConstraintContactData Contact2;
         public float FrictionCoefficient;
         public Vector3 Normal;
         public SpringSettings SpringSettings;
@@ -76,6 +76,15 @@ namespace BepuPhysics.Constraints.Contact
             description.Contact1.PenetrationDepth = GetFirst(ref source.PenetrationDepth1);
             description.Contact2.PenetrationDepth = GetFirst(ref source.PenetrationDepth2);
 
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void CopyManifoldWideProperties(ref Vector3 normal, ref PairMaterialProperties material)
+        {
+            FrictionCoefficient = material.FrictionCoefficient;
+            Normal = normal;
+            SpringSettings = material.SpringSettings;
+            MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
 
         public int ConstraintTypeId

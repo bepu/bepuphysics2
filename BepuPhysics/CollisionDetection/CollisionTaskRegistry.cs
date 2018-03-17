@@ -8,7 +8,8 @@ namespace BepuPhysics.CollisionDetection
     public interface ICollisionCallbacks
     {
         //TODO: In the future, continuations will need to be able to take typed collision caches. The PairCache will store cached separating axes for hull-hull acceleration and similar things.
-        unsafe void OnPairCompleted(int pairId, ContactManifold* manifold);
+        unsafe void OnPairCompleted(int pairId, ConvexContactManifold* manifold);
+        unsafe void OnPairCompleted(int pairId, NonconvexContactManifold* manifold);
 
         /// <summary>
         /// Provides control over subtask generated results before they are reported to the parent task.
@@ -17,7 +18,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="childA">Index of the child belonging to collidable A in the subpair under consideration.</param>
         /// <param name="childB">Index of the child belonging to collidable B in the subpair under consideration.</param>
         /// <param name="manifold">Manifold of the child pair to configure.</param>
-        unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ContactManifold* manifold);
+        unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ConvexContactManifold* manifold);
 
         /// <summary>
         /// Checks whether further collision testing should be performed for a given subtask.
