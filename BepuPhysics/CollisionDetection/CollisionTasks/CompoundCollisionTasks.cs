@@ -54,7 +54,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         //2) The data contained is copied by the time Add returns, so there's no concern about invalid pointers getting stored.
                         var continuationInfo = new PairContinuation(pair.Shared.Continuation.PairId, childA, childB, CollisionContinuationType.NonconvexReduction, continuationIndex);
                         batcher.Add(pair.A.TypeId, child.ShapeIndex.Type, Unsafe.SizeOf<TConvex>(), childShapeSize, Unsafe.AsPointer(ref pair.A), childShapePointer,
-                            ref pair.Shared.PoseA, ref childWorldPose, ref continuationInfo);
+                            ref pair.Shared.PoseA, ref childWorldPose, pair.Shared.SpeculativeMargin, ref continuationInfo);
                     }
                     else
                     {

@@ -156,13 +156,11 @@ namespace BepuPhysics.CollisionDetection
             struct DiscretePair
             {
                 public CollidablePair Pair;
-                public float SpeculativeMargin;
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Initialize(ref CollidablePair pair, float speculativeMargin)
+                public void Initialize(ref CollidablePair pair)
                 {
                     Pair = pair;
-                    SpeculativeMargin = speculativeMargin;
                 }
             }
             struct LinearPair
@@ -171,14 +169,12 @@ namespace BepuPhysics.CollisionDetection
                 public ConvexContactManifold DiscreteManifold;
                 public NonconvexContactManifold LinearManifold;
                 public CollidablePair Pair;
-                public float SpeculativeMargin;
                 public int ManifoldsReported;
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Initialize(ref CollidablePair pair, float speculativeMargin)
+                public void Initialize(ref CollidablePair pair)
                 {
                     Pair = pair;
-                    SpeculativeMargin = speculativeMargin;
                     ManifoldsReported = 0;
                     LinearManifold.Count = 2;
                 }
@@ -188,15 +184,13 @@ namespace BepuPhysics.CollisionDetection
             {
                 public SubstepManifolds Manifolds;
                 public CollidablePair Pair;
-                public float SpeculativeMargin;
                 public int ManifoldsReported;
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Initialize(BufferPool pool, int substepCapacity, ref CollidablePair pair, float speculativeMargin)
+                public void Initialize(BufferPool pool, int substepCapacity, ref CollidablePair pair)
                 {
                     Manifolds.Initialize(pool, substepCapacity);
                     Pair = pair;
-                    SpeculativeMargin = speculativeMargin;
                     ManifoldsReported = 0;
                 }
             }
@@ -207,16 +201,14 @@ namespace BepuPhysics.CollisionDetection
                 //TODO: Only handles convexes for now; need to revisit later.
                 public NonconvexContactManifold LinearManifold;
                 public CollidablePair Pair;
-                public float SpeculativeMargin;
                 public int ManifoldsReported;
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Initialize(BufferPool pool, int substepCapacity, ref CollidablePair pair, float speculativeMargin)
+                public void Initialize(BufferPool pool, int substepCapacity, ref CollidablePair pair)
                 {
                     SubstepManifolds.Initialize(pool, substepCapacity);
                     Pair = pair;
                     ManifoldsReported = 0;
-                    SpeculativeMargin = speculativeMargin;
                     LinearManifold.Count = 2;
                 }
             }
@@ -275,27 +267,27 @@ namespace BepuPhysics.CollisionDetection
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ContinuationIndex AddDiscrete(ref CollidablePair pair, float speculativeMargin)
+            public ContinuationIndex AddDiscrete(ref CollidablePair pair)
             {
-                discrete.Allocate(pool, out var index).Initialize(ref pair, speculativeMargin);
+                discrete.Allocate(pool, out var index).Initialize(ref pair);
                 return new ContinuationIndex((int)ConstraintGeneratorType.Discrete, index, 0);
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int AddLinear(ref CollidablePair pair, float speculativeMargin)
+            public int AddLinear(ref CollidablePair pair)
             {
-                linear.Allocate(pool, out var index).Initialize(ref pair, speculativeMargin);
+                linear.Allocate(pool, out var index).Initialize(ref pair);
                 return index;
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int AddSubsteps(ref CollidablePair pair, int substepCount, float speculativeMargin)
+            public int AddSubsteps(ref CollidablePair pair, int substepCount)
             {
-                substep.Allocate(pool, out var index).Initialize(pool, substepCount, ref pair, speculativeMargin);
+                substep.Allocate(pool, out var index).Initialize(pool, substepCount, ref pair);
                 return index;
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int AddSubstepsWithLinear(ref CollidablePair pair, int substepCount, float speculativeMargin)
+            public int AddSubstepsWithLinear(ref CollidablePair pair, int substepCount)
             {
-                substepWithLinear.Allocate(pool, out var index).Initialize(pool, substepCount, ref pair, speculativeMargin);
+                substepWithLinear.Allocate(pool, out var index).Initialize(pool, substepCount, ref pair);
                 return index;
             }
 

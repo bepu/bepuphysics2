@@ -71,6 +71,7 @@ namespace BepuPhysics.CollisionDetection
         public int FlipMask;
         public RigidPose PoseA;
         public RigidPose PoseB;
+        public float SpeculativeMargin;
         public PairContinuation Continuation;
     }
 
@@ -222,7 +223,7 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void Add(ref CollisionTaskReference reference,
-            int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
+            int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin, 
             int flipMask, ref PairContinuation pairContinuationInfo)
         {
             ref var batch = ref batches[reference.TaskIndex];
@@ -233,6 +234,7 @@ namespace BepuPhysics.CollisionDetection
             poses->FlipMask = flipMask;
             poses->PoseA = poseA;
             poses->PoseB = poseB;
+            poses->SpeculativeMargin = speculativeMargin;
             poses->Continuation = pairContinuationInfo;
             if (batch.Count == reference.BatchSize)
             {
@@ -245,7 +247,7 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
-            int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
+            int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin,
             ref PairContinuation pairContinuationInfo)
         {
             ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
@@ -270,39 +272,40 @@ namespace BepuPhysics.CollisionDetection
             if (shapeTypeA != reference.ExpectedFirstTypeId)
             {
                 //The inputs need to be reordered to guarantee that the collision tasks are handed data in the proper order.
-                Add(ref reference, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, -1, ref pairContinuationInfo);
+                Add(ref reference, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, speculativeMargin, -1, ref pairContinuationInfo);
             }
             else
             {
-                Add(ref reference, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, 0, ref pairContinuationInfo);
+                Add(ref reference, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, speculativeMargin, 0, ref pairContinuationInfo);
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
-           int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB,
+           int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin,
            int pairId)
         {
             var pairContinuationInfo = new PairContinuation(pairId);
-            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, ref pairContinuationInfo);
+            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, speculativeMargin, ref pairContinuationInfo);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB, ref PairContinuation pairContinuationInfo)
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin, 
+            ref PairContinuation pairContinuationInfo)
         {
             var shapeTypeA = shapeIndexA.Type;
             var shapeTypeB = shapeIndexB.Type;
             Shapes[shapeIndexA.Type].GetShapeData(shapeIndexA.Index, out var shapeA, out var shapeSizeA);
             Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
-            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, ref pairContinuationInfo);
+            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, speculativeMargin, ref pairContinuationInfo);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB, int pairId)
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin, int pairId)
         {
             var pairContinuationInfo = new PairContinuation(pairId);
-            Add(shapeIndexA, shapeIndexB, ref poseA, ref poseB, ref pairContinuationInfo);
+            Add(shapeIndexA, shapeIndexB, ref poseA, ref poseB, speculativeMargin, ref pairContinuationInfo);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB, int pairId)
+        public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin, int pairId)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
         {
             //Note that the shapes are passed by copy to avoid a GC hole. This isn't optimal, but it does allow a single code path, and the underlying function is the one
@@ -311,7 +314,7 @@ namespace BepuPhysics.CollisionDetection
             //(We could also have an explicit 'unsafe' overload, but that API complexity doesn't seem worthwhile. My guess is nontrivial uses will all use the underlying function directly.)
             var continuation = new PairContinuation(pairId);
             Add(shapeA.TypeId, shapeB.TypeId, Unsafe.SizeOf<TShapeA>(), Unsafe.SizeOf<TShapeB>(), Unsafe.AsPointer(ref shapeA), Unsafe.AsPointer(ref shapeB),
-                ref poseA, ref poseB, ref continuation);
+                ref poseA, ref poseB, speculativeMargin, ref continuation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

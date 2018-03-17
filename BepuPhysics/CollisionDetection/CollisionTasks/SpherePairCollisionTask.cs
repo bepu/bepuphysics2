@@ -8,18 +8,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     //Individual pair testers are designed to be used outside of the narrow phase. They need to be usable for queries and such, so all necessary data must be gathered externally.
     public struct SpherePairTester : IPairTester<SphereWide, SphereWide, Convex1ContactManifoldWide>
     {
-        public void Test(ref SphereWide a, ref SphereWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
+        public void Test(ref SphereWide a, ref SphereWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref SphereWide a, ref SphereWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
+        public void Test(ref SphereWide a, ref SphereWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Test(ref SphereWide a, ref SphereWide b, ref Vector3Wide offsetB, out Convex1ContactManifoldWide manifold)
+        public void Test(ref SphereWide a, ref SphereWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex1ContactManifoldWide manifold)
         {
             Vector3Wide.Length(ref offsetB, out var centerDistance);
             //Note the negative 1. By convention, the normal points from B to A.
@@ -35,7 +35,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //The contact position relative to object A is computed as the average of the extreme point along the normal toward the opposing sphere on each sphere, averaged.
             var negativeOffsetFromA = manifold.Depth * 0.5f - a.Radius;
             Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA, out manifold.OffsetA);
-            manifold.Count = new Vector<int>(1);
+            manifold.ContactExists = Vector.GreaterThan(manifold.Depth, -speculativeMargin);
         }
     }
 

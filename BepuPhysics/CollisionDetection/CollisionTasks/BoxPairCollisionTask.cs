@@ -98,7 +98,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Test(
-            ref BoxWide a, ref BoxWide b,
+            ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Convex4ContactManifoldWide manifold)
         {
@@ -392,8 +392,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useDepthIndex = Vector.GreaterThan(deepest.Depth - minDepth, new Vector<float>(1e-2f) * epsilonScale);
             Candidate contact0;
             ConditionalSelect(ref useDepthIndex, ref deepest, ref extreme, ref contact0);
-            var contact0Exists = Vector.GreaterThan(rawContactCount, Vector<int>.Zero);
-            manifold.Count = Vector.ConditionalSelect(contact0Exists, Vector<int>.One, Vector<int>.Zero);
+            manifold.Contact0Exists = Vector.GreaterThan(rawContactCount, Vector<int>.Zero);
 
             //Find the most distant point from the starting contact.
             var maxDistanceSquared = Vector<float>.Zero;
@@ -404,13 +403,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var offsetX = candidate.X - contact0.X;
                 var offsetY = candidate.Y - contact0.Y;
                 var distanceSquared = offsetX * offsetX + offsetY * offsetY;
-                var candidateIsMostDistant = Vector.BitwiseAnd(Vector.GreaterThan(distanceSquared, maxDistanceSquared), Vector.LessThan(new Vector<int>(i), rawContactCount));
+                var indexIsValid = Vector.LessThan(new Vector<int>(i), rawContactCount);
+                var candidateIsMostDistant = Vector.BitwiseAnd(Vector.GreaterThan(distanceSquared, maxDistanceSquared), indexIsValid);
                 maxDistanceSquared = Vector.ConditionalSelect(candidateIsMostDistant, distanceSquared, maxDistanceSquared);
                 ConditionalSelect(ref candidateIsMostDistant, ref candidate, ref contact1, ref contact1);
             }
             //There's no point in additional contacts if the distance between the first and second candidates is zero. Note that this captures the case where there is 0 or 1 contact.
-            var contact1Exists = Vector.GreaterThan(maxDistanceSquared, epsilonScale * epsilonScale * new Vector<float>(1e-6f));
-            manifold.Count = Vector.ConditionalSelect(contact1Exists, manifold.Count + Vector<int>.One, manifold.Count);
+            manifold.Contact1Exists = Vector.GreaterThan(maxDistanceSquared, epsilonScale * epsilonScale * new Vector<float>(1e-6f));
 
             //Now identify two more points. Using the two existing contacts as a starting edge, pick the points which, when considered as a triangle with the edge,
             //have the largest magnitude negative and positive signed areas.
@@ -443,32 +442,29 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var epsilon = maxDistanceSquared * maxDistanceSquared * new Vector<float>(1e-6f);
             //Note that minSignedArea is guaranteed to be zero or lower by construction, so it's safe to square for magnitude comparison.
             //Note that these epsilons capture the case where there are two or less raw contacts.
-            var minExists = Vector.GreaterThan(minSignedArea * minSignedArea, epsilon);
-            manifold.Count = Vector.ConditionalSelect(minExists, manifold.Count + Vector<int>.One, manifold.Count);
-            var maxExists = Vector.GreaterThan(maxSignedArea * maxSignedArea, epsilon);
-            manifold.Count = Vector.ConditionalSelect(maxExists, manifold.Count + Vector<int>.One, manifold.Count);
-
-            //If there is no min, then the fourth contact should just get put into the third slot. Note that we only had to deal with this now (and not on the previous two contacts)
-            //because the existence of the second contact depended on the first, and the third upon the second.
-            //But we don't know ahead of time whether there exist min or max signed area contacts.
-            var maxShouldGoIntoThirdSlot = Vector.AndNot(maxExists, minExists);
-            ConditionalSelect(ref maxShouldGoIntoThirdSlot, ref contact3, ref contact2, ref contact2);
+            manifold.Contact2Exists = Vector.GreaterThan(minSignedArea * minSignedArea, epsilon);
+            manifold.Contact3Exists = Vector.GreaterThan(maxSignedArea * maxSignedArea, epsilon);
 
             //Transform the contacts into the manifold.
-            TransformContactToManifold(ref contact0, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA0, ref manifold.Depth0, ref manifold.FeatureId0);
-            TransformContactToManifold(ref contact1, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA1, ref manifold.Depth1, ref manifold.FeatureId1);
-            TransformContactToManifold(ref contact2, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA2, ref manifold.Depth2, ref manifold.FeatureId2);
-            TransformContactToManifold(ref contact3, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA3, ref manifold.Depth3, ref manifold.FeatureId3);
+            var minimumAcceptedDepth = -speculativeMargin;
+            TransformContactToManifold(ref contact0, ref faceCenterB, ref tangentBX, ref tangentBY, ref minimumAcceptedDepth, ref manifold.Contact0Exists, ref manifold.OffsetA0, ref manifold.Depth0, ref manifold.FeatureId0);
+            TransformContactToManifold(ref contact1, ref faceCenterB, ref tangentBX, ref tangentBY, ref minimumAcceptedDepth, ref manifold.Contact1Exists, ref manifold.OffsetA1, ref manifold.Depth1, ref manifold.FeatureId1);
+            TransformContactToManifold(ref contact2, ref faceCenterB, ref tangentBX, ref tangentBY, ref minimumAcceptedDepth, ref manifold.Contact2Exists, ref manifold.OffsetA2, ref manifold.Depth2, ref manifold.FeatureId2);
+            TransformContactToManifold(ref contact3, ref faceCenterB, ref tangentBX, ref tangentBY, ref minimumAcceptedDepth, ref manifold.Contact3Exists, ref manifold.OffsetA3, ref manifold.Depth3, ref manifold.FeatureId3);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void TransformContactToManifold(ref Candidate rawContact, ref Vector3Wide faceCenterB, ref Vector3Wide tangentBX, ref Vector3Wide tangentBY,
-            ref Vector3Wide manifoldOffsetA, ref Vector<float> manifoldDepth, ref Vector<int> manifoldFeatureId)
+        private static void TransformContactToManifold(
+            ref Candidate rawContact, ref Vector3Wide faceCenterB, ref Vector3Wide tangentBX, ref Vector3Wide tangentBY, ref Vector<float> minimumAcceptedDepth,
+            ref Vector<int> contactExists, ref Vector3Wide manifoldOffsetA, ref Vector<float> manifoldDepth, ref Vector<int> manifoldFeatureId)
         {
             Vector3Wide.Scale(ref tangentBX, ref rawContact.X, out manifoldOffsetA);
             Vector3Wide.Scale(ref tangentBY, ref rawContact.Y, out var y);
             Vector3Wide.Add(ref manifoldOffsetA, ref y, out manifoldOffsetA);
             Vector3Wide.Add(ref manifoldOffsetA, ref faceCenterB, out manifoldOffsetA);
+            //Note that we delayed the speculative margin depth test until the end. This ensures area maximization has meaningful contacts to work with.
+            //If we were more aggressive about the depth testing, the final manifold would tend to have more contacts, but less meaningful contacts.
+            contactExists = Vector.BitwiseAnd(contactExists, Vector.GreaterThanOrEqual(rawContact.Depth, minimumAcceptedDepth));
             manifoldDepth = rawContact.Depth;
             manifoldFeatureId = rawContact.FeatureId;
         }
@@ -635,12 +631,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             count = Vector.ConditionalSelect(newContactExists, count + Vector<int>.One, count);
         }
 
-        public void Test(ref BoxWide a, ref BoxWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex4ContactManifoldWide manifold)
+        public void Test(ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref BoxWide a, ref BoxWide b, ref Vector3Wide offsetB, out Convex4ContactManifoldWide manifold)
+        public void Test(ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

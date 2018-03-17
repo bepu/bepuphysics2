@@ -9,7 +9,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(
-            ref CapsuleWide a, ref CapsuleWide b,
+            ref CapsuleWide a, ref CapsuleWide b, ref Vector<float> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Convex2ContactManifoldWide manifold)
         {
@@ -115,18 +115,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(ref manifold.OffsetA1, ref normalPush1, out manifold.OffsetA1);
             manifold.FeatureId0 = Vector<int>.Zero;
             manifold.FeatureId1 = Vector<int>.One;
-            manifold.Count = Vector.ConditionalSelect(Vector.LessThan(aMax - aMin, new Vector<float>(1e-7f) * a.HalfLength), Vector<int>.One, new Vector<int>(2));
+            var minimumAcceptedDepth = -speculativeMargin;
+            manifold.Contact0Exists = Vector.GreaterThanOrEqual(manifold.Depth0, minimumAcceptedDepth);
+            manifold.Contact1Exists = Vector.BitwiseAnd(
+                Vector.GreaterThanOrEqual(manifold.Depth1, minimumAcceptedDepth),
+                Vector.GreaterThan(aMax - aMin, new Vector<float>(1e-7f) * a.HalfLength));
 
             //TODO: Since we added in the complexity of 2 contact support, this is probably large enough to benefit from working in the local space of one of the capsules.
             //Worth looking into later.
         }
 
-        public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex2ContactManifoldWide manifold)
+        public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector3Wide offsetB, out Convex2ContactManifoldWide manifold)
+        public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
