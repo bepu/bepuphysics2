@@ -160,12 +160,51 @@ namespace BepuPhysics.CollisionDetection
         unsafe void FlushIfCompleted<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
         {
             ++CompletedChildManifoldCount;
+            Debug.Assert(ChildManifoldCount > 0);
             if (ChildManifoldCount == CompletedChildManifoldCount)
             {
-                NonconvexContactManifold reducedManifold;
-                //TODO: Reduce the child manifolds into the final manifold.
-                batcher.Callbacks.OnPairCompleted(pairId, &reducedManifold);
-
+                //This continuation is ready for processing. Find which contact manifold to report.
+                int populatedChildManifolds = 0;
+                //We cache an index in case there is only one populated manifold. Order of discovery doesn't matter- this value only gets used when there's one manifold.
+                int samplePopulatedChildIndex = 0;
+                for (int i = 0; i < ChildManifoldCount; ++i)
+                {
+                    if (ChildManifolds[i].Count > 0)
+                    {
+                        ++populatedChildManifolds;
+                        samplePopulatedChildIndex = i;
+                    }
+                }
+                if (populatedChildManifolds > 1)
+                {
+                    //There are multiple contributing child manifolds, so just assume that the resulting manifold is going to be nonconvex.
+                    NonconvexContactManifold reducedManifold;
+                    //We should assume that the stack memory backing the reduced manifold is uninitialized. We rely on the count, so initialize it manually.
+                    reducedManifold.Count = 0;
+                    for (int i = 0; i < ChildManifoldCount; ++i)
+                    {
+                        ref var child = ref ChildManifolds[i];
+                        ref var contactBase = ref child.Contact0;
+                        for (int j = 0; j < child.Count; ++j)
+                        {
+                            NonconvexContactManifold.Add(&reducedManifold, ref child.Normal, ref Unsafe.Add(ref contactBase, j));
+                            if (reducedManifold.Count == 8)
+                                break;
+                        }
+                        if (reducedManifold.Count == 8)
+                            break;
+                    }
+                    batcher.Callbacks.OnPairCompleted(pairId, &reducedManifold);
+                }
+                else
+                {
+                    //Two possibilities here: 
+                    //1) populatedChildManifolds == 1, and samplePopulatedChildIndex is the index of that sole populated manifold. We can directly report it.
+                    //It's useful to directly report the convex child manifold for performance reasons- convex constraints do not require multiple normals and use a faster friction model.
+                    //2) populatedChildManifolds == 0, and samplePopulatedChildIndex is 0. Given that we know this continuation is only used when there is at least one manifold expected
+                    //and that we can only hit this codepath if all manifolds are empty, reporting manifold 0 is perfectly fine.
+                    batcher.Callbacks.OnPairCompleted(pairId, (ConvexContactManifold*)ChildManifolds.Memory + samplePopulatedChildIndex);
+                }
                 batcher.Pool.ReturnUnsafely(ChildManifolds.Id);
 #if DEBUG
                 //This makes it a little easier to detect invalid accesses that occur after disposal.
@@ -223,7 +262,7 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void Add(ref CollisionTaskReference reference,
-            int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin, 
+            int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin,
             int flipMask, ref PairContinuation pairContinuationInfo)
         {
             ref var batch = ref batches[reference.TaskIndex];
@@ -288,7 +327,7 @@ namespace BepuPhysics.CollisionDetection
             Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, speculativeMargin, ref pairContinuationInfo);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin, 
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin,
             ref PairContinuation pairContinuationInfo)
         {
             var shapeTypeA = shapeIndexA.Type;

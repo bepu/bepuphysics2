@@ -65,7 +65,7 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Prestep(ref Vector3Wide tangentX, ref Vector3Wide tangentY, ref Vector3Wide offsetA, ref Vector3Wide offsetB,
             ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            out TangentFriction.Projection projection)
+            out Projection projection)
         {
             ComputeJacobians(ref tangentX, ref tangentY, ref offsetA, ref offsetB, out var jacobians);
             //Compute effective mass matrix contributions.

@@ -103,6 +103,17 @@ namespace BepuPhysics.CollisionDetection
                 contacts[index] = contacts[manifold->Count];
             }
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void Add(NonconvexContactManifold* manifold, ref Vector3 normal, ref ConvexContact convexContact)
+        {
+            Debug.Assert(manifold->Count < 8);
+            ref var targetContact = ref (&manifold->Contact0)[manifold->Count++];
+            targetContact.Depth = convexContact.Depth;
+            targetContact.Offset = convexContact.Offset;
+            targetContact.Normal = normal;
+            targetContact.FeatureId = convexContact.FeatureId;
+        }
     }
 
     /// <summary>
