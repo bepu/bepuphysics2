@@ -45,7 +45,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     if (batcher.Callbacks.AllowCollisionTesting(pair.Shared.Continuation.PairId, childA, childB))
                     {
                         ref var child = ref pair.B.Children[j];
-                        Compound.GetWorldPose(ref child.LocalPose, ref pair.Shared.PoseB, out var childWorldPose);
+                        Compound.GetRotatedChildPose(ref child.LocalPose, ref pair.Shared.PoseB.Orientation, out var childPose);
+                  
                         var childShapeType = child.ShapeIndex.Type;
                         batcher.Shapes[childShapeType].GetShapeData(child.ShapeIndex.Index, out var childShapePointer, out var childShapeSize);
 
@@ -54,16 +55,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         //2) The data contained is copied by the time Add returns, so there's no concern about invalid pointers getting stored.
                         var continuationInfo = new PairContinuation(pair.Shared.Continuation.PairId, childA, childB,
                             CollisionContinuationType.NonconvexReduction, continuationIndex);
+                        ref var continuationChild = ref batcher.NonconvexReductions.Continuations[continuationIndex].Children[j];
+
                         if (pair.Shared.FlipMask < 0)
                         {
                             //By reversing the order of the parameters, the manifold orientation is flipped. This compensates for the compound collision task's flip.
+                            continuationChild.OffsetA = childPose.Position;
+                            continuationChild.OffsetB = default;
+                            //Move the child into world space to be consistent with the other convex.
+                            childPose.Position += pair.Shared.PoseB.Position;
                             batcher.Add(child.ShapeIndex.Type, pair.A.TypeId, childShapeSize, Unsafe.SizeOf<TConvex>(), childShapePointer, Unsafe.AsPointer(ref pair.A),
-                                ref childWorldPose, ref pair.Shared.PoseA, pair.Shared.SpeculativeMargin, ref continuationInfo);
+                                ref childPose, ref pair.Shared.PoseA, pair.Shared.SpeculativeMargin, ref continuationInfo);
                         }
                         else
                         {
+                            continuationChild.OffsetA = default;
+                            continuationChild.OffsetB = childPose.Position;
+                            //Move the child into world space to be consistent with the other convex.
+                            childPose.Position += pair.Shared.PoseB.Position;
                             batcher.Add(pair.A.TypeId, child.ShapeIndex.Type, Unsafe.SizeOf<TConvex>(), childShapeSize, Unsafe.AsPointer(ref pair.A), childShapePointer,
-                                ref pair.Shared.PoseA, ref childWorldPose, pair.Shared.SpeculativeMargin, ref continuationInfo);
+                                ref pair.Shared.PoseA, ref childPose, pair.Shared.SpeculativeMargin, ref continuationInfo);
                         }
                     }
                     else
