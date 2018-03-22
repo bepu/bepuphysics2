@@ -204,6 +204,23 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int GetConvexConstraintTypeId<TBodyHandles>(int contactCount)
+        {
+            //Convex constraints:
+            //1-4 contacts: 0x3
+            //2 body (unset is 1 body): 0x4
+            //So:
+            //Convex one body constraints, contact count 1 through 4: [0, 3]
+            //Convex two body constraints, contact count 1 through 4: [4, 7]
+            int manifoldTypeAsConstraintType;
+            Debug.Assert(contactCount > 0);
+            manifoldTypeAsConstraintType = (contactCount - 1);
+            if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
+                manifoldTypeAsConstraintType |= 0x4;
+            return manifoldTypeAsConstraintType;
+        }
+
         //TODO: If you end up changing the NarrowPhasePendingConstraintAdds and PairCache hardcoded type handling, you should change this too. This is getting silly.
         unsafe void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TBodyHandles>(
             int workerIndex, ref CollidablePair pair, ref TContactManifold manifold, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TBodyHandles bodyHandles)
@@ -215,28 +232,32 @@ namespace BepuPhysics.CollisionDetection
             int manifoldTypeAsConstraintType;
             if (typeof(TContactManifold) == typeof(ConvexContactManifold))
             {
-                //Convex constraints:
-                //1-4 contacts: 0x3
-                //2 body (unset is 1 body): 0x4
                 ref var convexManifold = ref Unsafe.As<TContactManifold, ConvexContactManifold>(ref manifold);
-                Debug.Assert(convexManifold.Count > 0);
-                manifoldTypeAsConstraintType = (convexManifold.Count - 1);
-                if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
-                    manifoldTypeAsConstraintType |= 0x4;
+                manifoldTypeAsConstraintType = GetConvexConstraintTypeId<TBodyHandles>(convexManifold.Count);
             }
             else
             {
-                //Nonconvex constraints:
-                //1-8 contacts: 0x7
-                //2 body (unset is one body): 0x8
-                //then add 8 to jump over the convex ids.
                 Debug.Assert(typeof(TContactManifold) == typeof(NonconvexContactManifold));
                 ref var nonconvexManifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifold);
                 Debug.Assert(nonconvexManifold.Count > 0);
-                manifoldTypeAsConstraintType = (nonconvexManifold.Count - 1);
-                if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
-                    manifoldTypeAsConstraintType |= 0x8;
-                manifoldTypeAsConstraintType += 8;
+                if (nonconvexManifold.Count == 1)
+                {
+                    //No 'nonconvex' one contact constraints.
+                    manifoldTypeAsConstraintType = GetConvexConstraintTypeId<TBodyHandles>(1);
+                }
+                else
+                {
+                    //Nonconvex constraints:
+                    //To skip over convex constraints, start at 8
+                    //Nonconvex constraints range from 2 to 8 contacts (1 contact constraints are considered convex)
+                    //One body constraints have lower ids
+                    //So:
+                    //Nonconvex one body constraints, contact count 2 through 8: [8, 14]
+                    //Nonconvex two body constraints, contact count 2 through 8: [15, 21]
+                    manifoldTypeAsConstraintType = 8 + (nonconvexManifold.Count - 2);
+                    if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
+                        manifoldTypeAsConstraintType += 6;
+                }
             }
             contactConstraintAccessors[manifoldTypeAsConstraintType].UpdateConstraintForManifold(this, manifoldTypeAsConstraintType, workerIndex, ref pair, ref manifold, ref collisionCache, ref material, bodyHandles);
         }

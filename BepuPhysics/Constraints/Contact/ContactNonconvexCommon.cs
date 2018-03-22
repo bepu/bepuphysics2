@@ -1,0 +1,358 @@
+﻿using BepuPhysics.CollisionDetection;
+using BepuUtilities.Memory;
+using System;
+using System.Diagnostics;
+using System.Numerics;
+using System.Runtime.CompilerServices;
+using Quaternion = BepuUtilities.Quaternion;
+using static BepuPhysics.GatherScatter;
+namespace BepuPhysics.Constraints.Contact
+{
+    public struct NonconvexPrestepData
+    {
+        public Vector3Wide Offset;
+        public Vector<float> Depth;
+        public Vector3Wide Normal;
+    }
+    public struct NonconvexTwoBodyContactPrestepCommon
+    {
+        public Vector3Wide OffsetB;
+        public Vector<float> FrictionCoefficient;
+        public SpringSettingsWide SpringSettings;
+        public Vector<float> MaximumRecoveryVelocity;
+    }
+    public struct NonconvexOneBodyContactPrestepCommon
+    {
+        public Vector<float> FrictionCoefficient;
+        public SpringSettingsWide SpringSettings;
+        public Vector<float> MaximumRecoveryVelocity;
+    }
+    public interface INonconvexTwoBodyContactPrestepWide<TPrestep> where TPrestep : struct, INonconvexTwoBodyContactPrestepWide<TPrestep>
+    {
+        ref NonconvexTwoBodyContactPrestepCommon GetCommonProperties(ref TPrestep prestep);
+        ref NonconvexPrestepData GetFirstContact(ref TPrestep prestep);
+    }
+    public interface INonconvexOneBodyContactPrestepWide<TPrestep> where TPrestep : struct, INonconvexOneBodyContactPrestepWide<TPrestep>
+    {
+        ref NonconvexOneBodyContactPrestepCommon GetCommonProperties(ref TPrestep prestep);
+        ref NonconvexPrestepData GetFirstContact(ref TPrestep prestep);
+    }
+
+    static class NonconvexConstraintHelpers
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void CopyContactData(int contactCount, ref NonconvexConstraintContactData sourceContacts, ref NonconvexPrestepData targetContacts)
+        {
+            for (int i = 0; i < contactCount; ++i)
+            {
+                ref var sourceContact = ref Unsafe.Add(ref sourceContacts, i);
+                ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
+                GetFirst(ref targetContact.Offset.X) = sourceContact.OffsetA.X;
+                GetFirst(ref targetContact.Offset.Y) = sourceContact.OffsetA.Y;
+                GetFirst(ref targetContact.Offset.Z) = sourceContact.OffsetA.Z;
+
+                GetFirst(ref targetContact.Normal.X) = sourceContact.Normal.X;
+                GetFirst(ref targetContact.Normal.Y) = sourceContact.Normal.Y;
+                GetFirst(ref targetContact.Normal.Z) = sourceContact.Normal.Z;
+
+                GetFirst(ref targetContact.Depth) = sourceContact.PenetrationDepth;
+            }
+        }
+        //TODO: These could share even more, but... this already handles the 14
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApplyTwoBodyDescription<TDescription, TPrestep>(ref TDescription description, ref TypeBatch batch, int bundleIndex, int innerIndex)
+              where TPrestep : struct, INonconvexTwoBodyContactPrestepWide<TPrestep>
+              where TDescription : struct, INonconvexTwoBodyContactConstraintDescription<TDescription>
+        {
+            Debug.Assert(batch.TypeId == description.ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            ref var target = ref GetOffsetInstance(ref Buffer<TPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+
+            ref var sourceCommon = ref description.GetCommonProperties(ref description);
+            ref var targetCommon = ref target.GetCommonProperties(ref target);
+            GetFirst(ref targetCommon.OffsetB.X) = sourceCommon.OffsetB.X;
+            GetFirst(ref targetCommon.OffsetB.Y) = sourceCommon.OffsetB.Y;
+            GetFirst(ref targetCommon.OffsetB.Z) = sourceCommon.OffsetB.Z;
+
+            GetFirst(ref targetCommon.FrictionCoefficient) = sourceCommon.FrictionCoefficient;
+            GetFirst(ref targetCommon.SpringSettings.NaturalFrequency) = sourceCommon.SpringSettings.NaturalFrequency;
+            GetFirst(ref targetCommon.SpringSettings.DampingRatio) = sourceCommon.SpringSettings.DampingRatio;
+            GetFirst(ref targetCommon.MaximumRecoveryVelocity) = sourceCommon.MaximumRecoveryVelocity;
+
+            ref var sourceContacts = ref description.GetFirstContact(ref description);
+            ref var targetContacts = ref target.GetFirstContact(ref target);
+            CopyContactData(description.ContactCount, ref sourceContacts, ref targetContacts);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApplyOneBodyDescription<TDescription, TPrestep>(ref TDescription description, ref TypeBatch batch, int bundleIndex, int innerIndex)
+              where TPrestep : struct, INonconvexOneBodyContactPrestepWide<TPrestep>
+              where TDescription : struct, INonconvexOneBodyContactConstraintDescription<TDescription>
+        {
+            Debug.Assert(batch.TypeId == description.ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            ref var target = ref GetOffsetInstance(ref Buffer<TPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+
+            ref var sourceCommon = ref description.GetCommonProperties(ref description);
+            ref var targetCommon = ref target.GetCommonProperties(ref target);
+            GetFirst(ref targetCommon.FrictionCoefficient) = sourceCommon.FrictionCoefficient;
+            GetFirst(ref targetCommon.SpringSettings.NaturalFrequency) = sourceCommon.SpringSettings.NaturalFrequency;
+            GetFirst(ref targetCommon.SpringSettings.DampingRatio) = sourceCommon.SpringSettings.DampingRatio;
+            GetFirst(ref targetCommon.MaximumRecoveryVelocity) = sourceCommon.MaximumRecoveryVelocity;
+
+            ref var sourceContacts = ref description.GetFirstContact(ref description);
+            ref var targetContacts = ref target.GetFirstContact(ref target);
+            CopyContactData(description.ContactCount, ref sourceContacts, ref targetContacts);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void CopyContactData(int contactCount, ref NonconvexPrestepData sourceContacts, ref NonconvexConstraintContactData targetContacts)
+        {
+            for (int i = 0; i < contactCount; ++i)
+            {
+                ref var source = ref Unsafe.Add(ref sourceContacts, i);
+                ref var target = ref Unsafe.Add(ref targetContacts, i);
+                target.OffsetA = new Vector3(GetFirst(ref source.Offset.X), GetFirst(ref source.Offset.Y), GetFirst(ref source.Offset.Z));
+                target.Normal = new Vector3(GetFirst(ref source.Normal.X), GetFirst(ref source.Normal.Y), GetFirst(ref source.Normal.Z));
+                target.PenetrationDepth = GetFirst(ref source.Depth);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void BuildTwoBodyDescription<TDescription, TPrestep>(ref TypeBatch batch, int bundleIndex, int innerIndex, out TDescription description)
+              where TPrestep : struct, INonconvexTwoBodyContactPrestepWide<TPrestep>
+              where TDescription : struct, INonconvexTwoBodyContactConstraintDescription<TDescription>
+        {
+            Debug.Assert(batch.TypeId == default(TDescription).ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            ref var prestep = ref GetOffsetInstance(ref Buffer<TPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+
+            ref var prestepCommon = ref prestep.GetCommonProperties(ref prestep);
+            var offsetB = new Vector3(GetFirst(ref prestepCommon.OffsetB.X), GetFirst(ref prestepCommon.OffsetB.Y), GetFirst(ref prestepCommon.OffsetB.Z));
+            PairMaterialProperties material;
+            material.FrictionCoefficient = GetFirst(ref prestepCommon.FrictionCoefficient);
+            material.SpringSettings.NaturalFrequency = GetFirst(ref prestepCommon.SpringSettings.NaturalFrequency);
+            material.SpringSettings.DampingRatio = GetFirst(ref prestepCommon.SpringSettings.DampingRatio);
+            material.MaximumRecoveryVelocity = GetFirst(ref prestepCommon.MaximumRecoveryVelocity);
+
+            //TODO: Not ideal. We could avoid a default initialization with blittable...
+            description = default;
+            description.CopyManifoldWideProperties(ref offsetB, ref material);
+
+            ref var descriptionContacts = ref description.GetFirstContact(ref description);
+            ref var prestepContacts = ref prestep.GetFirstContact(ref prestep);
+            CopyContactData(description.ContactCount, ref prestepContacts, ref descriptionContacts);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void BuildOneBodyDescription<TDescription, TPrestep>(ref TypeBatch batch, int bundleIndex, int innerIndex, out TDescription description)
+              where TPrestep : struct, INonconvexOneBodyContactPrestepWide<TPrestep>
+              where TDescription : struct, INonconvexOneBodyContactConstraintDescription<TDescription>
+        {
+            Debug.Assert(batch.TypeId == default(TDescription).ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            ref var prestep = ref GetOffsetInstance(ref Buffer<TPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+
+            ref var prestepCommon = ref prestep.GetCommonProperties(ref prestep);
+            PairMaterialProperties material;
+            material.FrictionCoefficient = GetFirst(ref prestepCommon.FrictionCoefficient);
+            material.SpringSettings.NaturalFrequency = GetFirst(ref prestepCommon.SpringSettings.NaturalFrequency);
+            material.SpringSettings.DampingRatio = GetFirst(ref prestepCommon.SpringSettings.DampingRatio);
+            material.MaximumRecoveryVelocity = GetFirst(ref prestepCommon.MaximumRecoveryVelocity);
+
+            //TODO: Not ideal. We could avoid a default initialization with blittable...
+            description = default;
+            description.CopyManifoldWideProperties(ref material);
+
+            ref var descriptionContacts = ref description.GetFirstContact(ref description);
+            ref var prestepContacts = ref prestep.GetFirstContact(ref prestep);
+            CopyContactData(description.ContactCount, ref prestepContacts, ref descriptionContacts);
+        }
+    }
+
+
+    public struct NonconvexAccumulatedImpulses
+    {
+        public Vector2Wide Tangent;
+        public Vector<float> Penetration;
+    }
+
+    public struct NonconvexProjectionCommon
+    {
+        public BodyInertias InertiaA;
+        public BodyInertias InertiaB;
+        public Vector<float> FrictionCoefficient;
+    }
+    public struct ContactNonconvexOneBodyProjection
+    {
+        public Vector3Wide Normal;
+        public TangentFrictionOneBody.Projection Tangent;
+        public PenetrationLimit1OneBody.Projection Penetration;
+    }
+    public struct ContactNonconvexTwoBodyProjection
+    {
+        public Vector3Wide Normal;
+        public TangentFriction.Projection Tangent;
+        public PenetrationLimit1.Projection Penetration;
+    }
+
+    public interface INonconvexOneBodyProjection<TProjection> where TProjection : INonconvexOneBodyProjection<TProjection>
+    {
+        ref ContactNonconvexOneBodyProjection GetFirstContact(ref TProjection description);
+        int ContactCount { get; }
+
+        ref NonconvexProjectionCommon GetCommonProperties(ref TProjection projection);
+    }
+    public interface INonconvexTwoBodyProjection<TProjection> where TProjection : INonconvexTwoBodyProjection<TProjection>
+    {
+        ref ContactNonconvexTwoBodyProjection GetFirstContact(ref TProjection description);
+        int ContactCount { get; }
+
+        ref NonconvexProjectionCommon GetCommonProperties(ref TProjection projection);
+    }
+
+    public struct ContactNonconvexOneBodyFunctions<TPrestep, TProjection, TAccumulatedImpulses> :
+        IOneBodyConstraintFunctions<TPrestep, TProjection, TAccumulatedImpulses>
+        where TPrestep : struct, INonconvexOneBodyContactPrestepWide<TPrestep>
+        where TProjection : struct, INonconvexOneBodyProjection<TProjection>
+        where TAccumulatedImpulses : struct
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
+            float dt, float inverseDt, ref TPrestep prestep, out TProjection projection)
+        {
+            //TODO: This is another area where it's highly doubtful that the compiler will ever figure out that this initialization is unnecessary.
+            //While we could jump through some nasty contortions now to resolve this, we'll instead opt for a little inefficient simplicity while waiting for generic pointer support
+            //to more cleanly fix the issue.
+            projection = default;
+            ref var prestepCommon = ref prestep.GetCommonProperties(ref prestep);
+            ref var projectionCommon = ref projection.GetCommonProperties(ref projection);
+            bodies.GatherInertia(ref bodyReferences, count, out projectionCommon.InertiaA);
+            projectionCommon.FrictionCoefficient = prestepCommon.FrictionCoefficient;
+            ref var prestepContactStart = ref prestep.GetFirstContact(ref prestep);
+            ref var projectionContactStart = ref projection.GetFirstContact(ref projection);
+            for (int i = 0; i < projection.ContactCount; ++i)
+            {
+                ref var prestepContact = ref Unsafe.Add(ref prestepContactStart, i);
+                ref var projectionContact = ref Unsafe.Add(ref projectionContactStart, i);
+                projectionContact.Normal = prestepContact.Normal;
+                Helpers.BuildOrthnormalBasis(ref prestepContact.Normal, out var x, out var z);
+                TangentFrictionOneBody.Prestep(ref x, ref z, ref prestepContact.Offset, ref projectionCommon.InertiaA, out projectionContact.Tangent);
+                PenetrationLimit1OneBody.Prestep(ref projectionCommon.InertiaA,
+                    ref prestepContact.Offset, ref prestepContact.Normal, ref prestepContact.Depth, ref prestepCommon.SpringSettings, ref prestepCommon.MaximumRecoveryVelocity,
+                    dt, inverseDt, out projectionContact.Penetration);
+
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void WarmStart(ref BodyVelocities wsvA, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
+        {
+            //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
+            //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
+            ref var common = ref projection.GetCommonProperties(ref projection);
+            ref var contactStart = ref projection.GetFirstContact(ref projection);
+            ref var accumulatedImpulsesStart = ref Unsafe.As<TAccumulatedImpulses, NonconvexAccumulatedImpulses>(ref accumulatedImpulses);
+            for (int i = 0; i < projection.ContactCount; ++i)
+            {
+                ref var contact = ref Unsafe.Add(ref contactStart, i);
+                ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
+                Helpers.BuildOrthnormalBasis(ref contact.Normal, out var x, out var z);
+                TangentFrictionOneBody.WarmStart(ref x, ref z, ref contact.Tangent, ref common.InertiaA, ref contactImpulse.Tangent, ref wsvA);
+                PenetrationLimit1OneBody.WarmStart(ref contact.Penetration, ref common.InertiaA, ref contact.Normal, ref contactImpulse.Penetration, ref wsvA);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Solve(ref BodyVelocities wsvA, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
+        {
+            //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
+            //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
+            ref var common = ref projection.GetCommonProperties(ref projection);
+            ref var contactStart = ref projection.GetFirstContact(ref projection);
+            ref var accumulatedImpulsesStart = ref Unsafe.As<TAccumulatedImpulses, NonconvexAccumulatedImpulses>(ref accumulatedImpulses);
+            for (int i = 0; i < projection.ContactCount; ++i)
+            {
+                ref var contact = ref Unsafe.Add(ref contactStart, i);
+                ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
+                Helpers.BuildOrthnormalBasis(ref contact.Normal, out var x, out var z);
+                var maximumTangentImpulse = common.FrictionCoefficient * contactImpulse.Penetration;
+                TangentFrictionOneBody.Solve(ref x, ref z, ref contact.Tangent, ref common.InertiaA, ref maximumTangentImpulse, ref contactImpulse.Tangent, ref wsvA);
+                PenetrationLimit1OneBody.Solve(ref contact.Penetration, ref common.InertiaA, ref contact.Normal,
+                    ref contactImpulse.Penetration, ref wsvA);
+            }
+        }
+
+    }
+
+    public struct ContactNonconvexTwoBodyFunctions<TPrestep, TProjection, TAccumulatedImpulses> :
+        IConstraintFunctions<TPrestep, TProjection, TAccumulatedImpulses>
+        where TPrestep : struct, INonconvexTwoBodyContactPrestepWide<TPrestep>
+        where TProjection : struct, INonconvexTwoBodyProjection<TProjection>
+        where TAccumulatedImpulses : struct
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
+            float dt, float inverseDt, ref TPrestep prestep, out TProjection projection)
+        {
+            //TODO: This is another area where it's highly doubtful that the compiler will ever figure out that this initialization is unnecessary.
+            //While we could jump through some nasty contortions now to resolve this, we'll instead opt for a little inefficient simplicity while waiting for generic pointer support
+            //to more cleanly fix the issue.
+            projection = default;
+            ref var prestepCommon = ref prestep.GetCommonProperties(ref prestep);
+            ref var projectionCommon = ref projection.GetCommonProperties(ref projection);
+            bodies.GatherInertia(ref bodyReferences, count, out projectionCommon.InertiaA, out projectionCommon.InertiaB);
+            projectionCommon.FrictionCoefficient = prestepCommon.FrictionCoefficient;
+            ref var prestepContactStart = ref prestep.GetFirstContact(ref prestep);
+            ref var projectionContactStart = ref projection.GetFirstContact(ref projection);
+            for (int i = 0; i < projection.ContactCount; ++i)
+            {
+                ref var prestepContact = ref Unsafe.Add(ref prestepContactStart, i);
+                ref var projectionContact = ref Unsafe.Add(ref projectionContactStart, i);
+                projectionContact.Normal = prestepContact.Normal;
+                Helpers.BuildOrthnormalBasis(ref prestepContact.Normal, out var x, out var z);
+                Vector3Wide.Subtract(ref prestepContact.Offset, ref prestepCommon.OffsetB, out var contactOffsetB);
+                TangentFriction.Prestep(ref x, ref z, ref prestepContact.Offset, ref contactOffsetB, ref projectionCommon.InertiaA, ref projectionCommon.InertiaB, out projectionContact.Tangent);
+                PenetrationLimit1.Prestep(ref projectionCommon.InertiaA, ref projectionCommon.InertiaB,
+                    ref prestepContact.Offset, ref contactOffsetB, ref prestepContact.Normal, ref prestepContact.Depth, ref prestepCommon.SpringSettings, ref prestepCommon.MaximumRecoveryVelocity,
+                    dt, inverseDt, out projectionContact.Penetration);
+
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
+        {
+            //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
+            //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
+            ref var common = ref projection.GetCommonProperties(ref projection);
+            ref var contactStart = ref projection.GetFirstContact(ref projection);
+            ref var accumulatedImpulsesStart = ref Unsafe.As<TAccumulatedImpulses, NonconvexAccumulatedImpulses>(ref accumulatedImpulses);
+            for (int i = 0; i < projection.ContactCount; ++i)
+            {
+                ref var contact = ref Unsafe.Add(ref contactStart, i);
+                ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
+                Helpers.BuildOrthnormalBasis(ref contact.Normal, out var x, out var z);
+                TangentFriction.WarmStart(ref x, ref z, ref contact.Tangent, ref common.InertiaA, ref common.InertiaB, ref contactImpulse.Tangent, ref wsvA, ref wsvB);
+                PenetrationLimit1.WarmStart(ref contact.Penetration, ref common.InertiaA, ref common.InertiaB, ref contact.Normal, ref contactImpulse.Penetration, ref wsvA, ref wsvB);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref TProjection projection, ref TAccumulatedImpulses accumulatedImpulses)
+        {
+            //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
+            //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
+            ref var common = ref projection.GetCommonProperties(ref projection);
+            ref var contactStart = ref projection.GetFirstContact(ref projection);
+            ref var accumulatedImpulsesStart = ref Unsafe.As<TAccumulatedImpulses, NonconvexAccumulatedImpulses>(ref accumulatedImpulses);
+            for (int i = 0; i < projection.ContactCount; ++i)
+            {
+                ref var contact = ref Unsafe.Add(ref contactStart, i);
+                ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
+                Helpers.BuildOrthnormalBasis(ref contact.Normal, out var x, out var z);
+                var maximumTangentImpulse = common.FrictionCoefficient * contactImpulse.Penetration;
+                TangentFriction.Solve(ref x, ref z, ref contact.Tangent, ref common.InertiaA, ref common.InertiaB, ref maximumTangentImpulse, ref contactImpulse.Tangent, ref wsvA, ref wsvB);
+                PenetrationLimit1.Solve(ref contact.Penetration, ref common.InertiaA, ref common.InertiaB, ref contact.Normal,
+                    ref contactImpulse.Penetration, ref wsvA, ref wsvB);
+            }
+        }
+
+    }
+}

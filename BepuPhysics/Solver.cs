@@ -203,7 +203,9 @@ namespace BepuPhysics
             }
             if (TypeProcessors[description.ConstraintTypeId] != null)
             {
-                throw new ArgumentException($"Type processor {TypeProcessors[description.ConstraintTypeId].GetType().Name} has already been registered for this description's type id. " +
+                throw new ArgumentException(
+                    $"Type processor {TypeProcessors[description.ConstraintTypeId].GetType().Name} has already been registered for this description's type id " +
+                    $"({typeof(TDescription).Name}, {default(TDescription).ConstraintTypeId}). " +
                     $"Cannot register the same type id more than once.");
             }
             var processor = (TypeProcessor)Activator.CreateInstance(description.BatchType);

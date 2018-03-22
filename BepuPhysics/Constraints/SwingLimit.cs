@@ -171,7 +171,7 @@ namespace BepuPhysics.Constraints
 
     public class SwingLimitTypeProcessor : TwoBodyTypeProcessor<SwingLimitPrestepData, SwingLimitProjection, Vector<float>, SwingLimitFunctions>
     {
-        public const int BatchTypeId = 19;
+        public const int BatchTypeId = 25;
     }
 }
 

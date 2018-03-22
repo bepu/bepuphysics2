@@ -205,6 +205,6 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public class BallSocketTypeBatch : TwoBodyTypeProcessor<BallSocketPrestepData, BallSocketProjection, Vector3Wide, BallSocketFunctions>
     {
-        public const int BatchTypeId = 16;
+        public const int BatchTypeId = 22;
     }
 }

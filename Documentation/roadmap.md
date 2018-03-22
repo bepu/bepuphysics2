@@ -15,7 +15,7 @@ Note that this release will lack many of v1's built in features, like:
 
 The initial version will be split into incremental stages: alpha, beta, and release.
 
-### Alpha (February 2018, or maybe a few days after that,       )
+### Alpha (February 2018, or maybe a few days after that, for nonstandard definitions of few)
 This will be the first version that is likely to be useful to anyone, but far from everyone.
 - Spheres, capsules, and boxes.
 - List-based compound shape type. Primarily useful for small groups of shapes.

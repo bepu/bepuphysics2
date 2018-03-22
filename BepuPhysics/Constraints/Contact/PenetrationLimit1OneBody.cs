@@ -32,7 +32,15 @@ namespace BepuPhysics.Constraints.Contact
         public static void Prestep(ref BodyInertias inertiaA, ref Vector3Wide normal, ref Contact1OneBodyPrestepData prestep, float dt, float inverseDt,
             out Projection projection)
         {
-            Vector3Wide.CrossWithoutOverlap(ref prestep.OffsetA0, ref normal, out projection.Penetration0.AngularA);
+            Prestep(ref inertiaA, ref normal, ref prestep, dt, inverseDt, out projection);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Prestep(ref BodyInertias inertiaA,
+            ref Vector3Wide contactOffsetA, ref Vector3Wide normal, ref Vector<float> depth, ref SpringSettingsWide springSettings, ref Vector<float> maximumRecoveryVelocity,
+            float dt, float inverseDt, out Projection projection)
+        {
+            Vector3Wide.CrossWithoutOverlap(ref contactOffsetA, ref normal, out projection.Penetration0.AngularA);
 
             //effective mass
             Triangular3x3Wide.VectorSandwich(ref projection.Penetration0.AngularA, ref inertiaA.InverseInertiaTensor, out var angularA0);
@@ -40,14 +48,14 @@ namespace BepuPhysics.Constraints.Contact
             //Linear effective mass contribution notes:
             //1) The J * M^-1 * JT can be reordered to J * JT * M^-1 for the linear components, since M^-1 is a scalar and dot(n * scalar, n) = dot(n, n) * scalar.
             //2) dot(normal, normal) == 1, so the contribution from each body is just its inverse mass.
-            Springiness.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            Springiness.ComputeSpringiness(ref springSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             //Note that we don't precompute the JT * effectiveMass term. Since the jacobians are shared, we have to do that multiply anyway.
             projection.Penetration0.EffectiveMass = effectiveMassCFMScale / (inertiaA.InverseMass + angularA0);
 
             //If depth is negative, the bias velocity will permit motion up until the depth hits zero. This works because positionErrorToVelocity * dt will always be <=1.
             projection.Penetration0.BiasVelocity = Vector.Min(
-                prestep.PenetrationDepth0 * new Vector<float>(inverseDt),
-                Vector.Min(prestep.PenetrationDepth0 * positionErrorToVelocity, prestep.MaximumRecoveryVelocity));
+                depth * new Vector<float>(inverseDt),
+                Vector.Min(depth * positionErrorToVelocity, maximumRecoveryVelocity));
         }
 
 

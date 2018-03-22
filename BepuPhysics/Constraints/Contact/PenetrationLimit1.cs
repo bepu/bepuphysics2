@@ -18,9 +18,20 @@ namespace BepuPhysics.Constraints.Contact
             public PenetrationLimitProjection Penetration0;
             public Vector<float> SoftnessImpulseScale;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal, ref Contact1PrestepData prestep, float dt, float inverseDt,
+            out Projection projection)
+        {
+            Vector3Wide.Subtract(ref prestep.OffsetA0, ref prestep.OffsetB, out var contactOffsetB);
+            Prestep(ref inertiaA, ref inertiaB, 
+                ref prestep.OffsetA0, ref contactOffsetB, ref normal, ref prestep.PenetrationDepth0, ref prestep.SpringSettings, ref prestep.MaximumRecoveryVelocity, 
+                dt, inverseDt, out projection);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal, ref Contact1PrestepData prestep, float dt, float inverseDt, 
+        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, 
+            ref Vector3Wide contactOffsetA, ref Vector3Wide contactOffsetB, ref Vector3Wide normal, ref Vector<float> depth, ref SpringSettingsWide springSettings, ref Vector<float> maximumRecoveryVelocity,
+            float dt, float inverseDt,
             out Projection projection)
         {
             //We directly take the prestep data here since the jacobians and error don't undergo any processing.
@@ -52,9 +63,8 @@ namespace BepuPhysics.Constraints.Contact
             //linearB: -N
             //angularB: N x offsetB
             //Note that we leave the penetration depth as is, even when it's negative. Speculative contacts!
-            Vector3Wide.CrossWithoutOverlap(ref prestep.OffsetA0, ref normal, out projection.Penetration0.AngularA);
-            Vector3Wide.Subtract(ref prestep.OffsetA0, ref prestep.OffsetB, out var offsetB0);
-            Vector3Wide.CrossWithoutOverlap(ref normal, ref offsetB0, out projection.Penetration0.AngularB);
+            Vector3Wide.CrossWithoutOverlap(ref contactOffsetA, ref normal, out projection.Penetration0.AngularA);
+            Vector3Wide.CrossWithoutOverlap(ref normal, ref contactOffsetB, out projection.Penetration0.AngularB);
 
             //effective mass
             Triangular3x3Wide.VectorSandwich(ref projection.Penetration0.AngularA, ref inertiaA.InverseInertiaTensor, out var angularA0);
@@ -63,15 +73,15 @@ namespace BepuPhysics.Constraints.Contact
             //Linear effective mass contribution notes:
             //1) The J * M^-1 * JT can be reordered to J * JT * M^-1 for the linear components, since M^-1 is a scalar and dot(n * scalar, n) = dot(n, n) * scalar.
             //2) dot(normal, normal) == 1, so the contribution from each body is just its inverse mass.
-            Springiness.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            Springiness.ComputeSpringiness(ref springSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             var linear = inertiaA.InverseMass + inertiaB.InverseMass;
             //Note that we don't precompute the JT * effectiveMass term. Since the jacobians are shared, we have to do that multiply anyway.
             projection.Penetration0.EffectiveMass = effectiveMassCFMScale / (linear + angularA0 + angularB0);
 
             //If depth is negative, the bias velocity will permit motion up until the depth hits zero. This works because positionErrorToVelocity * dt will always be <=1.
             projection.Penetration0.BiasVelocity = Vector.Min(
-                prestep.PenetrationDepth0 * new Vector<float>(inverseDt),
-                Vector.Min(prestep.PenetrationDepth0 * positionErrorToVelocity, prestep.MaximumRecoveryVelocity));
+                depth * new Vector<float>(inverseDt),
+                Vector.Min(depth * positionErrorToVelocity, maximumRecoveryVelocity));
         }
 
 

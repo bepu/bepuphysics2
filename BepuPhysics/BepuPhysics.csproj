@@ -81,4 +81,23 @@
     <ProjectReference Include="..\BepuUtilities\BepuUtilities.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Constraints\Contact\ContactNonconvexTypes.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ContactNonconvexTypes.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Constraints\Contact\ContactNonconvexTypes.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ContactNonconvexTypes.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
 </Project>

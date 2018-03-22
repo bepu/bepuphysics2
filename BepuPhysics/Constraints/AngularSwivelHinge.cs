@@ -155,7 +155,7 @@ namespace BepuPhysics.Constraints
 
     public class AngularSwivelHingeTypeProcessor : TwoBodyTypeProcessor<AngularSwivelHingePrestepData, AngularSwivelHingeProjection, Vector<float>, AngularSwivelHingeFunctions>
     {
-        public const int BatchTypeId = 18;
+        public const int BatchTypeId = 24;
     }
 }
 

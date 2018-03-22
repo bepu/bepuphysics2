@@ -16,7 +16,7 @@ namespace Demos
     {
         static void Main(string[] args)
         {
-            //ConstraintDescriptionMappingTests.Test();
+            ConstraintDescriptionMappingTests.Test();
             //Console.ReadKey();
 
             var window = new Window("pretty cool multicolored window",

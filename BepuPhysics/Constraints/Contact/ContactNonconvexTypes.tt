@@ -1,0 +1,249 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+using BepuPhysics.CollisionDetection;
+using System;
+using System.Numerics;
+using System.Runtime.CompilerServices;
+namespace BepuPhysics.Constraints.Contact
+{  
+<#
+for (int contactCount = 2; contactCount <= 8; ++contactCount)
+{
+#>
+    public struct Contact<#= contactCount #>Nonconvex : INonconvexTwoBodyContactConstraintDescription<Contact<#= contactCount #>Nonconvex>
+    {
+        public NonconvexTwoBodyManifoldConstraintProperties Common;
+<#
+for (int i = 0; i < contactCount ; ++i)
+{#>
+        public NonconvexConstraintContactData Contact<#=i#>;
+<#}#>
+
+        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        {
+            NonconvexConstraintHelpers.ApplyTwoBodyDescription<Contact<#= contactCount #>Nonconvex, Contact<#= contactCount #>NonconvexPrestepData>(ref this, ref batch, bundleIndex, innerIndex);
+        }
+
+        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact<#= contactCount #>Nonconvex description)
+        {
+            NonconvexConstraintHelpers.BuildTwoBodyDescription<Contact<#= contactCount #>Nonconvex, Contact<#= contactCount #>NonconvexPrestepData>(ref batch, bundleIndex, innerIndex, out description);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void CopyManifoldWideProperties(ref Vector3 offsetB, ref PairMaterialProperties material)
+        {
+            Common.OffsetB = offsetB;
+            Common.FrictionCoefficient = material.FrictionCoefficient;
+            Common.SpringSettings = material.SpringSettings;
+            Common.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexTwoBodyManifoldConstraintProperties GetCommonProperties(ref Contact<#=contactCount#>Nonconvex description)
+        {
+            return ref description.Common;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexConstraintContactData GetFirstContact(ref Contact<#= contactCount #>Nonconvex description)
+        {
+            return ref description.Contact0;
+        }
+
+        public int ContactCount => <#= contactCount #>;
+
+        public int ConstraintTypeId
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Contact<#= contactCount #>NonconvexTypeProcessor.BatchTypeId;
+        }
+
+        public Type BatchType => typeof(Contact<#= contactCount #>NonconvexTypeProcessor);
+
+    }
+
+    public struct Contact<#= contactCount #>NonconvexPrestepData : INonconvexTwoBodyContactPrestepWide<Contact<#= contactCount #>NonconvexPrestepData>
+    {
+        //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
+        public NonconvexTwoBodyContactPrestepCommon Common;
+<#
+for (int i = 0; i < contactCount ; ++i)
+{#>
+        public NonconvexPrestepData Contact<#=i#>;
+<#}#>
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexTwoBodyContactPrestepCommon GetCommonProperties(ref Contact<#= contactCount #>NonconvexPrestepData prestep)
+        {
+            return ref prestep.Common;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexPrestepData GetFirstContact(ref Contact<#= contactCount #>NonconvexPrestepData prestep)
+        {
+            return ref prestep.Contact0;
+        }
+    }
+
+    public struct Contact<#= contactCount #>NonconvexAccumulatedImpulses
+    {
+<#
+for (int i = 0; i < contactCount ; ++i)
+{#>
+        public NonconvexAccumulatedImpulses Contact<#=i#>;
+<#}#>
+    }
+
+    public unsafe struct Contact<#= contactCount #>NonconvexProjection : INonconvexTwoBodyProjection<Contact<#= contactCount #>NonconvexProjection>
+    {
+        public NonconvexProjectionCommon Common;
+        //Nonprimitive fixed would be pretty convenient.
+		<#
+for (int i = 0; i < contactCount ; ++i)
+{#>
+        public ContactNonconvexTwoBodyProjection Contact<#=i#>;
+<#}#>
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ContactNonconvexTwoBodyProjection GetFirstContact(ref Contact<#= contactCount #>NonconvexProjection projection)
+        {
+            return ref projection.Contact0;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact<#= contactCount #>NonconvexProjection projection)
+        {
+            return ref projection.Common;
+        }
+
+        public int ContactCount => <#= contactCount #>;
+    }
+	
+    /// <summary>
+    /// Handles the solve iterations of a bunch of <#= contactCount #>-contact nonconvex two body manifold constraints.
+    /// </summary>
+    public class Contact<#= contactCount #>NonconvexTypeProcessor :
+        TwoBodyTypeProcessor<Contact<#= contactCount #>NonconvexPrestepData, Contact<#= contactCount #>NonconvexProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses,
+            ContactNonconvexTwoBodyFunctions<Contact<#= contactCount #>NonconvexPrestepData, Contact<#= contactCount #>NonconvexProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses>>
+    {
+        //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
+        public const int BatchTypeId = <#= 13 + contactCount #>;
+    }
+
+	public struct Contact<#= contactCount #>NonconvexOneBody : INonconvexOneBodyContactConstraintDescription<Contact<#= contactCount #>NonconvexOneBody>
+    {
+        public NonconvexOneBodyManifoldConstraintProperties Common;
+<#
+for (int i = 0; i < contactCount ; ++i)
+{#>
+        public NonconvexConstraintContactData Contact<#=i#>;
+<#}#>
+
+        public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
+        {
+            NonconvexConstraintHelpers.ApplyOneBodyDescription<Contact<#= contactCount #>NonconvexOneBody, Contact<#= contactCount #>NonconvexOneBodyPrestepData>(ref this, ref batch, bundleIndex, innerIndex);
+        }
+
+        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact<#= contactCount #>NonconvexOneBody description)
+        {
+            NonconvexConstraintHelpers.BuildOneBodyDescription<Contact<#= contactCount #>NonconvexOneBody, Contact<#= contactCount #>NonconvexOneBodyPrestepData>(ref batch, bundleIndex, innerIndex, out description);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void CopyManifoldWideProperties(ref PairMaterialProperties material)
+        {
+            Common.FrictionCoefficient = material.FrictionCoefficient;
+            Common.SpringSettings = material.SpringSettings;
+            Common.MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexOneBodyManifoldConstraintProperties GetCommonProperties(ref Contact<#=contactCount#>NonconvexOneBody description)
+        {
+            return ref description.Common;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexConstraintContactData GetFirstContact(ref Contact<#= contactCount #>NonconvexOneBody description)
+        {
+            return ref description.Contact0;
+        }
+
+        public int ContactCount => <#= contactCount #>;
+
+        public int ConstraintTypeId
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Contact<#= contactCount #>NonconvexOneBodyTypeProcessor.BatchTypeId;
+        }
+
+        public Type BatchType => typeof(Contact<#= contactCount #>NonconvexOneBodyTypeProcessor);
+
+    }
+
+    public struct Contact<#= contactCount #>NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact<#= contactCount #>NonconvexOneBodyPrestepData>
+    {
+        //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
+        public NonconvexOneBodyContactPrestepCommon Common;
+<#
+for (int i = 0; i < contactCount ; ++i)
+{#>
+        public NonconvexPrestepData Contact<#=i#>;
+<#}#>
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexOneBodyContactPrestepCommon GetCommonProperties(ref Contact<#= contactCount #>NonconvexOneBodyPrestepData prestep)
+        {
+            return ref prestep.Common;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexPrestepData GetFirstContact(ref Contact<#= contactCount #>NonconvexOneBodyPrestepData prestep)
+        {
+            return ref prestep.Contact0;
+        }
+    }
+
+    public unsafe struct Contact<#= contactCount #>NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact<#= contactCount #>NonconvexOneBodyProjection>
+    {
+        public NonconvexProjectionCommon Common;
+        //Nonprimitive fixed would be pretty convenient.
+		<#
+for (int i = 0; i < contactCount ; ++i)
+{#>
+        public ContactNonconvexOneBodyProjection Contact<#=i#>;
+<#}#>
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ContactNonconvexOneBodyProjection GetFirstContact(ref Contact<#= contactCount #>NonconvexOneBodyProjection projection)
+        {
+            return ref projection.Contact0;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact<#= contactCount #>NonconvexOneBodyProjection projection)
+        {
+            return ref projection.Common;
+        }
+
+        public int ContactCount => <#= contactCount #>;
+    }
+
+	/// <summary>
+    /// Handles the solve iterations of a bunch of <#= contactCount #>-contact nonconvex one body manifold constraints.
+    /// </summary>
+    public class Contact<#= contactCount #>NonconvexOneBodyTypeProcessor :
+        OneBodyTypeProcessor<Contact<#= contactCount #>NonconvexOneBodyPrestepData, Contact<#= contactCount #>NonconvexOneBodyProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses,
+            ContactNonconvexOneBodyFunctions<Contact<#= contactCount #>NonconvexOneBodyPrestepData, Contact<#= contactCount #>NonconvexOneBodyProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses>>
+    {
+        //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
+        public const int BatchTypeId = <#= 6 + contactCount #>;
+    }
+
+
+<#
+}
+#>
+}
