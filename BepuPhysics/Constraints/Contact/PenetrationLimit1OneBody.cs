@@ -29,10 +29,10 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref BodyInertias inertiaA, ref Vector3Wide normal, ref Contact1OneBodyPrestepData prestep, float dt, float inverseDt,
+        public static void Prestep(ref BodyInertias inertiaA, ref Contact1OneBodyPrestepData prestep, float dt, float inverseDt,
             out Projection projection)
         {
-            Prestep(ref inertiaA, ref normal, ref prestep, dt, inverseDt, out projection);
+            Prestep(ref inertiaA, ref prestep.OffsetA0, ref prestep.Normal, ref prestep.PenetrationDepth0, ref prestep.SpringSettings, ref prestep.MaximumRecoveryVelocity, dt, inverseDt, out projection);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

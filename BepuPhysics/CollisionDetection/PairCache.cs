@@ -376,12 +376,11 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsContactBatch(int constraintTypeId)
         {
-            //TODO: If the nonconvex contact count expands to 8, this will have to change.
-            return constraintTypeId < 16;
+            return constraintTypeId < CollisionConstraintTypeCount;
         }
 
-        //TODO: If we add in nonconvex manifolds with up to 8 contacts, this will need to change- we preallocate enough space to hold all possible narrowphase generated types.
-        public const int CollisionConstraintTypeCount = 16;
+        //4 convex one body, 4 convex two body, 7 nonconvex one body, 7 convex two body.
+        public const int CollisionConstraintTypeCount = 22;
         public const int CollisionTypeCount = 16;
 
 

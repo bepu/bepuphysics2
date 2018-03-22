@@ -52,9 +52,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         //Note that we can safely take a pointer to the pair-stored shape:
                         //1) It's stored in a buffer, which is guaranteed GC safe
                         //2) The data contained is copied by the time Add returns, so there's no concern about invalid pointers getting stored.
-                        var continuationInfo = new PairContinuation(pair.Shared.Continuation.PairId, childA, childB, CollisionContinuationType.NonconvexReduction, continuationIndex);
-                        batcher.Add(pair.A.TypeId, child.ShapeIndex.Type, Unsafe.SizeOf<TConvex>(), childShapeSize, Unsafe.AsPointer(ref pair.A), childShapePointer,
-                            ref pair.Shared.PoseA, ref childWorldPose, pair.Shared.SpeculativeMargin, ref continuationInfo);
+                        var continuationInfo = new PairContinuation(pair.Shared.Continuation.PairId, childA, childB,
+                            CollisionContinuationType.NonconvexReduction, continuationIndex);
+                        if (pair.Shared.FlipMask < 0)
+                        {
+                            //By reversing the order of the parameters, the manifold orientation is flipped. This compensates for the compound collision task's flip.
+                            batcher.Add(child.ShapeIndex.Type, pair.A.TypeId, childShapeSize, Unsafe.SizeOf<TConvex>(), childShapePointer, Unsafe.AsPointer(ref pair.A),
+                                ref childWorldPose, ref pair.Shared.PoseA, pair.Shared.SpeculativeMargin, ref continuationInfo);
+                        }
+                        else
+                        {
+                            batcher.Add(pair.A.TypeId, child.ShapeIndex.Type, Unsafe.SizeOf<TConvex>(), childShapeSize, Unsafe.AsPointer(ref pair.A), childShapePointer,
+                                ref pair.Shared.PoseA, ref childWorldPose, pair.Shared.SpeculativeMargin, ref continuationInfo);
+                        }
                     }
                     else
                     {

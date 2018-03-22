@@ -22,27 +22,52 @@ namespace BepuPhysics.CollisionDetection
 
         protected int AccumulatedImpulseBundleStrideInBytes;
         protected int ContactCount;
+        protected bool Convex;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GatherOldImpulses(ref ConstraintReference constraintReference, float* oldImpulses)
         {
-            //Note that we do not modify the friction accumulated impulses. This is just for simplicity- the impact of accumulated impulses on friction *should* be relatively
-            //hard to notice compared to penetration impulses. TODO: We should, however, test this assumption.
             BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var inner);
             ref var buffer = ref constraintReference.TypeBatch.AccumulatedImpulses;
-            //Note that we assume that the tangent friction impulses always come first. This should be safe for now, but it is important to keep in mind for later.
-            ref var baseImpulse = ref Unsafe.As<byte, Vector<float>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]);
-            GatherScatter.GetLane(ref baseImpulse, inner, ref *oldImpulses, ContactCount);
+            if (Convex)
+            {
+                //Note that we do not modify the friction accumulated impulses. This is just for simplicity- the impact of accumulated impulses on friction *should* be relatively
+                //hard to notice compared to penetration impulses. TODO: We should, however, test this assumption.
+                //Note that we assume that the tangent friction impulses always come first. This should be safe for now, but it is important to keep in mind for later.
+                ref var baseImpulse = ref Unsafe.As<byte, Vector<float>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]);
+                GatherScatter.GetLane(ref baseImpulse, inner, ref *oldImpulses, ContactCount);
+            }
+            else
+            {
+                ref var start = ref GatherScatter.GetOffsetInstance(ref Unsafe.As<byte, NonconvexAccumulatedImpulses>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex]), inner);
+                for (int i = 0; i < ContactCount; ++i)
+                {
+                    oldImpulses[i] = Unsafe.Add(ref start, i).Penetration[0];
+                }
+            }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ScatterNewImpulses<TContactImpulses>(ref ConstraintReference constraintReference, ref TContactImpulses contactImpulses)
-        {
+        {            
             //Note that we do not modify the friction accumulated impulses. This is just for simplicity- the impact of accumulated impulses on friction *should* be relatively
             //hard to notice compared to penetration impulses. TODO: We should, however, test this assumption.
             BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var inner);
             ref var buffer = ref constraintReference.TypeBatch.AccumulatedImpulses;
-            //Note that we assume that the tangent friction impulses always come first. This should be safe for now, but it is important to keep in mind for later.
-            ref var baseImpulse = ref Unsafe.As<byte, Vector<float>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]);
-            GatherScatter.SetLane(ref baseImpulse, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), ContactCount);
+            if (Convex)
+            {
+                //Note that we assume that the tangent friction impulses always come first. This should be safe for now, but it is important to keep in mind for later.
+                ref var baseImpulse = ref Unsafe.As<byte, Vector<float>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]);
+                GatherScatter.SetLane(ref baseImpulse, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), ContactCount);
+            }
+            else
+            {
+                ref var sourceStart = ref Unsafe.As<TContactImpulses, float>(ref contactImpulses);
+                ref var targetStart = ref GatherScatter.GetOffsetInstance(ref Unsafe.As<byte, NonconvexAccumulatedImpulses>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex]), inner);
+                for (int i = 0; i < ContactCount; ++i)
+                {
+                    GatherScatter.GetFirst(ref Unsafe.Add(ref targetStart, i).Penetration) = Unsafe.Add(ref sourceStart, i);
+                }
+            }
         }
 
         public abstract void DeterministicallyAdd<TCallbacks>(
@@ -82,8 +107,26 @@ namespace BepuPhysics.CollisionDetection
                 typeof(TContactImpulses) == typeof(ContactImpulses7) ||
                 typeof(TContactImpulses) == typeof(ContactImpulses8));
             ContactCount = Unsafe.SizeOf<TContactImpulses>() / Unsafe.SizeOf<float>();
-            Debug.Assert((ContactCount + 3) * Unsafe.SizeOf<Vector<float>>() == Unsafe.SizeOf<TAccumulatedImpulses>(),
-                "The layout of accumulated impulses seems to have changed; the assumptions of contact accessors are probably no longer valid.");
+            
+            Convex = 
+                typeof(TConstraintDescription) == typeof(Contact1) ||
+                typeof(TConstraintDescription) == typeof(Contact2) ||
+                typeof(TConstraintDescription) == typeof(Contact3) ||
+                typeof(TConstraintDescription) == typeof(Contact4) ||
+                typeof(TConstraintDescription) == typeof(Contact1OneBody) ||
+                typeof(TConstraintDescription) == typeof(Contact2OneBody) ||
+                typeof(TConstraintDescription) == typeof(Contact3OneBody) ||
+                typeof(TConstraintDescription) == typeof(Contact4OneBody);
+            if (Convex)
+            {
+                Debug.Assert((ContactCount + 3) * Unsafe.SizeOf<Vector<float>>() == Unsafe.SizeOf<TAccumulatedImpulses>(),
+                    "The layout of convex accumulated impulses seems to have changed; the assumptions of impulse gather/scatter are probably no longer valid.");
+            }
+            else
+            {
+                Debug.Assert(ContactCount * 3 * Unsafe.SizeOf<Vector<float>>() == Unsafe.SizeOf<TAccumulatedImpulses>(),
+                    "The layout of nonconvex accumulated impulses seems to have changed; the assumptions of impulse gather/scatter are probably no longer valid.");
+            }
             //Note that this test has to special case count == 1; 1 contact manifolds have no feature ids.
             Debug.Assert(Unsafe.SizeOf<TConstraintCache>() == sizeof(int) * (1 + ContactCount) &&
                 default(TConstraintCache).TypeId == ContactCount - 1,

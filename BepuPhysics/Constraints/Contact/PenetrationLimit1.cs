@@ -19,12 +19,12 @@ namespace BepuPhysics.Constraints.Contact
             public Vector<float> SoftnessImpulseScale;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal, ref Contact1PrestepData prestep, float dt, float inverseDt,
+        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Contact1PrestepData prestep, float dt, float inverseDt,
             out Projection projection)
         {
             Vector3Wide.Subtract(ref prestep.OffsetA0, ref prestep.OffsetB, out var contactOffsetB);
             Prestep(ref inertiaA, ref inertiaB, 
-                ref prestep.OffsetA0, ref contactOffsetB, ref normal, ref prestep.PenetrationDepth0, ref prestep.SpringSettings, ref prestep.MaximumRecoveryVelocity, 
+                ref prestep.OffsetA0, ref contactOffsetB, ref prestep.Normal, ref prestep.PenetrationDepth0, ref prestep.SpringSettings, ref prestep.MaximumRecoveryVelocity, 
                 dt, inverseDt, out projection);
         }
 

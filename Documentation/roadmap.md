@@ -15,21 +15,21 @@ Note that this release will lack many of v1's built in features, like:
 
 The initial version will be split into incremental stages: alpha, beta, and release.
 
-### Alpha (February 2018, or maybe a few days after that, for nonstandard definitions of few)
+### Alpha (March 2018)
 This will be the first version that is likely to be useful to anyone, but far from everyone.
 - Spheres, capsules, and boxes.
 - List-based compound shape type. Primarily useful for small groups of shapes.
 - Basic non-contact constraints. Should be able to simulate a ragdoll.
 - Some extra convenience types for accessing body data.
 
-### Beta (March-April 2018)
+### Beta (April-May 2018)
 The beta will still be missing some important pieces, but should be able to support most games.
 - Triangulated mesh colliders with boundary smoothing.
 - Tree-accelerated compound for larger collections of shapes.
 - Simulation-wide ray and shape casts.
 - A few additional common constraint types.
 
-### Release (March-May 2018)
+### Release (May-July 2018)
 Should be able to support the core features required by physically complex games.
 - Better handling of some dangerous performance corner cases in the solver.
 - Fully enabled CCD.
@@ -43,7 +43,7 @@ There are a few features which aren't fundamentally required for a release, but 
 - Experimental general convex boundary smoothing.
 - Cylinders and cones.
  
-## Medium term (Q2 2018-Q2 2019)
+## Medium term (Q3 2018-Q2 2019)
 
 Once the initial version is ready, most of my time will move to things other than core engine development. Much of that time will be spent actually using the engine, so expect to see incremental enhancements and fixes driven by practical use.
 

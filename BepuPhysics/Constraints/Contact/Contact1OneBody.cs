@@ -117,7 +117,7 @@ namespace BepuPhysics.Constraints.Contact
             projection.Normal = prestep.Normal;
             Helpers.BuildOrthnormalBasis(ref prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.Prestep(ref x, ref z, ref prestep.OffsetA0, ref projection.InertiaA, out projection.Tangent);
-            PenetrationLimit1OneBody.Prestep(ref projection.InertiaA, ref prestep.Normal, ref prestep, dt, inverseDt, out projection.Penetration);
+            PenetrationLimit1OneBody.Prestep(ref projection.InertiaA, ref prestep, dt, inverseDt, out projection.Penetration);
             //Single contact manifolds have no true surface area, so approximate twist friction lever arm using the penetration depth. 
             projection.PremultipliedTwistFrictionCoefficient = Vector.Max(Vector<float>.Zero, prestep.FrictionCoefficient * prestep.PenetrationDepth0);
             TwistFrictionOneBody.Prestep(ref projection.InertiaA, ref prestep.Normal, out projection.Twist);

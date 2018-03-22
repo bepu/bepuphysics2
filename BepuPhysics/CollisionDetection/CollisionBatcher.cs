@@ -42,26 +42,26 @@ namespace BepuPhysics.CollisionDetection
         public int PairId;
         public int ChildA;
         public int ChildB;
-        public uint PackedTypeAndIndex;
+        public uint Packed;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PairContinuation(int pairId, int childA, int childB, CollisionContinuationType continuationType, int continuationIndex)
         {
             PairId = pairId;
             ChildA = childA;
             ChildB = childB;
-            Debug.Assert(continuationIndex < (1 << 24));
-            PackedTypeAndIndex = (uint)(((int)continuationType << 24) | continuationIndex);
+            Debug.Assert(continuationIndex < (1 << 23));
+            Packed = (uint)(((int)continuationType << 24) | continuationIndex);
         }
         public PairContinuation(int pairId)
         {
             PairId = pairId;
             ChildA = 0;
             ChildB = 0;
-            PackedTypeAndIndex = 0;
+            Packed = 0;
         }
 
-        public CollisionContinuationType Type { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (CollisionContinuationType)(PackedTypeAndIndex >> 24); } }
-        public int Index { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)(PackedTypeAndIndex & 0x00FFFFFF); } }
+        public CollisionContinuationType Type { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (CollisionContinuationType)(Packed >> 24); } }
+        public int Index { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)(Packed & 0x007FFFFF); } }
     }
     public struct TestPair
     {
@@ -379,23 +379,23 @@ namespace BepuPhysics.CollisionDetection
             NonconvexReductions.Dispose(Pool);
         }
 
-        public unsafe void ProcessConvexResult(ConvexContactManifold* manifold, ref PairContinuation report)
+        public unsafe void ProcessConvexResult(ConvexContactManifold* manifold, ref PairContinuation continuation)
         {
-            if (report.Type == CollisionContinuationType.Direct)
+            if (continuation.Type == CollisionContinuationType.Direct)
             {
                 //This result concerns a pair which had no higher level owner. Directly report the manifold result.
-                Callbacks.OnPairCompleted(report.PairId, manifold);
+                Callbacks.OnPairCompleted(continuation.PairId, manifold);
             }
             else
             {
                 //This result is associated with another pair and requires additional processing.
                 //Before we move to the next stage, notify the submitter that the subpair has completed.
-                Callbacks.OnChildPairCompleted(report.PairId, report.ChildA, report.ChildB, manifold);
-                switch (report.Type)
+                Callbacks.OnChildPairCompleted(continuation.PairId, continuation.ChildA, continuation.ChildB, manifold);
+                switch (continuation.Type)
                 {
                     case CollisionContinuationType.NonconvexReduction:
                         {
-                            NonconvexReductions.ContributeChildToContinuation(ref report, manifold, ref this);
+                            NonconvexReductions.ContributeChildToContinuation(ref continuation, manifold, ref this);
                         }
                         break;
                 }
