@@ -205,6 +205,15 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ExtractContactConstraintBodyCount(int contactConstraintTypeId)
+        {
+            Debug.Assert(contactConstraintTypeId >= 0 && contactConstraintTypeId < PairCache.CollisionConstraintTypeCount);
+            //[0, 3] and [8, 14] are one body. Otherwise, two.
+            //Could probably be a little more clever than this if it matters.
+            return contactConstraintTypeId <= 3 || (contactConstraintTypeId >= 8 && contactConstraintTypeId <= 14) ? 1 : 2;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int GetConvexConstraintTypeId<TBodyHandles>(int contactCount)
         {
             //Convex constraints:
@@ -256,7 +265,7 @@ namespace BepuPhysics.CollisionDetection
                     //Nonconvex two body constraints, contact count 2 through 8: [15, 21]
                     manifoldTypeAsConstraintType = 8 + (nonconvexManifold.Count - 2);
                     if (typeof(TBodyHandles) == typeof(TwoBodyHandles))
-                        manifoldTypeAsConstraintType += 6;
+                        manifoldTypeAsConstraintType += 7;
                 }
             }
             contactConstraintAccessors[manifoldTypeAsConstraintType].UpdateConstraintForManifold(this, manifoldTypeAsConstraintType, workerIndex, ref pair, ref manifold, ref collisionCache, ref material, bodyHandles);

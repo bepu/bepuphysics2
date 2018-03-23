@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-
     public class ConvexCompoundCollisionTask<TConvex> : CollisionTask where TConvex : struct, IConvexShape
     {
         public ConvexCompoundCollisionTask()
@@ -46,7 +45,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     {
                         ref var child = ref pair.B.Children[j];
                         Compound.GetRotatedChildPose(ref child.LocalPose, ref pair.Shared.PoseB.Orientation, out var childPose);
-                  
+
                         var childShapeType = child.ShapeIndex.Type;
                         batcher.Shapes[childShapeType].GetShapeData(child.ShapeIndex.Index, out var childShapePointer, out var childShapeSize);
 

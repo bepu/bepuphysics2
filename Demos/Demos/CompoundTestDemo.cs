@@ -38,7 +38,7 @@ namespace Demos
             var capsuleChildShape = new Capsule(0.5f, 0.5f);
             var capsuleLocalPose = new RigidPose { Position = new Vector3(-0.5f, 0, 0), Orientation = BepuUtilities.Quaternion.Identity };
             var boxChildShape = new Box(0.5f, 1f, 1.5f);
-            var boxLocalPose = new RigidPose { Position = new Vector3(0.5f, 2, 0), Orientation = BepuUtilities.Quaternion.Identity };
+            var boxLocalPose = new RigidPose { Position = new Vector3(0.5f, 0, 0), Orientation = BepuUtilities.Quaternion.Identity };
 
             //All allocations from the buffer pool used for the final compound shape will be disposed when the demo is disposed. Don't have to worry about leaks in these demos.
             var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 8);
@@ -58,10 +58,15 @@ namespace Demos
                     SpeculativeMargin = 0.1f,
                 },
                 LocalInertia = compoundInertia,
-                Pose = new RigidPose { Position = new Vector3(0, 5, 0), Orientation = BepuUtilities.Quaternion.Identity },
+                Pose = new RigidPose { Orientation = BepuUtilities.Quaternion.Identity },
                 //Velocity = new BodyVelocity { Angular = new Vector3(1, 1, 1) }
             };
-            Simulation.Bodies.Add(ref compoundDescription);
+            for (int i = 0; i < 5; ++i)
+            {
+                compoundDescription.Pose.Position = new Vector3(0, 5 + i * 3, 0);
+                Simulation.Bodies.Add(ref compoundDescription);
+            }
+
 
             boxChildShape = new Box(100, 1, 100);
             var groundShapeIndex = Simulation.Shapes.Add(ref boxChildShape);

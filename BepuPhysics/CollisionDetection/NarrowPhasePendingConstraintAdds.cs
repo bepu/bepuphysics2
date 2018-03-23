@@ -200,13 +200,7 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(list.Buffer.Allocated, "The target region should be allocated, or else the job scheduler is broken.");
                 Debug.Assert(list.Count > 0);
                 int byteIndex = start * list.ElementSizeInBytes;
-                //This follows the same convention as the GatherOldImpulses and ScatterNewImpulses of the PairCache.
-                //Constraints cover 16 possible cases:
-                //1-4 contacts: 0x3
-                //convex vs nonconvex: 0x4
-                //1 body versus 2 body: 0x8
-                //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-                int bodyCount = (typeIndex >> 3) + 1;
+                int bodyCount = ExtractContactConstraintBodyCount(typeIndex);
                 ref var speculativeBatchIndicesForType = ref speculativeBatchIndices[typeIndex];
                 for (int i = start; i < end; ++i)
                 {
