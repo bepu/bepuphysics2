@@ -188,15 +188,10 @@ namespace BepuPhysics.CollisionDetection
                 targetContact.PenetrationDepth = sourceContact.Depth;
             }
         }
-        protected static void CopyContactData(ref NonconvexContactManifold manifold, out TConstraintCache constraintCache, out TConstraintDescription description)
+        protected static void CopyContactData(ref NonconvexContactManifold manifold, ref TConstraintCache constraintCache, ref NonconvexConstraintContactData targetContacts)
         {
-            //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
-            constraintCache = default;
-            description = default;
             //TODO: Check codegen. This should be a compilation time constant. If it's not, just use the ContactCount that we cached.
             var contactCount = constraintCache.TypeId + 1;
-            //Contact data comes first in the constraint description memory layout.
-            ref var targetContacts = ref Unsafe.As<TConstraintDescription, ConstraintContactData>(ref description);
             ref var targetFeatureIds = ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1);
             for (int i = 0; i < contactCount; ++i)
             {
@@ -204,6 +199,7 @@ namespace BepuPhysics.CollisionDetection
                 ref var targetContact = ref Unsafe.Add(ref targetContacts, i);
                 Unsafe.Add(ref targetFeatureIds, i) = sourceContact.FeatureId;
                 targetContact.OffsetA = sourceContact.Offset;
+                targetContact.Normal = sourceContact.Normal;
                 targetContact.PenetrationDepth = sourceContact.Depth;
             }
         }
@@ -250,7 +246,10 @@ namespace BepuPhysics.CollisionDetection
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
             ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
-            CopyContactData(ref manifold, out var constraintCache, out var description);
+            //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
+            TConstraintCache constraintCache = default;
+            TConstraintDescription description = default;
+            CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
             description.CopyManifoldWideProperties(ref material);
             UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
         }
@@ -265,8 +264,11 @@ namespace BepuPhysics.CollisionDetection
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
-            ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
-            CopyContactData(ref manifold, out var constraintCache, out var description);
+            ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);       
+            //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
+            TConstraintCache constraintCache = default;
+            TConstraintDescription description = default;
+            CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
             description.CopyManifoldWideProperties(ref manifold.OffsetB, ref material);
             UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
         }

@@ -81,9 +81,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact2NonconvexProjection : INonconvexTwoBodyProjection<Contact2NonconvexProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexTwoBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexTwoBodyProjection Contact0;
+        public ContactNonconvexTwoBodyProjection Contact0;
         public ContactNonconvexTwoBodyProjection Contact1;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -92,7 +92,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact2NonconvexProjection projection)
+        public ref NonconvexTwoBodyProjectionCommon GetCommonProperties(ref Contact2NonconvexProjection projection)
         {
             return ref projection.Common;
         }
@@ -181,9 +181,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact2NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact2NonconvexOneBodyProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexOneBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexOneBodyProjection Contact0;
+        public ContactNonconvexOneBodyProjection Contact0;
         public ContactNonconvexOneBodyProjection Contact1;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -192,7 +192,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact2NonconvexOneBodyProjection projection)
+        public ref NonconvexOneBodyProjectionCommon GetCommonProperties(ref Contact2NonconvexOneBodyProjection projection)
         {
             return ref projection.Common;
         }
@@ -292,9 +292,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact3NonconvexProjection : INonconvexTwoBodyProjection<Contact3NonconvexProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexTwoBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexTwoBodyProjection Contact0;
+        public ContactNonconvexTwoBodyProjection Contact0;
         public ContactNonconvexTwoBodyProjection Contact1;
         public ContactNonconvexTwoBodyProjection Contact2;
 
@@ -304,7 +304,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact3NonconvexProjection projection)
+        public ref NonconvexTwoBodyProjectionCommon GetCommonProperties(ref Contact3NonconvexProjection projection)
         {
             return ref projection.Common;
         }
@@ -395,9 +395,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact3NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact3NonconvexOneBodyProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexOneBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexOneBodyProjection Contact0;
+        public ContactNonconvexOneBodyProjection Contact0;
         public ContactNonconvexOneBodyProjection Contact1;
         public ContactNonconvexOneBodyProjection Contact2;
 
@@ -407,7 +407,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact3NonconvexOneBodyProjection projection)
+        public ref NonconvexOneBodyProjectionCommon GetCommonProperties(ref Contact3NonconvexOneBodyProjection projection)
         {
             return ref projection.Common;
         }
@@ -510,9 +510,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact4NonconvexProjection : INonconvexTwoBodyProjection<Contact4NonconvexProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexTwoBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexTwoBodyProjection Contact0;
+        public ContactNonconvexTwoBodyProjection Contact0;
         public ContactNonconvexTwoBodyProjection Contact1;
         public ContactNonconvexTwoBodyProjection Contact2;
         public ContactNonconvexTwoBodyProjection Contact3;
@@ -523,7 +523,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact4NonconvexProjection projection)
+        public ref NonconvexTwoBodyProjectionCommon GetCommonProperties(ref Contact4NonconvexProjection projection)
         {
             return ref projection.Common;
         }
@@ -616,9 +616,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact4NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact4NonconvexOneBodyProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexOneBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexOneBodyProjection Contact0;
+        public ContactNonconvexOneBodyProjection Contact0;
         public ContactNonconvexOneBodyProjection Contact1;
         public ContactNonconvexOneBodyProjection Contact2;
         public ContactNonconvexOneBodyProjection Contact3;
@@ -629,7 +629,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact4NonconvexOneBodyProjection projection)
+        public ref NonconvexOneBodyProjectionCommon GetCommonProperties(ref Contact4NonconvexOneBodyProjection projection)
         {
             return ref projection.Common;
         }
@@ -735,9 +735,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact5NonconvexProjection : INonconvexTwoBodyProjection<Contact5NonconvexProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexTwoBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexTwoBodyProjection Contact0;
+        public ContactNonconvexTwoBodyProjection Contact0;
         public ContactNonconvexTwoBodyProjection Contact1;
         public ContactNonconvexTwoBodyProjection Contact2;
         public ContactNonconvexTwoBodyProjection Contact3;
@@ -749,7 +749,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact5NonconvexProjection projection)
+        public ref NonconvexTwoBodyProjectionCommon GetCommonProperties(ref Contact5NonconvexProjection projection)
         {
             return ref projection.Common;
         }
@@ -844,9 +844,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact5NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact5NonconvexOneBodyProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexOneBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexOneBodyProjection Contact0;
+        public ContactNonconvexOneBodyProjection Contact0;
         public ContactNonconvexOneBodyProjection Contact1;
         public ContactNonconvexOneBodyProjection Contact2;
         public ContactNonconvexOneBodyProjection Contact3;
@@ -858,7 +858,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact5NonconvexOneBodyProjection projection)
+        public ref NonconvexOneBodyProjectionCommon GetCommonProperties(ref Contact5NonconvexOneBodyProjection projection)
         {
             return ref projection.Common;
         }
@@ -967,9 +967,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact6NonconvexProjection : INonconvexTwoBodyProjection<Contact6NonconvexProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexTwoBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexTwoBodyProjection Contact0;
+        public ContactNonconvexTwoBodyProjection Contact0;
         public ContactNonconvexTwoBodyProjection Contact1;
         public ContactNonconvexTwoBodyProjection Contact2;
         public ContactNonconvexTwoBodyProjection Contact3;
@@ -982,7 +982,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact6NonconvexProjection projection)
+        public ref NonconvexTwoBodyProjectionCommon GetCommonProperties(ref Contact6NonconvexProjection projection)
         {
             return ref projection.Common;
         }
@@ -1079,9 +1079,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact6NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact6NonconvexOneBodyProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexOneBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexOneBodyProjection Contact0;
+        public ContactNonconvexOneBodyProjection Contact0;
         public ContactNonconvexOneBodyProjection Contact1;
         public ContactNonconvexOneBodyProjection Contact2;
         public ContactNonconvexOneBodyProjection Contact3;
@@ -1094,7 +1094,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact6NonconvexOneBodyProjection projection)
+        public ref NonconvexOneBodyProjectionCommon GetCommonProperties(ref Contact6NonconvexOneBodyProjection projection)
         {
             return ref projection.Common;
         }
@@ -1206,9 +1206,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact7NonconvexProjection : INonconvexTwoBodyProjection<Contact7NonconvexProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexTwoBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexTwoBodyProjection Contact0;
+        public ContactNonconvexTwoBodyProjection Contact0;
         public ContactNonconvexTwoBodyProjection Contact1;
         public ContactNonconvexTwoBodyProjection Contact2;
         public ContactNonconvexTwoBodyProjection Contact3;
@@ -1222,7 +1222,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact7NonconvexProjection projection)
+        public ref NonconvexTwoBodyProjectionCommon GetCommonProperties(ref Contact7NonconvexProjection projection)
         {
             return ref projection.Common;
         }
@@ -1321,9 +1321,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact7NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact7NonconvexOneBodyProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexOneBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexOneBodyProjection Contact0;
+        public ContactNonconvexOneBodyProjection Contact0;
         public ContactNonconvexOneBodyProjection Contact1;
         public ContactNonconvexOneBodyProjection Contact2;
         public ContactNonconvexOneBodyProjection Contact3;
@@ -1337,7 +1337,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact7NonconvexOneBodyProjection projection)
+        public ref NonconvexOneBodyProjectionCommon GetCommonProperties(ref Contact7NonconvexOneBodyProjection projection)
         {
             return ref projection.Common;
         }
@@ -1452,9 +1452,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact8NonconvexProjection : INonconvexTwoBodyProjection<Contact8NonconvexProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexTwoBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexTwoBodyProjection Contact0;
+        public ContactNonconvexTwoBodyProjection Contact0;
         public ContactNonconvexTwoBodyProjection Contact1;
         public ContactNonconvexTwoBodyProjection Contact2;
         public ContactNonconvexTwoBodyProjection Contact3;
@@ -1469,7 +1469,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact8NonconvexProjection projection)
+        public ref NonconvexTwoBodyProjectionCommon GetCommonProperties(ref Contact8NonconvexProjection projection)
         {
             return ref projection.Common;
         }
@@ -1570,9 +1570,9 @@ namespace BepuPhysics.Constraints.Contact
 
     public unsafe struct Contact8NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact8NonconvexOneBodyProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexOneBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		        public ContactNonconvexOneBodyProjection Contact0;
+        public ContactNonconvexOneBodyProjection Contact0;
         public ContactNonconvexOneBodyProjection Contact1;
         public ContactNonconvexOneBodyProjection Contact2;
         public ContactNonconvexOneBodyProjection Contact3;
@@ -1587,7 +1587,7 @@ namespace BepuPhysics.Constraints.Contact
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact8NonconvexOneBodyProjection projection)
+        public ref NonconvexOneBodyProjectionCommon GetCommonProperties(ref Contact8NonconvexOneBodyProjection projection)
         {
             return ref projection.Common;
         }

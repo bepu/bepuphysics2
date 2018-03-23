@@ -100,9 +100,9 @@ for (int i = 0; i < contactCount ; ++i)
 
     public unsafe struct Contact<#= contactCount #>NonconvexProjection : INonconvexTwoBodyProjection<Contact<#= contactCount #>NonconvexProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexTwoBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		<#
+<#
 for (int i = 0; i < contactCount ; ++i)
 {#>
         public ContactNonconvexTwoBodyProjection Contact<#=i#>;
@@ -114,7 +114,7 @@ for (int i = 0; i < contactCount ; ++i)
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact<#= contactCount #>NonconvexProjection projection)
+        public ref NonconvexTwoBodyProjectionCommon GetCommonProperties(ref Contact<#= contactCount #>NonconvexProjection projection)
         {
             return ref projection.Common;
         }
@@ -209,9 +209,9 @@ for (int i = 0; i < contactCount ; ++i)
 
     public unsafe struct Contact<#= contactCount #>NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact<#= contactCount #>NonconvexOneBodyProjection>
     {
-        public NonconvexProjectionCommon Common;
+        public NonconvexOneBodyProjectionCommon Common;
         //Nonprimitive fixed would be pretty convenient.
-		<#
+<#
 for (int i = 0; i < contactCount ; ++i)
 {#>
         public ContactNonconvexOneBodyProjection Contact<#=i#>;
@@ -223,7 +223,7 @@ for (int i = 0; i < contactCount ; ++i)
             return ref projection.Contact0;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexProjectionCommon GetCommonProperties(ref Contact<#= contactCount #>NonconvexOneBodyProjection projection)
+        public ref NonconvexOneBodyProjectionCommon GetCommonProperties(ref Contact<#= contactCount #>NonconvexOneBodyProjection projection)
         {
             return ref projection.Common;
         }

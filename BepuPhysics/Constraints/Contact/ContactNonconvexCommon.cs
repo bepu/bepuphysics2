@@ -173,7 +173,12 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> Penetration;
     }
 
-    public struct NonconvexProjectionCommon
+    public struct NonconvexOneBodyProjectionCommon
+    {
+        public BodyInertias InertiaA;
+        public Vector<float> FrictionCoefficient;
+    }
+    public struct NonconvexTwoBodyProjectionCommon
     {
         public BodyInertias InertiaA;
         public BodyInertias InertiaB;
@@ -197,14 +202,14 @@ namespace BepuPhysics.Constraints.Contact
         ref ContactNonconvexOneBodyProjection GetFirstContact(ref TProjection description);
         int ContactCount { get; }
 
-        ref NonconvexProjectionCommon GetCommonProperties(ref TProjection projection);
+        ref NonconvexOneBodyProjectionCommon GetCommonProperties(ref TProjection projection);
     }
     public interface INonconvexTwoBodyProjection<TProjection> where TProjection : INonconvexTwoBodyProjection<TProjection>
     {
         ref ContactNonconvexTwoBodyProjection GetFirstContact(ref TProjection description);
         int ContactCount { get; }
 
-        ref NonconvexProjectionCommon GetCommonProperties(ref TProjection projection);
+        ref NonconvexTwoBodyProjectionCommon GetCommonProperties(ref TProjection projection);
     }
 
     public struct ContactNonconvexOneBodyFunctions<TPrestep, TProjection, TAccumulatedImpulses> :
