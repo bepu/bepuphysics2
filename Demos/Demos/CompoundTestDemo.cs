@@ -45,26 +45,61 @@ namespace Demos
             compoundBuilder.Add(ref capsuleChildShape, ref capsuleLocalPose, 1);
             compoundBuilder.Add(ref boxChildShape, ref boxLocalPose, 1);
             compoundBuilder.BuildCompound(out var compound, out var compoundInertia);
-            //We do, however, clean up the compound builder because we can.
-            compoundBuilder.Dispose();
-
-            var compoundIndex = Simulation.Shapes.Add(ref compound);
             var compoundDescription = new BodyDescription
             {
                 Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
                 Collidable = new CollidableDescription
                 {
-                    Shape = compoundIndex,
+                    Shape = Simulation.Shapes.Add(ref compound),
                     SpeculativeMargin = 0.1f,
                 },
                 LocalInertia = compoundInertia,
                 Pose = new RigidPose { Orientation = BepuUtilities.Quaternion.Identity },
-                //Velocity = new BodyVelocity { Angular = new Vector3(1, 1, 1) }
             };
+
+            compoundBuilder.Reset();
+            var gridBoxShape = new Sphere(0.5f);// Box(1, 1, 1);
+            var gridBoxShapeIndex = Simulation.Shapes.Add(ref gridBoxShape);
+            gridBoxShape.ComputeLocalInverseInertia(1, out var gridBoxInertia);
+            //The compound builder takes non-inverse inertias as input. Not exactly the most user friendly thing in this use case; 
+            //would be nice to improve the API without sacrificing directness of the codepath.
+            Triangular3x3.SymmetricInvert(ref gridBoxInertia, out gridBoxInertia);
+            const int gridCompoundWidth = 3;
+            const float gridCompoundSpacing = 1.25f;
+            const float localPoseOffset = -0.5f * gridCompoundSpacing * gridCompoundWidth;
+            for (int i = 0; i < gridCompoundWidth; ++i)
+            {
+                for (int j = 0; j < gridCompoundWidth; ++j)
+                {
+                    var localPose = new RigidPose
+                    {
+                        Orientation = BepuUtilities.Quaternion.Identity,
+                        Position = new Vector3(localPoseOffset) + new Vector3(gridCompoundSpacing) * new Vector3(i, 0, j)
+                    };
+                    compoundBuilder.Add(gridBoxShapeIndex, ref localPose, 1, ref gridBoxInertia);
+                }
+            }
+            compoundBuilder.BuildCompound(out var gridCompound, out var gridInertia);
+            var gridDescription = new BodyDescription
+            {
+                Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
+                Collidable = new CollidableDescription
+                {
+                    Shape = Simulation.Shapes.Add(ref gridCompound),
+                    SpeculativeMargin = 0.1f,
+                },
+                LocalInertia = gridInertia,
+                Pose = new RigidPose { Orientation = BepuUtilities.Quaternion.Identity }
+            };
+
+            //We do, however, clean up the compound builder because we can.
+            compoundBuilder.Dispose();
+            
+            
             for (int i = 0; i < 5; ++i)
             {
-                compoundDescription.Pose.Position = new Vector3(0, 5 + i * 3, 0);
-                Simulation.Bodies.Add(ref compoundDescription);
+                gridDescription.Pose.Position = new Vector3(0, 5 + i * 3, 0);
+                Simulation.Bodies.Add(ref gridDescription);
             }
 
 

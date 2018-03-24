@@ -50,7 +50,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             ref var continuationChild = ref batcher.NonconvexReductions.Continuations[continuationIndex].Children[childBIndex];
                             
                             continuationChild.OffsetA = childAPose.Position;
+                            continuationChild.ChildIndexA = childAIndex;
                             continuationChild.OffsetB = childBPose.Position;
+                            continuationChild.ChildIndexB = childBIndex;
                             //Move the child into world space to be consistent with the other convex.
                             childBPose.Position += pair.Shared.PoseB.Position;
                             batcher.Add(childA.ShapeIndex, childB.ShapeIndex, ref childAWorldPose, ref childBPose, pair.Shared.SpeculativeMargin, ref continuationInfo);

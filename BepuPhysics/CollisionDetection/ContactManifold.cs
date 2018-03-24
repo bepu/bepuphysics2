@@ -114,6 +114,12 @@ namespace BepuPhysics.CollisionDetection
             targetContact.Normal = normal;
             targetContact.FeatureId = convexContact.FeatureId;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static ref NonconvexContact Allocate(NonconvexContactManifold* manifold)
+        {
+            Debug.Assert(manifold->Count < 8);
+            return ref (&manifold->Contact0)[manifold->Count++];
+        }
     }
 
     /// <summary>

@@ -60,7 +60,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         {
                             //By reversing the order of the parameters, the manifold orientation is flipped. This compensates for the compound collision task's flip.
                             continuationChild.OffsetA = childPose.Position;
+                            continuationChild.ChildIndexA = childB;
                             continuationChild.OffsetB = default;
+                            continuationChild.ChildIndexB = childA;
                             //Move the child into world space to be consistent with the other convex.
                             childPose.Position += pair.Shared.PoseB.Position;
                             batcher.Add(child.ShapeIndex.Type, pair.A.TypeId, childShapeSize, Unsafe.SizeOf<TConvex>(), childShapePointer, Unsafe.AsPointer(ref pair.A),
@@ -69,7 +71,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         else
                         {
                             continuationChild.OffsetA = default;
+                            continuationChild.ChildIndexA = childA;
                             continuationChild.OffsetB = childPose.Position;
+                            continuationChild.ChildIndexB = childB;
                             //Move the child into world space to be consistent with the other convex.
                             childPose.Position += pair.Shared.PoseB.Position;
                             batcher.Add(pair.A.TypeId, child.ShapeIndex.Type, Unsafe.SizeOf<TConvex>(), childShapeSize, Unsafe.AsPointer(ref pair.A), childShapePointer,

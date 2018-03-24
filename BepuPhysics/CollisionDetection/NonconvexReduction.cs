@@ -1,4 +1,6 @@
-﻿using BepuUtilities.Memory;
+﻿using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,10 +17,12 @@ namespace BepuPhysics.CollisionDetection
         /// Offset from the origin of the first shape's parent to the child's location in world space. If there is no parent, this is the zero vector.
         /// </summary>
         public Vector3 OffsetA;
+        public int ChildIndexA;
         /// <summary>
         /// Offset from the origin of the second shape's parent to the child's location in world space. If there is no parent, this is the zero vector.
         /// </summary>
         public Vector3 OffsetB;
+        public int ChildIndexB;
     }
 
     public struct NonconvexReduction : ICollisionTestContinuation
@@ -32,6 +36,72 @@ namespace BepuPhysics.CollisionDetection
             ChildCount = childManifoldCount;
             CompletedChildCount = 0;
             pool.Take(childManifoldCount, out Children);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe void AddContact(NonconvexContactManifold* manifold, ref NonconvexReductionChild sourceChild,
+            ref Vector3 offset, float depth, ref Vector3 normal, int featureId)
+        {
+            ref var target = ref NonconvexContactManifold.Allocate(manifold);
+            target.Offset = offset + sourceChild.OffsetA;
+            target.Normal = normal;
+            //Mix the convex-generated feature id with the child indices.
+            target.FeatureId = (featureId ^ (sourceChild.ChildIndexA << 8)) ^ (sourceChild.ChildIndexB << 16);
+            target.Depth = depth;
+        }
+
+        unsafe void ChooseBadly(NonconvexContactManifold* reducedManifold)
+        {
+            for (int i = 0; i < ChildCount; ++i)
+            {
+                ref var child = ref Children[i];
+                ref var contactBase = ref child.Manifold.Contact0;
+                for (int j = 0; j < child.Manifold.Count; ++j)
+                {
+                    ref var contact = ref Unsafe.Add(ref contactBase, j);
+                    AddContact(reducedManifold, ref child, ref contact.Offset, contact.Depth, ref child.Manifold.Normal, contact.FeatureId);
+                    if (reducedManifold->Count == 8)
+                        break;
+                }
+                if (reducedManifold->Count == 8)
+                    break;
+            }
+
+        }
+        unsafe void ChooseDeepest(NonconvexContactManifold* manifold)
+        {
+            //Note that we're relying on stackalloc being efficient here. That's not actually a good idea unless you strip the stackalloc's init.
+            var contactCountUpperBound = ChildCount * 4;
+            int contactCount = 0;
+            var depths = stackalloc float[contactCountUpperBound];
+            var indices = stackalloc Int2[contactCountUpperBound];
+            for (int i = 0; i < ChildCount; ++i)
+            {
+                ref var child = ref Children[i];
+                ref var contactBase = ref child.Manifold.Contact0;
+                for (int j = 0; j < child.Manifold.Count; ++j)
+                {
+                    var contactIndex = contactCount++;
+                    ref var contactIndices = ref indices[contactIndex];
+                    contactIndices.X = i;
+                    contactIndices.Y = j;
+                    depths[contactIndex] = Unsafe.Add(ref contactBase, j).Depth;
+                }
+            }
+
+            var comparer = default(PrimitiveComparer<float>);
+            QuickSort.Sort(ref *depths, ref *indices, 0, contactCount - 1, ref comparer);
+            var newCount = contactCount < 8 ? contactCount : 8;
+            var minimumIndex = contactCount - newCount;
+            for (int i = contactCount - 1; i >= minimumIndex; --i)
+            {
+                ref var contactIndices = ref indices[i];
+                ref var child = ref Children[contactIndices.X];
+                ref var contact = ref Unsafe.Add(ref child.Manifold.Contact0, contactIndices.Y);
+                AddContact(manifold, ref child, ref contact.Offset, contact.Depth, ref child.Manifold.Normal, contact.FeatureId);
+            }
+
+
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -60,27 +130,13 @@ namespace BepuPhysics.CollisionDetection
                     NonconvexContactManifold reducedManifold;
                     //We should assume that the stack memory backing the reduced manifold is uninitialized. We rely on the count, so initialize it manually.
                     reducedManifold.Count = 0;
-                    for (int i = 0; i < ChildCount; ++i)
-                    {
-                        ref var child = ref Children[i];
-                        ref var contactBase = ref child.Manifold.Contact0;
-                        for (int j = 0; j < child.Manifold.Count; ++j)
-                        {
-                            ref var contact = ref Unsafe.Add(ref contactBase, j);
-                            contact.Offset += child.OffsetA;
-                            //Mix the convex-generated feature id with the child index.
-                            contact.FeatureId ^= i << 8;
-                            NonconvexContactManifold.Add(&reducedManifold, ref child.Manifold.Normal, ref contact);
-                            if (reducedManifold.Count == 8)
-                                break;
-                        }
-                        if (reducedManifold.Count == 8)
-                            break;
-                    }
+
+                    //ChooseArbitrarily(&reducedManifold);
+                    ChooseDeepest(&reducedManifold);
+
                     //The manifold offsetB is the offset from shapeA origin to shapeB origin.
-                    var reducedManifoldPointer = &reducedManifold;
                     reducedManifold.OffsetB = sampleChild->Manifold.OffsetB - sampleChild->OffsetB + sampleChild->OffsetA;
-                    batcher.Callbacks.OnPairCompleted(pairId, reducedManifoldPointer);
+                    batcher.Callbacks.OnPairCompleted(pairId, &reducedManifold);
                 }
                 else
                 {
