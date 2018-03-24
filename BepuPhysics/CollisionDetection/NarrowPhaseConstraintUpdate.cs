@@ -24,7 +24,7 @@ namespace BepuPhysics.CollisionDetection
     /// </summary>
     struct EmptyCollisionCache : IPairCacheEntry
     {
-        public int TypeId => -1;
+        public int CacheTypeId => -1;
     }
 
     public struct ContactImpulses1
@@ -143,19 +143,28 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(pointers.ConstraintCache.Exists, "If a pair was persisted in the narrow phase, there should be a constraint associated with it.");
 
                 var constraintCacheIndex = pointers.ConstraintCache;
-                var accessor = contactConstraintAccessors[constraintCacheIndex.Type];
                 var oldConstraintCachePointer = PairCache.GetOldConstraintCachePointer(index);
                 var constraintHandle = *(int*)oldConstraintCachePointer;
                 Solver.GetConstraintReference(constraintHandle, out var constraintReference);
-                Debug.Assert(constraintReference.typeBatchPointer != null);
+                Debug.Assert(
+                    constraintReference.typeBatchPointer != null && 
+                    constraintReference.IndexInTypeBatch >= 0 && 
+                    constraintReference.IndexInTypeBatch < constraintReference.TypeBatch.ConstraintCount, 
+                    "Handle-retrieved constraint reference must point to a constraint of expected type, or else something is corrupted.");
                 var newImpulses = default(TContactImpulses);
-                var oldContactCount = PairCache.GetContactCount(constraintCacheIndex.Type);
-                var oldImpulses = stackalloc float[oldContactCount];
+                var accessor = contactConstraintAccessors[constraintReference.TypeBatch.TypeId];
+                var oldImpulses = stackalloc float[accessor.ContactCount];
                 accessor.GatherOldImpulses(ref constraintReference, oldImpulses);
+#if DEBUG
+                for (int i = 0; i < accessor.ContactCount; ++i)
+                {
+                    Debug.Assert(oldImpulses[i] >= 0, "Penetration limit impulses must be nonnegative. Otherwise, something's wrong. Busted gather? Broken constraint?");
+                }
+#endif
                 //The first slot in the constraint cache is the constraint handle; the following slots are feature ids.
                 RedistributeImpulses(
-                    oldContactCount, (int*)oldConstraintCachePointer + 1, oldImpulses,
-                    newConstraintCache.TypeId + 1, ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref newConstraintCache), 1), ref newImpulses);
+                    accessor.ContactCount, (int*)oldConstraintCachePointer + 1, oldImpulses,
+                    newConstraintCache.CacheTypeId + 1, ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref newConstraintCache), 1), ref newImpulses);
 
                 if (manifoldTypeAsConstraintType == constraintReference.TypeBatch.TypeId)
                 {
@@ -163,7 +172,7 @@ namespace BepuPhysics.CollisionDetection
                     //to update the constraint cache's constraint handle. The good news is that we already have a valid constraint handle from the pre-existing constraint.
                     //It's exactly the same type, so we can just overwrite its properties without worry.
                     //Note that we rely on the constraint handle being stored in the first 4 bytes of the constraint cache.
-                    *(int*)Unsafe.AsPointer(ref newConstraintCache) = constraintHandle;
+                    Unsafe.As<TConstraintCache, int>(ref newConstraintCache) = constraintHandle;
                     PairCache.Update(workerIndex, index, ref pointers, ref collisionCache, ref newConstraintCache);
                     //There exists a constraint and it has the same type as the manifold. Directly apply the new description and impulses.
                     Solver.ApplyDescription(ref constraintReference, ref description);

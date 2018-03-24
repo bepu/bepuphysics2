@@ -114,7 +114,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PenetrationDepth1;
         public Vector<float> PenetrationDepth2;
     }
-    
+
     //The key observation here is that we have 7DOFs worth of constraints that all share the exact same bodies.
     //Despite the potential premultiplication optimizations, we focus on a few big wins:
     //1) Sharing the inverse mass for the impulse->velocity projection across all constraints.
@@ -138,7 +138,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> LeverArm2;
         public TwistFrictionProjection Twist;
     }
-    
+
     public struct Contact3OneBodyFunctions :
         IOneBodyConstraintFunctions<Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses>
     {

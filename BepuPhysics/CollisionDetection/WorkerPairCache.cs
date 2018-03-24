@@ -144,12 +144,12 @@ namespace BepuPhysics.CollisionDetection
         private unsafe void WorkerCacheAdd<TCollision, TConstraint>(ref TCollision collisionCache, ref TConstraint constraintCache, out CollidablePairPointers pointers)
             where TCollision : IPairCacheEntry where TConstraint : IPairCacheEntry
         {
-            pointers.ConstraintCache = new PairCacheIndex(workerIndex, constraintCache.TypeId, constraintCaches[constraintCache.TypeId].Add(ref constraintCache, minimumPerTypeCapacity, pool));
+            pointers.ConstraintCache = new PairCacheIndex(workerIndex, constraintCache.CacheTypeId, constraintCaches[constraintCache.CacheTypeId].Add(ref constraintCache, minimumPerTypeCapacity, pool));
 
             if (typeof(TCollision) == typeof(EmptyCollisionCache))
                 pointers.CollisionDetectionCache = new PairCacheIndex();
             else
-                pointers.CollisionDetectionCache = new PairCacheIndex(workerIndex, collisionCache.TypeId, collisionCaches[collisionCache.TypeId].Add(ref collisionCache, minimumPerTypeCapacity, pool));
+                pointers.CollisionDetectionCache = new PairCacheIndex(workerIndex, collisionCache.CacheTypeId, collisionCaches[collisionCache.CacheTypeId].Add(ref collisionCache, minimumPerTypeCapacity, pool));
 
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

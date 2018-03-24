@@ -21,7 +21,7 @@ namespace BepuPhysics.CollisionDetection
         public int ConstraintTypeId { get; protected set; }
 
         protected int AccumulatedImpulseBundleStrideInBytes;
-        protected int ContactCount;
+        public int ContactCount { get; protected set; }
         protected bool Convex;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -34,8 +34,11 @@ namespace BepuPhysics.CollisionDetection
                 //Note that we do not modify the friction accumulated impulses. This is just for simplicity- the impact of accumulated impulses on friction *should* be relatively
                 //hard to notice compared to penetration impulses. TODO: We should, however, test this assumption.
                 //Note that we assume that the tangent friction impulses always come first. This should be safe for now, but it is important to keep in mind for later.
-                ref var baseImpulse = ref Unsafe.As<byte, Vector<float>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]);
-                GatherScatter.GetLane(ref baseImpulse, inner, ref *oldImpulses, ContactCount);
+                ref var start = ref GatherScatter.GetOffsetInstance(ref Unsafe.As<byte, Vector<float>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]), inner);
+                for (int i = 0; i < ContactCount; ++i)
+                {
+                    oldImpulses[i] = Unsafe.Add(ref start, i)[0];
+                }
             }
             else
             {
@@ -48,7 +51,7 @@ namespace BepuPhysics.CollisionDetection
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ScatterNewImpulses<TContactImpulses>(ref ConstraintReference constraintReference, ref TContactImpulses contactImpulses)
-        {            
+        {
             //Note that we do not modify the friction accumulated impulses. This is just for simplicity- the impact of accumulated impulses on friction *should* be relatively
             //hard to notice compared to penetration impulses. TODO: We should, however, test this assumption.
             BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var inner);
@@ -56,8 +59,12 @@ namespace BepuPhysics.CollisionDetection
             if (Convex)
             {
                 //Note that we assume that the tangent friction impulses always come first. This should be safe for now, but it is important to keep in mind for later.
-                ref var baseImpulse = ref Unsafe.As<byte, Vector<float>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]);
-                GatherScatter.SetLane(ref baseImpulse, inner, ref Unsafe.As<TContactImpulses, float>(ref contactImpulses), ContactCount);
+                ref var sourceStart = ref Unsafe.As<TContactImpulses, float>(ref contactImpulses);
+                ref var targetStart = ref GatherScatter.GetOffsetInstance(ref Unsafe.As<byte, Vector<float>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]), inner);
+                for (int i = 0; i < ContactCount; ++i)
+                {
+                    GatherScatter.GetFirst(ref Unsafe.Add(ref targetStart, i)) = Unsafe.Add(ref sourceStart, i);
+                }
             }
             else
             {
@@ -107,8 +114,8 @@ namespace BepuPhysics.CollisionDetection
                 typeof(TContactImpulses) == typeof(ContactImpulses7) ||
                 typeof(TContactImpulses) == typeof(ContactImpulses8));
             ContactCount = Unsafe.SizeOf<TContactImpulses>() / Unsafe.SizeOf<float>();
-            
-            Convex = 
+
+            Convex =
                 typeof(TConstraintDescription) == typeof(Contact1) ||
                 typeof(TConstraintDescription) == typeof(Contact2) ||
                 typeof(TConstraintDescription) == typeof(Contact3) ||
@@ -129,7 +136,7 @@ namespace BepuPhysics.CollisionDetection
             }
             //Note that this test has to special case count == 1; 1 contact manifolds have no feature ids.
             Debug.Assert(Unsafe.SizeOf<TConstraintCache>() == sizeof(int) * (1 + ContactCount) &&
-                default(TConstraintCache).TypeId == ContactCount - 1,
+                default(TConstraintCache).CacheTypeId == ContactCount - 1,
                 "The type of the constraint cache should hold as many contacts as the contact impulses requires.");
             AccumulatedImpulseBundleStrideInBytes = Unsafe.SizeOf<TAccumulatedImpulses>();
             ConstraintTypeId = default(TConstraintDescription).ConstraintTypeId;
@@ -175,7 +182,7 @@ namespace BepuPhysics.CollisionDetection
             constraintCache = default;
             description = default;
             //TODO: Check codegen. This should be a compilation time constant. If it's not, just use the ContactCount that we cached.
-            var contactCount = constraintCache.TypeId + 1;
+            var contactCount = constraintCache.CacheTypeId + 1;
             //Contact data comes first in the constraint description memory layout.
             ref var targetContacts = ref Unsafe.As<TConstraintDescription, ConstraintContactData>(ref description);
             ref var targetFeatureIds = ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1);
@@ -191,7 +198,7 @@ namespace BepuPhysics.CollisionDetection
         protected static void CopyContactData(ref NonconvexContactManifold manifold, ref TConstraintCache constraintCache, ref NonconvexConstraintContactData targetContacts)
         {
             //TODO: Check codegen. This should be a compilation time constant. If it's not, just use the ContactCount that we cached.
-            var contactCount = constraintCache.TypeId + 1;
+            var contactCount = constraintCache.CacheTypeId + 1;
             ref var targetFeatureIds = ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1);
             for (int i = 0; i < contactCount; ++i)
             {
@@ -264,7 +271,7 @@ namespace BepuPhysics.CollisionDetection
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
-            ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);       
+            ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
             //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
             TConstraintCache constraintCache = default;
             TConstraintDescription description = default;

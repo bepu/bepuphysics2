@@ -361,13 +361,6 @@ namespace BepuPhysics.CollisionDetection
             NextWorkerCaches[workerIndex].Update(ref pointers, ref collisionCache, ref constraintCache);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal int GetContactCount(int constraintType)
-        {
-            //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-            return 1 + (constraintType & 0x3);
-        }
-
         /// <summary>
         /// Gets whether a constraint type id maps to a contact constraint.
         /// </summary>
@@ -416,6 +409,7 @@ namespace BepuPhysics.CollisionDetection
             //Note that this assumes that the constraint handle is stored in the first 4 bytes of the constraint cache.
             *(int*)NextWorkerCaches[constraintCacheIndex.Cache].GetConstraintCachePointer(constraintCacheIndex) = constraintHandle;
             solver.GetConstraintReference(constraintHandle, out var reference);
+            Debug.Assert(reference.IndexInTypeBatch >= 0 && reference.IndexInTypeBatch < reference.TypeBatch.ConstraintCount);
             narrowPhase.contactConstraintAccessors[constraintCacheIndex.Type].ScatterNewImpulses(ref reference, ref impulses);
             //This mapping entry had to be deferred until now because no constraint handle was known until now. Now that we have it,
             //we can fill in the pointers back to the overlap mapping.

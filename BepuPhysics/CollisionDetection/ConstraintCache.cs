@@ -6,14 +6,18 @@ namespace BepuPhysics.CollisionDetection
 {
     public interface IPairCacheEntry
     {
-        int TypeId { get; }
+        /// <summary>
+        /// Gets the cache's type id. 
+        /// Note that this is not the same as a constraint type id or other type ids; it only refers to the type of the caches for storage within the PairCache's structures.
+        /// </summary>
+        int CacheTypeId { get; }
     }
     public struct ConstraintCache1 : IPairCacheEntry
     {
         public int ConstraintHandle;
         public int FeatureId0;
 
-        public int TypeId => 0;
+        public int CacheTypeId => 0;
     }
     public struct ConstraintCache2 : IPairCacheEntry
     {
@@ -21,7 +25,7 @@ namespace BepuPhysics.CollisionDetection
         public int FeatureId0;
         public int FeatureId1;
 
-        public int TypeId => 1;
+        public int CacheTypeId => 1;
     }
     public struct ConstraintCache3 : IPairCacheEntry
     {
@@ -30,7 +34,7 @@ namespace BepuPhysics.CollisionDetection
         public int FeatureId1;
         public int FeatureId2;
 
-        public int TypeId => 2;
+        public int CacheTypeId => 2;
     }
     public struct ConstraintCache4 : IPairCacheEntry
     {
@@ -40,7 +44,7 @@ namespace BepuPhysics.CollisionDetection
         public int FeatureId2;
         public int FeatureId3;
 
-        public int TypeId => 3;
+        public int CacheTypeId => 3;
     }
 
     public struct ConstraintCache5 : IPairCacheEntry
@@ -52,7 +56,7 @@ namespace BepuPhysics.CollisionDetection
         public int FeatureId3;
         public int FeatureId4;
 
-        public int TypeId => 4;
+        public int CacheTypeId => 4;
     }
     public struct ConstraintCache6 : IPairCacheEntry
     {
@@ -64,7 +68,7 @@ namespace BepuPhysics.CollisionDetection
         public int FeatureId4;
         public int FeatureId5;
 
-        public int TypeId => 5;
+        public int CacheTypeId => 5;
     }
     public struct ConstraintCache7 : IPairCacheEntry
     {
@@ -77,7 +81,7 @@ namespace BepuPhysics.CollisionDetection
         public int FeatureId5;
         public int FeatureId6;
 
-        public int TypeId => 6;
+        public int CacheTypeId => 6;
     }
     public struct ConstraintCache8 : IPairCacheEntry
     {
@@ -91,7 +95,7 @@ namespace BepuPhysics.CollisionDetection
         public int FeatureId6;
         public int FeatureId7;
 
-        public int TypeId => 7;
+        public int CacheTypeId => 7;
     }
 
 }
