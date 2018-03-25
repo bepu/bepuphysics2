@@ -27,6 +27,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     "Compound-involving pairs cannot be marked as children of compound pairs. Convex-convex children of such pairs will be.");
                 ref var continuation = ref batcher.NonconvexReductions.CreateContinuation(pair.A.Children.Length * pair.B.Children.Length, batcher.Pool, out var continuationIndex);
                 Debug.Assert(pair.Shared.FlipMask == 0, "Compound-compound should be unflippable; they're the same shape type.");
+                int nextContinuationChildIndex = 0;
                 for (int childAIndex = 0; childAIndex < pair.A.Children.Length; ++childAIndex)
                 {
                     ref var childA = ref pair.A.Children[childAIndex];
@@ -45,9 +46,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             var childShapeType = childB.ShapeIndex.Type;
                             batcher.Shapes[childShapeType].GetShapeData(childB.ShapeIndex.Index, out var childShapePointer, out var childShapeSize);
 
+                            var continuationChildIndex = nextContinuationChildIndex++;
                             var continuationInfo = new PairContinuation(pair.Shared.Continuation.PairId, childAIndex, childBIndex,
-                                CollisionContinuationType.NonconvexReduction, continuationIndex);
-                            ref var continuationChild = ref batcher.NonconvexReductions.Continuations[continuationIndex].Children[childBIndex];
+                                CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
+                            ref var continuationChild = ref batcher.NonconvexReductions.Continuations[continuationIndex].Children[continuationChildIndex];
                             
                             continuationChild.OffsetA = childAPose.Position;
                             continuationChild.ChildIndexA = childAIndex;

@@ -131,7 +131,7 @@ namespace BepuPhysics.CollisionDetection
                     //We should assume that the stack memory backing the reduced manifold is uninitialized. We rely on the count, so initialize it manually.
                     reducedManifold.Count = 0;
 
-                    //ChooseArbitrarily(&reducedManifold);
+                    //ChooseBadly(&reducedManifold);
                     ChooseDeepest(&reducedManifold);
 
                     //The manifold offsetB is the offset from shapeA origin to shapeB origin.
@@ -164,14 +164,13 @@ namespace BepuPhysics.CollisionDetection
         public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ConvexContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
         {
-            Children[CompletedChildCount].Manifold = *manifold;
+            Children[report.ChildIndex].Manifold = *manifold;
             FlushIfCompleted(report.PairId, ref batcher);
-
         }
 
         public void OnChildCompletedEmpty<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
         {
-            Children[CompletedChildCount] = default;
+            Children[report.ChildIndex].Manifold.Count = 0;
             FlushIfCompleted(report.PairId, ref batcher);
         }
     }

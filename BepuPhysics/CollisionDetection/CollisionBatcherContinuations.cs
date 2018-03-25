@@ -50,13 +50,18 @@ namespace BepuPhysics.CollisionDetection
         public int ChildB;
         public uint Packed;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PairContinuation(int pairId, int childA, int childB, CollisionContinuationType continuationType, int continuationIndex)
+        public PairContinuation(int pairId, int childA, int childB, CollisionContinuationType continuationType, int continuationIndex, int continuationChildIndex)
         {
             PairId = pairId;
             ChildA = childA;
             ChildB = childB;
-            Debug.Assert(continuationIndex < (1 << 23));
-            Packed = (uint)(((int)continuationType << 24) | continuationIndex);
+            //continuationChildIndex: [0, 13]
+            //continuationIndex: [14, 27]
+            //continuationType:  [28, 31]
+            Debug.Assert(continuationIndex < (1 << 14));
+            Debug.Assert(continuationChildIndex < (1 << 14));
+            Debug.Assert((int)continuationType < (1 << 4));
+            Packed = (uint)(((int)continuationType << 28) | (continuationIndex << 14) | continuationChildIndex);
         }
         public PairContinuation(int pairId)
         {
@@ -66,8 +71,9 @@ namespace BepuPhysics.CollisionDetection
             Packed = 0;
         }
 
-        public CollisionContinuationType Type { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (CollisionContinuationType)(Packed >> 24); } }
-        public int Index { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)(Packed & 0x007FFFFF); } }
+        public CollisionContinuationType Type { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (CollisionContinuationType)(Packed >> 28); } }
+        public int Index { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)((Packed >> 14) & 0x00003FFF); } }
+        public int ChildIndex { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)(Packed & 0x00003FFF); } }
     }
 
     public struct BatcherContinuations<T> where T : ICollisionTestContinuation

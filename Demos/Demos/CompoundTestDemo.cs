@@ -66,7 +66,7 @@ namespace Demos
             Triangular3x3.SymmetricInvert(ref gridBoxInertia, out gridBoxInertia);
             const int gridCompoundWidth = 3;
             const float gridCompoundSpacing = 1.25f;
-            const float localPoseOffset = -0.5f * gridCompoundSpacing * gridCompoundWidth;
+            const float localPoseOffset = -0.5f * gridCompoundSpacing * (gridCompoundWidth - 1);
             for (int i = 0; i < gridCompoundWidth; ++i)
             {
                 for (int j = 0; j < gridCompoundWidth; ++j)
@@ -74,7 +74,7 @@ namespace Demos
                     var localPose = new RigidPose
                     {
                         Orientation = BepuUtilities.Quaternion.Identity,
-                        Position = new Vector3(localPoseOffset) + new Vector3(gridCompoundSpacing) * new Vector3(i, 0, j)
+                        Position = new Vector3(localPoseOffset, 0, localPoseOffset) + new Vector3(gridCompoundSpacing) * new Vector3(i, 0, j)
                     };
                     compoundBuilder.Add(gridBoxShapeIndex, ref localPose, 1, ref gridBoxInertia);
                 }
@@ -82,7 +82,7 @@ namespace Demos
             compoundBuilder.BuildCompound(out var gridCompound, out var gridInertia);
             var gridDescription = new BodyDescription
             {
-                Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
+                Activity = new BodyActivityDescription { SleepThreshold = 0.00f, MinimumTimestepCountUnderThreshold = 32 },
                 Collidable = new CollidableDescription
                 {
                     Shape = Simulation.Shapes.Add(ref gridCompound),
@@ -94,11 +94,15 @@ namespace Demos
 
             //We do, however, clean up the compound builder because we can.
             compoundBuilder.Dispose();
-            
-            
-            for (int i = 0; i < 5; ++i)
+
+
+            for (int i = 0; i < 4; ++i)
             {
-                gridDescription.Pose.Position = new Vector3(0, 5 + i * 3, 0);
+                gridDescription.Pose.Position = new Vector3(0, 2 + i * 3, 0);
+                //if (i == 0)
+                //    gridDescription.LocalInertia = new BodyInertia();
+                //else
+                //    gridDescription.LocalInertia = gridInertia; 
                 Simulation.Bodies.Add(ref gridDescription);
             }
 

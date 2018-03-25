@@ -26,6 +26,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Debug.Assert(pair.Shared.Continuation.ChildA == 0 && pair.Shared.Continuation.ChildB == 0 && pair.Shared.Continuation.Type == CollisionContinuationType.Direct,
                     "Compound-involving pairs cannot be marked as children of compound pairs. Convex-convex children of such pairs will be.");
                 ref var continuation = ref batcher.NonconvexReductions.CreateContinuation(pair.B.Children.Length, batcher.Pool, out var continuationIndex);
+                int nextContinuationChildIndex = 0;
                 for (int j = 0; j < pair.B.Children.Length; ++j)
                 {
                     //Note that we have to take into account whether we flipped the shapes to match the expected memory layout.
@@ -52,9 +53,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         //Note that we can safely take a pointer to the pair-stored shape:
                         //1) It's stored in a buffer, which is guaranteed GC safe
                         //2) The data contained is copied by the time Add returns, so there's no concern about invalid pointers getting stored.
+                        var continuationChildIndex = nextContinuationChildIndex++;
                         var continuationInfo = new PairContinuation(pair.Shared.Continuation.PairId, childA, childB,
-                            CollisionContinuationType.NonconvexReduction, continuationIndex);
-                        ref var continuationChild = ref batcher.NonconvexReductions.Continuations[continuationIndex].Children[j];
+                            CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
+                        ref var continuationChild = ref batcher.NonconvexReductions.Continuations[continuationIndex].Children[continuationChildIndex];
 
                         if (pair.Shared.FlipMask < 0)
                         {
