@@ -68,7 +68,20 @@ namespace BepuPhysics
             sandwich.ZY = i31 * r.X.Y + i32 * r.Y.Y + i33 * r.Z.Y;
             sandwich.ZZ = i31 * r.X.Z + i32 * r.Y.Z + i33 * r.Z.Z;
         }
-        
+
+        /// <summary>
+        /// Computes the determinant of a symmetric matrix.
+        /// </summary>
+        /// <param name="m">Matrix to intepret as symmetric.</param>
+        /// <returns>Determinant of the matrix interpreted as symmetric.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float SymmetricDeterminant(ref Triangular3x3 m)
+        {
+            var m11 = m.YY * m.ZZ - m.ZY * m.ZY;
+            var m21 = m.ZY * m.ZX - m.ZZ * m.YX;
+            var m31 = m.YX * m.ZY - m.ZX * m.YY;
+            return m11 * m.XX + m21 * m.YX + m31 * m.ZX;
+        }
         /// <summary>
         /// Inverts the given matix.
         /// </summary>
@@ -128,5 +141,6 @@ namespace BepuPhysics
             scaled.ZY = m.ZY * scale;
             scaled.ZZ = m.ZZ * scale;
         }
+
     }
 }

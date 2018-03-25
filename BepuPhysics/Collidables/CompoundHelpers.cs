@@ -2,33 +2,119 @@
 using BepuUtilities.Memory;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace BepuPhysics.Collidables
 {
-    public struct CompoundInertiaBuilder
+    /// <summary>
+    /// Reusable convenience type for incrementally building compound shapes.
+    /// </summary>
+    public struct CompoundBuilder : IDisposable
     {
-        /// <summary>
-        /// Combined mass added to the builder so far.
-        /// </summary>
-        public float AccumulatedMass;
-        /// <summary>
-        /// Combined inertia tensor from all posed contributions.
-        /// </summary>
-        public Triangular3x3 AccumulatedInertiaTensor;
-        public Triangular3x3 InverseAccumulatedInertiaTensor
+        public BufferPool Pool;
+        public Shapes Shapes;
+
+        public struct Child
         {
-            get
-            {
-                Triangular3x3.SymmetricInvert(ref AccumulatedInertiaTensor, out var toReturn);
-                return toReturn;
-            }
+            public RigidPose LocalPose;
+            public TypedIndex ShapeIndex;
+            /// <summary>
+            /// Weight associated with this child. Acts as the child's mass when interpreted as a dynamic compound.
+            /// When interpreted as kinematic with recentering, it is used as a local pose weight to compute the center of rotation.
+            /// </summary>
+            public float Weight;
+            /// <summary>
+            /// Inertia tensor associated with the child. If inertia is all zeroes, it is interpreted as infinite.
+            /// </summary>
+            public Triangular3x3 Inertia;
+        }
+
+        public QuickList<Child, Buffer<Child>> Children;
+
+        public CompoundBuilder(BufferPool pool, Shapes shapes, int builderCapacity)
+        {
+            Pool = pool;
+            Shapes = shapes;
+            QuickList<Child, Buffer<Child>>.Create(Pool.SpecializeFor<Child>(), builderCapacity, out Children);
+        }
+
+        /// <summary>
+        /// Adds a new shape to the accumulator, creating a new shape in the shapes set. The mass used to compute the inertia tensor will be based on the given weight.
+        /// </summary>
+        /// <typeparam name="TShape">Type of the shape to add to the accumulator and the shapes set.</typeparam>
+        /// <param name="shape">Shape to add.</param>
+        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
+        /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass and scales the inertia tensor. 
+        /// Otherwise, it is used for recentering.</param>
+        public void Add<TShape>(ref TShape shape, ref RigidPose localPose, float weight) where TShape : struct, IConvexShape
+        {
+            var shapeIndex = Shapes.Add(ref shape);
+            ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
+            child.LocalPose = localPose;
+            child.ShapeIndex = Shapes.Add(ref shape);
+            child.Weight = weight;
+            shape.ComputeLocalInverseInertia(1f / weight, out child.Inertia);
+            Triangular3x3.SymmetricInvert(ref child.Inertia, out child.Inertia);
+        }
+
+        /// <summary>
+        /// Adds a new shape to the accumulator, creating a new shape in the shapes set. Inertia is assumed to be infinite.
+        /// </summary>
+        /// <typeparam name="TShape">Type of the shape to add to the accumulator and the shapes set.</typeparam>
+        /// <param name="shape">Shape to add.</param>
+        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
+        /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass. Otherwise, it is used for recentering.</param>
+        public void AddForKinematic<TShape>(ref TShape shape, ref RigidPose localPose, float weight) where TShape : struct, IConvexShape
+        {
+            var shapeIndex = Shapes.Add(ref shape);
+            ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
+            child.LocalPose = localPose;
+            child.ShapeIndex = Shapes.Add(ref shape);
+            child.Weight = weight;
+            child.Inertia = default;
+        }
+
+        /// <summary>
+        /// Adds a new shape to the accumulator.
+        /// </summary>
+        /// <param name="shape">Index of the shape to add.</param>
+        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
+        /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass. Otherwise, it is used for recentering.</param>
+        /// <param name="inverseInertia">Inverse inertia tensor of the shape being added. This is assumed to already be scaled as desired by the weight.</param>
+        public void Add(TypedIndex shape, ref RigidPose localPose, ref Triangular3x3 inverseInertia, float weight)
+        {
+            ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
+            child.LocalPose = localPose;
+            child.ShapeIndex = shape;
+            child.Weight = weight;
+            //This assumes the given inertia is nonsingular. That should be a valid assumption, unless the user is trying to supply an axis-locked tensor.
+            //For such a use case, it's best to just lock the axis after computing a 'normal' inertia. 
+            Debug.Assert(Triangular3x3.SymmetricDeterminant(ref inverseInertia) > 0,
+                "Shape inertia tensors should be invertible. If making an axis-locked compound, consider locking the axis on the completed inertia. " +
+                "If making a kinematic, consider using the overload which takes no inverse inertia.");
+            Triangular3x3.SymmetricInvert(ref inverseInertia, out child.Inertia);
+        }
+
+        /// <summary>
+        /// Adds a new shape to the accumulator, assuming it has infinite inertia.
+        /// </summary>
+        /// <param name="shape">Index of the shape to add.</param>
+        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
+        /// <param name="weight">Weight of the shape used for computing the center of rotation.</param>
+        public void AddForKinematic(TypedIndex shape, ref RigidPose localPose, float weight)
+        {
+            ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
+            child.LocalPose = localPose;
+            child.ShapeIndex = shape;
+            child.Weight = weight;
+            child.Inertia = default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetOffsetContribution(ref Vector3 offset, float mass, out Triangular3x3 contribution)
+        public static void GetOffsetInertiaContribution(ref Vector3 offset, float mass, out Triangular3x3 contribution)
         {
             var innerProduct = Vector3.Dot(offset, offset);
             contribution.XX = mass * (innerProduct - offset.X * offset.X);
@@ -40,117 +126,140 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
-        /// Accumulates an inertia contribution with a given offset.
-        /// </summary>
-        /// <param name="offset">Offset at which to place the inertia contribution.</param>
-        /// <param name="mass">Mass of the contribution.</param>
-        /// <param name="inertiaTensor">Inertia tensor to accumulate at the given offset.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(ref Vector3 offset, float mass, ref Triangular3x3 inertiaTensor)
-        {
-            GetOffsetContribution(ref offset, mass, out var contribution);
-            Triangular3x3.Add(ref inertiaTensor, ref contribution, out contribution);
-            Triangular3x3.Add(ref AccumulatedInertiaTensor, ref contribution, out AccumulatedInertiaTensor);
-            AccumulatedMass += mass;
-        }
-
-        /// <summary>
-        /// Accumulates the inertia associated with a shape's default inertia tensor with a given pose and mass.
-        /// </summary>
-        /// <typeparam name="TShape">Type of the convex shape to get the default inertia tensor from.</typeparam>
-        /// <param name="pose"></param>
-        /// <param name="mass">Mass associated with the shape entry.</param>
-        /// <param name="shape">Convex shape to compute a default inertia tensor for.</param>
-        public void Add<TShape>(ref RigidPose pose, float mass, ref TShape shape) where TShape : struct, IConvexShape
-        {
-            shape.ComputeLocalInverseInertia(1f / mass, out var localInverseInertia);
-            PoseIntegrator.RotateInverseInertia(ref localInverseInertia, ref pose.Orientation, out var rotatedInverseInertia);
-            Triangular3x3.SymmetricInvert(ref rotatedInverseInertia, out var rotatedInertia);
-            Add(ref pose.Position, mass, ref rotatedInertia);
-        }
-
-        /// <summary>
-        /// Accumulates a contribution from an explicitly provided mass and inertia tensor at the specified pose.
-        /// </summary>
-        /// <param name="pose">Pose of the contribution being accumulated.</param>
-        /// <param name="mass">Mass of the contribution.</param>
-        /// <param name="localInertiaTensor">Local inertia tensor of the contribution being accumulated.</param>
-        public void Add(ref RigidPose pose, float mass, ref Triangular3x3 localInertiaTensor)
-        {
-            PoseIntegrator.RotateInverseInertia(ref localInertiaTensor, ref pose.Orientation, out var rotatedInertia);
-            Add(ref pose.Position, mass, ref rotatedInertia);
-        }
-    }
-    /// <summary>
-    /// Reusable convenience type for incrementally building compound shapes.
-    /// </summary>
-    public struct CompoundChildBuilder : IDisposable
-    {
-        public BufferPool Pool;
-        public Shapes Shapes;
-
-        QuickList<CompoundChild, Buffer<CompoundChild>> accumulatedChildren;
-
-        public CompoundChildBuilder(BufferPool pool, Shapes shapes, int builderCapacity)
-        {
-            Pool = pool;
-            Shapes = shapes;
-            QuickList<CompoundChild, Buffer<CompoundChild>>.Create(Pool.SpecializeFor<CompoundChild>(), builderCapacity, out accumulatedChildren);
-        }
-
-        /// <summary>
-        /// Adds a new shape to the accumulator, creating a new shape in the shapes set.
-        /// </summary>
-        /// <typeparam name="TShape">Type of the shape to add to the accumulator and the shapes set.</typeparam>
-        /// <param name="shape">Shape to add.</param>
-        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
-        public void Add<TShape>(ref TShape shape, ref RigidPose localPose) where TShape : struct, IConvexShape
-        {
-            var shapeIndex = Shapes.Add(ref shape);
-            var child = new CompoundChild { LocalPose = localPose, ShapeIndex = Shapes.Add(ref shape) };
-            accumulatedChildren.Add(ref child, Pool.SpecializeFor<CompoundChild>());
-        }
-
-        /// <summary>
-        /// Adds a new shape to the accumulator.
-        /// </summary>
-        /// <param name="shapeIndex">Index of the shape to add.</param>
-        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
-        public void Add(TypedIndex shapeIndex, ref RigidPose localPose)
-        {
-            var child = new CompoundChild { LocalPose = localPose, ShapeIndex = shapeIndex };
-            accumulatedChildren.Add(ref child, Pool.SpecializeFor<CompoundChild>());
-        }
-
-        /// <summary>
-        /// Builds a buffer of compound children from the accumulated set. Does not reset the accumulator.
+        /// Builds a buffer of compound children from the accumulated set for a dynamic compound.
+        /// Computes a center of mass and recenters child shapes relative to it. Does not reset the accumulator.
         /// </summary>
         /// <param name="children">List of children created from the accumulated set.</param>
-        public void BuildCompound(out Buffer<CompoundChild> children)
+        /// <param name="inertia">Combined inertia of the compound.</param>
+        /// <param name="center">Computed center of rotation based on the poses and weights of accumulated children.</param>
+        public void BuildDynamicCompound(out Buffer<CompoundChild> children, out BodyInertia inertia, out Vector3 center)
         {
-            Pool.SpecializeFor<CompoundChild>().Take(accumulatedChildren.Count, out children);
+            center = new Vector3();
+            float totalWeight = 0;
+            for (int i = 0; i < Children.Count; ++i)
+            {
+                center += Children[i].LocalPose.Position * Children[i].Weight;
+                totalWeight += Children[i].Weight;
+            }
+            Debug.Assert(totalWeight > 0, "The compound as a whole must have nonzero weight when using a recentering build. The center is undefined.");
+
+            inertia.InverseMass = 1f / totalWeight;
+            center *= inertia.InverseMass;
+            Pool.SpecializeFor<CompoundChild>().Take(Children.Count, out children);
             //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
             //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
-            children = children.Slice(0, accumulatedChildren.Count);
-            accumulatedChildren.Span.CopyTo(0, ref children, 0, accumulatedChildren.Count);
+            children = children.Slice(0, Children.Count);
+            Triangular3x3 summedInertia = default;
+            for (int i = 0; i < Children.Count; ++i)
+            {
+                ref var sourceChild = ref Children[i];
+                ref var targetChild = ref children[i];
+                targetChild.LocalPose.Position = sourceChild.LocalPose.Position - center;
+                GetOffsetInertiaContribution(ref targetChild.LocalPose.Position, sourceChild.Weight, out var contribution);
+                Triangular3x3.Add(ref contribution, ref summedInertia, out summedInertia);
+                Triangular3x3.Add(ref summedInertia, ref sourceChild.Inertia, out summedInertia);
+                targetChild.LocalPose.Orientation = sourceChild.LocalPose.Orientation;
+                targetChild.ShapeIndex = sourceChild.ShapeIndex;
+            }
+            Triangular3x3.SymmetricInvert(ref summedInertia, out inertia.InverseInertiaTensor);
         }
 
         /// <summary>
-        /// Builds a compound from the accumulated set. Does not reset the accumulator.
+        /// Builds a buffer of compound children from the accumulated set for a dynamic compound. Does not recenter the children. Does not reset the accumulator.
         /// </summary>
-        /// <param name="compound">Compound created from the accumulated set.</param>
-        public void BuildCompound(out Compound compound)
+        /// <param name="children">List of children created from the accumulated set.</param>
+        /// <param name="inertia">Combined inertia of the compound.</param>
+        public void BuildDynamicCompound(out Buffer<CompoundChild> children, out BodyInertia inertia)
         {
-            BuildCompound(out compound.Children);
+            float totalWeight = 0;
+            for (int i = 0; i < Children.Count; ++i)
+            {
+                totalWeight += Children[i].Weight;
+            }
+            Debug.Assert(totalWeight > 0, "The compound as a whole must have nonzero weight when creating a dynamic compound.");
+
+            inertia.InverseMass = 1f / totalWeight;
+            Pool.SpecializeFor<CompoundChild>().Take(Children.Count, out children);
+            //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
+            //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
+            children = children.Slice(0, Children.Count);
+            Triangular3x3 summedInertia = default;
+            for (int i = 0; i < Children.Count; ++i)
+            {
+                ref var sourceChild = ref Children[i];
+                ref var targetChild = ref children[i];
+                targetChild.LocalPose.Position = sourceChild.LocalPose.Position;
+                GetOffsetInertiaContribution(ref targetChild.LocalPose.Position, sourceChild.Weight, out var contribution);
+                Triangular3x3.Add(ref contribution, ref summedInertia, out summedInertia);
+                Triangular3x3.Add(ref summedInertia, ref sourceChild.Inertia, out summedInertia);
+                targetChild.LocalPose.Orientation = sourceChild.LocalPose.Orientation;
+                targetChild.ShapeIndex = sourceChild.ShapeIndex;
+            }
+            Triangular3x3.SymmetricInvert(ref summedInertia, out inertia.InverseInertiaTensor);
         }
 
+        /// <summary>
+        /// Builds a buffer of compound children from the accumulated set for a kinematic compound.
+        /// Computes a center of mass and recenters child shapes relative to it. Does not reset the accumulator.
+        /// </summary>
+        /// <param name="children">List of children created from the accumulated set.</param>
+        /// <param name="inertia">Combined inertia of the compound.</param>
+        /// <param name="center">Computed center of rotation based on the poses and weights of accumulated children.</param>
+        public void BuildKinematicCompound(out Buffer<CompoundChild> children, out Vector3 center)
+        {
+            center = new Vector3();
+            float totalWeight = 0;
+            for (int i = 0; i < Children.Count; ++i)
+            {
+                center += Children[i].LocalPose.Position * Children[i].Weight;
+                totalWeight += Children[i].Weight;
+            }
+            Debug.Assert(totalWeight > 0, "The compound as a whole must have nonzero weight when using a recentering build. The center is undefined.");
+
+            var inverseWeight = 1f / totalWeight;
+            center *= inverseWeight;
+            Pool.SpecializeFor<CompoundChild>().Take(Children.Count, out children);
+            //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
+            //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
+            children = children.Slice(0, Children.Count);
+            for (int i = 0; i < Children.Count; ++i)
+            {
+                ref var sourceChild = ref Children[i];
+                ref var targetChild = ref children[i];
+                targetChild.LocalPose.Position = sourceChild.LocalPose.Position - center;
+                targetChild.LocalPose.Orientation = sourceChild.LocalPose.Orientation;
+                targetChild.ShapeIndex = sourceChild.ShapeIndex;
+            }
+        }
+
+        /// <summary>
+        /// Builds a buffer of compound children from the accumulated set for a kinematic compound. Does not recenter children. Does not reset the accumulator.
+        /// </summary>
+        /// <param name="children">List of children created from the accumulated set.</param>
+        /// <param name="inertia">Combined inertia of the compound.</param>
+        /// <param name="center">Computed center of rotation based on the poses and weights of accumulated children.</param>
+        public void BuildKinematicCompound(out Buffer<CompoundChild> children)
+        {
+            Pool.SpecializeFor<CompoundChild>().Take(Children.Count, out children);
+            //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
+            //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
+            children = children.Slice(0, Children.Count);
+            for (int i = 0; i < Children.Count; ++i)
+            {
+                ref var sourceChild = ref Children[i];
+                ref var targetChild = ref children[i];
+                targetChild.LocalPose.Position = sourceChild.LocalPose.Position;
+                targetChild.LocalPose.Orientation = sourceChild.LocalPose.Orientation;
+                targetChild.ShapeIndex = sourceChild.ShapeIndex;
+            }
+        }
 
         /// <summary>
         /// Empties out the accumulated children.
         /// </summary>
         public void Reset()
         {
-            accumulatedChildren.Count = 0;
+            Children.Count = 0;
         }
 
         /// <summary>
@@ -158,76 +267,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public void Dispose()
         {
-            accumulatedChildren.Dispose(Pool.SpecializeFor<CompoundChild>());
-        }
-    }
-    /// <summary>
-    /// Reusable convenience type for incrementally building dynamic compound shapes and calculating their default properties.
-    /// </summary>
-    public struct CompoundBuilder : IDisposable
-    {
-        public CompoundChildBuilder ChildBuilder;
-        public CompoundInertiaBuilder InertiaBuilder;
-
-        public CompoundBuilder(BufferPool pool, Shapes shapes, int builderCapacity = 32)
-        {
-            ChildBuilder = new CompoundChildBuilder(pool, shapes, builderCapacity);
-            InertiaBuilder = new CompoundInertiaBuilder();
-        }
-
-        /// <summary>
-        /// Adds a new shape to the accumulator, creating a new shape in the shapes set.
-        /// </summary>
-        /// <typeparam name="TShape">Type of the shape to add to the accumulator and the shapes set.</typeparam>
-        /// <param name="shape">Shape to add.</param>
-        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
-        /// <param name="mass">Mass of the shape being added.</param>
-        public void Add<TShape>(ref TShape shape, ref RigidPose localPose, float mass) where TShape : struct, IConvexShape
-        {
-            ChildBuilder.Add(ref shape, ref localPose);
-            InertiaBuilder.Add(ref localPose, mass, ref shape);
-        }
-
-        /// <summary>
-        /// Adds a new shape to the accumulator.
-        /// </summary>
-        /// <param name="shapeIndex">Index of the shape to add.</param>
-        /// <param name="localPose">Pose of the shape in the compound's local space.</param>
-        /// <param name="mass">Mass of the shape being added.</param>
-        /// <param name="localInertiaTensor">Local inertia tensor of the shape being added.</param>
-        public void Add(TypedIndex shapeIndex, ref RigidPose localPose, float mass, ref Triangular3x3 localInertiaTensor)
-        {
-            ChildBuilder.Add(shapeIndex, ref localPose);
-            InertiaBuilder.Add(ref localPose, mass, ref localInertiaTensor);
-        }
-
-        /// <summary>
-        /// Builds a compound from the accumulated children. Does not reset the accumulator.
-        /// </summary>
-        /// <param name="compound">Compound built from the accumulated children.</param>
-        /// <param name="inertia">Inertia of the created compound.</param>
-        public void BuildCompound(out Compound compound, out BodyInertia inertia)
-        {
-            ChildBuilder.BuildCompound(out compound);
-            inertia.InverseMass = 1f / InertiaBuilder.AccumulatedMass;
-            Triangular3x3.SymmetricInvert(ref InertiaBuilder.AccumulatedInertiaTensor, out inertia.InverseInertiaTensor);
-        }
-
-        /// <summary>
-        /// Empties out the accumulated children.
-        /// </summary>
-        public void Reset()
-        {
-            ChildBuilder.Reset();
-            InertiaBuilder = new CompoundInertiaBuilder();
-        }
-
-        /// <summary>
-        /// Returns internal resources to the pool, rendering the builder unusable.
-        /// </summary>
-        public void Dispose()
-        {
-            ChildBuilder.Dispose();
+            Children.Dispose(Pool.SpecializeFor<Child>());
         }
     }
 }

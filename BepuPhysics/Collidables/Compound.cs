@@ -44,7 +44,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetRotatedChildPose(ref RigidPose localPose, ref Quaternion orientation, out RigidPose rotatedChildPose)
         {
-            Quaternion.ConcatenateWithoutOverlap(ref orientation, ref localPose.Orientation, out rotatedChildPose.Orientation);
+            Quaternion.ConcatenateWithoutOverlap(ref localPose.Orientation, ref orientation, out rotatedChildPose.Orientation);
             Quaternion.Transform(ref localPose.Position, ref orientation, out rotatedChildPose.Position);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -116,7 +116,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public const int Id = 3;
         public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
-    } 
+    }
 
 
 }

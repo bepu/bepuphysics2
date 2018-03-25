@@ -208,12 +208,25 @@ namespace BepuUtilities.Collections
         /// Appends space on the end of the list without checking capacity and returns a reference to it.
         /// </summary>
         /// <returns>Reference to the allocated space.</returns>
-        /// <remarks>This lacks a non-unsafe overload for now because it's likely only ever used in situations where passing in a pool would be better handled externally.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref T AllocateUnsafely()
         {
             ValidateUnsafeAdd();
             return ref Span[Count++];
+        }
+
+        /// <summary>
+        /// Appends space on the end of the list and returns a reference to it.
+        /// </summary>
+        /// <returns>Reference to the allocated space.</returns>
+        /// <typeparam name="TPool">Type of the pool to pull from.</typeparam>
+        /// <param name="pool">Pool used to obtain a new span if needed.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T Allocate<TPool>(TPool pool) where TPool : IMemoryPool<T, TSpan>
+        {
+            if (Count == Span.Length)
+                Resize(Count * 2, pool);
+            return ref AllocateUnsafely();
         }
 
         /// <summary>
@@ -268,6 +281,8 @@ namespace BepuUtilities.Collections
                 Resize(Count * 2, pool);
             AddUnsafely(ref element);
         }
+
+
 
 
 
