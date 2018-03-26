@@ -100,19 +100,49 @@ namespace BepuPhysics.CollisionDetection
             //Note that the pointer casts below are not actually GC holes:
             //contact manifolds passed down here from the collision batcher and friends are all stored either on the stack or in pinned buffers.
 
+
+            int unmatchedCount = 0;
             for (int i = 0; i < newContactCount; ++i)
             {
-                Unsafe.Add(ref newImpulses, i) = 0;
+                ref var newImpulse = ref Unsafe.Add(ref newImpulses, i);
+                //Accumulated impulses cannot be negative; we use a negative value as a 'unmatched' flag.
+                newImpulse = -1;
                 for (int j = 0; j < oldContactCount; ++j)
                 {
                     if (oldFeatureIds[j] == Unsafe.Add(ref newFeatureIds, i))
                     {
-                        Unsafe.Add(ref newImpulses, i) = oldImpulses[j];
+                        newImpulse = oldImpulses[j];
+                        //Eliminate the old impulse so that it will not be distributed to the unmatched contacts.
+                        oldImpulses[j] = 0;
                         break;
                     }
                 }
+                if (newImpulse < 0)
+                {
+                    ++unmatchedCount;
+                }
             }
-            //TODO: 'Unclaimed' impulse from old unmatched contacts could be redistributed to try to conserve total impulse. Something to fiddle with once we have a test case running.
+            //Distribute any missing impulse evenly over the remaining unmatched contacts.
+            if (unmatchedCount > 0)
+            {
+                float unmatchedImpulse = 0;
+                for (int i = 0; i < oldContactCount; ++i)
+                {
+                    unmatchedImpulse += oldImpulses[i];
+                }
+                var impulsePerUnmatched = unmatchedImpulse / unmatchedCount;
+                for (int i = 0; i < newContactCount; ++i)
+                {
+                    ref var newImpulse = ref Unsafe.Add(ref newImpulses, i);
+                    //If we flagged the impulse as unmatched in the first loop, we can fill it here.
+                    if (newImpulse < 0)
+                    {
+                        //newImpulse = 0;
+                        newImpulse = impulsePerUnmatched;
+                    }
+
+                }
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -147,9 +177,9 @@ namespace BepuPhysics.CollisionDetection
                 var constraintHandle = *(int*)oldConstraintCachePointer;
                 Solver.GetConstraintReference(constraintHandle, out var constraintReference);
                 Debug.Assert(
-                    constraintReference.typeBatchPointer != null && 
-                    constraintReference.IndexInTypeBatch >= 0 && 
-                    constraintReference.IndexInTypeBatch < constraintReference.TypeBatch.ConstraintCount, 
+                    constraintReference.typeBatchPointer != null &&
+                    constraintReference.IndexInTypeBatch >= 0 &&
+                    constraintReference.IndexInTypeBatch < constraintReference.TypeBatch.ConstraintCount,
                     "Handle-retrieved constraint reference must point to a constraint of expected type, or else something is corrupted.");
                 var newImpulses = default(TContactImpulses);
                 var accessor = contactConstraintAccessors[constraintReference.TypeBatch.TypeId];

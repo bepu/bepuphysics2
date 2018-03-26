@@ -143,10 +143,13 @@ namespace Demos
                         Pose = new RigidPose {  Orientation = BepuUtilities.Quaternion.Identity }
                     };
 
-                    //Drop one table by itself.
+                    //Stack some tables.
                     {
-                        tableDescription.Pose.Position = new Vector3(10, 3, 10);
-                        Simulation.Bodies.Add(ref tableDescription);
+                        for (int i =0; i < 10; ++i)
+                        {
+                            tableDescription.Pose.Position = new Vector3(10, 3 + i * 1.4f, 10);
+                            Simulation.Bodies.Add(ref tableDescription);
+                        }
                     }
 
                     //Put a table on top of a sphere to stress out nonconvex reduction for divergent normals.
@@ -176,12 +179,12 @@ namespace Demos
                         var clampPieceShape = new Box(2f, 0.1f, 0.3f);
                         clampPieceShape.ComputeLocalInverseInertia(1f, out var clampPieceInverseInertia);
                         var clampPieceShapeIndex = Simulation.Shapes.Add(ref clampPieceShape);
-                        var clamp0 = new RigidPose { Position = new Vector3(0, -0.2f, -1.3f), Orientation = BepuUtilities.Quaternion.Identity };
-                        var clamp1 = new RigidPose { Position = new Vector3(0, 0.2f, -1.3f), Orientation = BepuUtilities.Quaternion.Identity };
+                        var clamp0 = new RigidPose { Position = new Vector3(0, -0.2f, -1.1f), Orientation = BepuUtilities.Quaternion.Identity };
+                        var clamp1 = new RigidPose { Position = new Vector3(0, 0.2f, -1.1f), Orientation = BepuUtilities.Quaternion.Identity };
                         var clamp2 = new RigidPose { Position = new Vector3(0, -0.2f, 0), Orientation = BepuUtilities.Quaternion.Identity };
                         var clamp3 = new RigidPose { Position = new Vector3(0, 0.2f, 0), Orientation = BepuUtilities.Quaternion.Identity };
-                        var clamp4 = new RigidPose { Position = new Vector3(0, -0.2f, 1.3f), Orientation = BepuUtilities.Quaternion.Identity };
-                        var clamp5 = new RigidPose { Position = new Vector3(0, 0.2f, 1.3f), Orientation = BepuUtilities.Quaternion.Identity };
+                        var clamp4 = new RigidPose { Position = new Vector3(0, -0.2f, 1.1f), Orientation = BepuUtilities.Quaternion.Identity };
+                        var clamp5 = new RigidPose { Position = new Vector3(0, 0.2f, 1.1f), Orientation = BepuUtilities.Quaternion.Identity };
                         compoundBuilder.Add(clampPieceShapeIndex, ref clamp0, ref clampPieceInverseInertia, 1);
                         compoundBuilder.Add(clampPieceShapeIndex, ref clamp1, ref clampPieceInverseInertia, 1);
                         compoundBuilder.Add(clampPieceShapeIndex, ref clamp2, ref clampPieceInverseInertia, 1);
