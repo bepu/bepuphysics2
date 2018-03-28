@@ -696,7 +696,7 @@ namespace BepuPhysics
                 for (int j = 0; j < batch.TypeBatches.Count; ++j)
                 {
                     ref var typeBatch = ref batch.TypeBatches[j];
-                    TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, bodies);
+                    TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities);
                 }
             }
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
@@ -707,7 +707,7 @@ namespace BepuPhysics
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, bodies);
+                        TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities);
                     }
                 }
             }

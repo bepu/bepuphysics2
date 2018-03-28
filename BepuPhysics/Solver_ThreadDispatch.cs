@@ -59,7 +59,7 @@ namespace BepuPhysics
 
         //A couple of notes:
         //1) We explicitly don't care about maintaining worker-data relationships between frames. The cache will likely be trashed by the rest of the program- even other parts
-        //of the physics simulation will evict stuff. We're primarily concerned about scheduling within 
+        //of the physics simulation will evict stuff. We're primarily concerned about scheduling within the solver.
         //2) Note that neither the prestep nor the warmstart are used to modify the work distribution for the solve- neither of those stages is proportional to the solve iteration load.
 
         //3) Core-data stickiness doesn't really offer much value for L1/L2 caches. It doesn't take much to evict the entirety of the old data- a 3770K only holds 256KB in its L2.
@@ -295,20 +295,20 @@ namespace BepuPhysics
 
         struct WarmStartStageFunction : IStageFunction
         {
-            public Bodies Bodies;
+            public Buffer<BodyVelocity> Velocities;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Execute(ref TypeBatch typeBatch, int start, int end, TypeProcessor typeProcessor)
             {
-                typeProcessor.WarmStart(ref typeBatch, Bodies, start, end);
+                typeProcessor.WarmStart(ref typeBatch, ref Velocities, start, end);
             }
         }
         struct SolveStageFunction : IStageFunction
         {
-            public Bodies Bodies;
+            public Buffer<BodyVelocity> Velocities;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Execute(ref TypeBatch typeBatch, int start, int end, TypeProcessor typeProcessor)
             {
-                typeProcessor.SolveIteration(ref typeBatch, Bodies, start, end);
+                typeProcessor.SolveIteration(ref typeBatch, ref Velocities, start, end);
             }
         }
 
@@ -532,7 +532,7 @@ namespace BepuPhysics
 
             claimedState = 0;
             unclaimedState = 1;
-            var warmStartStage = new WarmStartStageFunction { Bodies = bodies };
+            var warmStartStage = new WarmStartStageFunction { Velocities = bodies.ActiveSet.Velocities };
             for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
                 var batchStart = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
@@ -544,7 +544,7 @@ namespace BepuPhysics
             claimedState = 1;
             unclaimedState = 0;
 
-            var solveStage = new SolveStageFunction { Bodies = bodies };
+            var solveStage = new SolveStageFunction { Velocities = bodies.ActiveSet.Velocities };
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
             {
                 for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
