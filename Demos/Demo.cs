@@ -5,6 +5,7 @@ using BepuPhysics;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using DemoRenderer.UI;
 
 namespace Demos
 {
@@ -54,7 +55,7 @@ namespace Demos
             }
         }
 
-        public virtual void Render(Renderer renderer)
+        public virtual void Render(Renderer renderer, TextBuilder text, Font font)
         {
         }
 
