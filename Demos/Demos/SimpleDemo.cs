@@ -41,10 +41,10 @@ namespace Demos
             var latticeSpacing = 1.1f;
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
-                new RegularGridBuilder(new Vector3(latticeSpacing, 1.1f, latticeSpacing), new Vector3(latticeOffset, 10, latticeOffset), sphereInertia, shapeIndex),
+                new RegularGridBuilder(new Vector3(latticeSpacing, 1.1f, latticeSpacing), new Vector3(latticeOffset, 3, latticeOffset), sphereInertia, shapeIndex),
                 new ConstraintlessLatticeBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -1, 0);
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
             Simulation.Deterministic = false;
 
             var staticShape = new Sphere(4);
@@ -87,8 +87,6 @@ namespace Demos
         int frameIndex;
         public override void Update(Input input, float dt)
         {
-            if (input.WasPushed(OpenTK.Input.Key.P))
-                Console.WriteLine("asdf");
             base.Update(input, dt);
         }
 

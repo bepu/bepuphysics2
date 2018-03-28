@@ -86,7 +86,7 @@ namespace Demos.SpecializedTests
         {
             for (int i = 0; i < context.ConstraintBundleCount; ++i)
             {
-                GatherScatter.GatherVelocities(ref context.BodyVelocities, ref context.BodyReferences[i], Vector<float>.Count, out var a, out var b);
+                BodyVelocities.GatherVelocities(ref context.BodyVelocities, ref context.BodyReferences[i], Vector<float>.Count, out var a, out var b);
             }
         }
 
@@ -98,7 +98,7 @@ namespace Demos.SpecializedTests
             var b = new BodyVelocities();
             for (int i = 0; i < context.ConstraintBundleCount; ++i)
             {
-                GatherScatter.ScatterVelocities(ref context.BodyVelocities, ref context.BodyReferences[i], Vector<float>.Count, ref a, ref b);
+                BodyVelocities.ScatterVelocities(ref a, ref b, ref context.BodyVelocities, ref context.BodyReferences[i], Vector<float>.Count);
             }
         }
 

@@ -547,30 +547,6 @@ namespace BepuPhysics
             }
         }
 
-        //This looks a little different because it's used by AABB calculation, not constraint pairs.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void GatherDataForBounds(ref int start, int count, out RigidPoses poses, out BodyVelocities velocities, out Vector<int> shapeIndices, out Vector<float> maximumExpansion)
-        {
-            Debug.Assert(count <= Vector<float>.Count);
-            ref var targetPositionBase = ref Unsafe.As<Vector<float>, float>(ref poses.Position.X);
-            ref var targetOrientationBase = ref Unsafe.As<Vector<float>, float>(ref poses.Orientation.X);
-            ref var targetLinearBase = ref Unsafe.As<Vector<float>, float>(ref velocities.Linear.X);
-            ref var targetAngularBase = ref Unsafe.As<Vector<float>, float>(ref velocities.Angular.X);
-            ref var targetShapeBase = ref Unsafe.As<Vector<int>, int>(ref shapeIndices);
-            ref var targetExpansionBase = ref Unsafe.As<Vector<float>, float>(ref maximumExpansion);
-            ref var activeSet = ref ActiveSet;
-            for (int i = 0; i < count; ++i)
-            {
-                var index = Unsafe.Add(ref start, i);
-                GatherPoseForBody(ref activeSet.Poses[index], ref targetPositionBase, ref targetOrientationBase, i);
-                GatherVelocityForBody(ref activeSet.Velocities[index], ref targetLinearBase, ref targetAngularBase, i);
-                ref var collidable = ref activeSet.Collidables[index];
-                Unsafe.Add(ref targetShapeBase, i) = collidable.Shape.Index;
-                //Not entirely pleased with the fact that this pulls in some logic from bounds calculation.
-                Unsafe.Add(ref targetExpansionBase, i) = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : collidable.SpeculativeMargin;
-            }
-        }
-
         struct ActiveConstraintBodyIndicesEnumerator<TInnerEnumerator> : IForEach<int> where TInnerEnumerator : IForEach<int>
         {
             public TInnerEnumerator InnerEnumerator;

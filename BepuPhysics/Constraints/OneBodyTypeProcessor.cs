@@ -103,9 +103,9 @@ namespace BepuPhysics.Constraints
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 int count = GetCountInBundle(ref typeBatch, i);
-                GatherScatter.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out var wsvA);
+                BodyVelocities.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out var wsvA);
                 function.WarmStart(ref wsvA, ref projection, ref accumulatedImpulses);
-                GatherScatter.ScatterVelocities(ref bodyVelocities, ref bodyReferences, count, ref wsvA);
+                BodyVelocities.ScatterVelocities(ref wsvA, ref bodyVelocities, ref bodyReferences, count);
             }
         }
 
@@ -121,9 +121,9 @@ namespace BepuPhysics.Constraints
                 ref var accumulatedImpulses = ref Unsafe.Add(ref accumulatedImpulsesBase, i);
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 int count = GetCountInBundle(ref typeBatch, i);
-                GatherScatter.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out var wsvA);
+                BodyVelocities.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out var wsvA);
                 function.Solve(ref wsvA, ref projection, ref accumulatedImpulses);
-                GatherScatter.ScatterVelocities(ref bodyVelocities, ref bodyReferences, count, ref wsvA);
+                BodyVelocities.ScatterVelocities(ref wsvA, ref bodyVelocities, ref bodyReferences, count);
             }
         }        
 
