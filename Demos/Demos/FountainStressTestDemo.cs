@@ -9,7 +9,7 @@ using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using System.Diagnostics;
 
-namespace Demos
+namespace Demos.Demos
 {
     public class FountainStressTestDemo : Demo
     {

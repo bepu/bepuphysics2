@@ -10,7 +10,7 @@ using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using BepuPhysics.Constraints;
 
-namespace Demos
+namespace Demos.Demos
 {
     public class ConstraintTestDemo : Demo
     {

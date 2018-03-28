@@ -115,7 +115,7 @@ float GetLocalGridPlaneCoverage(float2 interval, float inverseGridSpacing, float
 	//Note that we assume a simple uniform box region aligned with the local plane normal. That's not actually correct, but it's a decent approximation.
 	//In order to get the coverage fraction, we analytically integrate how much of the interval is covered and divide that by the whole interval width.
 	float normalizedCoveredSpan = EvaluateIntegral(end, normalizedLineWidth) - EvaluateIntegral(start, normalizedLineWidth);
-	return max(0, normalizedCoveredSpan) / max(1e-7, end - start);
+	return saturate(normalizedCoveredSpan / max(1e-7, end - start));
 }
 
 float GetNormalFade(float axisLocalNormal)
@@ -166,9 +166,9 @@ float4 GetLocalGridContributions(float3 localPosition, float3 localNormal, float
 	float4 smallContribution = float4(smallCoverage * smallLineColor, smallCoverage);
 	float4 mediumContribution = float4(mediumCoverage * mediumLineColor, mediumCoverage);
 	float4 largeContribution = float4(largeCoverage * largeLineColor, largeCoverage);
+
 	float4 contribution = mediumContribution + smallContribution * (1 - mediumContribution.w);
 	return largeContribution + contribution * (1 - largeContribution.w);
-
 }
 
 

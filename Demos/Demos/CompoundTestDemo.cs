@@ -10,7 +10,7 @@ using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using System.Runtime.CompilerServices;
 
-namespace Demos
+namespace Demos.Demos
 {
     public class CompoundTestDemo : Demo
     {

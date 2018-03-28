@@ -9,7 +9,7 @@ using System.Diagnostics;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 
-namespace Demos
+namespace Demos.Demos
 {
     public class ShapePileDemo : Demo
     {

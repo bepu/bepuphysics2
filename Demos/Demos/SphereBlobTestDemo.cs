@@ -9,9 +9,9 @@ using System.Diagnostics;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 
-namespace Demos
+namespace Demos.Demos
 {
-    public class SimpleDemo : Demo
+    public class SphereBlobTestDemo : Demo
     {
         public unsafe override void Initialize(Camera camera)
         {

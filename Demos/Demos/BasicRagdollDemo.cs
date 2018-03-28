@@ -10,7 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using BepuPhysics.Constraints;
 
-namespace Demos
+namespace Demos.Demos
 {
     //TODO: This would benefit from some convenience work related to storing custom per body data. Callbacks on body add/remove and so on.
     public class BodyCollisionMasks
