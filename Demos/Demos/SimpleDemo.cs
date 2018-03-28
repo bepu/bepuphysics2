@@ -42,7 +42,7 @@ namespace Demos
             var latticeOffset = -0.5f * width * latticeSpacing;
             SimulationSetup.BuildLattice(
                 new RegularGridBuilder(new Vector3(latticeSpacing, 1.1f, latticeSpacing), new Vector3(latticeOffset, 3, latticeOffset), sphereInertia, shapeIndex),
-                new ConstraintlessLatticeBuilder(),
+                new BallSocketConstraintBuilder(),
                 width, height, length, Simulation, out var bodyHandles, out var constraintHandles);
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
             Simulation.Deterministic = false;

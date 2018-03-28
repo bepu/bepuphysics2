@@ -295,20 +295,20 @@ namespace BepuPhysics
 
         struct WarmStartStageFunction : IStageFunction
         {
-            public Buffer<BodyVelocity> Velocities;
+            public Bodies Bodies;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Execute(ref TypeBatch typeBatch, int start, int end, TypeProcessor typeProcessor)
             {
-                typeProcessor.WarmStart(ref typeBatch, ref Velocities, start, end);
+                typeProcessor.WarmStart(ref typeBatch, Bodies, start, end);
             }
         }
         struct SolveStageFunction : IStageFunction
         {
-            public Buffer<BodyVelocity> Velocities;
+            public Bodies Bodies;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Execute(ref TypeBatch typeBatch, int start, int end, TypeProcessor typeProcessor)
             {
-                typeProcessor.SolveIteration(ref typeBatch, ref Velocities, start, end);
+                typeProcessor.SolveIteration(ref typeBatch, Bodies, start, end);
             }
         }
 
@@ -532,7 +532,7 @@ namespace BepuPhysics
 
             claimedState = 0;
             unclaimedState = 1;
-            var warmStartStage = new WarmStartStageFunction { Velocities = bodies.ActiveSet.Velocities };
+            var warmStartStage = new WarmStartStageFunction { Bodies = bodies };
             for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
                 var batchStart = batchIndex > 0 ? context.BatchBoundaries[batchIndex - 1] : 0;
@@ -544,7 +544,7 @@ namespace BepuPhysics
             claimedState = 1;
             unclaimedState = 0;
 
-            var solveStage = new SolveStageFunction { Velocities = bodies.ActiveSet.Velocities };
+            var solveStage = new SolveStageFunction { Bodies = bodies };
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
             {
                 for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)

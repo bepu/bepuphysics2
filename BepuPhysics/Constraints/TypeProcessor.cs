@@ -99,8 +99,8 @@ namespace BepuPhysics.Constraints
         public abstract void Resize(ref TypeBatch typeBatch, int newCapacity, BufferPool pool);
 
         public abstract void Prestep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
-        public abstract void WarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle);
-        public abstract void SolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle);
+        public abstract void WarmStart(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle);
+        public abstract void SolveIteration(ref TypeBatch typeBatch, Bodies bodies, int startBundle, int exclusiveEndBundle);
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -109,14 +109,14 @@ namespace BepuPhysics.Constraints
             Prestep(ref typeBatch, bodies, dt, inverseDt, 0, typeBatch.BundleCount);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities)
+        public void WarmStart(ref TypeBatch typeBatch, Bodies bodies)
         {
-            WarmStart(ref typeBatch, ref bodyVelocities, 0, typeBatch.BundleCount);
+            WarmStart(ref typeBatch, bodies, 0, typeBatch.BundleCount);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities)
+        public void SolveIteration(ref TypeBatch typeBatch, Bodies bodies)
         {
-            SolveIteration(ref typeBatch, ref bodyVelocities, 0, typeBatch.BundleCount);
+            SolveIteration(ref typeBatch, bodies, 0, typeBatch.BundleCount);
         }
 
     }
