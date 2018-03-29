@@ -117,7 +117,7 @@ namespace Demos.Demos
             shape.ComputeLocalInverseInertia(inertia.InverseMass, out inertia.InverseInertiaTensor);
             var description = new BodyDescription
             {
-                Activity = new BodyActivityDescription { SleepThreshold = 0, MinimumTimestepCountUnderThreshold = 32 },
+                Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
                 Collidable = new CollidableDescription
                 {
                     Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
@@ -429,18 +429,21 @@ namespace Demos.Demos
             var callbacks = new RagdollCallbacks { Masks = masks };
             Simulation = Simulation.Create(BufferPool, callbacks);
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
-            //Simulation.Solver.IterationCount = 100;
 
             int ragdollIndex = 0;
-            var spacing = new Vector3(5, 0, 3);
+            var spacing = new Vector3(5, 5, 3);
             int width = 4;
+            int height = 4;
             int length = 4;
             var origin = -0.5f * spacing * new Vector3(width, 0, length) + new Vector3(0, 10, 0);
             for (int i = 0; i < width; ++i)
             {
-                for (int j = 0; j < length; ++j)
+                for (int j = 0; j < height; ++j)
                 {
-                    AddRagdoll(origin + spacing * new Vector3(i, 0, j), Quaternion.Identity, ragdollIndex++, masks, Simulation);
+                    for (int k = 0; k < length; ++k)
+                    {
+                        AddRagdoll(origin + spacing * new Vector3(i, j, k), Quaternion.Identity, ragdollIndex++, masks, Simulation);
+                    }
                 }
             }
 

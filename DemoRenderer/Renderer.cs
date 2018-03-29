@@ -2,15 +2,10 @@
 using DemoRenderer.Background;
 using DemoRenderer.UI;
 using DemoRenderer.PostProcessing;
-using DemoRenderer.Properties;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using DemoRenderer.ShapeDrawing;
-using BepuPhysics;
 using DemoRenderer.Constraints;
 
 namespace DemoRenderer
@@ -58,7 +53,7 @@ namespace DemoRenderer
         {
             looper = new ParallelLooper();
             Surface = surface;
-            using (var stream = new MemoryStream(Resources.DemoRendererShaders))
+            using (var stream = GetType().Assembly.GetManifestResourceStream("DemoRenderer.DemoRenderer.shaderarchive"))
             {
                 ShaderCache = ShaderCache.Load(stream);
             }
