@@ -1,22 +1,48 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using BepuUtilities;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BepuPhysics
 {
     public struct SpringSettingsWide
     {
         //Be careful when fiddling with the memory layout. It's aligned with execution order.
-        public Vector<float> NaturalFrequency;
-        public Vector<float> DampingRatio;
+        public Vector<float> AngularFrequency;
+        public Vector<float> TwiceDampingRatio;
     }
 
-    public static class Springiness
+    public struct SpringSettings
     {
+        /// <summary>
+        /// Target number of undamped oscillations per unit of time, scaled by 2 * PI.
+        /// </summary>
+        public float AngularFrequency;
+        /// <summary>
+        /// Twice the ratio of the spring's actual damping to its critical damping.
+        /// </summary>
+        public float TwiceDampingRatio;
+
+        /// <summary>
+        /// Gets or sets the target number of undamped oscillations per unit of time.
+        /// </summary>
+        public float Frequency { get { return AngularFrequency / MathHelper.TwoPi; } set { AngularFrequency = value * MathHelper.TwoPi; } }
+
+        /// <summary>
+        /// Gets or sets the ratio of the spring's actual damping to its critical damping. 0 is undamped, 1 is critically damped, and higher values are overdamped.
+        /// </summary>
+        public float DampingRatio { get { return TwiceDampingRatio / 2f; } set { TwiceDampingRatio = value * 2; } }
+
+        /// <summary>
+        /// Constructs a new spring settings instance.
+        /// </summary>
+        /// <param name="frequency">Target number of undamped oscillations per unit of time.</param>
+        /// <param name="dampingRatio">Ratio of the spring's actual damping to its critical damping. 0 is undamped, 1 is critically damped, and higher values are overdamped.</param>
+        public SpringSettings(float frequency, float dampingRatio)
+        {
+            AngularFrequency = frequency * MathHelper.TwoPi;
+            TwiceDampingRatio = dampingRatio * 2;
+        }
+
         /// <summary>
         /// Computes springiness values for a set of constraints.
         /// </summary>
@@ -39,10 +65,9 @@ namespace BepuPhysics
             //"ERP" is the error reduction per frame. Note that it can never exceed 1 given physically valid input.
             //Since it is a *per frame* term, note that the position error is additionally scaled by inverseDt to get the target velocity
             //needed to accomplish the desired error reduction in one frame.
-            var frequencyDt = settings.NaturalFrequency * new Vector<float>(dt);
-            var twiceDampingRatio = settings.DampingRatio * new Vector<float>(2); //Could precompute.
-            positionErrorToVelocity = settings.NaturalFrequency / (frequencyDt + twiceDampingRatio);
-            var extra = Vector<float>.One / (frequencyDt * (frequencyDt + twiceDampingRatio));
+            var angularFrequencyDt = settings.AngularFrequency * new Vector<float>(dt);
+            positionErrorToVelocity = settings.AngularFrequency / (angularFrequencyDt + settings.TwiceDampingRatio);
+            var extra = Vector<float>.One / (angularFrequencyDt * (angularFrequencyDt + settings.TwiceDampingRatio));
             effectiveMassCFMScale = Vector<float>.One / (Vector<float>.One + extra);
             softnessImpulseScale = extra * effectiveMassCFMScale;
         }

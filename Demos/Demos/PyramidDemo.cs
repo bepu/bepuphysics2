@@ -20,10 +20,9 @@ namespace Demos.Demos
         {
             camera.Position = new Vector3(-30, 8, -60);
             camera.Yaw = MathHelper.Pi * 3f / 4;
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
+            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
-            Simulation.Deterministic = false;
 
             var boxShape = new Box(1, 1, 1);
             BodyInertia boxInertia;
@@ -119,7 +118,7 @@ namespace Demos.Demos
         public override void Render(Renderer renderer, TextBuilder text, Font font)
         {
             text.Clear().Append("Press Q to launch a ball!");
-            renderer.TextBatcher.Write(text, new Vector2(20, 36), 16, new Vector3(1, 1, 1), font);
+            renderer.TextBatcher.Write(text, new Vector2(20, renderer.Surface.Resolution.Y - 20), 16, new Vector3(1, 1, 1), font);
             base.Render(renderer, text, font);
         }
 

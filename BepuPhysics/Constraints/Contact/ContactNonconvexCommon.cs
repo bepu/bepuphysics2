@@ -74,8 +74,8 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref targetCommon.OffsetB.Z) = sourceCommon.OffsetB.Z;
 
             GetFirst(ref targetCommon.FrictionCoefficient) = sourceCommon.FrictionCoefficient;
-            GetFirst(ref targetCommon.SpringSettings.NaturalFrequency) = sourceCommon.SpringSettings.NaturalFrequency;
-            GetFirst(ref targetCommon.SpringSettings.DampingRatio) = sourceCommon.SpringSettings.DampingRatio;
+            GetFirst(ref targetCommon.SpringSettings.AngularFrequency) = sourceCommon.SpringSettings.AngularFrequency;
+            GetFirst(ref targetCommon.SpringSettings.TwiceDampingRatio) = sourceCommon.SpringSettings.TwiceDampingRatio;
             GetFirst(ref targetCommon.MaximumRecoveryVelocity) = sourceCommon.MaximumRecoveryVelocity;
 
             ref var sourceContacts = ref description.GetFirstContact(ref description);
@@ -94,8 +94,8 @@ namespace BepuPhysics.Constraints.Contact
             ref var sourceCommon = ref description.GetCommonProperties(ref description);
             ref var targetCommon = ref target.GetCommonProperties(ref target);
             GetFirst(ref targetCommon.FrictionCoefficient) = sourceCommon.FrictionCoefficient;
-            GetFirst(ref targetCommon.SpringSettings.NaturalFrequency) = sourceCommon.SpringSettings.NaturalFrequency;
-            GetFirst(ref targetCommon.SpringSettings.DampingRatio) = sourceCommon.SpringSettings.DampingRatio;
+            GetFirst(ref targetCommon.SpringSettings.AngularFrequency) = sourceCommon.SpringSettings.AngularFrequency;
+            GetFirst(ref targetCommon.SpringSettings.TwiceDampingRatio) = sourceCommon.SpringSettings.TwiceDampingRatio;
             GetFirst(ref targetCommon.MaximumRecoveryVelocity) = sourceCommon.MaximumRecoveryVelocity;
 
             ref var sourceContacts = ref description.GetFirstContact(ref description);
@@ -128,8 +128,8 @@ namespace BepuPhysics.Constraints.Contact
             var offsetB = new Vector3(GetFirst(ref prestepCommon.OffsetB.X), GetFirst(ref prestepCommon.OffsetB.Y), GetFirst(ref prestepCommon.OffsetB.Z));
             PairMaterialProperties material;
             material.FrictionCoefficient = GetFirst(ref prestepCommon.FrictionCoefficient);
-            material.SpringSettings.NaturalFrequency = GetFirst(ref prestepCommon.SpringSettings.NaturalFrequency);
-            material.SpringSettings.DampingRatio = GetFirst(ref prestepCommon.SpringSettings.DampingRatio);
+            material.SpringSettings.AngularFrequency = GetFirst(ref prestepCommon.SpringSettings.AngularFrequency);
+            material.SpringSettings.TwiceDampingRatio = GetFirst(ref prestepCommon.SpringSettings.TwiceDampingRatio);
             material.MaximumRecoveryVelocity = GetFirst(ref prestepCommon.MaximumRecoveryVelocity);
 
             //TODO: Not ideal. We could avoid a default initialization with blittable...
@@ -152,8 +152,8 @@ namespace BepuPhysics.Constraints.Contact
             ref var prestepCommon = ref prestep.GetCommonProperties(ref prestep);
             PairMaterialProperties material;
             material.FrictionCoefficient = GetFirst(ref prestepCommon.FrictionCoefficient);
-            material.SpringSettings.NaturalFrequency = GetFirst(ref prestepCommon.SpringSettings.NaturalFrequency);
-            material.SpringSettings.DampingRatio = GetFirst(ref prestepCommon.SpringSettings.DampingRatio);
+            material.SpringSettings.AngularFrequency = GetFirst(ref prestepCommon.SpringSettings.AngularFrequency);
+            material.SpringSettings.TwiceDampingRatio = GetFirst(ref prestepCommon.SpringSettings.TwiceDampingRatio);
             material.MaximumRecoveryVelocity = GetFirst(ref prestepCommon.MaximumRecoveryVelocity);
 
             //TODO: Not ideal. We could avoid a default initialization with blittable...

@@ -38,13 +38,12 @@ namespace Demos
         public DemoSet()
         {
             AddOption<PyramidDemo>();
+            AddOption<BlockChainDemo>();
             AddOption<ShapePileDemo>();
             AddOption<BasicRagdollDemo>();
             AddOption<CompoundTestDemo>();
-            AddOption<CapsuleTestDemo>();
             AddOption<SphereBlobTestDemo>();
             AddOption<FountainStressTestDemo>();
-            AddOption<ConstraintTestDemo>();
         }
 
         public int Count { get { return options.Count; } }

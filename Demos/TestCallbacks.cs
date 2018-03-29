@@ -32,8 +32,7 @@ namespace Demos
         {
             pairMaterial.FrictionCoefficient = 1;
             pairMaterial.MaximumRecoveryVelocity = 2f;
-            pairMaterial.SpringSettings.NaturalFrequency = MathHelper.Pi * 60;
-            pairMaterial.SpringSettings.DampingRatio = 1f;
+            pairMaterial.SpringSettings = new SpringSettings(30, 1);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)

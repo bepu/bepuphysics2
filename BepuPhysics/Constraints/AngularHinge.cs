@@ -35,8 +35,8 @@ namespace BepuPhysics.Constraints
             GetFirst(ref target.HingeAxisLocalB.X) = HingeAxisLocalB.X;
             GetFirst(ref target.HingeAxisLocalB.Y) = HingeAxisLocalB.Y;
             GetFirst(ref target.HingeAxisLocalB.Z) = HingeAxisLocalB.Z;
-            GetFirst(ref target.SpringSettings.NaturalFrequency) = SpringSettings.NaturalFrequency;
-            GetFirst(ref target.SpringSettings.DampingRatio) = SpringSettings.DampingRatio;
+            GetFirst(ref target.SpringSettings.AngularFrequency) = SpringSettings.AngularFrequency;
+            GetFirst(ref target.SpringSettings.TwiceDampingRatio) = SpringSettings.TwiceDampingRatio;
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out AngularHinge description)
@@ -49,8 +49,8 @@ namespace BepuPhysics.Constraints
             description.HingeAxisLocalB.X = GetFirst(ref source.HingeAxisLocalB.X);
             description.HingeAxisLocalB.Y = GetFirst(ref source.HingeAxisLocalB.Y);
             description.HingeAxisLocalB.Z = GetFirst(ref source.HingeAxisLocalB.Z);
-            description.SpringSettings.NaturalFrequency = GetFirst(ref source.SpringSettings.NaturalFrequency);
-            description.SpringSettings.DampingRatio = GetFirst(ref source.SpringSettings.DampingRatio);
+            description.SpringSettings.AngularFrequency = GetFirst(ref source.SpringSettings.AngularFrequency);
+            description.SpringSettings.TwiceDampingRatio = GetFirst(ref source.SpringSettings.TwiceDampingRatio);
         }
     }
 
@@ -152,7 +152,7 @@ namespace BepuPhysics.Constraints
             Triangular2x2Wide.Add(ref angularA, ref angularB, out var inverseEffectiveMass);
             Triangular2x2Wide.InvertSymmetricWithoutOverlap(ref inverseEffectiveMass, out var effectiveMass);
 
-            Springiness.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            SpringSettings.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Triangular2x2Wide.Scale(ref effectiveMass, ref effectiveMassCFMScale, out effectiveMass);
             Triangular2x2Wide.MultiplyTransposedBySymmetric(ref jacobianA, ref effectiveMass, out projection.VelocityToImpulseA);
 

@@ -50,7 +50,7 @@ namespace Demos.Demos
             var b = AddBody(new Box(3, 1, 1), 0, new RigidPose { Position = new Vector3(5, 10, 0), Orientation = BepuUtilities.Quaternion.Identity }, Simulation);
             a.Velocity.Angular = new Vector3(1f, 5f, 1f);
             //a.Pose.Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathHelper.PiOver4);
-            var springSettings = new BepuPhysics.CollisionDetection.SpringSettings { DampingRatio = 1f, NaturalFrequency = MathHelper.Pi * 30 };
+            var springSettings = new SpringSettings(15, 1);
             var ballSocket = new BallSocket
             {
                 LocalOffsetA = new Vector3(2.5f, 0, 0),
@@ -78,7 +78,7 @@ namespace Demos.Demos
                 AxisLocalA = new Vector3(1, 0, 0),
                 AxisLocalB = new Vector3(1, 0, 0),
                 MinimumDot = -0.5f,
-                SpringSettings = new BepuPhysics.CollisionDetection.SpringSettings { DampingRatio = 1f, NaturalFrequency = MathHelper.Pi * 30 }
+                SpringSettings = new SpringSettings(15, 1)
             };
             Simulation.Solver.Add(a.Handle, b.Handle, ref swingLimit);
 

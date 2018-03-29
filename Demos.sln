@@ -3,6 +3,12 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27004.2005
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Demos", "Demos\Demos.csproj", "{C4C313CF-0BBD-407F-AC30-C5E889206F55}"
+	ProjectSection(ProjectDependencies) = postProject
+		{499C899F-CD56-476E-AFF8-85A8C29B19BF} = {499C899F-CD56-476E-AFF8-85A8C29B19BF}
+		{6F7900A8-6B1A-41BB-BB2F-0348A527A2F5} = {6F7900A8-6B1A-41BB-BB2F-0348A527A2F5}
+	EndProjectSection
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DemoRenderer", "DemoRenderer\DemoRenderer.csproj", "{21058D92-EC74-4F70-98FF-D3D7D02A537E}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6F7900A8-6B1A-41BB-BB2F-0348A527A2F5} = {6F7900A8-6B1A-41BB-BB2F-0348A527A2F5}
@@ -17,12 +23,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BepuUtilities", "BepuUtilities\BepuUtilities.csproj", "{8D3FB6BE-2726-4479-8AF2-13F593314AC0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BepuPhysics", "BepuPhysics\BepuPhysics.csproj", "{5FBC743A-8911-4DE6-B136-C0B274E1B185}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Demos", "Demos\Demos.csproj", "{C4C313CF-0BBD-407F-AC30-C5E889206F55}"
-	ProjectSection(ProjectDependencies) = postProject
-		{499C899F-CD56-476E-AFF8-85A8C29B19BF} = {499C899F-CD56-476E-AFF8-85A8C29B19BF}
-		{6F7900A8-6B1A-41BB-BB2F-0348A527A2F5} = {6F7900A8-6B1A-41BB-BB2F-0348A527A2F5}
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

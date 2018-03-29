@@ -35,8 +35,8 @@ namespace BepuPhysics.Constraints
             GetFirst(ref target.LocalOffsetB.X) = LocalOffsetB.X;
             GetFirst(ref target.LocalOffsetB.Y) = LocalOffsetB.Y;
             GetFirst(ref target.LocalOffsetB.Z) = LocalOffsetB.Z;
-            GetFirst(ref target.SpringSettings.NaturalFrequency) = SpringSettings.NaturalFrequency;
-            GetFirst(ref target.SpringSettings.DampingRatio) = SpringSettings.DampingRatio;
+            GetFirst(ref target.SpringSettings.AngularFrequency) = SpringSettings.AngularFrequency;
+            GetFirst(ref target.SpringSettings.TwiceDampingRatio) = SpringSettings.TwiceDampingRatio;
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out BallSocket description)
@@ -49,8 +49,8 @@ namespace BepuPhysics.Constraints
             description.LocalOffsetB.X = GetFirst(ref source.LocalOffsetB.X);
             description.LocalOffsetB.Y = GetFirst(ref source.LocalOffsetB.Y);
             description.LocalOffsetB.Z = GetFirst(ref source.LocalOffsetB.Z);
-            description.SpringSettings.NaturalFrequency = GetFirst(ref source.SpringSettings.NaturalFrequency);
-            description.SpringSettings.DampingRatio = GetFirst(ref source.SpringSettings.DampingRatio);
+            description.SpringSettings.AngularFrequency = GetFirst(ref source.SpringSettings.AngularFrequency);
+            description.SpringSettings.TwiceDampingRatio = GetFirst(ref source.SpringSettings.TwiceDampingRatio);
         }
     }
 
@@ -128,7 +128,7 @@ namespace BepuPhysics.Constraints
             inverseEffectiveMass.YY += linearContribution;
             inverseEffectiveMass.ZZ += linearContribution;
             Triangular3x3Wide.SymmetricInvert(ref inverseEffectiveMass, out projection.EffectiveMass);
-            Springiness.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            SpringSettings.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Triangular3x3Wide.Scale(ref projection.EffectiveMass, ref effectiveMassCFMScale, out projection.EffectiveMass);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.

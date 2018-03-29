@@ -14,11 +14,7 @@ namespace Demos
             description = new Contact4
             {
                 //By convention, normal faces from B to A.
-                SpringSettings = new SpringSettings
-                {
-                    NaturalFrequency = (float)(Math.PI * 2 * 60),
-                    DampingRatio = 100f,
-                },
+                SpringSettings = new SpringSettings(60, 100),
                 MaximumRecoveryVelocity = 1f,
                 FrictionCoefficient = 1,
                 Normal = unitY,

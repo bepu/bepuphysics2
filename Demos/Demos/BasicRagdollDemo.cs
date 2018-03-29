@@ -81,8 +81,7 @@ namespace Demos.Demos
         {
             pairMaterial.FrictionCoefficient = 1;
             pairMaterial.MaximumRecoveryVelocity = 2f;
-            pairMaterial.SpringSettings.NaturalFrequency = MathHelper.Pi * 60;
-            pairMaterial.SpringSettings.DampingRatio = 1f;
+            pairMaterial.SpringSettings = new SpringSettings(30, 1);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
@@ -345,7 +344,7 @@ namespace Demos.Demos
             var head = AddBody(new Sphere(0.2f), 5, GetWorldPose(headPose.Position, headPose.Orientation, ragdollPose), simulation);
 
             //Attach constraints between torso pieces.
-            var springSettings = new SpringSettings { DampingRatio = 1f, NaturalFrequency = MathHelper.Pi * 30f };
+            var springSettings = new SpringSettings(15f, 1f);
             var lowerSpine = (hipsPose.Position + abdomenPose.Position) * 0.5f;
             var lowerSpineBallSocket = new BallSocket
             {

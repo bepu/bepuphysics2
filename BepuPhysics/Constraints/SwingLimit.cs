@@ -44,8 +44,8 @@ namespace BepuPhysics.Constraints
             GetFirst(ref target.AxisLocalB.Y) = AxisLocalB.Y;
             GetFirst(ref target.AxisLocalB.Z) = AxisLocalB.Z;
             GetFirst(ref target.MinimumDot) = MinimumDot;
-            GetFirst(ref target.SpringSettings.NaturalFrequency) = SpringSettings.NaturalFrequency;
-            GetFirst(ref target.SpringSettings.DampingRatio) = SpringSettings.DampingRatio;
+            GetFirst(ref target.SpringSettings.AngularFrequency) = SpringSettings.AngularFrequency;
+            GetFirst(ref target.SpringSettings.TwiceDampingRatio) = SpringSettings.TwiceDampingRatio;
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out SwingLimit description)
@@ -59,8 +59,8 @@ namespace BepuPhysics.Constraints
             description.AxisLocalB.Y = GetFirst(ref source.AxisLocalB.Y);
             description.AxisLocalB.Z = GetFirst(ref source.AxisLocalB.Z);
             description.MinimumDot = GetFirst(ref source.MinimumDot);
-            description.SpringSettings.NaturalFrequency = GetFirst(ref source.SpringSettings.NaturalFrequency);
-            description.SpringSettings.DampingRatio = GetFirst(ref source.SpringSettings.DampingRatio);
+            description.SpringSettings.AngularFrequency = GetFirst(ref source.SpringSettings.AngularFrequency);
+            description.SpringSettings.TwiceDampingRatio = GetFirst(ref source.SpringSettings.TwiceDampingRatio);
         }
     }
 
@@ -115,7 +115,7 @@ namespace BepuPhysics.Constraints
             Helpers.FindPerpendicular(ref axisA, out var fallbackJacobian);
             Vector3Wide.Dot(ref jacobianA, ref jacobianA, out var jacobianLengthSquared);
             var useFallback = Vector.LessThan(jacobianLengthSquared, new Vector<float>(1e-7f));
-            Vector3Wide.ConditionalSelect(ref useFallback, ref fallbackJacobian, ref jacobianA, out jacobianA); 
+            Vector3Wide.ConditionalSelect(ref useFallback, ref fallbackJacobian, ref jacobianA, out jacobianA);
 
             //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
 
@@ -126,7 +126,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Dot(ref projection.ImpulseToVelocityA, ref jacobianA, out var angularA);
             Vector3Wide.Dot(ref projection.NegatedImpulseToVelocityB, ref jacobianA, out var angularB);
 
-            Springiness.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            SpringSettings.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             var effectiveMass = effectiveMassCFMScale / (angularA + angularB);
             Vector3Wide.Scale(ref jacobianA, ref effectiveMass, out projection.VelocityToImpulseA);
 

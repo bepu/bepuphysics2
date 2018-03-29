@@ -31,8 +31,8 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.Normal.Y) = Normal.Y;
             GetFirst(ref target.Normal.Z) = Normal.Z;
 
-            GetFirst(ref target.SpringSettings.NaturalFrequency) = SpringSettings.NaturalFrequency;
-            GetFirst(ref target.SpringSettings.DampingRatio) = SpringSettings.DampingRatio;
+            GetFirst(ref target.SpringSettings.AngularFrequency) = SpringSettings.AngularFrequency;
+            GetFirst(ref target.SpringSettings.TwiceDampingRatio) = SpringSettings.TwiceDampingRatio;
             GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;
 
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
@@ -53,8 +53,8 @@ namespace BepuPhysics.Constraints.Contact
             description.Normal.Y = GetFirst(ref source.Normal.Y);
             description.Normal.Z = GetFirst(ref source.Normal.Z);
 
-            description.SpringSettings.NaturalFrequency = GetFirst(ref source.SpringSettings.NaturalFrequency);
-            description.SpringSettings.DampingRatio = GetFirst(ref source.SpringSettings.DampingRatio);
+            description.SpringSettings.AngularFrequency = GetFirst(ref source.SpringSettings.AngularFrequency);
+            description.SpringSettings.TwiceDampingRatio = GetFirst(ref source.SpringSettings.TwiceDampingRatio);
             description.MaximumRecoveryVelocity = GetFirst(ref source.MaximumRecoveryVelocity);
 
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);

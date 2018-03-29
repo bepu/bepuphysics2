@@ -273,7 +273,7 @@ namespace BepuPhysics.Constraints
             //We'll start with the unsoftened effective mass, constructed from the contributions computed above:
             var effectiveMass = Vector<float>.One / (linearA + linearB + angularA + angularB);
 
-            Springiness.ComputeSpringiness(ref springSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            SpringSettings.ComputeSpringiness(ref springSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             var softenedEffectiveMass = effectiveMass * effectiveMassCFMScale;
             
             //Note that we use a bit of a hack when computing the bias velocity- even if our damping ratio/natural frequency implies a strongly springy response
