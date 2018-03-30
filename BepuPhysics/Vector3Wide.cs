@@ -238,7 +238,19 @@ namespace BepuPhysics
             narrow.Y = Unsafe.Add(ref start, Vector<float>.Count);
             narrow.Z = Unsafe.Add(ref start, 2 * Vector<float>.Count);
         }
-
+        
+        /// <summary>
+        /// Gathers values from a vector and places them into the first indices of the target vector.
+        /// </summary>
+        /// <param name="source">Vector to copy values from.</param>
+        /// <param name="targetSlot">Wide vectorto place values into.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GatherSlot(ref Vector3 source, ref Vector3Wide targetSlot)
+        {
+            GatherScatter.GetFirst(ref targetSlot.X) = source.X;
+            GatherScatter.GetFirst(ref targetSlot.Y) = source.Y;
+            GatherScatter.GetFirst(ref targetSlot.Z) = source.Z;
+        }
 
         public override string ToString()
         {

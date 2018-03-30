@@ -332,5 +332,19 @@ namespace BepuPhysics
             result.Z = quaternion.Z;
             result.W = -quaternion.W;
         }
+        
+        /// <summary>
+        /// Gathers values from a quaternion and places them into the first indices of the target wide quaternion.
+        /// </summary>
+        /// <param name="source">Quaternion to copy values from.</param>
+        /// <param name="targetSlot">Wide quaternion to place values into.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GatherSlot(ref BepuUtilities.Quaternion source, ref QuaternionWide targetSlot)
+        {
+            GatherScatter.GetFirst(ref targetSlot.X) = source.X;
+            GatherScatter.GetFirst(ref targetSlot.Y) = source.Y;
+            GatherScatter.GetFirst(ref targetSlot.Z) = source.Z;
+            GatherScatter.GetFirst(ref targetSlot.W) = source.W;
+        }
     }
 }

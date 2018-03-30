@@ -231,10 +231,10 @@ namespace BepuPhysics
                     ref var instance = ref Unsafe.Add(ref bundleInstancesStart, innerIndex);
                     ref var targetInstanceSlot = ref GatherScatter.GetOffsetInstance(ref instanceBundle, innerIndex);
                     targetInstanceSlot.Shape.Gather(ref shapeBatch.shapes[instance.ShapeIndex]);
-                    GatherScatter.GatherSlot(ref instance.Pose.Position, ref targetInstanceSlot.Pose.Position);
-                    GatherScatter.GatherSlot(ref instance.Pose.Orientation, ref targetInstanceSlot.Pose.Orientation);
-                    GatherScatter.GatherSlot(ref instance.Velocities.Linear, ref targetInstanceSlot.Velocities.Linear);
-                    GatherScatter.GatherSlot(ref instance.Velocities.Angular, ref targetInstanceSlot.Velocities.Angular);
+                    Vector3Wide.GatherSlot(ref instance.Pose.Position, ref targetInstanceSlot.Pose.Position);
+                    QuaternionWide.GatherSlot(ref instance.Pose.Orientation, ref targetInstanceSlot.Pose.Orientation);
+                    Vector3Wide.GatherSlot(ref instance.Velocities.Linear, ref targetInstanceSlot.Velocities.Linear);
+                    Vector3Wide.GatherSlot(ref instance.Velocities.Angular, ref targetInstanceSlot.Velocities.Angular);
                     ref var collidable = ref activeSet.Collidables[instance.Continuation.BodyIndex];
                     GatherScatter.GetFirst(ref targetInstanceSlot.MaximumExpansion) =
                         collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : collidable.SpeculativeMargin;
