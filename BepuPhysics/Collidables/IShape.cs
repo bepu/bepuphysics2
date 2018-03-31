@@ -25,7 +25,7 @@ namespace BepuPhysics.Collidables
     {
         void GetBounds(ref BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max);
 
-        void ComputeLocalInverseInertia(float inverseMass, out Triangular3x3 localInverseInertia);
+        void ComputeInertia(float mass, out BodyInertia inertia);
 
         bool RayTest(ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, out float t, out Vector3 normal);
     }

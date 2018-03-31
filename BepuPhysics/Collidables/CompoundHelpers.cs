@@ -56,8 +56,8 @@ namespace BepuPhysics.Collidables
             child.LocalPose = localPose;
             child.ShapeIndex = Shapes.Add(ref shape);
             child.Weight = weight;
-            shape.ComputeLocalInverseInertia(1f / weight, out child.Inertia);
-            Triangular3x3.SymmetricInvert(ref child.Inertia, out child.Inertia);
+            shape.ComputeInertia(weight, out var inertia);
+            Triangular3x3.SymmetricInvert(ref inertia.InverseInertiaTensor, out child.Inertia);
         }
 
         /// <summary>

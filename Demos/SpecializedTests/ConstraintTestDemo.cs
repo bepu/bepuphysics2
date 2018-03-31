@@ -16,10 +16,8 @@ namespace Demos.SpecializedTests
     {
         static BodyReference AddBody<TShape>(TShape shape, float mass, RigidPose pose, Simulation simulation) where TShape : struct, IConvexShape
         {
-            BodyInertia inertia;
-            inertia.InverseMass = mass > 0 ? 1f / mass : 0;
             var shapeIndex = simulation.Shapes.Add(ref shape);
-            shape.ComputeLocalInverseInertia(inertia.InverseMass, out inertia.InverseInertiaTensor);
+            shape.ComputeInertia(mass, out var inertia);
             var description = new BodyDescription
             {
                 Activity = new BodyActivityDescription { SleepThreshold = 0, MinimumTimestepCountUnderThreshold = 32 },

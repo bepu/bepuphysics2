@@ -25,9 +25,7 @@ namespace Demos.Demos
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             var boxShape = new Box(1, 1, 1);
-            BodyInertia boxInertia;
-            boxInertia.InverseMass = 1;
-            boxShape.ComputeLocalInverseInertia(boxInertia.InverseMass, out boxInertia.InverseInertiaTensor);
+            boxShape.ComputeInertia(1, out var boxInertia);
             var boxIndex = Simulation.Shapes.Add(ref boxShape);
             const int pyramidCount = 20;
             for (int pyramidIndex = 0; pyramidIndex < pyramidCount; ++pyramidIndex)
@@ -86,7 +84,6 @@ namespace Demos.Demos
             {
                 //Create the shape that we'll launch at the pyramids when the user presses a button.
                 var bulletShape = new Sphere(0.5f + 5 * (float)random.NextDouble());
-                BodyInertia bulletInertia;
                 //Note that this can produce some pretty serious mass ratios. Observe what happens when a large ball sits on top of a few boxes with a fraction of the mass-
                 //the collision appears much squishier and less stable. For most games, if you want to maintain rigidity, you'll want to use some combination of:
                 //1) Limit the ratio of heavy object masses to light object masses when those heavy objects depend on the light objects.
@@ -95,8 +92,7 @@ namespace Demos.Demos
                 //#2 and #3 can become very expensive. In pathological cases, it can end up slower than using a quality-focused solver for the same simulation.
                 //Unfortunately, at the moment, bepuphysics v2 does not contain any alternative solvers, so if you can't afford to brute force the the problem away,
                 //the best solution is to cheat as much as possible to avoid the corner cases.
-                bulletInertia.InverseMass = 1f / (bulletShape.Radius * bulletShape.Radius * bulletShape.Radius);
-                bulletShape.ComputeLocalInverseInertia(bulletInertia.InverseMass, out bulletInertia.InverseInertiaTensor);
+                bulletShape.ComputeInertia(bulletShape.Radius * bulletShape.Radius * bulletShape.Radius, out var bulletInertia);
                 var bulletShapeIndex = Simulation.Shapes.Add(ref bulletShape);
                 var bodyDescription = new BodyDescription
                 {

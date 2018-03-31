@@ -22,9 +22,7 @@ namespace Demos.Demos
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
             var shape = new Capsule(.5f, 3.5f);
-            BodyInertia localInertia;
-            localInertia.InverseMass = 1f;
-            shape.ComputeLocalInverseInertia(localInertia.InverseMass, out localInertia.InverseInertiaTensor);
+            shape.ComputeInertia(1, out var localInertia);
             //capsuleInertia.InverseInertiaTensor = new Triangular3x3();
             var shapeIndex = Simulation.Shapes.Add(ref shape);
             const int width = 4;

@@ -30,9 +30,7 @@ namespace Demos.Demos
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             var boxShape = new Box(1, 1, 1);
-            BodyInertia boxInertia;
-            boxInertia.InverseMass = 1;
-            boxShape.ComputeLocalInverseInertia(boxInertia.InverseMass, out boxInertia.InverseInertiaTensor);
+            boxShape.ComputeInertia(1, out var boxInertia);
             var boxIndex = Simulation.Shapes.Add(ref boxShape);
             const int forkCount = 20;
             const int blocksPerChain = 20;
@@ -93,9 +91,7 @@ namespace Demos.Demos
 
             //Build the coin description for the ponz-I mean ICO.
             var coinShape = new Sphere(1f); //TODO: Obviously, when cylinders get added, this needs to be changed.
-            BodyInertia coinInertia;
-            coinInertia.InverseMass = 1f;
-            coinShape.ComputeLocalInverseInertia(coinInertia.InverseMass, out coinInertia.InverseInertiaTensor);
+            coinShape.ComputeInertia(1, out var coinInertia);
             coinDescription = new BodyDescription
             {
                 LocalInertia = coinInertia,

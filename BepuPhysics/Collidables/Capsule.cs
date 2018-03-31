@@ -144,8 +144,9 @@ namespace BepuPhysics.Collidables
 
         }
 
-        public void ComputeLocalInverseInertia(float inverseMass, out Triangular3x3 localInverseInertia)
+        public void ComputeInertia(float mass, out BodyInertia inertia)
         {
+            inertia.InverseMass = 1f / mass;
             var r2 = Radius * Radius;
             var h2 = HalfLength * HalfLength;
             var cylinderVolume = 2 * HalfLength * r2 * MathHelper.Pi;
@@ -154,14 +155,14 @@ namespace BepuPhysics.Collidables
             //Volume is in units of the capsule's whole volume.
             cylinderVolume *= inverseTotal;
             sphereVolume *= inverseTotal;
-            localInverseInertia.XX = inverseMass / (
+            inertia.InverseInertiaTensor.XX = inertia.InverseMass / (
                 cylinderVolume * ((3f / 12f) * r2 + (4f / 12f) * h2) +
                 sphereVolume * ((2f / 5f) * r2 + (6f / 8f) * Radius * HalfLength + h2));
-            localInverseInertia.YX = 0;
-            localInverseInertia.YY = inverseMass / (cylinderVolume * (1f / 2f) * r2 + sphereVolume * (2f / 5f) * r2);
-            localInverseInertia.ZX = 0;
-            localInverseInertia.ZY = 0;
-            localInverseInertia.ZZ = localInverseInertia.XX;
+            inertia.InverseInertiaTensor.YX = 0;
+            inertia.InverseInertiaTensor.YY = inertia.InverseMass / (cylinderVolume * (1f / 2f) * r2 + sphereVolume * (2f / 5f) * r2);
+            inertia.InverseInertiaTensor.ZX = 0;
+            inertia.InverseInertiaTensor.ZY = 0;
+            inertia.InverseInertiaTensor.ZZ = inertia.InverseInertiaTensor.XX;
         }
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)

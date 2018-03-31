@@ -31,9 +31,7 @@ namespace Demos
             });
 
             var shape = new Sphere(0.5f);
-            BodyInertia sphereInertia;
-            sphereInertia.InverseMass = 1;
-            shape.ComputeLocalInverseInertia(sphereInertia.InverseMass, out sphereInertia.InverseInertiaTensor);
+            shape.ComputeInertia(1, out var sphereInertia);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
             const int width = 12;
             const int height = 4;

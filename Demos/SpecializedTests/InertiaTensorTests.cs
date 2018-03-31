@@ -81,13 +81,13 @@ namespace Demos.SpecializedTests
 
             Triangular3x3.Scale(ref numericalLocalInertia, mass / containedSampleCount, out numericalLocalInertia);
             Triangular3x3.SymmetricInvert(ref numericalLocalInertia, out var numericalLocalInverseInertia);
-            shape.ComputeLocalInverseInertia(1f / mass, out var analyticLocalInverseInertia);
-            if (!ValuesAreSimilar(analyticLocalInverseInertia.XX, numericalLocalInverseInertia.XX) ||
-                !ValuesAreSimilar(analyticLocalInverseInertia.YX, numericalLocalInverseInertia.YX) ||
-                !ValuesAreSimilar(analyticLocalInverseInertia.YY, numericalLocalInverseInertia.YY) ||
-                !ValuesAreSimilar(analyticLocalInverseInertia.ZX, numericalLocalInverseInertia.ZX) ||
-                !ValuesAreSimilar(analyticLocalInverseInertia.ZY, numericalLocalInverseInertia.ZY) ||
-                !ValuesAreSimilar(analyticLocalInverseInertia.ZZ, numericalLocalInverseInertia.ZZ))
+            shape.ComputeInertia(mass, out var analyticInertia);
+            if (!ValuesAreSimilar(analyticInertia.InverseInertiaTensor.XX, numericalLocalInverseInertia.XX) ||
+                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.YX, numericalLocalInverseInertia.YX) ||
+                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.YY, numericalLocalInverseInertia.YY) ||
+                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZX, numericalLocalInverseInertia.ZX) ||
+                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZY, numericalLocalInverseInertia.ZY) ||
+                !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZZ, numericalLocalInverseInertia.ZZ))
             {
                 Console.WriteLine("Excessive error in numerical vs analytic inertia tensor.");
             }

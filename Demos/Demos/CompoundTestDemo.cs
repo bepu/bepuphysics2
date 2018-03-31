@@ -16,9 +16,9 @@ namespace Demos.Demos
     {
         public unsafe override void Initialize(Camera camera)
         {
-            camera.Position = new Vector3(-3f, 3, -3f);
+            camera.Position = new Vector3(-13f, 6, -13f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
-            camera.Pitch = MathHelper.Pi * 0.1f;
+            camera.Pitch = MathHelper.Pi * 0.05f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
@@ -61,7 +61,7 @@ namespace Demos.Demos
                     const float gridSpacing = 1.5f;
                     const int gridWidth = 3;
                     var gridShapeIndex = Simulation.Shapes.Add(ref gridShape);
-                    gridShape.ComputeLocalInverseInertia(1, out var gridBoxInertia);
+                    gridShape.ComputeInertia(1, out var gridBoxInertia);
                     float localPoseOffset = -0.5f * gridSpacing * (gridWidth - 1);
                     for (int i = 0; i < gridWidth; ++i)
                     {
@@ -72,7 +72,7 @@ namespace Demos.Demos
                                 Orientation = BepuUtilities.Quaternion.Identity,
                                 Position = new Vector3(localPoseOffset, 0, localPoseOffset) + new Vector3(gridSpacing) * new Vector3(i, 0, j)
                             };
-                            compoundBuilder.Add(gridShapeIndex, ref localPose, ref gridBoxInertia, 1);
+                            compoundBuilder.Add(gridShapeIndex, ref localPose, ref gridBoxInertia.InverseInertiaTensor, 1);
                         }
                     }
                     compoundBuilder.BuildDynamicCompound(out var gridChildren, out var gridInertia, out var center);
@@ -104,16 +104,16 @@ namespace Demos.Demos
                 //Build a table and use it for a couple of different tests. 
                 {
                     var legShape = new Box(0.2f, 1, 0.2f);
-                    legShape.ComputeLocalInverseInertia(1f, out var legInverseInertia);
+                    legShape.ComputeInertia(1f, out var legInverseInertia);
                     var legShapeIndex = Simulation.Shapes.Add(ref legShape);
                     var legPose0 = new RigidPose { Position = new Vector3(-1.5f, 0, -1.5f), Orientation = BepuUtilities.Quaternion.Identity };
                     var legPose1 = new RigidPose { Position = new Vector3(-1.5f, 0, 1.5f), Orientation = BepuUtilities.Quaternion.Identity };
                     var legPose2 = new RigidPose { Position = new Vector3(1.5f, 0, -1.5f), Orientation = BepuUtilities.Quaternion.Identity };
                     var legPose3 = new RigidPose { Position = new Vector3(1.5f, 0, 1.5f), Orientation = BepuUtilities.Quaternion.Identity };
-                    compoundBuilder.Add(legShapeIndex, ref legPose0, ref legInverseInertia, 1);
-                    compoundBuilder.Add(legShapeIndex, ref legPose1, ref legInverseInertia, 1);
-                    compoundBuilder.Add(legShapeIndex, ref legPose2, ref legInverseInertia, 1);
-                    compoundBuilder.Add(legShapeIndex, ref legPose3, ref legInverseInertia, 1);
+                    compoundBuilder.Add(legShapeIndex, ref legPose0, ref legInverseInertia.InverseInertiaTensor, 1);
+                    compoundBuilder.Add(legShapeIndex, ref legPose1, ref legInverseInertia.InverseInertiaTensor, 1);
+                    compoundBuilder.Add(legShapeIndex, ref legPose2, ref legInverseInertia.InverseInertiaTensor, 1);
+                    compoundBuilder.Add(legShapeIndex, ref legPose3, ref legInverseInertia.InverseInertiaTensor, 1);
                     var tableTopPose = new RigidPose { Position = new Vector3(0, 0.6f, 0), Orientation = BepuUtilities.Quaternion.Identity };
                     var tableTopShape = new Box(3.2f, 0.2f, 3.2f);
                     compoundBuilder.Add(ref tableTopShape, ref tableTopPose, 3);
@@ -167,7 +167,7 @@ namespace Demos.Demos
                         Simulation.Bodies.Add(ref tableDescription);
 
                         var clampPieceShape = new Box(2f, 0.1f, 0.3f);
-                        clampPieceShape.ComputeLocalInverseInertia(1f, out var clampPieceInverseInertia);
+                        clampPieceShape.ComputeInertia(1f, out var clampPieceInverseInertia);
                         var clampPieceShapeIndex = Simulation.Shapes.Add(ref clampPieceShape);
                         var clamp0 = new RigidPose { Position = new Vector3(0, -0.2f, -1.1f), Orientation = BepuUtilities.Quaternion.Identity };
                         var clamp1 = new RigidPose { Position = new Vector3(0, 0.2f, -1.1f), Orientation = BepuUtilities.Quaternion.Identity };
@@ -175,12 +175,12 @@ namespace Demos.Demos
                         var clamp3 = new RigidPose { Position = new Vector3(0, 0.2f, 0), Orientation = BepuUtilities.Quaternion.Identity };
                         var clamp4 = new RigidPose { Position = new Vector3(0, -0.2f, 1.1f), Orientation = BepuUtilities.Quaternion.Identity };
                         var clamp5 = new RigidPose { Position = new Vector3(0, 0.2f, 1.1f), Orientation = BepuUtilities.Quaternion.Identity };
-                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp0, ref clampPieceInverseInertia, 1);
-                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp1, ref clampPieceInverseInertia, 1);
-                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp2, ref clampPieceInverseInertia, 1);
-                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp3, ref clampPieceInverseInertia, 1);
-                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp4, ref clampPieceInverseInertia, 1);
-                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp5, ref clampPieceInverseInertia, 1);
+                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp0, ref clampPieceInverseInertia.InverseInertiaTensor, 1);
+                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp1, ref clampPieceInverseInertia.InverseInertiaTensor, 1);
+                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp2, ref clampPieceInverseInertia.InverseInertiaTensor, 1);
+                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp3, ref clampPieceInverseInertia.InverseInertiaTensor, 1);
+                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp4, ref clampPieceInverseInertia.InverseInertiaTensor, 1);
+                        compoundBuilder.Add(clampPieceShapeIndex, ref clamp5, ref clampPieceInverseInertia.InverseInertiaTensor, 1);
 
                         compoundBuilder.BuildDynamicCompound(out var clampChildren, out var clampInertia, out var clampCenter);
                         compoundBuilder.Reset();

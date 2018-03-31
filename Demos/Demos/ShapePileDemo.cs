@@ -15,7 +15,7 @@ namespace Demos.Demos
     {
         public unsafe override void Initialize(Camera camera)
         {
-            camera.Position = new Vector3(-20, 10, -20);
+            camera.Position = new Vector3(-30, 10, -30);
             //camera.Yaw = MathHelper.Pi ; 
             camera.Yaw = MathHelper.Pi * 3f / 4;
             //camera.Pitch = MathHelper.PiOver2 * 0.999f;
@@ -24,11 +24,9 @@ namespace Demos.Demos
             var box = new Box(1f, 3f, 2f);
             var capsule = new Capsule(1f, 1f);
             var sphere = new Sphere(1.5f);
-            BodyInertia boxInertia, capsuleInertia, sphereInertia;
-            boxInertia.InverseMass = capsuleInertia.InverseMass = sphereInertia.InverseMass = 1f;
-            box.ComputeLocalInverseInertia(boxInertia.InverseMass, out boxInertia.InverseInertiaTensor);
-            capsule.ComputeLocalInverseInertia(capsuleInertia.InverseMass, out capsuleInertia.InverseInertiaTensor);
-            sphere.ComputeLocalInverseInertia(sphereInertia.InverseMass, out sphereInertia.InverseInertiaTensor);
+            box.ComputeInertia(1, out var boxInertia);
+            capsule.ComputeInertia(1, out var capsuleInertia);
+            sphere.ComputeInertia(1, out var sphereInertia);
             //capsuleInertia.InverseInertiaTensor = new Triangular3x3();
             var boxIndex = Simulation.Shapes.Add(ref box);
             var capsuleIndex = Simulation.Shapes.Add(ref capsule);

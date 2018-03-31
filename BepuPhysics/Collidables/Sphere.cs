@@ -64,14 +64,15 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
-        public void ComputeLocalInverseInertia(float inverseMass, out Triangular3x3 localInverseInertia)
+        public void ComputeInertia(float mass, out BodyInertia inertia)
         {
-            localInverseInertia.XX = inverseMass / ((2f / 5f) * Radius * Radius);
-            localInverseInertia.YX = 0;
-            localInverseInertia.YY = localInverseInertia.XX;
-            localInverseInertia.ZX = 0;
-            localInverseInertia.ZY = 0;
-            localInverseInertia.ZZ = localInverseInertia.XX;
+            inertia.InverseMass = 1f / mass;
+            inertia.InverseInertiaTensor.XX = inertia.InverseMass / ((2f / 5f) * Radius * Radius);
+            inertia.InverseInertiaTensor.YX = 0;
+            inertia.InverseInertiaTensor.YY = inertia.InverseInertiaTensor.XX;
+            inertia.InverseInertiaTensor.ZX = 0;
+            inertia.InverseInertiaTensor.ZY = 0;
+            inertia.InverseInertiaTensor.ZZ = inertia.InverseInertiaTensor.XX;
         }
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
