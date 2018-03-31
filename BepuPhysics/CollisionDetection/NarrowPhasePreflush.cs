@@ -255,7 +255,10 @@ namespace BepuPhysics.CollisionDetection
                 //This will tend to significantly overestimate the true set requirement, but that's not concerning- the maximum allocation won't be troublesome regardless.
                 setsToAwakenCapacity += overlapWorkers[i].PendingSetAwakenings.Count;
             }
-            PairCache.EnsureConstraintToPairMappingCapacity(Solver, Solver.HandlePool.HighestPossiblyClaimedId + 1 + newConstraintCount);
+            var targetConstraintCapacity = Solver.HandlePool.HighestPossiblyClaimedId + 1 + newConstraintCount;
+            PairCache.EnsureConstraintToPairMappingCapacity(Solver, targetConstraintCapacity);
+            //Do the same for the main solver handle set. We make use of the Solver.HandleToLocation frequently; a resize would break stuff.
+            Solver.EnsureSolverCapacities(1, targetConstraintCapacity);
             QuickList<int, Buffer<int>>.Create(Pool.SpecializeFor<int>(), setsToAwakenCapacity, out var setsToAwaken);
             var uniqueAwakeningsSet = new IndexSet(Pool, Simulation.Bodies.Sets.Length);
             for (int i = 0; i < threadCount; ++i)

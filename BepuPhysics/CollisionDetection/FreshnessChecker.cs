@@ -52,7 +52,7 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-
+        
         public void CheckFreshnessInRegion(int workerIndex, int startIndex, int endIndex)
         {
             var count = endIndex - startIndex;
@@ -150,7 +150,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 var bodyHandle = constraintRemover.bodies.ActiveSet.IndexToHandle[references[i]];
                 Console.Write($"{bodyHandle} ({constraintRemover.bodies.ActiveSet.Constraints[references[i]].Count}), ");
-                
+
             }
             Console.WriteLine();
         }

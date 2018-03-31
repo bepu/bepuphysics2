@@ -15,20 +15,10 @@ namespace Demos.Demos
     {
         public unsafe override void Initialize(Camera camera)
         {
-            camera.Position = new Vector3(-3f, 3, -3f);
+            camera.Position = new Vector3(-20f, 13, -20f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks(),
-            new SimulationAllocationSizes
-            {
-                Bodies = 1,
-                ConstraintCountPerBodyEstimate = 1,
-                Constraints = 1,
-                ConstraintsPerTypeBatch = 1,
-                Islands = 1,
-                ShapesPerType = 1,
-                Statics = 1
-            });
+            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
             var shape = new Sphere(0.5f);
             BodyInertia sphereInertia;
