@@ -110,7 +110,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 ActiveTree.RefitAndRefine(frameIndex);
             }
-
+            
             //TODO: for now, the inactive/static tree is simply updated like another active tree. This is enormously inefficient compared to the ideal-
             //by nature, static and inactive objects do not move every frame!
             //This should be replaced by a dedicated inactive/static refinement approach. It should also run alongside the active tree to extract more parallelism;

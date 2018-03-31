@@ -112,8 +112,14 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
             }
+            if(foundLeafCount == 0 && (leafCount > 0 || expectedParentIndex >= 0))
+            {
+                //The only time foundLeafCount can be zero is if this is the root node in an empty tree.
+                throw new Exception("Bad leaf count.");
+            }
             var metric = ComputeBoundsMetric(ref mergedMin, ref mergedMax);
-            if (float.IsNaN(metric) || float.IsInfinity(metric))
+            if (foundLeafCount > 0 && //If there are no leaves, then calling the bounds 'bad' is silly. For this to happen, 
+                (float.IsNaN(metric) || float.IsInfinity(metric)))
             {
                 throw new Exception($"Bad bounds: {metric} SAH. {mergedMin}, {mergedMax}.");
             }

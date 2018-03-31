@@ -608,6 +608,8 @@ namespace BepuPhysics.CollisionDetection
             Debug.Assert(treeletInternalNodes.Count == 0, "The treelet internal nodes list should be empty since it's about to get filled.");
             Debug.Assert(treeletInternalNodes.Span.Length >= maximumSubtrees - 1, "Internal nodes queue should have a backing array large enough to hold all possible treelet internal nodes.");
             CollectSubtrees(nodeIndex, maximumSubtrees, resources.SubtreeHeapEntries, ref subtreeReferences, ref treeletInternalNodes, out float originalTreeletCost);
+            Debug.Assert(treeletInternalNodes.Count == subtreeReferences.Count - 2, 
+                "Given that this is a binary tree, the number of subtree references found must match the internal nodes traversed to reach them. Note that the treelet root is excluded.");
             Debug.Assert(subtreeReferences.Count <= maximumSubtrees);
 
             //TODO: There's no reason to use a priority queue based node selection process for MOST treelets. It's only useful for the root node treelet.

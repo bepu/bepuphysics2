@@ -160,7 +160,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
 
-        void GetRefineTuning(int frameIndex, int refinementCandidatesCount, float refineAggressivenessScale, float costChange, int threadCount,
+        void GetRefineTuning(int frameIndex, int refinementCandidatesCount, float refineAggressivenessScale, float costChange,
             out int targetRefinementCount, out int refinementPeriod, out int refinementOffset)
         {
                 Debug.Assert(!float.IsNaN(costChange) && !float.IsInfinity(costChange), 
@@ -168,19 +168,12 @@ namespace BepuPhysics.CollisionDetection
             var refineAggressiveness = Math.Max(0, costChange * refineAggressivenessScale);
             float refinePortion = Math.Min(1, refineAggressiveness * 0.25f);
 
-
-
             var targetRefinementScale = Math.Min(nodeCount, Math.Max(2, (float)Math.Ceiling(refinementCandidatesCount * 0.03f)) + refinementCandidatesCount * refinePortion);
-            //Round up to the next multiple of the thread count to keep all threads fed.
             //Note that the refinementCandidatesCount is used as a maximum instead of refinementCandidates + 1 for simplicity, since there's a chance
             //that the root would already be a refinementCandidate. Doesn't really have a significant effect either way.
-            //var clampInterval = Math.Max(1, threadCount / 2);
-            //targetRefinementScale = Math.Min((float)Math.Ceiling(targetRefinementScale / clampInterval) * clampInterval, refinementCandidatesCount);
             refinementPeriod = Math.Max(1, (int)(refinementCandidatesCount / targetRefinementScale));
             refinementOffset = (int)((frameIndex * 236887691L + 104395303L) % Math.Max(1, refinementCandidatesCount));
-
-
-            targetRefinementCount = (int)targetRefinementScale;
+            targetRefinementCount = Math.Min(refinementCandidatesCount, (int)targetRefinementScale);
         }
 
         public int GetCacheOptimizeTuning(int maximumSubtrees, float costChange, float cacheOptimizeAggressivenessScale)
@@ -210,7 +203,7 @@ namespace BepuPhysics.CollisionDetection
             var costChange = RefitAndMark(leafCountThreshold, ref refinementCandidates, Pool.SpecializeFor<int>());
 
 
-            GetRefineTuning(frameIndex, refinementCandidates.Count, refineAggressivenessScale, costChange, 1, out int targetRefinementCount, out int period, out int offset);
+            GetRefineTuning(frameIndex, refinementCandidates.Count, refineAggressivenessScale, costChange, out int targetRefinementCount, out int period, out int offset);
 
 
             QuickList<int, Buffer<int>>.Create(intPool, targetRefinementCount, out var refinementTargets);
@@ -221,9 +214,8 @@ namespace BepuPhysics.CollisionDetection
                 index += period;
                 if (index >= refinementCandidates.Count)
                     index -= refinementCandidates.Count;
-                Debug.Assert(index < refinementCandidates.Count && index >= 0);
-
                 refinementTargets.AddUnsafely(refinementCandidates[index]);
+                Debug.Assert(nodes[refinementCandidates[index]].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
                 nodes[refinementCandidates[index]].RefineFlag = 1;
             }
             refinementCandidates.Dispose(intPool);

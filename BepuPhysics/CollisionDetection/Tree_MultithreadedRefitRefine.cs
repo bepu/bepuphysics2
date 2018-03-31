@@ -63,11 +63,11 @@ namespace BepuPhysics.CollisionDetection
                 //Note that the number of refit nodes is not necessarily bound by MaximumSubtrees. It is just a heuristic estimate. Resizing has to be supported.
                 QuickList<int, Buffer<int>>.Create(tree.Pool.SpecializeFor<int>(), MaximumSubtrees, out RefitNodes);
                 //Note that we haven't rigorously guaranteed a refinement count maximum, so it's possible that the workers will need to resize the per-thread refinement candidate lists.
-                for (int i =0; i < threadDispatcher.ThreadCount; ++i)
+                for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
                 {
                     QuickList<int, Buffer<int>>.Create(threadDispatcher.GetThreadMemoryPool(i).SpecializeFor<int>(), estimatedRefinementCandidateCount, out RefinementCandidates[i]);
                 }
-                
+
                 int multithreadingLeafCountThreshold = Tree.leafCount / (threadDispatcher.ThreadCount * 2);
                 if (multithreadingLeafCountThreshold < RefinementLeafCountThreshold)
                     multithreadingLeafCountThreshold = RefinementLeafCountThreshold;
@@ -82,12 +82,10 @@ namespace BepuPhysics.CollisionDetection
                 for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
                 {
                     refinementCandidatesCount += RefinementCandidates[i].Count;
-
                 }
-                Tree.GetRefineTuning(frameIndex, refinementCandidatesCount, refineAggressivenessScale, RefitCostChange, threadDispatcher.ThreadCount,
+                Tree.GetRefineTuning(frameIndex, refinementCandidatesCount, refineAggressivenessScale, RefitCostChange,
                     out var targetRefinementCount, out var period, out var offset);
                 QuickList<int, Buffer<int>>.Create(tree.Pool.SpecializeFor<int>(), targetRefinementCount, out RefinementTargets);
-
                 //Note that only a subset of all refinement *candidates* will become refinement *targets*.
                 //We start at a semirandom offset and then skip through the set to accumulate targets.
                 //The number of candidates that become targets is based on the refinement aggressiveness,
@@ -107,6 +105,7 @@ namespace BepuPhysics.CollisionDetection
                     }
                     Debug.Assert(index < RefinementCandidates[currentCandidatesIndex].Count && index >= 0);
                     var nodeIndex = RefinementCandidates[currentCandidatesIndex][index];
+                    Debug.Assert(tree.nodes[nodeIndex].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
                     RefinementTargets.AddUnsafely(nodeIndex);
                     tree.nodes[nodeIndex].RefineFlag = 1;
                 }
@@ -116,7 +115,6 @@ namespace BepuPhysics.CollisionDetection
                     RefinementTargets.AddUnsafely(0);
                     tree.nodes->RefineFlag = 1;
                 }
-
 
                 RefineIndex = -1;
                 threadDispatcher.DispatchWorkers(RefineAction);
