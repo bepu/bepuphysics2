@@ -192,14 +192,7 @@ namespace BepuPhysics.CollisionDetection
                         //We initialize and sort those lists on multiple threads.
                         ref var list = ref sortedConstraints[job.TypeIndex];
                         //One and two body constraints require separate initialization to work in a single pass with a minimum of last second branches.
-                        //Use the type index to determine the body count.
-                        //This follows the same convention as the GatherOldImpulses and ScatterNewImpulses of the PairCache.
-                        //Constraints cover 16 possible cases:
-                        //1-4 contacts: 0x3
-                        //convex vs nonconvex: 0x4
-                        //1 body versus 2 body: 0x8
-                        //TODO: Very likely that we'll expand the nonconvex manifold maximum to 8 contacts, so this will need to be adjusted later.
-                        if (job.TypeIndex >= 8)
+                        if (ExtractContactConstraintBodyCount(job.TypeIndex) == 2)
                         {
                             BuildSortingTargets<TwoBodyHandleCollector>(ref list, job.TypeIndex, job.WorkerCount);
                         }

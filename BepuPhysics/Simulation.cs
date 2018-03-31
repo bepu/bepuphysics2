@@ -251,7 +251,7 @@ namespace BepuPhysics
             ProfilerStart(SolverBatchCompressor);
             SolverBatchCompressor.Compress(BufferPool, threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(SolverBatchCompressor);
-            
+
             ProfilerEnd(this);
         }
 

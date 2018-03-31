@@ -72,6 +72,7 @@ namespace Demos.SpecializedTests
                 }
                 Console.WriteLine($"Test complete.");
             }
+            dispatcher.Dispose();
         }
     }
 }
