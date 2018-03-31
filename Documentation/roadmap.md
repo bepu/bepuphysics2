@@ -2,7 +2,7 @@
 
 This is a high level plan for future development. All dates and features are goals, not guarantees. For a detailed breakdown of tasks in progress, check the [issues](https://github.com/bepu/bepuphysics2/issues) page.
 
-## Near future (Q1-Q2 2018)
+## Near future (Q2-Q3 2018)
 
 The big goals for the initial version are:
 - Performance should generally be an order of magnitude better than v1.
@@ -13,14 +13,7 @@ Note that this release will lack many of v1's built in features, like:
 - Full featured character controller (though I will likely provide a simple example version in the demos, just without the full upstepping/downstepping/stance shifting feature set).
 - Dedicated vehicle type.
 
-The initial version will be split into incremental stages: alpha, beta, and release.
-
-### Alpha (March 2018)
-This will be the first version that is likely to be useful to anyone, but far from everyone.
-- Spheres, capsules, and boxes.
-- List-based compound shape type. Primarily useful for small groups of shapes.
-- Basic non-contact constraints. Should be able to simulate a ragdoll.
-- Some extra convenience types for accessing body data.
+The initial version will be split into incremental stages: alpha, beta, and release. The alpha was released on March 31, 2018.
 
 ### Beta (April-May 2018)
 The beta will still be missing some important pieces, but should be able to support most games.

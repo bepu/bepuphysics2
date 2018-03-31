@@ -18,7 +18,7 @@
 
 -When trying to build rope-like constraint systems, it's likely that the solver will suffer from both mass ratios and the difficulty of propagating impulses through a long chain of bodies. In this situation, you can give the solver a little help by adding 'skip' constraints. That is, rather than creating distance limits only between adjacent bodies in a rope, try also connecting the first body to the last body (with an appropriately increased distance limit). In extreme cases, you could also create more skip constraints- connecting every other body or every third body, for example.
 
--When tuning the natural frequency of constraints, prefer values smaller than PI * 0.5 / timeStepDuration. Higher values risk oscillation that the time step can't represent, potentially leading to explosions.
+-When tuning the SpringSettings.Frequency of constraints, prefer values smaller than 0.5 / timeStepDuration. Higher values increase the risk of instability.
 
 -Once bugs and misconfiguration are ruled out and things are still behaving poorly, try decreasing the time step duration and updating the simulation more frequently to compensate. This is the single most powerful way to stabilize simulations, but also one of the most expensive.
 
