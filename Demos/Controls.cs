@@ -220,13 +220,14 @@ namespace Demos
         public float CameraMoveSpeed;
         public float CameraFastMoveSpeed;
 
+        public HoldableBind SlowTimesteps;
         public InstantBind LockMouse;
         public InstantBind Exit;
         public InstantBind ShowConstraints;
         public InstantBind ShowContacts;
         public InstantBind ShowBoundingBoxes;
         public InstantBind ChangeTimingDisplayMode;
-        public HoldableBind ChangeDemo;
+        public InstantBind ChangeDemo;
         public InstantBind ShowControls;
 
         public static Controls Default
@@ -247,6 +248,7 @@ namespace Demos
                     CameraSlowMoveSpeed = 0.5f,
                     CameraMoveSpeed = 5,
                     CameraFastMoveSpeed = 50,
+                    SlowTimesteps = MouseButton.Middle,
 
                     LockMouse = Key.Tab,
                     Exit = Key.Escape,
