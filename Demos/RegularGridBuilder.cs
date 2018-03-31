@@ -39,7 +39,7 @@ namespace Demos
                 },
                 Activity = new BodyActivityDescription
                 {
-                    SleepThreshold = -.1f,
+                    SleepThreshold = .01f,
                     MinimumTimestepCountUnderThreshold = 32
                 },
                 //Velocity = new BodyVelocity { Angular = new Vector3(0, (rowIndex % 2 - 0.5f) * 20, 0) }

@@ -1,4 +1,5 @@
-﻿using BepuUtilities.Memory;
+﻿using BepuUtilities;
+using BepuUtilities.Memory;
 using System.Numerics;
 
 namespace BepuPhysics.Collidables

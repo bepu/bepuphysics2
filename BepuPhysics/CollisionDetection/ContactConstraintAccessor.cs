@@ -1,5 +1,6 @@
 ﻿using BepuPhysics.Constraints;
 using BepuPhysics.Constraints.Contact;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;

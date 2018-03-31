@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using BepuUtilities.Memory;
 using System.Diagnostics;
+using BepuUtilities;
 
 namespace BepuPhysics.Collidables
 {

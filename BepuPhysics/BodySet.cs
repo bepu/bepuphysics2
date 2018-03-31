@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using BepuPhysics.Collidables;
 using BepuUtilities.Collections;
 using System;
+using BepuUtilities;
 
 namespace BepuPhysics
 {

@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using BepuPhysics.CollisionDetection;
+using BepuUtilities;
 
 namespace BepuPhysics
 {

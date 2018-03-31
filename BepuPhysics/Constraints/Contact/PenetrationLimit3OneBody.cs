@@ -1,7 +1,6 @@
-﻿using System;
+﻿using BepuUtilities;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Constraints.Contact
 {
@@ -66,7 +65,7 @@ namespace BepuPhysics.Constraints.Contact
             Vector3Wide.Scale(ref normal, ref linearVelocityChangeA, out var correctiveVelocityALinearVelocity);
             Vector3Wide.Scale(ref projection.AngularA, ref correctiveImpulse, out var correctiveAngularImpulseA);
             Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref correctiveAngularImpulseA, ref inertiaA.InverseInertiaTensor, out var correctiveVelocityAAngularVelocity);
-            
+
             Vector3Wide.Add(ref wsvA.Linear, ref correctiveVelocityALinearVelocity, out wsvA.Linear);
             Vector3Wide.Add(ref wsvA.Angular, ref correctiveVelocityAAngularVelocity, out wsvA.Angular);
         }
@@ -84,7 +83,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(ref BodyVelocities wsvA, 
+        public static void ComputeCorrectiveImpulse(ref BodyVelocities wsvA,
             ref PenetrationLimitOneBodyProjection projection,
             ref Vector3Wide normal, ref Vector<float> softnessImpulseScale,
             ref Vector<float> accumulatedImpulse, out Vector<float> correctiveCSI)

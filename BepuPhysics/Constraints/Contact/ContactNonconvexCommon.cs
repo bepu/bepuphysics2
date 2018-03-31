@@ -5,7 +5,9 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Quaternion = BepuUtilities.Quaternion;
-using static BepuPhysics.GatherScatter;
+using static BepuUtilities.GatherScatter;
+using BepuUtilities;
+
 namespace BepuPhysics.Constraints.Contact
 {
     public struct NonconvexPrestepData

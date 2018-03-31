@@ -1,12 +1,7 @@
-﻿using BepuUtilities;
-using BepuUtilities.Memory;
-using BepuPhysics.Constraints;
-using System;
-using System.Diagnostics;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace BepuPhysics
+namespace BepuUtilities
 {
     public static class GatherScatter
     {

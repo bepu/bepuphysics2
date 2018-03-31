@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace BepuPhysics
+namespace BepuUtilities
 {    
     /// <summary>
     /// Some helpers for indexing into vector bundles.

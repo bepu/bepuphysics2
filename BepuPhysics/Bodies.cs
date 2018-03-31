@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using BepuPhysics.Constraints;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
+using BepuUtilities;
 
 namespace BepuPhysics
 {

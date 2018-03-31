@@ -2,7 +2,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace BepuPhysics
+namespace BepuUtilities
 {
     /// <summary>
     /// Stores the lower left triangle (including diagonal) of a 2x2 matrix. Useful for triangular forms and (anti)symmetric matrices.

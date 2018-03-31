@@ -5,7 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using static BepuPhysics.GatherScatter;
+using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
     public struct AngularHinge : IConstraintDescription<AngularHinge>

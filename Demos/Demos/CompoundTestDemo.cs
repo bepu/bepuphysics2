@@ -19,17 +19,7 @@ namespace Demos.Demos
             camera.Position = new Vector3(-3f, 3, -3f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks(),
-            new SimulationAllocationSizes
-            {
-                Bodies = 1,
-                ConstraintCountPerBodyEstimate = 1,
-                Constraints = 1,
-                ConstraintsPerTypeBatch = 1,
-                Islands = 1,
-                ShapesPerType = 1,
-                Statics = 1
-            });
+            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             using (var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 8))
@@ -90,7 +80,7 @@ namespace Demos.Demos
                     var gridCompound = new Compound(gridChildren);
                     var bodyDescription = new BodyDescription
                     {
-                        Activity = new BodyActivityDescription { SleepThreshold = 0.0f, MinimumTimestepCountUnderThreshold = 32 },
+                        Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
                         Collidable = new CollidableDescription
                         {
                             Shape = Simulation.Shapes.Add(ref gridCompound),
@@ -133,7 +123,7 @@ namespace Demos.Demos
                     var table = new Compound(tableChildren);
                     var tableDescription = new BodyDescription
                     {
-                        Activity = new BodyActivityDescription { SleepThreshold = 0.0f, MinimumTimestepCountUnderThreshold = 32 },
+                        Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
                         Collidable = new CollidableDescription
                         {
                             Shape = Simulation.Shapes.Add(ref table),
@@ -197,7 +187,7 @@ namespace Demos.Demos
                         var clamp = new Compound(clampChildren);
                         var clampDescription = new BodyDescription
                         {
-                            Activity = new BodyActivityDescription { SleepThreshold = 0.0f, MinimumTimestepCountUnderThreshold = 32 },
+                            Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
                             Collidable = new CollidableDescription
                             {
                                 Shape = Simulation.Shapes.Add(ref clamp),
