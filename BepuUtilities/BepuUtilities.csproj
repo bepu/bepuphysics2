@@ -6,7 +6,7 @@
     <Version>2.0.0-alpha</Version>
     <Company>Bepu Entertainment LLC</Company>
     <Authors>Ross Nordby</Authors>
-    <Description>Early version of BEPUphysics v2.</Description>
+    <Description>Supporting utilities library for an early version of BEPUphysics v2.</Description>
     <Copyright>© Bepu Entertainment LLC</Copyright>
     <PackageProjectUrl>https://github.com/bepu/bepuphysics2</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/bepu/bepuphysics2/blob/master/LICENSE.md</PackageLicenseUrl>
