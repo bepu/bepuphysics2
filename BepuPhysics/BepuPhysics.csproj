@@ -12,6 +12,7 @@
     <PackageIconUrl>https://raw.githubusercontent.com/bepu/bepuphysics1/master/Documentation/images/readme/bepuphysicslogo256.png</PackageIconUrl>
     <Configurations>Debug;Release;ReleaseStrip</Configurations>
     <LangVersion>7.2</LangVersion>
+    <PackageTags>physics;3d;rigid body;real time;simulation</PackageTags>
   </PropertyGroup>
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">

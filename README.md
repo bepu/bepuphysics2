@@ -38,3 +38,6 @@ There exists some sparse proto-documentation:
 
 [Packaging and Versioning](Documentation/PackagingAndVersioning.md)
 
+If you have too many dollars, we are willing to consume them on [patreon](https://www.patreon.com/bepu).
+
+![](https://raw.githubusercontent.com/bepu/bepuphysics1/master/Documentation/images/readme/angelduck.png)
