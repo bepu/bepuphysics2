@@ -676,7 +676,6 @@ namespace BepuPhysics
                 for (int j = 0; j < workerIslands.Count; ++j)
                 {
                     ref var island = ref workerIslands[j];
-                    island.Validate(solver);
                     bool skip = false;
                     for (int previousWorkerIndex = 0; previousWorkerIndex < workerIndex; ++previousWorkerIndex)
                     {

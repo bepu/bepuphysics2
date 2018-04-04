@@ -79,7 +79,6 @@ namespace BepuPhysics
 
         public unsafe bool TryAdd(int constraintHandle, Solver solver, BufferPool pool)
         {
-            Validate(solver);
             ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle];
             var typeProcessor = solver.TypeProcessors[constraintLocation.TypeId];
             var bodiesPerConstraint = typeProcessor.BodiesPerConstraint;
@@ -101,10 +100,8 @@ namespace BepuPhysics
                 {
                     ReferencedBodyIndices.AddUnsafely(enumerator.BodyIndices[i]);
                 }
-                Validate(solver);
                 return true;
             }
-            Validate(solver);
             return false;
         }
         
@@ -143,7 +140,6 @@ namespace BepuPhysics
             {
                 AddConstraint(constraintHandles[i], solver, pool);
             }
-            Validate(solver);
         }
 
         [Conditional("DEBUG")]
@@ -157,13 +153,10 @@ namespace BepuPhysics
 
         void AddConstraint(int constraintHandle, Solver solver, BufferPool pool)
         {
-            Validate(solver);
-
             for (int batchIndex = 0; batchIndex < Protobatches.Count; ++batchIndex)
             {
                 if (Protobatches[batchIndex].TryAdd(constraintHandle, solver, pool))
                 {
-                    Validate(solver);
                     return;
                 }
             }
@@ -172,7 +165,6 @@ namespace BepuPhysics
             ref var newBatch = ref Protobatches.AllocateUnsafely();
             newBatch = new IslandScaffoldConstraintBatch(solver, pool);
             newBatch.TryAdd(constraintHandle, solver, pool);
-            Validate(solver);
         }
 
         internal void Dispose(BufferPool pool)
