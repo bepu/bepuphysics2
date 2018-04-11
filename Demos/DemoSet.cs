@@ -37,6 +37,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<BroadPhaseStressTestDemo>();
             AddOption<PyramidDemo>();
             AddOption<BlockChainDemo>();
             AddOption<ShapePileDemo>();
