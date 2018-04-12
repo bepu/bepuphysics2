@@ -42,8 +42,7 @@ namespace BepuPhysics.CollisionDetection
             Debug.Assert(leafCountThreshold > 1);
 
             var node = nodes + child.Index;
-            Debug.Assert(node->ChildCount >= 2);
-            Debug.Assert(node->RefineFlag == 0);
+            Debug.Assert(metanodes[child.Index].RefineFlag == 0);
             float childChange = 0;
 
             var premetric = ComputeBoundsMetric(ref child.Min, ref child.Max);
@@ -136,12 +135,12 @@ namespace BepuPhysics.CollisionDetection
 
         unsafe void ValidateRefineFlags(int index)
         {
-            var node = nodes + index;
-            if (node->RefineFlag != 0)
+            var metanode = metanodes + index;
+            if (metanode->RefineFlag != 0)
                 Console.WriteLine("Bad refine flag");
 
-            var children = &node->A;
-            for (int i = 0; i < node->ChildCount; ++i)
+            var children = &nodes[index].A;
+            for (int i = 0; i < 2; ++i)
             {
                 ref var child = ref children[i];
                 if (child.Index >= 0)
@@ -215,14 +214,14 @@ namespace BepuPhysics.CollisionDetection
                 if (index >= refinementCandidates.Count)
                     index -= refinementCandidates.Count;
                 refinementTargets.AddUnsafely(refinementCandidates[index]);
-                Debug.Assert(nodes[refinementCandidates[index]].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
-                nodes[refinementCandidates[index]].RefineFlag = 1;
+                Debug.Assert(metanodes[refinementCandidates[index]].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
+                metanodes[refinementCandidates[index]].RefineFlag = 1;
             }
             refinementCandidates.Dispose(intPool);
-            if (nodes->RefineFlag == 0)
+            if (metanodes->RefineFlag == 0)
             {
                 refinementTargets.AddUnsafely(0);
-                nodes->RefineFlag = 1;
+                metanodes->RefineFlag = 1;
             }
             
             //Refine all marked targets.
@@ -241,7 +240,7 @@ namespace BepuPhysics.CollisionDetection
                 //TODO: Should this be moved into a post-loop? It could permit some double work, but that's not terrible.
                 //It's not invalid from a multithreading perspective, either- setting the refine flag to zero is essentially an unlock.
                 //If other threads don't see it updated due to cache issues, it doesn't really matter- it's not a signal or anything like that.
-                nodes[refinementTargets[i]].RefineFlag = 0;
+                metanodes[refinementTargets[i]].RefineFlag = 0;
 
             }
 

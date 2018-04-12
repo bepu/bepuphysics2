@@ -11,25 +11,30 @@ namespace BepuPhysics.CollisionDetection
         {
             var a = nodes + indexA;
             var b = nodes + indexB;
+            var metaA = metanodes + indexA;
+            var metaB = metanodes + indexB;
 
             var temp = *a;
             *a = *b;
             *b = temp;
+            var tempMeta = *metaA;
+            *metaA = *metaB;
+            *metaB = tempMeta;
 
-            if (a->Parent == indexA)
+            if (metaA->Parent == indexA)
             {
                 //The original B's parent was A.
                 //That parent has moved.
-                a->Parent = indexB;
+                metaA->Parent = indexB;
             }
-            else if (b->Parent == indexB)
+            else if (metaB->Parent == indexB)
             {
                 //The original A's parent was B.
                 //That parent has moved.
-                b->Parent = indexA;
+                metaB->Parent = indexA;
             }
-            (&nodes[a->Parent].A)[a->IndexInParent].Index = indexA;
-            (&nodes[b->Parent].A)[b->IndexInParent].Index = indexB;
+            (&nodes[metaA->Parent].A)[metaA->IndexInParent].Index = indexA;
+            (&nodes[metaB->Parent].A)[metaB->IndexInParent].Index = indexB;
 
 
             //Update the parent pointers of the children.
@@ -39,7 +44,7 @@ namespace BepuPhysics.CollisionDetection
                 ref var child = ref children[i];
                 if (child.Index >= 0)
                 {
-                    nodes[child.Index].Parent = indexA;
+                    metanodes[child.Index].Parent = indexA;
                 }
                 else
                 {
@@ -53,7 +58,7 @@ namespace BepuPhysics.CollisionDetection
                 ref var child = ref children[i];
                 if (child.Index >= 0)
                 {
-                    nodes[child.Index].Parent = indexB;
+                    metanodes[child.Index].Parent = indexB;
                 }
                 else
                 {
@@ -72,7 +77,7 @@ namespace BepuPhysics.CollisionDetection
             while (true)
             {
                 lockedIndex = nodeIndex;
-                if (0 != Interlocked.CompareExchange(ref nodes[lockedIndex].RefineFlag, 1, 0))
+                if (0 != Interlocked.CompareExchange(ref metanodes[lockedIndex].RefineFlag, 1, 0))
                 {
                     //Abort.
                     return false;
@@ -80,7 +85,7 @@ namespace BepuPhysics.CollisionDetection
                 if (lockedIndex != nodeIndex) //Compare exchange inserts memory barrier.
                 {
                     //Locked the wrong node, let go.
-                    nodes[lockedIndex].RefineFlag = 0;
+                    metanodes[lockedIndex].RefineFlag = 0;
                 }
                 else
                 {
@@ -92,8 +97,8 @@ namespace BepuPhysics.CollisionDetection
 
         unsafe bool TrySwapNodeWithTargetThreadSafe(int swapperIndex, int swapperParentIndex, int swapTargetIndex)
         {
-            Debug.Assert(nodes[swapperIndex].RefineFlag == 1, "The swapper should be locked.");
-            Debug.Assert(nodes[swapperParentIndex].RefineFlag == 1, "The swapper parent should be locked.");
+            Debug.Assert(metanodes[swapperIndex].RefineFlag == 1, "The swapper should be locked.");
+            Debug.Assert(metanodes[swapperParentIndex].RefineFlag == 1, "The swapper parent should be locked.");
             Debug.Assert(swapTargetIndex != swapperIndex, "If the swapper is already at the swap target, this should not be called."); //safe to compare since if equal, it's locked.
             //We must make sure that the node, its parent, and its children are locked.
             //But watch out for parent or grandparent relationships between the nodes. Those lower the number of locks required.
@@ -122,21 +127,21 @@ namespace BepuPhysics.CollisionDetection
             //Similar logic applies to the similar lock elisions below.
 
             bool success = false;
-            var needSwapTargetLock = swapTargetIndex != swapperParentIndex && nodes[swapTargetIndex].Parent != swapperIndex;
+            var needSwapTargetLock = swapTargetIndex != swapperParentIndex && metanodes[swapTargetIndex].Parent != swapperIndex;
             if (!needSwapTargetLock || TryLock(ref swapTargetIndex))
             {
-                var swapTarget = nodes + swapTargetIndex;
+                var swapTarget = metanodes + swapTargetIndex;
 
                 //Don't lock swapTarget->Parent if:
                 //1) swapTarget->Parent == swapperIndex, because swapper is already locked.
                 //2) nodes[swapTarget->Parent].Parent == swapperIndex, because swapper's children are already locked.
 
-                var needSwapTargetParentLock = swapTarget->Parent != swapperIndex && nodes[swapTarget->Parent].Parent != swapperIndex;
+                var needSwapTargetParentLock = swapTarget->Parent != swapperIndex && metanodes[swapTarget->Parent].Parent != swapperIndex;
                 if (!needSwapTargetParentLock || TryLock(ref swapTarget->Parent))
                 {
 
                     int childrenLockedCount = 2;
-                    var children = &swapTarget->A;
+                    var children = &nodes[swapTargetIndex].A;
                     for (int i = 0; i < 2; ++i)
                     {
                         ref var child = ref children[i];
@@ -164,7 +169,7 @@ namespace BepuPhysics.CollisionDetection
                             ref var child = ref children[i];
                             //Again, note use of swapTargetIndex instead of swapperIndex.
                             if (child.Index >= 0 && child.Index != swapTargetIndex && child.Index != swapperParentIndex) //Avoid unlocking children already locked by the caller.
-                                nodes[child.Index].RefineFlag = 0;
+                                metanodes[child.Index].RefineFlag = 0;
                         }
                     }
                     else
@@ -174,7 +179,7 @@ namespace BepuPhysics.CollisionDetection
                         {
                             ref var child = ref children[i];
                             if (child.Index >= 0 && child.Index != swapperIndex && child.Index != swapperParentIndex) //Avoid unlocking children already locked by the caller.
-                                nodes[child.Index].RefineFlag = 0;
+                                metanodes[child.Index].RefineFlag = 0;
                         }
                     }
 
@@ -185,12 +190,12 @@ namespace BepuPhysics.CollisionDetection
                         {
                             //Note that swapTarget pointer is no longer used, since the node was swapped.
                             //The old swap target is now in the swapper index slot!
-                            nodes[nodes[swapperIndex].Parent].RefineFlag = 0;
+                            metanodes[metanodes[swapperIndex].Parent].RefineFlag = 0;
                         }
                         else
                         {
                             //No swap occurred, 
-                            nodes[swapTarget->Parent].RefineFlag = 0;
+                            metanodes[swapTarget->Parent].RefineFlag = 0;
                         }
                     }
                 }
@@ -200,7 +205,7 @@ namespace BepuPhysics.CollisionDetection
                     if (success)
                     {
                         //Once again, the original swapTarget now lives in swapperIndex.
-                        nodes[swapperIndex].RefineFlag = 0;
+                        metanodes[swapperIndex].RefineFlag = 0;
                     }
                     else
                     {
@@ -214,8 +219,8 @@ namespace BepuPhysics.CollisionDetection
 
         public unsafe bool TryLockSwapTargetThreadSafe(ref int swapTargetIndex, int swapperIndex, int swapperParentIndex)
         {
-            Debug.Assert(nodes[swapperIndex].RefineFlag == 1, "The swapper should be locked.");
-            Debug.Assert(nodes[swapperParentIndex].RefineFlag == 1, "The swapper parent should be locked.");
+            Debug.Assert(metanodes[swapperIndex].RefineFlag == 1, "The swapper should be locked.");
+            Debug.Assert(metanodes[swapperParentIndex].RefineFlag == 1, "The swapper parent should be locked.");
             Debug.Assert(swapTargetIndex != swapperIndex, "If the swapper is already at the swap target, this should not be called."); //safe to compare since if equal, it's locked.
             //We must make sure that the node, its parent, and its children are locked.
             //But watch out for parent or grandparent relationships between the nodes. Those lower the number of locks required.
@@ -244,21 +249,21 @@ namespace BepuPhysics.CollisionDetection
             //Similar logic applies to the similar lock elisions below.
 
             bool success = false;
-            var needSwapTargetLock = swapTargetIndex != swapperParentIndex && nodes[swapTargetIndex].Parent != swapperIndex;
+            var needSwapTargetLock = swapTargetIndex != swapperParentIndex && metanodes[swapTargetIndex].Parent != swapperIndex;
             if (!needSwapTargetLock || TryLock(ref swapTargetIndex))
             {
-                var swapTarget = nodes + swapTargetIndex;
+                var swapTarget = metanodes + swapTargetIndex;
 
                 //Don't lock swapTarget->Parent if:
                 //1) swapTarget->Parent == swapperIndex, because swapper is already locked.
                 //2) nodes[swapTarget->Parent].Parent == swapperIndex, because swapper's children are already locked.
 
-                var needSwapTargetParentLock = swapTarget->Parent != swapperIndex && nodes[swapTarget->Parent].Parent != swapperIndex;
+                var needSwapTargetParentLock = swapTarget->Parent != swapperIndex && metanodes[swapTarget->Parent].Parent != swapperIndex;
                 if (!needSwapTargetParentLock || TryLock(ref swapTarget->Parent))
                 {
 
                     int childrenLockedCount = 2;
-                    var children = &swapTarget->A;
+                    var children = &nodes[swapTargetIndex].A;
                     for (int i = 0; i < 2; ++i)
                     {
                         ref var child = ref children[i];
@@ -283,11 +288,11 @@ namespace BepuPhysics.CollisionDetection
                     {
                         ref var child = ref children[i];
                         if (child.Index != swapperIndex && child.Index != swapperParentIndex) //Avoid unlocking children already locked by the caller.
-                            nodes[child.Index].RefineFlag = 0;
+                            metanodes[child.Index].RefineFlag = 0;
                     }
 
                     if (needSwapTargetParentLock)
-                        nodes[swapTarget->Parent].RefineFlag = 0;
+                        metanodes[swapTarget->Parent].RefineFlag = 0;
                 }
                 if (needSwapTargetLock)
                     swapTarget->RefineFlag = 0;
@@ -325,11 +330,11 @@ namespace BepuPhysics.CollisionDetection
             bool success = false;
             if (TryLock(ref aIndex))
             {
-                var a = nodes + aIndex;
+                var a = metanodes + aIndex;
                 if (TryLock(ref bIndex))
                 {
                     //Now, we know that aIndex and bIndex will not change.
-                    var b = nodes + bIndex;
+                    var b = metanodes + bIndex;
 
                     var aParentAvoidedLock = a->Parent == bIndex;
                     if (aParentAvoidedLock || TryLock(ref a->Parent))
@@ -339,7 +344,7 @@ namespace BepuPhysics.CollisionDetection
                         {
 
                             int aChildrenLockedCount = 2;
-                            var aChildren = &a->A;
+                            var aChildren = &nodes[aIndex].A;
                             for (int i = 0; i < 2; ++i)
                             {
                                 ref var child = ref aChildren[i];
@@ -354,7 +359,7 @@ namespace BepuPhysics.CollisionDetection
                             if (aChildrenLockedCount == 2)
                             {
                                 int bChildrenLockedCount = 2;
-                                var bChildren = &b->A;
+                                var bChildren = &nodes[bIndex].A;
                                 for (int i = 0; i < 2; ++i)
                                 {
                                     ref var child = ref bChildren[i];
@@ -377,20 +382,20 @@ namespace BepuPhysics.CollisionDetection
                                 {
                                     ref var child = ref bChildren[i];
                                     if (child.Index != aIndex && child.Index != a->Parent) //Do not yet unlock a or its parent.
-                                        nodes[child.Index].RefineFlag = 0;
+                                        metanodes[child.Index].RefineFlag = 0;
                                 }
                             }
                             for (int i = aChildrenLockedCount - 1; i >= 0; --i)
                             {
                                 ref var child = ref aChildren[i];
                                 if (child.Index != bIndex && child.Index != b->Parent) //Do not yet unlock b or its parent.
-                                    nodes[child.Index].RefineFlag = 0;
+                                    metanodes[child.Index].RefineFlag = 0;
                             }
                             if (!bParentAvoidedLock)
-                                nodes[b->Parent].RefineFlag = 0;
+                                metanodes[b->Parent].RefineFlag = 0;
                         }
                         if (!aParentAvoidedLock)
-                            nodes[a->Parent].RefineFlag = 0;
+                            metanodes[a->Parent].RefineFlag = 0;
                     }
                     b->RefineFlag = 0;
                 }
@@ -418,12 +423,12 @@ namespace BepuPhysics.CollisionDetection
 
             //TODO: if you know the tree in question has a ton of coherence, could attempt to compare child pointers without locks ahead of time.
             //Unsafe, but acceptable as an optimization prepass. Would avoid some interlocks. Doesn't seem to help for trees undergoing any significant motion.
-            var node = nodes + nodeIndex;
+            var node = metanodes + nodeIndex;
             bool success = true;
 
             if (0 == Interlocked.CompareExchange(ref node->RefineFlag, 1, 0))
             {
-                var children = &node->A;
+                var children = &nodes[nodeIndex].A;
                 var targetIndex = nodeIndex + 1;
 
 
@@ -497,13 +502,13 @@ namespace BepuPhysics.CollisionDetection
                                 {
                                     ref var grandchild = ref grandchildren[grandchildIndex];
                                     if (grandchild.Index >= 0)
-                                        nodes[grandchild.Index].RefineFlag = 0;
+                                        metanodes[grandchild.Index].RefineFlag = 0;
                                 }
 
                             }
                             //Unlock. children[i] is either the targetIndex, if a swap went through, or it's the original child index if it didn't.
                             //Those are the proper targets.
-                            nodes[child.Index].RefineFlag = 0;
+                            metanodes[child.Index].RefineFlag = 0;
                         }
                         else
                         {

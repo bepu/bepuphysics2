@@ -9,6 +9,8 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection
 {
+    //TODO: This type was built on assumptions which are no longer valid today; could avoid this complexity with virtually zero overhead now.
+    //This will likely be revisited during the larger tree refinement revamp.
     public unsafe struct BinnedResources
     {
         //TODO:
@@ -24,6 +26,7 @@ namespace BepuPhysics.CollisionDetection
 
         public SubtreeHeapEntry* SubtreeHeapEntries;
         public Node* StagingNodes;
+        public int* RefineFlags;
 
         //The binning process requires a lot of auxiliary memory.
         //Rather than continually reallocating it with stackalloc
@@ -87,7 +90,8 @@ namespace BepuPhysics.CollisionDetection
                 16 * (6 + 3 + 8) + sizeof(int) * (maximumSubtreeCount * 6 + nodeCount * 3 + MaximumBinCount * 8) +
                 16 * (1) + sizeof(Vector3) * maximumSubtreeCount +
                 16 * (1) + sizeof(SubtreeHeapEntry) * maximumSubtreeCount +
-                16 * (1) + sizeof(Node) * nodeCount;
+                16 * (1) + sizeof(Node) * nodeCount +
+                16 * (1) + sizeof(int) * nodeCount;
 
             bufferPool.Take(bytesRequired, out buffer);
             var memory = buffer.Memory;
@@ -99,6 +103,7 @@ namespace BepuPhysics.CollisionDetection
             resources.Centroids = (Vector3*)Suballocate(memory, ref memoryAllocated, sizeof(Vector3) * maximumSubtreeCount);
             resources.SubtreeHeapEntries = (SubtreeHeapEntry*)Suballocate(memory, ref memoryAllocated, sizeof(SubtreeHeapEntry) * maximumSubtreeCount);
             resources.StagingNodes = (Node*)Suballocate(memory, ref memoryAllocated, sizeof(Node) * nodeCount);
+            resources.RefineFlags = (int*)Suballocate(memory, ref memoryAllocated, sizeof(int) * nodeCount);
 
             resources.SubtreeBinIndicesX = (int*)Suballocate(memory, ref memoryAllocated, sizeof(int) * maximumSubtreeCount);
             resources.SubtreeBinIndicesY = (int*)Suballocate(memory, ref memoryAllocated, sizeof(int) * maximumSubtreeCount);
@@ -405,75 +410,52 @@ namespace BepuPhysics.CollisionDetection
             int start, int count,
             int stagingNodeIndex, ref int stagingNodesCount, out float childrenTreeletsCost)
         {
-            if (count > 1)
+            Debug.Assert(count > 2);
+            FindPartitionBinned(ref resources, start, count, out int splitIndex, out BoundingBox aBounds, out BoundingBox bBounds, out int leafCountA, out int leafCountB);
+
+            //Recursion bottomed out. 
+            var stagingNode = resources.StagingNodes + stagingNodeIndex;
+
+            var stagingChildren = &stagingNode->A;
+            ref var a = ref stagingNode->A;
+            ref var b = ref stagingNode->B;
+            a.Min = aBounds.Min;
+            a.Max = aBounds.Max;
+            b.Min = bBounds.Min;
+            b.Max = bBounds.Max;
+            a.LeafCount = leafCountA;
+            b.LeafCount = leafCountB;
+
+            int subtreeCountA = splitIndex - start;
+            int subtreeCountB = start + count - splitIndex;
+            float costA, costB;
+            if (subtreeCountA > 1)
             {
-
-                FindPartitionBinned(ref resources, start, count, out int splitIndex, out BoundingBox aBounds, out BoundingBox bBounds, out int leafCountA, out int leafCountB);
-
-
-                //Recursion bottomed out. 
-                var stagingNode = resources.StagingNodes + stagingNodeIndex;
-                var childIndexA = stagingNode->ChildCount++;
-                var childIndexB = stagingNode->ChildCount++;
-                Debug.Assert(stagingNode->ChildCount <= 2);
-
-                var stagingChildren = &stagingNode->A;
-                ref var a = ref stagingNode->A;
-                ref var b = ref stagingNode->B;
-                a.Min = aBounds.Min;
-                a.Max = aBounds.Max;
-                b.Min = bBounds.Min;
-                b.Max = bBounds.Max;
-                a.LeafCount = leafCountA;
-                b.LeafCount = leafCountB;
-
-                int subtreeCountA = splitIndex - start;
-                int subtreeCountB = start + count - splitIndex;
-                float costA, costB;
-                if (subtreeCountA > 1)
-                {
-                    a.Index = CreateStagingNodeBinned(ref resources, start, subtreeCountA,
-                        ref stagingNodesCount, out costA);
-                    costA += ComputeBoundsMetric(ref aBounds); //An internal node was created; measure its cost.
-                }
-                else
-                {
-                    Debug.Assert(subtreeCountA == 1);
-                    //Only one subtree. Don't create another node.
-                    a.Index = Encode(resources.IndexMap[start]);
-                    costA = 0;
-                }
-                if (subtreeCountB > 1)
-                {
-                    b.Index = CreateStagingNodeBinned(ref resources, splitIndex, subtreeCountB,
-                        ref stagingNodesCount, out costB);
-                    costB += ComputeBoundsMetric(ref bBounds); //An internal node was created; measure its cost.
-                }
-                else
-                {
-                    Debug.Assert(subtreeCountB == 1);
-                    //Only one subtree. Don't create another node.
-                    b.Index = Encode(resources.IndexMap[splitIndex]);
-                    costB = 0;
-                }
-                childrenTreeletsCost = costA + costB;
+                a.Index = CreateStagingNodeBinned(ref resources, start, subtreeCountA,
+                    ref stagingNodesCount, out costA);
+                costA += ComputeBoundsMetric(ref aBounds); //An internal node was created; measure its cost.
             }
             else
             {
-                Debug.Assert(count == 1);
-                //Only one subtree. Just stick it directly into the node.
-                var childIndex = resources.StagingNodes[stagingNodeIndex].ChildCount++;
-                var subtreeIndex = resources.IndexMap[start];
-                Debug.Assert(resources.StagingNodes[stagingNodeIndex].ChildCount <= 2);
-                ref var child = ref (&resources.StagingNodes[stagingNodeIndex].A)[childIndex];
-                ref var bounds = ref resources.BoundingBoxes[subtreeIndex];
-                child.Min = bounds.Min;
-                child.Max = bounds.Max;
-                child.Index = Encode(subtreeIndex);
-                child.LeafCount = resources.LeafCounts[subtreeIndex];
-                //Subtrees cannot contribute to change in cost.
-                childrenTreeletsCost = 0;
+                Debug.Assert(subtreeCountA == 1);
+                //Only one subtree. Don't create another node.
+                a.Index = Encode(resources.IndexMap[start]);
+                costA = 0;
             }
+            if (subtreeCountB > 1)
+            {
+                b.Index = CreateStagingNodeBinned(ref resources, splitIndex, subtreeCountB,
+                    ref stagingNodesCount, out costB);
+                costB += ComputeBoundsMetric(ref bBounds); //An internal node was created; measure its cost.
+            }
+            else
+            {
+                Debug.Assert(subtreeCountB == 1);
+                //Only one subtree. Don't create another node.
+                b.Index = Encode(resources.IndexMap[splitIndex]);
+                costB = 0;
+            }
+            childrenTreeletsCost = costA + costB;
         }
 
         unsafe int CreateStagingNodeBinned(
@@ -482,15 +464,11 @@ namespace BepuPhysics.CollisionDetection
         {
             var stagingNodeIndex = stagingNodeCount++;
             var stagingNode = resources.StagingNodes + stagingNodeIndex;
-            //The resource memory could contain arbitrary data.
-            //ChildCount will be read, so zero it out.
-            stagingNode->ChildCount = 0;
 
             if (count <= 2)
             {
                 //No need to do any sorting. This node can fit every remaining subtree.
                 var localIndexMap = resources.IndexMap + start;
-                stagingNode->ChildCount = count;
                 var stagingNodeChildren = &stagingNode->A;
                 for (int i = 0; i < count; ++i)
                 {
@@ -517,9 +495,10 @@ namespace BepuPhysics.CollisionDetection
         unsafe void ReifyChildren(int internalNodeIndex, Node* stagingNodes,
             ref QuickList<int, Buffer<int>> subtrees, ref QuickList<int, Buffer<int>> treeletInternalNodes, ref int nextInternalNodeIndexToUse)
         {
+            Debug.Assert(subtrees.Count > 1);
             var internalNode = nodes + internalNodeIndex;
             var internalNodeChildren = &internalNode->A;
-            for (int i = 0; i < internalNode->ChildCount; ++i)
+            for (int i = 0; i < 2; ++i)
             {
                 ref var child = ref internalNodeChildren[i];
                 if (child.Index >= 0)
@@ -536,8 +515,9 @@ namespace BepuPhysics.CollisionDetection
                     {
                         Debug.Assert(subtreeIndex >= 0 && subtreeIndex < nodeCount);
                         //Subtree is an internal node. Update its parent pointers.
-                        nodes[subtreeIndex].IndexInParent = i;
-                        nodes[subtreeIndex].Parent = internalNodeIndex;
+                        var metanode = metanodes + subtreeIndex;
+                        metanode->IndexInParent = i;
+                        metanode->Parent = internalNodeIndex;
 
                     }
                     else
@@ -573,9 +553,10 @@ namespace BepuPhysics.CollisionDetection
             var stagingNode = stagingNodes + stagingNodeIndex;
             var internalNode = nodes + internalNodeIndex;
             *internalNode = *stagingNode;
-            internalNode->RefineFlag = 0; //The staging node could have contained arbitrary refine flag data.
-            internalNode->Parent = parent;
-            internalNode->IndexInParent = indexInParent;
+            var metanode = metanodes + internalNodeIndex;
+            metanode->RefineFlag = 0; //The staging node could have contained arbitrary refine flag data.
+            metanode->Parent = parent;
+            metanode->IndexInParent = indexInParent;
 
 
             ReifyChildren(internalNodeIndex, stagingNodes, ref subtrees, ref treeletInternalNodes, ref nextInternalNodeIndexToUse);
@@ -589,8 +570,6 @@ namespace BepuPhysics.CollisionDetection
             //The parent and index in parent of the treelet root CANNOT BE TOUCHED.
             //When running on multiple threads, another thread may modify the Parent and IndexInParent of the treelet root.
             var internalNode = nodes + treeletRootIndex;
-            internalNode->ChildCount = stagingNodes->ChildCount;
-            Debug.Assert(internalNode->ChildCount == 2);
             internalNode->A = stagingNodes->A;
             internalNode->B = stagingNodes->B;
             ReifyChildren(treeletRootIndex, stagingNodes, ref subtrees, ref treeletInternalNodes, ref nextInternalNodeIndexToUse);
@@ -608,7 +587,7 @@ namespace BepuPhysics.CollisionDetection
             Debug.Assert(treeletInternalNodes.Count == 0, "The treelet internal nodes list should be empty since it's about to get filled.");
             Debug.Assert(treeletInternalNodes.Span.Length >= maximumSubtrees - 1, "Internal nodes queue should have a backing array large enough to hold all possible treelet internal nodes.");
             CollectSubtrees(nodeIndex, maximumSubtrees, resources.SubtreeHeapEntries, ref subtreeReferences, ref treeletInternalNodes, out float originalTreeletCost);
-            Debug.Assert(treeletInternalNodes.Count == subtreeReferences.Count - 2, 
+            Debug.Assert(treeletInternalNodes.Count == subtreeReferences.Count - 2,
                 "Given that this is a binary tree, the number of subtree references found must match the internal nodes traversed to reach them. Note that the treelet root is excluded.");
             Debug.Assert(subtreeReferences.Count <= maximumSubtrees);
 
@@ -623,9 +602,9 @@ namespace BepuPhysics.CollisionDetection
                 if (subtreeReferences[i] >= 0)
                 {
                     //It's an internal node.
-                    var subtreeNode = nodes + subtreeReferences[i];
-                    var parentNode = nodes + subtreeNode->Parent;
-                    ref var owningChild = ref (&parentNode->A)[subtreeNode->IndexInParent];
+                    var subtreeMetanode = metanodes + subtreeReferences[i];
+                    var parentNode = nodes + subtreeMetanode->Parent;
+                    ref var owningChild = ref (&parentNode->A)[subtreeMetanode->IndexInParent];
                     ref var targetBounds = ref resources.BoundingBoxes[i];
                     targetBounds.Min = owningChild.Min;
                     targetBounds.Max = owningChild.Max;
@@ -645,10 +624,6 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
 
-            var node = nodes + nodeIndex;
-            int parent = node->Parent;
-            int indexInParent = node->IndexInParent;
-
             //Now perform a top-down sweep build.
             //TODO: this staging creation section is really the only part that is sweep-specific. The rest is common to any other kind of subtree-collection based refinement. 
             //If you end up making others, keep this in mind.
@@ -657,7 +632,7 @@ namespace BepuPhysics.CollisionDetection
 
             CreateStagingNodeBinned(ref resources, 0, subtreeReferences.Count, ref stagingNodeCount, out float newTreeletCost);
             //Copy the refine flag over from the treelet root so that it persists.
-            resources.StagingNodes[0].RefineFlag = node->RefineFlag;
+            resources.RefineFlags[0] = metanodes[nodeIndex].RefineFlag;
 
 
             //ValidateStaging(stagingNodes, sweepSubtrees, ref subtreeReferences, parent, indexInParent);

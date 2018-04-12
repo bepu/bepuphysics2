@@ -67,11 +67,12 @@ namespace BepuPhysics.CollisionDetection
         unsafe void Validate(int nodeIndex, int expectedParentIndex, int expectedIndexInParent, ref Vector3 expectedMin, ref Vector3 expectedMax, out int foundLeafCount)
         {
             var node = nodes + nodeIndex;
-            if (node->Parent != expectedParentIndex)
+            var metanode = metanodes + nodeIndex;
+            if (metanode->Parent != expectedParentIndex)
                 throw new Exception($"Bad parent index on node {nodeIndex}");
-            if (node->IndexInParent != expectedIndexInParent)
+            if (metanode->IndexInParent != expectedIndexInParent)
                 throw new Exception($"Bad index in parent on node {nodeIndex}");
-            if (node->RefineFlag != 0)
+            if (metanode->RefineFlag != 0)
                 throw new Exception($"Nonzero refine flag on node {nodeIndex}");
             var children = &node->A;
             foundLeafCount = 0;
@@ -80,7 +81,6 @@ namespace BepuPhysics.CollisionDetection
             var mergedMin = badMinValue; //Note- using isolated vectors instead of actual BoundingBox here to avoid a compiler bug: https://github.com/dotnet/coreclr/issues/12950
             var mergedMax = badMaxValue;
             var childCount = Math.Min(leafCount, 2);
-            Debug.Assert(node->ChildCount == childCount);
             for (int i = 0; i < childCount; ++i)
             {
                 ref var child = ref children[i];
@@ -168,7 +168,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 throw new Exception($"Invalid node count of {nodeCount}, larger than nodes array length {Nodes.Length}.");
             }
-            if (LeafCount > 0 && (nodes[0].Parent != -1 || nodes[0].IndexInParent != -1))
+            if (LeafCount > 0 && (metanodes[0].Parent != -1 || metanodes[0].IndexInParent != -1))
             {
                 throw new Exception($"Invalid parent pointers on root.");
             }
@@ -187,37 +187,13 @@ namespace BepuPhysics.CollisionDetection
 
         }
 
-
-        unsafe void MeasureNodeOccupancy(Node* node, out int nodeCount, out int childCount)
-        {
-            var children = &node->A;
-            nodeCount = 1;
-            childCount = node->ChildCount;
-            for (int i = 0; i < node->ChildCount; ++i)
-            {
-                ref var child = ref children[i];
-                if (child.Index >= 0)
-                {
-                    MeasureNodeOccupancy(nodes + child.Index, out int childNodeCount, out int childChildCount);
-                    nodeCount += childNodeCount;
-                    childCount += childChildCount;
-                }
-            }
-        }
-
-        public unsafe void MeasureNodeOccupancy(out int nodeCount, out int childCount)
-        {
-            MeasureNodeOccupancy(nodes, out nodeCount, out childCount);
-
-
-        }
-
         unsafe int ComputeMaximumDepth(Node* node, int currentDepth)
         {
             var children = &node->A;
             int maximum = currentDepth;
             int nextDepth = currentDepth + 1;
-            for (int i = 0; i < node->ChildCount; ++i)
+            var childCount = Math.Min(leafCount, 2);
+            for (int i = 0; i < childCount; ++i)
             {
                 ref var child = ref children[i];
                 if (child.Index >= 0)
@@ -245,7 +221,8 @@ namespace BepuPhysics.CollisionDetection
             int correctlyPositionedImmediateChildren = 0;
             int immediateInternalChildren = 0;
             int expectedChildIndex = nodeIndex + 1;
-            for (int i = 0; i < node->ChildCount; ++i)
+            var childCount = Math.Min(leafCount, 2);
+            for (int i = 0; i < childCount; ++i)
             {
                 ref var child = ref children[i];
                 if (child.Index >= 0)

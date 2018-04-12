@@ -21,10 +21,12 @@ namespace BepuPhysics.CollisionDetection
                 //Swap last node for removed node.
                 var node = nodes + nodeIndex;
                 *node = nodes[nodeCount];
+                var metanode = metanodes + nodeIndex;
+                *metanode = metanodes[nodeCount];
 
                 //Update the moved node's pointers:
                 //its parent's child pointer should change, and...
-                (&nodes[node->Parent].A)[node->IndexInParent].Index = nodeIndex;
+                (&nodes[metanode->Parent].A)[metanode->IndexInParent].Index = nodeIndex;
                 //its children's parent pointers should change.
                 var nodeChildren = &node->A;
                 for (int i = 0; i < 2; ++i)
@@ -32,7 +34,7 @@ namespace BepuPhysics.CollisionDetection
                     ref var child = ref nodeChildren[i];
                     if (child.Index >= 0)
                     {
-                        nodes[child.Index].Parent = nodeIndex;
+                        metanodes[child.Index].Parent = nodeIndex;
                     }
                     else
                     {
@@ -47,17 +49,20 @@ namespace BepuPhysics.CollisionDetection
         }
 
 
-        unsafe void RefitForRemoval(Node* node)
+        unsafe void RefitForRemoval(int nodeIndex)
         {
             //Note that no attempt is made to refit the root node. Note that the root node is the only node that can have a number of children less than 2.
-            while (node->Parent >= 0)
+            var node = nodes + nodeIndex;
+            var metanode = metanodes + nodeIndex;
+            while (metanode->Parent >= 0)
             {
                 //Compute the new bounding box for this node.
-                var parent = nodes + node->Parent;
-                ref var childInParent = ref (&parent->A)[node->IndexInParent];
+                var parent = nodes + metanode->Parent;
+                ref var childInParent = ref (&parent->A)[metanode->IndexInParent];
                 BoundingBox.CreateMerged(ref node->A.Min, ref node->A.Max, ref node->B.Min, ref node->B.Max, out childInParent.Min, out childInParent.Max);
                 --childInParent.LeafCount;
                 node = parent;
+                metanode = metanodes + metanode->Parent;
             }
         }
 
@@ -87,6 +92,7 @@ namespace BepuPhysics.CollisionDetection
             }
 
             var node = nodes + leaf.NodeIndex;
+            var metanode = metanodes + leaf.NodeIndex;
             var nodeChildren = &node->A;
 
             //Remove the leaf from this node.
@@ -99,15 +105,13 @@ namespace BepuPhysics.CollisionDetection
             ref var survivingChild = ref nodeChildren[survivingChildIndexInNode];
 
             //Check to see if this node should collapse.
-            if (node->Parent >= 0)
+            if (metanode->Parent >= 0)
             {
                 //This is a non-root internal node.
                 //Since there are only two children in the node, then the node containing the removed leaf will collapse.
-                Debug.Assert(node->ChildCount == 2);
 
                 //Move the other node into the slot that used to point to the collapsing internal node.
-                var parentNode = nodes + node->Parent;
-                ref var childInParent = ref (&parentNode->A)[node->IndexInParent];
+                ref var childInParent = ref (&nodes[metanode->Parent].A)[metanode->IndexInParent];
                 childInParent.Min = survivingChild.Min;
                 childInParent.Max = survivingChild.Max;
                 childInParent.Index = survivingChild.Index;
@@ -117,23 +121,22 @@ namespace BepuPhysics.CollisionDetection
                 {
                     //It's a leaf. Update the leaf's reference in the leaves array.
                     var otherLeafIndex = Encode(survivingChild.Index);
-                    leaves[otherLeafIndex] = new Leaf(node->Parent, node->IndexInParent);
+                    leaves[otherLeafIndex] = new Leaf(metanode->Parent, metanode->IndexInParent);
                 }
                 else
                 {
                     //It's an internal node. Update its parent node.
-                    nodes[survivingChild.Index].Parent = node->Parent;
-                    nodes[survivingChild.Index].IndexInParent = node->IndexInParent;
-
+                    metanodes[survivingChild.Index].Parent = metanode->Parent;
+                    metanodes[survivingChild.Index].IndexInParent = metanode->IndexInParent;
                 }
 
+                //Work up the chain of parent pointers, refitting bounding boxes and decrementing leaf counts.
+                //Note that this starts at the parent; we've already done the refit for the current level via collapse.
+                RefitForRemoval(metanode->Parent);
 
                 //Remove the now dead node.
                 RemoveNodeAt(leaf.NodeIndex);
 
-                //Work up the chain of parent pointers, refitting bounding boxes and decrementing leaf counts.
-                //Note that this starts at the parent; we've already done the refit for the current level via collapse.
-                RefitForRemoval(parentNode);
 
             }
             else
@@ -151,8 +154,8 @@ namespace BepuPhysics.CollisionDetection
                         var pulledNodeIndex = survivingChild.Index;
                         //TODO: This node movement logic could be unified with other instances of node moving. Nothing too special about the fact that it's the root.
                         *nodes = nodes[pulledNodeIndex]; //Note that this overwrites the memory pointed to by the otherChild reference.
-                        nodes->Parent = -1;
-                        nodes->IndexInParent = -1;
+                        metanodes->Parent = -1;
+                        metanodes->IndexInParent = -1;
                         //Update the parent pointers of the children of the moved internal node.
                         for (int i = 0; i < 2; ++i)
                         {
@@ -160,7 +163,7 @@ namespace BepuPhysics.CollisionDetection
                             if (child.Index >= 0)
                             {
                                 //Child is an internal node. Note that the index in child doesn't change; we copied the children directly.
-                                nodes[child.Index].Parent = 0;
+                                metanodes[child.Index].Parent = 0;
                             }
                             else
                             {
@@ -180,14 +183,8 @@ namespace BepuPhysics.CollisionDetection
                             //Update the leaf pointer to reflect the change.
                             leaves[Encode(survivingChild.Index)] = new Leaf(0, 0);
                         }
-                        nodes->ChildCount = 1;
                     }
                 }
-                else
-                {
-                    nodes->ChildCount = 0;
-                }
-
                 //No need to perform a RefitForRemoval here; it's the root. There is no higher bounding box.
             }
             return leafIndex < leafCount ? leafCount : -1;

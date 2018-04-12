@@ -2,6 +2,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System;
+using System.Diagnostics;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -24,9 +25,10 @@ namespace BepuPhysics.CollisionDetection
 
             var newNodeIndex = AllocateNode();
             var newNode = nodes + newNodeIndex;
-            newNode->ChildCount = 2;
-            newNode->Parent = parentIndex;
-            newNode->IndexInParent = indexInParent;
+            var newMetanode = metanodes + newNodeIndex;
+            newMetanode->Parent = parentIndex;
+            newMetanode->IndexInParent = indexInParent;
+            newMetanode->RefineFlag = 0;
             //The first child of the new node is the old leaf. Insert its bounding box.
             var parentNode = nodes + parentIndex;
             ref var childInParent = ref (&parentNode->A)[indexInParent];
@@ -48,14 +50,14 @@ namespace BepuPhysics.CollisionDetection
             childInParent.Index = newNodeIndex;
             childInParent.Min = merged.Min;
             childInParent.Max = merged.Max;
-            ++childInParent.LeafCount;
+            Debug.Assert(childInParent.LeafCount == 1);
+            childInParent.LeafCount = 2;
             return leafIndex;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         unsafe int InsertLeafIntoEmptySlot(ref BoundingBox leafBox, int nodeIndex, int childIndex, Node* node)
         {
-            ++node->ChildCount;
             var leafIndex = AddLeaf(nodeIndex, childIndex);
             ref var child = ref (&node->A)[childIndex];
             child.Min = leafBox.Min;

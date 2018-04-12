@@ -146,64 +146,42 @@ namespace BepuPhysics.CollisionDetection
 
         unsafe void SplitLeavesIntoChildren(ref SweepResources leaves, int start, int count, int nodeIndex)
         {
-            if (count > 1)
+            Debug.Assert(count >= 2);
+            FindPartition(ref leaves, start, count, out int splitIndex, out BoundingBox aBounds, out BoundingBox bBounds, out int leafCountA, out int leafCountB);
+
+            var node = nodes + nodeIndex;
+
+            ref var a = ref node->A;
+            ref var b = ref node->B;
+            a.Min = aBounds.Min;
+            a.Max = aBounds.Max;
+            b.Min = bBounds.Min;
+            b.Max = bBounds.Max;
+
+            a.LeafCount = leafCountA;
+            b.LeafCount = leafCountB;
+
+            if (leafCountA > 1)
             {
-
-                FindPartition(ref leaves, start, count, out int splitIndex, out BoundingBox aBounds, out BoundingBox bBounds, out int leafCountA, out int leafCountB);
-
-                var node = nodes + nodeIndex;
-                var childIndexA = node->ChildCount++;
-                var childIndexB = node->ChildCount++;
-                Debug.Assert(node->ChildCount <= 2);
-
-                ref var a = ref node->A;
-                ref var b = ref node->B;
-                a.Min = aBounds.Min;
-                a.Max = aBounds.Max;
-                b.Min = bBounds.Min;
-                b.Max = bBounds.Max;
-
-                a.LeafCount = leafCountA;
-                b.LeafCount = leafCountB;
-
-                if (leafCountA > 1)
-                {
-                    a.Index = CreateSweepBuilderNode(nodeIndex, childIndexA, ref leaves, start, leafCountA);
-                }
-                else
-                {
-                    Debug.Assert(leafCountA == 1);
-                    //Only one leaf. Don't create another node.
-                    var leafIndex = AddLeaf(nodeIndex, childIndexA);
-                    a.Index = Encode(leafIndex);
-                }
-                if (leafCountB > 1)
-                {
-                    b.Index = CreateSweepBuilderNode(nodeIndex, childIndexB, ref leaves, splitIndex, leafCountB);
-                }
-                else
-                {
-                    Debug.Assert(leafCountB == 1);
-                    //Only one leaf. Don't create another node.
-                    var leafIndex = AddLeaf(nodeIndex, childIndexB);
-                    b.Index = Encode(leafIndex);
-                }
+                a.Index = CreateSweepBuilderNode(nodeIndex, 0, ref leaves, start, leafCountA);
             }
             else
             {
-                Debug.Assert(count == 1);
-                //Only one leaf. Just stick it directly into the node.
-                var node = nodes + nodeIndex;
-                var childIndex = node->ChildCount++;
-                Debug.Assert(node->ChildCount <= 2);
-                var index = leaves.IndexMap[start];
-                var leafIndex = AddLeaf(nodeIndex, childIndex);
-                ref var child = ref (&node->A)[childIndex];
-                child.Min = leaves.Bounds[index].Min;
-                child.Max = leaves.Bounds[index].Max;
-                child.Index = Encode(leafIndex);
-                child.LeafCount = 1;
-
+                Debug.Assert(leafCountA == 1);
+                //Only one leaf. Don't create another node.
+                var leafIndex = AddLeaf(nodeIndex, 0);
+                a.Index = Encode(leafIndex);
+            }
+            if (leafCountB > 1)
+            {
+                b.Index = CreateSweepBuilderNode(nodeIndex, 1, ref leaves, splitIndex, leafCountB);
+            }
+            else
+            {
+                Debug.Assert(leafCountB == 1);
+                //Only one leaf. Don't create another node.
+                var leafIndex = AddLeaf(nodeIndex, 1);
+                b.Index = Encode(leafIndex);
             }
         }
 
@@ -211,15 +189,15 @@ namespace BepuPhysics.CollisionDetection
             ref SweepResources leaves, int start, int count)
         {
             var nodeIndex = AllocateNode();
-            var node = nodes + nodeIndex;
-            node->Parent = parentIndex;
-            node->IndexInParent = indexInParent;
+            var metanode = metanodes + nodeIndex;
+            metanode->Parent = parentIndex;
+            metanode->IndexInParent = indexInParent;
+            metanode->RefineFlag = 0;
 
             if (count <= 2)
             {
                 //No need to do any sorting. This node can fit every remaining subtree.
-                node->ChildCount = count;
-                var children = &node->A;
+                var children = &nodes[nodeIndex].A;
                 for (int i = 0; i < count; ++i)
                 {
                     var index = leaves.IndexMap[i + start];
@@ -313,7 +291,7 @@ namespace BepuPhysics.CollisionDetection
             //Return resources.            
             floatPool.Return(ref centroidsX);
             floatPool.Return(ref centroidsY);
-            floatPool.Return(ref centroidsZ);            
+            floatPool.Return(ref centroidsZ);
             intPool.Return(ref indexMapX);
             intPool.Return(ref indexMapY);
             intPool.Return(ref indexMapZ);

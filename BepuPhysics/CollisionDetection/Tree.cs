@@ -10,8 +10,10 @@ namespace BepuPhysics.CollisionDetection
     {
         public BufferPool Pool;
         public Buffer<Node> Nodes;
+        public Buffer<Metanode> Metanodes;
         //We cache a raw pointer for now. Buffer indexing isn't completely free yet. Also, this implementation was originally developed on raw pointers, so changing it would require effort.
         internal Node* nodes;
+        internal Metanode* metanodes;
         int nodeCount;
         public int NodeCount
         {
@@ -34,15 +36,15 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         int AllocateNode()
         {
-            Debug.Assert(Nodes.Length > nodeCount,
+            Debug.Assert(Nodes.Length > nodeCount && Metanodes.Length > nodeCount,
                 "Any attempt to allocate a node should not overrun the allocated nodes. For all operations that allocate nodes, capacity should be preallocated.");
             return nodeCount++;
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         int AddLeaf(int nodeIndex, int childIndex)
         {
             Debug.Assert(leafCount < Leaves.Length,
@@ -70,7 +72,7 @@ namespace BepuPhysics.CollisionDetection
         //TODO: Could use a constructor or factory that can make it easy to take deserialized tree data without having to rerun a builder or hack with the backing memory.
 
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int Encode(int index)
         {
             return -1 - index;
@@ -81,9 +83,8 @@ namespace BepuPhysics.CollisionDetection
         {
             //The root always exists, even if there are no children in it. Makes some bookkeeping simpler.
             nodeCount = 1;
-            nodes->Parent = -1;
-            nodes->IndexInParent = -1;
-            nodes->ChildCount = 0;
+            metanodes->Parent = -1;
+            metanodes->IndexInParent = -1;
         }
 
         /// <summary>
@@ -97,6 +98,7 @@ namespace BepuPhysics.CollisionDetection
             //Adding incrementally checks the capacity of leaves, and issues a resize if there isn't enough space. But it doesn't check nodes.
             //You could change that, but for now, we simply ensure that the node array has sufficient room to hold everything in the resized leaf array.
             var nodeCapacityForTarget = BufferPool<Node>.GetLowestContainingElementCount(Math.Max(nodeCount, leafCapacityForTarget - 1));
+            var metanodeCapacityForTarget = BufferPool<Metanode>.GetLowestContainingElementCount(Math.Max(nodeCount, leafCapacityForTarget - 1));
             bool wasAllocated = Leaves.Allocated;
             Debug.Assert(Leaves.Allocated == Nodes.Allocated);
             if (leafCapacityForTarget != Leaves.Length)
@@ -107,10 +109,15 @@ namespace BepuPhysics.CollisionDetection
             if (nodeCapacityForTarget != Nodes.Length)
             {
                 Pool.SpecializeFor<Node>().Resize(ref Nodes, nodeCapacityForTarget, nodeCount);
-                //A node's RefineFlag must be 0, so just clear out the node set. 
-                //TODO: You could avoid the bulk of this by either a) getting rid of refine flags as a concept or b) using a separate array for the node metadata (a good idea anyway).
-                Nodes.Clear(nodeCount, Nodes.Length - nodeCount);
                 nodes = (Node*)Nodes.Memory;
+            }
+            if (metanodeCapacityForTarget != Metanodes.Length)
+            {
+                Pool.SpecializeFor<Metanode>().Resize(ref Metanodes, metanodeCapacityForTarget, nodeCount);
+                //A node's RefineFlag must be 0, so just clear out the node set. 
+                //TODO: This won't be necessary if we get rid of refineflags as a concept.
+                Nodes.Clear(nodeCount, Nodes.Length - nodeCount);
+                metanodes = (Metanode*)Metanodes.Memory;
             }
             if (!wasAllocated)
             {
@@ -134,10 +141,11 @@ namespace BepuPhysics.CollisionDetection
         /// <remarks>Disposed trees can be reused if EnsureCapacity or Resize is used to rehydrate them.</remarks>
         public void Dispose()
         {
-            Debug.Assert(Nodes.Allocated == Leaves.Allocated, "Nodes and leaves should have consistent lifetimes.");
+            Debug.Assert(Nodes.Allocated == Leaves.Allocated && Nodes.Allocated == Metanodes.Allocated, "Nodes and leaves should have consistent lifetimes.");
             if (Nodes.Allocated)
             {
                 Pool.SpecializeFor<Node>().Return(ref Nodes);
+                Pool.SpecializeFor<Metanode>().Return(ref Metanodes);
                 Pool.SpecializeFor<Leaf>().Return(ref Leaves);
             }
         }

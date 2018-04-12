@@ -76,7 +76,6 @@ namespace BepuPhysics.CollisionDetection
 
                 RefitNodeIndex = -1;
                 threadDispatcher.DispatchWorkers(RefitAndMarkAction);
-
                 //Condense the set of candidates into a set of targets.
                 int refinementCandidatesCount = 0;
                 for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
@@ -106,24 +105,24 @@ namespace BepuPhysics.CollisionDetection
                     }
                     Debug.Assert(index < RefinementCandidates[currentCandidatesIndex].Count && index >= 0);
                     var nodeIndex = RefinementCandidates[currentCandidatesIndex][index];
-                    Debug.Assert(tree.nodes[nodeIndex].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
+                    Debug.Assert(tree.metanodes[nodeIndex].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
                     RefinementTargets.AddUnsafely(nodeIndex);
-                    tree.nodes[nodeIndex].RefineFlag = 1;
+                    tree.metanodes[nodeIndex].RefineFlag = 1;
                 }
                 //Note that the root node is only refined if it was not picked as a target earlier.
-                if (tree.nodes->RefineFlag != 1)
+                if (tree.metanodes->RefineFlag != 1)
                 {
                     RefinementTargets.AddUnsafely(0);
-                    tree.nodes->RefineFlag = 1;
+                    tree.metanodes->RefineFlag = 1;
                 }
                 RefineIndex = -1;
 
                 threadDispatcher.DispatchWorkers(RefineAction);
                 //Note that we defer the refine flag clear until after the refinements complete. If we did it within the refine action itself, 
                 //it would introduce nondeterminism by allowing refines to progress based on their order of completion.
-                for (int i =0; i < RefinementTargets.Count; ++i)
+                for (int i = 0; i < RefinementTargets.Count; ++i)
                 {
-                    Tree.nodes[RefinementTargets[i]].RefineFlag = 0;
+                    Tree.metanodes[RefinementTargets[i]].RefineFlag = 0;
                 }
 
                 //To multithread this, give each worker a contiguous chunk of nodes. You want to do the biggest chunks possible to chain decent cache behavior as far as possible.
@@ -177,16 +176,18 @@ namespace BepuPhysics.CollisionDetection
                 int refinementLeafCountThreshold, ref QuickList<int, Buffer<int>> refinementCandidates, BufferPool<int> threadIntPool)
             {
                 var node = Tree.nodes + nodeIndex;
+                var metanode = Tree.metanodes + nodeIndex;
                 var children = &node->A;
-                Debug.Assert(node->RefineFlag == 0);
-                for (int i = 0; i < node->ChildCount; ++i)
+                Debug.Assert(metanode->RefineFlag == 0);
+                Debug.Assert(Tree.leafCount > 2);
+                for (int i = 0; i < 2; ++i)
                 {
                     ref var child = ref children[i];
                     if (child.Index >= 0)
                     {
                         //Each node stores how many children are involved in the multithreaded refit.
                         //This allows the postphase to climb the tree in a thread safe way.
-                        ++node->RefineFlag;
+                        ++metanode->RefineFlag;
                         if (child.LeafCount <= multithreadingLeafCountThreshold)
                         {
                             if (child.LeafCount <= refinementLeafCountThreshold)
@@ -215,6 +216,7 @@ namespace BepuPhysics.CollisionDetection
                 //The main thread already created the refinement candidate list using the worker's pool.
                 var threadIntPool = threadDispatcher.GetThreadMemoryPool(workerIndex).SpecializeFor<int>();
                 int refitIndex;
+                Debug.Assert(Tree.leafCount > 2);
                 while ((refitIndex = Interlocked.Increment(ref RefitNodeIndex)) < RefitNodes.Count)
                 {
 
@@ -232,18 +234,19 @@ namespace BepuPhysics.CollisionDetection
                     }
 
                     var node = Tree.nodes + nodeIndex;
-                    Debug.Assert(node->Parent >= 0, "The root should not be marked for refit.");
-                    var parent = Tree.nodes + node->Parent;
-                    var childInParent = &parent->A + node->IndexInParent;
+                    var metanode = Tree.metanodes + nodeIndex;
+                    Debug.Assert(metanode->Parent >= 0, "The root should not be marked for refit.");
+                    var parent = Tree.nodes + metanode->Parent;
+                    var childInParent = &parent->A + metanode->IndexInParent;
                     if (shouldUseMark)
                     {
                         var costChange = Tree.RefitAndMark(ref *childInParent, RefinementLeafCountThreshold, ref RefinementCandidates[workerIndex], threadIntPool);
-                        node->LocalCostChange = costChange;
+                        metanode->LocalCostChange = costChange;
                     }
                     else
                     {
                         var costChange = Tree.RefitAndMeasure(ref *childInParent);
-                        node->LocalCostChange = costChange;
+                        metanode->LocalCostChange = costChange;
                     }
 
 
@@ -253,21 +256,22 @@ namespace BepuPhysics.CollisionDetection
 
                     //Walk up the tree.
                     node = parent;
+                    metanode = Tree.metanodes + metanode->Parent;
                     while (true)
                     {
 
-                        if (Interlocked.Decrement(ref node->RefineFlag) == 0)
+                        if (Interlocked.Decrement(ref metanode->RefineFlag) == 0)
                         {
                             //Compute the child contributions to this node's volume change.
                             var children = &node->A;
-                            node->LocalCostChange = 0;
-                            for (int i = 0; i < node->ChildCount; ++i)
+                            metanode->LocalCostChange = 0;
+                            for (int i = 0; i < 2; ++i)
                             {
                                 ref var child = ref children[i];
                                 if (child.Index >= 0)
                                 {
-                                    var childMetadata = Tree.nodes + child.Index;
-                                    node->LocalCostChange += childMetadata->LocalCostChange;
+                                    var childMetadata = Tree.metanodes + child.Index;
+                                    metanode->LocalCostChange += childMetadata->LocalCostChange;
                                     //Clear the refine flag (unioned).
                                     childMetadata->RefineFlag = 0;
 
@@ -276,7 +280,7 @@ namespace BepuPhysics.CollisionDetection
 
                             //This thread is the last thread to visit this node, so it must handle this node.
                             //Merge all the child bounding boxes into one. 
-                            if (node->Parent < 0)
+                            if (metanode->Parent < 0)
                             {
                                 //Root node.
                                 //Don't bother including the root's change in volume.
@@ -291,17 +295,17 @@ namespace BepuPhysics.CollisionDetection
                                 }
                                 var postmetric = ComputeBoundsMetric(ref merged);
                                 if (postmetric > 1e-9f)
-                                    RefitCostChange = node->LocalCostChange / postmetric;
+                                    RefitCostChange = metanode->LocalCostChange / postmetric;
                                 else
                                     RefitCostChange = 0;
                                 //Clear the root's refine flag (unioned).
-                                node->RefineFlag = 0;
+                                metanode->RefineFlag = 0;
                                 break;
                             }
                             else
                             {
-                                parent = Tree.nodes + node->Parent;
-                                childInParent = &parent->A + node->IndexInParent;
+                                parent = Tree.nodes + metanode->Parent;
+                                childInParent = &parent->A + metanode->IndexInParent;
                                 var premetric = ComputeBoundsMetric(ref childInParent->Min, ref childInParent->Max);
                                 childInParent->Min = new Vector3(float.MaxValue);
                                 childInParent->Max = new Vector3(float.MinValue);
@@ -311,8 +315,9 @@ namespace BepuPhysics.CollisionDetection
                                     BoundingBox.CreateMerged(ref child.Min, ref child.Max, ref childInParent->Min, ref childInParent->Max, out childInParent->Min, out childInParent->Max);
                                 }
                                 var postmetric = ComputeBoundsMetric(ref childInParent->Min, ref childInParent->Max);
-                                node->LocalCostChange += postmetric - premetric;
+                                metanode->LocalCostChange += postmetric - premetric;
                                 node = parent;
+                                metanode = Tree.metanodes + metanode->Parent;
                             }
                         }
                         else
@@ -368,10 +373,9 @@ namespace BepuPhysics.CollisionDetection
 
         unsafe void CheckForRefinementOverlaps(int nodeIndex, ref QuickList<int, Buffer<int>> refinementTargets)
         {
-
             var node = nodes + nodeIndex;
             var children = &node->A;
-            for (int childIndex = 0; childIndex < node->ChildCount; ++childIndex)
+            for (int childIndex = 0; childIndex < 2; ++childIndex)
             {
                 ref var child = ref children[childIndex];
                 if (child.Index >= 0)

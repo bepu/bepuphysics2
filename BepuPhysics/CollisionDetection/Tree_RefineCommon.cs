@@ -28,7 +28,7 @@ namespace BepuPhysics.CollisionDetection
         public unsafe void Insert(Node* node, Node* nodes, ref QuickList<int, Buffer<int>> subtrees)
         {
             var children = &node->A;
-            for (int childIndex = 0; childIndex < node->ChildCount; ++childIndex)
+            for (int childIndex = 0; childIndex < 2; ++childIndex)
             {
                 ref var child = ref children[childIndex];
                 if (child.Index >= 0)
@@ -129,7 +129,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryPop(Node* nodes, ref int remainingSubtreeSpace, ref QuickList<int, Buffer<int>> subtrees, out int index, out float cost)
+        public bool TryPop(Metanode* metanodes, ref int remainingSubtreeSpace, ref QuickList<int, Buffer<int>> subtrees, out int index, out float cost)
         {
             while (Count > 0)
             {
@@ -137,20 +137,19 @@ namespace BepuPhysics.CollisionDetection
                 //Given the unique access nature, the fact that you're destroying the heap when there's not much space left doesn't matter.
                 //In the event that you consume all the nodes, that just means there aren't any entries which would fit in the subtree set anymore.
                 Pop(out SubtreeHeapEntry entry);
-                var node = nodes + entry.Index;
+                var metanode = metanodes + entry.Index;
                 //Choose to expand this node, or not.
                 //Only choose to expand if its children will fit.
                 //Any time a node is expanded, the existing node is removed from the set of potential subtrees stored in the priorityQueue.
                 //So, the change in remainingSubtreeSpace = maximumSubtreesCount - (priorityQueue.Count + subtrees.Count) is childCount - 1.
                 //This is ALWAYS the case.
-                var changeInChildCount = node->ChildCount - 1;
-                if (remainingSubtreeSpace >= changeInChildCount && node->RefineFlag == 0)
+                if (remainingSubtreeSpace >= 1 && metanodes[entry.Index].RefineFlag == 0)
                 {
                     //Debug.Fail("don't forget to reenable the refine flag condition");
                     //This node's children can be included successfully in the remaining space.
                     index = entry.Index;
                     cost = entry.Cost;
-                    remainingSubtreeSpace -= changeInChildCount;
+                    remainingSubtreeSpace -= 1;
                     return true;
                 }
                 else
@@ -184,7 +183,7 @@ namespace BepuPhysics.CollisionDetection
 
 
             var node = nodes + nodeIndex;
-            Debug.Assert(maximumSubtrees >= node->ChildCount, "Can't only consider some of a node's children, but specified maximumSubtrees precludes the treelet root's children.");
+            Debug.Assert(maximumSubtrees >= 2, "Can't only consider some of a node's children, but specified maximumSubtrees precludes the treelet root's children.");
             //All of treelet root's children are included immediately. (Follows from above requirement.)
 
             var priorityQueue = new SubtreeBinaryHeap(entries);
@@ -197,7 +196,7 @@ namespace BepuPhysics.CollisionDetection
             //That's because the treelet root cannot change.
             treeletCost = 0;
             int remainingSubtreeSpace = maximumSubtrees - priorityQueue.Count - subtrees.Count;
-            while (priorityQueue.TryPop(nodes, ref remainingSubtreeSpace, ref subtrees, out int highestIndex, out float highestCost))
+            while (priorityQueue.TryPop(metanodes, ref remainingSubtreeSpace, ref subtrees, out int highestIndex, out float highestCost))
             {
                 treeletCost += highestCost;
                 internalNodes.AddUnsafely(highestIndex);
@@ -229,7 +228,7 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        
+
         unsafe void ValidateStaging(Node* stagingNodes, ref QuickList<int, Buffer<int>> subtreeNodePointers, int treeletParent, int treeletIndexInParent, BufferPool pool)
         {
             var intPool = pool.SpecializeFor<int>();
@@ -239,7 +238,7 @@ namespace BepuPhysics.CollisionDetection
             ValidateStaging(stagingNodes, 0, ref subtreeNodePointers, ref collectedSubtreeReferences, ref internalReferences, intPool, out int foundSubtrees, out int foundLeafCount);
             if (treeletParent < -1 || treeletParent >= nodeCount)
                 throw new Exception("Bad treelet parent.");
-            if (treeletIndexInParent < -1 || (treeletParent >= 0 && treeletIndexInParent >= nodes[treeletParent].ChildCount))
+            if (treeletIndexInParent < -1 || (treeletParent >= 0 && treeletIndexInParent >= 2))
                 throw new Exception("Bad treelet index in parent.");
             if (treeletParent >= 0 && (&nodes[treeletParent].A)[treeletIndexInParent].LeafCount != foundLeafCount)
             {
