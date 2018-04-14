@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using BepuUtilities;
 using BepuPhysics.CollisionDetection;
+using BepuPhysics.Trees;
 
 namespace DemoRenderer.Constraints
 {

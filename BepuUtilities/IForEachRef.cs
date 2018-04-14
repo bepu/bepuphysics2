@@ -1,4 +1,4 @@
-﻿namespace BepuPhysics
+﻿namespace BepuUtilities
 {
     //Who's up for some super idiomatic C#?
     //These types are typically implemented by value types and passed into various performance sensitive functions.

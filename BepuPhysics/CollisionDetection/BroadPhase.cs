@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Numerics;
+using BepuPhysics.Trees;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -82,7 +83,7 @@ namespace BepuPhysics.CollisionDetection
         static void GetBoundsPointers(int broadPhaseIndex, Tree tree, out Vector3* minPointer, out Vector3* maxPointer)
         {
             var leaf = tree.Leaves[broadPhaseIndex];
-            var nodeChild = (&tree.nodes[leaf.NodeIndex].A) + leaf.ChildIndex;
+            var nodeChild = (&tree.NodesPointer[leaf.NodeIndex].A) + leaf.ChildIndex;
             minPointer = &nodeChild->Min;
             maxPointer = &nodeChild->Max;
         }

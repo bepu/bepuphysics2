@@ -1,8 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     /// <summary>
     /// Pointer to a leaf's tree location.

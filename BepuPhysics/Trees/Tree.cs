@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     public unsafe partial class Tree : IDisposable
     {
@@ -13,6 +13,7 @@ namespace BepuPhysics.CollisionDetection
         public Buffer<Metanode> Metanodes;
         //We cache a raw pointer for now. Buffer indexing isn't completely free yet. Also, this implementation was originally developed on raw pointers, so changing it would require effort.
         internal Node* nodes;
+        public Node* NodesPointer { get { return nodes; } }
         internal Metanode* metanodes;
         int nodeCount;
         public int NodeCount

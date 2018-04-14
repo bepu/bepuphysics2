@@ -1,10 +1,8 @@
 ﻿using BepuUtilities;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     partial class Tree
     {

@@ -2,7 +2,7 @@
 using BepuUtilities.Memory;
 using System.Diagnostics;
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
 
 

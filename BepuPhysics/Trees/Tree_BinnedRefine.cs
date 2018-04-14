@@ -7,7 +7,7 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     //TODO: This type was built on assumptions which are no longer valid today; could avoid this complexity with virtually zero overhead now.
     //This will likely be revisited during the larger tree refinement revamp.

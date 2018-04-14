@@ -2,6 +2,7 @@
 using BepuPhysics.CollisionDetection;
 using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuPhysics.Trees;
 using System;
 using System.Collections.Generic;
 using System.Numerics;

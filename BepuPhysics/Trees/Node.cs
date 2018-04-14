@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     [StructLayout(LayoutKind.Explicit)]
     public struct NodeChild

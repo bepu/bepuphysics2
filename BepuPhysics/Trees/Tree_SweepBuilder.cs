@@ -1,13 +1,12 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     partial class Tree
     {

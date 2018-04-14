@@ -7,6 +7,7 @@ using BepuPhysics.Constraints;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using BepuPhysics.Trees;
 
 namespace BepuPhysics
 {

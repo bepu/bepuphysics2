@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     public struct SubtreeHeapEntry
     {

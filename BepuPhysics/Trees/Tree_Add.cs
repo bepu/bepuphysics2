@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System;
 using System.Diagnostics;
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     partial class Tree
     {

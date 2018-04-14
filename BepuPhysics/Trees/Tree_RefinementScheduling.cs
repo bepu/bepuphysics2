@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     partial class Tree
     {

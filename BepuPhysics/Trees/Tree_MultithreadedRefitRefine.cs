@@ -7,7 +7,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading;
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     partial class Tree
     {

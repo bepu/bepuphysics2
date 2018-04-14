@@ -8,6 +8,7 @@ using System.Numerics;
 using System.Diagnostics;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
+using System.Runtime.CompilerServices;
 
 namespace Demos.Demos
 {

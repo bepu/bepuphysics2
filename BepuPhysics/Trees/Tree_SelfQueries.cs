@@ -1,10 +1,8 @@
 ﻿using BepuUtilities;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     public interface IOverlapHandler
     {

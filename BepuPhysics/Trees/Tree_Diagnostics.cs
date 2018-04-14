@@ -8,7 +8,7 @@ using System.Text;
 
 
 
-namespace BepuPhysics.CollisionDetection
+namespace BepuPhysics.Trees
 {
     partial class Tree
     {
