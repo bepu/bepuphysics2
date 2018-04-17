@@ -74,7 +74,7 @@ namespace BepuPhysics.Trees
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int Encode(int index)
+        public static int Encode(int index)
         {
             return -1 - index;
         }
