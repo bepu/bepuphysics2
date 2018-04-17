@@ -9,11 +9,74 @@ using System.Text;
 
 namespace BepuPhysics.Trees
 {
+    public struct Ray
+    {
+        public Vector3 Origin;
+        public Vector3 Direction;
+    }
+
+    /// <summary>
+    /// Ray representation designed for quicker intersection against axis aligned bounding boxes.
+    /// </summary>
+    struct TreeRay
+    {
+        public Vector3 OriginOverDirection;
+        public float MaximumT;
+        public Vector3 InverseDirection;
+    }
+
+    public unsafe struct LeafRaySource
+    {
+        TreeRay* treeRays;
+        Ray* rays;
+        ushort* rayPointers;
+        int rayCount;
+
+        internal LeafRaySource(TreeRay* treeRays, Ray* rays, ushort* rayPointerStack, int rayCount)
+        {
+            this.treeRays = treeRays;
+            this.rays = rays;
+            this.rayPointers = rayPointerStack;
+            this.rayCount = rayCount;
+        }
+
+        /// <summary>
+        /// Gets the number of rays in the batch.
+        /// </summary>
+        public int RayCount
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return rayCount; }
+        }
+        
+        /// <summary>
+        /// Gets pointers to the data for a ray that intersects the leaf's bounding box..
+        /// </summary>
+        /// <param name="rayIndex">Index of the ray affecting this leaf to grab.</param>
+        /// <param name="ray">Pointer to the ray's origin and direction. Note that changing the ray's origin and direction mid-traversal will not change the path of the traversal, 
+        /// but it will be visible by any future leafs impacted by this ray.</param>
+        /// <param name="maximumT">Pointer to the maximum length of the ray in units of the ray's length.
+        /// Decreasing this value will prevent the traversal from visiting more distant nodes later in the traversal.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetRay(int rayIndex, out Ray* ray, out float* maximumT)
+        {
+            Debug.Assert(rayIndex >= 0 && rayIndex < rayCount, "The ray index must be within 0 and RayCount - 1.");
+            ray = rays + rayIndex;
+            maximumT = &treeRays[rayIndex].MaximumT;
+        }
+
+    }
+
+    public interface ILeafTester
+    {
+        void RayTest(ref LeafRaySource rays);
+    }
+
 
     /// <summary>
     /// Reusable structure for testing large numbers of rays against trees.
     /// </summary>
-    public struct RayBatcher : IDisposable
+    public struct RayBatcher<TLeafTester> : IDisposable where TLeafTester : struct, ILeafTester
     {
         //If you want a deeper explanation about this implementation, check out the Dynamic Ray Stream Traversal paper by Barringer and Akenine-Moller. It's basically the same.
         int stackPointerA0, stackPointerB, stackPointerA1;
@@ -21,43 +84,65 @@ namespace BepuPhysics.Trees
         struct StackEntry
         {
             public int NodeIndex;
-            public short RayCount;
-            public short RayStack;
+            public ushort RayCount;
+            public byte RayStack;
+            public byte Depth;
         }
         int stackPointer;
         Buffer<StackEntry> stack;
         BufferPool pool;
+        public Tree Tree;
+        int batchRayCount;
+        Buffer<TreeRay> batchRays;
+        Buffer<Ray> batchOriginalRays;
         int maximumRaysPerTraversal;
+        int preallocatedTreeDepth;
+
+        TLeafTester leafTester;
 
         /// <summary>
         /// Constructs a ray batcher and initializes its backing resources.
         /// </summary>
         /// <param name="pool">Pool to pull resources from.</param>
+        /// <param name="tree">Tree to target with rays initially.</param>
+        /// <param name="leafTester">Leaf tester used to test leaves found by the tree traversal.</param>
         /// <param name="maximumRaysPerTraversal">Maximum number of rays to execute in each traversal.
         /// This should typically be chosen as the highest value which avoids spilling data out of L2 cache.</param>
         /// <param name="treeDepthForPreallocation">Tree depth to preallocate ray stack space for. If a traversal finds nodes deeper than this, a dynamic resize will be triggered.</param>
-        public RayBatcher(BufferPool pool, int maximumRaysPerTraversal = 2048, int treeDepthForPreallocation = 24)
+        public RayBatcher(BufferPool pool, Tree tree, TLeafTester leafTester, int maximumRaysPerTraversal = 2048, int treeDepthForPreallocation = 24) : this()
         {
-            this.maximumRaysPerTraversal = maximumRaysPerTraversal;
+            this.Tree = tree;
             this.pool = pool;
+            this.leafTester = leafTester;
+            batchRayCount = 0;
+            pool.Take(maximumRaysPerTraversal, out batchRays);
+            pool.Take(maximumRaysPerTraversal, out batchOriginalRays);
             Debug.Assert(maximumRaysPerTraversal <= ushort.MaxValue, $"The number of rays per traversal must be less than {ushort.MaxValue}; ray pointers are stored in 2 bytes.");
-            //The number of ray pointers on the stack is limited in the worst case to all rays per level of the tree.
-            var preallocatedRayPointerCount = maximumRaysPerTraversal * treeDepthForPreallocation;
-            pool.Take(preallocatedRayPointerCount, out rayIndicesA0);
-            pool.Take(preallocatedRayPointerCount, out rayIndicesB);
-            pool.Take(preallocatedRayPointerCount, out rayIndicesA1);
-            //The number of stack entries is limited by the number of node entries (tree node count * 3) and the number of ray entries.
-            //(Can't have more entries on the stack than total ray pointers, after all.)
-            pool.Take(Math.Min(preallocatedRayPointerCount, 3 << Math.Min(16, treeDepthForPreallocation)), out stack);
+
+            ResizeRayStacks(maximumRaysPerTraversal, treeDepthForPreallocation);
 
             stackPointer = stackPointerA0 = stackPointerB = stackPointerA1 = 0;
 
         }
 
+        void ResizeRayStacks(int maximumRaysPerTraversal, int treeDepthForPreallocation)
+        {
+            this.maximumRaysPerTraversal = maximumRaysPerTraversal;
+            this.preallocatedTreeDepth = treeDepthForPreallocation;
+            //The number of ray pointers on the stack is limited in the worst case to all rays per level of the tree.
+            var preallocatedRayPointerCount = maximumRaysPerTraversal * treeDepthForPreallocation;
+            pool.Resize(ref rayIndicesA0, preallocatedRayPointerCount, stackPointerA0);
+            pool.Resize(ref rayIndicesB, preallocatedRayPointerCount, stackPointerB);
+            pool.Resize(ref rayIndicesA1, preallocatedRayPointerCount, stackPointerA1);
+            //The number of stack entries is limited by the number of node entries (tree node count * 3) and the number of ray entries.
+            //(Can't have more entries on the stack than total ray pointers, after all.)
+            pool.Resize(ref stack, Math.Min(preallocatedRayPointerCount, 3 << Math.Min(16, treeDepthForPreallocation)), stackPointer);
+        }
+
         /// <summary>
         /// Ray representation designed for quicker intersection against axis aligned bounding boxes.
         /// </summary>
-        public struct TreeRayWide
+        struct TreeRayWide
         {
             public Vector3Wide OriginOverDirection;
             public Vector3Wide InverseDirection;
@@ -115,29 +200,21 @@ namespace BepuPhysics.Trees
             intersected = Vector.LessThanOrEqual(tMin, tMax);
         }
 
-        /// <summary>
-        /// Ray representation designed for quicker intersection against axis aligned bounding boxes.
-        /// </summary>
-        struct TreeRay
-        {
-            public Vector3 OriginOverDirection;
-            public Vector3 InverseDirection;
-        }
+
 
         interface ITreeRaySource
         {
             int RayCount { get; }
-            ref TreeRay this[int rayIndex] { get; }
+            int this[int rayIndex] { get; }
         }
 
         unsafe struct RootRaySource : ITreeRaySource
         {
-            TreeRay* rays;
             int rayCount;
 
-            public RootRaySource(TreeRay* rays, int rayCount)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public RootRaySource(int rayCount)
             {
-                this.rays = rays;
                 this.rayCount = rayCount;
             }
 
@@ -147,25 +224,24 @@ namespace BepuPhysics.Trees
                 get { return rayCount; }
             }
 
-            public ref TreeRay this[int rayIndex]
+            public int this[int rayIndex]
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get
                 {
-                    return ref rays[rayIndex];
+                    return rayIndex;
                 }
             }
         }
 
-        public unsafe struct TreeRaySource : ITreeRaySource
+        unsafe struct TreeRaySource : ITreeRaySource
         {
-            TreeRay* rays;
             ushort* rayPointers;
             int rayCount;
 
-            public TreeRaySource(TreeRay* rays, ushort* rayPointerStack, int rayCount)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public TreeRaySource(ushort* rayPointerStack, int rayCount)
             {
-                this.rays = rays;
                 this.rayPointers = rayPointerStack;
                 this.rayCount = rayCount;
             }
@@ -176,18 +252,18 @@ namespace BepuPhysics.Trees
                 get { return rayCount; }
             }
 
-            public ref TreeRay this[int rayIndex]
+            public int this[int rayIndex]
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get
                 {
                     Debug.Assert(rayIndex >= 0 && rayIndex < RayCount, "The requested ray index must be within the source's region.");
-                    return ref rays[rayPointers[rayIndex]];
+                    return rayPointers[rayIndex];
                 }
             }
         }
 
-        unsafe void TestNode<TRayStackSource>(Node* node, ref TRayStackSource raySource) where TRayStackSource : struct, ITreeRaySource
+        unsafe void TestNode<TRayStackSource>(Node* node, byte depth, ref TRayStackSource raySource) where TRayStackSource : struct, ITreeRaySource
         {
             int a0Start = stackPointerA0;
             int bStart = stackPointerB;
@@ -195,14 +271,14 @@ namespace BepuPhysics.Trees
             BroadcastNode(ref *node, out var wideNode);
             TreeRayWide rayBundle;
 
-            for (int i = 0; i < raySource.RayCount; i += Vector<float>.Count)
+            for (int bundleStartIndex = 0; bundleStartIndex < raySource.RayCount; bundleStartIndex += Vector<float>.Count)
             {
-                var count = raySource.RayCount - i;
+                var count = raySource.RayCount - bundleStartIndex;
                 if (count > Vector<float>.Count)
                     count = Vector<float>.Count;
-                for (int j = 0; j < count; ++j)
+                for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                 {
-                    TreeRayWide.GatherIntoFirstSlot(ref raySource[i + j], ref GatherScatter.GetOffsetInstance(ref rayBundle, j));
+                    TreeRayWide.GatherIntoFirstSlot(ref batchRays[raySource[bundleStartIndex + innerIndex]], ref GatherScatter.GetOffsetInstance(ref rayBundle, innerIndex));
                 }
                 Intersect(ref rayBundle, ref wideNode.MinA, ref wideNode.MaxA, out var tA, out var aIntersected);
                 Intersect(ref rayBundle, ref wideNode.MinB, ref wideNode.MaxB, out var tB, out var bIntersected);
@@ -214,20 +290,20 @@ namespace BepuPhysics.Trees
                 var aFirst = Vector.LessThanOrEqual(tA, tB);
                 var bothIntersected = Vector.BitwiseAnd(aIntersected, bIntersected);
                 var shouldAllocateRayToA0 = Vector.BitwiseOr(Vector.BitwiseAnd(bothIntersected, aFirst), Vector.AndNot(aIntersected, bIntersected));
-                for (int j = 0; j < count; ++j)
+                for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                 {
                     //TODO: Examine codegen. Bounds checks MIGHT be elided, but if they aren't, we can work around them.
-                    ushort rayPointerIndex = (ushort)(i + j);
-                    if (shouldAllocateRayToA0[j] < 0)
+                    ushort rayPointerIndex = (ushort)(bundleStartIndex + innerIndex);
+                    if (shouldAllocateRayToA0[innerIndex] < 0)
                     {
                         rayIndicesA0[stackPointerA0++] = rayPointerIndex;
                     }
-                    else if (aIntersected[j] < 0)
+                    else if (aIntersected[innerIndex] < 0)
                     {
                         //If A was intersected but did not qualify to fit into the A0 slot, it must come after B.
                         rayIndicesA1[stackPointerA1++] = rayPointerIndex;
                     }
-                    if (bIntersected[j] < 0)
+                    if (bIntersected[innerIndex] < 0)
                     {
                         rayIndicesB[stackPointerB++] = rayPointerIndex;
                     }
@@ -235,77 +311,87 @@ namespace BepuPhysics.Trees
                 }
             }
             var a1Count = stackPointerA1 - a1Start;
+            Debug.Assert(depth < 255,
+                "We represent the depth as a byte under the assumption that there won't be any absurdly degenerate tree with extreme depth. This may be a poor assumption." +
+                "If you encounter this, consider reporting it as an issue on github. You can work around it by using a larger datatype for StackEntry.Depth, but I should probably also fix" +
+                "whatever caused a tree to generate so many levels if at all possible.");
+            byte newDepth = (byte)(depth + 1);
+            if(newDepth > preallocatedTreeDepth)
+            {
+                //We were not aggressive enough in preallocating for the ray stacks, apparently. Resize them aggressively.
+                ResizeRayStacks(maximumRaysPerTraversal, Math.Max(preallocatedTreeDepth * 2, 1));
+            }
+
             if (a1Count > 0)
             {
                 ref var newEntry = ref stack[stackPointer++];
                 newEntry.NodeIndex = node->A.Index;
-                newEntry.RayCount = (short)a1Count;
+                newEntry.RayCount = (ushort)a1Count;
+                newEntry.RayStack = 2;
+                newEntry.Depth = newDepth;
             }
             var bCount = stackPointerB - bStart;
             if (bCount > 0)
             {
                 ref var newEntry = ref stack[stackPointer++];
                 newEntry.NodeIndex = node->B.Index;
-                newEntry.RayCount = (short)bCount;
+                newEntry.RayCount = (ushort)bCount;
+                newEntry.RayStack = 1;
+                newEntry.Depth = newDepth;
             }
             var a0Count = stackPointerA0 - a0Start;
             if (a0Count > 0)
             {
                 ref var newEntry = ref stack[stackPointer++];
                 newEntry.NodeIndex = node->A.Index;
-                newEntry.RayCount = (short)a0Count;
+                newEntry.RayCount = (ushort)a0Count;
+                newEntry.RayStack = 0;
+                newEntry.Depth = newDepth;
             }
 
         }
 
-        Buffer<TreeRay> rayData;
-        public unsafe void TestRayBatch<TRaySource>(ref TRaySource raySource0, Tree tree) where TRaySource : IRaySource
+        /// <summary>
+        /// Tests any remaining batched rays against the Tree.
+        /// </summary>
+        public unsafe void Flush()
         {
-            if (tree.LeafCount == 0)
+            if (Tree.LeafCount == 0)
                 return;
-
-            if (rayData.Length < raySource0.RayCount)
-                pool.Resize(ref rayData, raySource0.RayCount, 0);
-            for (int i = 0; i < raySource0.RayCount; ++i)
-            {
-                ref var originalRay = ref raySource0[i];
-                ref var ray = ref rayData[i];
-                ray.InverseDirection = originalRay.
-            }
 
             //The traversal begins by assuming an implicit stack entry for the root node containing all ray pointers from 0 to rayCount-1.
             TreeRayWide rayBundle = default;
 
-            if (tree.LeafCount >= 2)
+            if (Tree.LeafCount >= 2)
             {
-                var raySource = new RootRaySource(rays, rayCount);
-                TestNode(tree.nodes, ref raySource);
+                var raySource = new RootRaySource(batchRayCount);
+                TestNode(Tree.nodes, 0, ref raySource);
             }
             else
             {
-                Debug.Assert(tree.LeafCount == 1);
+                Debug.Assert(Tree.LeafCount == 1);
                 //Only one child in the tree. Handle it as a special case.
                 int a0Start = stackPointerA0;
-                var node = tree.nodes;
+                var node = Tree.nodes;
                 BroadcastNode(ref *node, out var nodeWide);
-                for (int i = 0; i < rayCount; i += Vector<float>.Count)
+                for (int bundleStartIndex = 0; bundleStartIndex < batchRayCount; bundleStartIndex += Vector<float>.Count)
                 {
-                    var bundleStart = rays + i;
+                    var bundleStart = (TreeRay*)batchRays.Memory + bundleStartIndex;
 
-                    var count = rayCount - i;
+                    var count = batchRayCount - bundleStartIndex;
                     if (count > Vector<float>.Count)
                         count = Vector<float>.Count;
-                    for (int j = 0; j < count; ++j)
+                    for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                     {
-                        TreeRayWide.GatherIntoFirstSlot(ref bundleStart[j], ref GatherScatter.GetOffsetInstance(ref rayBundle, j));
+                        TreeRayWide.GatherIntoFirstSlot(ref bundleStart[innerIndex], ref GatherScatter.GetOffsetInstance(ref rayBundle, innerIndex));
                     }
                     Intersect(ref rayBundle, ref nodeWide.MinA, ref nodeWide.MaxA, out var tA, out var aIntersected);
-                    for (int j = 0; j < count; ++j)
+                    for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                     {
                         //TODO: Examine codegen. Bounds checks MIGHT be elided, but if they aren't, we can work around them.
-                        if (aIntersected[j] < 0)
+                        if (aIntersected[innerIndex] < 0)
                         {
-                            rayIndicesA0[stackPointerA0++] = (ushort)(i + j);
+                            rayIndicesA0[stackPointerA0++] = (ushort)(bundleStartIndex + innerIndex);
                         }
 
                     }
@@ -315,7 +401,9 @@ namespace BepuPhysics.Trees
                 {
                     ref var entry = ref stack[stackPointer++];
                     entry.NodeIndex = node->A.Index;
-                    entry.RayCount = (short)a0Count;
+                    entry.RayCount = (byte)a0Count;
+                    entry.RayStack = 0;
+                    entry.Depth = 1;
                 }
             }
             while (stackPointer > 0)
@@ -340,44 +428,52 @@ namespace BepuPhysics.Trees
                 }
                 if (entry.NodeIndex >= 0)
                 {
-                    var rayStackSource = new TreeRaySource(rays, rayStackStart, entry.RayCount);
-                    TestNode(tree.nodes + entry.NodeIndex, ref rayStackSource);
+                    var rayStackSource = new TreeRaySource(rayStackStart, entry.RayCount);
+                    TestNode(Tree.nodes + entry.NodeIndex, entry.Depth, ref rayStackSource);
                 }
                 else
                 {
                     //This is a leaf node.
-
+                    var rayStackSource = new LeafRaySource((TreeRay*)batchRays.Memory, (Ray*)batchOriginalRays.Memory, rayStackStart, entry.RayCount);
+                    leafTester.RayTest(ref rayStackSource);
                 }
             }
         }
-        public struct Ray
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Add(ref Vector3 origin, ref Vector3 direction, float maximumT)
         {
-            public Vector3 Origin;
-            public Vector3 Direction;
+            Debug.Assert(batchRayCount < maximumRaysPerTraversal);
+            ref var ray = ref batchRays[batchRayCount++];
+            //Note that this division has two odd properties:
+            //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
+            //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
+            //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
+            //2) To compensate for the clamp and abs, we reintroduce the sign in the numerator.
+            //TODO: There is a small chance that a gather/scatter vectorized implementation would be a win. Pretty questionable, though.
+            ray.InverseDirection = new Vector3(direction.X < 0 ? -1 : 1, direction.Y < 0 ? -1 : 1, direction.Z < 0 ? -1 : 1) / Vector3.Max(new Vector3(1e-15f), Vector3.Abs(direction));
+            ray.MaximumT = maximumT;
+            ray.OriginOverDirection = origin * ray.InverseDirection;
+            if (batchRayCount == maximumRaysPerTraversal)
+            {
+                Flush();
+                batchRayCount = 0;
+            }
         }
-        public interface IRaySource
-        {
-            int RayCount { get; }
-            ref Ray this[int rayIndex] { get; }
-        }
 
-        public void TestRays<TRaySource>(ref TRaySource raySource) where TRaySource : IRaySource
-        {
-
-        }
-
-
+        /// <summary>
+        /// Disposes all the resources backing the ray batcher.
+        /// </summary>
         public void Dispose()
         {
             pool.ReturnUnsafely(rayIndicesA0.Id);
             pool.ReturnUnsafely(rayIndicesB.Id);
             pool.ReturnUnsafely(rayIndicesA1.Id);
             pool.ReturnUnsafely(stack.Id);
+            pool.ReturnUnsafely(batchOriginalRays.Id);
+            pool.ReturnUnsafely(batchRays.Id);
             //Easier to catch bugs if the references get cleared.
-            rayIndicesA0 = new Buffer<ushort>();
-            rayIndicesB = new Buffer<ushort>();
-            rayIndicesA1 = new Buffer<ushort>();
-            stack = new Buffer<StackEntry>();
+            this = default;
         }
     }
 }
