@@ -142,6 +142,7 @@ namespace BepuPhysics.Trees
         struct TreeRayWide
         {
             public Vector3Wide OriginOverDirection;
+            public Vector<float> MaximumT;
             public Vector3Wide InverseDirection;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -150,9 +151,11 @@ namespace BepuPhysics.Trees
                 GatherScatter.GetFirst(ref wide.OriginOverDirection.X) = ray.OriginOverDirection.X;
                 GatherScatter.GetFirst(ref wide.OriginOverDirection.Y) = ray.OriginOverDirection.Y;
                 GatherScatter.GetFirst(ref wide.OriginOverDirection.Z) = ray.OriginOverDirection.Z;
+                GatherScatter.GetFirst(ref wide.MaximumT) = ray.MaximumT;
                 GatherScatter.GetFirst(ref wide.InverseDirection.X) = ray.InverseDirection.X;
                 GatherScatter.GetFirst(ref wide.InverseDirection.Y) = ray.InverseDirection.Y;
                 GatherScatter.GetFirst(ref wide.InverseDirection.Z) = ray.InverseDirection.Z;
+
             }
         }
 
@@ -177,24 +180,24 @@ namespace BepuPhysics.Trees
         static void Intersect(ref TreeRayWide ray, ref Vector3Wide min, ref Vector3Wide max, out Vector<float> tMin, out Vector<int> intersected)
         {
             //TODO: This is a good spot for FMA if/when we swap over to platform intrinsics.
-            var tX0 = ray.OriginOverDirection.X + min.X * ray.InverseDirection.X;
-            var tX1 = ray.OriginOverDirection.X + max.X * ray.InverseDirection.X;
+            var tX0 = min.X * ray.InverseDirection.X - ray.OriginOverDirection.X;
+            var tX1 = max.X * ray.InverseDirection.X - ray.OriginOverDirection.X;
             var tMinX = Vector.Min(tX0, tX1);
             var tMaxX = Vector.Max(tX0, tX1);
 
-            var tY0 = ray.OriginOverDirection.Y + min.Y * ray.InverseDirection.Y;
-            var tY1 = ray.OriginOverDirection.Y + max.Y * ray.InverseDirection.Y;
-            var tMinY = Vector.Min(tY0, tY0);
+            var tY0 = min.Y * ray.InverseDirection.Y - ray.OriginOverDirection.Y;
+            var tY1 = max.Y * ray.InverseDirection.Y - ray.OriginOverDirection.Y;
+            var tMinY = Vector.Min(tY0, tY1);
             var tMaxY = Vector.Max(tY0, tY1);
 
-            var tZ0 = ray.OriginOverDirection.Z + min.Z * ray.InverseDirection.Z;
-            var tZ1 = ray.OriginOverDirection.Z + max.Z * ray.InverseDirection.Z;
+            var tZ0 = min.Z * ray.InverseDirection.Z - ray.OriginOverDirection.Z;
+            var tZ1 = max.Z * ray.InverseDirection.Z - ray.OriginOverDirection.Z;
             var tMinZ = Vector.Min(tZ0, tZ1);
             var tMaxZ = Vector.Max(tZ0, tZ1);
 
-            tMin = Vector.Max(tMinX, Vector.Max(tMinY, tMinZ));
+            tMin = Vector.Max(Vector.Max(Vector<float>.Zero, tMinX), Vector.Max(tMinY, tMinZ));
             var tMax = Vector.Min(tMaxX, Vector.Min(tMaxY, tMaxZ));
-            intersected = Vector.LessThanOrEqual(tMin, tMax);
+            intersected = Vector.LessThanOrEqual(tMin, Vector.Min(ray.MaximumT, tMax));
         }
 
 
@@ -275,7 +278,8 @@ namespace BepuPhysics.Trees
                     count = Vector<float>.Count;
                 for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                 {
-                    TreeRayWide.GatherIntoFirstSlot(ref batchRays[raySource[bundleStartIndex + innerIndex]], ref GatherScatter.GetOffsetInstance(ref rayBundle, innerIndex));
+                    var rayIndex = raySource[bundleStartIndex + innerIndex];
+                    TreeRayWide.GatherIntoFirstSlot(ref batchRays[rayIndex], ref GatherScatter.GetOffsetInstance(ref rayBundle, innerIndex));
                 }
                 Intersect(ref rayBundle, ref wideNode.MinA, ref wideNode.MaxA, out var tA, out var aIntersected);
                 Intersect(ref rayBundle, ref wideNode.MinB, ref wideNode.MaxB, out var tB, out var bIntersected);
@@ -290,7 +294,7 @@ namespace BepuPhysics.Trees
                 for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                 {
                     //TODO: Examine codegen. Bounds checks MIGHT be elided, but if they aren't, we can work around them.
-                    ushort rayPointerIndex = (ushort)(bundleStartIndex + innerIndex);
+                    ushort rayPointerIndex = (ushort)raySource[bundleStartIndex + innerIndex];
                     if (shouldAllocateRayToA0[innerIndex] < 0)
                     {
                         rayIndicesA0[stackPointerA0++] = rayPointerIndex;
@@ -307,7 +311,6 @@ namespace BepuPhysics.Trees
 
                 }
             }
-            var a1Count = stackPointerA1 - a1Start;
             Debug.Assert(depth < 255,
                 "We represent the depth as a byte under the assumption that there won't be any absurdly degenerate tree with extreme depth. This may be a poor assumption." +
                 "If you encounter this, consider reporting it as an issue on github. You can work around it by using a larger datatype for StackEntry.Depth, but I should probably also fix" +
@@ -319,6 +322,7 @@ namespace BepuPhysics.Trees
                 ResizeRayStacks(rayCapacity, Math.Max(preallocatedTreeDepth * 2, 1));
             }
 
+            var a1Count = stackPointerA1 - a1Start;
             if (a1Count > 0)
             {
                 ref var newEntry = ref stack[stackPointer++];
@@ -415,13 +419,13 @@ namespace BepuPhysics.Trees
                 switch (entry.RayStack)
                 {
                     case 0:
-                        rayStackStart = (ushort*)rayIndicesA0.Memory + (stackPointerA0 -= entry.NodeIndex);
+                        rayStackStart = (ushort*)rayIndicesA0.Memory + (stackPointerA0 -= entry.RayCount);
                         break;
                     case 1:
-                        rayStackStart = (ushort*)rayIndicesB.Memory + (stackPointerB -= entry.NodeIndex);
+                        rayStackStart = (ushort*)rayIndicesB.Memory + (stackPointerB -= entry.RayCount);
                         break;
                     default:
-                        rayStackStart = (ushort*)rayIndicesA1.Memory + (stackPointerA1 -= entry.NodeIndex);
+                        rayStackStart = (ushort*)rayIndicesA1.Memory + (stackPointerA1 -= entry.RayCount);
                         break;
                 }
                 if (entry.NodeIndex >= 0)
@@ -453,11 +457,12 @@ namespace BepuPhysics.Trees
         {
             Debug.Assert(batchRayCount >= 0 && batchRayCount < rayCapacity,
                 "The accumulated rays must not exceed the maximum count per traversal; make sure ResetRays was called following a call to Add that returned true.");
-            ref var originalRay = ref batchOriginalRays[batchRayCount++];
+            var rayIndex = batchRayCount++;
+            ref var originalRay = ref batchOriginalRays[rayIndex];
             originalRay.Origin = origin;
             originalRay.Id = id;
             originalRay.Direction = direction;
-            ref var ray = ref batchRays[batchRayCount++];
+            ref var ray = ref batchRays[rayIndex];
             //Note that this division has two odd properties:
             //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
             //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result

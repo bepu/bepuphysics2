@@ -10,7 +10,7 @@ using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using System.Runtime.CompilerServices;
 
-namespace Demos.Demos
+namespace Demos.SpecializedTests
 {
     public class BroadPhaseStressTestDemo : Demo
     {

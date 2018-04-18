@@ -1,5 +1,6 @@
 ﻿using DemoRenderer;
 using Demos.Demos;
+using Demos.SpecializedTests;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -37,7 +38,7 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<BroadPhaseStressTestDemo>();
+            AddOption<RayBatcherTests>();
             AddOption<PyramidDemo>();
             AddOption<BlockChainDemo>();
             AddOption<ShapePileDemo>();
