@@ -20,7 +20,7 @@ namespace BepuPhysics.CollisionDetection
     {
         BroadPhase broadPhase;
         RayBatcher batcher;
-        
+
         struct LeafTester : ILeafTester
         {
             public TRayTester RayTester;
@@ -90,6 +90,97 @@ namespace BepuPhysics.CollisionDetection
         /// <summary>
         /// Disposes the underlying batcher resources.
         /// </summary>
+        public void Dispose()
+        {
+            batcher.Dispose();
+        }
+    }
+
+    public interface IRayHitHandler
+    {
+        bool AllowTest(ref RayData ray, ref float maximumT, CollidableReference collidable);
+        void OnRayHit(ref RayData ray, ref float maximumT, float t, ref Vector3 normal, CollidableReference collidable);
+    }
+
+
+    /// <summary>
+    /// Tests batches of rays against the simulation.
+    /// </summary>
+    /// <typeparam name="TRayHitHandler">Type used to handle hits against objects in the simulation.</typeparam>
+    public struct SimulationRayBatcher<TRayHitHandler> : IDisposable where TRayHitHandler : struct, IRayHitHandler
+    {
+        struct Dispatcher : IBroadPhaseRayTester
+        {
+            public Simulation Simulation;
+            public TRayHitHandler HitHandler;
+
+            unsafe void Test(CollidableReference reference, TypedIndex shape, ref RigidPose pose, ref RaySource rays)
+            {
+                //TODO: Need vectorized tests.
+                //TODO: consider adding a filter that only considers the leaf, not the ray-leaf combination. In many cases, users won't care about the ray-leaf combo, 
+                //and leaf-only filtering would be quite a bit simpler.
+                //TODO: Arguably, moving filtering into the core traversal would be the simplest option, and it would have some performance benefits. The raytest stack wouldn't 
+                //have all the unnecessary rays added to it in the first place.
+                for (int i = 0; i < rays.RayCount; ++i)
+                {
+                    rays.GetRay(i, out var ray, out var maxT);
+                    if (HitHandler.AllowTest(ref *ray, ref *maxT, reference))
+                    {
+                        if (Simulation.Shapes[shape.Type].RayTest(shape.Index, ref pose, ref ray->Origin, ref ray->Direction, out var t, out var normal))
+                        {
+                            HitHandler.OnRayHit(ref *ray, ref *maxT, t, ref normal, reference);
+                        }
+                    }
+                }
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public unsafe void RayTest(CollidableReference reference, ref RaySource rays)
+            {
+                if (reference.Mobility == CollidableMobility.Static)
+                {
+                    var index = Simulation.Statics.HandleToIndex[reference.Handle];
+                    Test(reference, Simulation.Statics.Collidables[index].Shape, ref Simulation.Statics.Poses[index], ref rays);
+                }
+                else
+                {
+                    ref var location = ref Simulation.Bodies.HandleToLocation[reference.Handle];
+                    ref var set = ref Simulation.Bodies.Sets[location.SetIndex];
+                    Test(reference, set.Collidables[location.Index].Shape, ref set.Poses[location.Index], ref rays);
+                }
+            }
+        }
+
+        BroadPhaseRayBatcher<Dispatcher> batcher;
+
+        public SimulationRayBatcher(BufferPool pool, Simulation simulation, TRayHitHandler hitHandler, int batcherRayCapacity = 2048)
+        {
+            var dispatcher = new Dispatcher { Simulation = simulation, HitHandler = hitHandler };
+            batcher = new BroadPhaseRayBatcher<Dispatcher>(pool, simulation.BroadPhase, dispatcher, batcherRayCapacity);
+        }
+
+        /// <summary>
+        /// Adds a ray to the batcher to test against the simulation.
+        /// If the underlying ray batcher hits its maximum capacity, all the accumulated rays will be tested against the simulation and the accumulator will be reset.
+        /// </summary>
+        /// <param name="origin">Origin of the ray to test against the simulation.</param>
+        /// <param name="direction">Direction of the ray to test against the simulation.</param>
+        /// <param name="maximumT">Maximum distance that the ray will travel in units of the ray's length.</param>
+        /// <param name="id">Identifier value for the ray. Callbacks will have access to the id.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Add(ref Vector3 origin, ref Vector3 direction, float maximumT, int id = 0)
+        {
+            batcher.Add(ref origin, ref direction, maximumT, id);
+        }
+
+        /// <summary>
+        /// Tests any accumulated rays against the broad phase trees and then resets the batcher.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Flush()
+        {
+            batcher.Flush();
+        }
+
         public void Dispose()
         {
             batcher.Dispose();

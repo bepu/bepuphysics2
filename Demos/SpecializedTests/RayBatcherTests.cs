@@ -27,9 +27,9 @@ namespace Demos.SpecializedTests
             var shape = new Sphere(0.5f);
             shape.ComputeInertia(1, out var sphereInertia);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 32;
-            const int height = 32;
-            const int length = 32;
+            const int width = 3;
+            const int height = 3;
+            const int length = 3;
             var spacing = new Vector3(1.01f);
             var halfSpacing = spacing / 2;
             float randomization = 0.9f;
@@ -44,7 +44,7 @@ namespace Demos.SpecializedTests
                     {
                         var r = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
                         //var location = spacing * (new Vector3(i, j, k)) + randomizationBase + r * randomizationSpan;
-                        var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, 1, -length) * 0.5f) + randomizationBase + r * randomizationSpan;
+                        var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, -height, -length) * 0.5f) + randomizationBase + r * randomizationSpan;
                         //var location = new Vector3();
                         if ((i + j + k) % 2 == 1)
                         {
@@ -89,8 +89,9 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            int rayCount = 8192;
+            int rayCount = 3;
             QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), rayCount, out testRays);
+            BufferPool.Take(rayCount, out hits);
 
             for (int i = 0; i < rayCount; ++i)
             {
@@ -126,48 +127,113 @@ namespace Demos.SpecializedTests
             public float MaximumT;
             public Vector3 Direction;
         }
-
         QuickList<TestRay, Buffer<TestRay>> testRays;
+
+        struct RayHit
+        {
+            public Vector3 Normal;
+            public float T;
+            public CollidableReference Collidable;
+            public bool Hit;
+        }
+        Buffer<RayHit> hits;
 
         unsafe struct RayTester : IBroadPhaseRayTester
         {
             public int* IntersectionCount;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void RayTest(CollidableReference collidable, ref RaySource rays)
             {
                 *IntersectionCount += rays.RayCount;
             }
         }
 
+
+        unsafe struct HitHandler : IRayHitHandler
+        {
+            public Buffer<RayHit> Hits;
+            public int* IntersectionCount;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool AllowTest(ref RayData ray, ref float maximumT, CollidableReference collidable)
+            {
+                return true;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void OnRayHit(ref RayData ray, ref float maximumT, float t, ref Vector3 normal, CollidableReference collidable)
+            {
+                //if (t < maximumT)
+                //    maximumT = t;
+                ref var hit = ref Hits[ray.Id];
+                hit.Normal = normal;
+                hit.T = t;
+                hit.Collidable = collidable;
+                ++*IntersectionCount;
+            }
+        }
+
+
         const int sampleCount = 128;
-        TimingsRingBuffer times = new TimingsRingBuffer(sampleCount);
+        TimingsRingBuffer broadPhaseQueryTimes = new TimingsRingBuffer(sampleCount);
+        TimingsRingBuffer simulationQueryTimes = new TimingsRingBuffer(sampleCount);
         long frameCount;
         public unsafe override void Update(Input input, float dt)
         {
             base.Update(input, dt);
 
-            int leafIntersectionCount = 0;
-            var rayTester = new RayTester { IntersectionCount = &leafIntersectionCount };
-            var batcher = new BroadPhaseRayBatcher<RayTester>(BufferPool, Simulation.BroadPhase, rayTester);
-
-            var start = Stopwatch.GetTimestamp();
-            for (int i = 0; i < testRays.Count; ++i)
             {
-                ref var ray = ref testRays[i];
-                batcher.Add(ref ray.Origin, ref ray.Direction, ray.MaximumT, i);
-            }
-            batcher.Flush();
-            var stop = Stopwatch.GetTimestamp();
-            times.Add((stop - start) / (double)Stopwatch.Frequency);
+                int leafIntersectionCount = 0;
+                var rayTester = new RayTester { IntersectionCount = &leafIntersectionCount };
+                var batcher = new BroadPhaseRayBatcher<RayTester>(BufferPool, Simulation.BroadPhase, rayTester);
 
-            batcher.Dispose();
-            if (frameCount++ % sampleCount == 0)
-            {
-                var stats = times.ComputeStats();
-                Console.WriteLine($"Test times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {leafIntersectionCount} intersectionCount");
-                Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
-                Console.WriteLine($"Time per intersection: {1e9 * stats.Average / leafIntersectionCount} ns");
-                Console.WriteLine($"Intersections per ray: {leafIntersectionCount / (double)testRays.Count}");
+                var start = Stopwatch.GetTimestamp();
+                for (int i = 0; i < testRays.Count; ++i)
+                {
+                    ref var ray = ref testRays[i];
+                    batcher.Add(ref ray.Origin, ref ray.Direction, ray.MaximumT, i);
+                }
+                batcher.Flush();
+                var stop = Stopwatch.GetTimestamp();
+                broadPhaseQueryTimes.Add((stop - start) / (double)Stopwatch.Frequency);
+
+                batcher.Dispose();
+                if (frameCount % sampleCount == 0)
+                {
+                    var stats = broadPhaseQueryTimes.ComputeStats();
+                    Console.WriteLine($"BroadPhase Query times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {leafIntersectionCount} intersectionCount");
+                    Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
+                    Console.WriteLine($"Time per intersection: {1e9 * stats.Average / leafIntersectionCount} ns");
+                    Console.WriteLine($"Intersections per ray: {leafIntersectionCount / (double)testRays.Count}");
+                }
             }
+
+            {
+                int intersectionCount = 0;
+                var hitHandler = new HitHandler { Hits = hits, IntersectionCount = &intersectionCount };
+                var batcher = new SimulationRayBatcher<HitHandler>(BufferPool, Simulation, hitHandler);
+                var start = Stopwatch.GetTimestamp();
+                for (int i = 0; i < testRays.Count; ++i)
+                {
+                    ref var ray = ref testRays[i];
+                    batcher.Add(ref ray.Origin, ref ray.Direction, ray.MaximumT, i);
+                }
+                batcher.Flush();
+                var stop = Stopwatch.GetTimestamp();
+                simulationQueryTimes.Add((stop - start) / (double)Stopwatch.Frequency);
+
+                batcher.Dispose();
+                if (frameCount % sampleCount == 0)
+                {
+                    var stats = simulationQueryTimes.ComputeStats();
+                    Console.WriteLine($"Simulation Query times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {intersectionCount} intersectionCount");
+                    Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
+                    Console.WriteLine($"Time per intersection: {1e9 * stats.Average / intersectionCount} ns");
+                    Console.WriteLine($"Intersections per ray: {intersectionCount / (double)testRays.Count}");
+                }
+            }
+
+            ++frameCount;
+
         }
 
     }

@@ -358,6 +358,8 @@ namespace BepuPhysics.Trees
         /// <param name="tree">Tree to test the accumulated rays against.</param>
         public unsafe void TestRays<TLeafTester>(Tree tree, ref TLeafTester leafTester) where TLeafTester : ILeafTester
         {
+            Debug.Assert(stackPointerA0 == 0 && stackPointerB == 0 && stackPointerA1 == 0 && stackPointer == 0,
+                "At the beginning of the traversal, there should exist no entries on the traversal stack.");
             if (tree.LeafCount == 0)
                 return;
 
@@ -403,7 +405,7 @@ namespace BepuPhysics.Trees
                 {
                     ref var entry = ref stack[stackPointer++];
                     entry.NodeIndex = node->A.Index;
-                    entry.RayCount = (byte)a0Count;
+                    entry.RayCount = (ushort)a0Count;
                     entry.RayStack = 0;
                     entry.Depth = 1;
                 }
