@@ -113,7 +113,7 @@ namespace BepuPhysics.CollisionDetection
         {
             public Simulation Simulation;
             public TRayHitHandler HitHandler;
-
+            
             unsafe void Test(CollidableReference reference, TypedIndex shape, ref RigidPose pose, ref RaySource rays)
             {
                 //TODO: Need vectorized tests.
@@ -126,7 +126,7 @@ namespace BepuPhysics.CollisionDetection
                     rays.GetRay(i, out var ray, out var maxT);
                     if (HitHandler.AllowTest(ref *ray, ref *maxT, reference))
                     {
-                        if (Simulation.Shapes[shape.Type].RayTest(shape.Index, ref pose, ref ray->Origin, ref ray->Direction, out var t, out var normal))
+                        if (Simulation.Shapes[shape.Type].RayTest(shape.Index, ref pose, ref ray->Origin, ref ray->Direction, out var t, out var normal) && t < *maxT)
                         {
                             HitHandler.OnRayHit(ref *ray, ref *maxT, t, ref normal, reference);
                         }

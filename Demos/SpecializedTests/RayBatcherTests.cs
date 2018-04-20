@@ -27,10 +27,10 @@ namespace Demos.SpecializedTests
             var shape = new Sphere(0.5f);
             shape.ComputeInertia(1, out var sphereInertia);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 3;
-            const int height = 3;
-            const int length = 3;
-            var spacing = new Vector3(1.01f);
+            const int width = 32;
+            const int height = 32;
+            const int length = 32;
+            var spacing = new Vector3(10.01f);
             var halfSpacing = spacing / 2;
             float randomization = 0.9f;
             var randomizationSpan = (spacing - new Vector3(1)) * randomization;
@@ -89,7 +89,7 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            int rayCount = 3;
+            int rayCount = 8192;
             QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), rayCount, out testRays);
             BufferPool.Take(rayCount, out hits);
 
@@ -162,13 +162,16 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnRayHit(ref RayData ray, ref float maximumT, float t, ref Vector3 normal, CollidableReference collidable)
             {
-                //if (t < maximumT)
-                //    maximumT = t;
+                maximumT = t;
                 ref var hit = ref Hits[ray.Id];
-                hit.Normal = normal;
-                hit.T = t;
-                hit.Collidable = collidable;
-                ++*IntersectionCount;
+                if (t < hit.T)
+                {
+                    if (hit.T == float.MaxValue)
+                        ++*IntersectionCount;
+                    hit.Normal = normal;
+                    hit.T = t;
+                    hit.Collidable = collidable;
+                }
             }
         }
 
@@ -209,6 +212,10 @@ namespace Demos.SpecializedTests
 
             {
                 int intersectionCount = 0;
+                for (int i = 0; i < testRays.Count; ++i)
+                {
+                    hits[i].T = float.MaxValue;
+                }
                 var hitHandler = new HitHandler { Hits = hits, IntersectionCount = &intersectionCount };
                 var batcher = new SimulationRayBatcher<HitHandler>(BufferPool, Simulation, hitHandler);
                 var start = Stopwatch.GetTimestamp();
@@ -231,7 +238,6 @@ namespace Demos.SpecializedTests
                     Console.WriteLine($"Intersections per ray: {intersectionCount / (double)testRays.Count}");
                 }
             }
-
             ++frameCount;
 
         }

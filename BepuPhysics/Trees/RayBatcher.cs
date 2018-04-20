@@ -62,8 +62,9 @@ namespace BepuPhysics.Trees
         public void GetRay(int rayIndex, out RayData* ray, out float* maximumT)
         {
             Debug.Assert(rayIndex >= 0 && rayIndex < rayCount, "The ray index must be within 0 and RayCount - 1.");
-            ray = rays + rayIndex;
-            maximumT = &treeRays[rayIndex].MaximumT;
+            var remappedIndex = rayPointers[rayIndex];
+            ray = rays + remappedIndex;
+            maximumT = &treeRays[remappedIndex].MaximumT;
         }
 
     }
