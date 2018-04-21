@@ -72,6 +72,7 @@ namespace BepuPhysics.Trees
     public interface ILeafTester
     {
         void RayTest(int leafIndex, ref RaySource rays);
+        unsafe void RayTest(int leafIndex, RayData* rayData, float* maximumT);
     }
 
 
@@ -99,6 +100,8 @@ namespace BepuPhysics.Trees
         int rayCapacity;
         int preallocatedTreeDepth;
 
+        Buffer<int> fallbackStack;
+
         public int RayCapacity { get { return rayCapacity; } }
         public int RayCount { get { return batchRayCount; } }
 
@@ -115,8 +118,10 @@ namespace BepuPhysics.Trees
             batchRayCount = 0;
             pool.Take(rayCapacity, out batchRays);
             pool.Take(rayCapacity, out batchOriginalRays);
-            Debug.Assert(rayCapacity <= ushort.MaxValue, $"The number of rays per traversal must be less than {ushort.MaxValue}; ray pointers are stored in 2 bytes.");
+            Debug.Assert(rayCapacity <= ushort.MaxValue, $"The number of rays per traversal must be less than {ushort.MaxValue}.");
 
+            //Note that this assumes the tree has a depth of less than 256.
+            pool.Take(256, out fallbackStack);
             ResizeRayStacks(rayCapacity, treeDepthForPreallocation);
 
             stackPointer = stackPointerA0 = stackPointerB = stackPointerA1 = 0;
@@ -294,7 +299,6 @@ namespace BepuPhysics.Trees
                 var shouldAllocateRayToA0 = Vector.BitwiseOr(Vector.BitwiseAnd(bothIntersected, aFirst), Vector.AndNot(aIntersected, bIntersected));
                 for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                 {
-                    //TODO: Examine codegen. Bounds checks MIGHT be elided, but if they aren't, we can work around them.
                     ushort rayPointerIndex = (ushort)raySource[bundleStartIndex + innerIndex];
                     if (shouldAllocateRayToA0[innerIndex] < 0)
                     {
@@ -361,6 +365,9 @@ namespace BepuPhysics.Trees
         {
             Debug.Assert(stackPointerA0 == 0 && stackPointerB == 0 && stackPointerA1 == 0 && stackPointer == 0,
                 "At the beginning of the traversal, there should exist no entries on the traversal stack.");
+            Debug.Assert(tree.ComputeMaximumDepth() < fallbackStack.Length, "At the moment, we assume that no tree will have more than 256 levels. " +
+                "This isn't a hard guarantee; if you hit this, please report it- it probably means there is some goofy pathological case badness in the builder or refiner." +
+                "Would be nice to replace this with a properly tracked tree depth so correctness isn't conditional.");
             if (tree.LeafCount == 0)
                 return;
 
@@ -431,16 +438,30 @@ namespace BepuPhysics.Trees
                         rayStackStart = (ushort*)rayIndicesA1.Memory + (stackPointerA1 -= entry.RayCount);
                         break;
                 }
-                if (entry.NodeIndex >= 0)
+
+                if (entry.RayCount >= 4)
                 {
-                    var rayStackSource = new TreeRaySource(rayStackStart, entry.RayCount);
-                    TestNode(tree.nodes + entry.NodeIndex, entry.Depth, ref rayStackSource);
+                    //There are enough rays that we can justify a vectorized approach.
+                    if (entry.NodeIndex >= 0)
+                    {
+                        var rayStackSource = new TreeRaySource(rayStackStart, entry.RayCount);
+                        TestNode(tree.nodes + entry.NodeIndex, entry.Depth, ref rayStackSource);
+                    }
+                    else
+                    {
+                        //This is a leaf node.
+                        var rayStackSource = new RaySource((TreeRay*)batchRays.Memory, (RayData*)batchOriginalRays.Memory, rayStackStart, entry.RayCount);
+                        leafTester.RayTest(Tree.Encode(entry.NodeIndex), ref rayStackSource);
+                    }
                 }
                 else
                 {
-                    //This is a leaf node.
-                    var rayStackSource = new RaySource((TreeRay*)batchRays.Memory, (RayData*)batchOriginalRays.Memory, rayStackStart, entry.RayCount);
-                    leafTester.RayTest(Tree.Encode(entry.NodeIndex), ref rayStackSource);
+                    //Not enough rays remain to justify group tests. Fall back to a per-ray traversal.
+                    for (int i = 0; i < entry.RayCount; ++i)
+                    {
+                        var rayIndex = rayStackStart[i];
+                        tree.RayCast(entry.NodeIndex, (TreeRay*)batchRays.Memory + rayIndex, (RayData*)batchOriginalRays.Memory + rayIndex, (int*)fallbackStack.Memory, ref leafTester);
+                    }
                 }
             }
             Debug.Assert(stackPointerA0 == 0 && stackPointerB == 0 && stackPointerA1 == 0 && stackPointer == 0,

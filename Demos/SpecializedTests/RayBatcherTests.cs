@@ -27,10 +27,10 @@ namespace Demos.SpecializedTests
             var shape = new Sphere(0.5f);
             shape.ComputeInertia(1, out var sphereInertia);
             var shapeIndex = Simulation.Shapes.Add(ref shape);
-            const int width = 32;
-            const int height = 32;
-            const int length = 32;
-            var spacing = new Vector3(10.01f);
+            const int width = 16;
+            const int height = 16;
+            const int length = 16;
+            var spacing = new Vector3(2.01f);
             var halfSpacing = spacing / 2;
             float randomization = 0.9f;
             var randomizationSpan = (spacing - new Vector3(1)) * randomization;
@@ -89,7 +89,7 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            int rayCount = 8192;
+            int rayCount = 20000;
             QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), rayCount, out testRays);
             BufferPool.Take(rayCount, out hits);
 
@@ -98,8 +98,8 @@ namespace Demos.SpecializedTests
                 var direction = GetDirection(random);
                 testRays.AllocateUnsafely() = new TestRay
                 {
-                    Origin = -direction * 300,
-                    Direction = direction,
+                    Origin = GetDirection(random) * width * spacing * 0.25f,
+                    Direction = GetDirection(random),
                     MaximumT = 1000// 50 + (float)random.NextDouble() * 300
                     //Origin = new Vector3(-100, 0, 0),
                     //Direction = new Vector3(1, 0, 0),
@@ -146,6 +146,11 @@ namespace Demos.SpecializedTests
             {
                 *IntersectionCount += rays.RayCount;
             }
+
+            public void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT)
+            {
+                ++*IntersectionCount;
+            }
         }
 
 
@@ -176,7 +181,7 @@ namespace Demos.SpecializedTests
         }
 
 
-        const int sampleCount = 128;
+        const int sampleCount = 16;
         TimingsRingBuffer broadPhaseQueryTimes = new TimingsRingBuffer(sampleCount);
         TimingsRingBuffer simulationQueryTimes = new TimingsRingBuffer(sampleCount);
         long frameCount;
@@ -217,7 +222,7 @@ namespace Demos.SpecializedTests
                     hits[i].T = float.MaxValue;
                 }
                 var hitHandler = new HitHandler { Hits = hits, IntersectionCount = &intersectionCount };
-                var batcher = new SimulationRayBatcher<HitHandler>(BufferPool, Simulation, hitHandler);
+                var batcher = new SimulationRayBatcher<HitHandler>(BufferPool, Simulation, hitHandler, 32768);
                 var start = Stopwatch.GetTimestamp();
                 for (int i = 0; i < testRays.Count; ++i)
                 {

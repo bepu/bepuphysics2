@@ -10,6 +10,7 @@ namespace BepuPhysics.CollisionDetection
     public interface IBroadPhaseRayTester
     {
         void RayTest(CollidableReference collidable, ref RaySource rays);
+        unsafe void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT);
     }
 
     /// <summary>
@@ -30,6 +31,12 @@ namespace BepuPhysics.CollisionDetection
             public void RayTest(int leafIndex, ref RaySource rays)
             {
                 RayTester.RayTest(Leaves[leafIndex], ref rays);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public unsafe void RayTest(int leafIndex, RayData* rayData, float* maximumT)
+            {
+                RayTester.RayTest(Leaves[leafIndex], rayData, maximumT);
             }
         }
 
@@ -113,7 +120,9 @@ namespace BepuPhysics.CollisionDetection
         {
             public Simulation Simulation;
             public TRayHitHandler HitHandler;
-            
+
+
+
             unsafe void Test(CollidableReference reference, TypedIndex shape, ref RigidPose pose, ref RaySource rays)
             {
                 //TODO: Need vectorized tests.
@@ -146,6 +155,36 @@ namespace BepuPhysics.CollisionDetection
                     ref var location = ref Simulation.Bodies.HandleToLocation[reference.Handle];
                     ref var set = ref Simulation.Bodies.Sets[location.SetIndex];
                     Test(reference, set.Collidables[location.Index].Shape, ref set.Poses[location.Index], ref rays);
+                }
+            }
+            unsafe void Test(CollidableReference reference, TypedIndex shape, ref RigidPose pose, RayData* ray, float* maximumT)
+            {
+                //TODO: Need vectorized tests.
+                //TODO: consider adding a filter that only considers the leaf, not the ray-leaf combination. In many cases, users won't care about the ray-leaf combo, 
+                //and leaf-only filtering would be quite a bit simpler.
+                //TODO: Arguably, moving filtering into the core traversal would be the simplest option, and it would have some performance benefits. The raytest stack wouldn't 
+                //have all the unnecessary rays added to it in the first place.
+                if (HitHandler.AllowTest(ref *ray, ref *maximumT, reference))
+                {
+                    if (Simulation.Shapes[shape.Type].RayTest(shape.Index, ref pose, ref ray->Origin, ref ray->Direction, out var t, out var normal) && t < *maximumT)
+                    {
+                        HitHandler.OnRayHit(ref *ray, ref *maximumT, t, ref normal, reference);
+                    }
+                }
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public unsafe void RayTest(CollidableReference reference, RayData* rayData, float* maximumT)
+            {
+                if (reference.Mobility == CollidableMobility.Static)
+                {
+                    var index = Simulation.Statics.HandleToIndex[reference.Handle];
+                    Test(reference, Simulation.Statics.Collidables[index].Shape, ref Simulation.Statics.Poses[index], rayData, maximumT);
+                }
+                else
+                {
+                    ref var location = ref Simulation.Bodies.HandleToLocation[reference.Handle];
+                    ref var set = ref Simulation.Bodies.Sets[location.SetIndex];
+                    Test(reference, set.Collidables[location.Index].Shape, ref set.Poses[location.Index], rayData, maximumT);
                 }
             }
         }
