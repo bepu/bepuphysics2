@@ -26,7 +26,7 @@ namespace BepuPhysics.Trees
             return t < earliestExit && t < ray->MaximumT;
         }
 
-        
+
         internal unsafe void RayCast<TLeafTester>(int nodeIndex, TreeRay* treeRay, RayData* rayData, int* stack, ref TLeafTester leafTester) where TLeafTester : ILeafTester
         {
             Debug.Assert((nodeIndex >= 0 && nodeIndex < nodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < leafCount));
@@ -54,6 +54,7 @@ namespace BepuPhysics.Trees
                     if (aIntersected && bIntersected)
                     {
                         //Visit the earlier AABB intersection first.
+                        Debug.Assert(stackEnd < TraversalStackCapacity - 1, "At the moment, we use a fixed size stack. Until we have explicitly tracked depths, watch out for excessive depth traversals.");
                         if (tA < tB)
                         {
                             nodeIndex = node->A.Index;
@@ -84,6 +85,37 @@ namespace BepuPhysics.Trees
                 }
             }
 
+        }
+
+        internal const int TraversalStackCapacity = 256;
+
+        internal unsafe void RayCast<TLeafTester>(TreeRay* treeRay, RayData* rayData, ref TLeafTester leafTester) where TLeafTester : ILeafTester
+        {
+            if (leafCount == 0)
+                return;
+            
+            if (leafCount == 1)
+            {
+                //If the first node isn't filled, we have to use a special case.
+                if (Intersects(ref nodes->A.Min, ref nodes->A.Max, treeRay, out var tA))
+                {
+                    leafTester.RayTest(0, rayData, &treeRay->MaximumT);
+                }
+            }
+            else
+            {
+                //TODO: Explicitly tracking depth in the tree during construction/refinement is practically required to guarantee correctness.
+                //While it's exceptionally rare that any tree would have more than 256 levels, the worst case of stomping stack memory is not acceptable in the long run.
+                var stack = stackalloc int[TraversalStackCapacity];                
+                RayCast(0, treeRay, rayData, stack, ref leafTester);
+            }
+
+        }
+
+        public unsafe void RayCast<TLeafTester>(ref Vector3 origin, ref Vector3 direction, float maximumT, ref TLeafTester leafTester, int id = 0) where TLeafTester : ILeafTester
+        {
+            TreeRay.CreateFrom(ref origin, ref direction, maximumT, id, out var rayData, out var treeRay);
+            RayCast(&treeRay, &rayData, ref leafTester);
         }
     }
 }

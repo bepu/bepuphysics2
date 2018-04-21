@@ -9,20 +9,23 @@ namespace BepuPhysics.CollisionDetection
 {
     public interface IBroadPhaseRayTester
     {
-        void RayTest(CollidableReference collidable, ref RaySource rays);
         unsafe void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT);
+    }
+    public interface IBroadPhaseBatchedRayTester : IBroadPhaseRayTester
+    {
+        void RayTest(CollidableReference collidable, ref RaySource rays);
     }
 
     /// <summary>
     /// Helps test the broad phase's active and static trees with a custom leaf tester.
     /// </summary>
     /// <typeparam name="TRayTester">Type used to test rays against leaves.</typeparam>
-    public struct BroadPhaseRayBatcher<TRayTester> : IDisposable where TRayTester : struct, IBroadPhaseRayTester
+    public struct BroadPhaseRayBatcher<TRayTester> : IDisposable where TRayTester : struct, IBroadPhaseBatchedRayTester
     {
         BroadPhase broadPhase;
         RayBatcher batcher;
 
-        struct LeafTester : ILeafTester
+        struct LeafTester : IBatchedLeafTester
         {
             public TRayTester RayTester;
             public Buffer<CollidableReference> Leaves;
@@ -116,7 +119,7 @@ namespace BepuPhysics.CollisionDetection
     /// <typeparam name="TRayHitHandler">Type used to handle hits against objects in the simulation.</typeparam>
     public struct SimulationRayBatcher<TRayHitHandler> : IDisposable where TRayHitHandler : struct, IRayHitHandler
     {
-        struct Dispatcher : IBroadPhaseRayTester
+        struct Dispatcher : IBroadPhaseBatchedRayTester
         {
             public Simulation Simulation;
             public TRayHitHandler HitHandler;

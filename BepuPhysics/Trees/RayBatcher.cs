@@ -24,6 +24,23 @@ namespace BepuPhysics.Trees
         public Vector3 OriginOverDirection;
         public float MaximumT;
         public Vector3 InverseDirection;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void CreateFrom(ref Vector3 origin, ref Vector3 direction, float maximumT, int id, out RayData rayData, out TreeRay treeRay)
+        {
+            rayData.Origin = origin;
+            rayData.Id = id;
+            rayData.Direction = direction;
+            //Note that this division has two odd properties:
+            //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
+            //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
+            //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
+            //2) To compensate for the clamp and abs, we reintroduce the sign in the numerator.
+            //TODO: There is a small chance that a gather/scatter vectorized implementation would be a win. Pretty questionable, though.
+            treeRay.InverseDirection = new Vector3(direction.X < 0 ? -1 : 1, direction.Y < 0 ? -1 : 1, direction.Z < 0 ? -1 : 1) / Vector3.Max(new Vector3(1e-15f), Vector3.Abs(direction));
+            treeRay.MaximumT = maximumT;
+            treeRay.OriginOverDirection = origin * treeRay.InverseDirection;
+        }
     }
 
     public unsafe struct RaySource
@@ -71,8 +88,11 @@ namespace BepuPhysics.Trees
 
     public interface ILeafTester
     {
-        void RayTest(int leafIndex, ref RaySource rays);
         unsafe void RayTest(int leafIndex, RayData* rayData, float* maximumT);
+    }
+    public interface IBatchedLeafTester : ILeafTester
+    {
+        void RayTest(int leafIndex, ref RaySource rays);
     }
 
 
@@ -120,8 +140,8 @@ namespace BepuPhysics.Trees
             pool.Take(rayCapacity, out batchOriginalRays);
             Debug.Assert(rayCapacity <= ushort.MaxValue, $"The number of rays per traversal must be less than {ushort.MaxValue}.");
 
-            //Note that this assumes the tree has a depth of less than 256.
-            pool.Take(256, out fallbackStack);
+            //Note that this assumes the tree has a fixed maximum depth. Note a great idea in the long term.
+            pool.Take(Tree.TraversalStackCapacity, out fallbackStack);
             ResizeRayStacks(rayCapacity, treeDepthForPreallocation);
 
             stackPointer = stackPointerA0 = stackPointerB = stackPointerA1 = 0;
@@ -361,7 +381,7 @@ namespace BepuPhysics.Trees
         /// Tests any batched rays against the given tree.
         /// </summary>
         /// <param name="tree">Tree to test the accumulated rays against.</param>
-        public unsafe void TestRays<TLeafTester>(Tree tree, ref TLeafTester leafTester) where TLeafTester : ILeafTester
+        public unsafe void TestRays<TLeafTester>(Tree tree, ref TLeafTester leafTester) where TLeafTester : IBatchedLeafTester
         {
             Debug.Assert(stackPointerA0 == 0 && stackPointerB == 0 && stackPointerA1 == 0 && stackPointer == 0,
                 "At the beginning of the traversal, there should exist no entries on the traversal stack.");
@@ -439,7 +459,7 @@ namespace BepuPhysics.Trees
                         break;
                 }
 
-                if (entry.RayCount >= 4)
+                if (true)//entry.RayCount >= 4)
                 {
                     //There are enough rays that we can justify a vectorized approach.
                     if (entry.NodeIndex >= 0)
@@ -468,6 +488,7 @@ namespace BepuPhysics.Trees
                 "By the end of the traversal, there should exist no entries on the traversal stack.");
         }
 
+
         /// <summary>
         /// Adds a ray to the batcher. Returns true if the batcher has reached maximum ray capacity and needs to be reset in order to continue adding rays.
         /// </summary>
@@ -486,16 +507,7 @@ namespace BepuPhysics.Trees
             originalRay.Origin = origin;
             originalRay.Id = id;
             originalRay.Direction = direction;
-            ref var ray = ref batchRays[rayIndex];
-            //Note that this division has two odd properties:
-            //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
-            //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
-            //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
-            //2) To compensate for the clamp and abs, we reintroduce the sign in the numerator.
-            //TODO: There is a small chance that a gather/scatter vectorized implementation would be a win. Pretty questionable, though.
-            ray.InverseDirection = new Vector3(direction.X < 0 ? -1 : 1, direction.Y < 0 ? -1 : 1, direction.Z < 0 ? -1 : 1) / Vector3.Max(new Vector3(1e-15f), Vector3.Abs(direction));
-            ray.MaximumT = maximumT;
-            ray.OriginOverDirection = origin * ray.InverseDirection;
+            TreeRay.CreateFrom(ref origin, ref direction, maximumT, id, out batchOriginalRays[rayIndex], out batchRays[rayIndex]);
             return batchRayCount == rayCapacity;
         }
 

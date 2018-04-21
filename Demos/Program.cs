@@ -1,6 +1,7 @@
 ﻿using BepuUtilities;
 using DemoContentLoader;
 using DemoRenderer.UI;
+using Demos.SpecializedTests;
 using DemoUtilities;
 using OpenTK;
 

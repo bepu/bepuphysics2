@@ -89,7 +89,7 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            int rayCount = 20000;
+            int rayCount = 1 << 20;
             QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), rayCount, out testRays);
             BufferPool.Take(rayCount, out hits);
 
@@ -189,31 +189,31 @@ namespace Demos.SpecializedTests
         {
             base.Update(input, dt);
 
-            {
-                int leafIntersectionCount = 0;
-                var rayTester = new RayTester { IntersectionCount = &leafIntersectionCount };
-                var batcher = new BroadPhaseRayBatcher<RayTester>(BufferPool, Simulation.BroadPhase, rayTester);
+            //{
+            //    int leafIntersectionCount = 0;
+            //    var rayTester = new RayTester { IntersectionCount = &leafIntersectionCount };
+            //    var batcher = new BroadPhaseRayBatcher<RayTester>(BufferPool, Simulation.BroadPhase, rayTester);
 
-                var start = Stopwatch.GetTimestamp();
-                for (int i = 0; i < testRays.Count; ++i)
-                {
-                    ref var ray = ref testRays[i];
-                    batcher.Add(ref ray.Origin, ref ray.Direction, ray.MaximumT, i);
-                }
-                batcher.Flush();
-                var stop = Stopwatch.GetTimestamp();
-                broadPhaseQueryTimes.Add((stop - start) / (double)Stopwatch.Frequency);
+            //    var start = Stopwatch.GetTimestamp();
+            //    for (int i = 0; i < testRays.Count; ++i)
+            //    {
+            //        ref var ray = ref testRays[i];
+            //        batcher.Add(ref ray.Origin, ref ray.Direction, ray.MaximumT, i);
+            //    }
+            //    batcher.Flush();
+            //    var stop = Stopwatch.GetTimestamp();
+            //    broadPhaseQueryTimes.Add((stop - start) / (double)Stopwatch.Frequency);
 
-                batcher.Dispose();
-                if (frameCount % sampleCount == 0)
-                {
-                    var stats = broadPhaseQueryTimes.ComputeStats();
-                    Console.WriteLine($"BroadPhase Query times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {leafIntersectionCount} intersectionCount");
-                    Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
-                    Console.WriteLine($"Time per intersection: {1e9 * stats.Average / leafIntersectionCount} ns");
-                    Console.WriteLine($"Intersections per ray: {leafIntersectionCount / (double)testRays.Count}");
-                }
-            }
+            //    batcher.Dispose();
+            //    if (frameCount % sampleCount == 0)
+            //    {
+            //        var stats = broadPhaseQueryTimes.ComputeStats();
+            //        Console.WriteLine($"BroadPhase Query times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {leafIntersectionCount} intersectionCount");
+            //        Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
+            //        Console.WriteLine($"Time per intersection: {1e9 * stats.Average / leafIntersectionCount} ns");
+            //        Console.WriteLine($"Intersections per ray: {leafIntersectionCount / (double)testRays.Count}");
+            //    }
+            //}
 
             {
                 int intersectionCount = 0;
@@ -237,7 +237,33 @@ namespace Demos.SpecializedTests
                 if (frameCount % sampleCount == 0)
                 {
                     var stats = simulationQueryTimes.ComputeStats();
-                    Console.WriteLine($"Simulation Query times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {intersectionCount} intersectionCount");
+                    Console.WriteLine($"Batched times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {intersectionCount} intersectionCount");
+                    Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
+                    Console.WriteLine($"Time per intersection: {1e9 * stats.Average / intersectionCount} ns");
+                    Console.WriteLine($"Intersections per ray: {intersectionCount / (double)testRays.Count}");
+                }
+            }
+
+            {
+                int intersectionCount = 0;
+                for (int i = 0; i < testRays.Count; ++i)
+                {
+                    hits[i].T = float.MaxValue;
+                }
+                var hitHandler = new HitHandler { Hits = hits, IntersectionCount = &intersectionCount };
+                var start = Stopwatch.GetTimestamp();
+                for (int i = 0; i < testRays.Count; ++i)
+                {
+                    ref var ray = ref testRays[i];
+                    Simulation.RayCast(ref ray.Origin, ref ray.Direction, ray.MaximumT, ref hitHandler, i);
+                }
+                var stop = Stopwatch.GetTimestamp();
+                simulationQueryTimes.Add((stop - start) / (double)Stopwatch.Frequency);
+                
+                if (frameCount % sampleCount == 0)
+                {
+                    var stats = simulationQueryTimes.ComputeStats();
+                    Console.WriteLine($"Unbatched times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {intersectionCount} intersectionCount");
                     Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
                     Console.WriteLine($"Time per intersection: {1e9 * stats.Average / intersectionCount} ns");
                     Console.WriteLine($"Intersections per ray: {intersectionCount / (double)testRays.Count}");
