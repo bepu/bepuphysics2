@@ -16,14 +16,11 @@ namespace BepuPhysics.Trees
             var t1 = max * ray->InverseDirection - ray->OriginOverDirection;
             var tExit = Vector3.Max(t0, t1);
             var tEntry = Vector3.Min(t0, t1);
-            //TODO: Some potential microoptimization opportunities here, especially with platform specific intrinsics.
-            var earliestExit = tExit.X < tExit.Y ? tExit.X : tExit.Y;
-            t = tEntry.X > tEntry.Y ? tEntry.X : tEntry.Y;
-            if (tExit.Z < earliestExit)
-                earliestExit = tExit.Z;
-            if (tEntry.Z > t)
-                t = tEntry.Z;
-            return t < earliestExit && t < ray->MaximumT;
+            //TODO: Note the use of broadcast and SIMD min/max here. This is much faster than using branches to compute minimum elements, since the branches
+            //get mispredicted extremely frequently. Also note 4-wide operations; they're actually faster than using Vector2 or Vector3 due to some unnecessary codegen as of this writing.
+            var earliestExit = Vector4.Min(Vector4.Min(new Vector4(ray->MaximumT), new Vector4(tExit.X)), Vector4.Min(new Vector4(tExit.Y), new Vector4(tExit.Z))).X;
+            t = Vector4.Max(new Vector4(tEntry.X), Vector4.Max(new Vector4(tEntry.Y), new Vector4(tEntry.Z))).X;
+            return t < earliestExit;
         }
 
 
@@ -93,7 +90,7 @@ namespace BepuPhysics.Trees
         {
             if (leafCount == 0)
                 return;
-            
+
             if (leafCount == 1)
             {
                 //If the first node isn't filled, we have to use a special case.
@@ -106,7 +103,7 @@ namespace BepuPhysics.Trees
             {
                 //TODO: Explicitly tracking depth in the tree during construction/refinement is practically required to guarantee correctness.
                 //While it's exceptionally rare that any tree would have more than 256 levels, the worst case of stomping stack memory is not acceptable in the long run.
-                var stack = stackalloc int[TraversalStackCapacity];                
+                var stack = stackalloc int[TraversalStackCapacity];
                 RayCast(0, treeRay, rayData, stack, ref leafTester);
             }
 

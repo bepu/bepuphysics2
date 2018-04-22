@@ -181,7 +181,7 @@ namespace Demos.SpecializedTests
         }
 
 
-        const int sampleCount = 16;
+        const int sampleCount = 1;
         TimingsRingBuffer broadPhaseQueryTimes = new TimingsRingBuffer(sampleCount);
         TimingsRingBuffer simulationQueryTimes = new TimingsRingBuffer(sampleCount);
         long frameCount;
@@ -215,34 +215,34 @@ namespace Demos.SpecializedTests
             //    }
             //}
 
-            {
-                int intersectionCount = 0;
-                for (int i = 0; i < testRays.Count; ++i)
-                {
-                    hits[i].T = float.MaxValue;
-                }
-                var hitHandler = new HitHandler { Hits = hits, IntersectionCount = &intersectionCount };
-                var batcher = new SimulationRayBatcher<HitHandler>(BufferPool, Simulation, hitHandler, 32768);
-                var start = Stopwatch.GetTimestamp();
-                for (int i = 0; i < testRays.Count; ++i)
-                {
-                    ref var ray = ref testRays[i];
-                    batcher.Add(ref ray.Origin, ref ray.Direction, ray.MaximumT, i);
-                }
-                batcher.Flush();
-                var stop = Stopwatch.GetTimestamp();
-                simulationQueryTimes.Add((stop - start) / (double)Stopwatch.Frequency);
+            //{
+            //    int intersectionCount = 0;
+            //    for (int i = 0; i < testRays.Count; ++i)
+            //    {
+            //        hits[i].T = float.MaxValue;
+            //    }
+            //    var hitHandler = new HitHandler { Hits = hits, IntersectionCount = &intersectionCount };
+            //    var batcher = new SimulationRayBatcher<HitHandler>(BufferPool, Simulation, hitHandler, 32768);
+            //    var start = Stopwatch.GetTimestamp();
+            //    for (int i = 0; i < testRays.Count; ++i)
+            //    {
+            //        ref var ray = ref testRays[i];
+            //        batcher.Add(ref ray.Origin, ref ray.Direction, ray.MaximumT, i);
+            //    }
+            //    batcher.Flush();
+            //    var stop = Stopwatch.GetTimestamp();
+            //    simulationQueryTimes.Add((stop - start) / (double)Stopwatch.Frequency);
 
-                batcher.Dispose();
-                if (frameCount % sampleCount == 0)
-                {
-                    var stats = simulationQueryTimes.ComputeStats();
-                    Console.WriteLine($"Batched times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {intersectionCount} intersectionCount");
-                    Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
-                    Console.WriteLine($"Time per intersection: {1e9 * stats.Average / intersectionCount} ns");
-                    Console.WriteLine($"Intersections per ray: {intersectionCount / (double)testRays.Count}");
-                }
-            }
+            //    batcher.Dispose();
+            //    if (frameCount % sampleCount == 0)
+            //    {
+            //        var stats = simulationQueryTimes.ComputeStats();
+            //        Console.WriteLine($"Batched times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {intersectionCount} intersectionCount");
+            //        Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
+            //        Console.WriteLine($"Time per intersection: {1e9 * stats.Average / intersectionCount} ns");
+            //        Console.WriteLine($"Intersections per ray: {intersectionCount / (double)testRays.Count}");
+            //    }
+            //}
 
             {
                 int intersectionCount = 0;
