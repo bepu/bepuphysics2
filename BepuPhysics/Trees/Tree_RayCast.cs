@@ -48,25 +48,28 @@ namespace BepuPhysics.Trees
                     var aIntersected = Intersects(ref node->A.Min, ref node->A.Max, treeRay, out var tA);
                     var bIntersected = Intersects(ref node->B.Min, ref node->B.Max, treeRay, out var tB);
 
-                    if (aIntersected && bIntersected)
+                    if (aIntersected)
                     {
-                        //Visit the earlier AABB intersection first.
-                        Debug.Assert(stackEnd < TraversalStackCapacity - 1, "At the moment, we use a fixed size stack. Until we have explicitly tracked depths, watch out for excessive depth traversals.");
-                        if (tA < tB)
+                        if (bIntersected)
                         {
-                            nodeIndex = node->A.Index;
-                            stack[stackEnd++] = node->B.Index;
+                            //Visit the earlier AABB intersection first.
+                            Debug.Assert(stackEnd < TraversalStackCapacity - 1, "At the moment, we use a fixed size stack. Until we have explicitly tracked depths, watch out for excessive depth traversals.");
+                            if (tA < tB)
+                            {
+                                nodeIndex = node->A.Index;
+                                stack[stackEnd++] = node->B.Index;
+                            }
+                            else
+                            {
+                                nodeIndex = node->B.Index;
+                                stack[stackEnd++] = node->A.Index;
+                            }
                         }
                         else
                         {
-                            nodeIndex = node->B.Index;
-                            stack[stackEnd++] = node->A.Index;
+                            //Single intersection cases don't require an explicit stack entry.
+                            nodeIndex = node->A.Index;
                         }
-                    }
-                    //Single intersection cases don't require an explicit stack entry.
-                    else if (aIntersected)
-                    {
-                        nodeIndex = node->A.Index;
                     }
                     else if (bIntersected)
                     {
@@ -83,7 +86,7 @@ namespace BepuPhysics.Trees
             }
 
         }
-
+        
         internal const int TraversalStackCapacity = 256;
 
         internal unsafe void RayCast<TLeafTester>(TreeRay* treeRay, RayData* rayData, ref TLeafTester leafTester) where TLeafTester : ILeafTester

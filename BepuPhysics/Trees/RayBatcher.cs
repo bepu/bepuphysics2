@@ -289,7 +289,7 @@ namespace BepuPhysics.Trees
             }
         }
 
-        unsafe void TestNode<TRayStackSource>(Node* node, byte depth, ref TRayStackSource raySource) where TRayStackSource : struct, ITreeRaySource
+        unsafe void TestNode<TRaySource>(Node* node, byte depth, ref TRaySource raySource) where TRaySource : struct, ITreeRaySource
         {
             int a0Start = stackPointerA0;
             int bStart = stackPointerB;
@@ -302,6 +302,7 @@ namespace BepuPhysics.Trees
                 var count = raySource.RayCount - bundleStartIndex;
                 if (count > Vector<float>.Count)
                     count = Vector<float>.Count;
+
                 for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                 {
                     var rayIndex = raySource[bundleStartIndex + innerIndex];
@@ -313,27 +314,35 @@ namespace BepuPhysics.Trees
                 //rayIndicesA0: A first or A only
                 //rayIndicesB:  B is intersected at all
                 //rayIndicesA1: A after B
-                //We assign the role for each ray in a vectorized way.
                 var aFirst = Vector.LessThanOrEqual(tA, tB);
-                var bothIntersected = Vector.BitwiseAnd(aIntersected, bIntersected);
-                var shouldAllocateRayToA0 = Vector.BitwiseOr(Vector.BitwiseAnd(bothIntersected, aFirst), Vector.AndNot(aIntersected, bIntersected));
                 for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                 {
                     ushort rayPointerIndex = (ushort)raySource[bundleStartIndex + innerIndex];
-                    if (shouldAllocateRayToA0[innerIndex] < 0)
+                    var bSlotIntersected = bIntersected[innerIndex] < 0;
+                    if (aIntersected[innerIndex] < 0)
                     {
-                        rayIndicesA0[stackPointerA0++] = rayPointerIndex;
+                        if (bSlotIntersected)
+                        {
+                            if (aFirst[innerIndex] < 0)
+                            {
+                                rayIndicesA0[stackPointerA0++] = rayPointerIndex;
+                                rayIndicesB[stackPointerB++] = rayPointerIndex;
+                            }
+                            else
+                            {
+                                rayIndicesB[stackPointerB++] = rayPointerIndex;
+                                rayIndicesA1[stackPointerA1++] = rayPointerIndex;
+                            }
+                        }
+                        else
+                        {
+                            rayIndicesA0[stackPointerA0++] = rayPointerIndex;
+                        }
                     }
-                    else if (aIntersected[innerIndex] < 0)
-                    {
-                        //If A was intersected but did not qualify to fit into the A0 slot, it must come after B.
-                        rayIndicesA1[stackPointerA1++] = rayPointerIndex;
-                    }
-                    if (bIntersected[innerIndex] < 0)
+                    else if (bSlotIntersected)
                     {
                         rayIndicesB[stackPointerB++] = rayPointerIndex;
                     }
-
                 }
             }
             Debug.Assert(depth < 255,
@@ -459,9 +468,9 @@ namespace BepuPhysics.Trees
                         break;
                 }
 
-                if (true)//entry.RayCount >= 4)
+                if (entry.RayCount >= 3)
                 {
-                    //There are enough rays that we can justify a vectorized approach.
+                    //There are enough rays that we can justify continuing this vectorized approach.
                     if (entry.NodeIndex >= 0)
                     {
                         var rayStackSource = new TreeRaySource(rayStackStart, entry.RayCount);
