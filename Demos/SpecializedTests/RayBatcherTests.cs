@@ -104,6 +104,12 @@ namespace Demos.SpecializedTests
                     //Origin = new Vector3(-500, 0, 0),
                     //Direction = new Vector3(1, 0, 0),
                     //MaximumT = 1000
+                    //Origin = new Vector3(-500),
+                    //Direction = new Vector3(1),
+                    //MaximumT = 1000
+                    //    Direction = new Vector3(0.5346225f, -0.7184405f, -0.4449964f),
+                    //MaximumT = 1000,
+                    //Origin = new Vector3(0.8212769f, -0.8531729f, 0.9328218f)
                 };
             }
         }
@@ -233,7 +239,7 @@ namespace Demos.SpecializedTests
                 batcher.Flush();
                 var stop = Stopwatch.GetTimestamp();
                 simulationQueryTimes.Add(batchedTime = (stop - start) / (double)Stopwatch.Frequency);
-
+                
                 batcher.Dispose();
                 if (frameCount % sampleCount == 0)
                 {
@@ -244,7 +250,7 @@ namespace Demos.SpecializedTests
                     Console.WriteLine($"Intersections per ray: {intersectionCount / (double)testRays.Count}");
                 }
             }
-
+            CacheBlaster.Blast();
             double unbatchedTime;
             {
                 int intersectionCount = 0;

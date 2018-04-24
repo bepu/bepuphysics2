@@ -86,7 +86,7 @@ namespace BepuPhysics.Trees
             }
 
         }
-        
+
         internal const int TraversalStackCapacity = 256;
 
         internal unsafe void RayCast<TLeafTester>(TreeRay* treeRay, RayData* rayData, ref TLeafTester leafTester) where TLeafTester : ILeafTester
@@ -109,7 +109,6 @@ namespace BepuPhysics.Trees
                 var stack = stackalloc int[TraversalStackCapacity];
                 RayCast(0, treeRay, rayData, stack, ref leafTester);
             }
-
         }
 
         public unsafe void RayCast<TLeafTester>(ref Vector3 origin, ref Vector3 direction, float maximumT, ref TLeafTester leafTester, int id = 0) where TLeafTester : ILeafTester

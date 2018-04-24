@@ -222,8 +222,8 @@ namespace BepuPhysics.Trees
             var tMaxZ = Vector.Max(tZ0, tZ1);
 
             tMin = Vector.Max(Vector.Max(Vector<float>.Zero, tMinX), Vector.Max(tMinY, tMinZ));
-            var tMax = Vector.Min(tMaxX, Vector.Min(tMaxY, tMaxZ));
-            intersected = Vector.LessThanOrEqual(tMin, Vector.Min(ray.MaximumT, tMax));
+            var tMax = Vector.Min(Vector.Min(ray.MaximumT, tMaxX), Vector.Min(tMaxY, tMaxZ));
+            intersected = Vector.LessThan(tMin, tMax);
         }
 
 
@@ -296,7 +296,7 @@ namespace BepuPhysics.Trees
             int a1Start = stackPointerA1;
             BroadcastNode(ref *node, out var wideNode);
             TreeRayWide rayBundle;
-
+            
             for (int bundleStartIndex = 0; bundleStartIndex < raySource.RayCount; bundleStartIndex += Vector<float>.Count)
             {
                 var count = raySource.RayCount - bundleStartIndex;
@@ -469,6 +469,7 @@ namespace BepuPhysics.Trees
                 }
 
                 if (entry.RayCount >= 3)
+                //if(true)
                 {
                     //There are enough rays that we can justify continuing this vectorized approach.
                     if (entry.NodeIndex >= 0)
@@ -519,7 +520,7 @@ namespace BepuPhysics.Trees
             TreeRay.CreateFrom(ref origin, ref direction, maximumT, id, out batchOriginalRays[rayIndex], out batchRays[rayIndex]);
             return batchRayCount == rayCapacity;
         }
-
+        
         /// <summary>
         /// Resets the accumulated ray count to zero.
         /// </summary>

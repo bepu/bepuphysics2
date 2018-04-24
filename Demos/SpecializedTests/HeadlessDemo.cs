@@ -22,7 +22,7 @@ namespace Demos.SpecializedTests
             int largestOverlapCount = 0;
             for (int i = 0; i < frameCount; ++i)
             {
-                //CacheBlaster.Blast();
+                CacheBlaster.Blast();
                 var start = Stopwatch.GetTimestamp();
                 demo.Update(null, 1 / 60f);
                 var end = Stopwatch.GetTimestamp();
