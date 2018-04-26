@@ -45,13 +45,13 @@ namespace BepuPhysics.Collidables
             min = -max;
         }
 
-        public bool RayTest(ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, out float t, out Vector3 normal)
+        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
         {
             //It's convenient to work in local space, so pull the ray into the capsule's local space.
-            Matrix3x3.CreateFromQuaternion(ref pose.Orientation, out var orientation);
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
             var o = origin - pose.Position;
-            Matrix3x3.TransformTranspose(ref o, ref orientation, out o);
-            Matrix3x3.TransformTranspose(ref direction, ref orientation, out var d);
+            Matrix3x3.TransformTranspose(o, ref orientation, out o);
+            Matrix3x3.TransformTranspose(direction, ref orientation, out var d);
 
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
             var inverseDLength = 1f / d.Length();
@@ -183,6 +183,14 @@ namespace BepuPhysics.Collidables
     {
         public Vector<float> Radius;
         public Vector<float> HalfLength;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Broadcast(ref Capsule shape)
+        {
+            Radius = new Vector<float>(shape.Radius);
+            HalfLength = new Vector<float>(shape.HalfLength);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref Capsule source)
         {
@@ -204,6 +212,75 @@ namespace BepuPhysics.Collidables
             maximumRadius = HalfLength + Radius;
             //The minimum radius is capsules.Radius, so the maximum offset is simply the half length.
             maximumAngularExpansion = HalfLength;
+        }
+
+        public void RayTest(ref RigidPoses pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        {
+            //It's convenient to work in local space, so pull the ray into the capsule's local space.
+            Matrix3x3Wide.CreateFromQuaternion(ref pose.Orientation, out var orientation);
+            Vector3Wide.Subtract(ref ray.Origin, ref pose.Position, out var oWorld);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref oWorld, ref orientation, out var o);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref ray.Direction, ref orientation, out var d);
+
+            //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
+            Vector3Wide.Length(ref d, out var dLength);
+            var inverseDLength = Vector<float>.One / dLength;
+            Vector3Wide.Scale(ref d, ref inverseDLength, out d);
+
+            //Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
+            Vector3Wide.Dot(ref o, ref d, out var od);
+            var tOffset = Vector.Max(-od - (HalfLength + Radius), Vector<float>.Zero);
+            Vector3Wide.Scale(ref d, ref tOffset, out var oOffset);
+            Vector3Wide.Add(ref o, ref oOffset, out o);
+            var a = d.X * d.X + d.Z * d.Z;
+            var b = o.X * d.X + o.Z * d.Z;
+            var radiusSquared = Radius * Radius;
+            var c = (o.X * o.X + o.Z * o.Z) - radiusSquared;
+
+            var rayIsntParallel = Vector.GreaterThan(a, new Vector<float>(1e-8f));
+            var discriminant = b * b - a * c;
+            var cylinderIntersected = Vector.BitwiseAnd(
+                Vector.BitwiseOr(
+                    Vector.LessThanOrEqual(b, Vector<float>.Zero),
+                    Vector.LessThanOrEqual(c, Vector<float>.Zero)),
+                Vector.GreaterThanOrEqual(discriminant, Vector<float>.Zero));
+            var cylinderT = Vector.Max(-tOffset, (-b - Vector.SquareRoot(discriminant)) / a);
+            Vector3Wide.Scale(ref d, ref cylinderT, out oOffset);
+            Vector3Wide.Add(ref o, ref oOffset, out var cylinderHitLocation);
+            var inverseRadius = Vector<float>.One / Radius;
+            var cylinderNormalX = cylinderHitLocation.X * inverseRadius;
+            var cylinderNormalZ = cylinderHitLocation.Z * inverseRadius;
+            var useCylinder = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(cylinderHitLocation.Y, -HalfLength), Vector.LessThanOrEqual(cylinderHitLocation.Y, HalfLength));
+
+            //Intersect the spherical cap for any lane which ended up not using the cylinder.
+            Vector<float> sphereY = Vector.ConditionalSelect(
+                Vector.BitwiseOr(
+                    Vector.BitwiseAnd(Vector.GreaterThan(cylinderHitLocation.Y, HalfLength), rayIsntParallel),
+                    Vector.AndNot(Vector.LessThanOrEqual(d.Y, Vector<float>.Zero), rayIsntParallel)), HalfLength, -HalfLength);
+
+            o.Y -= sphereY;
+            Vector3Wide.Dot(ref o, ref d, out var capB);
+            Vector3Wide.Dot(ref o, ref o, out var capC);
+            capC -= radiusSquared;
+
+            var capDiscriminant = capB * capB - capC;
+            var capIntersected = Vector.BitwiseAnd(
+                Vector.BitwiseOr(
+                    Vector.LessThanOrEqual(capB, Vector<float>.Zero),
+                    Vector.LessThanOrEqual(capC, Vector<float>.Zero)),
+                Vector.GreaterThanOrEqual(capDiscriminant, Vector<float>.Zero));
+
+            var capT = Vector.Max(-tOffset, -capB - Vector.SquareRoot(capDiscriminant));
+            Vector3Wide.Scale(ref d, ref capT, out oOffset);
+            Vector3Wide.Add(ref o, ref oOffset, out var capHitLocation);
+            Vector3Wide.Scale(ref capHitLocation, ref inverseRadius, out var capNormal);
+
+            normal.X = Vector.ConditionalSelect(useCylinder, cylinderNormalX, capNormal.X);
+            normal.Y = Vector.ConditionalSelect(useCylinder, Vector<float>.Zero, capNormal.Y);
+            normal.Z = Vector.ConditionalSelect(useCylinder, cylinderNormalZ, capNormal.Z);
+            t = (Vector.ConditionalSelect(useCylinder, cylinderT, capT) + tOffset) * inverseDLength;
+            intersected = Vector.ConditionalSelect(useCylinder, cylinderIntersected, capIntersected);
+            Matrix3x3Wide.Transform(ref normal, ref orientation, out normal);
         }
     }
 }

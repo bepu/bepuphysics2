@@ -6,9 +6,26 @@ using System.Text;
 using BepuUtilities.Memory;
 using System.Diagnostics;
 using BepuUtilities;
+using BepuPhysics.Trees;
 
 namespace BepuPhysics.Collidables
 {
+    public struct RayWide
+    {
+        public Vector3Wide Origin;
+        public Vector3Wide Direction;
+
+        public void Gather(in RayData ray)
+        {
+            GatherScatter.GetFirst(ref Origin.X) = ray.Origin.X;
+            GatherScatter.GetFirst(ref Origin.Y) = ray.Origin.Y;
+            GatherScatter.GetFirst(ref Origin.Z) = ray.Origin.Z;
+            GatherScatter.GetFirst(ref Direction.X) = ray.Direction.X;
+            GatherScatter.GetFirst(ref Direction.Y) = ray.Direction.Y;
+            GatherScatter.GetFirst(ref Direction.Z) = ray.Direction.Z;
+        }
+    }
+
     public struct Sphere : IConvexShape
     {
         public float Radius;
@@ -25,7 +42,7 @@ namespace BepuPhysics.Collidables
             max = new Vector3(Radius);
         }
 
-        public bool RayTest(ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, out float t, out Vector3 normal)
+        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
         {
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
             var inverseDLength = 1f / direction.Length();
@@ -80,6 +97,7 @@ namespace BepuPhysics.Collidables
             return new ConvexShapeBatch<Sphere, SphereWide>(pool, initialCapacity);
         }
 
+
         /// <summary>
         /// Type id of sphere shapes.
         /// </summary>
@@ -90,6 +108,13 @@ namespace BepuPhysics.Collidables
     public struct SphereWide : IShapeWide<Sphere>
     {
         public Vector<float> Radius;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Broadcast(ref Sphere shape)
+        {
+            Radius = new Vector<float>(shape.Radius);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref Sphere source)
         {
@@ -108,6 +133,42 @@ namespace BepuPhysics.Collidables
             var negatedRadius = -Radius;
             max = new Vector3Wide(ref Radius);
             min = new Vector3Wide(ref negatedRadius);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void RayTest(ref RigidPoses pose, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        {
+            //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
+            Vector3Wide.Length(ref rayWide.Direction, out var inverseDLength);
+            inverseDLength = Vector<float>.One / inverseDLength;
+            Vector3Wide.Scale(ref rayWide.Direction, ref inverseDLength, out var d);
+
+            //Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
+            Vector3Wide.Subtract(ref rayWide.Origin, ref pose.Position, out var o);
+            Vector3Wide.Dot(ref o, ref d, out var dot);
+            var tOffset = Vector.Max(Vector<float>.Zero, -dot - Radius);
+            Vector3Wide.Scale(ref d, ref tOffset, out var oOffset);
+            Vector3Wide.Add(ref oOffset, ref o, out o);
+            Vector3Wide.Dot(ref o, ref d, out var b);
+            Vector3Wide.Dot(ref o, ref o, out var c);
+            c -= Radius * Radius;
+
+            //If b > 0 && c > 0, ray is outside and pointing away, no hit.
+            //If discriminant < 0, the ray misses.
+            var discriminant = b * b - c;
+            intersected = Vector.BitwiseAnd(
+                Vector.BitwiseOr(
+                    Vector.LessThanOrEqual(b, Vector<float>.Zero), 
+                    Vector.LessThanOrEqual(c, Vector<float>.Zero)),
+                Vector.GreaterThanOrEqual(discriminant, Vector<float>.Zero));
+            
+
+            t = Vector.Max(-tOffset, -b - Vector.SquareRoot(discriminant));
+            Vector3Wide.Scale(ref d, ref t, out oOffset);
+            Vector3Wide.Add(ref o, ref oOffset, out normal);
+            var inverseRadius = Vector<float>.One / Radius;
+            Vector3Wide.Scale(ref normal, ref inverseRadius, out normal);
+            t = (t + tOffset) * inverseDLength;
         }
     }
 

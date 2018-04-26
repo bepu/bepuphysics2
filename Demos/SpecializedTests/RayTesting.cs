@@ -217,8 +217,34 @@ namespace Demos.SpecializedTests
             point = anchor + basisX * localPoint.X + basisZ * localPoint.Y;
         }
 
+        static void CheckWide<TShape, TShapeWide>(ref RigidPoses poses, ref TShapeWide shapeWide, ref Vector3 origin, ref Vector3 direction, bool intersected, float t, ref Vector3 normal)
+                            where TShape : IConvexShape where TShapeWide : IShapeWide<TShape>
+        {
+            RayWide rayWide;
+            Vector3Wide.Broadcast(origin, out rayWide.Origin);
+            Vector3Wide.Broadcast(direction, out rayWide.Direction);
 
-        public static void Test<TShape, TTester>() where TShape : IConvexShape where TTester : IRayTester<TShape>
+            shapeWide.RayTest(ref poses, ref rayWide, out var intersectedWide, out var tWide, out var normalWide);
+            if (intersectedWide[0] < 0 != intersected)
+            {
+                Console.WriteLine($"Wide ray boolean result disagrees with scalar ray.");
+            }
+            if (intersected && intersectedWide[0] < 0)
+            {
+                if (Math.Abs(tWide[0] - t) > 1e-7f)
+                {
+                    Console.WriteLine("Wide ray t disagrees with scalar ray.");
+                }
+                if (Math.Abs(normalWide.X[0] - normal.X) > 1e-7f ||
+                    Math.Abs(normalWide.Y[0] - normal.Y) > 1e-7f ||
+                    Math.Abs(normalWide.Z[0] - normal.Z) > 1e-7f)
+                {
+                    Console.WriteLine("Wide ray normal disagrees with scalar ray.");
+                }
+            }
+        }
+
+        public static void Test<TShape, TShapeWide, TTester>() where TShape : IConvexShape where TTester : IRayTester<TShape> where TShapeWide : IShapeWide<TShape>
         {
             const int shapeIterations = 1000;
             const int transformIterations = 100;
@@ -246,15 +272,20 @@ namespace Demos.SpecializedTests
 
             var tester = default(TTester);
             Random random = new Random(5);
+            TShapeWide shapeWide = default;
             for (int shapeIteration = 0; shapeIteration < shapeIterations; ++shapeIteration)
             {
                 tester.GetRandomShape(random, out var shape);
+                shapeWide.Broadcast(ref shape);
                 for (int transformIteration = 0; transformIteration < transformIterations; ++transformIteration)
                 {
                     RigidPose pose;
                     pose.Position = new Vector3(positionMin) + positionBoundsSpan * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
                     GetUnitQuaternion(random, out pose.Orientation);
-                    Matrix3x3.CreateFromQuaternion(ref pose.Orientation, out var orientation);
+                    Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
+                    RigidPoses poses;
+                    Vector3Wide.Broadcast(pose.Position, out poses.Position);
+                    QuaternionWide.Broadcast(pose.Orientation, out poses.Orientation);
                     for (int rayIndex = 0; rayIndex < outsideToInsideRays; ++rayIndex)
                     {
                         tester.GetSurface(random, ref shape, out var pointOnSurface, out var normal);
@@ -267,12 +298,13 @@ namespace Demos.SpecializedTests
                         var localDirection = (localTargetPoint - localSourcePoint) * directionScale;
                         Matrix3x3.Transform(ref localDirection, ref orientation, out var direction);
 
-                        if (shape.RayTest(ref pose, ref sourcePoint, ref direction, out var t, out var rayTestedNormal))
+                        bool intersected;
+                        if (intersected = shape.RayTest(pose, sourcePoint, direction, out var t, out var rayTestedNormal))
                         {
                             //If the ray start is outside the shape and the target point is inside, then the ray impact should exist on the surface of the shape.
                             var hitLocation = sourcePoint + t * direction;
                             var localHitLocation = hitLocation - pose.Position;
-                            Matrix3x3.TransformTranspose(ref localHitLocation, ref orientation, out localHitLocation);
+                            Matrix3x3.TransformTranspose(localHitLocation, ref orientation, out localHitLocation);
                             if (!tester.PointIsOnSurface(ref shape, ref localHitLocation))
                             {
                                 Console.WriteLine("Outside->inside ray detected non-surface impact.");
@@ -282,6 +314,7 @@ namespace Demos.SpecializedTests
                         {
                             Console.WriteLine($"Outside->inside ray detected no hit.");
                         }
+                        CheckWide<TShape, TShapeWide>(ref poses, ref shapeWide, ref sourcePoint, ref direction, intersected, t, ref rayTestedNormal);
                     }
                     for (int rayIndex = 0; rayIndex < insideRays; ++rayIndex)
                     {
@@ -294,7 +327,8 @@ namespace Demos.SpecializedTests
                         direction *= directionScale;
 
                         //If the ray start is inside the shape, then the impact t should be 0.
-                        if (shape.RayTest(ref pose, ref sourcePoint, ref direction, out var t, out var rayTestedNormal))
+                        bool intersected;
+                        if (intersected = shape.RayTest(pose, sourcePoint, direction, out var t, out var rayTestedNormal))
                         {
                             if (t > 0)
                             {
@@ -305,6 +339,7 @@ namespace Demos.SpecializedTests
                         {
                             Console.WriteLine($"Inside ray detected no impact.");
                         }
+                        CheckWide<TShape, TShapeWide>(ref poses, ref shapeWide, ref sourcePoint, ref direction, intersected, t, ref rayTestedNormal);
                     }
                     for (int rayIndex = 0; rayIndex < outsideRays; ++rayIndex)
                     {
@@ -319,11 +354,12 @@ namespace Demos.SpecializedTests
                         Matrix3x3.Transform(ref localSourcePoint, ref orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
                         Matrix3x3.Transform(ref localDirection, ref orientation, out var direction);
-
-                        if (shape.RayTest(ref pose, ref sourcePoint, ref direction, out var t, out var rayTestedNormal))
+                        bool intersected;
+                        if (intersected = shape.RayTest(pose, sourcePoint, direction, out var t, out var rayTestedNormal))
                         {
                             Console.WriteLine($"Outside ray incorrectly detected an impact.");
                         }
+                        CheckWide<TShape, TShapeWide>(ref poses, ref shapeWide, ref sourcePoint, ref direction, intersected, t, ref rayTestedNormal);
                     }
                     for (int rayIndex = 0; rayIndex < outwardPointingRays; ++rayIndex)
                     {
@@ -339,10 +375,12 @@ namespace Demos.SpecializedTests
                         Matrix3x3.Transform(ref localSourcePoint, ref orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
                         Matrix3x3.Transform(ref localDirection, ref orientation, out var direction);
-                        if (shape.RayTest(ref pose, ref sourcePoint, ref direction, out var t, out var rayTestedNormal))
+                        bool intersected;
+                        if (intersected = shape.RayTest(pose, sourcePoint, direction, out var t, out var rayTestedNormal))
                         {
                             Console.WriteLine($"Outward ray incorrectly detected an impact.");
                         }
+                        CheckWide<TShape, TShapeWide>(ref poses, ref shapeWide, ref sourcePoint, ref direction, intersected, t, ref rayTestedNormal);
                     }
                 }
             }

@@ -57,7 +57,7 @@ namespace BepuUtilities
         ///<param name="translation">Translation to use in the transform.</param>
         public AffineTransform(ref Quaternion orientation, ref Vector3 translation)
         {
-            Matrix3x3.CreateFromQuaternion(ref orientation, out LinearTransform);
+            Matrix3x3.CreateFromQuaternion(orientation, out LinearTransform);
             Translation = translation;
         }
 
@@ -82,7 +82,7 @@ namespace BepuUtilities
             //Create an SRT transform.
             Matrix3x3.CreateScale(ref scaling, out LinearTransform);
             Matrix3x3 rotation;
-            Matrix3x3.CreateFromQuaternion(ref orientation, out rotation);
+            Matrix3x3.CreateFromQuaternion(orientation, out rotation);
             Matrix3x3.Multiply(ref LinearTransform, ref rotation, out LinearTransform);
             Translation = translation;
         }

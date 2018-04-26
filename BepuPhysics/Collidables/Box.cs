@@ -42,7 +42,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetBounds(ref Quaternion orientation, out Vector3 min, out Vector3 max)
         {
-            Matrix3x3.CreateFromQuaternion(ref orientation, out var basis);
+            Matrix3x3.CreateFromQuaternion(orientation, out var basis);
             var x = HalfWidth * basis.X;
             var y = HalfHeight * basis.Y;
             var z = HalfLength * basis.Z;
@@ -50,12 +50,12 @@ namespace BepuPhysics.Collidables
             min = -max;
         }
 
-        public bool RayTest(ref RigidPose pose, ref Vector3 origin, ref Vector3 direction, out float t, out Vector3 normal)
+        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
         {
             var offset = origin - pose.Position;
-            Matrix3x3.CreateFromQuaternion(ref pose.Orientation, out var orientation);
-            Matrix3x3.TransformTranspose(ref offset, ref orientation, out var localOffset);
-            Matrix3x3.TransformTranspose(ref direction, ref orientation, out var localDirection);
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
+            Matrix3x3.TransformTranspose(offset, ref orientation, out var localOffset);
+            Matrix3x3.TransformTranspose(direction, ref orientation, out var localDirection);
             //Note that this division has two odd properties:
             //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
             //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
@@ -159,6 +159,15 @@ namespace BepuPhysics.Collidables
         public Vector<float> HalfWidth;
         public Vector<float> HalfHeight;
         public Vector<float> HalfLength;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Broadcast(ref Box shape)
+        {
+            HalfWidth = new Vector<float>(shape.HalfWidth);
+            HalfHeight = new Vector<float>(shape.HalfHeight);
+            HalfLength = new Vector<float>(shape.HalfLength);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref Box source)
         {
@@ -179,6 +188,58 @@ namespace BepuPhysics.Collidables
 
             maximumRadius = Vector.SquareRoot(HalfWidth * HalfWidth + HalfHeight * HalfHeight + HalfLength * HalfLength);
             maximumAngularExpansion = maximumRadius - Vector.Min(HalfLength, Vector.Min(HalfHeight, HalfLength));
+        }
+
+        public void RayTest(ref RigidPoses pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        {
+            Vector3Wide.Subtract(ref ray.Origin, ref pose.Position, out var offset);
+            Matrix3x3Wide.CreateFromQuaternion(ref pose.Orientation, out var orientation);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offset, ref orientation, out var localOffset);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref ray.Direction, ref orientation, out var localDirection);
+            //Note that this division has two odd properties:
+            //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
+            //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
+            //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
+            //2) To compensate for the clamp and abs, we reintroduce the sign in the numerator. Note that it has the reverse sign since it will be applied to the offset to get the T value.
+            var negativeOne = -Vector<float>.One;
+            var epsilon = new Vector<float>(1e-15f);
+            Vector3Wide offsetToTScale;
+            offsetToTScale.X = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.X, Vector<float>.Zero), negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.X));
+            offsetToTScale.Y = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.Y, Vector<float>.Zero), negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.Y));
+            offsetToTScale.Z = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.Z, Vector<float>.Zero), negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.Z));
+
+            //Compute impact times for each pair of planes in local space.
+            Vector3Wide negativeT, positiveT;
+            negativeT.X = (localOffset.X - HalfWidth) * offsetToTScale.X;
+            negativeT.Y = (localOffset.Y - HalfHeight) * offsetToTScale.Y;
+            negativeT.Z = (localOffset.Z - HalfLength) * offsetToTScale.Z;
+            positiveT.X = (localOffset.X + HalfWidth) * offsetToTScale.X;
+            positiveT.Y = (localOffset.Y + HalfHeight) * offsetToTScale.Y;
+            positiveT.Z = (localOffset.Z + HalfLength) * offsetToTScale.Z;
+            Vector3Wide entryT, exitT;
+            entryT.X = Vector.Min(negativeT.X, positiveT.X);
+            entryT.Y = Vector.Min(negativeT.Y, positiveT.Y);
+            entryT.Z = Vector.Min(negativeT.Z, positiveT.Z);
+            exitT.X = Vector.Max(negativeT.X, positiveT.X);
+            exitT.Y = Vector.Max(negativeT.Y, positiveT.Y);
+            exitT.Z = Vector.Max(negativeT.Z, positiveT.Z);
+            //In order for an impact to occur, the ray must enter all three slabs formed by the axis planes before exiting any of them.
+            //In other words, the first exit must occur after the last entry.
+            var earliestExit = Vector.Min(Vector.Min(exitT.X, exitT.Y), exitT.Z);
+            var earliestEntry = Vector.Max(Vector.Max(entryT.X, entryT.Y), entryT.Z);
+            t = Vector.Max(Vector<float>.Zero, earliestEntry);
+            intersected = Vector.LessThanOrEqual(t, earliestExit);
+
+            var useX = Vector.Equals(earliestEntry, entryT.X);
+            var useY = Vector.AndNot(Vector.Equals(earliestEntry, entryT.Y), useX);
+            normal.X = Vector.ConditionalSelect(useX, orientation.X.X, Vector.ConditionalSelect(useY, orientation.Y.X, orientation.Z.X));
+            normal.Y = Vector.ConditionalSelect(useX, orientation.X.Y, Vector.ConditionalSelect(useY, orientation.Y.Y, orientation.Z.Y));
+            normal.Z = Vector.ConditionalSelect(useX, orientation.X.Z, Vector.ConditionalSelect(useY, orientation.Y.Z, orientation.Z.Z));
+            Vector3Wide.Dot(ref normal, ref localOffset, out var dot);
+            var shouldNegate = Vector.LessThan(dot, Vector<float>.Zero);
+            normal.X = Vector.ConditionalSelect(shouldNegate, -normal.X, normal.X);
+            normal.Y = Vector.ConditionalSelect(shouldNegate, -normal.Y, normal.Y);
+            normal.Z = Vector.ConditionalSelect(shouldNegate, -normal.Z, normal.Z);
         }
     }
 }

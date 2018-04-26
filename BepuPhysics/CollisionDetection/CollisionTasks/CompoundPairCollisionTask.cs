@@ -31,7 +31,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 for (int childAIndex = 0; childAIndex < pair.A.Children.Length; ++childAIndex)
                 {
                     ref var childA = ref pair.A.Children[childAIndex];
-                    Compound.GetRotatedChildPose(ref childA.LocalPose, ref pair.Shared.PoseA.Orientation, out var childAPose);
+                    Compound.GetRotatedChildPose(childA.LocalPose, pair.Shared.PoseA.Orientation, out var childAPose);
                     RigidPose childAWorldPose;
                     childAWorldPose.Orientation = childAPose.Orientation;
                     childAWorldPose.Position = childAPose.Position + pair.Shared.PoseA.Position;
@@ -41,7 +41,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         {
                             ref var childB = ref pair.B.Children[childBIndex];
                             //You could avoid recalculating this pose for every childA, but the value is limited and it adds nontrivial complexity. Only bother if it shows up.
-                            Compound.GetRotatedChildPose(ref childB.LocalPose, ref pair.Shared.PoseB.Orientation, out var childBPose);
+                            Compound.GetRotatedChildPose(childB.LocalPose, pair.Shared.PoseB.Orientation, out var childBPose);
 
                             var childShapeType = childB.ShapeIndex.Type;
                             batcher.Shapes[childShapeType].GetShapeData(childB.ShapeIndex.Index, out var childShapePointer, out var childShapeSize);

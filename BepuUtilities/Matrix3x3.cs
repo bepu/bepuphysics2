@@ -178,7 +178,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix to use as the transformation transpose.</param>
         /// <param name="result">Product of the transformation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformTranspose(ref Vector3 v, ref Matrix3x3 m, out Vector3 result)
+        public static void TransformTranspose(in Vector3 v, ref Matrix3x3 m, out Vector3 result)
         {
             result = new Vector3(
                 Vector3.Dot(v, m.X),
@@ -270,7 +270,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFromQuaternion(ref Quaternion quaternion, out Matrix3x3 result)
+        public static void CreateFromQuaternion(in Quaternion quaternion, out Matrix3x3 result)
         {
             float qX2 = quaternion.X + quaternion.X;
             float qY2 = quaternion.Y + quaternion.Y;
@@ -307,7 +307,7 @@ namespace BepuUtilities
         public static Matrix3x3 CreateFromQuaternion(Quaternion quaternion)
         {
             Matrix3x3 toReturn;
-            CreateFromQuaternion(ref quaternion, out toReturn);
+            CreateFromQuaternion(quaternion, out toReturn);
             return toReturn;
         }
 

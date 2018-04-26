@@ -1,4 +1,5 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics.Collidables;
+using BepuUtilities;
 using DemoContentLoader;
 using DemoRenderer.UI;
 using Demos.SpecializedTests;
@@ -11,6 +12,9 @@ namespace Demos
     {
         static void Main(string[] args)
         {
+            RayTesting.Test<Box, BoxWide, BoxRayTester>();
+            RayTesting.Test<Capsule, CapsuleWide, CapsuleRayTester>();
+            RayTesting.Test<Sphere, SphereWide, SphereRayTester>();
             HeadlessDemo.Test<RayBatcherTests>(8, 128);
             return;
             var window = new Window("pretty cool multicolored window",

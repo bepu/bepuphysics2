@@ -20,8 +20,8 @@ namespace DemoRenderer.Constraints
             var poseB = bodies.Sets[setIndex].Poses[bodyIndices[1]];
             Vector3Wide.GetLane(ref prestepBundle.LocalOffsetA, innerIndex, out var localOffsetA);
             Vector3Wide.GetLane(ref prestepBundle.LocalOffsetB, innerIndex, out var localOffsetB);
-            Quaternion.Transform(ref localOffsetA, ref poseA.Orientation, out var worldOffsetA);
-            Quaternion.Transform(ref localOffsetB, ref poseB.Orientation, out var worldOffsetB);
+            Quaternion.Transform(localOffsetA, poseA.Orientation, out var worldOffsetA);
+            Quaternion.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
             var endA = poseA.Position + worldOffsetA;
             var endB = poseB.Position + worldOffsetB;
             var color = new Vector3(0.2f, 0.2f, 1f) * tint;

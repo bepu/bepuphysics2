@@ -134,7 +134,7 @@ namespace Demos.Demos
         {
             RigidPose worldPose;
             RigidPose.Transform(ref localPosition, ref ragdollPose, out worldPose.Position);
-            Quaternion.ConcatenateWithoutOverlap(ref localOrientation, ref ragdollPose.Orientation, out worldPose.Orientation);
+            Quaternion.ConcatenateWithoutOverlap(localOrientation, ragdollPose.Orientation, out worldPose.Orientation);
             return worldPose;
         }
         static void GetCapsuleForLineSegment(Vector3 start, Vector3 end, float radius, out Capsule capsule, out Vector3 position, out Quaternion orientation)

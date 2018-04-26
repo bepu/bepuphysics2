@@ -11,6 +11,14 @@ namespace BepuUtilities
         public Vector<float> Z;
         public Vector<float> W;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Broadcast(in Quaternion source, out QuaternionWide broadcasted)
+        {
+            broadcasted.X = new Vector<float>(source.X);
+            broadcasted.Y = new Vector<float>(source.Y);
+            broadcasted.Z = new Vector<float>(source.Z);
+            broadcasted.W = new Vector<float>(source.W);
+        }
 
         /// <summary>
         /// Constructs a quaternion from a rotation matrix.

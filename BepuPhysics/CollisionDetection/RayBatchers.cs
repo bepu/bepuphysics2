@@ -108,8 +108,8 @@ namespace BepuPhysics.CollisionDetection
 
     public interface IRayHitHandler
     {
-        bool AllowTest(ref RayData ray, ref float maximumT, CollidableReference collidable);
-        void OnRayHit(ref RayData ray, ref float maximumT, float t, ref Vector3 normal, CollidableReference collidable);
+        bool AllowTest(CollidableReference collidable);
+        void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, CollidableReference collidable);
     }
 
 
@@ -122,81 +122,57 @@ namespace BepuPhysics.CollisionDetection
         struct Dispatcher : IBroadPhaseBatchedRayTester
         {
             public Simulation Simulation;
-            public TRayHitHandler HitHandler;
+            public ShapeHitHandler HitHandler;
 
-
-
-            unsafe void Test(CollidableReference reference, TypedIndex shape, ref RigidPose pose, ref RaySource rays)
+            public struct ShapeHitHandler : IShapeRayHitHandler
             {
-                //TODO: Need vectorized tests.
-                //TODO: consider adding a filter that only considers the leaf, not the ray-leaf combination. In many cases, users won't care about the ray-leaf combo, 
-                //and leaf-only filtering would be quite a bit simpler.
-                //TODO: Arguably, moving filtering into the core traversal would be the simplest option, and it would have some performance benefits. The raytest stack wouldn't 
-                //have all the unnecessary rays added to it in the first place.
-                for (int i = 0; i < rays.RayCount; ++i)
+                public TRayHitHandler HitHandler;
+                public CollidableReference Reference;
+                public RaySource RaySource;
+
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                public unsafe void OnRayHit(int rayIndex, float t, in Vector3 normal)
                 {
-                    rays.GetRay(i, out var ray, out var maxT);
-                    if (HitHandler.AllowTest(ref *ray, ref *maxT, reference))
-                    {
-                        if (Simulation.Shapes[shape.Type].RayTest(shape.Index, ref pose, ref ray->Origin, ref ray->Direction, out var t, out var normal) && t < *maxT)
-                        {
-                            HitHandler.OnRayHit(ref *ray, ref *maxT, t, ref normal, reference);
-                        }
-                    }
+                    RaySource.GetRay(rayIndex, out var ray, out var maximumT);
+                    HitHandler.OnRayHit(*ray, ref *maximumT, t, normal, Reference);
                 }
             }
+
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe void RayTest(CollidableReference reference, ref RaySource rays)
             {
-                if (reference.Mobility == CollidableMobility.Static)
+                if (HitHandler.HitHandler.AllowTest(reference))
                 {
-                    var index = Simulation.Statics.HandleToIndex[reference.Handle];
-                    Test(reference, Simulation.Statics.Collidables[index].Shape, ref Simulation.Statics.Poses[index], ref rays);
-                }
-                else
-                {
-                    ref var location = ref Simulation.Bodies.HandleToLocation[reference.Handle];
-                    ref var set = ref Simulation.Bodies.Sets[location.SetIndex];
-                    Test(reference, set.Collidables[location.Index].Shape, ref set.Poses[location.Index], ref rays);
+                    Simulation.GetPoseAndShape(reference, out var pose, out var shape);
+                    HitHandler.Reference = reference;
+                    HitHandler.RaySource = rays;
+                    Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, ref rays, ref HitHandler);
                 }
             }
-            unsafe void Test(CollidableReference reference, TypedIndex shape, ref RigidPose pose, RayData* ray, float* maximumT)
-            {
-                //TODO: Need vectorized tests.
-                //TODO: consider adding a filter that only considers the leaf, not the ray-leaf combination. In many cases, users won't care about the ray-leaf combo, 
-                //and leaf-only filtering would be quite a bit simpler.
-                //TODO: Arguably, moving filtering into the core traversal would be the simplest option, and it would have some performance benefits. The raytest stack wouldn't 
-                //have all the unnecessary rays added to it in the first place.
-                if (HitHandler.AllowTest(ref *ray, ref *maximumT, reference))
-                {
-                    if (Simulation.Shapes[shape.Type].RayTest(shape.Index, ref pose, ref ray->Origin, ref ray->Direction, out var t, out var normal) && t < *maximumT)
-                    {
-                        HitHandler.OnRayHit(ref *ray, ref *maximumT, t, ref normal, reference);
-                    }
-                }
-            }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe void RayTest(CollidableReference reference, RayData* rayData, float* maximumT)
             {
-                if (reference.Mobility == CollidableMobility.Static)
+                if (HitHandler.HitHandler.AllowTest(reference))
                 {
-                    var index = Simulation.Statics.HandleToIndex[reference.Handle];
-                    Test(reference, Simulation.Statics.Collidables[index].Shape, ref Simulation.Statics.Poses[index], rayData, maximumT);
-                }
-                else
-                {
-                    ref var location = ref Simulation.Bodies.HandleToLocation[reference.Handle];
-                    ref var set = ref Simulation.Bodies.Sets[location.SetIndex];
-                    Test(reference, set.Collidables[location.Index].Shape, ref set.Poses[location.Index], rayData, maximumT);
+                    Simulation.GetPoseAndShape(reference, out var pose, out var shape);
+                    if (Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, rayData->Origin, rayData->Direction, out var t, out var normal) && t < *maximumT)
+                    {
+                        HitHandler.HitHandler.OnRayHit(*rayData, ref *maximumT, t, normal, reference);
+                    }
                 }
             }
+
         }
 
         BroadPhaseRayBatcher<Dispatcher> batcher;
 
         public SimulationRayBatcher(BufferPool pool, Simulation simulation, TRayHitHandler hitHandler, int batcherRayCapacity = 2048)
         {
-            var dispatcher = new Dispatcher { Simulation = simulation, HitHandler = hitHandler };
+            Dispatcher dispatcher = default;
+            dispatcher.Simulation = simulation;
+            dispatcher.HitHandler.HitHandler = hitHandler;
             batcher = new BroadPhaseRayBatcher<Dispatcher>(pool, simulation.BroadPhase, dispatcher, batcherRayCapacity);
         }
 

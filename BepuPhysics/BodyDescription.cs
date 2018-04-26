@@ -15,7 +15,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Transform(ref Vector3 v, ref RigidPose pose, out Vector3 result)
         {
-            BepuUtilities.Quaternion.Transform(ref v, ref pose.Orientation, out result);
+            BepuUtilities.Quaternion.Transform(v, pose.Orientation, out result);
             result += pose.Position;
         }
     }

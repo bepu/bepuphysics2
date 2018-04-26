@@ -45,7 +45,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     if (batcher.Callbacks.AllowCollisionTesting(pair.Shared.Continuation.PairId, childA, childB))
                     {
                         ref var child = ref pair.B.Children[j];
-                        Compound.GetRotatedChildPose(ref child.LocalPose, ref pair.Shared.PoseB.Orientation, out var childPose);
+                        Compound.GetRotatedChildPose(child.LocalPose, pair.Shared.PoseB.Orientation, out var childPose);
 
                         var childShapeType = child.ShapeIndex.Type;
                         batcher.Shapes[childShapeType].GetShapeData(child.ShapeIndex.Index, out var childShapePointer, out var childShapeSize);

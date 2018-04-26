@@ -315,12 +315,12 @@ namespace Demos.SpecializedTests
             for (int i = 0; i < 1000; ++i)
             {
                 var axis = Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1));
-                Vector3Wide.CreateFrom(ref axis, out var axisWide);
+                Vector3Wide.Broadcast(axis, out var axisWide);
                 var rotation = Matrix3x3.CreateFromAxisAngle(axis, (float)random.NextDouble());
                 Matrix3x3Wide rotationWide;
-                Vector3Wide.CreateFrom(ref rotation.X, out rotationWide.X);
-                Vector3Wide.CreateFrom(ref rotation.Y, out rotationWide.Y);
-                Vector3Wide.CreateFrom(ref rotation.Z, out rotationWide.Z);
+                Vector3Wide.Broadcast(rotation.X, out rotationWide.X);
+                Vector3Wide.Broadcast(rotation.Y, out rotationWide.Y);
+                Vector3Wide.Broadcast(rotation.Z, out rotationWide.Z);
 
                 var m2x3Wide = new Matrix2x3Wide() { X = axisWide, Y = new Vector3Wide { X = -axisWide.Y, Y = axisWide.Z, Z = axisWide.X } };
 
@@ -348,9 +348,9 @@ namespace Demos.SpecializedTests
                     Z = new Vector3(triangular.ZX, triangular.ZY, triangular.ZZ),
                 };
                 Matrix3x3Wide symmetricWide;
-                Vector3Wide.CreateFrom(ref symmetric.X, out symmetricWide.X);
-                Vector3Wide.CreateFrom(ref symmetric.Y, out symmetricWide.Y);
-                Vector3Wide.CreateFrom(ref symmetric.Z, out symmetricWide.Z);
+                Vector3Wide.Broadcast(symmetric.X, out symmetricWide.X);
+                Vector3Wide.Broadcast(symmetric.Y, out symmetricWide.Y);
+                Vector3Wide.Broadcast(symmetric.Z, out symmetricWide.Z);
 
                 var symmetricVectorSandwich = new SymmetricVectorSandwich() { v = axis, symmetric = symmetric };
                 var symmetricWideVectorSandwich = new SymmetricWideVectorSandwich() { v = axisWide, symmetric = symmetricWide };

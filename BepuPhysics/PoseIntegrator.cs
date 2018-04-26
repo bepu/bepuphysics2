@@ -47,7 +47,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void RotateInverseInertia(ref Triangular3x3 localInverseInertiaTensor, ref Quaternion orientation, out Triangular3x3 rotatedInverseInertiaTensor)
         {
-            Matrix3x3.CreateFromQuaternion(ref orientation, out var orientationMatrix);
+            Matrix3x3.CreateFromQuaternion(orientation, out var orientationMatrix);
             //I^-1 = RT * Ilocal^-1 * R 
             //NOTE: If you were willing to confuse users a little bit, the local inertia could be required to be diagonal.
             //This would be totally fine for all the primitive types which happen to have diagonal inertias, but for more complex shapes (convex hulls, meshes), 
@@ -100,7 +100,7 @@ namespace BepuPhysics
                 Quaternion multiplier;
                 Unsafe.As<float, Vector3>(ref *&multiplier.X) = velocity.Angular * halfDt;
                 multiplier.W = 0;
-                Quaternion.ConcatenateWithoutOverlap(ref pose.Orientation, ref *&multiplier, out var increment);
+                Quaternion.ConcatenateWithoutOverlap(pose.Orientation, *&multiplier, out var increment);
                 Quaternion.Add(ref pose.Orientation, ref increment, out pose.Orientation);
                 Quaternion.Normalize(ref pose.Orientation);
 

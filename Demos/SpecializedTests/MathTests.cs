@@ -46,7 +46,7 @@ namespace Demos.SpecializedTests
 
                 for (int i = 0; i < innerIterations; ++i)
                 {
-                    Matrix3x3.CreateFromQuaternion(ref q, out var r);
+                    Matrix3x3.CreateFromQuaternion(q, out var r);
                     Quaternion.CreateFromRotationMatrix(ref r, out var qTest);
 
 #if DEBUG
@@ -253,10 +253,10 @@ namespace Demos.SpecializedTests
                     Quaternion.GetQuaternionBetweenNormalizedVectors(ref v2, ref v1, out var v2ToV1);
 
 #if DEBUG
-                    Quaternion.ConcatenateWithoutOverlap(ref v1ToV2, ref v2ToV1, out var concatenated);
-                    Quaternion.Transform(ref v1, ref v1ToV2, out var v1TransformedToV2);
-                    Quaternion.Transform(ref v2, ref v2ToV1, out var v2TransformedToV1);
-                    Quaternion.Transform(ref v1, ref concatenated, out var v1TransformedToV1);
+                    Quaternion.ConcatenateWithoutOverlap(v1ToV2, v2ToV1, out var concatenated);
+                    Quaternion.Transform(v1, v1ToV2, out var v1TransformedToV2);
+                    Quaternion.Transform(v2, v2ToV1, out var v2TransformedToV1);
+                    Quaternion.Transform(v1, concatenated, out var v1TransformedToV1);
 
 
                     var v1ToV2ErrorLength = (v1TransformedToV2 - v2).LengthSquared();

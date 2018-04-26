@@ -19,7 +19,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFrom(ref Vector3 source, out Vector3Wide broadcasted)
+        public static void Broadcast(in Vector3 source, out Vector3Wide broadcasted)
         {
             broadcasted.X = new Vector<float>(source.X);
             broadcasted.Y = new Vector<float>(source.Y);

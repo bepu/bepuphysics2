@@ -626,7 +626,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CreateRigid(ref Quaternion rotation, ref Vector3 position, out Matrix world)
         {
-            Matrix3x3.CreateFromQuaternion(ref rotation, out var rotationMatrix);
+            Matrix3x3.CreateFromQuaternion(rotation, out var rotationMatrix);
             world.X = new Vector4(rotationMatrix.X, 0);
             world.Y = new Vector4(rotationMatrix.Y, 0);
             world.Z = new Vector4(rotationMatrix.Z, 0);

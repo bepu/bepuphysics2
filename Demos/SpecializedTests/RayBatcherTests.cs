@@ -98,12 +98,12 @@ namespace Demos.SpecializedTests
                 var direction = GetDirection(random);
                 testRays.AllocateUnsafely() = new TestRay
                 {
-                    Origin = GetDirection(random) * width * spacing * 0.25f,
-                    Direction = GetDirection(random),
-                    MaximumT = 1000// 50 + (float)random.NextDouble() * 300
-                    //Origin = new Vector3(-500, 0, 0),
-                    //Direction = new Vector3(1, 0, 0),
-                    //MaximumT = 1000
+                    //Origin = GetDirection(random) * width * spacing * 0.25f,
+                    //Direction = GetDirection(random),
+                    //MaximumT = 1000// 50 + (float)random.NextDouble() * 300
+                    Origin = new Vector3(-500, 0, 0),
+                    Direction = new Vector3(1, 0, 0),
+                    MaximumT = 1000
                     //Origin = new Vector3(-500),
                     //Direction = new Vector3(1),
                     //MaximumT = 1000
@@ -144,7 +144,7 @@ namespace Demos.SpecializedTests
         }
         Buffer<RayHit> hits;
 
-        unsafe struct RayTester : IBroadPhaseRayTester
+        unsafe struct RayTester : IBroadPhaseBatchedRayTester
         {
             public int* IntersectionCount;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -165,13 +165,13 @@ namespace Demos.SpecializedTests
             public Buffer<RayHit> Hits;
             public int* IntersectionCount;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool AllowTest(ref RayData ray, ref float maximumT, CollidableReference collidable)
+            public bool AllowTest(CollidableReference collidable)
             {
                 return true;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnRayHit(ref RayData ray, ref float maximumT, float t, ref Vector3 normal, CollidableReference collidable)
+            public void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, CollidableReference collidable)
             {
                 maximumT = t;
                 ref var hit = ref Hits[ray.Id];
@@ -229,7 +229,7 @@ namespace Demos.SpecializedTests
                     hits[i].T = float.MaxValue;
                 }
                 var hitHandler = new HitHandler { Hits = hits, IntersectionCount = &intersectionCount };
-                var batcher = new SimulationRayBatcher<HitHandler>(BufferPool, Simulation, hitHandler, 8192);
+                var batcher = new SimulationRayBatcher<HitHandler>(BufferPool, Simulation, hitHandler, 4096);
                 var start = Stopwatch.GetTimestamp();
                 for (int i = 0; i < testRays.Count; ++i)
                 {

@@ -43,7 +43,14 @@ namespace BepuPhysics.Trees
         }
     }
 
-    public unsafe struct RaySource
+    public unsafe interface IRaySource
+    {
+        int RayCount { get; }
+        ref readonly RayData GetRay(int rayIndex);
+    }
+
+
+    public unsafe struct RaySource : IRaySource
     {
         TreeRay* treeRays;
         RayData* rays;
@@ -68,9 +75,9 @@ namespace BepuPhysics.Trees
         }
 
         /// <summary>
-        /// Gets pointers to the data for a ray that intersects the leaf's bounding box..
+        /// Gets pointers to the data for a ray.
         /// </summary>
-        /// <param name="rayIndex">Index of the ray affecting this leaf to grab.</param>
+        /// <param name="rayIndex">Index of the ray to grab.</param>
         /// <param name="ray">Pointer to the ray's origin and direction. Note that changing the ray's origin and direction mid-traversal will not change the path of the traversal, 
         /// but it will be visible by any future leafs impacted by this ray.</param>
         /// <param name="maximumT">Pointer to the maximum length of the ray in units of the ray's length.
@@ -84,6 +91,17 @@ namespace BepuPhysics.Trees
             maximumT = &treeRays[remappedIndex].MaximumT;
         }
 
+        /// <summary>
+        /// Gets a reference to the data for a ray.
+        /// </summary>
+        /// <param name="rayIndex">Index of the ray to grab.</param>
+        /// <returns>Returns a reference to the ray in the ray source.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref readonly RayData GetRay(int rayIndex)
+        {
+            Debug.Assert(rayIndex >= 0 && rayIndex < rayCount, "The ray index must be within 0 and RayCount - 1.");
+            return ref rays[rayPointers[rayIndex]];
+        }
     }
 
     public interface ILeafTester
@@ -196,10 +214,10 @@ namespace BepuPhysics.Trees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void BroadcastNode(ref Node node, out NodeWide wide)
         {
-            Vector3Wide.CreateFrom(ref node.A.Min, out wide.MinA);
-            Vector3Wide.CreateFrom(ref node.A.Max, out wide.MaxA);
-            Vector3Wide.CreateFrom(ref node.B.Min, out wide.MinB);
-            Vector3Wide.CreateFrom(ref node.B.Max, out wide.MaxB);
+            Vector3Wide.Broadcast(node.A.Min, out wide.MinA);
+            Vector3Wide.Broadcast(node.A.Max, out wide.MaxA);
+            Vector3Wide.Broadcast(node.B.Min, out wide.MinB);
+            Vector3Wide.Broadcast(node.B.Max, out wide.MaxB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -296,7 +314,7 @@ namespace BepuPhysics.Trees
             int a1Start = stackPointerA1;
             BroadcastNode(ref *node, out var wideNode);
             TreeRayWide rayBundle;
-            
+
             for (int bundleStartIndex = 0; bundleStartIndex < raySource.RayCount; bundleStartIndex += Vector<float>.Count)
             {
                 var count = raySource.RayCount - bundleStartIndex;
@@ -520,7 +538,7 @@ namespace BepuPhysics.Trees
             TreeRay.CreateFrom(ref origin, ref direction, maximumT, id, out batchOriginalRays[rayIndex], out batchRays[rayIndex]);
             return batchRayCount == rayCapacity;
         }
-        
+
         /// <summary>
         /// Resets the accumulated ray count to zero.
         /// </summary>
