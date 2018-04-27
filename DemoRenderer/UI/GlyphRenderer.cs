@@ -50,7 +50,7 @@ namespace DemoRenderer.UI
                 packScaledScale = 65535f;
             Debug.Assert(sourceId >= 0 && sourceId < 65536);
             PackedScaleAndSourceId = (uint)packScaledScale | (uint)(sourceId << 16);
-            PackedColor = Helpers.PackColor(ref color);
+            PackedColor = Helpers.PackColor(color);
         }
     }
 

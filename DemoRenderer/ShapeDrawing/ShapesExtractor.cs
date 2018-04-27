@@ -42,7 +42,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.Position = pose.Position;
                         instance.Radius = shapes.GetShape<Sphere>(shapeIndex.Index).Radius;
                         Helpers.PackOrientation(ref pose.Orientation, out instance.PackedOrientation);
-                        instance.PackedColor = Helpers.PackColor(ref color);
+                        instance.PackedColor = Helpers.PackColor(color);
                         spheres.Add(ref instance, new PassthroughArrayPool<SphereInstance>());
                     }
                     break;
@@ -54,7 +54,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.Radius = capsule.Radius;
                         instance.HalfLength = capsule.HalfLength;
                         instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
-                        instance.PackedColor = Helpers.PackColor(ref color);
+                        instance.PackedColor = Helpers.PackColor(color);
                         capsules.Add(ref instance, new PassthroughArrayPool<CapsuleInstance>());
                     }
                     break;
@@ -63,7 +63,7 @@ namespace DemoRenderer.ShapeDrawing
                         BoxInstance instance;
                         instance.Position = pose.Position;
                         ref var box = ref shapes.GetShape<Box>(shapeIndex.Index);
-                        instance.PackedColor = Helpers.PackColor(ref color);
+                        instance.PackedColor = Helpers.PackColor(color);
                         instance.Orientation = pose.Orientation;
                         instance.HalfWidth = box.HalfWidth;
                         instance.HalfHeight = box.HalfHeight;

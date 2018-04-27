@@ -168,7 +168,7 @@ namespace DemoRenderer
         /// <param name="color">RGB color to pack.</param>
         /// <returns>Color packed into 32 bits.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint PackColor(ref Vector3 color)
+        public static uint PackColor(in Vector3 color)
         {
             const uint RScale = (1 << 11) - 1;
             const uint GScale = (1 << 11) - 1;

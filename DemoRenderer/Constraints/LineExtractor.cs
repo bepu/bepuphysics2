@@ -29,6 +29,12 @@ namespace DemoRenderer.Constraints
             if (showBoundingBoxes)
                 boundingBoxes.AddInstances(broadPhase, ref lines, looper);
         }
+
+        public ref LineInstance Allocate()
+        {
+            return ref lines.Allocate(new PassthroughArrayPool<LineInstance>());
+        }
+
         public void ClearInstances()
         {
             lines.Count = 0;

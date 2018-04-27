@@ -271,6 +271,10 @@ namespace Demos
         TextBuilder uiText = new TextBuilder(128);
         public void Render(Renderer renderer)
         {
+            //Clear first so that any demo-specific logic doesn't get lost.
+            renderer.Shapes.ClearInstances();
+            renderer.Lines.ClearInstances();
+
             //Perform any demo-specific rendering first.
             demo.Render(renderer, uiText, font);
 #if DEBUG
@@ -346,9 +350,7 @@ namespace Demos
                     uiText.Clear().Append(1e3 * timeSamples.Simulation[timeSamples.Simulation.End - 1], timingGraph.Description.VerticalIntervalLabelRounding).Append(" ms/step"),
                     new Vector2(window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, timingTextSize), inset), timingTextSize, timingGraph.Description.TextColor, font);
             }
-            renderer.Shapes.ClearInstances();
             renderer.Shapes.AddInstances(demo.Simulation, demo.ThreadDispatcher);
-            renderer.Lines.ClearInstances();
             renderer.Lines.Extract(demo.Simulation.Bodies, demo.Simulation.Solver, demo.Simulation.BroadPhase, showConstraints, showContacts, showBoundingBoxes, demo.ThreadDispatcher);
         }
 

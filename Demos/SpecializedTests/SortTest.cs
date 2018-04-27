@@ -27,8 +27,8 @@ namespace Demos.SpecializedTests
                     Debug.Assert(keys[i] >= keys[i - 1]);
                 }
             }
-            const int elementCount = 4096;
-            const int elementExclusiveUpperBound = 32768;// 1 << 5;
+            const int elementCount = 65536;
+            const int elementExclusiveUpperBound = int.MaxValue;// 1 << 5;
 
             var bufferPool = new BufferPool();
             var threadDispatcher = new SimpleThreadDispatcher(8);
@@ -69,23 +69,23 @@ namespace Demos.SpecializedTests
                 var bucketCounts = new int[1024];
                 for (int t = 0; t < 16; ++t)
                 {
-                    //keys2.CopyTo(0, ref keys, 0, elementCount);
-                    //unsafe
-                    //{
-                    //    var comparer = new Comparer();
-                    //    fixed (int* keysPointer = keys.Memory)
-                    //    fixed (int* valuesPointer = indexMap.Memory)
-                    //    {
-                    //        var keysBuffer = new Buffer<int>(keysPointer, keys.Length);
-                    //        var valuesBuffer = new Buffer<int>(valuesPointer, indexMap.Length);
-                    //        timer.Restart();
-                    //        QuickSort.Sort(ref keysBuffer[0], ref valuesBuffer[0], 0, elementCount - 1, ref comparer);
-                    //    }
-                    //}
-                    ////QuickSort.Sort2(ref keys[0], ref indexMap[0], 0, elementCount - 1, ref comparer);
-                    //timer.Stop();
-                    //VerifySort(keys);
-                    //Console.WriteLine($"QuickSort time (ms): {timer.Elapsed.TotalSeconds * 1e3}");
+                    keys2.CopyTo(0, ref keys, 0, elementCount);
+                    unsafe
+                    {
+                        var comparer = new Comparer();
+                        fixed (int* keysPointer = keys.Memory)
+                        fixed (int* valuesPointer = indexMap.Memory)
+                        {
+                            var keysBuffer = new Buffer<int>(keysPointer, keys.Length);
+                            var valuesBuffer = new Buffer<int>(valuesPointer, indexMap.Length);
+                            timer.Restart();
+                            QuickSort.Sort(ref keysBuffer[0], ref valuesBuffer[0], 0, elementCount - 1, ref comparer);
+                        }
+                    }
+                    //QuickSort.Sort2(ref keys[0], ref indexMap[0], 0, elementCount - 1, ref comparer);
+                    timer.Stop();
+                    VerifySort(keys);
+                    Console.WriteLine($"QuickSort time (ms): {timer.Elapsed.TotalSeconds * 1e3}");
 
                     //keys.CopyTo(0, ref keys2, 0, elementCount);
                     //timer.Restart();
@@ -102,14 +102,14 @@ namespace Demos.SpecializedTests
                     VerifySort(keys3);
                     Console.WriteLine($"{t} LSBRadixSort time (ms): {timer.Elapsed.TotalSeconds * 1e3}");
 
-                    //keys.CopyTo(0, ref keys4, 0, elementCount);
-                    //var originalIndices = new int[256];
-                    //timer.Restart();
-                    ////MSBRadixSort.SortU32(ref keys4[0], ref indexMap4[0], ref bucketCounts[0], ref originalIndices[0], elementCount, 24);
-                    //MSBRadixSort.SortU32(ref keys4[0], ref indexMap4[0], elementCount, SpanHelper.GetContainingPowerOf2(elementExclusiveUpperBound));
-                    //timer.Stop();
-                    //VerifySort(keys4);
-                    //Console.WriteLine($"{t} MSBRadixSort time (ms): {timer.Elapsed.TotalSeconds * 1e3}");
+                    keys.CopyTo(0, ref keys4, 0, elementCount);
+                    var originalIndices = new int[256];
+                    timer.Restart();
+                    //MSBRadixSort.SortU32(ref keys4[0], ref indexMap4[0], ref bucketCounts[0], ref originalIndices[0], elementCount, 24);
+                    MSBRadixSort.SortU32(ref keys4[0], ref indexMap4[0], elementCount, SpanHelper.GetContainingPowerOf2(elementExclusiveUpperBound));
+                    timer.Stop();
+                    VerifySort(keys4);
+                    Console.WriteLine($"{t} MSBRadixSort time (ms): {timer.Elapsed.TotalSeconds * 1e3}");
 
 
                 }

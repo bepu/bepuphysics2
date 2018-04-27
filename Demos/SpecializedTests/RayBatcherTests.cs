@@ -11,6 +11,8 @@ using BepuUtilities.Collections;
 using System.Runtime.CompilerServices;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Trees;
+using DemoRenderer.UI;
+using DemoRenderer.Constraints;
 
 namespace Demos.SpecializedTests
 {
@@ -89,21 +91,22 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            int rayCount = 1 << 20;
+            int rayCount = 1 << 10;
             QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), rayCount, out testRays);
-            BufferPool.Take(rayCount, out hits);
+            BufferPool.Take(rayCount, out batchedResults);
+            BufferPool.Take(rayCount, out unbatchedResults);
 
             for (int i = 0; i < rayCount; ++i)
             {
                 var direction = GetDirection(random);
                 testRays.AllocateUnsafely() = new TestRay
                 {
-                    //Origin = GetDirection(random) * width * spacing * 0.25f,
-                    //Direction = GetDirection(random),
-                    //MaximumT = 1000// 50 + (float)random.NextDouble() * 300
-                    Origin = new Vector3(-500, 0, 0),
-                    Direction = new Vector3(1, 0, 0),
-                    MaximumT = 1000
+                    Origin = GetDirection(random) * width * spacing * 0.25f,
+                    Direction = GetDirection(random),
+                    MaximumT = 1000// 50 + (float)random.NextDouble() * 300
+                    //Origin = new Vector3(-500, 0, 0),
+                    //Direction = new Vector3(1, 0, 0),
+                    //MaximumT = 1000
                     //Origin = new Vector3(-500),
                     //Direction = new Vector3(1),
                     //MaximumT = 1000
@@ -142,7 +145,8 @@ namespace Demos.SpecializedTests
             public CollidableReference Collidable;
             public bool Hit;
         }
-        Buffer<RayHit> hits;
+        Buffer<RayHit> batchedResults;
+        Buffer<RayHit> unbatchedResults;
 
         unsafe struct RayTester : IBroadPhaseBatchedRayTester
         {
@@ -182,6 +186,7 @@ namespace Demos.SpecializedTests
                     hit.Normal = normal;
                     hit.T = t;
                     hit.Collidable = collidable;
+                    hit.Hit = true;
                 }
             }
         }
@@ -221,14 +226,15 @@ namespace Demos.SpecializedTests
             //    }
             //}
 
+            CacheBlaster.Blast();
             double batchedTime;
             {
                 int intersectionCount = 0;
                 for (int i = 0; i < testRays.Count; ++i)
                 {
-                    hits[i].T = float.MaxValue;
+                    batchedResults[i].T = float.MaxValue;
                 }
-                var hitHandler = new HitHandler { Hits = hits, IntersectionCount = &intersectionCount };
+                var hitHandler = new HitHandler { Hits = batchedResults, IntersectionCount = &intersectionCount };
                 var batcher = new SimulationRayBatcher<HitHandler>(BufferPool, Simulation, hitHandler, 4096);
                 var start = Stopwatch.GetTimestamp();
                 for (int i = 0; i < testRays.Count; ++i)
@@ -239,7 +245,7 @@ namespace Demos.SpecializedTests
                 batcher.Flush();
                 var stop = Stopwatch.GetTimestamp();
                 simulationQueryTimes.Add(batchedTime = (stop - start) / (double)Stopwatch.Frequency);
-                
+
                 batcher.Dispose();
                 if (frameCount % sampleCount == 0)
                 {
@@ -256,9 +262,9 @@ namespace Demos.SpecializedTests
                 int intersectionCount = 0;
                 for (int i = 0; i < testRays.Count; ++i)
                 {
-                    hits[i].T = float.MaxValue;
+                    unbatchedResults[i].T = float.MaxValue;
                 }
-                var hitHandler = new HitHandler { Hits = hits, IntersectionCount = &intersectionCount };
+                var hitHandler = new HitHandler { Hits = unbatchedResults, IntersectionCount = &intersectionCount };
                 var start = Stopwatch.GetTimestamp();
                 for (int i = 0; i < testRays.Count; ++i)
                 {
@@ -286,6 +292,41 @@ namespace Demos.SpecializedTests
             }
             ++frameCount;
 
+        }
+
+        void DrawRays(ref Buffer<RayHit> results, Renderer renderer, Vector3 foregroundMissColor, Vector3 foregroundHitColor, Vector3 foregroundNormalColor, Vector3 backgroundColor)
+        {
+            var packedForegroundMiss = Helpers.PackColor(foregroundMissColor);
+            var packedForegroundHit = Helpers.PackColor(foregroundHitColor);
+            var packedForegroundNormal = Helpers.PackColor(foregroundNormalColor);
+            var packedBackground = Helpers.PackColor(backgroundColor);
+            for (int i = 0; i < testRays.Count; ++i)
+            {
+                ref var result = ref results[i];
+                ref var ray = ref testRays[i];
+                if (result.Hit)
+                {
+                    var end = ray.Origin + ray.Direction * result.T;
+                    renderer.Lines.Allocate() = new LineInstance(ray.Origin, end, packedForegroundHit, packedBackground);
+                    renderer.Lines.Allocate() = new LineInstance(end, end + result.Normal, packedForegroundNormal, packedBackground);
+                }
+                else
+                {
+                    var end = ray.Origin + ray.Direction * ray.MaximumT;
+                    renderer.Lines.Allocate() = new LineInstance(ray.Origin, end, packedForegroundMiss, packedBackground);
+                }
+            }
+        }
+
+        public override void Render(Renderer renderer, TextBuilder text, Font font)
+        {
+            var batchedPackedColor = Helpers.PackColor(new Vector3(0.75f, 0.75f, 0));
+            var batchedPackedNormalColor = Helpers.PackColor(new Vector3(1f, 1f, 0));
+            var batchedPackedBackgroundColor = Helpers.PackColor(new Vector3());
+
+            DrawRays(ref batchedResults, renderer, new Vector3(0.5f, 0.5f, 0), new Vector3(1, 1, 0), new Vector3(0, 1, 0), new Vector3());
+            //DrawRays(ref unbatchedResults, renderer, new Vector3(0.5f, 0, 0.5f), new Vector3(0.75f, 0, 0.75f), new Vector3());
+            base.Render(renderer, text, font);
         }
 
     }

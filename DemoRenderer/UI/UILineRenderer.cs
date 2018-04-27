@@ -37,7 +37,7 @@ namespace DemoRenderer.UI
             PackedStart = (uint)(start.X * screenToPackedScale.X) | ((uint)(start.Y * screenToPackedScale.Y) << 16);
             PackedEnd = (uint)(end.X * screenToPackedScale.X) | ((uint)(end.Y * screenToPackedScale.Y) << 16);
             Radius = radius;
-            PackedColor = Helpers.PackColor(ref color);
+            PackedColor = Helpers.PackColor(color);
         }
     }
 
