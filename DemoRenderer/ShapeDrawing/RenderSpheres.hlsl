@@ -64,7 +64,7 @@ PSInput VSMain(uint vertexId : SV_VertexId)
 
 struct PSOutput
 {
-	float3 Color : SV_Target0;
+	float4 Color : SV_Target0;
 	float Depth : SV_DepthLessEqual;
 };
 
@@ -79,13 +79,10 @@ cbuffer PixelConstants : register(b1)
 	float2 PixelSizeAtUnitPlane;
 };
 
-bool RayCastSphere(float3 rayDirection, float3 spherePosition, float radius,
+bool RayCastSphere(float3 d, float3 spherePosition, float radius,
 	out float t, out float3 hitLocation, out float3 hitNormal)
 {
-	//Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
-	float inverseDLength = 1.0 / length(rayDirection);
-	float3 d = rayDirection * inverseDLength;
-
+	//Note that the ray direction is assumed to be normalized. Helps with numerical issues and simplifies the math.
 	//Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
 	float3 o = -spherePosition;
 	float tOffset = max(0, -dot(o, d) - radius);
@@ -98,17 +95,24 @@ bool RayCastSphere(float3 rayDirection, float3 spherePosition, float radius,
 	hitLocation = o + d * t;
 	hitNormal = hitLocation / radius;
 	hitLocation += spherePosition;
-	t = (t + tOffset) * inverseDLength;
+	t = t + tOffset;
 	return (b <= 0 || c <= 0) && discriminant > 0;
 }
 
+float GetSignedDistance(float3 direction, float3 position, float radius, out float3 closestPointOnRay)
+{
+	//Compute closest point on the eye ray to the sphere center.
+	closestPointOnRay = direction * dot(direction, position);
+	return distance(closestPointOnRay, position) - radius;
+}
 
 PSOutput PSMain(PSInput input)
 {
 	PSOutput output;
 	float t;
 	float3 hitLocation, hitNormal;
-	if (RayCastSphere(input.ToAABB, input.Sphere.Position, input.Sphere.Radius, t, hitLocation, hitNormal))
+	float3 direction = normalize(input.ToAABB);
+	if (RayCastSphere(direction, input.Sphere.Position, input.Sphere.Radius, t, hitLocation, hitNormal))
 	{
 		float4 orientation = UnpackOrientation(input.Sphere.PackedOrientation);
 		float3 dpdx, dpdy;
@@ -116,7 +120,9 @@ PSOutput PSMain(PSInput input)
 		float3 color = ShadeSurface(
 			hitLocation, hitNormal, UnpackR11G11B10_UNorm(input.Sphere.PackedColor), dpdx, dpdy,
 			input.Sphere.Position, orientation);
-		output.Color = color;
+		float3 closestPointOnRay;
+		float signedDistance = GetSignedDistance(direction, input.Sphere.Position, input.Sphere.Radius, closestPointOnRay);
+		output.Color = float4(color, GetCoverage(signedDistance, PixelSizeAtUnitPlane, -dot(closestPointOnRay, CameraBackwardPS)));
 		output.Depth = GetProjectedDepth(-dot(CameraBackwardPS, hitLocation), Near, Far);
 	}
 	else

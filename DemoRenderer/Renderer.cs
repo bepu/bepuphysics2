@@ -47,6 +47,7 @@ namespace DemoRenderer
         RasterizerState rasterizerState;
         DepthStencilState opaqueDepthState;
         BlendState opaqueBlendState;
+        BlendState a2cBlendState;
         DepthStencilState uiDepthState;
         BlendState uiBlendState;
 
@@ -95,6 +96,11 @@ namespace DemoRenderer
             var opaqueBlendStateDescription = BlendStateDescription.Default();
             opaqueBlendState = new BlendState(Surface.Device, opaqueBlendStateDescription);
             opaqueBlendState.DebugName = "Opaque Blend State";
+
+            var a2cBlendStateDescription = BlendStateDescription.Default();
+            a2cBlendStateDescription.AlphaToCoverageEnable = true;
+            a2cBlendState = new BlendState(Surface.Device, a2cBlendStateDescription);
+            a2cBlendState.DebugName = "A2C Blend State";
 
             var uiDepthStateDescription = new DepthStencilStateDescription
             {
@@ -206,11 +212,15 @@ namespace DemoRenderer
             context.ClearRenderTargetView(rtv, new SharpDX.Mathematics.Interop.RawColor4());
             context.OutputMerger.SetRenderTargets(dsv, rtv);
             context.Rasterizer.State = rasterizerState;
-            context.OutputMerger.SetBlendState(opaqueBlendState);
             context.OutputMerger.SetDepthStencilState(opaqueDepthState);
 
+            //All ray traced shapes use analytic coverage writes to get antialiasing.
+            context.OutputMerger.SetBlendState(a2cBlendState);
             SphereRenderer.Render(context, camera, Surface.Resolution, Shapes.spheres.Span.Memory, 0, Shapes.spheres.Count);
             CapsuleRenderer.Render(context, camera, Surface.Resolution, Shapes.capsules.Span.Memory, 0, Shapes.capsules.Count);
+
+            //Non-raytraced shapes just use regular opaque rendering.
+            context.OutputMerger.SetBlendState(opaqueBlendState);
             BoxRenderer.Render(context, camera, Surface.Resolution, Shapes.boxes.Span.Memory, 0, Shapes.boxes.Count);
             LineRenderer.Render(context, camera, Surface.Resolution, Lines.lines.Span.Memory, 0, Lines.lines.Count);
 
@@ -261,6 +271,7 @@ namespace DemoRenderer
                 rasterizerState.Dispose();
                 opaqueDepthState.Dispose();
                 opaqueBlendState.Dispose();
+                a2cBlendState.Dispose();
                 uiDepthState.Dispose();
                 uiBlendState.Dispose();
             }

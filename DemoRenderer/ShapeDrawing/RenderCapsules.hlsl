@@ -73,7 +73,7 @@ PSInput VSMain(uint vertexId : SV_VertexId)
 
 struct PSOutput
 {
-	float3 Color : SV_Target0;
+	float4 Color : SV_Target0;
 	float Depth : SV_DepthLessEqual;
 };
 
@@ -96,9 +96,7 @@ bool RayCastCapsule(float3 rayDirection, float3 capsulePosition, float4 capsuleO
 	float3 o = mul(-capsulePosition, transpose(orientationMatrix));
 	float3 d = mul(rayDirection, transpose(orientationMatrix));
 
-	//Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
-	float inverseDLength = 1.0 / length(d);
-	d *= inverseDLength;
+	//Note that we assume the ray direction is unit length. That helps with some numerical issues and simplifies some things.
 
 	//Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
 	float tOffset = 0;// max(0, -dot(o, d) - (halfLength + radius));
@@ -140,7 +138,7 @@ bool RayCastCapsule(float3 rayDirection, float3 capsulePosition, float4 capsuleO
 		{
 			//The hit is on the cylindrical portion of the capsule.
 			hitNormal = mul(float3(cylinderHitLocation.x, 0, cylinderHitLocation.z) / radius, orientationMatrix);
-			t = (t + tOffset) * inverseDLength;
+			t = t + tOffset;
 			hitLocation = rayDirection * t;
 			return true;
 		}
@@ -170,11 +168,35 @@ bool RayCastCapsule(float3 rayDirection, float3 capsulePosition, float4 capsuleO
 	}
 	t = max(-tOffset, -capB - sqrt(capDiscriminant));
 	hitNormal = mul((os + d * t) / radius, orientationMatrix);
-	t = (t + tOffset) * inverseDLength;
+	t = t + tOffset;
 	hitLocation = rayDirection * t;
 	return true;
 }
 
+float GetSignedDistance(float3 direction, float3 position, float4 orientation, float radius, float halfLength, out float3 closestPointOnRay)
+{
+	//Compute closest points between the infinite eye ray and the capsule's internal line segment.
+	//Note that direction is assumed to be unit length.
+
+	//Compute the closest points between the infinite eye ray and internal line segment. No clamping to begin with.
+	//We want to minimize distance = ||(a + da * ta) - (b + db * tb)||.
+	//Taking the derivative with respect to ta and doing some algebra (taking into account ||da|| == ||db|| == 1) to solve for ta yields:
+	//ta = (da * (b - a) + (db * (a - b)) * (da * db)) / (1 - ((da * db) * (da * db))    
+	//Treat the capsule's internal segment as 'a', and the eye ray as 'b'.
+	float3 da = TransformUnitY(orientation);
+	float daOffsetB = -dot(da, position);
+	float dbOffsetB = -dot(direction, position);
+	float dadb = dot(da, direction);
+	//Note potential division by zero when the axes are parallel. Arbitrarily clamp; near zero values will instead produce extreme values which get clamped to reasonable results.
+	float ta = clamp((daOffsetB - dbOffsetB * dadb) / max(1e-15, 1.0 - dadb * dadb), -halfLength, halfLength);
+	//tb = ta * (da * db) - db * (b - a)
+	float tb = ta * dadb - dbOffsetB;
+	closestPointOnRay = tb * direction;
+	float3 segmentLocation = position + da * ta;
+	float3 offset = closestPointOnRay - segmentLocation;
+	float internalDistance = length(offset);
+	return internalDistance - radius;
+}
 
 PSOutput PSMain(PSInput input)
 {
@@ -182,14 +204,17 @@ PSOutput PSMain(PSInput input)
 	float t;
 	float3 hitLocation, hitNormal;
 	float4 orientation = UnpackOrientation(input.Instance.PackedOrientation);
-	if (RayCastCapsule(input.ToAABB, input.Instance.Position, orientation, input.Instance.Radius, input.Instance.HalfLength, t, hitLocation, hitNormal))
+	float3 direction = normalize(input.ToAABB);
+	if (RayCastCapsule(direction, input.Instance.Position, orientation, input.Instance.Radius, input.Instance.HalfLength, t, hitLocation, hitNormal))
 	{
 		float3 dpdx, dpdy;
 		GetScreenspaceDerivatives(hitLocation, hitNormal, input.ToAABB, CameraRightPS, CameraUpPS, CameraBackwardPS, PixelSizeAtUnitPlane, dpdx, dpdy);
 		float3 color = ShadeSurface(
 			hitLocation, hitNormal, UnpackR11G11B10_UNorm(input.Instance.PackedColor), dpdx, dpdy,
 			input.Instance.Position, orientation);
-		output.Color = color;
+		float3 closestPointOnRay;
+		float signedDistance = GetSignedDistance(direction, input.Instance.Position, orientation, input.Instance.Radius, input.Instance.HalfLength, closestPointOnRay);
+		output.Color = float4(color, GetCoverage(signedDistance, PixelSizeAtUnitPlane, -dot(closestPointOnRay, CameraBackwardPS)));
 		output.Depth = GetProjectedDepth(-dot(CameraBackwardPS, hitLocation), Near, Far);
 	}
 	else

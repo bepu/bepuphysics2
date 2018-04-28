@@ -197,6 +197,14 @@ void GetScreenspaceDerivatives(float3 surfacePosition, float3 surfaceNormal, flo
 
 }
 
+float GetCoverage(float signedDistanceFromShape, float2 pixelSizeAtUnitPlane, float z)
+{
+	float pixelSize = z * max(pixelSizeAtUnitPlane.x, pixelSizeAtUnitPlane.y);
+	//0 distance = 0 coverage. -1 distance in pixels = 1 coverage.
+	//Note that this effectively 'insets' the antialiasing compared to the ground truth. It's only a half pixel off and it's simple, so not a big deal.
+	return saturate(-signedDistanceFromShape / pixelSize);
+}
+
 float3 ShadeSurface(float3 surfacePosition, float3 surfaceNormal, float3 surfaceColor, float3 dpdx, float3 dpdy,
 	float3 instancePosition, float4 instanceOrientation)
 {
