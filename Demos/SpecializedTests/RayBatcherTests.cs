@@ -324,7 +324,7 @@ namespace Demos.SpecializedTests
             var batchedPackedNormalColor = Helpers.PackColor(new Vector3(1f, 1f, 0));
             var batchedPackedBackgroundColor = Helpers.PackColor(new Vector3());
 
-            DrawRays(ref batchedResults, renderer, new Vector3(0.5f, 0.5f, 0), new Vector3(1, 1, 0), new Vector3(0, 1, 0), new Vector3());
+            DrawRays(ref batchedResults, renderer, new Vector3(0.25f, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3());
             //DrawRays(ref unbatchedResults, renderer, new Vector3(0.5f, 0, 0.5f), new Vector3(0.75f, 0, 0.75f), new Vector3());
             base.Render(renderer, text, font);
         }
