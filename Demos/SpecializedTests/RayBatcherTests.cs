@@ -103,15 +103,15 @@ namespace Demos.SpecializedTests
                 {
                     Origin = GetDirection(random) * width * spacing * 0.25f,
                     Direction = GetDirection(random),
-                    MaximumT = 1000// 50 + (float)random.NextDouble() * 300
+                    MaximumT = 50// 50 + (float)random.NextDouble() * 300
                     //Origin = new Vector3(-500, 0, 0),
                     //Direction = new Vector3(1, 0, 0),
-                    //MaximumT = 1000
+                    //MaximumT = 50
                     //Origin = new Vector3(-500),
                     //Direction = new Vector3(1),
-                    //MaximumT = 1000
+                    //MaximumT = 50
                     //    Direction = new Vector3(0.5346225f, -0.7184405f, -0.4449964f),
-                    //MaximumT = 1000,
+                    //MaximumT = 50,
                     //Origin = new Vector3(0.8212769f, -0.8531729f, 0.9328218f)
                 };
             }

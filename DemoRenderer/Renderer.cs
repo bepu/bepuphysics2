@@ -140,7 +140,7 @@ namespace DemoRenderer
             TextBatcher.Resolution = resolution;
             UILineBatcher.Resolution = resolution;
 
-            var sampleDescription = new SampleDescription(8, 0);
+            var sampleDescription = new SampleDescription(4, 0);
             depthBuffer = new Texture2D(Surface.Device, new Texture2DDescription
             {
                 Format = Format.R32_Typeless,

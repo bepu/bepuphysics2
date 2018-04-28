@@ -34,10 +34,10 @@ struct PSInput
 	nointerpolation float Length : LineLength;
 	nointerpolation float3 Color : ScreenLineColor0;
 	nointerpolation float3 BackgroundColor : ScreenLineColor1;
-	float PixelSize : WorldPixelSize;
+	nointerpolation float InverseLineRadius : InverseLineRadius;
 };
 #define InnerRadius 0.5
-#define OuterRadius 0.75
+#define OuterRadius 1.0
 #define SampleRadius 0.70710678118
 PSInput VSMain(uint vertexId : SV_VertexId)
 {
@@ -55,19 +55,20 @@ PSInput VSMain(uint vertexId : SV_VertexId)
 	output.Length = worldLineLength;
 	output.Color = UnpackR11G11B10_UNorm(instance.PackedColor);
 	output.BackgroundColor = UnpackR11G11B10_UNorm(instance.PackedBackgroundColor);
-	//How wide is a pixel at this vertex, approximately?
+	//How wide is a pixel at the line, approximately?
+	//Compute the closest point on the line to the camera.
+	float t = clamp(-dot(worldLine, output.Start), 0, worldLineLength);
+	float3 closestOnLine = output.Start + worldLine * t;
+	float distanceFromCamera = length(closestOnLine);
 	//Convert the vertex id to local box coordinates.
 	//Note that this id->coordinate transformation requires consistency with the index buffer
 	//to ensure proper triangle winding. A set bit in a given position makes it higher along the axis.
 	//So vertexId&1 == 1 => +x, vertexId&2 == 2 => +y, and vertexId&4 == 4 => +z.
 	float3 boxCoordinates = float3(vertexId & 1, (vertexId & 2) >> 1, (vertexId & 4) >> 2);
-	float3 endpoint = boxCoordinates.z > 0 ? instance.End : instance.Start;
-	//Note that distance is used instead of z. Resizing lines based on camera orientation is a bit odd.
-	float distance = length(endpoint - CameraPosition);
-	float pixelSize = distance * TanAnglePerPixel;
-	output.PixelSize = pixelSize;
-
-
+	float pixelSize = distanceFromCamera * TanAnglePerPixel;
+	float lineRadius = OuterRadius * pixelSize;
+	output.InverseLineRadius = 1.0 / lineRadius;
+	
 	float3 worldLineX = cross(CameraForward, worldLine);
 	float worldLineXLength = length(worldLineX);
 	if (worldLineXLength < 1e-7)
@@ -77,13 +78,10 @@ PSInput VSMain(uint vertexId : SV_VertexId)
 	}
 	worldLineX /= worldLineXLength;
 	float3 worldLineY = cross(worldLine, worldLineX);
-	//Use the pixel size in world space to pad out the bounding box.
-	const float paddingInPixels = OuterRadius + SampleRadius;
-
-	float worldPadding = paddingInPixels * pixelSize;
-	float3 paddingX = worldPadding * worldLineX;
-	float3 paddingY = worldPadding * worldLineY;
-	float3 paddingZ = worldPadding * worldLine;
+	//Use the line radius to pad out the box.
+	float3 paddingX = lineRadius * worldLineX;
+	float3 paddingY = lineRadius * worldLineY;
+	float3 paddingZ = lineRadius * worldLine;
 	float3 position = boxCoordinates.z > 0 ?
 		instance.End + paddingZ :
 		instance.Start - paddingZ;
@@ -129,9 +127,9 @@ PSOutput PSMain(PSInput input)
 	float3 closestOnLine = input.Start + tLine * input.Direction;
 	float3 closestOnRay = rayDirection * (dot(closestOnLine, rayDirection) / dot(rayDirection, rayDirection));
 	float lineDistance = distance(closestOnRay, closestOnLine);
-	float lineScreenDistance = lineDistance / input.PixelSize;
+	float normalizedDistance = lineDistance * input.InverseLineRadius;
 
-	float innerDistance = lineScreenDistance - InnerRadius;
+	float innerDistance = normalizedDistance - InnerRadius;
 	//This distance is measured in screen pixels. Treat every pixel as having a set radius.
 	//If the line's distance is beyond the sample radius, then there is zero coverage.
 	//If the distance is 0, then the sample is half covered.
