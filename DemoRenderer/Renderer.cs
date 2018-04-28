@@ -37,10 +37,12 @@ namespace DemoRenderer
         DepthStencilView dsv;
         //Technically we could get away with rendering directly to the backbuffer, but a dedicated color buffer simplifies some things- 
         //you aren't bound by the requirements of the swapchain's buffer during rendering, and post processing is nicer.
-        //Not entirely necessary for the demos, but hey, you could add MSAA resolves and tonemapping if you wanted?
+        //Not entirely necessary for the demos, but hey, you could add tonemapping if you wanted?
         Texture2D colorBuffer;
-        ShaderResourceView srv;
         RenderTargetView rtv;
+        Texture2D resolvedColorBuffer;
+        ShaderResourceView resolvedSRV;
+        RenderTargetView resolvedRTV;
 
         RasterizerState rasterizerState;
         DepthStencilState opaqueDepthState;
@@ -132,6 +134,7 @@ namespace DemoRenderer
             TextBatcher.Resolution = resolution;
             UILineBatcher.Resolution = resolution;
 
+            var sampleDescription = new SampleDescription(8, 0);
             depthBuffer = new Texture2D(Surface.Device, new Texture2DDescription
             {
                 Format = Format.R32_Typeless,
@@ -139,7 +142,7 @@ namespace DemoRenderer
                 MipLevels = 1,
                 Width = resolution.X,
                 Height = resolution.Y,
-                SampleDescription = new SampleDescription(1, 0),
+                SampleDescription = sampleDescription,
                 Usage = ResourceUsage.Default,
                 BindFlags = BindFlags.DepthStencil,
                 CpuAccessFlags = CpuAccessFlags.None,
@@ -150,7 +153,7 @@ namespace DemoRenderer
             var depthStencilViewDescription = new DepthStencilViewDescription
             {
                 Flags = DepthStencilViewFlags.None,
-                Dimension = DepthStencilViewDimension.Texture2D,
+                Dimension = DepthStencilViewDimension.Texture2DMultisampled,
                 Format = Format.D32_Float,
                 Texture2D = { MipSlice = 0 }
             };
@@ -158,26 +161,35 @@ namespace DemoRenderer
             dsv.DebugName = "Depth DSV";
 
             //Using a 64 bit texture in the demos for lighting is pretty silly. But we gon do it.
-            colorBuffer = new Texture2D(Surface.Device, new Texture2DDescription
+            var description = new Texture2DDescription
             {
                 Format = Format.R16G16B16A16_Float,
                 ArraySize = 1,
                 MipLevels = 1,
                 Width = resolution.X,
                 Height = resolution.Y,
-                SampleDescription = new SampleDescription(1, 0),
+                SampleDescription = sampleDescription,
                 Usage = ResourceUsage.Default,
                 BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
                 CpuAccessFlags = CpuAccessFlags.None,
                 OptionFlags = ResourceOptionFlags.None
-            });
+            };
+            colorBuffer = new Texture2D(Surface.Device, description);
             colorBuffer.DebugName = "Color Buffer";
-
-            srv = new ShaderResourceView(Surface.Device, colorBuffer);
-            srv.DebugName = "Color SRV";
 
             rtv = new RenderTargetView(Surface.Device, colorBuffer);
             rtv.DebugName = "Color RTV";
+            
+            description.SampleDescription = new SampleDescription(1, 0);
+            resolvedColorBuffer = new Texture2D(Surface.Device, description);
+            resolvedColorBuffer.DebugName = "Resolved Color Buffer";
+
+            resolvedSRV = new ShaderResourceView(Surface.Device, resolvedColorBuffer);
+            resolvedSRV.DebugName = "Resolved Color SRV";
+
+            resolvedRTV = new RenderTargetView(Surface.Device, resolvedColorBuffer);
+            resolvedRTV.DebugName = "Resolved Color RTV";
+
         }
 
         public void Render(Camera camera)
@@ -191,8 +203,6 @@ namespace DemoRenderer
 
             //Note reversed depth.
             context.ClearDepthStencilView(dsv, DepthStencilClearFlags.Depth, 0, 0);
-            //The background render is going to fill out the entire color buffer, but having a clear can be useful- e.g. clearing out MSAA history.
-            //We don't use MSAA right now, but the cost of doing this clear is negligible and it avoids a surprise later.
             context.ClearRenderTargetView(rtv, new SharpDX.Mathematics.Interop.RawColor4());
             context.OutputMerger.SetRenderTargets(dsv, rtv);
             context.Rasterizer.State = rasterizerState;
@@ -206,6 +216,12 @@ namespace DemoRenderer
 
             Background.Render(context, camera);
 
+            //Resolve MSAA rendering down to a single sample buffer for screenspace work.
+            //Note that we're not bothering to properly handle tonemapping during the resolve. That's going to hurt quality a little, but the demos don't make use of very wide ranges.
+            //(If for some reason you end up expanding the demos to make use of wider HDR, you can make this a custom resolve pretty easily.)
+            context.ResolveSubresource(colorBuffer, 0, resolvedColorBuffer, 0, Format.R16G16B16A16_Float);
+            context.OutputMerger.SetRenderTargets(resolvedRTV);
+
             //Glyph and screenspace line drawing rely on the same premultiplied alpha blending transparency. We'll handle their state out here.
             context.OutputMerger.SetBlendState(uiBlendState);
             context.OutputMerger.SetDepthStencilState(uiDepthState);
@@ -216,7 +232,7 @@ namespace DemoRenderer
             //Note that, for now, the compress to swap handles its own depth state since it's the only post processing stage.
             context.OutputMerger.SetBlendState(opaqueBlendState);
             context.Rasterizer.State = rasterizerState;
-            CompressToSwap.Render(context, srv, Surface.RTV);
+            CompressToSwap.Render(context, resolvedSRV, Surface.RTV);
         }
 
         bool disposed;
@@ -234,10 +250,14 @@ namespace DemoRenderer
                 UILineRenderer.Dispose();
                 GlyphRenderer.Dispose();
 
-                depthBuffer.Dispose();
                 dsv.Dispose();
-                colorBuffer.Dispose();
+                depthBuffer.Dispose();
                 rtv.Dispose();
+                colorBuffer.Dispose();
+                resolvedSRV.Dispose();
+                resolvedRTV.Dispose();
+                resolvedColorBuffer.Dispose();
+
                 rasterizerState.Dispose();
                 opaqueDepthState.Dispose();
                 opaqueBlendState.Dispose();
