@@ -220,7 +220,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Normalize(ref Quaternion quaternion)
         {
-            ref var q = ref Unsafe.As<float, Vector4>(ref quaternion.X);
+            ref var q = ref Unsafe.As<Quaternion, Vector4>(ref quaternion);
             q = q / (float)Math.Sqrt(Vector4.Dot(q, q)); //not great; MathF when available or perhaps alternatives?
         }
 

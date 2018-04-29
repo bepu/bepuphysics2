@@ -120,7 +120,7 @@ namespace BepuPhysics.Collidables
             }
             t = latestEntry < 0 ? 0 : latestEntry;
             //The normal should point away from the center of the box.
-            if (Vector3.Dot(normal, localOffset) < 0)
+            if (Vector3.Dot(normal, offset) < 0)
             {
                 normal = -normal;
             }
@@ -235,7 +235,7 @@ namespace BepuPhysics.Collidables
             normal.X = Vector.ConditionalSelect(useX, orientation.X.X, Vector.ConditionalSelect(useY, orientation.Y.X, orientation.Z.X));
             normal.Y = Vector.ConditionalSelect(useX, orientation.X.Y, Vector.ConditionalSelect(useY, orientation.Y.Y, orientation.Z.Y));
             normal.Z = Vector.ConditionalSelect(useX, orientation.X.Z, Vector.ConditionalSelect(useY, orientation.Y.Z, orientation.Z.Z));
-            Vector3Wide.Dot(ref normal, ref localOffset, out var dot);
+            Vector3Wide.Dot(ref normal, ref offset, out var dot);
             var shouldNegate = Vector.LessThan(dot, Vector<float>.Zero);
             normal.X = Vector.ConditionalSelect(shouldNegate, -normal.X, normal.X);
             normal.Y = Vector.ConditionalSelect(shouldNegate, -normal.Y, normal.Y);

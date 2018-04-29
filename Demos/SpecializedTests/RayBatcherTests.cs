@@ -18,24 +18,73 @@ namespace Demos.SpecializedTests
 {
     public class RayBatcherTests : Demo
     {
+        public unsafe struct NoCollisionCallbacks : INarrowPhaseCallbacks
+        {
+            public void Initialize(Simulation simulation)
+            {
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b)
+            {
+                return false;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool AllowContactGeneration(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB)
+            {
+                return false;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            void ConfigureMaterial(out PairMaterialProperties pairMaterial)
+            {
+                pairMaterial = new PairMaterialProperties();
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
+            {
+                pairMaterial = new PairMaterialProperties();
+                return false;
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
+            {
+                pairMaterial = new PairMaterialProperties();
+                return false;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ConvexContactManifold* manifold)
+            {
+                return false;
+            }
+
+            public void Dispose()
+            {
+            }
+        }
         public unsafe override void Initialize(Camera camera)
         {
             camera.Position = new Vector3(-20f, 13, -20f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
+            Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks());
             //Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
-            var shape = new Sphere(0.5f);
-            shape.ComputeInertia(1, out var sphereInertia);
-            var shapeIndex = Simulation.Shapes.Add(ref shape);
+            var box = new Box(0.5f, 1.5f, 1f);
+            var capsule = new Capsule(0.5f, 0.5f);
+            var sphere = new Sphere(.5f);
+            var boxIndex = Simulation.Shapes.Add(ref box);
+            var capsuleIndex = Simulation.Shapes.Add(ref capsule);
+            var sphereIndex = Simulation.Shapes.Add(ref sphere);
             const int width = 16;
             const int height = 16;
             const int length = 16;
             var spacing = new Vector3(2.01f);
             var halfSpacing = spacing / 2;
-            float randomization = 0.9f;
-            var randomizationSpan = (spacing - new Vector3(1)) * randomization;
+            float randomizationSubset = 0.9f;
+            var randomizationSpan = (spacing - new Vector3(1)) * randomizationSubset;
             var randomizationBase = randomizationSpan * -0.5f;
             var random = new Random(5);
             for (int i = 0; i < width; ++i)
@@ -48,6 +97,28 @@ namespace Demos.SpecializedTests
                         //var location = spacing * (new Vector3(i, j, k)) + randomizationBase + r * randomizationSpan;
                         var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, -height, -length) * 0.5f) + randomizationBase + r * randomizationSpan;
                         //var location = new Vector3();
+
+                        BepuUtilities.Quaternion orientation;
+                        orientation.X = -1 + 2 * (float)random.NextDouble();
+                        orientation.Y = -1 + 2 * (float)random.NextDouble();
+                        orientation.Z = -1 + 2 * (float)random.NextDouble();
+                        orientation.W = 0.01f + (float)random.NextDouble();
+                        orientation.Normalize();
+
+                        TypedIndex shapeIndex;
+                        switch ((i + j + k) % 3)
+                        {
+                            case 0:
+                                shapeIndex = boxIndex;
+                                break;
+                            case 1:
+                                shapeIndex = capsuleIndex;
+                                break;
+                            default:
+                                shapeIndex = sphereIndex;
+                                break;
+                        }
+
                         if ((i + j + k) % 2 == 1)
                         {
                             var bodyDescription = new BodyDescription
@@ -55,7 +126,7 @@ namespace Demos.SpecializedTests
                                 Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = -0.1f },
                                 Pose = new RigidPose
                                 {
-                                    Orientation = BepuUtilities.Quaternion.Identity,
+                                    Orientation = orientation,
                                     Position = location
                                 },
                                 Collidable = new CollidableDescription
@@ -63,8 +134,7 @@ namespace Demos.SpecializedTests
                                     Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
                                     SpeculativeMargin = 0.1f,
                                     Shape = shapeIndex
-                                },
-                                LocalInertia = sphereInertia
+                                }
                             };
                             Simulation.Bodies.Add(ref bodyDescription);
                         }
@@ -74,7 +144,7 @@ namespace Demos.SpecializedTests
                             {
                                 Pose = new RigidPose
                                 {
-                                    Orientation = BepuUtilities.Quaternion.Identity,
+                                    Orientation = orientation,
                                     Position = location
                                 },
                                 Collidable = new CollidableDescription
@@ -91,7 +161,7 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            int rayCount = 1 << 10;
+            int rayCount = 1 << 12;
             QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), rayCount, out testRays);
             BufferPool.Take(rayCount, out batchedResults);
             BufferPool.Take(rayCount, out unbatchedResults);
@@ -192,39 +262,12 @@ namespace Demos.SpecializedTests
         }
 
 
-        const int sampleCount = 1;
-        TimingsRingBuffer broadPhaseQueryTimes = new TimingsRingBuffer(sampleCount);
-        TimingsRingBuffer simulationQueryTimes = new TimingsRingBuffer(sampleCount);
-        long frameCount;
+        const int sampleCount = 16;
+        TimingsRingBuffer batchedQueryTimes = new TimingsRingBuffer(sampleCount);
+        TimingsRingBuffer unbatchedQueryTimes = new TimingsRingBuffer(sampleCount);
         public unsafe override void Update(Input input, float dt)
         {
             base.Update(input, dt);
-
-            //{
-            //    int leafIntersectionCount = 0;
-            //    var rayTester = new RayTester { IntersectionCount = &leafIntersectionCount };
-            //    var batcher = new BroadPhaseRayBatcher<RayTester>(BufferPool, Simulation.BroadPhase, rayTester);
-
-            //    var start = Stopwatch.GetTimestamp();
-            //    for (int i = 0; i < testRays.Count; ++i)
-            //    {
-            //        ref var ray = ref testRays[i];
-            //        batcher.Add(ref ray.Origin, ref ray.Direction, ray.MaximumT, i);
-            //    }
-            //    batcher.Flush();
-            //    var stop = Stopwatch.GetTimestamp();
-            //    broadPhaseQueryTimes.Add((stop - start) / (double)Stopwatch.Frequency);
-
-            //    batcher.Dispose();
-            //    if (frameCount % sampleCount == 0)
-            //    {
-            //        var stats = broadPhaseQueryTimes.ComputeStats();
-            //        Console.WriteLine($"BroadPhase Query times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {leafIntersectionCount} intersectionCount");
-            //        Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
-            //        Console.WriteLine($"Time per intersection: {1e9 * stats.Average / leafIntersectionCount} ns");
-            //        Console.WriteLine($"Intersections per ray: {leafIntersectionCount / (double)testRays.Count}");
-            //    }
-            //}
 
             CacheBlaster.Blast();
             double batchedTime;
@@ -233,6 +276,7 @@ namespace Demos.SpecializedTests
                 for (int i = 0; i < testRays.Count; ++i)
                 {
                     batchedResults[i].T = float.MaxValue;
+                    batchedResults[i].Hit = false;
                 }
                 var hitHandler = new HitHandler { Hits = batchedResults, IntersectionCount = &intersectionCount };
                 var batcher = new SimulationRayBatcher<HitHandler>(BufferPool, Simulation, hitHandler, 4096);
@@ -244,17 +288,9 @@ namespace Demos.SpecializedTests
                 }
                 batcher.Flush();
                 var stop = Stopwatch.GetTimestamp();
-                simulationQueryTimes.Add(batchedTime = (stop - start) / (double)Stopwatch.Frequency);
+                batchedQueryTimes.Add(batchedTime = (stop - start) / (double)Stopwatch.Frequency);
 
                 batcher.Dispose();
-                if (frameCount % sampleCount == 0)
-                {
-                    var stats = simulationQueryTimes.ComputeStats();
-                    Console.WriteLine($"Batched times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {intersectionCount} intersectionCount");
-                    Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
-                    //Console.WriteLine($"Time per intersection: {1e9 * stats.Average / intersectionCount} ns");
-                    Console.WriteLine($"Intersections per ray: {intersectionCount / (double)testRays.Count}");
-                }
             }
             CacheBlaster.Blast();
             double unbatchedTime;
@@ -263,6 +299,7 @@ namespace Demos.SpecializedTests
                 for (int i = 0; i < testRays.Count; ++i)
                 {
                     unbatchedResults[i].T = float.MaxValue;
+                    unbatchedResults[i].Hit = false;
                 }
                 var hitHandler = new HitHandler { Hits = unbatchedResults, IntersectionCount = &intersectionCount };
                 var start = Stopwatch.GetTimestamp();
@@ -272,25 +309,14 @@ namespace Demos.SpecializedTests
                     Simulation.RayCast(ref ray.Origin, ref ray.Direction, ray.MaximumT, ref hitHandler, i);
                 }
                 var stop = Stopwatch.GetTimestamp();
-                simulationQueryTimes.Add(unbatchedTime = (stop - start) / (double)Stopwatch.Frequency);
+                unbatchedQueryTimes.Add(unbatchedTime = (stop - start) / (double)Stopwatch.Frequency);
 
-                if (frameCount % sampleCount == 0)
-                {
-                    var stats = simulationQueryTimes.ComputeStats();
-                    Console.WriteLine($"Unbatched times: {stats.Average * 1000} ms average, {stats.StdDev * 1000} stddev, {intersectionCount} intersectionCount");
-                    Console.WriteLine($"Time per ray: {1e9 * stats.Average / testRays.Count} ns");
-                    //Console.WriteLine($"Time per intersection: {1e9 * stats.Average / intersectionCount} ns");
-                    Console.WriteLine($"Intersections per ray: {intersectionCount / (double)testRays.Count}");
-                }
             }
 
-            if (frameCount % sampleCount == 0)
+            for (int i = 0; i < testRays.Count; ++i)
             {
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                Console.WriteLine($"Batched Speedup: {unbatchedTime / batchedTime}");
-                Console.ResetColor();
+                Debug.Assert(unbatchedResults[i].Hit == batchedResults[i].Hit && (!batchedResults[i].Hit || Math.Abs(batchedResults[i].T - unbatchedResults[i].T) < 1e-6f));
             }
-            ++frameCount;
 
         }
 
@@ -318,6 +344,22 @@ namespace Demos.SpecializedTests
             }
         }
 
+        void WriteResults(string name, double time, double baseline, float y, TextBatcher batcher, TextBuilder text, Font font)
+        {
+            batcher.Write(
+                text.Clear().Append(name).Append(":"),
+                new Vector2(32, y), 16, new Vector3(1), font);
+            batcher.Write(
+                text.Clear().Append(time * 1e6, 2),
+                new Vector2(128, y), 16, new Vector3(1), font);
+            batcher.Write(
+                text.Clear().Append(testRays.Count / time, 0),
+                new Vector2(224, y), 16, new Vector3(1), font);
+            batcher.Write(
+                text.Clear().Append(baseline / time, 2),
+                new Vector2(350, y), 16, new Vector3(1), font);
+        }
+
         public override void Render(Renderer renderer, TextBuilder text, Font font)
         {
             var batchedPackedColor = Helpers.PackColor(new Vector3(0.75f, 0.75f, 0));
@@ -325,7 +367,17 @@ namespace Demos.SpecializedTests
             var batchedPackedBackgroundColor = Helpers.PackColor(new Vector3());
 
             DrawRays(ref batchedResults, renderer, new Vector3(0.25f, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3());
-            //DrawRays(ref unbatchedResults, renderer, new Vector3(0.5f, 0, 0.5f), new Vector3(0.75f, 0, 0.75f), new Vector3());
+
+            renderer.TextBatcher.Write(text.Clear().Append("Ray count: ").Append(testRays.Count), new Vector2(32, renderer.Surface.Resolution.Y - 80), 16, new Vector3(1), font);
+            renderer.TextBatcher.Write(text.Clear().Append("Time (us):"), new Vector2(128, renderer.Surface.Resolution.Y - 64), 16, new Vector3(1), font);
+            renderer.TextBatcher.Write(text.Clear().Append("Rays per second:"), new Vector2(224, renderer.Surface.Resolution.Y - 64), 16, new Vector3(1), font);
+            renderer.TextBatcher.Write(text.Clear().Append("Relative speed:"), new Vector2(350, renderer.Surface.Resolution.Y - 64), 16, new Vector3(1), font);
+
+            var batchedStats = batchedQueryTimes.ComputeStats();
+            var unbatchedStats = unbatchedQueryTimes.ComputeStats();
+            WriteResults("Unbatched", unbatchedStats.Average, unbatchedStats.Average, renderer.Surface.Resolution.Y - 48, renderer.TextBatcher, text, font);
+            WriteResults("Batched", batchedStats.Average, unbatchedStats.Average, renderer.Surface.Resolution.Y - 32, renderer.TextBatcher, text, font);
+
             base.Render(renderer, text, font);
         }
 
