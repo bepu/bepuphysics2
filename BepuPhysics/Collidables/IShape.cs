@@ -59,6 +59,7 @@ namespace BepuPhysics.Collidables
 
     public interface IShapeWide<TShape> where TShape : IShape
     {
+
         /// <summary>
         /// Places the specified AOS-formatted shape into the first lane of the wide 'this' reference.
         /// </summary>
@@ -69,6 +70,10 @@ namespace BepuPhysics.Collidables
         void Broadcast(ref TShape shape);
 
         void GetBounds(ref QuaternionWide orientations, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max);
+        /// <summary>
+        /// Gets the lower bound on the number of rays to execute in a wide fashion. Ray bundles with fewer rays will fall back to the single ray code path.
+        /// </summary>
+        int MinimumWideRayCount { get; }
         void RayTest(ref RigidPoses poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal);
     }
 

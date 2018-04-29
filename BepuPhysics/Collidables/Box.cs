@@ -190,6 +190,15 @@ namespace BepuPhysics.Collidables
             maximumAngularExpansion = maximumRadius - Vector.Min(HalfLength, Vector.Min(HalfHeight, HalfLength));
         }
 
+        public int MinimumWideRayCount
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                return 2;
+            }
+        }
+
         public void RayTest(ref RigidPoses pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
             Vector3Wide.Subtract(ref ray.Origin, ref pose.Position, out var offset);

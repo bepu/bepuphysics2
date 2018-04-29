@@ -109,6 +109,7 @@ namespace BepuPhysics.Collidables
     {
         public Vector<float> Radius;
 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Broadcast(ref Sphere shape)
         {
@@ -135,6 +136,15 @@ namespace BepuPhysics.Collidables
             min = new Vector3Wide(ref negatedRadius);
         }
 
+
+        public int MinimumWideRayCount
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                return 2;
+            }
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RayTest(ref RigidPoses pose, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
@@ -158,10 +168,10 @@ namespace BepuPhysics.Collidables
             var discriminant = b * b - c;
             intersected = Vector.BitwiseAnd(
                 Vector.BitwiseOr(
-                    Vector.LessThanOrEqual(b, Vector<float>.Zero), 
+                    Vector.LessThanOrEqual(b, Vector<float>.Zero),
                     Vector.LessThanOrEqual(c, Vector<float>.Zero)),
                 Vector.GreaterThanOrEqual(discriminant, Vector<float>.Zero));
-            
+
 
             t = Vector.Max(-tOffset, -b - Vector.SquareRoot(discriminant));
             Vector3Wide.Scale(ref d, ref t, out oOffset);

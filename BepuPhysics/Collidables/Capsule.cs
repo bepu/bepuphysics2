@@ -214,6 +214,15 @@ namespace BepuPhysics.Collidables
             maximumAngularExpansion = HalfLength;
         }
 
+        public int MinimumWideRayCount
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                return 3;
+            }
+        }
+
         public void RayTest(ref RigidPoses pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
             //It's convenient to work in local space, so pull the ray into the capsule's local space.
