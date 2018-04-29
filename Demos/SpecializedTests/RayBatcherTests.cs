@@ -96,8 +96,7 @@ namespace Demos.SpecializedTests
                         var r = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
                         //var location = spacing * (new Vector3(i, j, k)) + randomizationBase + r * randomizationSpan;
                         var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, -height, -length) * 0.5f) + randomizationBase + r * randomizationSpan;
-                        //var location = new Vector3();
-
+        
                         BepuUtilities.Quaternion orientation;
                         orientation.X = -1 + 2 * (float)random.NextDouble();
                         orientation.Y = -1 + 2 * (float)random.NextDouble();
@@ -161,30 +160,67 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            int rayCount = 1 << 12;
-            QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), rayCount, out testRays);
-            BufferPool.Take(rayCount, out batchedResults);
-            BufferPool.Take(rayCount, out unbatchedResults);
-
-            for (int i = 0; i < rayCount; ++i)
+            //Spew rays all over the place, starting inside the shape cube.
+            int randomRayCount = 1 << 12;
+            QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), randomRayCount, out randomRays);
+            for (int i = 0; i < randomRayCount; ++i)
             {
                 var direction = GetDirection(random);
-                testRays.AllocateUnsafely() = new TestRay
+                randomRays.AllocateUnsafely() = new TestRay
                 {
                     Origin = GetDirection(random) * width * spacing * 0.25f,
                     Direction = GetDirection(random),
-                    MaximumT = 50// 50 + (float)random.NextDouble() * 300
-                    //Origin = new Vector3(-500, 0, 0),
-                    //Direction = new Vector3(1, 0, 0),
-                    //MaximumT = 50
-                    //Origin = new Vector3(-500),
-                    //Direction = new Vector3(1),
-                    //MaximumT = 50
-                    //    Direction = new Vector3(0.5346225f, -0.7184405f, -0.4449964f),
-                    //MaximumT = 50,
-                    //Origin = new Vector3(0.8212769f, -0.8531729f, 0.9328218f)
+                    MaximumT = 50
                 };
             }
+
+            //Send rays out matching a planar projection.
+            int frustumRayWidth = 40;
+            int frustumRayHeight = 20;
+            float aspectRatio = 1.6f;
+            float verticalFOV = MathHelper.Pi * 0.2f;
+            var unitZScreenHeight = 2 * MathF.Tan(verticalFOV / 2);
+            var unitZScreenWidth = unitZScreenHeight * aspectRatio;
+            var unitZSpacing = new Vector2(unitZScreenWidth / frustumRayWidth, unitZScreenHeight / frustumRayHeight);
+            var unitZBase = (unitZSpacing - new Vector2(unitZScreenWidth, unitZScreenHeight)) * 0.5f;
+            QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), frustumRayWidth * frustumRayHeight, out frustumRays);
+            var frustumOrigin = new Vector3(0, 0, -50);
+            for (int i = 0; i < frustumRayWidth; ++i)
+            {
+                for (int j = 0; j < frustumRayHeight; ++j)
+                {
+                    frustumRays.AllocateUnsafely() = new TestRay
+                    {
+                        Origin = frustumOrigin,
+                        Direction = new Vector3(unitZBase + new Vector2(i, j) * unitZSpacing, 1),
+                        MaximumT = 100
+                    };
+                }
+            }
+
+            //Send a wall of rays. Matches an orthographic projection.
+            int wallWidth = 32;
+            int wallHeight = 32;
+            var wallOrigin = new Vector3(0, 0, -50);
+            var wallSpacing = new Vector2(0.25f);
+            var wallBase = 0.5f * (wallSpacing - wallSpacing * new Vector2(wallWidth, wallHeight));
+            QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), wallWidth * wallHeight, out wallRays);
+            for (int i = 0; i < wallWidth; ++i)
+            {
+                for (int j = 0; j < wallHeight; ++j)
+                {
+                    wallRays.AllocateUnsafely() = new TestRay
+                    {
+                        Origin = wallOrigin + new Vector3(wallBase + wallSpacing * new Vector2(i, j), 0),
+                        Direction = new Vector3(0, 0, 1),
+                        MaximumT = 100
+                    };
+                }
+            }
+            var maxRayCount = Math.Max(randomRays.Count, Math.Max(frustumRays.Count, wallRays.Count));
+            QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), maxRayCount, out testRays);
+            BufferPool.Take(maxRayCount, out batchedResults);
+            BufferPool.Take(maxRayCount, out unbatchedResults);
         }
         static Vector3 GetDirection(Random random)
         {
@@ -206,7 +242,12 @@ namespace Demos.SpecializedTests
             public float MaximumT;
             public Vector3 Direction;
         }
+        QuickList<TestRay, Buffer<TestRay>> randomRays;
+        QuickList<TestRay, Buffer<TestRay>> frustumRays;
+        QuickList<TestRay, Buffer<TestRay>> wallRays;
+
         QuickList<TestRay, Buffer<TestRay>> testRays;
+
 
         struct RayHit
         {
@@ -265,9 +306,46 @@ namespace Demos.SpecializedTests
         const int sampleCount = 16;
         TimingsRingBuffer batchedQueryTimes = new TimingsRingBuffer(sampleCount);
         TimingsRingBuffer unbatchedQueryTimes = new TimingsRingBuffer(sampleCount);
+        int frameCount;
+        float rotation;
+        void CopyAndRotate(ref QuickList<TestRay, Buffer<TestRay>> source)
+        {
+            testRays.Count = source.Count;
+            var transform = Matrix3x3.CreateFromAxisAngle(new Vector3(0, 1, 0), rotation);
+
+            for (int i = 0; i < source.Count; ++i)
+            {
+                ref var targetRay = ref testRays[i];
+                ref var sourceRay = ref source[i];
+                Matrix3x3.Transform(ref sourceRay.Origin, ref transform, out targetRay.Origin);
+                Matrix3x3.Transform(ref sourceRay.Direction, ref transform, out targetRay.Direction);
+                targetRay.MaximumT = sourceRay.MaximumT;
+            }
+        }
         public unsafe override void Update(Input input, float dt)
         {
             base.Update(input, dt);
+
+            ++frameCount;
+            if (frameCount > 1 << 20)
+                frameCount = 0;
+            rotation += (MathF.PI * 1e-2f * (1 / 60f)) % (2 * MathF.PI);
+
+
+            switch ((frameCount / 256) % 3)
+            {
+                case 0:
+                    CopyAndRotate(ref randomRays);
+                    break;
+                case 1:
+                    CopyAndRotate(ref frustumRays);
+                    break;
+                default:
+                    CopyAndRotate(ref wallRays);
+                    break;
+            }
+
+
 
             CacheBlaster.Blast();
             double batchedTime;
