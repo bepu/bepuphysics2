@@ -33,15 +33,5 @@ namespace BepuPhysics.CollisionDetection
             tester.Leaves = staticLeaves;
             StaticTree.RayCast(&treeRay, &rayData, ref tester);
         }
-        public unsafe void RayCast2<TRayTester>(ref Vector3 origin, ref Vector3 direction, float maximumT, ref TRayTester rayTester, int id = 0) where TRayTester : IBroadPhaseRayTester
-        {
-            TreeRay.CreateFrom(ref origin, ref direction, maximumT, id, out var rayData, out var treeRay);
-            LeafTester<TRayTester> tester;
-            tester.RayTester = rayTester;
-            tester.Leaves = activeLeaves;
-            ActiveTree.RayCast2(&treeRay, &rayData, ref tester);
-            tester.Leaves = staticLeaves;
-            StaticTree.RayCast2(&treeRay, &rayData, ref tester);
-        }
     }
 }

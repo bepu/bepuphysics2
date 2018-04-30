@@ -73,9 +73,9 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks());
             //Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
-            var box = new Box(0.5f, 1.5f, 1f);
-            var capsule = new Capsule(0.5f, 0.5f);
-            var sphere = new Sphere(.5f);
+            var box = new Box(0.5f, 1.5f,1f);
+            var capsule = new Capsule(0, 0.5f);
+            var sphere = new Sphere(0.5f);
             var boxIndex = Simulation.Shapes.Add(ref box);
             var capsuleIndex = Simulation.Shapes.Add(ref capsule);
             var sphereIndex = Simulation.Shapes.Add(ref sphere);
@@ -95,7 +95,6 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         var r = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
-                        //var location = spacing * (new Vector3(i, j, k)) + randomizationBase + r * randomizationSpan;
                         var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, -height, -length) * 0.5f) + randomizationBase + r * randomizationSpan;
 
                         BepuUtilities.Quaternion orientation;
@@ -171,19 +170,20 @@ namespace Demos.SpecializedTests
             for (int i = 0; i < randomRayCount; ++i)
             {
                 var direction = GetDirection(random);
+                var originScale = (float)Math.Sqrt(random.NextDouble());
                 randomRays.AllocateUnsafely() = new TestRay
                 {
-                    Origin = GetDirection(random) * width * spacing * 0.25f,
+                    Origin = originScale * GetDirection(random) * width * spacing * 0.25f,
                     Direction = GetDirection(random),
                     MaximumT = 50
                 };
             }
 
             //Send rays out matching a planar projection.
-            int frustumRayWidth = 128;
-            int frustumRayHeight = 128;
+            int frustumRayWidth = 256;
+            int frustumRayHeight = 256;
             float aspectRatio = 1.6f;
-            float verticalFOV = MathHelper.Pi * 0.26f;
+            float verticalFOV = MathHelper.Pi * 0.16f;
             var unitZScreenHeight = 2 * MathF.Tan(verticalFOV / 2);
             var unitZScreenWidth = unitZScreenHeight * aspectRatio;
             var unitZSpacing = new Vector2(unitZScreenWidth / frustumRayWidth, unitZScreenHeight / frustumRayHeight);
@@ -196,15 +196,15 @@ namespace Demos.SpecializedTests
                 for (int j = 0; j < frustumRayHeight; ++j)
                 {
                     ref var ray = ref frustumRays.AllocateUnsafely();
-                    ray.Direction = new Vector3(unitZBase + new Vector2(i, j) * unitZSpacing, -1);
+                    ray.Direction = new Vector3(unitZBase + new Vector2(i, j) * unitZSpacing, 1);
                     ray.Origin = frustumOrigin + ray.Direction;
                     ray.MaximumT = 100;
                 }
             }
 
             //Send a wall of rays. Matches an orthographic projection.
-            int wallWidth = 256;
-            int wallHeight = 256;
+            int wallWidth = 128;
+            int wallHeight = 128;
             var wallOrigin = new Vector3(0, 0, -50);
             var wallSpacing = new Vector2(0.1f);
             var wallBase = 0.5f * (wallSpacing - wallSpacing * new Vector2(wallWidth, wallHeight));
@@ -227,8 +227,8 @@ namespace Demos.SpecializedTests
             var timeSampleCount = 16;
             QuickList<IntersectionAlgorithm, Array<IntersectionAlgorithm>>.Create(new PassthroughArrayPool<IntersectionAlgorithm>(), 3, out algorithms);
             algorithms.Add(new IntersectionAlgorithm("Unbatched", UnbatchedWorker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
-            algorithms.Add(new IntersectionAlgorithm("Unbatched2", Unbatched2Worker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
             algorithms.Add(new IntersectionAlgorithm("Batched", BatchedWorker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
+            algorithms.Add(new IntersectionAlgorithm("Batched2", Batched2Worker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
 
             BufferPool.Take(Environment.ProcessorCount * 2, out jobs);
         }
@@ -321,7 +321,26 @@ namespace Demos.SpecializedTests
         {
             int intersectionCount = 0;
             var hitHandler = new HitHandler { Hits = algorithm.Results, IntersectionCount = &intersectionCount };
-            var batcher = new SimulationRayBatcher<HitHandler>(ThreadDispatcher.GetThreadMemoryPool(workerIndex), Simulation, hitHandler, 4096);
+            var batcher = new SimulationRayBatcher<HitHandler>(ThreadDispatcher.GetThreadMemoryPool(workerIndex), Simulation, hitHandler, 2048);
+            int claimedIndex;
+            while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
+            {
+                ref var job = ref jobs[claimedIndex];
+                for (int i = job.Start; i < job.End; ++i)
+                {
+                    ref var ray = ref testRays[i];
+                    batcher.Add(ref ray.Origin, ref ray.Direction, ray.MaximumT, i);
+                }
+            }
+            batcher.Flush();
+            batcher.Dispose();
+            return intersectionCount;
+        }
+        unsafe int Batched2Worker(int workerIndex, IntersectionAlgorithm algorithm)
+        {
+            int intersectionCount = 0;
+            var hitHandler = new HitHandler { Hits = algorithm.Results, IntersectionCount = &intersectionCount };
+            var batcher = new SimulationRayBatcher2<HitHandler>(ThreadDispatcher.GetThreadMemoryPool(workerIndex), Simulation, hitHandler, 2048);
             int claimedIndex;
             while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
             {
@@ -354,22 +373,6 @@ namespace Demos.SpecializedTests
             return intersectionCount;
         }
 
-        unsafe int Unbatched2Worker(int workerIndex, IntersectionAlgorithm algorithm)
-        {
-            int intersectionCount = 0;
-            var hitHandler = new HitHandler { Hits = algorithm.Results, IntersectionCount = &intersectionCount };
-            int claimedIndex;
-            while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
-            {
-                ref var job = ref jobs[claimedIndex];
-                for (int i = job.Start; i < job.End; ++i)
-                {
-                    ref var ray = ref testRays[i];
-                    Simulation.RayCast2(ref ray.Origin, ref ray.Direction, ray.MaximumT, ref hitHandler, i);
-                }
-            }
-            return intersectionCount;
-        }
         QuickList<IntersectionAlgorithm, Array<IntersectionAlgorithm>> algorithms;
 
         struct RayJob
@@ -536,7 +539,12 @@ namespace Demos.SpecializedTests
                 if (result.Hit)
                 {
                     var end = ray.Origin + ray.Direction * result.T;
-                    renderer.Lines.Allocate() = new LineInstance(ray.Origin, end, packedForegroundHit, packedBackground);
+                    var diffuseLight = Vector3.Dot(result.Normal, new Vector3(0.57735f));
+                    if(diffuseLight < 0)
+                    {
+                        diffuseLight = -0.5f * diffuseLight;
+                    }
+                    renderer.Lines.Allocate() = new LineInstance(ray.Origin, end, Helpers.PackColor(foregroundHitColor * (0.2f + 0.8f * diffuseLight)), packedBackground);
                     renderer.Lines.Allocate() = new LineInstance(end, end + result.Normal, packedForegroundNormal, packedBackground);
                 }
                 else
