@@ -219,7 +219,7 @@ namespace BepuPhysics.Collidables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return 3;
+                return 2;
             }
         }
 

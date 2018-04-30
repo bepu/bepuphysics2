@@ -183,7 +183,7 @@ namespace Demos.SpecializedTests
             int frustumRayWidth = 128;
             int frustumRayHeight = 128;
             float aspectRatio = 1.6f;
-            float verticalFOV = MathHelper.Pi * 0.16f;
+            float verticalFOV = MathHelper.Pi * 0.26f;
             var unitZScreenHeight = 2 * MathF.Tan(verticalFOV / 2);
             var unitZScreenWidth = unitZScreenHeight * aspectRatio;
             var unitZSpacing = new Vector2(unitZScreenWidth / frustumRayWidth, unitZScreenHeight / frustumRayHeight);
@@ -195,20 +195,18 @@ namespace Demos.SpecializedTests
             {
                 for (int j = 0; j < frustumRayHeight; ++j)
                 {
-                    frustumRays.AllocateUnsafely() = new TestRay
-                    {
-                        Origin = frustumOrigin,
-                        Direction = new Vector3(unitZBase + new Vector2(i, j) * unitZSpacing, 1),
-                        MaximumT = 100
-                    };
+                    ref var ray = ref frustumRays.AllocateUnsafely();
+                    ray.Direction = new Vector3(unitZBase + new Vector2(i, j) * unitZSpacing, -1);
+                    ray.Origin = frustumOrigin + ray.Direction;
+                    ray.MaximumT = 100;
                 }
             }
 
             //Send a wall of rays. Matches an orthographic projection.
-            int wallWidth = 128;
-            int wallHeight = 128;
+            int wallWidth = 256;
+            int wallHeight = 256;
             var wallOrigin = new Vector3(0, 0, -50);
-            var wallSpacing = new Vector2(0.2f);
+            var wallSpacing = new Vector2(0.1f);
             var wallBase = 0.5f * (wallSpacing - wallSpacing * new Vector2(wallWidth, wallHeight));
             ref var wallRays = ref raySources[2];
             QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), wallWidth * wallHeight, out wallRays);
@@ -226,12 +224,13 @@ namespace Demos.SpecializedTests
             }
             var maxRayCount = Math.Max(randomRays.Count, Math.Max(frustumRays.Count, wallRays.Count));
             QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), maxRayCount, out testRays);
-            BufferPool.Take(maxRayCount, out batchedResults);
-            BufferPool.Take(maxRayCount, out unbatchedResults);
+            var timeSampleCount = 16;
+            QuickList<IntersectionAlgorithm, Array<IntersectionAlgorithm>>.Create(new PassthroughArrayPool<IntersectionAlgorithm>(), 3, out algorithms);
+            algorithms.Add(new IntersectionAlgorithm("Unbatched", UnbatchedWorker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
+            algorithms.Add(new IntersectionAlgorithm("Unbatched2", Unbatched2Worker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
+            algorithms.Add(new IntersectionAlgorithm("Batched", BatchedWorker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
 
             BufferPool.Take(Environment.ProcessorCount * 2, out jobs);
-            batchedWorker = BatchedThreadWorker;
-            unbatchedWorker = UnbatchedThreadWorker;
         }
 
         static Vector3 GetDirection(Random random)
@@ -265,26 +264,66 @@ namespace Demos.SpecializedTests
             public CollidableReference Collidable;
             public bool Hit;
         }
-        Buffer<RayHit> batchedResults;
-        Buffer<RayHit> unbatchedResults;
-
-        struct RayJob
+        class IntersectionAlgorithm
         {
-            public int Start;
-            public int End;
-        }
-        Buffer<RayJob> jobs;
+            public string Name;
+            public int IntersectionCount;
+            public Buffer<RayHit> Results;
+            public TimingsRingBuffer Timings;
 
-        int jobIndex;
-        int totalIntersectionCount;
-        Action<int> batchedWorker, unbatchedWorker;
-        public unsafe void BatchedThreadWorker(int workerIndex)
+            Func<int, IntersectionAlgorithm, int> worker;
+            Action<int> internalWorker;
+            public int JobIndex;
+
+            public IntersectionAlgorithm(string name, Func<int, IntersectionAlgorithm, int> worker,
+                BufferPool pool, int largestRayCount, int timingSampleCount = 16)
+            {
+                Name = name;
+                Timings = new TimingsRingBuffer(timingSampleCount);
+                this.worker = worker;
+                internalWorker = ExecuteWorker;
+                pool.Take(largestRayCount, out Results);
+            }
+
+            void ExecuteWorker(int workerIndex)
+            {
+                var intersectionCount = worker(workerIndex, this);
+                Interlocked.Add(ref IntersectionCount, intersectionCount);
+            }
+
+            public void Execute(ref QuickList<TestRay, Buffer<TestRay>> rays, SimpleThreadDispatcher dispatcher)
+            {
+                CacheBlaster.Blast();
+                for (int i = 0; i < rays.Count; ++i)
+                {
+                    Results[i].T = float.MaxValue;
+                    Results[i].Hit = false;
+                }
+                JobIndex = -1;
+                IntersectionCount = 0;
+                var start = Stopwatch.GetTimestamp();
+                if (dispatcher != null)
+                {
+                    dispatcher.DispatchWorkers(internalWorker);
+                }
+                else
+                {
+                    internalWorker(0);
+                }
+                var stop = Stopwatch.GetTimestamp();
+                Timings.Add((stop - start) / (double)Stopwatch.Frequency);
+            }
+        }
+
+
+
+        unsafe int BatchedWorker(int workerIndex, IntersectionAlgorithm algorithm)
         {
             int intersectionCount = 0;
-            var hitHandler = new HitHandler { Hits = batchedResults, IntersectionCount = &intersectionCount };
+            var hitHandler = new HitHandler { Hits = algorithm.Results, IntersectionCount = &intersectionCount };
             var batcher = new SimulationRayBatcher<HitHandler>(ThreadDispatcher.GetThreadMemoryPool(workerIndex), Simulation, hitHandler, 4096);
             int claimedIndex;
-            while ((claimedIndex = Interlocked.Increment(ref jobIndex)) < jobs.Length)
+            while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
             {
                 ref var job = ref jobs[claimedIndex];
                 for (int i = job.Start; i < job.End; ++i)
@@ -295,15 +334,15 @@ namespace Demos.SpecializedTests
             }
             batcher.Flush();
             batcher.Dispose();
-            Interlocked.Add(ref totalIntersectionCount, intersectionCount);
+            return intersectionCount;
         }
 
-        public unsafe void UnbatchedThreadWorker(int workerIndex)
+        unsafe int UnbatchedWorker(int workerIndex, IntersectionAlgorithm algorithm)
         {
             int intersectionCount = 0;
-            var hitHandler = new HitHandler { Hits = unbatchedResults, IntersectionCount = &intersectionCount };
+            var hitHandler = new HitHandler { Hits = algorithm.Results, IntersectionCount = &intersectionCount };
             int claimedIndex;
-            while ((claimedIndex = Interlocked.Increment(ref jobIndex)) < jobs.Length)
+            while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
             {
                 ref var job = ref jobs[claimedIndex];
                 for (int i = job.Start; i < job.End; ++i)
@@ -312,8 +351,33 @@ namespace Demos.SpecializedTests
                     Simulation.RayCast(ref ray.Origin, ref ray.Direction, ray.MaximumT, ref hitHandler, i);
                 }
             }
-            Interlocked.Add(ref totalIntersectionCount, intersectionCount);
+            return intersectionCount;
         }
+
+        unsafe int Unbatched2Worker(int workerIndex, IntersectionAlgorithm algorithm)
+        {
+            int intersectionCount = 0;
+            var hitHandler = new HitHandler { Hits = algorithm.Results, IntersectionCount = &intersectionCount };
+            int claimedIndex;
+            while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
+            {
+                ref var job = ref jobs[claimedIndex];
+                for (int i = job.Start; i < job.End; ++i)
+                {
+                    ref var ray = ref testRays[i];
+                    Simulation.RayCast2(ref ray.Origin, ref ray.Direction, ray.MaximumT, ref hitHandler, i);
+                }
+            }
+            return intersectionCount;
+        }
+        QuickList<IntersectionAlgorithm, Array<IntersectionAlgorithm>> algorithms;
+
+        struct RayJob
+        {
+            public int Start;
+            public int End;
+        }
+        Buffer<RayJob> jobs;
 
 
         unsafe struct RayTester : IBroadPhaseBatchedRayTester
@@ -384,7 +448,6 @@ namespace Demos.SpecializedTests
             }
         }
 
-
         public unsafe override void Update(Input input, float dt)
         {
             base.Update(input, dt);
@@ -440,72 +503,22 @@ namespace Demos.SpecializedTests
                 job.End = previousJobEnd = previousJobEnd + raysInJob;
             }
 
-            CacheBlaster.Blast();
-            double batchedTime;
-            {
-                for (int i = 0; i < testRays.Count; ++i)
-                {
-                    batchedResults[i].T = float.MaxValue;
-                    batchedResults[i].Hit = false;
-                }
-                jobIndex = -1;
-                totalIntersectionCount = 0;
-                var start = Stopwatch.GetTimestamp();
-                if (shouldUseMultithreading)
-                {
-                    ThreadDispatcher.DispatchWorkers(batchedWorker);
-                }
-                else
-                {
-                    int intersectionCount = 0;
-                    var hitHandler = new HitHandler { Hits = batchedResults, IntersectionCount = &intersectionCount };
-                    var batcher = new SimulationRayBatcher<HitHandler>(BufferPool, Simulation, hitHandler, 4096);
-                    for (int i = 0; i < testRays.Count; ++i)
-                    {
-                        ref var ray = ref testRays[i];
-                        batcher.Add(ref ray.Origin, ref ray.Direction, ray.MaximumT, i);
-                    }
-                    batcher.Flush();
-                    batcher.Dispose();
-                }
-                var stop = Stopwatch.GetTimestamp();
-                batchedQueryTimes.Add(batchedTime = (stop - start) / (double)Stopwatch.Frequency);
 
-            }
-            int batchedIntersectionCount = totalIntersectionCount;
-            CacheBlaster.Blast();
-            double unbatchedTime;
+            for (int i = 0; i < algorithms.Count; ++i)
             {
-                for (int i = 0; i < testRays.Count; ++i)
-                {
-                    unbatchedResults[i].T = float.MaxValue;
-                    unbatchedResults[i].Hit = false;
-                }
-                jobIndex = -1;
-                totalIntersectionCount = 0;
-                var start = Stopwatch.GetTimestamp();
-                if (shouldUseMultithreading)
-                {
-                    ThreadDispatcher.DispatchWorkers(unbatchedWorker);
-                }
-                else
-                {
-                    int intersectionCount = 0;
-                    var hitHandler = new HitHandler { Hits = unbatchedResults, IntersectionCount = &intersectionCount };
-                    for (int i = 0; i < testRays.Count; ++i)
-                    {
-                        ref var ray = ref testRays[i];
-                        Simulation.RayCast(ref ray.Origin, ref ray.Direction, ray.MaximumT, ref hitHandler, i);
-                    }
-                }
-                var stop = Stopwatch.GetTimestamp();
-                unbatchedQueryTimes.Add(unbatchedTime = (stop - start) / (double)Stopwatch.Frequency);
+                algorithms[i].Execute(ref testRays, shouldUseMultithreading ? ThreadDispatcher : null);
             }
-            int unbatchedIntersectionCount = totalIntersectionCount;
-            Debug.Assert(unbatchedIntersectionCount == batchedIntersectionCount);
-            for (int i = 0; i < testRays.Count; ++i)
+            for (int i = 1; i < algorithms.Count; ++i)
             {
-                Debug.Assert(unbatchedResults[i].Hit == batchedResults[i].Hit && (!batchedResults[i].Hit || Math.Abs(batchedResults[i].T - unbatchedResults[i].T) < 1e-6f));
+                Debug.Assert(algorithms[i].IntersectionCount == algorithms[0].IntersectionCount);
+                var current = algorithms[i];
+                var earlier = algorithms[0];
+                for (int j = 0; j < testRays.Count; ++j)
+                {
+                    ref var currentResult = ref current.Results[j];
+                    ref var earlierResult = ref earlier.Results[j];
+                    Debug.Assert(currentResult.Hit == earlierResult.Hit && (!earlierResult.Hit || Math.Abs(earlierResult.T - currentResult.T) < 1e-6f));
+                }
             }
 
         }
@@ -564,7 +577,7 @@ namespace Demos.SpecializedTests
             var batchedPackedNormalColor = Helpers.PackColor(new Vector3(1f, 1f, 0));
             var batchedPackedBackgroundColor = Helpers.PackColor(new Vector3());
 
-            DrawRays(ref batchedResults, renderer, new Vector3(0.25f, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3());
+            DrawRays(ref algorithms[0].Results, renderer, new Vector3(0.25f, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3());
 
             text.Clear().Append("Active ray source index: ").Append(raySourceIndex);
             if (shouldCycle)
@@ -586,10 +599,13 @@ namespace Demos.SpecializedTests
             renderer.TextBatcher.Write(text.Clear().Append("Rays per second:"), new Vector2(224, renderer.Surface.Resolution.Y - 64), 16, new Vector3(1), font);
             renderer.TextBatcher.Write(text.Clear().Append("Relative speed:"), new Vector2(350, renderer.Surface.Resolution.Y - 64), 16, new Vector3(1), font);
 
-            var batchedStats = batchedQueryTimes.ComputeStats();
-            var unbatchedStats = unbatchedQueryTimes.ComputeStats();
-            WriteResults("Unbatched", unbatchedStats.Average, unbatchedStats.Average, renderer.Surface.Resolution.Y - 48, renderer.TextBatcher, text, font);
-            WriteResults("Batched", batchedStats.Average, unbatchedStats.Average, renderer.Surface.Resolution.Y - 32, renderer.TextBatcher, text, font);
+            var baseStats = algorithms[0].Timings.ComputeStats();
+            var baseHeight = 48;
+            for (int i = 0; i < algorithms.Count; ++i)
+            {
+                var stats = algorithms[i].Timings.ComputeStats();
+                WriteResults(algorithms[i].Name, stats.Average, baseStats.Average, renderer.Surface.Resolution.Y - (baseHeight - 16 * i), renderer.TextBatcher, text, font);
+            }
 
             base.Render(renderer, text, font);
         }

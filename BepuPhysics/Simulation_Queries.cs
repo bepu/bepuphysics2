@@ -57,5 +57,15 @@ namespace BepuPhysics
             dispatcher.Simulation = this;
             BroadPhase.RayCast(ref origin, ref direction, maximumT, ref dispatcher, id);
         }
+
+
+        public unsafe void RayCast2<THitHandler>(ref Vector3 origin, ref Vector3 direction, float maximumT, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler
+        {
+            TreeRay.CreateFrom(ref origin, ref direction, maximumT, id, out var rayData, out var treeRay);
+            RayHitDispatcher<THitHandler> dispatcher;
+            dispatcher.HitHandler = hitHandler;
+            dispatcher.Simulation = this;
+            BroadPhase.RayCast2(ref origin, ref direction, maximumT, ref dispatcher, id);
+        }
     }
 }

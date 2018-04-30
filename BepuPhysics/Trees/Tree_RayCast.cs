@@ -116,5 +116,126 @@ namespace BepuPhysics.Trees
             TreeRay.CreateFrom(ref origin, ref direction, maximumT, id, out var rayData, out var treeRay);
             RayCast(&treeRay, &rayData, ref leafTester);
         }
+
+
+
+
+
+        internal struct NodeToVisit
+        {
+            public int NodeIndex;
+            public float T;
+        }
+
+        internal unsafe void RayCast2<TLeafTester>(int nodeIndex, TreeRay* treeRay, RayData* rayData, NodeToVisit* stack, ref TLeafTester leafTester) where TLeafTester : ILeafTester
+        {
+            Debug.Assert((nodeIndex >= 0 && nodeIndex < nodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < leafCount));
+            Debug.Assert(leafCount >= 2, "This implementation assumes all nodes are filled.");
+
+            int stackEnd = 0;
+            while (true)
+            {
+                if (nodeIndex < 0)
+                {
+                    //This is actually a leaf node.
+                    var leafIndex = Encode(nodeIndex);
+                    leafTester.RayTest(leafIndex, rayData, &treeRay->MaximumT);
+                    //Leaves have no children; have to pull from the stack to get a new target.
+                    while (true)
+                    {
+                        if (stackEnd == 0)
+                            return;
+                        ref var nodeToVisit = ref stack[--stackEnd];
+                        if (nodeToVisit.T < treeRay->MaximumT)
+                        {
+                            nodeIndex = nodeToVisit.NodeIndex;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    var node = nodes + nodeIndex;
+                    var aIntersected = Intersects(ref node->A.Min, ref node->A.Max, treeRay, out var tA);
+                    var bIntersected = Intersects(ref node->B.Min, ref node->B.Max, treeRay, out var tB);
+
+                    if (aIntersected)
+                    {
+                        if (bIntersected)
+                        {
+                            //Visit the earlier AABB intersection first.
+                            Debug.Assert(stackEnd < TraversalStackCapacity - 1, "At the moment, we use a fixed size stack. Until we have explicitly tracked depths, watch out for excessive depth traversals.");
+                            if (tA < tB)
+                            {
+                                nodeIndex = node->A.Index;
+                                ref var entry = ref stack[stackEnd++];
+                                entry.NodeIndex = node->B.Index;
+                                entry.T = tB;
+                            }
+                            else
+                            {
+                                nodeIndex = node->B.Index;
+                                ref var entry = ref stack[stackEnd++];
+                                entry.NodeIndex = node->A.Index;
+                                entry.T = tA;
+                            }
+                        }
+                        else
+                        {
+                            //Single intersection cases don't require an explicit stack entry.
+                            nodeIndex = node->A.Index;
+                        }
+                    }
+                    else if (bIntersected)
+                    {
+                        nodeIndex = node->B.Index;
+                    }
+                    else
+                    {
+                        //No intersection. Need to pull from the stack to get a new target.
+                        while (true)
+                        {
+                            if (stackEnd == 0)
+                                return;
+                            ref var nodeToVisit = ref stack[--stackEnd];
+                            if (nodeToVisit.T < treeRay->MaximumT)
+                            {
+                                nodeIndex = nodeToVisit.NodeIndex;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+
+        internal unsafe void RayCast2<TLeafTester>(TreeRay* treeRay, RayData* rayData, ref TLeafTester leafTester) where TLeafTester : ILeafTester
+        {
+            if (leafCount == 0)
+                return;
+
+            if (leafCount == 1)
+            {
+                //If the first node isn't filled, we have to use a special case.
+                if (Intersects(ref nodes->A.Min, ref nodes->A.Max, treeRay, out var tA))
+                {
+                    leafTester.RayTest(0, rayData, &treeRay->MaximumT);
+                }
+            }
+            else
+            {
+                //TODO: Explicitly tracking depth in the tree during construction/refinement is practically required to guarantee correctness.
+                //While it's exceptionally rare that any tree would have more than 256 levels, the worst case of stomping stack memory is not acceptable in the long run.
+                var stack = stackalloc NodeToVisit[TraversalStackCapacity];
+                RayCast2(0, treeRay, rayData, stack, ref leafTester);
+            }
+        }
+
+        public unsafe void RayCast2<TLeafTester>(ref Vector3 origin, ref Vector3 direction, float maximumT, ref TLeafTester leafTester, int id = 0) where TLeafTester : ILeafTester
+        {
+            TreeRay.CreateFrom(ref origin, ref direction, maximumT, id, out var rayData, out var treeRay);
+            RayCast2(&treeRay, &rayData, ref leafTester);
+        }
     }
 }
