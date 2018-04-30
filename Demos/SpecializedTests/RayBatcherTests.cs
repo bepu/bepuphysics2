@@ -180,8 +180,8 @@ namespace Demos.SpecializedTests
             }
 
             //Send rays out matching a planar projection.
-            int frustumRayWidth = 256;
-            int frustumRayHeight = 256;
+            int frustumRayWidth = 128;
+            int frustumRayHeight = 128;
             float aspectRatio = 1.6f;
             float verticalFOV = MathHelper.Pi * 0.16f;
             var unitZScreenHeight = 2 * MathF.Tan(verticalFOV / 2);
@@ -197,7 +197,7 @@ namespace Demos.SpecializedTests
                 {
                     ref var ray = ref frustumRays.AllocateUnsafely();
                     ray.Direction = new Vector3(unitZBase + new Vector2(i, j) * unitZSpacing, 1);
-                    ray.Origin = frustumOrigin + ray.Direction;
+                    ray.Origin = frustumOrigin + ray.Direction * 10;
                     ray.MaximumT = 100;
                 }
             }
@@ -225,10 +225,9 @@ namespace Demos.SpecializedTests
             var maxRayCount = Math.Max(randomRays.Count, Math.Max(frustumRays.Count, wallRays.Count));
             QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), maxRayCount, out testRays);
             var timeSampleCount = 16;
-            QuickList<IntersectionAlgorithm, Array<IntersectionAlgorithm>>.Create(new PassthroughArrayPool<IntersectionAlgorithm>(), 3, out algorithms);
+            QuickList<IntersectionAlgorithm, Array<IntersectionAlgorithm>>.Create(new PassthroughArrayPool<IntersectionAlgorithm>(), 2, out algorithms);
             algorithms.Add(new IntersectionAlgorithm("Unbatched", UnbatchedWorker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
             algorithms.Add(new IntersectionAlgorithm("Batched", BatchedWorker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
-            algorithms.Add(new IntersectionAlgorithm("Batched2", Batched2Worker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
 
             BufferPool.Take(Environment.ProcessorCount * 2, out jobs);
         }
@@ -322,25 +321,6 @@ namespace Demos.SpecializedTests
             int intersectionCount = 0;
             var hitHandler = new HitHandler { Hits = algorithm.Results, IntersectionCount = &intersectionCount };
             var batcher = new SimulationRayBatcher<HitHandler>(ThreadDispatcher.GetThreadMemoryPool(workerIndex), Simulation, hitHandler, 2048);
-            int claimedIndex;
-            while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
-            {
-                ref var job = ref jobs[claimedIndex];
-                for (int i = job.Start; i < job.End; ++i)
-                {
-                    ref var ray = ref testRays[i];
-                    batcher.Add(ref ray.Origin, ref ray.Direction, ray.MaximumT, i);
-                }
-            }
-            batcher.Flush();
-            batcher.Dispose();
-            return intersectionCount;
-        }
-        unsafe int Batched2Worker(int workerIndex, IntersectionAlgorithm algorithm)
-        {
-            int intersectionCount = 0;
-            var hitHandler = new HitHandler { Hits = algorithm.Results, IntersectionCount = &intersectionCount };
-            var batcher = new SimulationRayBatcher2<HitHandler>(ThreadDispatcher.GetThreadMemoryPool(workerIndex), Simulation, hitHandler, 2048);
             int claimedIndex;
             while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
             {
