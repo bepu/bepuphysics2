@@ -47,9 +47,9 @@ namespace BepuUtilities
         /// <param name="b">Second bounding box to test.</param>
         /// <returns>Whether the bounding boxes intersected.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Intersects(ref BoundingBox a, ref BoundingBox b)
+        public static bool Intersects(in BoundingBox a, in BoundingBox b)
         {
-            return Intersects(ref a.Min, ref a.Max, ref b.Min, ref b.Max);
+            return Intersects(a.Min, a.Max, b.Min, b.Max);
         }
         //TODO: At some point in the past, intersection was found to be faster with non-short circuiting operators.
         //While that does make some sense (the branches aren't really valuable relative to their cost), it's still questionable enough that it should be reevaluated on a modern compiler. 
@@ -60,7 +60,7 @@ namespace BepuUtilities
         /// <param name="b">Second bounding box to test.</param>
         /// <returns>Whether the bounding boxes intersected.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Intersects(ref Vector3 minA, ref Vector3 maxA, ref Vector3 minB, ref Vector3 maxB)
+        public static bool Intersects(in Vector3 minA, in Vector3 maxA, in Vector3 minB, in Vector3 maxB)
         {
             return maxA.X >= minB.X & maxA.Y >= minB.Y & maxA.Z >= minB.Z &
                    maxB.X >= minA.X & maxB.Y >= minA.Y & maxB.Z >= minA.Z;

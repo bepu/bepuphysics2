@@ -14,10 +14,11 @@ using BepuPhysics.Trees;
 using DemoRenderer.UI;
 using DemoRenderer.Constraints;
 using System.Threading;
+using Demos.SpecializedTests;
 
-namespace Demos.SpecializedTests
+namespace Demos
 {
-    public class RayBatcherTests : Demo
+    public class RayCastingDemo : Demo
     {
         public unsafe struct NoCollisionCallbacks : INarrowPhaseCallbacks
         {

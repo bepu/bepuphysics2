@@ -41,8 +41,8 @@ namespace BepuPhysics.Trees
             //Reloading that in the event of eviction would require more work than keeping the derived data on the stack.
             //TODO: this is some pretty questionable microtuning. It's not often that the post-leaf-found recursion will be long enough to evict L1. Definitely test it.
             var bIndex = b.Index;
-            var aIntersects = BoundingBox.Intersects(ref leafMin, ref leafMax, ref a.Min, ref a.Max);
-            var bIntersects = BoundingBox.Intersects(ref leafMin, ref leafMax, ref b.Min, ref b.Max);
+            var aIntersects = BoundingBox.Intersects(leafMin, leafMax, a.Min, a.Max);
+            var bIntersects = BoundingBox.Intersects(leafMin, leafMax, b.Min, b.Max);
             if (aIntersects)
             {
                 DispatchTestForLeaf(leafIndex, ref leafMin, ref leafMax, a.Index, ref results);
@@ -81,9 +81,9 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool Intersects(ref NodeChild a, ref NodeChild b)
+        static bool Intersects(in NodeChild a, in NodeChild b)
         {
-            return BoundingBox.Intersects(ref a.Min, ref a.Max, ref b.Min, ref b.Max);
+            return BoundingBox.Intersects(a.Min, a.Max, b.Min, b.Max);
         }
 
         unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(Node* a, Node* b, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
@@ -93,10 +93,10 @@ namespace BepuPhysics.Trees
             ref var ab = ref a->B;
             ref var ba = ref b->A;
             ref var bb = ref b->B;
-            var aaIntersects = Intersects(ref aa, ref ba);
-            var abIntersects = Intersects(ref aa, ref bb);
-            var baIntersects = Intersects(ref ab, ref ba);
-            var bbIntersects = Intersects(ref ab, ref bb);
+            var aaIntersects = Intersects(aa, ba);
+            var abIntersects = Intersects(aa, bb);
+            var baIntersects = Intersects(ab, ba);
+            var bbIntersects = Intersects(ab, bb);
 
             if (aaIntersects)
             {
@@ -122,7 +122,7 @@ namespace BepuPhysics.Trees
             ref var a = ref node->A;
             ref var b = ref node->B;
 
-            var ab = Intersects(ref a, ref b);
+            var ab = Intersects(a, b);
 
             if (a.Index >= 0)
                 GetOverlapsInNode(nodes + a.Index, ref results);

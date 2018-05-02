@@ -1,5 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.Trees;
+using BepuUtilities;
 using BepuUtilities.Memory;
 using System;
 using System.Collections.Generic;
@@ -32,6 +33,48 @@ namespace BepuPhysics.CollisionDetection
             ActiveTree.RayCast(&treeRay, &rayData, ref tester);
             tester.Leaves = staticLeaves;
             StaticTree.RayCast(&treeRay, &rayData, ref tester);
+        }
+
+        struct BoxQueryEnumerator<TInnerEnumerator> : IBreakableForEach<int> where TInnerEnumerator : IBreakableForEach<CollidableReference>
+        {
+            public TInnerEnumerator Enumerator;
+            public Buffer<CollidableReference> Leaves;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool LoopBody(int i)
+            {
+                return Enumerator.LoopBody(Leaves[i]);
+            }
+        }
+
+        public unsafe void GetOverlaps<TOverlapEnumerator>(ref BoundingBox boundingBox, ref TOverlapEnumerator overlapEnumerator) where TOverlapEnumerator : IBreakableForEach<CollidableReference>
+        {
+            BoxQueryEnumerator<TOverlapEnumerator> enumerator;
+            enumerator.Enumerator = overlapEnumerator;
+            enumerator.Leaves = activeLeaves;
+            ActiveTree.GetOverlaps(ref boundingBox, ref enumerator);
+            enumerator.Leaves = staticLeaves;
+            StaticTree.GetOverlaps(ref boundingBox, ref enumerator);
+        }
+
+        public unsafe void GetOverlaps2<TOverlapEnumerator>(in Vector3 min, in Vector3 max, ref TOverlapEnumerator overlapEnumerator) where TOverlapEnumerator : IBreakableForEach<CollidableReference>
+        {
+            BoxQueryEnumerator<TOverlapEnumerator> enumerator;
+            enumerator.Enumerator = overlapEnumerator;
+            enumerator.Leaves = activeLeaves;
+            ActiveTree.GetOverlaps2(min, max, ref enumerator);
+            enumerator.Leaves = staticLeaves;
+            StaticTree.GetOverlaps2(min, max, ref enumerator);
+        }
+
+        public unsafe void GetOverlaps2<TOverlapEnumerator>(in BoundingBox boundingBox, ref TOverlapEnumerator overlapEnumerator) where TOverlapEnumerator : IBreakableForEach<CollidableReference>
+        {
+            BoxQueryEnumerator<TOverlapEnumerator> enumerator;
+            enumerator.Enumerator = overlapEnumerator;
+            enumerator.Leaves = activeLeaves;
+            ActiveTree.GetOverlaps2(boundingBox, ref enumerator);
+            enumerator.Leaves = staticLeaves;
+            StaticTree.GetOverlaps2(boundingBox, ref enumerator);
         }
     }
 }

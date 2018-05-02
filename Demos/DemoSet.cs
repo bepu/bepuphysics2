@@ -38,7 +38,7 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<RayBatcherTests>();
+            AddOption<VolumeQueryTests>();
             AddOption<PyramidDemo>();
             AddOption<BlockChainDemo>();
             AddOption<ShapePileDemo>();
@@ -46,6 +46,7 @@ namespace Demos
             AddOption<ClothLatticeDemo>();
             AddOption<CompoundTestDemo>();
             AddOption<SphereBlobTestDemo>();
+            AddOption<RayCastingDemo>();
             AddOption<FountainStressTestDemo>();
         }
 

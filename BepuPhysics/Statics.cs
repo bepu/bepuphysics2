@@ -82,7 +82,7 @@ namespace BepuPhysics
                 "This static handle doesn't seem to exist, or the mappings are out of sync. If a handle exists, both directions should match.");
         }
 
-        struct InactiveBodyCollector : IForEach<int>
+        struct InactiveBodyCollector : IBreakableForEach<int>
         {
             BroadPhase broadPhase;
             BufferPool<int> pool;
@@ -103,13 +103,14 @@ namespace BepuPhysics
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void LoopBody(int leafIndex)
+            public bool LoopBody(int leafIndex)
             {
                 ref var leaf = ref broadPhase.staticLeaves[leafIndex];
                 if (leaf.Mobility != CollidableMobility.Static)
                 {
                     InactiveBodyHandles.Add(leaf.Handle, pool);
                 }
+                return true;
             }
         }
 

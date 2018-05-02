@@ -29,8 +29,8 @@ namespace BepuPhysics.Trees
             //Reloading that in the event of eviction would require more work than keeping the derived data on the stack.
             //TODO: this is some pretty questionable microtuning. It's not often that the post-leaf-found recursion will be long enough to evict L1. Definitely test it.
             var bIndex = b.Index;
-            var aIntersects = BoundingBox.Intersects(ref leafMin, ref leafMax, ref a.Min, ref a.Max);
-            var bIntersects = BoundingBox.Intersects(ref leafMin, ref leafMax, ref b.Min, ref b.Max);
+            var aIntersects = BoundingBox.Intersects(leafMin, leafMax, a.Min, a.Max);
+            var bIntersects = BoundingBox.Intersects(leafMin, leafMax, b.Min, b.Max);
             if (aIntersects)
             {
                 DispatchTestForNodeAgainstLeaf(leafIndex, ref leafMin, ref leafMax, a.Index, ref results);
@@ -63,8 +63,8 @@ namespace BepuPhysics.Trees
             //Reloading that in the event of eviction would require more work than keeping the derived data on the stack.
             //TODO: this is some pretty questionable microtuning. It's not often that the post-leaf-found recursion will be long enough to evict L1. Definitely test it.
             var bIndex = b.Index;
-            var aIntersects = BoundingBox.Intersects(ref leafMin, ref leafMax, ref a.Min, ref a.Max);
-            var bIntersects = BoundingBox.Intersects(ref leafMin, ref leafMax, ref b.Min, ref b.Max);
+            var aIntersects = BoundingBox.Intersects(leafMin, leafMax, a.Min, a.Max);
+            var bIntersects = BoundingBox.Intersects(leafMin, leafMax, b.Min, b.Max);
             if (aIntersects)
             {
                 DispatchTestForLeafAgainstNode(leafIndex, ref leafMin, ref leafMax, a.Index, treeB, ref results);
@@ -108,10 +108,10 @@ namespace BepuPhysics.Trees
             ref var ab = ref a->B;
             ref var ba = ref b->A;
             ref var bb = ref b->B;
-            var aaIntersects = Intersects(ref aa, ref ba);
-            var abIntersects = Intersects(ref aa, ref bb);
-            var baIntersects = Intersects(ref ab, ref ba);
-            var bbIntersects = Intersects(ref ab, ref bb);
+            var aaIntersects = Intersects(aa, ba);
+            var abIntersects = Intersects(aa, bb);
+            var baIntersects = Intersects(ab, ba);
+            var bbIntersects = Intersects(ab, bb);
 
             if (aaIntersects)
             {
@@ -146,8 +146,8 @@ namespace BepuPhysics.Trees
                 //Tree A is degenerate; needs a special case.
                 var a = nodes;
                 var b = treeB.nodes;
-                var aaIntersects = Intersects(ref a->A, ref b->A);
-                var abIntersects = Intersects(ref a->A, ref b->B);
+                var aaIntersects = Intersects(a->A, b->A);
+                var abIntersects = Intersects(a->A, b->B);
                 if (aaIntersects)
                 {
                     DispatchTestForNodes(ref a->A, ref b->A, treeB, ref overlapHandler);
@@ -162,8 +162,8 @@ namespace BepuPhysics.Trees
                 //Tree B is degenerate; needs a special case.
                 var a = nodes;
                 var b = treeB.nodes;
-                var aaIntersects = Intersects(ref a->A, ref b->A);
-                var baIntersects = Intersects(ref a->B, ref b->A);
+                var aaIntersects = Intersects(a->A, b->A);
+                var baIntersects = Intersects(a->B, b->A);
                 if (aaIntersects)
                 {
                     DispatchTestForNodes(ref a->A, ref b->A, treeB, ref overlapHandler);
@@ -176,7 +176,7 @@ namespace BepuPhysics.Trees
             else
             {
                 Debug.Assert(leafCount == 1 && treeB.leafCount == 1);
-                if (Intersects(ref nodes->A, ref treeB.nodes->A))
+                if (Intersects(nodes->A, treeB.nodes->A))
                 {
                     DispatchTestForNodes(ref nodes->A, ref treeB.nodes->A, treeB, ref overlapHandler);
                 }
