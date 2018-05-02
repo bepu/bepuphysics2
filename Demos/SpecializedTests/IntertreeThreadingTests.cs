@@ -142,7 +142,7 @@ namespace Demos.SpecializedTests
             {
                 GetBoundsForLeaf(smaller, i, out var bounds);
                 bruteResultsEnumerator.QuerySourceIndex = i;
-                larger.GetOverlaps(ref bounds, ref bruteResultsEnumerator);
+                larger.GetOverlaps(bounds, ref bruteResultsEnumerator);
             }
             SortPairs(bruteResultsEnumerator.Pairs);
 

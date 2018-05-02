@@ -158,8 +158,7 @@ namespace Demos.SpecializedTests
             }
 
             QuickList<BoxQueryAlgorithm, Array<BoxQueryAlgorithm>>.Create(new PassthroughArrayPool<BoxQueryAlgorithm>(), 2, out algorithms);
-            algorithms.Add(new BoxQueryAlgorithm("Recursive", RecursiveWorker), new PassthroughArrayPool<BoxQueryAlgorithm>());
-            algorithms.Add(new BoxQueryAlgorithm("Direct", DirectWorker), new PassthroughArrayPool<BoxQueryAlgorithm>());
+            algorithms.Add(new BoxQueryAlgorithm("1", Worker1), new PassthroughArrayPool<BoxQueryAlgorithm>());
 
             BufferPool.Take(Environment.ProcessorCount * 2, out jobs);
         }
@@ -213,7 +212,7 @@ namespace Demos.SpecializedTests
 
 
 
-        unsafe int RecursiveWorker(int workerIndex, BoxQueryAlgorithm algorithm)
+        unsafe int Worker1(int workerIndex, BoxQueryAlgorithm algorithm)
         {
             int intersectionCount = 0;
             var hitHandler = new HitHandler { IntersectionCount = &intersectionCount };
@@ -224,28 +223,12 @@ namespace Demos.SpecializedTests
                 for (int i = job.Start; i < job.End; ++i)
                 {
                     ref var box = ref queryBoxes[i];
-                    Simulation.BroadPhase.GetOverlaps(ref box, ref hitHandler);
+                    Simulation.BroadPhase.GetOverlaps(box, ref hitHandler);
                 }
             }
             return intersectionCount;
         }
-
-        unsafe int DirectWorker(int workerIndex, BoxQueryAlgorithm algorithm)
-        {
-            int intersectionCount = 0;
-            var hitHandler = new HitHandler { IntersectionCount = &intersectionCount };
-            int claimedIndex;
-            while ((claimedIndex = Interlocked.Increment(ref algorithm.JobIndex)) < jobs.Length)
-            {
-                ref var job = ref jobs[claimedIndex];
-                for (int i = job.Start; i < job.End; ++i)
-                {
-                    ref var box = ref queryBoxes[i];
-                    Simulation.BroadPhase.GetOverlaps2(box, ref hitHandler);
-                }
-            }
-            return intersectionCount;
-        }
+        
 
         QuickList<BoxQueryAlgorithm, Array<BoxQueryAlgorithm>> algorithms;
 

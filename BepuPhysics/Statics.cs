@@ -117,7 +117,7 @@ namespace BepuPhysics
         void AwakenBodiesInBounds(ref BoundingBox bounds)
         {
             var collector = new InactiveBodyCollector(broadPhase, pool);
-            broadPhase.StaticTree.GetOverlaps(ref bounds, ref collector);
+            broadPhase.StaticTree.GetOverlaps(bounds, ref collector);
             for (int i = 0; i < collector.InactiveBodyHandles.Count; ++i)
             {
                 awakener.AwakenBody(collector.InactiveBodyHandles[i]);
