@@ -26,11 +26,8 @@ namespace BepuPhysics.Trees
         public Vector3 InverseDirection;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void CreateFrom(ref Vector3 origin, ref Vector3 direction, float maximumT, int id, out RayData rayData, out TreeRay treeRay)
+        internal static void CreateFrom(in Vector3 origin, in Vector3 direction, float maximumT, out TreeRay treeRay)
         {
-            rayData.Origin = origin;
-            rayData.Id = id;
-            rayData.Direction = direction;
             //Note that this division has two odd properties:
             //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
             //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
@@ -40,6 +37,15 @@ namespace BepuPhysics.Trees
             treeRay.InverseDirection = new Vector3(direction.X < 0 ? -1 : 1, direction.Y < 0 ? -1 : 1, direction.Z < 0 ? -1 : 1) / Vector3.Max(new Vector3(1e-15f), Vector3.Abs(direction));
             treeRay.MaximumT = maximumT;
             treeRay.OriginOverDirection = origin * treeRay.InverseDirection;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void CreateFrom(in Vector3 origin, in Vector3 direction, float maximumT, int id, out RayData rayData, out TreeRay treeRay)
+        {
+            rayData.Origin = origin;
+            rayData.Id = id;
+            rayData.Direction = direction;
+            CreateFrom(origin, direction, maximumT, out treeRay);
         }
     }
 
@@ -104,11 +110,11 @@ namespace BepuPhysics.Trees
         }
     }
 
-    public interface ILeafTester
+    public interface IRayLeafTester
     {
-        unsafe void RayTest(int leafIndex, RayData* rayData, float* maximumT);
+        unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT);
     }
-    public interface IBatchedLeafTester : ILeafTester
+    public interface IBatchedRayLeafTester : IRayLeafTester
     {
         void RayTest(int leafIndex, ref RaySource rays);
     }
@@ -408,7 +414,7 @@ namespace BepuPhysics.Trees
         /// Tests any batched rays against the given tree.
         /// </summary>
         /// <param name="tree">Tree to test the accumulated rays against.</param>
-        public unsafe void TestRays<TLeafTester>(Tree tree, ref TLeafTester leafTester) where TLeafTester : IBatchedLeafTester
+        public unsafe void TestRays<TLeafTester>(Tree tree, ref TLeafTester leafTester) where TLeafTester : IBatchedRayLeafTester
         {
             Debug.Assert(stackPointerA0 == 0 && stackPointerB == 0 && stackPointerA1 == 0 && stackPointer == 0,
                 "At the beginning of the traversal, there should exist no entries on the traversal stack.");
@@ -535,7 +541,7 @@ namespace BepuPhysics.Trees
             originalRay.Origin = origin;
             originalRay.Id = id;
             originalRay.Direction = direction;
-            TreeRay.CreateFrom(ref origin, ref direction, maximumT, id, out batchOriginalRays[rayIndex], out batchRays[rayIndex]);
+            TreeRay.CreateFrom(origin, direction, maximumT, id, out batchOriginalRays[rayIndex], out batchRays[rayIndex]);
             return batchRayCount == rayCapacity;
         }
 

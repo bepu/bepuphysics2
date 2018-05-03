@@ -25,7 +25,7 @@ namespace BepuPhysics.CollisionDetection
         BroadPhase broadPhase;
         RayBatcher batcher;
 
-        struct LeafTester : IBatchedLeafTester
+        struct LeafTester : IBatchedRayLeafTester
         {
             public TRayTester RayTester;
             public Buffer<CollidableReference> Leaves;
@@ -37,7 +37,7 @@ namespace BepuPhysics.CollisionDetection
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void RayTest(int leafIndex, RayData* rayData, float* maximumT)
+            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
             {
                 RayTester.RayTest(Leaves[leafIndex], rayData, maximumT);
             }

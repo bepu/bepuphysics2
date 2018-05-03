@@ -51,11 +51,11 @@ namespace BepuPhysics
 
         public unsafe void RayCast<THitHandler>(ref Vector3 origin, ref Vector3 direction, float maximumT, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler
         {
-            TreeRay.CreateFrom(ref origin, ref direction, maximumT, id, out var rayData, out var treeRay);
+            TreeRay.CreateFrom(origin, direction, maximumT, id, out var rayData, out var treeRay);
             RayHitDispatcher<THitHandler> dispatcher;
             dispatcher.HitHandler = hitHandler;
             dispatcher.Simulation = this;
-            BroadPhase.RayCast(ref origin, ref direction, maximumT, ref dispatcher, id);
+            BroadPhase.RayCast(origin, direction, maximumT, ref dispatcher, id);
         }
         
     }

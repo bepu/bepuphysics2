@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BepuUtilities;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
@@ -7,24 +8,13 @@ using System.Text;
 
 namespace BepuPhysics.Trees
 {
+    public interface ISweepLeafTester
+    {
+        unsafe void TestLeaf(int leafIndex, ref float maximumT);
+    }
     partial class Tree
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe static bool Intersects(in Vector3 min, in Vector3 max, TreeRay* ray, out float t)
-        {
-            var t0 = min * ray->InverseDirection - ray->OriginOverDirection;
-            var t1 = max * ray->InverseDirection - ray->OriginOverDirection;
-            var tExit = Vector3.Max(t0, t1);
-            var tEntry = Vector3.Min(t0, t1);
-            //TODO: Note the use of broadcast and SIMD min/max here. This is much faster than using branches to compute minimum elements, since the branches
-            //get mispredicted extremely frequently. Also note 4-wide operations; they're actually faster than using Vector2 or Vector3 due to some unnecessary codegen as of this writing.
-            var earliestExit = Vector4.Min(Vector4.Min(new Vector4(ray->MaximumT), new Vector4(tExit.X)), Vector4.Min(new Vector4(tExit.Y), new Vector4(tExit.Z))).X;
-            t = Vector4.Max(Vector4.Max(new Vector4(tEntry.X), Vector4.Zero), Vector4.Max(new Vector4(tEntry.Y), new Vector4(tEntry.Z))).X;
-            return t < earliestExit;
-        }
-
-
-        internal unsafe void RayCast<TLeafTester>(int nodeIndex, TreeRay* treeRay, RayData* rayData, int* stack, ref TLeafTester leafTester) where TLeafTester : IRayLeafTester
+        internal unsafe void Sweep<TLeafTester>(int nodeIndex, in Vector3 expansion, in Vector3 origin, in Vector3 direction, TreeRay* treeRay, int* stack, ref TLeafTester leafTester) where TLeafTester : ISweepLeafTester
         {
             Debug.Assert((nodeIndex >= 0 && nodeIndex < nodeCount) || (Encode(nodeIndex) >= 0 && Encode(nodeIndex) < leafCount));
             Debug.Assert(leafCount >= 2, "This implementation assumes all nodes are filled.");
@@ -36,7 +26,7 @@ namespace BepuPhysics.Trees
                 {
                     //This is actually a leaf node.
                     var leafIndex = Encode(nodeIndex);
-                    leafTester.TestLeaf(leafIndex, rayData, &treeRay->MaximumT);
+                    leafTester.TestLeaf(leafIndex, ref treeRay->MaximumT);
                     //Leaves have no children; have to pull from the stack to get a new target.
                     if (stackEnd == 0)
                         return;
@@ -45,8 +35,10 @@ namespace BepuPhysics.Trees
                 else
                 {
                     var node = nodes + nodeIndex;
-                    var aIntersected = Intersects(node->A.Min, node->A.Max, treeRay, out var tA);
-                    var bIntersected = Intersects(node->B.Min, node->B.Max, treeRay, out var tB);
+                    var min = node->A.Min - expansion;
+                    var max = node->A.Max + expansion;
+                    var aIntersected = Intersects(min, max, treeRay, out var tA);
+                    var bIntersected = Intersects(min, max, treeRay, out var tB);
 
                     if (aIntersected)
                     {
@@ -87,9 +79,7 @@ namespace BepuPhysics.Trees
 
         }
 
-        internal const int TraversalStackCapacity = 256;
-
-        internal unsafe void RayCast<TLeafTester>(TreeRay* treeRay, RayData* rayData, ref TLeafTester leafTester) where TLeafTester : IRayLeafTester
+        internal unsafe void Sweep<TLeafTester>(in Vector3 expansion, in Vector3 origin, in Vector3 direction, TreeRay* treeRay, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
         {
             if (leafCount == 0)
                 return;
@@ -97,9 +87,9 @@ namespace BepuPhysics.Trees
             if (leafCount == 1)
             {
                 //If the first node isn't filled, we have to use a special case.
-                if (Intersects(nodes->A.Min, nodes->A.Max, treeRay, out var tA))
+                if (Intersects(nodes->A.Min - expansion, nodes->A.Max + expansion, treeRay, out var tA))
                 {
-                    leafTester.TestLeaf(0, rayData, &treeRay->MaximumT);
+                    sweepTester.TestLeaf(0, ref treeRay->MaximumT);
                 }
             }
             else
@@ -107,15 +97,30 @@ namespace BepuPhysics.Trees
                 //TODO: Explicitly tracking depth in the tree during construction/refinement is practically required to guarantee correctness.
                 //While it's exceptionally rare that any tree would have more than 256 levels, the worst case of stomping stack memory is not acceptable in the long run.
                 var stack = stackalloc int[TraversalStackCapacity];
-                RayCast(0, treeRay, rayData, stack, ref leafTester);
+                Sweep(0, expansion, origin, direction, treeRay, stack, ref sweepTester);
             }
         }
 
-        public unsafe void RayCast<TLeafTester>(in Vector3 origin, in Vector3 direction, float maximumT, ref TLeafTester leafTester, int id = 0) where TLeafTester : IRayLeafTester
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void ConvertBoxToCentroidWithExtent(in Vector3 min, in Vector3 max, out Vector3 origin, out Vector3 expansion)
         {
-            TreeRay.CreateFrom(origin, direction, maximumT, id, out var rayData, out var treeRay);
-            RayCast(&treeRay, &rayData, ref leafTester);
+            var halfMin = 0.5f * min;
+            var halfMax = 0.5f * max;
+            expansion = halfMax - halfMin;
+            origin = halfMax + halfMin;
         }
-                
+
+        public unsafe void Sweep<TLeafTester>(in Vector3 min, in Vector3 max, in Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
+        {
+            ConvertBoxToCentroidWithExtent(min, max, out var origin, out var expansion);
+            TreeRay.CreateFrom(origin, direction, maximumT, out var treeRay);
+            Sweep(expansion, origin, direction, &treeRay, ref sweepTester);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void Sweep<TLeafTester>(in BoundingBox boundingBox, in Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
+        {
+            Sweep(boundingBox.Min, boundingBox.Max, direction, maximumT, ref sweepTester);
+        }
+
     }
 }
