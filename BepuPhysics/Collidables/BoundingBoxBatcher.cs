@@ -210,6 +210,26 @@ namespace BepuPhysics
             Vector3Wide.Add(ref max, ref maxDisplacement, out max);
         }
 
+        //This is simply a internally vectorized version of the above. As of this writing, it's only used for convex sweeps.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ExpandBoundingBox(ref Vector3 min, ref Vector3 max, in Vector3 angularVelocity, float dt,
+            float maximumRadius, float maximumAngularExpansion)
+        {
+            var angularVelocityMagnitude = angularVelocity.Length();
+            var a = MathHelper.Min(angularVelocityMagnitude * dt, MathHelper.Pi / 3f);
+            var a2 = a * a;
+            var a4 = a2 * a2;
+            var a6 = a4 * a2;
+            var cosAngleMinusOne = a2 * (-1f / 2f) + a4 * (1f / 24f) - a6 * (1f / 720f);
+            //Note that it's impossible for angular motion to cause an increase in bounding box size beyond (maximumRadius-minimumRadius) on any given axis.
+            //That value, or a conservative approximation, is stored as the maximum angular expansion.
+            var angularExpansion = new Vector3(MathHelper.Min(maximumAngularExpansion,
+                (float)Math.Sqrt(-2f * maximumRadius * maximumRadius * cosAngleMinusOne)));
+
+            min -= angularExpansion;
+            max += angularExpansion;
+        }
+
         public unsafe void ExecuteConvexBatch<TShape, TShapeWide>(ConvexShapeBatch<TShape, TShapeWide> shapeBatch) where TShape : struct, IConvexShape where TShapeWide : struct, IShapeWide<TShape>
         {
             var instanceBundle = default(BoundingBoxInstanceWide<TShape, TShapeWide>);

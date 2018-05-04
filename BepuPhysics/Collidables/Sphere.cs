@@ -36,12 +36,19 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetBounds(ref BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max)
+        public void GetBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             min = new Vector3(-Radius);
             max = new Vector3(Radius);
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetBounds(in BepuUtilities.Quaternion orientation, out float maximumRadius, out float maximumAngularExpansion, out Vector3 min, out Vector3 max)
+        {
+            GetBounds(orientation, out min, out max);
+            //Spheres have perfect symmetry, so there is no need for angular expansion.
+            maximumRadius = 0;
+            maximumAngularExpansion = 0;
+        }
         public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
         {
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.

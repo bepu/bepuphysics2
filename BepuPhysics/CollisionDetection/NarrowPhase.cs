@@ -97,6 +97,7 @@ namespace BepuPhysics.CollisionDetection
         public Statics Statics;
         public Solver Solver;
         public Shapes Shapes;
+        public SweepTaskRegistry SweepTaskRegistry;
         public CollisionTaskRegistry CollisionTaskRegistry;
         public ConstraintRemover ConstraintRemover;
         internal FreshnessChecker FreshnessChecker;
@@ -261,7 +262,7 @@ namespace BepuPhysics.CollisionDetection
 
         internal OverlapWorker[] overlapWorkers;
 
-        public NarrowPhase(Simulation simulation, CollisionTaskRegistry collisionTaskRegistry, TCallbacks callbacks,
+        public NarrowPhase(Simulation simulation, CollisionTaskRegistry collisionTaskRegistry, SweepTaskRegistry sweepTaskRegistry, TCallbacks callbacks,
              int initialSetCapacity, int minimumMappingSize = 2048, int minimumPendingSize = 128, int minimumPerTypeCapacity = 128)
             : base()
         {
@@ -275,6 +276,7 @@ namespace BepuPhysics.CollisionDetection
             Callbacks = callbacks;
             Callbacks.Initialize(simulation);
             CollisionTaskRegistry = collisionTaskRegistry;
+            SweepTaskRegistry = sweepTaskRegistry;
             PairCache = new PairCache(simulation.BufferPool, initialSetCapacity, minimumMappingSize, minimumPendingSize, minimumPerTypeCapacity);
             FreshnessChecker = new FreshnessChecker(this);
             preflushWorkerLoop = PreflushWorkerLoop;

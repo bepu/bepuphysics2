@@ -348,7 +348,7 @@ namespace Demos
                 for (int i = job.Start; i < job.End; ++i)
                 {
                     ref var ray = ref testRays[i];
-                    Simulation.RayCast(ref ray.Origin, ref ray.Direction, ray.MaximumT, ref hitHandler, i);
+                    Simulation.RayCast(ray.Origin, ray.Direction, ray.MaximumT, ref hitHandler, i);
                 }
             }
             return intersectionCount;

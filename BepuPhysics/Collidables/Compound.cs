@@ -58,19 +58,19 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ComputeChildBounds(ref CompoundChild child, ref Quaternion orientation, Shapes shapeBatches, out Vector3 childMin, out Vector3 childMax)
+        static void ComputeChildBounds(in CompoundChild child, in Quaternion orientation, Shapes shapeBatches, out Vector3 childMin, out Vector3 childMax)
         {
             GetRotatedChildPose(child.LocalPose, orientation, out var childPose);
             shapeBatches[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, ref childPose, out childMin, out childMax);
         }
 
-        public void GetBounds(ref Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
+        public void GetBounds(in Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
         {
-            ComputeChildBounds(ref Children[0], ref orientation, shapeBatches, out min, out max);
+            ComputeChildBounds(Children[0], orientation, shapeBatches, out min, out max);
             for (int i = 1; i < Children.Length; ++i)
             {
                 ref var child = ref Children[i];
-                ComputeChildBounds(ref Children[i], ref orientation, shapeBatches, out var childMin, out var childMax);
+                ComputeChildBounds(Children[i], orientation, shapeBatches, out var childMin, out var childMax);
                 BoundingBox.CreateMerged(ref min, ref max, ref childMin, ref childMax, out min, out max);
             }
         }

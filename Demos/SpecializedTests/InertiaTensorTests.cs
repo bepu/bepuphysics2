@@ -46,7 +46,7 @@ namespace Demos.SpecializedTests
         static void CheckInertia<TShape, TInertiaTester>(ref TShape shape) where TShape : IConvexShape where TInertiaTester : IInertiaTester<TShape>
         {
             var orientation = BepuUtilities.Quaternion.Identity;
-            shape.GetBounds(ref orientation, out var min, out var max);
+            shape.GetBounds(orientation, out var min, out var max);
             var span = max - min;
             const int axisSampleCount = 64;
             var sampleSpacing = span / axisSampleCount;

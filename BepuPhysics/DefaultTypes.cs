@@ -88,5 +88,14 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new CompoundPairCollisionTask());
             return defaultTaskRegistry;
         }
+
+        /// <summary>
+        /// Creates a task registry containing the default sweep task types.
+        /// </summary>
+        public static SweepTaskRegistry CreateDefaultSweepTaskRegistry()
+        {
+            var defaultTaskRegistry = new SweepTaskRegistry();
+            return defaultTaskRegistry;
+        }
     }
 }

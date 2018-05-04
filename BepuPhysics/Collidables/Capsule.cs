@@ -38,11 +38,21 @@ namespace BepuPhysics.Collidables
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetBounds(ref Quaternion orientation, out Vector3 min, out Vector3 max)
+        public void GetBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
         {
-            Quaternion.TransformUnitY(ref orientation, out var segmentOffset);
+            Quaternion.TransformUnitY(orientation, out var segmentOffset);
             max = Vector3.Abs(HalfLength * segmentOffset) + new Vector3(Radius);
             min = -max;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetBounds(in Quaternion orientation, out float maximumRadius, out float maximumAngularExpansion, out Vector3 min, out Vector3 max)
+        {
+            GetBounds(orientation, out min, out max);
+
+            maximumRadius = HalfLength + Radius;
+            //The minimum radius is capsules.Radius, so the maximum offset is simply the half length.
+            maximumAngularExpansion = HalfLength;
         }
 
         public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)

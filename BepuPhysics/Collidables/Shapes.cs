@@ -203,7 +203,7 @@ namespace BepuPhysics.Collidables
 
         public override void ComputeBounds(int shapeIndex, ref RigidPose pose, out Vector3 min, out Vector3 max)
         {
-            shapes[shapeIndex].GetBounds(ref pose.Orientation, out min, out max);
+            shapes[shapeIndex].GetBounds(pose.Orientation, out min, out max);
             min += pose.Position;
             max += pose.Position;
         }
@@ -258,7 +258,7 @@ namespace BepuPhysics.Collidables
 
         public override void ComputeBounds(int shapeIndex, ref RigidPose pose, out Vector3 min, out Vector3 max)
         {
-            shapes[shapeIndex].GetBounds(ref pose.Orientation, shapeBatches, out min, out max);
+            shapes[shapeIndex].GetBounds(pose.Orientation, shapeBatches, out min, out max);
             min += pose.Position;
             max += pose.Position;
         }
