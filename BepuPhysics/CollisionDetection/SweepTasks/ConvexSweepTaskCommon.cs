@@ -4,14 +4,13 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using static BepuUtilities.GatherScatter;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public interface IPairDistanceTester<TShapeWideA, TShapeWideB>
     {
         void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
-            out Vector<int> intersected, out Vector<float> distance, out Vector3Wide normal);
+            out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal);
     }
 
     class ConvexSweepTaskCommon
@@ -84,7 +83,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public static unsafe bool Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
             void* shapeDataA, int shapeTypeA, ref BepuUtilities.Quaternion orientationA, ref BodyVelocity velocityA,
             void* shapeDataB, int shapeTypeB, ref Vector3 offsetB, ref BepuUtilities.Quaternion orientationB, ref BodyVelocity velocityB,
-            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount, out float t0, out float t1, out Vector3 normal)
+            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
             where TShapeA : struct, IConvexShape
             where TShapeB : struct, IConvexShape
             where TShapeWideA : struct, IShapeWide<TShapeA>
@@ -100,7 +99,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             wideA.Broadcast(ref shapeA);
             wideB.Broadcast(ref shapeB);
             var pairTester = default(TPairDistanceTester);
-            normal = default;
+            hitNormal = default;
+            hitLocation = default;
 
             //Initialize the interval to the tighter of 1) input bounds [0, maximumT] and 2) the swept impact interval of the bounding spheres of the two shapes.
             //Note that the intersection interval of two swept spheres is equivalent to performing a single ray cast against a sphere with a combined radius.
@@ -159,19 +159,24 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             QuaternionWide sampleOrientationA;
             QuaternionWide sampleOrientationB;
             Vector3Wide normals;
+            Vector3Wide closestA;
             Vector<float> distances;
             Vector<int> intersections;
             var minimumProgressionWide = new Vector<float>(minimumProgression);
 
+            float next0 = t0;
+            float next1 = t1;
             ConstructSamples(t0, t1,
                 ref wideLinearVelocityB, ref wideAngularVelocityA, ref wideAngularVelocityB,
                 ref initialOffsetB, ref initialOrientationA, ref initialOrientationB,
                 ref samples, ref sampleOffsetB, ref sampleOrientationA, ref sampleOrientationB);
 
             bool intersectionEncountered = false;
-            for (int iterationIndex = 0; iterationIndex < maximumIterationCount; ++iterationIndex)
+            int iterationIndex = 0;
+            while (true)
             {
-                pairTester.Test(ref wideA, ref wideB, ref sampleOffsetB, ref sampleOrientationA, ref sampleOrientationB, out intersections, out distances, out normals);
+                pairTester.Test(ref wideA, ref wideB, ref sampleOffsetB, ref sampleOrientationA, ref sampleOrientationB,
+                    out intersections, out distances, out closestA, out normals);
 
                 Vector3Wide.Dot(ref normals, ref wideLinearVelocityB, out var linearVelocityAlongNormal);
                 //Note that, for any given timespan, the maximum displacement of any point on a body is bounded.
@@ -206,7 +211,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 if (intersections[0] < 0)
                 {
                     //First sample was intersected, can't do anything with the rest of the interval shoving on this iteration.
-                    t1 = samples[0];
+                    next1 = samples[0];
                     intersectionEncountered = true;
                 }
                 else
@@ -221,7 +226,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             if (intersections[nextIndex] < 0)
                             {
                                 //An intersection was found. Pull the interval endpoint all the way up. No point in looking at further samples.
-                                t1 = samples[nextIndex];
+                                next1 = samples[nextIndex];
                                 intersectionEncountered = true;
                                 break;
                             }
@@ -234,20 +239,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             }
                         }
                     }
-                    t0 = safeIntervalEnd[lastSafeIndex];
+                    next0 = safeIntervalEnd[lastSafeIndex];
                     //Copy the best normal into the output variable. We're going to overwrite all the wide normals in the next iteration, but we need to keep the best guess around.
-                    normal.X = normals.X[lastSafeIndex];
-                    normal.Y = normals.Y[lastSafeIndex];
-                    normal.Z = normals.Z[lastSafeIndex];
+                    hitNormal = new Vector3(normals.X[lastSafeIndex], normals.Y[lastSafeIndex], normals.Z[lastSafeIndex]);
+                    hitLocation = new Vector3(closestA.X[lastSafeIndex], closestA.Y[lastSafeIndex], closestA.Z[lastSafeIndex]);
+
                     if (!intersectionEncountered)
                     {
-                        //If no intersection has yet been detected, we can pull t1 forward to narrow the sample range.        
+                        //If no intersection has yet been detected, we can pull t1 forward to narrow the sample range.      
                         for (int i = Vector<float>.Count - 1; i >= 0; --i)
                         {
-                            t1 = safeIntervalStart[i];
+                            next1 = safeIntervalStart[i];
                             //Note that we use the forced interval for testing safe traversal.
                             //This allows the root finder to skip small intersections for a substantial speedup in pathological cases.
-                            if (i > 0 && forcedIntervalEnd[i - 1] < t1)
+                            if (i > 0 && forcedIntervalEnd[i - 1] < next1)
                             {
                                 //Can't make it to the next sample. We've pushed t1 as far as it can go.
                                 break;
@@ -256,21 +261,55 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     }
                 }
 
-                //If the interval has narrowed below the convergence threshold, we can quit.
-                if (t1 - t0 <= convergenceThreshold)
+                //The sampling region is initialized to nonconservative bounds.
+                //The true sample interval computation completes later; this is here just so we can set t0 and t1 and potentially early out. 
+                var sample0 = t0 + minimumProgression;
+                var sample1 = t1 - minimumProgression;
+                t0 = next0;
+                t1 = next1;
+
+                var intervalSpan = t1 - t0;
+                //If no intersection has been found, keep working even if the interval has narrowed below the convergence threshold.
+                if (intervalSpan < 0)
+                    return false;
+                if (intersectionEncountered && intervalSpan < convergenceThreshold)
+                    return true;
+                if (++iterationIndex >= maximumIterationCount)
+                    return intersectionEncountered;
+
+                //Now we need to clean up the aggressive sampling interval. Get rid of any inversions.
+                if (sample0 < next0)
+                    sample0 = next0;
+                else if (sample0 > next1)
+                    sample0 = next1;
+                if (sample1 > next1)
+                    sample1 = next1;
+                else if (sample1 < next0)
+                    sample1 = next0;
+
+                var minimumSpan = minimumProgression * (Vector<float>.Count - 1);
+                var sampleSpan = sample1 - sample0;
+                if (sampleSpan < minimumSpan)
                 {
-                    break;
+                    //We've reached the point where individual samples are crowded below the minimum progression.
+                    //Try to make room by pushing sample 0 back toward the conservative bound.
+                    sample0 = sample0 - (minimumSpan - sampleSpan);
+                    if (sample0 < t0)
+                        sample0 = t0;
+                    sampleSpan = sample1 - sample0;
+                    //Now check if we need to move sample1 toward t1.
+                    //Note that we nver push sample1 all the way to t1. t1 is often in intersection, so taking another sample there has no value.
+                    //Instead, we only move up to halfway there.
+                    if (sampleSpan < minimumSpan)
+                        sample1 = sample1 + Math.Min(minimumSpan - sampleSpan, (t1 - sample1) * 0.5f);
                 }
 
-                //Not done yet; construct the new samples.
-                //TODO: Need nonconservative sample bounds- t0 and t1 only advance up to safe points, but the sampling region will be a subset of that conservative region.
-                //In other words, 
-                //nextSample0 = t0 + max(safeProgress0, minimumProgress), nextSample1 = t1 - max(safeProgress1, minimumProgress)
-                //t0 += safeProgress0, t1 -= safeProgress1
-                //Note that if an intersection has been found, then t1 won't progress, but the nextSample1 will still move up by minimumProgress.
-                //(If nextSample1 ends up less than nextSample0, arbitrarily stick it at a point in between nextSample0 and the old t1.)
+                //The sample bounds are now constrained to be an aggressive subset of the conservative bounds.
+                ConstructSamples(sample0, sample1,
+                    ref wideLinearVelocityB, ref wideAngularVelocityA, ref wideAngularVelocityB,
+                    ref initialOffsetB, ref initialOrientationA, ref initialOrientationB,
+                    ref samples, ref sampleOffsetB, ref sampleOrientationA, ref sampleOrientationB);
             }
-            return intersectionEncountered;
         }
     }
 }
