@@ -31,8 +31,8 @@ namespace BepuPhysics.Collidables
 
     public interface IConvexShape : IShape
     {
-        void GetBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max);
-        void GetBounds(in BepuUtilities.Quaternion orientation, out float maximumRadius, out float maximumAngularExpansion, out Vector3 min, out Vector3 max);
+        void ComputeBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max);
+        void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion);
 
         void ComputeInertia(float mass, out BodyInertia inertia);
 
@@ -47,7 +47,7 @@ namespace BepuPhysics.Collidables
     {
         //Note that compound shapes have no wide GetBounds function. Compounds, by virtue of containing shapes of different types, cannot be usefully vectorized over.
         //Instead, their children are added to other computation batches.
-        void GetBounds(in BepuUtilities.Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max);
+        void ComputeBounds(in BepuUtilities.Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max);
 
         //Compound shapes may require indirections into other shape batches. This isn't wonderfully fast, but this scalar path is designed more for convenience than performance anyway.
         //For performance, a batched and vectorized codepath should be used.
@@ -60,7 +60,6 @@ namespace BepuPhysics.Collidables
 
     public interface IShapeWide<TShape> where TShape : IShape
     {
-
         /// <summary>
         /// Places the specified AOS-formatted shape into the first lane of the wide 'this' reference.
         /// </summary>

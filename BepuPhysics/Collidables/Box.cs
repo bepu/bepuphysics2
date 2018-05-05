@@ -40,7 +40,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
+        public void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var basis);
             var x = HalfWidth * basis.X;
@@ -49,11 +49,10 @@ namespace BepuPhysics.Collidables
             max = Vector3.Abs(x) + Vector3.Abs(y) + Vector3.Abs(z);
             min = -max;
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetBounds(in BepuUtilities.Quaternion orientation, out float maximumRadius, out float maximumAngularExpansion, out Vector3 min, out Vector3 max)
-        {
-            GetBounds(orientation, out min, out max);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
+        {
             maximumRadius = (float)Math.Sqrt(HalfWidth * HalfWidth + HalfHeight * HalfHeight + HalfLength * HalfLength);
             maximumAngularExpansion = maximumRadius - Vector4.Min(new Vector4(HalfLength), Vector4.Min(new Vector4(HalfHeight), new Vector4(HalfLength))).X;
         }

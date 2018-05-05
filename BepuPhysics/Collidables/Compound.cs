@@ -64,7 +64,7 @@ namespace BepuPhysics.Collidables
             shapeBatches[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, ref childPose, out childMin, out childMax);
         }
 
-        public void GetBounds(in Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
+        public void ComputeBounds(in Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max)
         {
             ComputeChildBounds(Children[0], orientation, shapeBatches, out min, out max);
             for (int i = 1; i < Children.Length; ++i)
