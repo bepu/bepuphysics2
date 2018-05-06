@@ -18,6 +18,23 @@ namespace BepuPhysics.CollisionDetection
         bool AllowTest(int childA, int childB);
     }
 
+    public enum SweepResult
+    {
+        /// <summary>
+        /// The swept pair did not collide.
+        /// </summary>
+        Miss,
+        /// <summary>
+        /// The swept pair hit at some point beyond t = 0.
+        /// </summary>
+        Hit,
+        /// <summary>
+        /// The swept pair intersected at t = 0.
+        /// </summary>
+        StartedIntersecting
+    }
+
+
 
     public abstract class SweepTask
     {
@@ -30,7 +47,7 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public int ShapeTypeIndexB { get; protected set; }
 
-        public abstract unsafe bool Sweep<TSweepFilter>(
+        public abstract unsafe SweepResult Sweep<TSweepFilter>(
             void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,

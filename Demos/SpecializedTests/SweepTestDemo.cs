@@ -38,7 +38,7 @@ namespace Demos.SpecializedTests
             var filter = new TestFilter();
             var intersected = spherePairTask.Sweep(
                 &a, a.TypeId, Quaternion.Identity, new BodyVelocity { Linear = new Vector3(1, 0, 0) },
-                &b, b.TypeId, new Vector3(1, 0, 0), Quaternion.Identity, new BodyVelocity { Linear = new Vector3(0, 0, 0) },
+                &b, b.TypeId, new Vector3(2, 0, 0), Quaternion.Identity, new BodyVelocity { Linear = new Vector3(0, 0, 0) },
                 5, 0f, 1e-9f, 10, ref filter, out var t0, out var t1, out var hitLocation, out var hitNormal);
 
             Console.WriteLine($"Intersected: {intersected}");

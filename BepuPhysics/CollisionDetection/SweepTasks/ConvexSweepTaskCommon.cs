@@ -82,7 +82,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe bool Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
+        public static unsafe SweepResult Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
             void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
@@ -118,7 +118,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
         }
 
-        public static unsafe bool Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
+        public static unsafe SweepResult Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
             void* shapeDataA, in Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
@@ -137,8 +137,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             wideA.Broadcast(ref shapeA);
             wideB.Broadcast(ref shapeB);
             var pairTester = default(TPairDistanceTester);
-            hitNormal = default;
-            hitLocation = default;
 
             //Initialize the interval to the tighter of 1) input bounds [0, maximumT] and 2) the swept impact interval of the bounding spheres of the two shapes.
             //Note that the intersection interval of two swept spheres is equivalent to performing a single ray cast against a sphere with a combined radius.
@@ -150,13 +148,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             if (!GetSphereCastInterval(offsetB, linearVelocityB, maximumRadiusA + maximumRadiusB, out t0, out t1) || t0 > maximumT || t1 < 0)
             {
                 //The bounding spheres do not intersect, or the intersection interval is outside of the requested search interval.
-                return false;
+                hitLocation = default;
+                hitNormal = default;
+                return SweepResult.Miss;
             }
             //Clamp the interval to the intended search space.
             if (t0 < 0)
                 t0 = 0;
             if (t1 > maximumT)
                 t1 = maximumT;
+            //Initialize the hit location and normal. If the t0 bracket we chose ends up to be intersecting (as it would be with spheres, for example),
+            //these values will be used.
+            hitLocation = offsetB + t0 * linearVelocityB;
+            //The normal points from B to A by convention.
+            hitNormal = Vector3.Normalize(-hitLocation);
+            hitLocation += hitNormal * maximumRadiusB;
 
             //We now have a relatively tight bracket (not much larger than the involved shapes, at least).
             //At a high level, the following sweep uses two parts:
@@ -308,12 +314,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 var intervalSpan = t1 - t0;
                 //If no intersection has been found, keep working even if the interval has narrowed below the convergence threshold.
-                if (intervalSpan < 0)
-                    return false;
-                if (intersectionEncountered && intervalSpan < convergenceThreshold)
-                    return true;
-                if (++iterationIndex >= maximumIterationCount)
-                    return intersectionEncountered;
+                if (intervalSpan < 0 ||
+                    (intersectionEncountered && intervalSpan < convergenceThreshold) ||
+                    ++iterationIndex >= maximumIterationCount)
+                    break;
 
                 //Now we need to clean up the aggressive sampling interval. Get rid of any inversions.
                 if (sample0 < next0)
@@ -348,6 +352,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref initialOffsetB, ref initialOrientationA, ref initialOrientationB,
                     ref samples, ref sampleOffsetB, ref sampleOrientationA, ref sampleOrientationB);
             }
+            return intersectionEncountered ? t1 == 0 ? SweepResult.StartedIntersecting : SweepResult.Hit : SweepResult.Miss;
         }
     }
 }

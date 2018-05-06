@@ -11,9 +11,34 @@ namespace BepuPhysics
 {
     public interface ISweepHitHandler
     {
+        /// <summary>
+        /// Checks whether to run a detailed sweep test against a target collidable.
+        /// </summary>
+        /// <param name="collidable">Collidable to check.</param>
+        /// <returns>True if the sweep test should be attempted, false otherwise.</returns>
         bool AllowTest(CollidableReference collidable);
-        bool AllowTest(int childA, CollidableReference collidableB, int childB);
+        /// <summary>
+        /// Checks whether to run a detailed sweep test against a target collidable's child.
+        /// </summary>
+        /// <param name="collidable">Collidable to check.</param>
+        /// <param name="child">Index of the child in the collidable to check.</param>
+        /// <returns>True if the sweep test should be attempted, false otherwise.</returns>
+        bool AllowTest(CollidableReference collidable, int child);
+        /// <summary>
+        /// Called when a swep test detects a hit with nonzero T value.
+        /// </summary>
+        /// <param name="maximumT">Reference to maximumT passed to the traversal.</param>
+        /// <param name="t">Impact time of the sweep test.</param>
+        /// <param name="hitLocation">Location of the first hit detected by the sweep.</param>
+        /// <param name="hitNormal">Surface normal at the hit location.</param>
+        /// <param name="collidable">Collidable hit by the traversal.</param>
         void OnHit(ref float maximumT, float t, in Vector3 hitLocation, in Vector3 hitNormal, CollidableReference collidable);
+        /// <summary>
+        /// Called when a swept test detects a hit at T = 0, meaning that no location or normal can be computed.
+        /// </summary>
+        /// <param name="maximumT">Reference to maximumT passed to the traversal.</param>
+        /// <param name="collidable">Collidable hit by the traversal.</param>
+        void OnHitAtTZero(ref float maximumT, CollidableReference collidable);
     }
 
     partial class Simulation
@@ -91,7 +116,8 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool AllowTest(int childA, int childB)
             {
-                return HitHandler.AllowTest(childA, CollidableBeingTested, childB);
+                //Note that the simulation sweep does not permit nonconvex sweeps, so we don't need to worry about childA.
+                return HitHandler.AllowTest(CollidableBeingTested, childB);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -121,13 +147,21 @@ namespace BepuPhysics
                     //}
                     CollidableBeingTested = reference;
                     var task = Simulation.NarrowPhase.SweepTaskRegistry.GetTask(ShapeType, shape.Type);
-                    if (task != null && task.Sweep(
-                        ShapeData, ShapeType, Pose.Orientation, Velocity,
-                        targetShapeData, shape.Type, targetPose->Position - Pose.Position, targetPose->Orientation, new BodyVelocity(),
-                        maximumT, MinimumProgression, ConvergenceThreshold, MaximumIterationCount,
-                        ref this, out var t0, out var t1, out var hitLocation, out var hitNormal))
+                    if (task != null)
                     {
-                        HitHandler.OnHit(ref maximumT, t1, hitLocation, hitNormal, reference);
+                        var result = task.Sweep(
+                            ShapeData, ShapeType, Pose.Orientation, Velocity,
+                            targetShapeData, shape.Type, targetPose->Position - Pose.Position, targetPose->Orientation, new BodyVelocity(),
+                            maximumT, MinimumProgression, ConvergenceThreshold, MaximumIterationCount,
+                            ref this, out var t0, out var t1, out var hitLocation, out var hitNormal);
+                        if (result != SweepResult.Miss)
+                        {
+                            hitLocation += Pose.Position;
+                            if (result == SweepResult.Hit)
+                                HitHandler.OnHit(ref maximumT, t1, hitLocation, hitNormal, reference);
+                            else if (result == SweepResult.StartedIntersecting)
+                                HitHandler.OnHitAtTZero(ref maximumT, reference);
+                        }
                     }
                 }
             }
