@@ -32,16 +32,16 @@ namespace DemoRenderer.ShapeDrawing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void AddShape(Shapes shapes, TypedIndex shapeIndex, ref RigidPose pose, ref Vector3 color)
+        public unsafe void AddShape(void* shapeData, int shapeType, Shapes shapes, ref RigidPose pose, in Vector3 color)
         {
-            switch (shapeIndex.Type)
+            switch (shapeType)
             {
                 case Sphere.Id:
                     {
                         SphereInstance instance;
                         instance.Position = pose.Position;
-                        instance.Radius = shapes.GetShape<Sphere>(shapeIndex.Index).Radius;
-                        Helpers.PackOrientation(ref pose.Orientation, out instance.PackedOrientation);
+                        instance.Radius = Unsafe.AsRef<Sphere>(shapeData).Radius;
+                        Helpers.PackOrientation(pose.Orientation, out instance.PackedOrientation);
                         instance.PackedColor = Helpers.PackColor(color);
                         spheres.Add(ref instance, new PassthroughArrayPool<SphereInstance>());
                     }
@@ -50,7 +50,7 @@ namespace DemoRenderer.ShapeDrawing
                     {
                         CapsuleInstance instance;
                         instance.Position = pose.Position;
-                        ref var capsule = ref shapes.GetShape<Capsule>(shapeIndex.Index);
+                        ref var capsule = ref Unsafe.AsRef<Capsule>(shapeData);
                         instance.Radius = capsule.Radius;
                         instance.HalfLength = capsule.HalfLength;
                         instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
@@ -62,7 +62,7 @@ namespace DemoRenderer.ShapeDrawing
                     {
                         BoxInstance instance;
                         instance.Position = pose.Position;
-                        ref var box = ref shapes.GetShape<Box>(shapeIndex.Index);
+                        ref var box = ref Unsafe.AsRef<Box>(shapeData);
                         instance.PackedColor = Helpers.PackColor(color);
                         instance.Orientation = pose.Orientation;
                         instance.HalfWidth = box.HalfWidth;
@@ -73,17 +73,31 @@ namespace DemoRenderer.ShapeDrawing
                     break;
                 case Compound.Id:
                     {
-                        ref var compound = ref shapes.GetShape<Compound>(shapeIndex.Index);
+                        ref var compound = ref Unsafe.AsRef<Compound>(shapeData);
                         for (int i = 0; i < compound.Children.Length; ++i)
                         {
                             ref var child = ref compound.Children[i];
-                            Compound.GetWorldPose(ref child.LocalPose, ref pose, out var childPose);
-                            AddShape(shapes, child.ShapeIndex, ref childPose, ref color);
+                            Compound.GetWorldPose(child.LocalPose, pose, out var childPose);
+                            AddShape(shapes, child.ShapeIndex, ref childPose, color);
                         }
                     }
                     break;
             }
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void AddShape(Shapes shapes, TypedIndex shapeIndex, ref RigidPose pose, in Vector3 color)
+        {
+            shapes[shapeIndex.Type].GetShapeData(shapeIndex.Index, out var shapeData, out _);
+            AddShape(shapeData, shapeIndex.Type, shapes, ref pose, color);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void AddShape<TShape>(TShape shape, Shapes shapes, ref RigidPose pose, in Vector3 color) where TShape : IShape
+        {
+            AddShape(Unsafe.AsPointer(ref shape), shape.TypeId, shapes, ref pose, color);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void AddBodyShape(Shapes shapes, Bodies bodies, int setIndex, int indexInSet)
         {
@@ -124,7 +138,7 @@ namespace DemoRenderer.ShapeDrawing
                 color *= sleepTint;
             }
 
-            AddShape(shapes, set.Collidables[indexInSet].Shape, ref set.Poses[indexInSet], ref color);
+            AddShape(shapes, set.Collidables[indexInSet].Shape, ref set.Poses[indexInSet], color);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -136,7 +150,7 @@ namespace DemoRenderer.ShapeDrawing
             var staticBase = new Vector3(0.1f, 0.057f, 0.014f);
             var staticVariationSpan = new Vector3(0.07f, 0.07f, 0.03f);
             var color = staticBase + staticVariationSpan * colorVariation;
-            AddShape(shapes, statics.Collidables[index].Shape, ref statics.Poses[index], ref color);
+            AddShape(shapes, statics.Collidables[index].Shape, ref statics.Poses[index], color);
         }
 
         public void AddInstances(Simulation simulation, IThreadDispatcher threadDispatcher = null)

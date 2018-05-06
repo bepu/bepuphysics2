@@ -55,6 +55,26 @@ namespace BepuPhysics
             Triangular3x3.RotationSandwich(ref orientationMatrix, ref localInverseInertiaTensor, out rotatedInverseInertiaTensor);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose)
+        {
+            var displacement = velocity.Linear * dt;
+            integratedPose.Position = pose.Position + displacement;
+
+            //Integrate orientation with the latest angular velocity.
+            //Note that we don't bother with conservation of angular momentum or the gyroscopic term or anything else- 
+            //it's not exactly correct, but it's stable, fast, and no one really notices. Unless they're trying to spin a multitool in space or something.
+            //(But frankly, that just looks like reality has a bug.)
+
+            //TODO: This is a pretty strong combo-hack. Check codegen.
+            Quaternion multiplier;
+            Unsafe.As<float, Vector3>(ref *&multiplier.X) = velocity.Angular * (dt * 0.5f);
+            multiplier.W = 0;
+            Quaternion.ConcatenateWithoutOverlap(pose.Orientation, *&multiplier, out var increment);
+            Quaternion.Add(pose.Orientation, increment, out integratedPose.Orientation);
+            Quaternion.Normalize(ref integratedPose.Orientation);
+        }
+
         unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher)
         {
             ref var basePoses = ref bodies.ActiveSet.Poses[0];
@@ -62,14 +82,13 @@ namespace BepuPhysics
             ref var baseLocalInertias = ref bodies.ActiveSet.LocalInertias[0];
             ref var baseInertias = ref bodies.Inertias[0];
             ref var baseActivity = ref bodies.ActiveSet.Activity[0];
-            var halfDt = dt * 0.5f;
             for (int i = startIndex; i < endIndex; ++i)
             {
                 //Integrate position with the latest linear velocity. Note that gravity is integrated afterwards.
                 ref var pose = ref Unsafe.Add(ref basePoses, i);
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
-                var displacement = velocity.Linear * dt;
-                pose.Position += displacement;
+
+                Integrate(pose, velocity, dt, out pose);
 
                 //Update sleep candidacy. Note that this comes before velocity integration. That means an object can go inactive with gravity-induced velocity.
                 //That is actually intended: when the narrowphase wakes up an island, the accumulated impulses in the island will be ready for gravity's influence.
@@ -90,19 +109,6 @@ namespace BepuPhysics
                         activity.SleepCandidate = true;
                     }
                 }
-
-                //Integrate orientation with the latest angular velocity.
-                //Note that we don't bother with conservation of angular momentum or the gyroscopic term or anything else- 
-                //it's not exactly correct, but it's stable, fast, and no one really notices. Unless they're trying to spin a multitool in space or something.
-                //(But frankly, that just looks like reality has a bug.)
-
-                //TODO: This is a pretty strong combo-hack. Check codegen.
-                Quaternion multiplier;
-                Unsafe.As<float, Vector3>(ref *&multiplier.X) = velocity.Angular * halfDt;
-                multiplier.W = 0;
-                Quaternion.ConcatenateWithoutOverlap(pose.Orientation, *&multiplier, out var increment);
-                Quaternion.Add(ref pose.Orientation, ref increment, out pose.Orientation);
-                Quaternion.Normalize(ref pose.Orientation);
 
                 //Update the inertia tensors for the new orientation.
                 //TODO: If the pose integrator is positioned at the end of an update, the first frame after any out-of-timestep orientation change or local inertia change

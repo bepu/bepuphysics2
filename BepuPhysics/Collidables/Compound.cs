@@ -49,7 +49,7 @@ namespace BepuPhysics.Collidables
             Quaternion.Transform(localPose.Position, orientation, out rotatedChildPose.Position);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetWorldPose(ref RigidPose localPose, ref RigidPose transform, out RigidPose worldPose)
+        public static void GetWorldPose(in RigidPose localPose, in RigidPose transform, out RigidPose worldPose)
         {
             GetRotatedChildPose(localPose, transform.Orientation, out worldPose);
             //TODO: This is an area that has to be updated for high precision poses. May be able to centralize positional work
@@ -81,7 +81,7 @@ namespace BepuPhysics.Collidables
             for (int i = 0; i < Children.Length; ++i)
             {
                 ref var child = ref Children[i];
-                GetWorldPose(ref child.LocalPose, ref pose, out var childPose);
+                GetWorldPose(child.LocalPose, pose, out var childPose);
                 batcher.AddCompoundChild(bodyIndex, Children[i].ShapeIndex, ref childPose, ref velocity);
             }
         }

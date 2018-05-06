@@ -206,7 +206,7 @@ namespace DemoRenderer
         /// <param name="source">Orientation to pack.</param>
         /// <param name="packed">W-less packed orientation, with remaining components negated to guarantee that the reconstructed positive W component is valid.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void PackOrientation(ref Quaternion source, out Vector3 packed)
+        public static void PackOrientation(in Quaternion source, out Vector3 packed)
         {
             packed = new Vector3(source.X, source.Y, source.Z);
             if (source.W < 0)

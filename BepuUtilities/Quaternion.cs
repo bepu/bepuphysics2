@@ -55,7 +55,7 @@ namespace BepuUtilities
         /// <param name="b">Second quaternion to add.</param>
         /// <param name="result">Sum of the addition.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(ref Quaternion a, ref Quaternion b, out Quaternion result)
+        public static void Add(in Quaternion a, in Quaternion b, out Quaternion result)
         {
             result.X = a.X + b.X;
             result.Y = a.Y + b.Y;

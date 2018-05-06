@@ -38,7 +38,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="maximumT">Reference to maximumT passed to the traversal.</param>
         /// <param name="collidable">Collidable hit by the traversal.</param>
-        void OnHitAtTZero(ref float maximumT, CollidableReference collidable);
+        void OnHitAtZeroT(ref float maximumT, CollidableReference collidable);
     }
 
     partial class Simulation
@@ -154,13 +154,18 @@ namespace BepuPhysics
                             targetShapeData, shape.Type, targetPose->Position - Pose.Position, targetPose->Orientation, new BodyVelocity(),
                             maximumT, MinimumProgression, ConvergenceThreshold, MaximumIterationCount,
                             ref this, out var t0, out var t1, out var hitLocation, out var hitNormal);
-                        if (result != SweepResult.Miss)
+                        if (result)
                         {
-                            hitLocation += Pose.Position;
-                            if (result == SweepResult.Hit)
+                            if (t1 > 0)
+                            {
+                                hitLocation += Pose.Position;
                                 HitHandler.OnHit(ref maximumT, t1, hitLocation, hitNormal, reference);
-                            else if (result == SweepResult.StartedIntersecting)
-                                HitHandler.OnHitAtTZero(ref maximumT, reference);
+                            }
+                            else
+                            {
+                                //At t1 == 0, hitLocation and hitNormal do not have valid values, so don't imply that they exist.
+                                HitHandler.OnHitAtZeroT(ref maximumT, reference);
+                            }
                         }
                     }
                 }

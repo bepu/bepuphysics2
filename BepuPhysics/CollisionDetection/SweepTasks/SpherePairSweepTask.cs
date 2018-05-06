@@ -34,7 +34,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ShapeTypeIndexB = default(Sphere).TypeId;
         }
         
-        public override unsafe SweepResult Sweep<TSweepFilter>(
+        public override unsafe bool Sweep<TSweepFilter>(
             void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA, 
             void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,

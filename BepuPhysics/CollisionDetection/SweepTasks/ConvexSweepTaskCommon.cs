@@ -27,7 +27,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ShapeTypeIndexB = default(TShapeB).TypeId;
         }
 
-        public override unsafe SweepResult Sweep<TSweepFilter>(
+        public override unsafe bool Sweep<TSweepFilter>(
             void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
@@ -46,7 +46,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         static bool GetSphereCastInterval(in Vector3 origin, in Vector3 direction, float radius, out float t0, out float t1)
         {
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
-            var inverseDLength = 1f / direction.Length();
+            var dLength = direction.Length();
+            if (dLength == 0)
+            {
+                //Zero length direction => miss or infinite length intersection.
+                t0 = 0;
+                t1 = float.MaxValue;
+                return origin.LengthSquared() <= radius * radius;
+            }
+            var inverseDLength = 1f / dLength;
             var d = direction * inverseDLength;
 
             //Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
@@ -109,7 +117,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe SweepResult Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
+        public static unsafe bool Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
             void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
@@ -145,7 +153,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
         }
 
-        public static unsafe SweepResult Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
+        public static unsafe bool Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
             void* shapeDataA, in Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
@@ -177,7 +185,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //The bounding spheres do not intersect, or the intersection interval is outside of the requested search interval.
                 hitLocation = default;
                 hitNormal = default;
-                return SweepResult.Miss;
+                return false;
             }
             //Clamp the interval to the intended search space.
             if (t0 < 0)
@@ -379,7 +387,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref initialOffsetB, ref initialOrientationA, ref initialOrientationB,
                     ref samples, ref sampleOffsetB, ref sampleOrientationA, ref sampleOrientationB);
             }
-            return intersectionEncountered ? t1 == 0 ? SweepResult.StartedIntersecting : SweepResult.Hit : SweepResult.Miss;
+            //If there was an intersection, we need to correct the hit location for the sample location.
+            hitLocation = hitLocation + t0 * velocityA.Linear;
+            return intersectionEncountered;
         }
     }
 }
