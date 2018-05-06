@@ -120,12 +120,12 @@ namespace Demos.SpecializedTests
         {
             base.Render(renderer, text, font);
             TestSweep(
-                new Capsule(0.5f, 0.5f), 
-                new RigidPose { Position = new Vector3(-2, 4, 0), Orientation = Quaternion.Identity }, 
-                new BodyVelocity { Linear = new Vector3(1, .8f, 0) },
-                new Capsule(0.5f, 0.5f), 
-                new RigidPose { Position = new Vector3(2, 6, 0), Orientation = Quaternion.Identity }, 
-                new BodyVelocity { Linear = new Vector3(-1, 0, 0) }, renderer);
+                new Capsule(0.5f, 0.5f),
+                new RigidPose { Position = new Vector3(0, 0, 0), Orientation = Quaternion.Identity },
+                new BodyVelocity { Linear = new Vector3(0, 0, 0), Angular = new Vector3(1, 0, 1) },
+                new Capsule(0.5f, 0.5f),
+                new RigidPose { Position = new Vector3(2, 0, 0), Orientation = Quaternion.Identity },
+                new BodyVelocity { Linear = new Vector3(-1, 0, 0), Angular = new Vector3(0, 0, 1) }, renderer);
         }
     }
 }

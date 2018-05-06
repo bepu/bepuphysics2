@@ -85,6 +85,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return true;
         }
 
+
+        static void Integrate(ref QuaternionWide start, ref Vector3Wide angularVelocity, ref Vector<float> halfDt, out QuaternionWide integrated)
+        {
+            QuaternionWide multiplierA;
+            multiplierA.X = angularVelocity.X * halfDt;
+            multiplierA.Y = angularVelocity.Y * halfDt;
+            multiplierA.Z = angularVelocity.Z * halfDt;
+            multiplierA.W = Vector<float>.Zero;
+            QuaternionWide.ConcatenateWithoutOverlap(ref start, ref multiplierA, out var incrementA);
+            QuaternionWide.Add(ref start, ref incrementA, out integrated);
+            QuaternionWide.Normalize(ref integrated, out integrated);
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ConstructSamples(float t0, float t1,
             ref Vector3Wide linearVelocityB, ref Vector3Wide angularVelocityA, ref Vector3Wide angularVelocityB,
@@ -103,17 +115,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //Integrate orientations to sample locations.
             var halfSamples = samples * 0.5f;
-            QuaternionWide multiplier;
-            multiplier.X = angularVelocityA.X * halfSamples;
-            multiplier.Y = angularVelocityA.Y * halfSamples;
-            multiplier.Z = angularVelocityA.Z * halfSamples;
-            multiplier.W = Vector<float>.Zero;
-            QuaternionWide.ConcatenateWithoutOverlap(ref initialOrientationA, ref multiplier, out var incrementA);
-            QuaternionWide.Add(ref initialOrientationA, ref incrementA, out orientationA);
-            QuaternionWide.Normalize(ref orientationA, out orientationA);
-            QuaternionWide.ConcatenateWithoutOverlap(ref initialOrientationB, ref multiplier, out var incrementB);
-            QuaternionWide.Add(ref initialOrientationB, ref incrementB, out orientationB);
-            QuaternionWide.Normalize(ref orientationB, out orientationB);
+            Integrate(ref initialOrientationA, ref angularVelocityA, ref halfSamples, out orientationA);
+            Integrate(ref initialOrientationB, ref angularVelocityB, ref halfSamples, out orientationB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
