@@ -14,6 +14,33 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal);
     }
 
+    public class ConvexPairSweepTask<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester> : SweepTask
+            where TShapeA : struct, IConvexShape
+            where TShapeB : struct, IConvexShape
+            where TShapeWideA : struct, IShapeWide<TShapeA>
+            where TShapeWideB : struct, IShapeWide<TShapeB>
+            where TPairDistanceTester : struct, IPairDistanceTester<TShapeWideA, TShapeWideB>
+    {
+        public ConvexPairSweepTask()
+        {
+            ShapeTypeIndexA = default(TShapeA).TypeId;
+            ShapeTypeIndexB = default(TShapeB).TypeId;
+        }
+
+        public override unsafe SweepResult Sweep<TSweepFilter>(
+            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            float minimumProgression, float convergenceThreshold, int maximumIterationCount,
+            ref TSweepFilter filter, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+        {
+            return ConvexSweepTaskCommon.Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
+                shapeDataA, shapeTypeA, orientationA, velocityA,
+                shapeDataB, shapeTypeB, offsetB, orientationB, velocityB,
+                maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+                out t0, out t1, out hitLocation, out hitNormal);
+        }
+    }
+
     class ConvexSweepTaskCommon
     {
         static bool GetSphereCastInterval(in Vector3 origin, in Vector3 direction, float radius, out float t0, out float t1)

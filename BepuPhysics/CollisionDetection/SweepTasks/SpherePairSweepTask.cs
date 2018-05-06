@@ -40,6 +40,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             ref TSweepFilter filter, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
+            //TODO: Special case this with a ray test.
             return ConvexSweepTaskCommon.Sweep<Sphere, SphereWide, Sphere, SphereWide, SpherePairDistanceTester>(
                 shapeDataA, shapeTypeA, orientationA, velocityA,
                 shapeDataB, shapeTypeB, offsetB, orientationB, velocityB,

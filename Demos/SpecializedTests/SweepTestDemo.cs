@@ -32,13 +32,13 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
-            var spherePairTask = Simulation.NarrowPhase.SweepTaskRegistry.GetTask<Sphere, Sphere>();
-            var a = new Sphere(0.5f);
-            var b = new Sphere(0.5f);
+            var a = new Capsule(0.5f, 0.5f);
+            var b = new Capsule(0.5f, 0.5f);
             var filter = new TestFilter();
+            var spherePairTask = Simulation.NarrowPhase.SweepTaskRegistry.GetTask(a.TypeId, b.TypeId);
             var intersected = spherePairTask.Sweep(
                 &a, a.TypeId, Quaternion.Identity, new BodyVelocity { Linear = new Vector3(1, 0, 0) },
-                &b, b.TypeId, new Vector3(2, 0, 0), Quaternion.Identity, new BodyVelocity { Linear = new Vector3(0, 0, 0) },
+                &b, b.TypeId, new Vector3(a.Radius + b.Radius + 1, a.HalfLength + b.Radius + b.HalfLength, 0), Quaternion.Identity, new BodyVelocity { Linear = new Vector3(0, 0, 0) },
                 5, 0f, 1e-9f, 10, ref filter, out var t0, out var t1, out var hitLocation, out var hitNormal);
 
             Console.WriteLine($"Intersected: {intersected}");
