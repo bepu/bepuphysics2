@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -29,11 +30,11 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public int ShapeTypeIndexB { get; protected set; }
 
-        public unsafe abstract bool Sweep<TSweepFilter>(
-            void* shapeDataA, int shapeTypeA, in RigidPose poseA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in RigidPose poseB, in BodyVelocity velocityB,
-            ref TSweepFilter filter, out float t, out Vector3 normal)
-            where TSweepFilter : struct, ISweepFilter;
+        public abstract unsafe bool Sweep<TSweepFilter>(
+            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            float minimumProgression, float convergenceThreshold, int maximumIterationCount,
+            ref TSweepFilter filter, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal) where TSweepFilter : ISweepFilter;
 
     }
 

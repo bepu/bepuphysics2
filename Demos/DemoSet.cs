@@ -38,7 +38,7 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<VolumeQueryTests>();
+            AddOption<SweepTestDemo>();
             AddOption<PyramidDemo>();
             AddOption<BlockChainDemo>();
             AddOption<ShapePileDemo>();

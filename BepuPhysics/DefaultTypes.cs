@@ -95,6 +95,7 @@ namespace BepuPhysics
         public static SweepTaskRegistry CreateDefaultSweepTaskRegistry()
         {
             var defaultTaskRegistry = new SweepTaskRegistry();
+            defaultTaskRegistry.Register(new SpherePairSweepTask());
             return defaultTaskRegistry;
         }
     }

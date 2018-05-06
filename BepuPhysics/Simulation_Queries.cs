@@ -13,7 +13,7 @@ namespace BepuPhysics
     {
         bool AllowTest(CollidableReference collidable);
         bool AllowTest(int childA, CollidableReference collidableB, int childB);
-        void OnHit(ref float maximumT, float t, in Vector3 normal, CollidableReference collidable);
+        void OnHit(ref float maximumT, float t, in Vector3 hitLocation, in Vector3 hitNormal, CollidableReference collidable);
     }
 
     partial class Simulation
@@ -84,6 +84,9 @@ namespace BepuPhysics
             public BodyVelocity Velocity;
             public TSweepHitHandler HitHandler;
             public CollidableReference CollidableBeingTested;
+            public float MinimumProgression;
+            public float ConvergenceThreshold;
+            public int MaximumIterationCount;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool AllowTest(int childA, int childB)
@@ -119,11 +122,12 @@ namespace BepuPhysics
                     CollidableBeingTested = reference;
                     var task = Simulation.NarrowPhase.SweepTaskRegistry.GetTask(ShapeType, shape.Type);
                     if (task != null && task.Sweep(
-                        ShapeData, ShapeType, Pose, Velocity,
-                        targetShapeData, shape.Type, *targetPose, new BodyVelocity(),
-                        ref this, out var t, out var normal))
+                        ShapeData, ShapeType, Pose.Orientation, Velocity,
+                        targetShapeData, shape.Type, targetPose->Position - Pose.Position, targetPose->Orientation, new BodyVelocity(),
+                        maximumT, MinimumProgression, ConvergenceThreshold, MaximumIterationCount,
+                        ref this, out var t0, out var t1, out var hitLocation, out var hitNormal))
                     {
-                        HitHandler.OnHit(ref maximumT, t, normal, reference);
+                        HitHandler.OnHit(ref maximumT, t1, hitLocation, hitNormal, reference);
                     }
                 }
             }
@@ -141,7 +145,11 @@ namespace BepuPhysics
         /// <param name="maximumT">Maximum length of the sweep in units of time used to integrate the velocity.</param>
         /// <param name="hitHandler">Callbacks executed when a sweep impacts an object in the scene.</param>
         /// <remarks>Simulation objects are treated as stationary during the sweep.</remarks>
-        public unsafe void Sweep<TShape, TSweepHitHandler>(TShape shape, in RigidPose pose, in BodyVelocity velocity, float maximumT, ref TSweepHitHandler hitHandler)
+        /// <param name="minimumProgression">Minimum amount of progress in terms of t parameter that any iterative sweep tests should make for each sample.</param>
+        /// <param name="convergenceThreshold">Threshold in terms of t parameter under which iterative sweep tests are permitted to exit in collision.</param>
+        /// <param name="maximumIterationCount">Maximum number of iterations to use in iterative sweep tests.</param>
+        public unsafe void Sweep<TShape, TSweepHitHandler>(TShape shape, in RigidPose pose, in BodyVelocity velocity, float maximumT, ref TSweepHitHandler hitHandler,
+            float minimumProgression, float convergenceThreshold, int maximumIterationCount)
             where TShape : IConvexShape where TSweepHitHandler : ISweepHitHandler
         {
             //Build a bounding box.
@@ -160,8 +168,40 @@ namespace BepuPhysics
             dispatcher.ShapeType = shape.TypeId;
             dispatcher.Simulation = this;
             dispatcher.CollidableBeingTested = default;
+            dispatcher.MinimumProgression = minimumProgression;
+            dispatcher.ConvergenceThreshold = convergenceThreshold;
+            dispatcher.MaximumIterationCount = maximumIterationCount;
             BroadPhase.Sweep(min, max, direction, maximumT, ref dispatcher);
         }
 
+        /// <summary>
+        /// Sweeps a shape against the simulation.
+        /// </summary>
+        /// <typeparam name="TShape">Type of the shape to sweep.</typeparam>
+        /// <typeparam name="TSweepHitHandler">Type of the callbacks executed when a sweep impacts an object in the scene.</typeparam>
+        /// <param name="shape">Shape to sweep.</param>
+        /// <param name="pose">Starting pose of the sweep.</param>
+        /// <param name="velocity">Velocity of the swept shape.</param>
+        /// <param name="maximumT">Maximum length of the sweep in units of time used to integrate the velocity.</param>
+        /// <param name="hitHandler">Callbacks executed when a sweep impacts an object in the scene.</param>
+        /// <remarks>Simulation objects are treated as stationary during the sweep.</remarks>
+        public unsafe void Sweep<TShape, TSweepHitHandler>(in TShape shape, in RigidPose pose, in BodyVelocity velocity, float maximumT, ref TSweepHitHandler hitHandler)
+            where TShape : IConvexShape where TSweepHitHandler : ISweepHitHandler
+        {
+            //Estimate some reasonable termination conditions for iterative sweeps based on the input shape size.
+            shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
+            var minimumRadius = maximumRadius - maximumAngularExpansion;
+            var sizeEstimate = Math.Max(minimumRadius, maximumRadius * 0.25f);
+            //By default, lean towards precision. This may often trip the maximum iteration count, but that's okay. Performance sensitive users can tune it down with the other overload.
+            //It would be far more disconcerting for new users to use a 'fast' default tuning and get visibly incorrect results.
+            var minimumProgressionDistance = .1f * sizeEstimate;
+            var convergenceThresholdDistance = 1e-5f * sizeEstimate;
+            var tangentVelocity = Math.Min(velocity.Angular.Length() * maximumRadius, maximumAngularExpansion / maximumT);
+            var inverseVelocity = 1f / (velocity.Linear.Length() + tangentVelocity);
+            var minimumProgressionT = minimumProgressionDistance * inverseVelocity;
+            var convergenceThresholdT = convergenceThresholdDistance * inverseVelocity;
+            var maximumIterationCount = 12;
+            Sweep(shape, pose, velocity, maximumT, ref hitHandler, minimumProgressionT, convergenceThresholdT, maximumIterationCount);
+        }
     }
 }

@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
@@ -15,7 +16,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
     class ConvexSweepTaskCommon
     {
-        static bool GetSphereCastInterval(ref Vector3 origin, ref Vector3 direction, float radius, out float t0, out float t1)
+        static bool GetSphereCastInterval(in Vector3 origin, in Vector3 direction, float radius, out float t0, out float t1)
         {
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
             var inverseDLength = 1f / direction.Length();
@@ -80,17 +81,54 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             QuaternionWide.Normalize(ref orientationB, out orientationB);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe bool Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
-            void* shapeDataA, int shapeTypeA, ref BepuUtilities.Quaternion orientationA, ref BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, ref Vector3 offsetB, ref BepuUtilities.Quaternion orientationB, ref BodyVelocity velocityB,
-            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
+            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
+            out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
             where TShapeA : struct, IConvexShape
             where TShapeB : struct, IConvexShape
             where TShapeWideA : struct, IShapeWide<TShapeA>
             where TShapeWideB : struct, IShapeWide<TShapeB>
             where TPairDistanceTester : struct, IPairDistanceTester<TShapeWideA, TShapeWideB>
         {
-            Debug.Assert(shapeTypeA == default(TShapeA).TypeId && shapeTypeB == default(TShapeB).TypeId, "This sweep test requires input of a specific type.");
+            Debug.Assert(
+                (shapeTypeA == default(TShapeA).TypeId && shapeTypeB == default(TShapeB).TypeId) ||
+                (shapeTypeA == default(TShapeB).TypeId && shapeTypeB == default(TShapeA).TypeId),
+                "Sweep type requirements not met.");
+            if (shapeTypeA == default(TShapeA).TypeId)
+            {
+                return Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
+                    shapeDataA, orientationA, velocityA,
+                    shapeDataB, offsetB, orientationB, velocityB,
+                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+                    out t0, out t1, out hitLocation, out hitNormal);
+            }
+            else
+            {
+                var intersected = Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
+                    shapeDataB, orientationB, velocityB,
+                    shapeDataA, -offsetB, orientationA, velocityA,
+                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+                    out t0, out t1, out hitLocation, out hitNormal);
+                //Normals are calibrated to point from B to A by convention; retain that convention if the parameters were reversed.
+                hitNormal = -hitNormal;
+                return intersected;
+            }
+        }
+
+        public static unsafe bool Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
+            void* shapeDataA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
+            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
+            out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+            where TShapeA : struct, IConvexShape
+            where TShapeB : struct, IConvexShape
+            where TShapeWideA : struct, IShapeWide<TShapeA>
+            where TShapeWideB : struct, IShapeWide<TShapeB>
+            where TPairDistanceTester : struct, IPairDistanceTester<TShapeWideA, TShapeWideB>
+        {
             ref var shapeA = ref Unsafe.AsRef<TShapeA>(shapeDataA);
             ref var shapeB = ref Unsafe.AsRef<TShapeB>(shapeDataB);
             //TODO: Would be nice to get rid of this pointless zero init (if the compiler doesn't eventually get rid of it).
@@ -109,7 +147,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var linearVelocityB = velocityB.Linear - velocityA.Linear;
             shapeA.ComputeAngularExpansionData(out var maximumRadiusA, out var maximumAngularExpansionA);
             shapeB.ComputeAngularExpansionData(out var maximumRadiusB, out var maximumAngularExpansionB);
-            if (!GetSphereCastInterval(ref offsetB, ref linearVelocityB, maximumRadiusA + maximumRadiusB, out t0, out t1) || t0 > maximumT || t1 < 0)
+            if (!GetSphereCastInterval(offsetB, linearVelocityB, maximumRadiusA + maximumRadiusB, out t0, out t1) || t0 > maximumT || t1 < 0)
             {
                 //The bounding spheres do not intersect, or the intersection interval is outside of the requested search interval.
                 return false;
