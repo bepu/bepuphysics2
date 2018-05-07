@@ -32,16 +32,8 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
-            //var a = new Capsule(0.5f, 0.5f);
-            //var b = new Capsule(0.5f, 0.5f);
-            //var filter = new TestFilter();
-            //var spherePairTask = Simulation.NarrowPhase.SweepTaskRegistry.GetTask(a.TypeId, b.TypeId);
-            //var intersected = spherePairTask.Sweep(
-            //    &a, a.TypeId, Quaternion.Identity, new BodyVelocity { Linear = new Vector3(1, 0, 0) },
-            //    &b, b.TypeId, new Vector3(a.Radius + b.Radius + 1, a.HalfLength + b.Radius + b.HalfLength, 0), Quaternion.Identity, new BodyVelocity { Linear = new Vector3(0, 0, 0) },
-            //    5, 0f, 1e-9f, 10, ref filter, out var t0, out var t1, out var hitLocation, out var hitNormal);
 
-            //Console.WriteLine($"Intersected: {intersected}");
+
         }
 
         unsafe void DrawSweep<TShape>(TShape shape, ref RigidPose pose, in BodyVelocity velocity, int steps,
@@ -69,24 +61,22 @@ namespace Demos.SpecializedTests
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void BuildOrthnormalBasis(ref Vector3 normal, out Vector3 t1, out Vector3 t2)
         {
-            //This could probably be improved.
-            var sign = normal.Z < 0 ? -1 : 1;
-
-            //This has a discontinuity at z==0. Raw frisvad has only one discontinuity, though that region is more unpredictable than the revised version.
-            var scale = -1f / (sign + normal.Z);
-            t1.X = normal.X * normal.Y * scale;
-            t1.Y = sign + normal.Y * normal.Y * scale;
-            t1.Z = -normal.Y;
-
-            t2.X = 1f + sign * normal.X * normal.X * scale;
-            t2.Y = sign * t1.X;
-            t2.Z = -sign * normal.X;
+            //No frisvad or friends here- just want a simple and consistent basis with only one singularity.
+            t1 = Vector3.Cross(normal, new Vector3(1, -1, 1));
+            var lengthSquared = t1.LengthSquared();
+            if (lengthSquared < 1e-8f)
+            {
+                t1 = Vector3.Cross(normal, new Vector3(-1, 1, 1));
+                lengthSquared = t1.LengthSquared();
+            }
+            t1 /= MathF.Sqrt(lengthSquared);
+            t2 = Vector3.Cross(normal, t1);
         }
 
         unsafe void TestSweep<TShapeA, TShapeB>(
             TShapeA a, RigidPose poseA, in BodyVelocity velocityA,
             TShapeB b, RigidPose poseB, in BodyVelocity velocityB,
-            Renderer renderer)
+            float maximumT, Renderer renderer)
             where TShapeA : struct, IShape
             where TShapeB : struct, IShape
         {
@@ -96,14 +86,14 @@ namespace Demos.SpecializedTests
             var intersected = task.Sweep(
                 Unsafe.AsPointer(ref a), a.TypeId, poseA.Orientation, velocityA,
                 Unsafe.AsPointer(ref b), b.TypeId, poseB.Position - poseA.Position, poseB.Orientation, velocityB,
-                5, 0f, 1e-9f, 10, ref filter, out var t0, out var t1, out var hitLocation, out var hitNormal);
+                maximumT, 1e-3f, 1e-7f, 25, ref filter, out var t0, out var t1, out var hitLocation, out var hitNormal);
             hitLocation += poseA.Position;
 
             var hitTint = intersected ? new Vector3(0.5f, 1, 0.5f) : new Vector3(1f, 0.5f, 0.5f);
             var colorA = new Vector3(0.75f, 0.75f, 1) * hitTint;
             var colorB = new Vector3(0.75f, 1f, 1) * hitTint;
 
-            var stepCount = 4;
+            var stepCount = 250;
             DrawSweep(a, ref poseA, velocityA, stepCount, t1, renderer, colorA);
             DrawSweep(b, ref poseB, velocityB, stepCount, t1, renderer, colorB);
 
@@ -116,16 +106,25 @@ namespace Demos.SpecializedTests
             }
         }
 
+        float animationT;
+
         public override void Render(Renderer renderer, TextBuilder text, Font font)
         {
+            animationT = (animationT + 1 / 60f) % (128);
+
+            var x = Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0.02f * animationT * MathHelper.Pi);
+            var y = Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0.04f * animationT * MathHelper.Pi);
+            var z = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0.06f * animationT * MathHelper.Pi);
+            var worldA = Quaternion.Concatenate(x, Quaternion.Concatenate(y, z));
+            var worldB = Quaternion.Concatenate(y, Quaternion.Concatenate(z, x));
             base.Render(renderer, text, font);
             TestSweep(
-                new Capsule(0.5f, 0.5f),
-                new RigidPose { Position = new Vector3(0, 0, 0), Orientation = Quaternion.Identity },
-                new BodyVelocity { Linear = new Vector3(0, 0, 0), Angular = new Vector3(1, 0, 1) },
-                new Capsule(0.5f, 0.5f),
-                new RigidPose { Position = new Vector3(2, 0, 0), Orientation = Quaternion.Identity },
-                new BodyVelocity { Linear = new Vector3(-1, 0, 0), Angular = new Vector3(0, 0, 1) }, renderer);
+                new Capsule(.5f, 15.5f),
+                new RigidPose { Position = new Vector3(0, -20, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
+                new BodyVelocity { Linear = new Vector3(0, 1, 0), Angular = new Vector3(0.5f, 1f, -1f) },
+                new Capsule(1.5f, 5.5f),
+                new RigidPose { Position = new Vector3(-20, 0, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
+                new BodyVelocity { Linear = new Vector3(1, 0, 0), Angular = new Vector3(-1f, 0, 1f) }, 50, renderer);
         }
     }
 }

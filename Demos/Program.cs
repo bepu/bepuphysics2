@@ -2,6 +2,7 @@
 using BepuUtilities;
 using DemoContentLoader;
 using DemoRenderer.UI;
+using Demos.Demos;
 using Demos.SpecializedTests;
 using DemoUtilities;
 using OpenTK;
@@ -12,11 +13,6 @@ namespace Demos
     {
         static void Main(string[] args)
         {
-            //RayTesting.Test<Box, BoxWide, BoxRayTester>();
-            //RayTesting.Test<Capsule, CapsuleWide, CapsuleRayTester>();
-            //RayTesting.Test<Sphere, SphereWide, SphereRayTester>();
-            //HeadlessDemo.Test<RayBatcherTests>(8, 128);
-            //return;
             var window = new Window("pretty cool multicolored window",
                 new Int2((int)(DisplayDevice.Default.Width * 0.75f), (int)(DisplayDevice.Default.Height * 0.75f)), WindowMode.Windowed);
             var loop = new GameLoop(window);

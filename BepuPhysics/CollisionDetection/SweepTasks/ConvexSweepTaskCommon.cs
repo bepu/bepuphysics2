@@ -85,17 +85,63 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void Cos(in Vector<float> x, out Vector<float> result)
+        {
+            //This exists primarily for consistency between the PoseIntegrator and sweeps, not necessarily for raw performance relative to Math.Cos.
+            var periodX = Vector.Abs(x);
+            //TODO: No floor or truncate available... may want to revisit later.
+            periodX = periodX - MathHelper.TwoPi * Vector.ConvertToSingle(Vector.ConvertToInt32(periodX * (1f / MathHelper.TwoPi)));
+
+            //[0, pi/2] = f(x)
+            //(pi/2, pi] = -f(Pi - x)
+            //(pi, 3 * pi / 2] = -f(x - Pi)
+            //(3*pi/2, 2*pi] = f(2 * Pi - x)
+            //This could be done more cleverly.
+            Vector<float> y;
+            y = Vector.ConditionalSelect(Vector.GreaterThan(periodX, new Vector<float>(MathHelper.PiOver2)), new Vector<float>(MathHelper.Pi) - periodX, periodX);
+            y = Vector.ConditionalSelect(Vector.GreaterThan(periodX, new Vector<float>(MathHelper.Pi)), new Vector<float>(-MathHelper.Pi) + periodX, y);
+            y = Vector.ConditionalSelect(Vector.GreaterThan(periodX, new Vector<float>(3 * MathHelper.PiOver2)), new Vector<float>(MathHelper.TwoPi) - periodX, y);
+
+            //The expression is a rational interpolation from 0 to Pi/2. Maximum error is a little more than 3e-6.
+            var y2 = y * y;
+            var y3 = y2 * y;
+            //TODO: This could be reorganized into two streams of FMAs if that was available.
+            var numerator = Vector<float>.One - 0.24f * y - 0.4266f * y2 + 0.110838f * y3;
+            var denominator = Vector<float>.One - 0.240082f * y + 0.0741637f * y2 - 0.0118786f * y3;
+            result = numerator / denominator;
+            result = Vector.ConditionalSelect(
+                Vector.BitwiseAnd(
+                    Vector.GreaterThan(periodX, new Vector<float>(MathHelper.PiOver2)),
+                    Vector.LessThan(periodX, new Vector<float>(3 * MathHelper.PiOver2))), -result, result);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void Sin(in Vector<float> x, out Vector<float> result)
+        {
+            Cos(x - new Vector<float>(MathHelper.PiOver2), out result);
+        }
 
         static void Integrate(ref QuaternionWide start, ref Vector3Wide angularVelocity, ref Vector<float> halfDt, out QuaternionWide integrated)
         {
-            QuaternionWide multiplierA;
-            multiplierA.X = angularVelocity.X * halfDt;
-            multiplierA.Y = angularVelocity.Y * halfDt;
-            multiplierA.Z = angularVelocity.Z * halfDt;
-            multiplierA.W = Vector<float>.Zero;
-            QuaternionWide.ConcatenateWithoutOverlap(ref start, ref multiplierA, out var incrementA);
-            QuaternionWide.Add(ref start, ref incrementA, out integrated);
+            Vector3Wide.Length(ref angularVelocity, out var speed);
+            var halfAngle = speed * halfDt;
+            QuaternionWide q;
+            var testSin = Math.Sin(halfAngle[0]);
+            var testCos = Math.Cos(halfAngle[0]);
+            Sin(halfAngle, out var s);
+            var scale = s / speed;
+            q.X = angularVelocity.X * scale;
+            q.Y = angularVelocity.Y * scale;
+            q.Z = angularVelocity.Z * scale;
+            Cos(halfAngle, out q.W);
+            QuaternionWide.ConcatenateWithoutOverlap(ref start, ref q, out integrated);
             QuaternionWide.Normalize(ref integrated, out integrated);
+            var speedValid = Vector.GreaterThan(speed, new Vector<float>(1e-15f));
+            integrated.X = Vector.ConditionalSelect(speedValid, integrated.X, start.X);
+            integrated.Y = Vector.ConditionalSelect(speedValid, integrated.Y, start.Y);
+            integrated.Z = Vector.ConditionalSelect(speedValid, integrated.Z, start.Z);
+            integrated.W = Vector.ConditionalSelect(speedValid, integrated.W, start.W);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ConstructSamples(float t0, float t1,
@@ -347,25 +393,34 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //The true sample interval computation completes later; this is here just so we can set t0 and t1 and potentially early out. 
                 var sample0 = t0 + minimumProgression;
                 var sample1 = t1 - minimumProgression;
+                var previousIntervalSpan = t1 - t0;
                 t0 = next0;
                 t1 = next1;
 
                 var intervalSpan = t1 - t0;
-                //If no intersection has been found, keep working even if the interval has narrowed below the convergence threshold.
+                //A few different termination conditions:
+                //1) The span has inverted, implying that a safe path has been found through the entire search interval and there is no intersection
+                //2) There has been an intersection, and the interval span is small enough to pass the requested epsilon. Note that this means that misses cannot exit on 'convergence'.
+                //3) The interval has not shrunk at all. This will happen when numerical precision is exhausted. No point in continuing; the machine can't represent anything better.
+                //4) Out of iterations.
+                //Console.WriteLine($"Iteration narrowing: {previousIntervalSpan / intervalSpan}");
                 if (intervalSpan < 0 ||
                     (intersectionEncountered && intervalSpan < convergenceThreshold) ||
+                    intervalSpan >= previousIntervalSpan ||
                     ++iterationIndex >= maximumIterationCount)
+                {
                     break;
+                }
 
                 //Now we need to clean up the aggressive sampling interval. Get rid of any inversions.
                 if (sample0 < next0)
                     sample0 = next0;
                 else if (sample0 > next1)
                     sample0 = next1;
-                if (sample1 > next1)
+                if (sample1 < sample0)
+                    sample1 = sample0;
+                else if (sample1 > next1)
                     sample1 = next1;
-                else if (sample1 < next0)
-                    sample1 = next0;
 
                 var minimumSpan = minimumProgression * (Vector<float>.Count - 1);
                 var sampleSpan = sample1 - sample0;
@@ -390,6 +445,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref initialOffsetB, ref initialOrientationA, ref initialOrientationB,
                     ref samples, ref sampleOffsetB, ref sampleOrientationA, ref sampleOrientationB);
             }
+            //Console.WriteLine($"iteration count: {iterationIndex}");
             //If there was an intersection, we need to correct the hit location for the sample location.
             hitLocation = hitLocation + t0 * velocityA.Linear;
             return intersectionEncountered;
