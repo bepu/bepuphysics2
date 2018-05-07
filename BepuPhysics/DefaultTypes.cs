@@ -97,6 +97,7 @@ namespace BepuPhysics
             var defaultTaskRegistry = new SweepTaskRegistry();
             defaultTaskRegistry.Register(new SpherePairSweepTask());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Capsule, CapsuleWide, Capsule, CapsuleWide, CapsulePairDistanceTester>());
+            defaultTaskRegistry.Register(new ConvexPairSweepTask<Sphere, SphereWide, Capsule, CapsuleWide, SphereCapsuleDistanceTester>());
             return defaultTaskRegistry;
         }
     }
