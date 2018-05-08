@@ -1,6 +1,7 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
+using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuUtilities;
 using DemoRenderer;
 using DemoRenderer.UI;
@@ -32,6 +33,16 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
+            CapsuleBoxDistanceTester tester;
+            CapsuleWide a;
+            a.HalfLength = new Vector<float>(0.5f);
+            a.Radius= new Vector<float>(0.5f);
+            BoxWide b;
+            b.HalfWidth = b.HalfLength = b.HalfHeight = new Vector<float>(.75f);
+            Vector3Wide.Broadcast(new Vector3(2, 0, 0), out var offsetB);
+            QuaternionWide.Broadcast(Quaternion.Identity, out var orientationA);
+            QuaternionWide.Broadcast(Quaternion.Identity, out var orientationB);
+            tester.Test(ref a, ref b, ref offsetB, ref orientationA, ref orientationB, out var intersected, out var distance, out var closestA, out var normal);
 
 
         }
@@ -93,7 +104,7 @@ namespace Demos.SpecializedTests
             var colorA = new Vector3(0.75f, 0.75f, 1) * hitTint;
             var colorB = new Vector3(0.75f, 1f, 1) * hitTint;
 
-            var stepCount = intersected && t1 > 0 ? 250 : 1;
+            var stepCount = (intersected && t1 > 0) || !intersected ? 100 : 1;
             var visualizedT = intersected ? t1 : maximumT;
             DrawSweep(a, ref poseA, velocityA, stepCount, visualizedT, renderer, colorA);
             DrawSweep(b, ref poseB, velocityB, stepCount, visualizedT, renderer, colorB);
@@ -120,12 +131,12 @@ namespace Demos.SpecializedTests
             var worldB = Quaternion.Concatenate(y, Quaternion.Concatenate(z, x));
             base.Render(renderer, text, font);
             TestSweep(
-                new Sphere(.5f),
-                new RigidPose { Position = new Vector3(0, -10, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
-                new BodyVelocity { Linear = new Vector3(0, 1, 0), Angular = new Vector3(1, 0, 0) },
-                new Capsule(1.5f, 5.5f),
-                new RigidPose { Position = new Vector3(-10, 0, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
-                new BodyVelocity { Linear = new Vector3(1, 0, 0), Angular = new Vector3(0, 1, 0) }, 50, renderer);
+                new Capsule(.5f, 10.5f),
+                new RigidPose { Position = new Vector3(-10, 0, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
+                new BodyVelocity { Linear = new Vector3(1, 0, 0), Angular = new Vector3(1, 0, 1) },
+                new Box(.5f, 1f, 1.5f),
+                new RigidPose { Position = new Vector3(10, 0, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
+                new BodyVelocity { Linear = new Vector3(-1, 0, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
         }
     }
 }
