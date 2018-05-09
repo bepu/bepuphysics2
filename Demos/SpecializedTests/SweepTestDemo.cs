@@ -3,6 +3,7 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuUtilities;
+using BepuUtilities.Memory;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
@@ -25,7 +26,7 @@ namespace Demos.SpecializedTests
                 return true;
             }
         }
-
+        
         public unsafe override void Initialize(Camera camera)
         {
             camera.Position = new Vector3(0, 0, 15);
@@ -36,7 +37,7 @@ namespace Demos.SpecializedTests
             CapsuleBoxDistanceTester tester;
             CapsuleWide a;
             a.HalfLength = new Vector<float>(0.5f);
-            a.Radius= new Vector<float>(0.5f);
+            a.Radius = new Vector<float>(0.5f);
             BoxWide b;
             b.HalfWidth = b.HalfLength = b.HalfHeight = new Vector<float>(.75f);
             Vector3Wide.Broadcast(new Vector3(2, 0, 0), out var offsetB);
