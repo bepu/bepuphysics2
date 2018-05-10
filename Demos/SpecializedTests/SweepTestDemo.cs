@@ -26,7 +26,7 @@ namespace Demos.SpecializedTests
                 return true;
             }
         }
-        
+
         public unsafe override void Initialize(Camera camera)
         {
             camera.Position = new Vector3(0, 0, 15);
@@ -34,15 +34,14 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
-            CapsuleBoxDistanceTester tester;
-            CapsuleWide a;
-            a.HalfLength = new Vector<float>(0.5f);
-            a.Radius = new Vector<float>(0.5f);
+            BoxPairDistanceTester tester;
+            BoxWide a;
+            a.HalfWidth = a.HalfLength = a.HalfHeight = new Vector<float>(1);
             BoxWide b;
-            b.HalfWidth = b.HalfLength = b.HalfHeight = new Vector<float>(.75f);
-            Vector3Wide.Broadcast(new Vector3(2, 0, 0), out var offsetB);
-            QuaternionWide.Broadcast(Quaternion.Identity, out var orientationA);
-            QuaternionWide.Broadcast(Quaternion.Identity, out var orientationB);
+            b.HalfWidth = b.HalfLength = b.HalfHeight = new Vector<float>(5);
+            Vector3Wide.Broadcast(new Vector3(10, 0, 0), out var offsetB);
+            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.PiOver4), out var orientationA);
+            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathHelper.PiOver4), out var orientationB);
             tester.Test(ref a, ref b, ref offsetB, ref orientationA, ref orientationB, out var intersected, out var distance, out var closestA, out var normal);
 
 
@@ -98,7 +97,7 @@ namespace Demos.SpecializedTests
             var intersected = task.Sweep(
                 Unsafe.AsPointer(ref a), a.TypeId, poseA.Orientation, velocityA,
                 Unsafe.AsPointer(ref b), b.TypeId, poseB.Position - poseA.Position, poseB.Orientation, velocityB,
-                maximumT, 1e-3f, 1e-7f, 25, ref filter, out var t0, out var t1, out var hitLocation, out var hitNormal);
+                maximumT, 1e-10f, 1e-10f, 25, ref filter, out var t0, out var t1, out var hitLocation, out var hitNormal);
             hitLocation += poseA.Position;
 
             var hitTint = intersected ? new Vector3(0.5f, 1, 0.5f) : new Vector3(1f, 0.5f, 0.5f);
@@ -132,12 +131,12 @@ namespace Demos.SpecializedTests
             var worldB = Quaternion.Concatenate(y, Quaternion.Concatenate(z, x));
             base.Render(renderer, text, font);
             TestSweep(
-                new Capsule(.5f, 10.5f),
+                new Box(0.5f, 0.5f, 0.5f),
                 new RigidPose { Position = new Vector3(-10, 0, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
-                new BodyVelocity { Linear = new Vector3(1, 0, 0), Angular = new Vector3(1, 0, 1) },
+                new BodyVelocity { Linear = new Vector3(1, 0, 0), Angular = new Vector3(0, 0, 0) },
                 new Box(.5f, 1f, 1.5f),
                 new RigidPose { Position = new Vector3(10, 0, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
-                new BodyVelocity { Linear = new Vector3(-1, 0, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
+                new BodyVelocity { Linear = new Vector3(-1, 0, 0), Angular = new Vector3(0, 0, 0) }, 50f, renderer);
         }
     }
 }
