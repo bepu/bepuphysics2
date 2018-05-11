@@ -40,11 +40,9 @@ namespace Demos.SpecializedTests
             BoxWide b;
             b.HalfWidth = b.HalfLength = b.HalfHeight = new Vector<float>(5);
             Vector3Wide.Broadcast(new Vector3(10, 0, 0), out var offsetB);
-            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.PiOver4), out var orientationA);
-            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathHelper.PiOver4), out var orientationB);
+            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationA);
+            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0), out var orientationB);
             tester.Test(ref a, ref b, ref offsetB, ref orientationA, ref orientationB, out var intersected, out var distance, out var closestA, out var normal);
-
-
         }
 
         unsafe void DrawSweep<TShape>(TShape shape, ref RigidPose pose, in BodyVelocity velocity, int steps,
@@ -118,12 +116,20 @@ namespace Demos.SpecializedTests
             }
         }
 
+        public override void Update(Input input, float dt)
+        {
+            base.Update(input, dt);
+
+            if (!input.WasDown(OpenTK.Input.Key.P))
+                animationT = (animationT + 1 / 60f) % (128);
+            if (input.WasDown(OpenTK.Input.Key.L))
+                Console.WriteLine("break");
+        }
+
         float animationT;
 
         public override void Render(Renderer renderer, TextBuilder text, Font font)
         {
-            animationT = (animationT + 1 / 60f) % (128);
-
             var x = Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0.02f * animationT * MathHelper.Pi);
             var y = Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0.04f * animationT * MathHelper.Pi);
             var z = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0.06f * animationT * MathHelper.Pi);
@@ -133,10 +139,10 @@ namespace Demos.SpecializedTests
             TestSweep(
                 new Box(0.5f, 0.5f, 0.5f),
                 new RigidPose { Position = new Vector3(-10, 0, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
-                new BodyVelocity { Linear = new Vector3(1, 0, 0), Angular = new Vector3(0, 0, 0) },
-                new Box(.5f, 1f, 1.5f),
+                new BodyVelocity { Linear = new Vector3(1, 0, 0), Angular = new Vector3(1, 0, 1) },
+                new Box(2.5f, 2.5f, 2.5f),
                 new RigidPose { Position = new Vector3(10, 0, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
-                new BodyVelocity { Linear = new Vector3(-1, 0, 0), Angular = new Vector3(0, 0, 0) }, 50f, renderer);
+                new BodyVelocity { Linear = new Vector3(-1, 0, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
         }
     }
 }

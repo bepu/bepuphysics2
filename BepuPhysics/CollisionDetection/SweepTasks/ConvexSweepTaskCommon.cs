@@ -394,7 +394,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var sample0 = t0 + minimumProgression;
                 var sample1 = t1 - minimumProgression;
                 var previousIntervalSpan = t1 - t0;
-                t0 = next0;
+                //In pure linear cast cases, advancing all the way to the conservative bound can result in collision. That won't make the detected t value wrong,
+                //but it will mean that we can't get a more accurate normal and closest point. By only advancing within an epsilon, another iteration is forced.
+                t0 = t0 + (next0 - t0) * 0.9999f;
                 t1 = next1;
 
                 var intervalSpan = t1 - t0;
@@ -413,14 +415,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 }
 
                 //Now we need to clean up the aggressive sampling interval. Get rid of any inversions.
-                if (sample0 < next0)
-                    sample0 = next0;
-                else if (sample0 > next1)
-                    sample0 = next1;
-                if (sample1 < sample0)
-                    sample1 = sample0;
-                else if (sample1 > next1)
-                    sample1 = next1;
+                if (sample0 < t0)
+                    sample0 = t0;
+                else if (sample0 > t1)
+                    sample0 = t1;
+                if (sample1 < t0)
+                    sample1 = t0;
+                else if (sample1 > t1)
+                    sample1 = t1;
 
                 var minimumSpan = minimumProgression * (Vector<float>.Count - 1);
                 var sampleSpan = sample1 - sample0;

@@ -9,17 +9,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     public struct BoxPairDistanceTester : IPairDistanceTester<BoxWide, BoxWide>
     {
         //TODO: This is far from an optimal implementation. Sweeps aren't ultra-critical, so I just skipped spending too much time on this. May want to revisit later if perf concerns arise.
-        //(Options include SPMD-style iterative algorithms (GJK and friends), or just making this brute force approach a little less dumb.)
+        //(SPMD-style GJK and friends, despite being far from ideal for internal vectorization, would likely outperform this substantially.)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TestEdgeEdge(
-               ref Vector<float> halfExtentA, ref Vector3Wide edgeCenterA, ref Vector3Wide edgeDirectionA,
-               ref Vector<float> halfExtentB, ref Vector3Wide edgeCenterB, ref Vector3Wide edgeDirectionB,
+               ref BoxWide a, ref Matrix3x3Wide rA, ref Vector<float> halfExtentA, ref Vector3Wide edgeCenterA, ref Vector3Wide edgeDirectionA,
+               ref BoxWide b, ref Matrix3x3Wide rB, ref Vector<float> halfExtentB, ref Vector3Wide edgeCenterB, ref Vector3Wide edgeDirectionB,
                ref Vector3Wide offsetB,
-               out Vector<float> distance, out Vector3Wide normal, out Vector3Wide closestA)
+               out Vector<float> depth, out Vector3Wide normal, out Vector3Wide closestA)
         {
             //While we based the edgeCenterB on the rotation, we deferred the translation since it's common to all cases.
             Vector3Wide.Add(ref edgeCenterB, ref offsetB, out edgeCenterB);
-            Vector3Wide.Subtract(ref edgeCenterA, ref edgeCenterB, out var edgeCentersOffsetBA);
+            Vector3Wide.Subtract(ref edgeCenterB, ref edgeCenterA, out var edgeCentersOffsetAB);
             Vector3Wide.CrossWithoutOverlap(ref edgeDirectionA, ref edgeDirectionB, out normal);
             Vector3Wide.Length(ref normal, out var length);
             var inverseLength = Vector<float>.One / length;
@@ -29,18 +29,25 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             normal.X = Vector.ConditionalSelect(shouldNegate, -normal.X, normal.X);
             normal.Y = Vector.ConditionalSelect(shouldNegate, -normal.Y, normal.Y);
             normal.Z = Vector.ConditionalSelect(shouldNegate, -normal.Z, normal.Z);
-            Vector3Wide.Dot(ref normal, ref edgeCentersOffsetBA, out distance);
+            Vector3Wide.Dot(ref normal, ref edgeCentersOffsetAB, out var depthOld);
+
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref normal, ref rA, out var localNormalA);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref normal, ref rB, out var localNormalB);
+
+            depth =
+                (a.HalfWidth * Vector.Abs(localNormalA.X) + a.HalfHeight * Vector.Abs(localNormalA.Y) + a.HalfLength * Vector.Abs(localNormalA.Z)) +
+                (b.HalfWidth * Vector.Abs(localNormalB.X) + b.HalfHeight * Vector.Abs(localNormalB.Y) + b.HalfLength * Vector.Abs(localNormalB.Z)) - Vector.Abs(calibrationDot);
 
 
             //The edge distance is only meaningful if the normal is well defined and the edges projected intervals overlap.
             //(Parallel edges and edge endpoint cases are handled by the vertex-box cases.)
             Vector3Wide.Dot(ref edgeDirectionA, ref edgeDirectionB, out var dadb);
-            Vector3Wide.Dot(ref edgeDirectionA, ref edgeCentersOffsetBA, out var daOffsetBA);
-            Vector3Wide.Dot(ref edgeDirectionB, ref edgeCentersOffsetBA, out var dbOffsetBA);
+            Vector3Wide.Dot(ref edgeDirectionA, ref edgeCentersOffsetAB, out var daOffsetAB);
+            Vector3Wide.Dot(ref edgeDirectionB, ref edgeCentersOffsetAB, out var dbOffsetAB);
             //Note potential division by zero when the axes are parallel. Later validation catches it.
-            var ta = (dbOffsetBA * dadb - daOffsetBA) / (Vector<float>.One - dadb * dadb);
+            var ta = (daOffsetAB - dbOffsetAB * dadb) / (Vector<float>.One - dadb * dadb);
             //tb = ta * (da * db) - db * (b - a)
-            var tb = ta * dadb + dbOffsetBA;
+            var tb = ta * dadb - dbOffsetAB;
             Vector3Wide.Scale(ref edgeDirectionA, ref ta, out closestA);
             Vector3Wide.Add(ref closestA, ref edgeCenterA, out closestA);
 
@@ -49,48 +56,50 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var closestPointOutsideOfEdges = Vector.BitwiseOr(outsideA, outsideB);
             var badNormal = Vector.LessThan(length, new Vector<float>(1e-15f));
             var edgeDistanceInvalid = Vector.BitwiseOr(badNormal, closestPointOutsideOfEdges);
-            distance = Vector.ConditionalSelect(edgeDistanceInvalid, new Vector<float>(float.MaxValue), distance);
+            depth = Vector.ConditionalSelect(edgeDistanceInvalid, new Vector<float>(float.MaxValue), depth);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Select(
-            ref Vector<float> distance, ref Vector3Wide normal, ref Vector3Wide closestA,
-            ref Vector<float> distanceCandidate, ref Vector3Wide normalCandidate, ref Vector3Wide closestACandidate)
+            ref Vector<float> depth, ref Vector3Wide normal, ref Vector3Wide closestA,
+            ref Vector<float> depthCandidate, ref Vector3Wide normalCandidate, ref Vector3Wide closestACandidate)
         {
-            var useCandidate = Vector.LessThan(distanceCandidate, distance);
-            distance = Vector.Min(distance, distanceCandidate);
+            var useCandidate = Vector.LessThan(depthCandidate, depth);
+            depth = Vector.Min(depth, depthCandidate);
             Vector3Wide.ConditionalSelect(ref useCandidate, ref normalCandidate, ref normal, out normal);
             Vector3Wide.ConditionalSelect(ref useCandidate, ref closestACandidate, ref closestA, out closestA);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void SelectForVertex(
-            ref Vector<float> distanceSquared, ref Vector3Wide offset, ref Vector3Wide closestA,
-            ref Vector<float> distanceSquaredCandidate, ref Vector3Wide offsetCandidate, ref Vector3Wide closestACandidate)
-        {
-            var useCandidate = Vector.LessThanOrEqual(distanceSquaredCandidate, distanceSquared);
-            distanceSquared = Vector.Min(distanceSquared, distanceSquaredCandidate);
-            Vector3Wide.ConditionalSelect(ref useCandidate, ref closestACandidate, ref closestA, out closestA);
-            Vector3Wide.ConditionalSelect(ref useCandidate, ref offsetCandidate, ref offset, out offset);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void VertexBox(ref BoxWide a, ref Vector3Wide x, ref Vector3Wide y, ref Vector3Wide z, ref Vector3Wide offsetB,
-            out Vector<float> distanceSquared, out Vector3Wide vertexOffset, out Vector3Wide closestA)
+        private static void VertexBox(ref BoxWide a, ref BoxWide b, ref Vector3Wide x, ref Vector3Wide y, ref Vector3Wide z, ref Matrix3x3Wide localRB, ref Vector3Wide localOffsetB,
+            out Vector<float> depth, out Vector3Wide localNormalA, out Vector3Wide closestA)
         {
             Vector3Wide.Add(ref x, ref y, out var vertexB);
-            Vector3Wide.Add(ref z, ref offsetB, out var add);
+            Vector3Wide.Add(ref z, ref localOffsetB, out var add);
             Vector3Wide.Add(ref add, ref vertexB, out vertexB);
             closestA.X = Vector.Min(a.HalfWidth, Vector.Max(-a.HalfWidth, vertexB.X));
             closestA.Y = Vector.Min(a.HalfHeight, Vector.Max(-a.HalfHeight, vertexB.Y));
             closestA.Z = Vector.Min(a.HalfLength, Vector.Max(-a.HalfLength, vertexB.Z));
-            Vector3Wide.Subtract(ref closestA, ref vertexB, out vertexOffset);
-            Vector3Wide.Dot(ref vertexOffset, ref vertexOffset, out distanceSquared);
+            Vector3Wide.Subtract(ref closestA, ref vertexB, out var vertexOffset);
+            Vector3Wide.Length(ref vertexOffset, out var length);
+            var inverseLength = Vector<float>.One / length;
+            Vector3Wide.Scale(ref vertexOffset, ref inverseLength, out localNormalA);
+            Vector3Wide.Dot(ref localOffsetB, ref localNormalA, out var calibrationDot);
+            var shouldNegate = Vector.GreaterThan(calibrationDot, Vector<float>.Zero);
+            localNormalA.X = Vector.ConditionalSelect(shouldNegate, -localNormalA.X, localNormalA.X);
+            localNormalA.Y = Vector.ConditionalSelect(shouldNegate, -localNormalA.Y, localNormalA.Y);
+            localNormalA.Z = Vector.ConditionalSelect(shouldNegate, -localNormalA.Z, localNormalA.Z);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref localNormalA, ref localRB, out var localNormalB);
+            depth =
+                (Vector.Abs(localNormalA.X) * a.HalfWidth + Vector.Abs(localNormalA.Y) * a.HalfHeight + Vector.Abs(localNormalA.Z) * a.HalfLength) +
+                (Vector.Abs(localNormalB.X) * b.HalfWidth + Vector.Abs(localNormalB.Y) * b.HalfHeight + Vector.Abs(localNormalB.Z) * b.HalfLength) - Vector.Abs(calibrationDot);
+            //Avoid leaking NaN-infected values.
+            depth = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-15f)), new Vector<float>(float.MaxValue), depth);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void VerticesBox(ref BoxWide a, ref BoxWide b, ref Matrix3x3Wide rA, ref Matrix3x3Wide rB, ref Vector3Wide offsetB,
-            out Vector<float> distanceSquared, out Vector3Wide offset, out Vector3Wide closestA)
+            out Vector<float> depth, out Vector3Wide offset, out Vector3Wide closestB)
         {
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(ref rB, ref rA, out var rBInA);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offsetB, ref rA, out var localOffsetB);
@@ -100,25 +109,32 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Negate(ref x, out var negativeX);
             Vector3Wide.Negate(ref y, out var negativeY);
             Vector3Wide.Negate(ref z, out var negativeZ);
-            VertexBox(ref a, ref x, ref y, ref z, ref localOffsetB, out distanceSquared, out var localOffset, out var localClosestA);
-            VertexBox(ref a, ref x, ref y, ref negativeZ, ref localOffsetB, out var distanceSquaredCandidate, out var offsetCandidate, out var closestACandidate);
-            SelectForVertex(ref distanceSquared, ref localOffset, ref localClosestA, ref distanceSquaredCandidate, ref offsetCandidate, ref closestACandidate);
-            VertexBox(ref a, ref x, ref negativeY, ref z, ref localOffsetB, out distanceSquaredCandidate, out offsetCandidate, out closestACandidate);
-            SelectForVertex(ref distanceSquared, ref localOffset, ref localClosestA, ref distanceSquaredCandidate, ref offsetCandidate, ref closestACandidate);
-            VertexBox(ref a, ref x, ref negativeY, ref negativeZ, ref localOffsetB, out distanceSquaredCandidate, out offsetCandidate, out closestACandidate);
-            SelectForVertex(ref distanceSquared, ref localOffset, ref localClosestA, ref distanceSquaredCandidate, ref offsetCandidate, ref closestACandidate);
-            VertexBox(ref a, ref negativeX, ref y, ref z, ref localOffsetB, out distanceSquaredCandidate, out offsetCandidate, out closestACandidate);
-            SelectForVertex(ref distanceSquared, ref localOffset, ref localClosestA, ref distanceSquaredCandidate, ref offsetCandidate, ref closestACandidate);
-            VertexBox(ref a, ref negativeX, ref y, ref negativeZ, ref localOffsetB, out distanceSquaredCandidate, out offsetCandidate, out closestACandidate);
-            SelectForVertex(ref distanceSquared, ref localOffset, ref localClosestA, ref distanceSquaredCandidate, ref offsetCandidate, ref closestACandidate);
-            VertexBox(ref a, ref negativeX, ref negativeY, ref z, ref localOffsetB, out distanceSquaredCandidate, out offsetCandidate, out closestACandidate);
-            SelectForVertex(ref distanceSquared, ref localOffset, ref localClosestA, ref distanceSquaredCandidate, ref offsetCandidate, ref closestACandidate);
-            VertexBox(ref a, ref negativeX, ref negativeY, ref negativeZ, ref localOffsetB, out distanceSquaredCandidate, out offsetCandidate, out closestACandidate);
-            SelectForVertex(ref distanceSquared, ref localOffset, ref localClosestA, ref distanceSquaredCandidate, ref offsetCandidate, ref closestACandidate);
+            VertexBox(ref a, ref b, ref x, ref y, ref z, ref rBInA, ref localOffsetB, out depth, out var localNormalA, out var localClosestA);
+            VertexBox(ref a, ref b, ref x, ref y, ref negativeZ, ref rBInA, ref localOffsetB, out var depthCandidate, out var normalCandidate, out var closestACandidate);
+            Select(ref depth, ref localNormalA, ref localClosestA, ref depthCandidate, ref normalCandidate, ref closestACandidate);
+            VertexBox(ref a, ref b, ref x, ref negativeY, ref z, ref rBInA, ref localOffsetB, out depthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref localNormalA, ref localClosestA, ref depthCandidate, ref normalCandidate, ref closestACandidate);
+            VertexBox(ref a, ref b, ref x, ref negativeY, ref negativeZ, ref rBInA, ref localOffsetB, out depthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref localNormalA, ref localClosestA, ref depthCandidate, ref normalCandidate, ref closestACandidate);
+            VertexBox(ref a, ref b, ref negativeX, ref y, ref z, ref rBInA, ref localOffsetB, out depthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref localNormalA, ref localClosestA, ref depthCandidate, ref normalCandidate, ref closestACandidate);
+            VertexBox(ref a, ref b, ref negativeX, ref y, ref negativeZ, ref rBInA, ref localOffsetB, out depthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref localNormalA, ref localClosestA, ref depthCandidate, ref normalCandidate, ref closestACandidate);
+            VertexBox(ref a, ref b, ref negativeX, ref negativeY, ref z, ref rBInA, ref localOffsetB, out depthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref localNormalA, ref localClosestA, ref depthCandidate, ref normalCandidate, ref closestACandidate);
+            VertexBox(ref a, ref b, ref negativeX, ref negativeY, ref negativeZ, ref rBInA, ref localOffsetB, out depthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref localNormalA, ref localClosestA, ref depthCandidate, ref normalCandidate, ref closestACandidate);
+
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref localNormalA, ref rBInA, out var localNormalB);
+            Vector3Wide localExtremeOnB;
+            localExtremeOnB.X = Vector.ConditionalSelect(Vector.LessThan(localNormalB.X, Vector<float>.Zero), -b.HalfWidth, b.HalfWidth);
+            localExtremeOnB.Y = Vector.ConditionalSelect(Vector.LessThan(localNormalB.Y, Vector<float>.Zero), -b.HalfHeight, b.HalfHeight);
+            localExtremeOnB.Z = Vector.ConditionalSelect(Vector.LessThan(localNormalB.Z, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localExtremeOnB, ref rB, out var extremeOnB);
+            Vector3Wide.Add(ref extremeOnB, ref offsetB, out closestB);
 
             //We were working in rA's local space; push it back into world.
-            Matrix3x3Wide.TransformWithoutOverlap(ref localOffset, ref rA, out offset);
-            Matrix3x3Wide.TransformWithoutOverlap(ref localClosestA, ref rA, out closestA);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localNormalA, ref rA, out offset);
 
         }
 
@@ -147,80 +163,70 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //aX x bX
             Vector3Wide.Add(ref ya, ref za, out var edgeCenterA);
             Vector3Wide.Add(ref yb, ref zb, out var edgeCenterB);
-            TestEdgeEdge(ref a.HalfWidth, ref edgeCenterA, ref rA.X, ref b.HalfWidth, ref edgeCenterB, ref rB.X, ref offsetB,
-                out distance, out normal, out closestA);
+            TestEdgeEdge(ref a, ref rA, ref a.HalfWidth, ref edgeCenterA, ref rA.X, ref b, ref rB, ref b.HalfWidth, ref edgeCenterB, ref rB.X, ref offsetB,
+                out var depth, out normal, out closestA);
             //aX x bY
             Vector3Wide.Add(ref xb, ref zb, out edgeCenterB);
-            TestEdgeEdge(ref a.HalfWidth, ref edgeCenterA, ref rA.X, ref b.HalfHeight, ref edgeCenterB, ref rB.Y, ref offsetB,
-                out var distanceCandidate, out var normalCandidate, out var closestACandidate);
-            Select(ref distance, ref normal, ref closestA, ref distanceCandidate, ref normalCandidate, ref closestACandidate);
+            TestEdgeEdge(ref a, ref rA, ref a.HalfWidth, ref edgeCenterA, ref rA.X, ref b, ref rB, ref b.HalfHeight, ref edgeCenterB, ref rB.Y, ref offsetB,
+                out var edgeDepthCandidate, out var normalCandidate, out var closestACandidate);
+            Select(ref depth, ref normal, ref closestA, ref edgeDepthCandidate, ref normalCandidate, ref closestACandidate);
             //aX x bZ
             Vector3Wide.Add(ref xb, ref yb, out edgeCenterB);
-            TestEdgeEdge(ref a.HalfWidth, ref edgeCenterA, ref rA.X, ref b.HalfLength, ref edgeCenterB, ref rB.Z, ref offsetB,
-                out distanceCandidate, out normalCandidate, out closestACandidate);
-            Select(ref distance, ref normal, ref closestA, ref distanceCandidate, ref normalCandidate, ref closestACandidate);
+            TestEdgeEdge(ref a, ref rA, ref a.HalfWidth, ref edgeCenterA, ref rA.X, ref b, ref rB, ref b.HalfLength, ref edgeCenterB, ref rB.Z, ref offsetB,
+                out edgeDepthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref normal, ref closestA, ref edgeDepthCandidate, ref normalCandidate, ref closestACandidate);
             //aY x bX
             Vector3Wide.Add(ref xa, ref za, out edgeCenterA);
             Vector3Wide.Add(ref yb, ref zb, out edgeCenterB);
-            TestEdgeEdge(ref a.HalfHeight, ref edgeCenterA, ref rA.Y, ref b.HalfWidth, ref edgeCenterB, ref rB.X, ref offsetB,
-                out distanceCandidate, out normalCandidate, out closestACandidate);
-            Select(ref distance, ref normal, ref closestA, ref distanceCandidate, ref normalCandidate, ref closestACandidate);
+            TestEdgeEdge(ref a, ref rA, ref a.HalfHeight, ref edgeCenterA, ref rA.Y, ref b, ref rB, ref b.HalfWidth, ref edgeCenterB, ref rB.X, ref offsetB,
+                out edgeDepthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref normal, ref closestA, ref edgeDepthCandidate, ref normalCandidate, ref closestACandidate);
             //aY x bY
             Vector3Wide.Add(ref xb, ref zb, out edgeCenterB);
-            TestEdgeEdge(ref a.HalfHeight, ref edgeCenterA, ref rA.Y, ref b.HalfHeight, ref edgeCenterB, ref rB.Y, ref offsetB,
-                out distanceCandidate, out normalCandidate, out closestACandidate);
-            Select(ref distance, ref normal, ref closestA, ref distanceCandidate, ref normalCandidate, ref closestACandidate);
+            TestEdgeEdge(ref a, ref rA, ref a.HalfHeight, ref edgeCenterA, ref rA.Y, ref b, ref rB, ref b.HalfHeight, ref edgeCenterB, ref rB.Y, ref offsetB,
+                out edgeDepthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref normal, ref closestA, ref edgeDepthCandidate, ref normalCandidate, ref closestACandidate);
             //aY x bZ
             Vector3Wide.Add(ref xb, ref yb, out edgeCenterB);
-            TestEdgeEdge(ref a.HalfHeight, ref edgeCenterA, ref rA.Y, ref b.HalfLength, ref edgeCenterB, ref rB.Z, ref offsetB,
-                out distanceCandidate, out normalCandidate, out closestACandidate);
-            Select(ref distance, ref normal, ref closestA, ref distanceCandidate, ref normalCandidate, ref closestACandidate);
+            TestEdgeEdge(ref a, ref rA, ref a.HalfHeight, ref edgeCenterA, ref rA.Y, ref b, ref rB, ref b.HalfLength, ref edgeCenterB, ref rB.Z, ref offsetB,
+                out edgeDepthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref normal, ref closestA, ref edgeDepthCandidate, ref normalCandidate, ref closestACandidate);
             //aZ x bX
             Vector3Wide.Add(ref xa, ref ya, out edgeCenterA);
             Vector3Wide.Add(ref yb, ref zb, out edgeCenterB);
-            TestEdgeEdge(ref a.HalfLength, ref edgeCenterA, ref rA.Z, ref b.HalfWidth, ref edgeCenterB, ref rB.X, ref offsetB,
-                out distanceCandidate, out normalCandidate, out closestACandidate);
-            Select(ref distance, ref normal, ref closestA, ref distanceCandidate, ref normalCandidate, ref closestACandidate);
+            TestEdgeEdge(ref a, ref rA, ref a.HalfLength, ref edgeCenterA, ref rA.Z, ref b, ref rB, ref b.HalfWidth, ref edgeCenterB, ref rB.X, ref offsetB,
+                out edgeDepthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref normal, ref closestA, ref edgeDepthCandidate, ref normalCandidate, ref closestACandidate);
             //aZ x bY
             Vector3Wide.Add(ref xb, ref zb, out edgeCenterB);
-            TestEdgeEdge(ref a.HalfLength, ref edgeCenterA, ref rA.Z, ref b.HalfHeight, ref edgeCenterB, ref rB.Y, ref offsetB,
-                out distanceCandidate, out normalCandidate, out closestACandidate);
-            Select(ref distance, ref normal, ref closestA, ref distanceCandidate, ref normalCandidate, ref closestACandidate);
+            TestEdgeEdge(ref a, ref rA, ref a.HalfLength, ref edgeCenterA, ref rA.Z, ref b, ref rB, ref b.HalfHeight, ref edgeCenterB, ref rB.Y, ref offsetB,
+                out edgeDepthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref normal, ref closestA, ref edgeDepthCandidate, ref normalCandidate, ref closestACandidate);
             //aZ x bZ
             Vector3Wide.Add(ref xb, ref yb, out edgeCenterB);
-            TestEdgeEdge(ref a.HalfLength, ref edgeCenterA, ref rA.Z, ref b.HalfLength, ref edgeCenterB, ref rB.Z, ref offsetB,
-                out distanceCandidate, out normalCandidate, out closestACandidate);
-            Select(ref distance, ref normal, ref closestA, ref distanceCandidate, ref normalCandidate, ref closestACandidate);
-            
-            //Periodically branching can be worth it. Sweeps are relatively coherent.
-            if(Vector.LessThanOrEqualAll(distance, Vector<float>.Zero))
-            {
-                intersected = new Vector<int>(-1);
-                return;
-            }
+            TestEdgeEdge(ref a, ref rA, ref a.HalfLength, ref edgeCenterA, ref rA.Z, ref b, ref rB, ref b.HalfLength, ref edgeCenterB, ref rB.Z, ref offsetB,
+                out edgeDepthCandidate, out normalCandidate, out closestACandidate);
+            Select(ref depth, ref normal, ref closestA, ref edgeDepthCandidate, ref normalCandidate, ref closestACandidate);
 
-            VerticesBox(ref a, ref b, ref rA, ref rB, ref offsetB, out var verticesDistanceSquared, out var verticesOffset, out var verticesClosest);
-            if (Vector.EqualsAll(verticesDistanceSquared, Vector<float>.Zero))
-            {
-                intersected = new Vector<int>(-1);
-                return;
-            }
+            VerticesBox(ref a, ref b, ref rA, ref rB, ref offsetB, out var verticesDepth, out var verticesNormal, out var verticesClosestOnB);
+            Vector3Wide.Scale(ref verticesNormal, ref verticesDepth, out var offset);
+            Vector3Wide.Add(ref verticesClosestOnB, ref offset, out var verticesClosestA);
+
             Vector3Wide.Negate(ref offsetB, out var offsetA);
-            VerticesBox(ref b, ref a, ref rB, ref rA, ref offsetA, out var verticesBDistanceSquared, out var verticesBOffset, out var verticesBClosest);
+            VerticesBox(ref b, ref a, ref rB, ref rA, ref offsetA, out var verticesDepthCandidate, out var verticesNormalCandidate, out var verticesClosestACandidate);
             //Note that the test of the vertices of B output the closest point as belonging to B, so we apply the offset to get the other point.
-            Vector3Wide.Negate(ref verticesBOffset, out verticesBOffset);
-            Vector3Wide.Add(ref verticesBClosest, ref verticesBOffset, out verticesBClosest);
-            Vector3Wide.Add(ref verticesBClosest, ref offsetB, out verticesBClosest);
-            SelectForVertex(ref verticesDistanceSquared, ref verticesOffset, ref verticesClosest, ref verticesBDistanceSquared, ref verticesBOffset, ref verticesBClosest);
+            Vector3Wide.Add(ref verticesClosestACandidate, ref offsetB, out verticesClosestACandidate);
+            Vector3Wide.Negate(ref verticesNormalCandidate, out verticesNormalCandidate);
+            //Vector3Wide.Scale(ref verticesNormalB, ref verticesDepthB, out var offset);
+            //Vector3Wide.Subtract(ref verticesClosestB, ref offset, out verticesClosestB);
+            Select(ref verticesDepth, ref verticesNormal, ref verticesClosestA, ref verticesDepthCandidate, ref verticesNormalCandidate, ref verticesClosestACandidate);
 
-            var verticesDistance = Vector.SquareRoot(verticesDistanceSquared);
-            var verticesInverseDistance = Vector<float>.One / verticesDistance;
-            Vector3Wide.Scale(ref verticesOffset, ref verticesInverseDistance, out var verticesNormal);
-
-            Select(ref distance, ref normal, ref closestA, ref verticesDistance, ref verticesNormal, ref verticesClosest);
-            intersected = Vector.LessThanOrEqual(distance, Vector<float>.Zero);
+            Select(ref depth, ref normal, ref closestA, ref verticesDepth, ref verticesNormal, ref verticesClosestA);
+            distance = -depth;
+            intersected = Vector.GreaterThanOrEqual(depth, Vector<float>.Zero);
 
         }
+
 
     }
 }
