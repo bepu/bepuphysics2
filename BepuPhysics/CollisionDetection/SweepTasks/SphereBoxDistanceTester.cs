@@ -19,11 +19,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             clampedLocalOffsetB.Y = Vector.Min(Vector.Max(localOffsetB.Y, -b.HalfHeight), b.HalfHeight);
             clampedLocalOffsetB.Z = Vector.Min(Vector.Max(localOffsetB.Z, -b.HalfLength), b.HalfLength);
             //Implicit negation to make the normal point from B to A, following convention.
-            Vector3Wide.Subtract(ref clampedLocalOffsetB, ref localOffsetB, out normal);
-            Vector3Wide.Length(ref normal, out var innerDistance);
+            Vector3Wide.Subtract(ref clampedLocalOffsetB, ref localOffsetB, out var localNormal);
+            Vector3Wide.Length(ref localNormal, out var innerDistance);
             var inverseDistance = Vector<float>.One / innerDistance;
-            Vector3Wide.Scale(ref normal, ref inverseDistance, out normal);
-            Matrix3x3Wide.TransformWithoutOverlap(ref normal, ref orientationMatrixB, out normal);
+            Vector3Wide.Scale(ref localNormal, ref inverseDistance, out localNormal);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref orientationMatrixB, out normal);
             var negativeRadius = -a.Radius;
             Vector3Wide.Scale(ref normal, ref negativeRadius, out closestA);
             distance = innerDistance - a.Radius;

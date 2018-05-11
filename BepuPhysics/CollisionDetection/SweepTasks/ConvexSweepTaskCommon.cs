@@ -234,6 +234,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //The bounding spheres do not intersect, or the intersection interval is outside of the requested search interval.
                 hitLocation = default;
                 hitNormal = default;
+                //Console.WriteLine("Early out.");
                 return false;
             }
             //Clamp the interval to the intended search space.

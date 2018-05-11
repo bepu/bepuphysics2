@@ -8,7 +8,6 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    //Note that sphere-sphere sweeps use a direct analytic implementation. The distance tester just exists because it's trivial and to maintain API consistency.
     public struct SpherePairDistanceTester : IPairDistanceTester<SphereWide, SphereWide>
     {
         public void Test(ref SphereWide a, ref SphereWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
@@ -26,26 +25,5 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
     }
 
-    public class SpherePairSweepTask : SweepTask
-    {
-        public SpherePairSweepTask()
-        {
-            ShapeTypeIndexA = default(Sphere).TypeId;
-            ShapeTypeIndexB = default(Sphere).TypeId;
-        }
-        
-        public override unsafe bool Sweep<TSweepFilter>(
-            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA, 
-            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
-            float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            ref TSweepFilter filter, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
-        {
-            //TODO: Special case this with a ray test.
-            return ConvexSweepTaskCommon.Sweep<Sphere, SphereWide, Sphere, SphereWide, SpherePairDistanceTester>(
-                shapeDataA, shapeTypeA, orientationA, velocityA,
-                shapeDataB, shapeTypeB, offsetB, orientationB, velocityB,
-                maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
-                out t0, out t1, out hitLocation, out hitNormal);
-        }
-    }
+    //TODO: Could just use an analytic time of impact for two spheres if there's ever a performance issue.
 }

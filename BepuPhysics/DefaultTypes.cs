@@ -95,7 +95,7 @@ namespace BepuPhysics
         public static SweepTaskRegistry CreateDefaultSweepTaskRegistry()
         {
             var defaultTaskRegistry = new SweepTaskRegistry();
-            defaultTaskRegistry.Register(new SpherePairSweepTask());
+            defaultTaskRegistry.Register(new ConvexPairSweepTask<Sphere, SphereWide, Sphere, SphereWide, SpherePairDistanceTester>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Sphere, SphereWide, Capsule, CapsuleWide, SphereCapsuleDistanceTester>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Sphere, SphereWide, Box, BoxWide, SphereBoxDistanceTester>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Capsule, CapsuleWide, Capsule, CapsuleWide, CapsulePairDistanceTester>());

@@ -137,12 +137,47 @@ namespace Demos.SpecializedTests
             var worldB = Quaternion.Concatenate(y, Quaternion.Concatenate(z, x));
             base.Render(renderer, text, font);
             TestSweep(
+                new Sphere(0.5f),
+                new RigidPose { Position = new Vector3(-10, 30, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
+                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 0, 1) },
+                new Sphere(.25f),
+                new RigidPose { Position = new Vector3(10, 30, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
+                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
+            TestSweep(
+                new Sphere(0.5f),
+                new RigidPose { Position = new Vector3(-10, 25, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
+                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 0, 1) },
+                new Capsule(.25f, 1f),
+                new RigidPose { Position = new Vector3(10, 25, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
+                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
+            TestSweep(
+                new Sphere(0.5f),
+                new RigidPose { Position = new Vector3(-10, 20, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
+                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 0, 1) },
+                new Box(.5f, 1f, 1.5f),
+                new RigidPose { Position = new Vector3(10, 20, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
+                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
+            TestSweep(
+                new Capsule(0.5f, 0.5f),
+                new RigidPose { Position = new Vector3(-10, 15, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
+                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 0, 1) },
+                new Capsule(.5f, 1.5f),
+                new RigidPose { Position = new Vector3(10, 15, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
+                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
+            TestSweep(
+                new Capsule(0.5f, 0.5f),
+                new RigidPose { Position = new Vector3(-10, 10, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
+                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 0, 1) },
+                new Box(.5f, 1f, 1.5f),
+                new RigidPose { Position = new Vector3(10, 10, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
+                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
+            TestSweep(
                 new Box(0.5f, 0.5f, 0.5f),
-                new RigidPose { Position = new Vector3(-10, 0, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
-                new BodyVelocity { Linear = new Vector3(1, 0, 0), Angular = new Vector3(1, 0, 1) },
-                new Box(2.5f, 2.5f, 2.5f),
-                new RigidPose { Position = new Vector3(10, 0, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
-                new BodyVelocity { Linear = new Vector3(-1, 0, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
+                new RigidPose { Position = new Vector3(-10, 5, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
+                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 0, 1) },
+                new Box(.25f, .5f, 1.5f),
+                new RigidPose { Position = new Vector3(10, 5, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
+                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
         }
     }
 }
