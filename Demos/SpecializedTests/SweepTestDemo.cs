@@ -9,6 +9,7 @@ using DemoRenderer.UI;
 using DemoUtilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -34,15 +35,58 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
-            BoxPairDistanceTester tester;
-            BoxWide a;
-            a.HalfWidth = a.HalfLength = a.HalfHeight = new Vector<float>(1);
-            BoxWide b;
-            b.HalfWidth = b.HalfLength = b.HalfHeight = new Vector<float>(5);
-            Vector3Wide.Broadcast(new Vector3(10, 0, 0), out var offsetB);
-            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationA);
-            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0), out var orientationB);
-            tester.Test(ref a, ref b, ref offsetB, ref orientationA, ref orientationB, out var intersected, out var distance, out var closestA, out var normal);
+            {
+                BoxPairDistanceTester tester;
+                BoxWide a;
+                a.HalfWidth = a.HalfLength = a.HalfHeight = new Vector<float>(1);
+                BoxWide b;
+                b.HalfWidth = b.HalfLength = b.HalfHeight = new Vector<float>(5);
+                Vector3Wide.Broadcast(new Vector3(10, 0, 0), out var offsetB);
+                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationA);
+                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0), out var orientationB);
+                tester.Test(ref a, ref b, ref offsetB, ref orientationA, ref orientationB, out var intersected, out var distance, out var closestA, out var normal);
+            }
+
+            {
+                TestFilter filter;
+                var a = new Capsule(0.5f, 0.5f);
+                var b = new Capsule(0.5f, 0.5f);
+                var offsetB = new Vector3(10, 0, 0);
+                var orientationA = Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.PiOver4);
+                var orientationB = Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver4);
+                var velocityA = new BodyVelocity { Linear = new Vector3(1, 0, 0), Angular = new Vector3(1, 0, 1) };
+                var velocityB = new BodyVelocity { Linear = new Vector3(-1, 0, 0), Angular = new Vector3(0, 1, 0) };
+                var task = Simulation.NarrowPhase.SweepTaskRegistry.GetTask(a.TypeId, b.TypeId);
+                var maximumT = 50;
+                var minimumProgression = 1e-1f;
+                var convergenceThreshold = 1e-1f;
+                var maximumIterationCount = 15;
+
+                var intersected = task.Sweep(
+                    &a, a.TypeId, orientationA, velocityA,
+                    &b, b.TypeId, offsetB, orientationB, velocityB,
+                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+                    ref filter, out var t0, out var t1, out var hitLocation, out var hitNormal);
+                Console.WriteLine($"Intersected: {intersected}, interval: {t0}, {t1}; location: {hitLocation}, normal: {hitNormal}");
+
+                int intersectionCount = 0;
+                int iterationCount = 100000;
+                var start = Stopwatch.GetTimestamp();
+                for (int i = 0; i < iterationCount; ++i)
+                {
+                    if (task.Sweep(
+                      &a, a.TypeId, orientationA, velocityA,
+                      &b, b.TypeId, offsetB, orientationB, velocityB,
+                      maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+                      ref filter, out t0, out t1, out hitLocation, out hitNormal))
+                    {
+                        ++intersectionCount;
+                    }
+                }
+                var end = Stopwatch.GetTimestamp();
+                Console.WriteLine($"Time per sweep (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
+
+            }
         }
 
         unsafe void DrawSweep<TShape>(TShape shape, ref RigidPose pose, in BodyVelocity velocity, int steps,
