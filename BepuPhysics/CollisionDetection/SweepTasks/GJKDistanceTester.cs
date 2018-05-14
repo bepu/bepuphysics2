@@ -194,7 +194,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 Vector.BitwiseAnd(Vector.LessThanOrEqual(adA, Vector<float>.Zero), Vector.GreaterThanOrEqual(adD, Vector<float>.Zero)));
             aRequired = Vector.BitwiseOr(aRequired, adActive);
             dRequired = Vector.BitwiseOr(dRequired, adActive);
-
+            
             //BC:
             //BC * B <= 0
             //CB * C <= 0
@@ -242,44 +242,73 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             cRequired = Vector.BitwiseOr(cRequired, cdActive);
             dRequired = Vector.BitwiseOr(dRequired, cdActive);
 
+            //Note that face tests are forced to use calibration due to the lack of consistent winding in the simplex. This could be improved,
+            //but beware of adding overhead to guarantee winding- moving things around in slots introduces a lot of scalar work.
             //ABC:
             //Inside abABC, acABC, and bcABC planes.
-            //(-A * (AB x AC) * (AB * (AB x AC))
+            //(A * (AB x AC) * (AD * (AB x AC)) >= 0
+            Vector3Wide.CrossWithoutOverlap(ref ab, ref ac, out var nabc);
+            Vector3Wide.Dot(ref simplex.A, ref nabc, out var anabc);
+            Vector3Wide.Dot(ref ad, ref nabc, out var adnabc);
+            var outsideABC = Vector.GreaterThanOrEqual(anabc * adnabc, Vector<float>.Zero);
             var abcActive = Vector.BitwiseAnd(
-                Vector.GreaterThan(abABCPlaneTest, Vector<float>.Zero),
                 Vector.BitwiseAnd(
-                    Vector.GreaterThan(abABCPlaneTest, Vector<float>.Zero), 
-                    Vector.GreaterThan(abABCPlaneTest, Vector<float>.Zero)));
+                    outsideABC,
+                    Vector.GreaterThanOrEqual(abABCPlaneTest, Vector<float>.Zero)),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(acABCPlaneTest, Vector<float>.Zero),
+                    Vector.GreaterThanOrEqual(bcABCPlaneTest, Vector<float>.Zero)));
             aRequired = Vector.BitwiseOr(abcActive, aRequired);
             bRequired = Vector.BitwiseOr(abcActive, bRequired);
             cRequired = Vector.BitwiseOr(abcActive, cRequired);
 
             //BCD:
-            //Inside bcBCD, bdBCD, and cdBCD planes.
+            //Inside bcBCD, bdBCD, and cdBCD planes.     
+            //(B * (BC x BD) * (BA * (BC x BD)) >= 0
+            Vector3Wide.CrossWithoutOverlap(ref bc, ref bd, out var nbcd);
+            Vector3Wide.Dot(ref simplex.B, ref nbcd, out var bnbcd);
+            Vector3Wide.Dot(ref ab, ref nbcd, out var abnbcd);
+            var outsideBCD = Vector.LessThanOrEqual(bnbcd * abnbcd, Vector<float>.Zero);
             var bcdActive = Vector.BitwiseAnd(
-                Vector.GreaterThan(bcBCDPlaneTest, Vector<float>.Zero),
                 Vector.BitwiseAnd(
-                    Vector.GreaterThan(bdBCDPlaneTest, Vector<float>.Zero),
-                    Vector.GreaterThan(cdBCDPlaneTest, Vector<float>.Zero)));
+                    outsideBCD,
+                    Vector.GreaterThanOrEqual(bcBCDPlaneTest, Vector<float>.Zero)),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(bdBCDPlaneTest, Vector<float>.Zero),
+                    Vector.GreaterThanOrEqual(cdBCDPlaneTest, Vector<float>.Zero)));
             bRequired = Vector.BitwiseOr(bcdActive, bRequired);
             cRequired = Vector.BitwiseOr(bcdActive, cRequired);
             dRequired = Vector.BitwiseOr(bcdActive, dRequired);
 
             //ACD:
             //Inside acACD, adACD, and cdACD planes.
+            //(A * (AC x AD) * (AB * (AC x AD)) >= 0
+            Vector3Wide.CrossWithoutOverlap(ref ac, ref ad, out var nacd);
+            Vector3Wide.Dot(ref simplex.A, ref nacd, out var anacd);
+            Vector3Wide.Dot(ref ab, ref nacd, out var abnacd);
+            var outsideACD = Vector.LessThanOrEqual(anacd * abnacd, Vector<float>.Zero);
             var acdActive = Vector.BitwiseAnd(
-                Vector.GreaterThan(acACDPlaneTest, Vector<float>.Zero),
                 Vector.BitwiseAnd(
-                    Vector.GreaterThan(adACDPlaneTest, Vector<float>.Zero),
-                    Vector.GreaterThan(cdACDPlaneTest, Vector<float>.Zero)));
+                    outsideACD,
+                    Vector.GreaterThanOrEqual(acACDPlaneTest, Vector<float>.Zero)),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(adACDPlaneTest, Vector<float>.Zero),
+                    Vector.GreaterThanOrEqual(cdACDPlaneTest, Vector<float>.Zero)));
             aRequired = Vector.BitwiseOr(acdActive, aRequired);
             cRequired = Vector.BitwiseOr(acdActive, cRequired);
             dRequired = Vector.BitwiseOr(acdActive, dRequired);
 
             //ABD:
             //Inside abABD, adABD, and bdABD planes.
+            //(A * (AB x AD) * (AC * (AB x AD)) >= 0
+            Vector3Wide.CrossWithoutOverlap(ref ab, ref ad, out var nabd);
+            Vector3Wide.Dot(ref simplex.A, ref nabd, out var anabd);
+            Vector3Wide.Dot(ref ac, ref nabd, out var acnabd);
+            var outsideABD = Vector.LessThanOrEqual(anabd * acnabd, Vector<float>.Zero);
             var abdActive = Vector.BitwiseAnd(
-                Vector.GreaterThan(abABDPlaneTest, Vector<float>.Zero),
+                Vector.BitwiseAnd(
+                    outsideABD,
+                    Vector.GreaterThan(abABDPlaneTest, Vector<float>.Zero)),
                 Vector.BitwiseAnd(
                     Vector.GreaterThan(adABDPlaneTest, Vector<float>.Zero),
                     Vector.GreaterThan(bdABDPlaneTest, Vector<float>.Zero)));
@@ -287,14 +316,54 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             bRequired = Vector.BitwiseOr(abdActive, bRequired);
             dRequired = Vector.BitwiseOr(abdActive, dRequired);
 
-            //Note that all the face regions did not bother testing the actual face plane. They each accept 
+            //ABCD:
+            var insideTetrahedron = Vector.BitwiseAnd(
+                Vector.AndNot(Vector.OnesComplement(outsideABC), outsideBCD), 
+                Vector.AndNot(Vector.OnesComplement(outsideACD), outsideABD));
+            aRequired = Vector.BitwiseOr(aRequired, insideTetrahedron);
+            bRequired = Vector.BitwiseOr(bRequired, insideTetrahedron);
+            cRequired = Vector.BitwiseOr(cRequired, insideTetrahedron);
+            dRequired = Vector.BitwiseOr(dRequired, insideTetrahedron);
 
+            //Note that the tetrahedral containment case implies intersection. Distance queries do not guarantee meaningful normals or closest points during intersection,
+            //so there is no need to compute barycentric coordinates.
+
+            //Sub-tetrahedral cases imply nonintersection.
             //For triangle barycentric coordinates, we can make use of the edge-face plane tests we computed earlier.
             //The barycentric weight of vertex C on triangle ABC for the origin is:
             //(A x AB) * (AB x AC) / ((AB x AC) * (AB x AC))
             //Once again applying an identity, this transforms to:
             //(A x AB) * (AB x AC) / ((AB * AB) * (AC * AC) - (AB * AC) * (AC * AB))
             //Which, once again, shares a bunch of ALU work we already did.
+            var abcDenom = Vector<float>.One / (abab * acac - abac * abac);
+            var abcAWeight = bcABCPlaneTest * abcDenom;
+            var abcBWeight = acABCPlaneTest * abcDenom;
+            var abcCWeight = abABCPlaneTest * abcDenom;
+            var acdDenom = Vector<float>.One / (acac * adad - acad * acad);
+            var acdAWeight = cdACDPlaneTest * acdDenom;
+            var acdCWeight = adACDPlaneTest * acdDenom;
+            var acdDWeight = acACDPlaneTest * acdDenom;
+            var abdDenom = Vector<float>.One / (abab * adad - abad * abad);
+            var abdAWeight = bdABDPlaneTest * abdDenom;
+            var abdBWeight = adABDPlaneTest * abdDenom;
+            var abdDWeight = abABDPlaneTest * abdDenom;
+            var bcdDenom = Vector<float>.One / (bcbc * bdbd - bcbd * bcbd);
+            var bcdBWeight = cdBCDPlaneTest * bcdDenom;
+            var bcdCWeight = bdBCDPlaneTest * bcdDenom;
+            var bcdDWeight = bcBCDPlaneTest * bcdDenom;
+
+            var abAWeight = abB / abab;
+            var abBWeight = Vector<float>.One - abAWeight;
+            var acAWeight = acC / acac;
+            var acCWeight = Vector<float>.One - acAWeight;
+            var adAWeight = adD / adad;
+            var adDWeight = Vector<float>.One - adAWeight;
+            var bcBWeight = bcC / bcbc;
+            var bcCWeight = Vector<float>.One - bcBWeight;
+            var bdBWeight = bdD / bdbd;
+            var bdDWeight = Vector<float>.One - bdBWeight;
+            var cdCWeight = cdD / cdcd;
+            var cdDWeight = Vector<float>.One - cdCWeight;
         }
 
         public void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
