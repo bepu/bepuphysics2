@@ -36,31 +36,31 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
         struct Simplex
         {
-            public Vector3Wide V0;
-            public Vector3Wide V1;
-            public Vector3Wide V2;
-            public Vector3Wide V3;
+            public Vector3Wide A;
+            public Vector3Wide B;
+            public Vector3Wide C;
+            public Vector3Wide D;
             //Contributing points from one object are tracked to create the closest points.
-            public Vector3Wide V0A;
-            public Vector3Wide V1A;
-            public Vector3Wide V2A;
-            public Vector3Wide V3A;
+            public Vector3Wide AOnA;
+            public Vector3Wide BOnA;
+            public Vector3Wide COnA;
+            public Vector3Wide DOnA;
             public Vector<int> Count;
         }
 
-       [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Append(ref Vector<int> mask, ref Simplex simplex, ref Vector3Wide vA, ref Vector3Wide v)
         {
             for (int i = 0; i < Vector<float>.Count; ++i)
             {
-                if(mask[i] == 0)
+                if (mask[i] == 0)
                 {
                     ref var count = ref Unsafe.Add(ref GatherScatter.GetFirst(ref simplex.Count), i);
-                    ref var vTargetSlot = ref GatherScatter.GetOffsetInstance(ref Unsafe.Add(ref simplex.V0, count), i);
+                    ref var vTargetSlot = ref GatherScatter.GetOffsetInstance(ref Unsafe.Add(ref simplex.A, count), i);
                     GatherScatter.GetFirst(ref vTargetSlot.X) = v.X[i];
                     GatherScatter.GetFirst(ref vTargetSlot.Y) = v.Y[i];
                     GatherScatter.GetFirst(ref vTargetSlot.Z) = v.Z[i];
-                    ref var vATargetSlot = ref GatherScatter.GetOffsetInstance(ref Unsafe.Add(ref simplex.V0A, count), i);
+                    ref var vATargetSlot = ref GatherScatter.GetOffsetInstance(ref Unsafe.Add(ref simplex.AOnA, count), i);
                     GatherScatter.GetFirst(ref vATargetSlot.X) = vA.X[i];
                     GatherScatter.GetFirst(ref vATargetSlot.Y) = vA.Y[i];
                     GatherScatter.GetFirst(ref vATargetSlot.Z) = vA.Z[i];
@@ -71,7 +71,230 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
         void FindClosestPoint(ref Simplex simplex, out Vector3Wide closestA, out Vector3Wide closest)
         {
-            //There are four possible cases to consider for the simplex: point, line, triangle, and tetrahedron.
+            //This function's job is to identify the simplex feature closest to the origin, and to compute the closest point on it.
+            //While there are quite a few possible approaches here (direct solvers, enumerating feature distances, voronoi region testing), 
+            //it's useful to keep in mind two details:
+            //1) At the end of the function, the simplex should no longer contain any vertex which does not contribute to the closest point linear combination.
+            //2) This is widely vectorized, so branching and divergence hurts even more than usual.
+
+            //One option that fits reasonably well to both of these is to walk the simplex cases from tetrahedron down to point.
+            //At each simplex case, every vertex is tested for its ability to contribute to the final closest point linear combination.
+            //For example, in a tetrahedron ABCD tested against point P, D is only relevant if P is in a region connected to D (ABCD, ABD, BCD, ACD, AD, BD, CD, or D).
+            //So, test P against every voronoi region.
+
+            //TETRAHEDRON
+            Vector3Wide.Subtract(ref simplex.B, ref simplex.A, out var ab);
+            Vector3Wide.Subtract(ref simplex.C, ref simplex.A, out var ac);
+            Vector3Wide.Subtract(ref simplex.D, ref simplex.A, out var ad);
+            Vector3Wide.Subtract(ref simplex.C, ref simplex.B, out var bc);
+            Vector3Wide.Subtract(ref simplex.D, ref simplex.B, out var bd);
+            Vector3Wide.Subtract(ref simplex.D, ref simplex.C, out var cd);
+
+            //TODO: This does way more dot products than fundamentally required. It's just doing the most direct naive implementation. Could revisit.
+            //(stuff like ab * ab = ab * (b - a) = ab * b - ab * a, or reformulating bounds to be nonzero and rely on previously computed result, and so on.)
+
+            //Note that the test point is the origin, so the offset from a vertex to the test point is simply -vertex.
+            //A: 
+            //AB * A >= 0
+            //AC * A >= 0
+            //AD * A >= 0
+            Vector3Wide.Dot(ref ab, ref simplex.A, out var abA);
+            Vector3Wide.Dot(ref ac, ref simplex.A, out var acA);
+            Vector3Wide.Dot(ref ad, ref simplex.A, out var adA);
+            var aRequired = Vector.BitwiseAnd(
+                Vector.GreaterThanOrEqual(abA, Vector<float>.Zero),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(acA, Vector<float>.Zero),
+                    Vector.GreaterThanOrEqual(adA, Vector<float>.Zero)));
+            //B: 
+            //BA * B >= 0
+            //BC * B >= 0
+            //BD * B >= 0
+            Vector3Wide.Dot(ref ab, ref simplex.B, out var abB);
+            Vector3Wide.Dot(ref bc, ref simplex.B, out var bcB);
+            Vector3Wide.Dot(ref bd, ref simplex.B, out var bdB);
+            var bRequired = Vector.BitwiseAnd(
+                Vector.LessThanOrEqual(abB, Vector<float>.Zero), //Note negation.
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(bcB, Vector<float>.Zero),
+                    Vector.GreaterThanOrEqual(bdB, Vector<float>.Zero)));
+            //C: 
+            //CA * C >= 0
+            //CB * C >= 0
+            //CD * C >= 0
+            Vector3Wide.Dot(ref ac, ref simplex.C, out var acC);
+            Vector3Wide.Dot(ref bc, ref simplex.C, out var bcC);
+            Vector3Wide.Dot(ref cd, ref simplex.C, out var cdC);
+            var cRequired = Vector.BitwiseAnd(
+                Vector.LessThanOrEqual(acC, Vector<float>.Zero), //Note negation.
+                Vector.BitwiseAnd(
+                    Vector.LessThanOrEqual(bcC, Vector<float>.Zero),//Note negation.
+                    Vector.GreaterThanOrEqual(cdC, Vector<float>.Zero)));
+            //D: 
+            //DA * D >= 0
+            //DB * D >= 0
+            //DC * D >= 0
+            Vector3Wide.Dot(ref ad, ref simplex.D, out var adD);
+            Vector3Wide.Dot(ref bd, ref simplex.D, out var bdD);
+            Vector3Wide.Dot(ref cd, ref simplex.D, out var cdD);
+            var dRequired = Vector.BitwiseAnd(
+                Vector.LessThanOrEqual(adD, Vector<float>.Zero), //Note negation.
+                Vector.BitwiseAnd(
+                    Vector.LessThanOrEqual(bdD, Vector<float>.Zero), //Note negation.
+                    Vector.LessThanOrEqual(cdD, Vector<float>.Zero))); //Note negation.
+
+            //AB:
+            //AB * A <= 0
+            //BA * B <= 0
+            //(A * AB) * (AB * AC) - (A * AC) * (AB * AB) <= 0 (from (A x AB) * (AB x AC) <= 0)
+            //(A * AB) * (AB * AD) - (A * AD) * (AB * AB) <= 0 (from (A x AB) * (AB x AD) <= 0)
+            //Note that these expressions can be derived from a more naive 'calibrated' plane test:
+            //(-A * (AB x Nabc)) * (AC * (AB x Nabc)) <= 0
+            //((AB x A) * Nabc) * ((AC x AB) * Nabc) <= 0
+            //((AB x A) * (AB x AC) * ((AC x AB) * (AB x AC)) <= 0  //Note that the 'calibration' component is always negative because of how we defined Nabc.
+            //(AB x A) * (AB x AC) >= 0 //Note that (W x X) * (Y x Z) = (W * Y) * (X * Z) - (W * Z) * (X * Y)
+            //(AB * AB) * (A * AC) - (AB * AC) * (A * AB) >= 0
+            //Which is equivalent.
+            Vector3Wide.Dot(ref ab, ref ab, out var abab);
+            Vector3Wide.Dot(ref ab, ref ac, out var abac);
+            Vector3Wide.Dot(ref ab, ref ad, out var abad);
+            var abABCPlaneTest = abA * abac - acA * abab;
+            var abABDPlaneTest = abA * abad - adA * abab;
+            var abActive = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(abABCPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(abABDPlaneTest, Vector<float>.Zero)),
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(abA, Vector<float>.Zero), Vector.GreaterThanOrEqual(abB, Vector<float>.Zero)));
+            aRequired = Vector.BitwiseOr(aRequired, abActive);
+            bRequired = Vector.BitwiseOr(bRequired, abActive);
+
+            //AC:
+            //AC * A <= 0
+            //CA * C <= 0
+            //(A * AC) * (AC * AB) - (A * AB) * (AC * AC) <= 0 (from (A x AC) * (AC x AB) <= 0)
+            //(A * AC) * (AC * AD) - (A * AD) * (AC * AC) <= 0 (from (A x AC) * (AC x AD) <= 0)
+            Vector3Wide.Dot(ref ac, ref ad, out var acad);
+            Vector3Wide.Dot(ref ac, ref ac, out var acac);
+            var acABCPlaneTest = acA * abac - abA * acac;
+            var acACDPlaneTest = acA * acad - adA * acac;
+            var acActive = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(acABCPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(acACDPlaneTest, Vector<float>.Zero)),
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(acA, Vector<float>.Zero), Vector.GreaterThanOrEqual(acC, Vector<float>.Zero)));
+            aRequired = Vector.BitwiseOr(aRequired, acActive);
+            cRequired = Vector.BitwiseOr(cRequired, acActive);
+
+            //AD:
+            //AD * A <= 0
+            //DA * D <= 0
+            //(A * AD) * (AD * AB) - (A * AB) * (AD * AD) <= 0 (from (A x AD) * (AD x AB) <= 0)
+            //(A * AD) * (AD * AC) - (A * AC) * (AD * AD) <= 0 (from (A x AD) * (AD x AC) <= 0)
+            Vector3Wide.Dot(ref ad, ref ad, out var adad);
+            var adABDPlaneTest = adA * abad - abA * adad;
+            var adACDPlaneTest = adA * acad - acA * adad;
+            var adActive = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(adABDPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(adACDPlaneTest, Vector<float>.Zero)),
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(adA, Vector<float>.Zero), Vector.GreaterThanOrEqual(adD, Vector<float>.Zero)));
+            aRequired = Vector.BitwiseOr(aRequired, adActive);
+            dRequired = Vector.BitwiseOr(dRequired, adActive);
+
+            //BC:
+            //BC * B <= 0
+            //CB * C <= 0
+            //(B * BC) * (BC * BA) - (B * BA) * (BC * BC) <= 0 (from (B x BC) * (BC x BA) <= 0)
+            //(B * BC) * (BC * BD) - (B * BD) * (BC * BC) <= 0 (from (B x BC) * (BC x BD) <= 0)
+            Vector3Wide.Dot(ref ab, ref bc, out var abbc);
+            Vector3Wide.Dot(ref bc, ref bc, out var bcbc);
+            Vector3Wide.Dot(ref bc, ref bd, out var bcbd);
+            var bcABCPlaneTest = abB * bcbc - bcB * abbc;
+            var bcBCDPlaneTest = bcB * bcbd - bdB * bcbc;
+            var bcActive = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(bcABCPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(bcBCDPlaneTest, Vector<float>.Zero)),
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(bcB, Vector<float>.Zero), Vector.GreaterThanOrEqual(bcC, Vector<float>.Zero)));
+            bRequired = Vector.BitwiseOr(bRequired, bcActive);
+            cRequired = Vector.BitwiseOr(cRequired, bcActive);
+
+            //BD:
+            //BD * B <= 0
+            //DB * D <= 0
+            //(B * BD) * (BD * BA) - (B * BA) * (BD * BD) <= 0 (from (B x BD) * (BD x BA) <= 0)
+            //(B * BD) * (BD * BC) - (B * BC) * (BD * BD) <= 0 (from (B x BD) * (BD x BC) <= 0)
+            Vector3Wide.Dot(ref ab, ref bd, out var abbd);
+            Vector3Wide.Dot(ref bd, ref bd, out var bdbd);
+            var bdABDPlaneTest = abB * bdbd - bdB * abbd;
+            var bdBCDPlaneTest = bdB * bcbd - bcB * bdbd;
+            var bdActive = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(bdABDPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(bdBCDPlaneTest, Vector<float>.Zero)),
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(bdB, Vector<float>.Zero), Vector.GreaterThanOrEqual(bdD, Vector<float>.Zero)));
+            bRequired = Vector.BitwiseOr(bRequired, bdActive);
+            dRequired = Vector.BitwiseOr(dRequired, bdActive);
+
+            //CD:
+            //CD * C <= 0
+            //DC * D <= 0
+            //(C * CD) * (CD * CA) - (C * CA) * (CD * CD) <= 0 (from (C x CD) * (CD x CA) <= 0)
+            //(C * CD) * (CD * CB) - (C * CB) * (CD * CD) <= 0 (from (C x CD) * (CD x CB) <= 0)
+            Vector3Wide.Dot(ref cd, ref cd, out var cdcd);
+            Vector3Wide.Dot(ref ac, ref cd, out var accd);
+            Vector3Wide.Dot(ref bc, ref cd, out var bccd);
+            var cdACDPlaneTest = acC * cdcd - cdC * accd;
+            var cdBCDPlaneTest = bcC * cdcd - cdC * bccd;
+            var cdActive = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(cdACDPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(cdBCDPlaneTest, Vector<float>.Zero)),
+                Vector.BitwiseAnd(Vector.LessThanOrEqual(cdC, Vector<float>.Zero), Vector.GreaterThanOrEqual(cdD, Vector<float>.Zero)));
+            cRequired = Vector.BitwiseOr(cRequired, cdActive);
+            dRequired = Vector.BitwiseOr(dRequired, cdActive);
+
+            //ABC:
+            //Inside abABC, acABC, and bcABC planes.
+            //(-A * (AB x AC) * (AB * (AB x AC))
+            var abcActive = Vector.BitwiseAnd(
+                Vector.GreaterThan(abABCPlaneTest, Vector<float>.Zero),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThan(abABCPlaneTest, Vector<float>.Zero), 
+                    Vector.GreaterThan(abABCPlaneTest, Vector<float>.Zero)));
+            aRequired = Vector.BitwiseOr(abcActive, aRequired);
+            bRequired = Vector.BitwiseOr(abcActive, bRequired);
+            cRequired = Vector.BitwiseOr(abcActive, cRequired);
+
+            //BCD:
+            //Inside bcBCD, bdBCD, and cdBCD planes.
+            var bcdActive = Vector.BitwiseAnd(
+                Vector.GreaterThan(bcBCDPlaneTest, Vector<float>.Zero),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThan(bdBCDPlaneTest, Vector<float>.Zero),
+                    Vector.GreaterThan(cdBCDPlaneTest, Vector<float>.Zero)));
+            bRequired = Vector.BitwiseOr(bcdActive, bRequired);
+            cRequired = Vector.BitwiseOr(bcdActive, cRequired);
+            dRequired = Vector.BitwiseOr(bcdActive, dRequired);
+
+            //ACD:
+            //Inside acACD, adACD, and cdACD planes.
+            var acdActive = Vector.BitwiseAnd(
+                Vector.GreaterThan(acACDPlaneTest, Vector<float>.Zero),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThan(adACDPlaneTest, Vector<float>.Zero),
+                    Vector.GreaterThan(cdACDPlaneTest, Vector<float>.Zero)));
+            aRequired = Vector.BitwiseOr(acdActive, aRequired);
+            cRequired = Vector.BitwiseOr(acdActive, cRequired);
+            dRequired = Vector.BitwiseOr(acdActive, dRequired);
+
+            //ABD:
+            //Inside abABD, adABD, and bdABD planes.
+            var abdActive = Vector.BitwiseAnd(
+                Vector.GreaterThan(abABDPlaneTest, Vector<float>.Zero),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThan(adABDPlaneTest, Vector<float>.Zero),
+                    Vector.GreaterThan(bdABDPlaneTest, Vector<float>.Zero)));
+            aRequired = Vector.BitwiseOr(abdActive, aRequired);
+            bRequired = Vector.BitwiseOr(abdActive, bRequired);
+            dRequired = Vector.BitwiseOr(abdActive, dRequired);
+
+            //Note that all the face regions did not bother testing the actual face plane. They each accept 
+
+            //For triangle barycentric coordinates, we can make use of the edge-face plane tests we computed earlier.
+            //The barycentric weight of vertex C on triangle ABC for the origin is:
+            //(A x AB) * (AB x AC) / ((AB x AC) * (AB x AC))
+            //Once again applying an identity, this transforms to:
+            //(A x AB) * (AB x AC) / ((AB * AB) * (AC * AC) - (AB * AC) * (AC * AB))
+            //Which, once again, shares a bunch of ALU work we already did.
         }
 
         public void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
@@ -83,7 +306,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var supportFinderB = default(TSupportFinderB);
             Simplex simplex;
             //TODO: It would be pretty easy to initialize to a triangle or tetrahedron. Might be worth it.
-            SampleMinkowskiDifference(ref a, ref rA, ref supportFinderA, ref b, ref rB, ref supportFinderB, ref offsetB, ref offsetB, out simplex.V0A, out simplex.V0);
+            SampleMinkowskiDifference(ref a, ref rA, ref supportFinderA, ref b, ref rB, ref supportFinderB, ref offsetB, ref offsetB, out simplex.AOnA, out simplex.A);
             simplex.Count = new Vector<int>(1);
 
             //GJK is a pretty branchy algorithm that doesn't map perfectly to widely vectorized implementations. We'll be using an SPMD model- if any SIMD lane needs to continue 
