@@ -6,7 +6,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using Quaternion = BepuUtilities.Quaternion;
 
-namespace BepuPhysics.CollisionDetection.CollisionTasks
+namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public interface IPairDistanceTester<TShapeWideA, TShapeWideB>
     {

@@ -2,7 +2,7 @@
 using BepuUtilities;
 using System.Numerics;
 
-namespace BepuPhysics.CollisionDetection.CollisionTasks
+namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public struct CapsulePairDistanceTester : IPairDistanceTester<CapsuleWide, CapsuleWide>
     {

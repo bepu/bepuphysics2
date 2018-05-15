@@ -1,11 +1,7 @@
 ﻿using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuUtilities;
-using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {

@@ -4,7 +4,7 @@ using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace BepuPhysics.CollisionDetection.CollisionTasks
+namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public struct BoxPairDistanceTester : IPairDistanceTester<BoxWide, BoxWide>
     {

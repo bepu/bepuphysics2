@@ -1,9 +1,10 @@
 ﻿using BepuPhysics.Collidables;
+using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuUtilities;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace BepuPhysics.CollisionDetection.CollisionTasks
+namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public struct CapsuleBoxDistanceTester : IPairDistanceTester<CapsuleWide, BoxWide>
     {

@@ -2,6 +2,7 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.CollisionDetection.CollisionTasks;
+using BepuPhysics.CollisionDetection.SweepTasks;
 using BepuUtilities;
 using BepuUtilities.Memory;
 using DemoRenderer;
