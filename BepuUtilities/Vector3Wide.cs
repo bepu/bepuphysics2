@@ -217,7 +217,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ConditionalSelect(ref Vector<int> condition, ref Vector3Wide left, ref Vector3Wide right, out Vector3Wide result)
+        public static void ConditionalSelect(in Vector<int> condition, in Vector3Wide left, in Vector3Wide right, out Vector3Wide result)
         {
             result.X = Vector.ConditionalSelect(condition, left.X, right.X);
             result.Y = Vector.ConditionalSelect(condition, left.Y, right.Y);

@@ -21,9 +21,9 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.Negate(ref Normal, out var flippedNormal);
             Vector3Wide.Subtract(ref OffsetA, ref offsetB, out var flippedContactPosition);
             Vector3Wide.Negate(ref offsetB, out var flippedOffsetB);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedNormal, ref Normal, out Normal);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedContactPosition, ref OffsetA, out OffsetA);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedOffsetB, ref offsetB, out offsetB);
+            Vector3Wide.ConditionalSelect(flipMask, flippedNormal, Normal, out Normal);
+            Vector3Wide.ConditionalSelect(flipMask, flippedContactPosition, OffsetA, out OffsetA);
+            Vector3Wide.ConditionalSelect(flipMask, flippedOffsetB, offsetB, out offsetB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -72,10 +72,10 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.Subtract(ref OffsetA0, ref offsetB, out var flippedA0);
             Vector3Wide.Subtract(ref OffsetA1, ref offsetB, out var flippedA1);
             Vector3Wide.Negate(ref offsetB, out var flippedOffsetB);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedNormal, ref Normal, out Normal);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedA0, ref OffsetA0, out OffsetA0);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedA1, ref OffsetA1, out OffsetA1);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedOffsetB, ref offsetB, out offsetB);
+            Vector3Wide.ConditionalSelect(flipMask, flippedNormal, Normal, out Normal);
+            Vector3Wide.ConditionalSelect(flipMask, flippedA0, OffsetA0, out OffsetA0);
+            Vector3Wide.ConditionalSelect(flipMask, flippedA1, OffsetA1, out OffsetA1);
+            Vector3Wide.ConditionalSelect(flipMask, flippedOffsetB, offsetB, out offsetB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -142,14 +142,14 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.Subtract(ref OffsetA2, ref offsetB, out var flippedA2);
             Vector3Wide.Subtract(ref OffsetA3, ref offsetB, out var flippedA3);
             Vector3Wide.Negate(ref offsetB, out var flippedOffsetB);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedNormal, ref Normal, out Normal);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedA0, ref OffsetA0, out OffsetA0);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedA1, ref OffsetA1, out OffsetA1);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedA2, ref OffsetA2, out OffsetA2);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedA3, ref OffsetA3, out OffsetA3);
-            Vector3Wide.ConditionalSelect(ref flipMask, ref flippedOffsetB, ref offsetB, out offsetB);
+            Vector3Wide.ConditionalSelect(flipMask, flippedNormal, Normal, out Normal);
+            Vector3Wide.ConditionalSelect(flipMask, flippedA0, OffsetA0, out OffsetA0);
+            Vector3Wide.ConditionalSelect(flipMask, flippedA1, OffsetA1, out OffsetA1);
+            Vector3Wide.ConditionalSelect(flipMask, flippedA2, OffsetA2, out OffsetA2);
+            Vector3Wide.ConditionalSelect(flipMask, flippedA3, OffsetA3, out OffsetA3);
+            Vector3Wide.ConditionalSelect(flipMask, flippedOffsetB, offsetB, out offsetB);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Scatter(ref Vector3Wide offsetB, ref ConvexContactManifold target)
         {
@@ -163,7 +163,7 @@ namespace BepuPhysics.CollisionDetection
                 target.Contact0.Depth = Depth0[0];
                 target.Contact0.FeatureId = FeatureId0[0];
             }
-            if(Contact1Exists[0] < 0)
+            if (Contact1Exists[0] < 0)
             {
                 ref var contact = ref Unsafe.Add(ref target.Contact0, target.Count++);
                 contact.Offset.X = OffsetA1.X[0];
@@ -189,7 +189,7 @@ namespace BepuPhysics.CollisionDetection
                 contact.Offset.Z = OffsetA3.Z[0];
                 contact.Depth = Depth3[0];
                 contact.FeatureId = FeatureId3[0];
-            }           
+            }
             if (target.Count > 0)
             {
                 target.OffsetB.X = offsetB.X[0];

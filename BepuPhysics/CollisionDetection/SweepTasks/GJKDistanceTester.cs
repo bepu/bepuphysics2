@@ -69,302 +69,257 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             }
         }
 
-        void FindClosestPoint(ref Simplex simplex, out Vector3Wide closestA, out Vector3Wide closest)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void Select(ref Vector<int> mask,
+            ref Vector<float> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId,
+            in Vector<float> distanceSquaredCandidate, in Vector3Wide closestCandidate, in Vector3Wide closestACandidate, in Vector<int> featureIdCandidate)
         {
+            var useCandidate = Vector.BitwiseAnd(mask, Vector.LessThan(distanceSquaredCandidate, distanceSquared));
+            distanceSquared = Vector.Min(distanceSquared, distanceSquaredCandidate);
+            Vector3Wide.ConditionalSelect(useCandidate, closestCandidate, closest, out closest);
+            Vector3Wide.ConditionalSelect(useCandidate, closestACandidate, closestA, out closestA);
+            featureId = Vector.ConditionalSelect(useCandidate, featureIdCandidate, featureId);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void Edge(ref Vector3Wide a, ref Vector3Wide b, out Vector3Wide ab, out Vector<float> abab, out Vector<float> abA, in Vector<int> aFeatureId, in Vector<int> bFeatureId,
+            ref Vector<int> mask, ref Vector<float> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId)
+        {
+            Vector3Wide.Subtract(ref b, ref a, out ab);
+            Vector3Wide.Dot(ref ab, ref ab, out abab);
+            Vector3Wide.Dot(ref ab, ref a, out abA);
+            //Note that vertex B (and technically A, too) is handled by clamping the edge. No need to handle the vertices by themselves (apart from the base case).
+            var abT = -abA / abab;
+            var aFeatureContribution = Vector.ConditionalSelect(Vector.LessThan(abT, Vector<float>.One), aFeatureId, Vector<int>.Zero);
+            var bFeatureContribution = Vector.ConditionalSelect(Vector.GreaterThan(abT, Vector<float>.Zero), bFeatureId, Vector<int>.Zero);
+            var featureIdCandidate = Vector.BitwiseOr(aFeatureContribution, bFeatureContribution);
+
+            abT = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, abT));
+            Vector3Wide.Scale(ref ab, ref abT, out var closestOnAB);
+            Vector3Wide.Add(ref closestOnAB, ref a, out closestOnAB);
+            Vector3Wide.Scale(ref ab, ref abT, out var closestOnABOnA);
+            Vector3Wide.Add(ref closestOnAB, ref a, out closestOnABOnA);
+            Vector3Wide.LengthSquared(ref closestOnAB, out var distanceSquaredCandidate);
+            Select(ref mask,
+                ref distanceSquared, ref closest, ref closestA, ref featureId,
+                distanceSquaredCandidate, closestOnAB, closestOnABOnA, featureIdCandidate);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TryRemove(ref Simplex simplex, int index, in Vector<int> shouldRemove, in Vector<int> mask)
+        {
+            var masked = Vector.BitwiseAnd(shouldRemove, mask);
+            var lastSlot = simplex.Count - Vector<int>.One;
+            simplex.Count = Vector.ConditionalSelect(masked, lastSlot, simplex.Count);
+            var shouldPullLastSlot = Vector.BitwiseAnd(masked, Vector.LessThan(new Vector<int>(index), lastSlot));
+            if (Vector.EqualsAny(shouldPullLastSlot, new Vector<int>(-1)))
+            {
+                ref var target = ref Unsafe.Add(ref simplex.A, index);
+                ref var targetX = ref GatherScatter.GetFirst(ref target.X);
+                ref var targetY = ref GatherScatter.GetFirst(ref target.Y);
+                ref var targetZ = ref GatherScatter.GetFirst(ref target.Z);
+                ref var targetOnA = ref Unsafe.Add(ref simplex.AOnA, index);
+                ref var targetOnAX = ref GatherScatter.GetFirst(ref targetOnA.X);
+                ref var targetOnAY = ref GatherScatter.GetFirst(ref targetOnA.Y);
+                ref var targetOnAZ = ref GatherScatter.GetFirst(ref targetOnA.Z);
+                for (int i = 0; i < Vector<int>.Count; ++i)
+                {
+                    if (shouldPullLastSlot[i] < 0)
+                    {
+                        ref var source = ref Unsafe.Add(ref simplex.A, lastSlot[i]);
+                        Unsafe.Add(ref targetX, i) = source.X[i];
+                        Unsafe.Add(ref targetY, i) = source.Y[i];
+                        Unsafe.Add(ref targetZ, i) = source.Z[i];
+                        ref var sourceOnA = ref Unsafe.Add(ref simplex.AOnA, lastSlot[i]);
+                        Unsafe.Add(ref targetOnAX, i) = sourceOnA.X[i];
+                        Unsafe.Add(ref targetOnAY, i) = sourceOnA.Y[i];
+                        Unsafe.Add(ref targetOnAZ, i) = sourceOnA.Z[i];
+                    }
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void Triangle(
+            ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide c,
+            ref Vector3Wide aOnA, ref Vector3Wide bOnA, ref Vector3Wide cOnA,
+            ref Vector<float> abA, ref Vector<float> acA,
+            ref Vector3Wide ab, ref Vector3Wide ac, ref Vector3Wide bc,
+            ref Vector<float> abab, ref Vector<float> acac,
+            in Vector<int> featureIdCandidate,
+            ref Vector<int> mask, ref Vector<float> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId)
+        {
+            //Triangle distances are only accepted if the projected point is actually within the triangle. Note that this allows distances to be computed
+            //for test point which is on the 'wrong' side of the plane in the tetrahedral case. That's fine, because the point is either inside 
+            //(distance == 0, will be caught later in the tetrahedral case) or it's closer to a feature on the other side of the tetrahedron.
+            //We have to test the three edge planes:
+            //(A * AB) * (AB * AC) - (A * AC) * (AB * AB) >= 0  (from (A x AB) * (AB x AC) >= 0)
+            //(A * AB) * (AC * AC) - (A * AC) * (AC * AB) >= 0  (from (A x AC) * (AB x AC) >= 0)
+            //(A * AB) * (BC * AC) - (A * AC) * (BC * AB) >= 0  (from (A x BC) * (AB x AC) >= 0)
+
+            //Further, we want to compute barycentric coordinates which require a scaling factor.
+            //The barycentric weight of vertex C on triangle ABC for the origin is:
+            //(A x AB) * (AB x AC) / ((AB x AC) * (AB x AC))
+            //Expanding with identities, this transforms to:
+            //((A * AB) * (AB * AC) - (A * AC) * (AB * AB)) / ((AB * AB) * (AC * AC) - (AB * AC) * (AC * AB))
+            Vector3Wide.Dot(ref ab, ref ac, out var abac);
+            Vector3Wide.Dot(ref ac, ref bc, out var acbc);
+            Vector3Wide.Dot(ref ab, ref bc, out var abbc);
+            var abcDenom = Vector<float>.One / (abab * acac - abac * abac);
+            var aWeight = (abA * acbc - acA * abbc) * abcDenom;
+            var bWeight = (abA * acac - acA * abac) * abcDenom;
+            var cWeight = Vector<float>.One - aWeight - bWeight;
+            var projectionInTriangle = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(aWeight, Vector<float>.Zero),
+                    Vector.GreaterThanOrEqual(bWeight, Vector<float>.Zero)),
+                Vector.GreaterThanOrEqual(cWeight, Vector<float>.Zero));
+            Vector3Wide.Scale(ref a, ref aWeight, out var aContribution);
+            Vector3Wide.Scale(ref b, ref bWeight, out var bContribution);
+            Vector3Wide.Scale(ref c, ref cWeight, out var cContribution);
+            Vector3Wide.Scale(ref aOnA, ref aWeight, out var aOnAContribution);
+            Vector3Wide.Scale(ref bOnA, ref bWeight, out var bOnAContribution);
+            Vector3Wide.Scale(ref cOnA, ref cWeight, out var cOnAContribution);
+            Vector3Wide.Add(ref aContribution, ref bContribution, out var closestCandidate);
+            Vector3Wide.Add(ref cContribution, ref closestCandidate, out closestCandidate);
+            Vector3Wide.Add(ref aOnAContribution, ref bOnAContribution, out var closestACandidate);
+            Vector3Wide.Add(ref cOnAContribution, ref closestACandidate, out closestACandidate);
+            Vector3Wide.LengthSquared(ref closestCandidate, out var distanceSquaredCandidate);
+            var combinedMask = Vector.BitwiseAnd(mask, projectionInTriangle);
+            Select(ref combinedMask,
+                ref distanceSquared, ref closest, ref closestA, ref featureId,
+                distanceSquaredCandidate, closestCandidate, closestACandidate, featureIdCandidate);
+        }
+
+        void FindClosestPoint(ref Vector<int> outerLoopMask, ref Simplex simplex, out Vector3Wide closestA, out Vector3Wide closest)
+        {
+            //The outer loop mask considers 0 to be executing, -1 to be terminated.
+            var mask = Vector.OnesComplement(outerLoopMask);
             //This function's job is to identify the simplex feature closest to the origin, and to compute the closest point on it.
             //While there are quite a few possible approaches here (direct solvers, enumerating feature distances, voronoi region testing), 
             //it's useful to keep in mind two details:
             //1) At the end of the function, the simplex should no longer contain any vertex which does not contribute to the closest point linear combination.
             //2) This is widely vectorized, so branching and divergence hurts even more than usual.
 
-            //One option that fits reasonably well to both of these is to walk the simplex cases from tetrahedron down to point.
-            //At each simplex case, every vertex is tested for its ability to contribute to the final closest point linear combination.
-            //For example, in a tetrahedron ABCD tested against point P, D is only relevant if P is in a region connected to D (ABCD, ABD, BCD, ACD, AD, BD, CD, or D).
-            //So, test P against every voronoi region.
+            //One option that fits reasonably well to both of these is to walk the simplex features up from point to tetrahedron, tracking distance and contributing vertices
+            //as you go. Since every smaller feature is required by the next step up, there are no wasted calculations, and you can early out
+            //if all SIMD lanes are below a given simplex size.
 
-            //TETRAHEDRON
-            Vector3Wide.Subtract(ref simplex.B, ref simplex.A, out var ab);
-            Vector3Wide.Subtract(ref simplex.C, ref simplex.A, out var ac);
-            Vector3Wide.Subtract(ref simplex.D, ref simplex.A, out var ad);
-            Vector3Wide.Subtract(ref simplex.C, ref simplex.B, out var bc);
-            Vector3Wide.Subtract(ref simplex.D, ref simplex.B, out var bd);
-            Vector3Wide.Subtract(ref simplex.D, ref simplex.C, out var cd);
+            //Vertex A:
+            //Note that simplex sizes are always at least 1.
+            Vector3Wide.LengthSquared(ref simplex.A, out var distanceSquared);
+            //Contributing vertices are tracked using a bitfield. A:1, B:2, C:4, D:8.
+            Vector<int> featureId = new Vector<int>(1);
+            //For simplicity, we'll compute the closestA at each point and cache it if it is optimal.
+            closest = simplex.A;
+            closestA = simplex.AOnA;
 
-            //TODO: This does way more dot products than fundamentally required. It's just doing the most direct naive implementation. Could revisit.
-            //(stuff like ab * ab = ab * (b - a) = ab * b - ab * a, or reformulating bounds to be nonzero and rely on previously computed result, and so on.)
 
-            //Note that the test point is the origin, so the offset from a vertex to the test point is simply -vertex.
-            //A: 
-            //AB * A >= 0
-            //AC * A >= 0
-            //AD * A >= 0
-            Vector3Wide.Dot(ref ab, ref simplex.A, out var abA);
-            Vector3Wide.Dot(ref ac, ref simplex.A, out var acA);
-            Vector3Wide.Dot(ref ad, ref simplex.A, out var adA);
-            var aRequired = Vector.BitwiseAnd(
-                Vector.GreaterThanOrEqual(abA, Vector<float>.Zero),
-                Vector.BitwiseAnd(
-                    Vector.GreaterThanOrEqual(acA, Vector<float>.Zero),
-                    Vector.GreaterThanOrEqual(adA, Vector<float>.Zero)));
-            //B: 
-            //BA * B >= 0
-            //BC * B >= 0
-            //BD * B >= 0
-            Vector3Wide.Dot(ref ab, ref simplex.B, out var abB);
-            Vector3Wide.Dot(ref bc, ref simplex.B, out var bcB);
-            Vector3Wide.Dot(ref bd, ref simplex.B, out var bdB);
-            var bRequired = Vector.BitwiseAnd(
-                Vector.LessThanOrEqual(abB, Vector<float>.Zero), //Note negation.
-                Vector.BitwiseAnd(
-                    Vector.GreaterThanOrEqual(bcB, Vector<float>.Zero),
-                    Vector.GreaterThanOrEqual(bdB, Vector<float>.Zero)));
-            //C: 
-            //CA * C >= 0
-            //CB * C >= 0
-            //CD * C >= 0
-            Vector3Wide.Dot(ref ac, ref simplex.C, out var acC);
-            Vector3Wide.Dot(ref bc, ref simplex.C, out var bcC);
-            Vector3Wide.Dot(ref cd, ref simplex.C, out var cdC);
-            var cRequired = Vector.BitwiseAnd(
-                Vector.LessThanOrEqual(acC, Vector<float>.Zero), //Note negation.
-                Vector.BitwiseAnd(
-                    Vector.LessThanOrEqual(bcC, Vector<float>.Zero),//Note negation.
-                    Vector.GreaterThanOrEqual(cdC, Vector<float>.Zero)));
-            //D: 
-            //DA * D >= 0
-            //DB * D >= 0
-            //DC * D >= 0
-            Vector3Wide.Dot(ref ad, ref simplex.D, out var adD);
-            Vector3Wide.Dot(ref bd, ref simplex.D, out var bdD);
-            Vector3Wide.Dot(ref cd, ref simplex.D, out var cdD);
-            var dRequired = Vector.BitwiseAnd(
-                Vector.LessThanOrEqual(adD, Vector<float>.Zero), //Note negation.
-                Vector.BitwiseAnd(
-                    Vector.LessThanOrEqual(bdD, Vector<float>.Zero), //Note negation.
-                    Vector.LessThanOrEqual(cdD, Vector<float>.Zero))); //Note negation.
+            mask = Vector.BitwiseAnd(mask, Vector.GreaterThanOrEqual(simplex.Count, new Vector<int>(2)));
+            if (Vector.EqualsAll(mask, Vector<int>.Zero))
+            {
+                //No possible reduction; simplices have at least one vertex.
+                return;
+            }
 
-            //AB:
-            //AB * A <= 0
-            //BA * B <= 0
-            //(A * AB) * (AB * AC) - (A * AC) * (AB * AB) <= 0 (from (A x AB) * (AB x AC) <= 0)
-            //(A * AB) * (AB * AD) - (A * AD) * (AB * AB) <= 0 (from (A x AB) * (AB x AD) <= 0)
-            //Note that these expressions can be derived from a more naive 'calibrated' plane test:
-            //(-A * (AB x Nabc)) * (AC * (AB x Nabc)) <= 0
-            //((AB x A) * Nabc) * ((AC x AB) * Nabc) <= 0
-            //((AB x A) * (AB x AC) * ((AC x AB) * (AB x AC)) <= 0  //Note that the 'calibration' component is always negative because of how we defined Nabc.
-            //(AB x A) * (AB x AC) >= 0 //Note that (W x X) * (Y x Z) = (W * Y) * (X * Z) - (W * Z) * (X * Y)
-            //(AB * AB) * (A * AC) - (AB * AC) * (A * AB) >= 0
-            //Which is equivalent.
-            Vector3Wide.Dot(ref ab, ref ab, out var abab);
-            Vector3Wide.Dot(ref ab, ref ac, out var abac);
-            Vector3Wide.Dot(ref ab, ref ad, out var abad);
-            var abABCPlaneTest = abA * abac - acA * abab;
-            var abABDPlaneTest = abA * abad - adA * abab;
-            var abActive = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(abABCPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(abABDPlaneTest, Vector<float>.Zero)),
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(abA, Vector<float>.Zero), Vector.GreaterThanOrEqual(abB, Vector<float>.Zero)));
-            aRequired = Vector.BitwiseOr(aRequired, abActive);
-            bRequired = Vector.BitwiseOr(bRequired, abActive);
+            //Edge AB:
+            Edge(ref simplex.A, ref simplex.B, out var ab, out var abab, out var abA, new Vector<int>(1), new Vector<int>(2),
+                ref mask, ref distanceSquared, ref closest, ref closestA, ref featureId);
 
-            //AC:
-            //AC * A <= 0
-            //CA * C <= 0
-            //(A * AC) * (AC * AB) - (A * AB) * (AC * AC) <= 0 (from (A x AC) * (AC x AB) <= 0)
-            //(A * AC) * (AC * AD) - (A * AD) * (AC * AC) <= 0 (from (A x AC) * (AC x AD) <= 0)
-            Vector3Wide.Dot(ref ac, ref ad, out var acad);
-            Vector3Wide.Dot(ref ac, ref ac, out var acac);
-            var acABCPlaneTest = acA * abac - abA * acac;
-            var acACDPlaneTest = acA * acad - adA * acac;
-            var acActive = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(acABCPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(acACDPlaneTest, Vector<float>.Zero)),
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(acA, Vector<float>.Zero), Vector.GreaterThanOrEqual(acC, Vector<float>.Zero)));
-            aRequired = Vector.BitwiseOr(aRequired, acActive);
-            cRequired = Vector.BitwiseOr(cRequired, acActive);
 
-            //AD:
-            //AD * A <= 0
-            //DA * D <= 0
-            //(A * AD) * (AD * AB) - (A * AB) * (AD * AD) <= 0 (from (A x AD) * (AD x AB) <= 0)
-            //(A * AD) * (AD * AC) - (A * AC) * (AD * AD) <= 0 (from (A x AD) * (AD x AC) <= 0)
-            Vector3Wide.Dot(ref ad, ref ad, out var adad);
-            var adABDPlaneTest = adA * abad - abA * adad;
-            var adACDPlaneTest = adA * acad - acA * adad;
-            var adActive = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(adABDPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(adACDPlaneTest, Vector<float>.Zero)),
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(adA, Vector<float>.Zero), Vector.GreaterThanOrEqual(adD, Vector<float>.Zero)));
-            aRequired = Vector.BitwiseOr(aRequired, adActive);
-            dRequired = Vector.BitwiseOr(dRequired, adActive);
-            
-            //BC:
-            //BC * B <= 0
-            //CB * C <= 0
-            //(B * BC) * (BC * BA) - (B * BA) * (BC * BC) <= 0 (from (B x BC) * (BC x BA) <= 0)
-            //(B * BC) * (BC * BD) - (B * BD) * (BC * BC) <= 0 (from (B x BC) * (BC x BD) <= 0)
-            Vector3Wide.Dot(ref ab, ref bc, out var abbc);
-            Vector3Wide.Dot(ref bc, ref bc, out var bcbc);
-            Vector3Wide.Dot(ref bc, ref bd, out var bcbd);
-            var bcABCPlaneTest = abB * bcbc - bcB * abbc;
-            var bcBCDPlaneTest = bcB * bcbd - bdB * bcbc;
-            var bcActive = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(bcABCPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(bcBCDPlaneTest, Vector<float>.Zero)),
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(bcB, Vector<float>.Zero), Vector.GreaterThanOrEqual(bcC, Vector<float>.Zero)));
-            bRequired = Vector.BitwiseOr(bRequired, bcActive);
-            cRequired = Vector.BitwiseOr(cRequired, bcActive);
+            mask = Vector.BitwiseAnd(mask, Vector.GreaterThanOrEqual(simplex.Count, new Vector<int>(3)));
+            if (Vector.EqualsAll(mask, Vector<int>.Zero))
+            {
+                TryRemove(ref simplex, 1, Vector.AndNot(featureId, new Vector<int>(2)), mask);
+                TryRemove(ref simplex, 0, Vector.AndNot(featureId, new Vector<int>(1)), mask);
+                return;
+            }
 
-            //BD:
-            //BD * B <= 0
-            //DB * D <= 0
-            //(B * BD) * (BD * BA) - (B * BA) * (BD * BD) <= 0 (from (B x BD) * (BD x BA) <= 0)
-            //(B * BD) * (BD * BC) - (B * BC) * (BD * BD) <= 0 (from (B x BD) * (BD x BC) <= 0)
-            Vector3Wide.Dot(ref ab, ref bd, out var abbd);
-            Vector3Wide.Dot(ref bd, ref bd, out var bdbd);
-            var bdABDPlaneTest = abB * bdbd - bdB * abbd;
-            var bdBCDPlaneTest = bdB * bcbd - bcB * bdbd;
-            var bdActive = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(bdABDPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(bdBCDPlaneTest, Vector<float>.Zero)),
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(bdB, Vector<float>.Zero), Vector.GreaterThanOrEqual(bdD, Vector<float>.Zero)));
-            bRequired = Vector.BitwiseOr(bRequired, bdActive);
-            dRequired = Vector.BitwiseOr(dRequired, bdActive);
+            //Edge AC, BC:
+            Edge(ref simplex.A, ref simplex.C, out var ac, out var acac, out var acA, new Vector<int>(1), new Vector<int>(4),
+                ref mask, ref distanceSquared, ref closest, ref closestA, ref featureId);
+            Edge(ref simplex.B, ref simplex.C, out var bc, out var bcbc, out var bcB, new Vector<int>(2), new Vector<int>(4),
+                ref mask, ref distanceSquared, ref closest, ref closestA, ref featureId);
 
-            //CD:
-            //CD * C <= 0
-            //DC * D <= 0
-            //(C * CD) * (CD * CA) - (C * CA) * (CD * CD) <= 0 (from (C x CD) * (CD x CA) <= 0)
-            //(C * CD) * (CD * CB) - (C * CB) * (CD * CD) <= 0 (from (C x CD) * (CD x CB) <= 0)
-            Vector3Wide.Dot(ref cd, ref cd, out var cdcd);
-            Vector3Wide.Dot(ref ac, ref cd, out var accd);
-            Vector3Wide.Dot(ref bc, ref cd, out var bccd);
-            var cdACDPlaneTest = acC * cdcd - cdC * accd;
-            var cdBCDPlaneTest = bcC * cdcd - cdC * bccd;
-            var cdActive = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(cdACDPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(cdBCDPlaneTest, Vector<float>.Zero)),
-                Vector.BitwiseAnd(Vector.LessThanOrEqual(cdC, Vector<float>.Zero), Vector.GreaterThanOrEqual(cdD, Vector<float>.Zero)));
-            cRequired = Vector.BitwiseOr(cRequired, cdActive);
-            dRequired = Vector.BitwiseOr(dRequired, cdActive);
+            //Triangle ABC:
+            Triangle(
+                ref simplex.A, ref simplex.B, ref simplex.C,
+                ref simplex.AOnA, ref simplex.BOnA, ref simplex.COnA,
+                ref abA, ref acA, ref ab, ref ac, ref bc, ref abab, ref acac, new Vector<int>(1 | 2 | 4),
+                ref mask, ref distanceSquared, ref closest, ref closestA, ref featureId);
 
-            //Note that face tests are forced to use calibration due to the lack of consistent winding in the simplex. This could be improved,
-            //but beware of adding overhead to guarantee winding- moving things around in slots introduces a lot of scalar work.
-            //ABC:
-            //Inside abABC, acABC, and bcABC planes.
-            //(A * (AB x AC) * (AD * (AB x AC)) >= 0
-            Vector3Wide.CrossWithoutOverlap(ref ab, ref ac, out var nabc);
-            Vector3Wide.Dot(ref simplex.A, ref nabc, out var anabc);
-            Vector3Wide.Dot(ref ad, ref nabc, out var adnabc);
-            var outsideABC = Vector.GreaterThanOrEqual(anabc * adnabc, Vector<float>.Zero);
-            var abcActive = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(
-                    outsideABC,
-                    Vector.GreaterThanOrEqual(abABCPlaneTest, Vector<float>.Zero)),
-                Vector.BitwiseAnd(
-                    Vector.GreaterThanOrEqual(acABCPlaneTest, Vector<float>.Zero),
-                    Vector.GreaterThanOrEqual(bcABCPlaneTest, Vector<float>.Zero)));
-            aRequired = Vector.BitwiseOr(abcActive, aRequired);
-            bRequired = Vector.BitwiseOr(abcActive, bRequired);
-            cRequired = Vector.BitwiseOr(abcActive, cRequired);
+            mask = Vector.BitwiseAnd(mask, Vector.GreaterThanOrEqual(simplex.Count, new Vector<int>(4)));
+            if (Vector.EqualsAll(mask, Vector<int>.Zero))
+            {
+                TryRemove(ref simplex, 2, Vector.AndNot(featureId, new Vector<int>(4)), mask);
+                TryRemove(ref simplex, 1, Vector.AndNot(featureId, new Vector<int>(2)), mask);
+                TryRemove(ref simplex, 0, Vector.AndNot(featureId, new Vector<int>(1)), mask);
+                return;
+            }
 
-            //BCD:
-            //Inside bcBCD, bdBCD, and cdBCD planes.     
-            //(B * (BC x BD) * (BA * (BC x BD)) >= 0
-            Vector3Wide.CrossWithoutOverlap(ref bc, ref bd, out var nbcd);
-            Vector3Wide.Dot(ref simplex.B, ref nbcd, out var bnbcd);
-            Vector3Wide.Dot(ref ab, ref nbcd, out var abnbcd);
-            var outsideBCD = Vector.LessThanOrEqual(bnbcd * abnbcd, Vector<float>.Zero);
-            var bcdActive = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(
-                    outsideBCD,
-                    Vector.GreaterThanOrEqual(bcBCDPlaneTest, Vector<float>.Zero)),
-                Vector.BitwiseAnd(
-                    Vector.GreaterThanOrEqual(bdBCDPlaneTest, Vector<float>.Zero),
-                    Vector.GreaterThanOrEqual(cdBCDPlaneTest, Vector<float>.Zero)));
-            bRequired = Vector.BitwiseOr(bcdActive, bRequired);
-            cRequired = Vector.BitwiseOr(bcdActive, cRequired);
-            dRequired = Vector.BitwiseOr(bcdActive, dRequired);
+            //Edges AD, BD, CD:
+            Edge(ref simplex.A, ref simplex.D, out var ad, out var adad, out var adA, new Vector<int>(1), new Vector<int>(8),
+                ref mask, ref distanceSquared, ref closest, ref closestA, ref featureId);
+            Edge(ref simplex.B, ref simplex.D, out var bd, out var bdbd, out var bdB, new Vector<int>(2), new Vector<int>(8),
+                ref mask, ref distanceSquared, ref closest, ref closestA, ref featureId);
+            Edge(ref simplex.C, ref simplex.D, out var cd, out var cdcd, out var cdC, new Vector<int>(4), new Vector<int>(8),
+                ref mask, ref distanceSquared, ref closest, ref closestA, ref featureId);
 
-            //ACD:
-            //Inside acACD, adACD, and cdACD planes.
-            //(A * (AC x AD) * (AB * (AC x AD)) >= 0
-            Vector3Wide.CrossWithoutOverlap(ref ac, ref ad, out var nacd);
-            Vector3Wide.Dot(ref simplex.A, ref nacd, out var anacd);
-            Vector3Wide.Dot(ref ab, ref nacd, out var abnacd);
-            var outsideACD = Vector.LessThanOrEqual(anacd * abnacd, Vector<float>.Zero);
-            var acdActive = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(
-                    outsideACD,
-                    Vector.GreaterThanOrEqual(acACDPlaneTest, Vector<float>.Zero)),
-                Vector.BitwiseAnd(
-                    Vector.GreaterThanOrEqual(adACDPlaneTest, Vector<float>.Zero),
-                    Vector.GreaterThanOrEqual(cdACDPlaneTest, Vector<float>.Zero)));
-            aRequired = Vector.BitwiseOr(acdActive, aRequired);
-            cRequired = Vector.BitwiseOr(acdActive, cRequired);
-            dRequired = Vector.BitwiseOr(acdActive, dRequired);
+            //Triangle ACD:    
+            Triangle(
+                ref simplex.A, ref simplex.C, ref simplex.D,
+                ref simplex.AOnA, ref simplex.COnA, ref simplex.DOnA,
+                ref acA, ref adA, ref ac, ref ad, ref cd, ref acac, ref adad, new Vector<int>(1 | 4 | 8),
+                ref mask, ref distanceSquared, ref closest, ref closestA, ref featureId);
 
-            //ABD:
-            //Inside abABD, adABD, and bdABD planes.
-            //(A * (AB x AD) * (AC * (AB x AD)) >= 0
-            Vector3Wide.CrossWithoutOverlap(ref ab, ref ad, out var nabd);
-            Vector3Wide.Dot(ref simplex.A, ref nabd, out var anabd);
-            Vector3Wide.Dot(ref ac, ref nabd, out var acnabd);
-            var outsideABD = Vector.LessThanOrEqual(anabd * acnabd, Vector<float>.Zero);
-            var abdActive = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(
-                    outsideABD,
-                    Vector.GreaterThan(abABDPlaneTest, Vector<float>.Zero)),
-                Vector.BitwiseAnd(
-                    Vector.GreaterThan(adABDPlaneTest, Vector<float>.Zero),
-                    Vector.GreaterThan(bdABDPlaneTest, Vector<float>.Zero)));
-            aRequired = Vector.BitwiseOr(abdActive, aRequired);
-            bRequired = Vector.BitwiseOr(abdActive, bRequired);
-            dRequired = Vector.BitwiseOr(abdActive, dRequired);
+            //Triangle ABD:    
+            Triangle(
+                ref simplex.A, ref simplex.B, ref simplex.D,
+                ref simplex.AOnA, ref simplex.BOnA, ref simplex.DOnA,
+                ref abA, ref adA, ref ab, ref ad, ref bd, ref abab, ref adad, new Vector<int>(1 | 2 | 8),
+                ref mask, ref distanceSquared, ref closest, ref closestA, ref featureId);
 
-            //ABCD:
-            var insideTetrahedron = Vector.BitwiseAnd(
-                Vector.AndNot(Vector.OnesComplement(outsideABC), outsideBCD), 
-                Vector.AndNot(Vector.OnesComplement(outsideACD), outsideABD));
-            aRequired = Vector.BitwiseOr(aRequired, insideTetrahedron);
-            bRequired = Vector.BitwiseOr(bRequired, insideTetrahedron);
-            cRequired = Vector.BitwiseOr(cRequired, insideTetrahedron);
-            dRequired = Vector.BitwiseOr(dRequired, insideTetrahedron);
+            //Triangle BCD:    
+            Triangle(
+                ref simplex.B, ref simplex.C, ref simplex.D,
+                ref simplex.BOnA, ref simplex.COnA, ref simplex.DOnA,
+                ref bcB, ref bdB, ref bc, ref bd, ref cd, ref bcbc, ref cdcd, new Vector<int>(2 | 4 | 8),
+                ref mask, ref distanceSquared, ref closest, ref closestA, ref featureId);
 
-            //Note that the tetrahedral containment case implies intersection. Distance queries do not guarantee meaningful normals or closest points during intersection,
-            //so there is no need to compute barycentric coordinates.
+            //Tetrahedron:
+            //Test the plane of each triangle against the origin.
+            //Calibrate based on winding: the origin should be on the same side of ABC from D.
+            //Calibration: AD * (AB x BC) <= 0
+            //ABC: A * (BC x AB) <= 0
+            //ABD: A * (AD x BD) <= 0
+            //ACD: A * (CD x AC) <= 0
+            //BCD: B * (BD x CD) <= 0
+            Vector3Wide.CrossWithoutOverlap(ref ab, ref bc, out var nabc);
+            Vector3Wide.Dot(ref simplex.D, ref nabc, out var calibrationDot);
+            var flipRequired = Vector.GreaterThanOrEqual(calibrationDot, Vector<float>.Zero);
+            Vector3Wide.CrossWithoutOverlap(ref ad, ref bd, out var nabd);
+            Vector3Wide.CrossWithoutOverlap(ref cd, ref ac, out var nacd);
+            Vector3Wide.CrossWithoutOverlap(ref bd, ref cd, out var nbdc);
+            Vector3Wide.Dot(ref nabc, ref simplex.A, out var abcDot);
+            Vector3Wide.Dot(ref nabd, ref simplex.A, out var abdDot);
+            Vector3Wide.Dot(ref nacd, ref simplex.A, out var acdDot);
+            Vector3Wide.Dot(ref nbdc, ref simplex.B, out var bdcDot);
+            var abcInside = Vector.Xor(Vector.LessThanOrEqual(abcDot, Vector<float>.Zero), flipRequired);
+            var abdInside = Vector.Xor(Vector.LessThanOrEqual(abdDot, Vector<float>.Zero), flipRequired);
+            var acdInside = Vector.Xor(Vector.LessThanOrEqual(acdDot, Vector<float>.Zero), flipRequired);
+            var bdcInside = Vector.Xor(Vector.LessThanOrEqual(bdcDot, Vector<float>.Zero), flipRequired);
+            var tetrahedronContains = Vector.BitwiseAnd(Vector.BitwiseAnd(abcInside, abdInside), Vector.BitwiseAnd(acdInside, bdcInside));
 
-            //Sub-tetrahedral cases imply nonintersection.
-            //For triangle barycentric coordinates, we can make use of the edge-face plane tests we computed earlier.
-            //The barycentric weight of vertex C on triangle ABC for the origin is:
-            //(A x AB) * (AB x AC) / ((AB x AC) * (AB x AC))
-            //Once again applying an identity, this transforms to:
-            //(A x AB) * (AB x AC) / ((AB * AB) * (AC * AC) - (AB * AC) * (AC * AB))
-            //Which, once again, shares a bunch of ALU work we already did.
-            var abcDenom = Vector<float>.One / (abab * acac - abac * abac);
-            var abcAWeight = bcABCPlaneTest * abcDenom;
-            var abcBWeight = acABCPlaneTest * abcDenom;
-            var abcCWeight = abABCPlaneTest * abcDenom;
-            var acdDenom = Vector<float>.One / (acac * adad - acad * acad);
-            var acdAWeight = cdACDPlaneTest * acdDenom;
-            var acdCWeight = adACDPlaneTest * acdDenom;
-            var acdDWeight = acACDPlaneTest * acdDenom;
-            var abdDenom = Vector<float>.One / (abab * adad - abad * abad);
-            var abdAWeight = bdABDPlaneTest * abdDenom;
-            var abdBWeight = adABDPlaneTest * abdDenom;
-            var abdDWeight = abABDPlaneTest * abdDenom;
-            var bcdDenom = Vector<float>.One / (bcbc * bdbd - bcbd * bcbd);
-            var bcdBWeight = cdBCDPlaneTest * bcdDenom;
-            var bcdCWeight = bdBCDPlaneTest * bcdDenom;
-            var bcdDWeight = bcBCDPlaneTest * bcdDenom;
+            //Note that we don't guarantee correct closest points in the intersecting case, so there's no need to blend with barycentric weights.
+            Select(ref mask, ref distanceSquared, ref closest, ref closestA, ref featureId, Vector<float>.Zero, new Vector3Wide(), new Vector3Wide(), new Vector<int>(1 | 2 | 4 | 8));
 
-            var abAWeight = abB / abab;
-            var abBWeight = Vector<float>.One - abAWeight;
-            var acAWeight = acC / acac;
-            var acCWeight = Vector<float>.One - acAWeight;
-            var adAWeight = adD / adad;
-            var adDWeight = Vector<float>.One - adAWeight;
-            var bcBWeight = bcC / bcbc;
-            var bcCWeight = Vector<float>.One - bcBWeight;
-            var bdBWeight = bdD / bdbd;
-            var bdDWeight = Vector<float>.One - bdBWeight;
-            var cdCWeight = cdD / cdcd;
-            var cdDWeight = Vector<float>.One - cdCWeight;
+            TryRemove(ref simplex, 3, Vector.AndNot(featureId, new Vector<int>(8)), mask);
+            TryRemove(ref simplex, 2, Vector.AndNot(featureId, new Vector<int>(4)), mask);
+            TryRemove(ref simplex, 1, Vector.AndNot(featureId, new Vector<int>(2)), mask);
+            TryRemove(ref simplex, 0, Vector.AndNot(featureId, new Vector<int>(1)), mask);
+
         }
+
 
         public void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
@@ -385,7 +340,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             intersected = Vector<int>.Zero;
             while (true)
             {
-                FindClosestPoint(ref simplex, out var simplexClosestA, out var simplexClosest);
+                FindClosestPoint(ref mask, ref simplex, out var simplexClosestA, out var simplexClosest);
 
                 var simplexContainsOrigin = Vector.BitwiseAnd(
                     Vector.BitwiseAnd(
@@ -408,8 +363,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 //Any still-executing lane that failed to make progress is now verified to be nonintersecting.
                 //Note that the default initialized state is nonintersecting, so we don't have to set the flag explicitly here.
                 //Note that lanes which previously terminated are excluded from closest/normal updates.      
-                Vector3Wide.ConditionalSelect(ref mask, ref closestA, ref simplexClosestA, out closestA);
-                Vector3Wide.ConditionalSelect(ref mask, ref normal, ref simplexClosest, out normal);
+                Vector3Wide.ConditionalSelect(mask, closestA, simplexClosestA, out closestA);
+                Vector3Wide.ConditionalSelect(mask, normal, simplexClosest, out normal);
                 mask = Vector.BitwiseOr(mask, noProgressMade);
                 if (Vector.EqualsAll(mask, -Vector<int>.One))
                     break;

@@ -66,8 +66,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             var useCandidate = Vector.LessThan(depthCandidate, depth);
             depth = Vector.Min(depth, depthCandidate);
-            Vector3Wide.ConditionalSelect(ref useCandidate, ref normalCandidate, ref normal, out normal);
-            Vector3Wide.ConditionalSelect(ref useCandidate, ref closestACandidate, ref closestA, out closestA);
+            Vector3Wide.ConditionalSelect(useCandidate, normalCandidate, normal, out normal);
+            Vector3Wide.ConditionalSelect(useCandidate, closestACandidate, closestA, out closestA);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

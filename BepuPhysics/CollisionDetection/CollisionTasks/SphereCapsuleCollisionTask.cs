@@ -35,7 +35,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //to do something like manually resolving collisions or other query-based logic.
             //A cheaper option would be to simply use the y axis as the normal. That's known to be suboptimal, but if we don't guarantee minimum penetration depth, that's totally fine.
             //My guess is that computing x will be so cheap as to be irrelevant.
-            Vector3Wide.ConditionalSelect(ref normalIsValid, ref manifold.Normal, ref x, out manifold.Normal);
+            Vector3Wide.ConditionalSelect(normalIsValid, manifold.Normal, x, out manifold.Normal);
             manifold.Depth = a.Radius + b.Radius - internalDistance;
 
             //The contact position relative to object A (the sphere) is computed as the average of the extreme point along the normal toward the opposing shape on each shape, averaged.

@@ -103,7 +103,7 @@ namespace BepuPhysics.Constraints
             Helpers.FindPerpendicular(ref swivelAxis, out var fallbackJacobian);
             Vector3Wide.Dot(ref jacobianA, ref jacobianA, out var jacobianLengthSquared);
             var useFallback = Vector.LessThan(jacobianLengthSquared, new Vector<float>(1e-7f));
-            Vector3Wide.ConditionalSelect(ref useFallback, ref fallbackJacobian, ref jacobianA, out jacobianA);
+            Vector3Wide.ConditionalSelect(useFallback, fallbackJacobian, jacobianA, out jacobianA);
 
             //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
 

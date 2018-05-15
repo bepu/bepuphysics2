@@ -54,7 +54,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //In the event that the line segments are touching, the normal doesn't exist and we need an alternative. Any direction along the local horizontal (XZ) plane of either capsule
             //is valid. (Normals along the local Y axes are not guaranteed to be as quick of a path to separation due to nonzero line length.)
             var normalIsValid = Vector.GreaterThan(distance, new Vector<float>(1e-7f));
-            Vector3Wide.ConditionalSelect(ref normalIsValid, ref manifold.Normal, ref xa, out manifold.Normal);
+            Vector3Wide.ConditionalSelect(normalIsValid, manifold.Normal, xa, out manifold.Normal);
 
             //In the event that the two capsule axes are coplanar, we accept the whole interval as a source of contact.
             //As the axes drift away from coplanarity, the accepted interval rapidly narrows to zero length, centered on ta and tb.

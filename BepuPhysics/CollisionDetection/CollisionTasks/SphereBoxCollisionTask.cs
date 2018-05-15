@@ -50,7 +50,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             insideDepth += a.Radius;
             var useInside = Vector.Equals(distance, Vector<float>.Zero);
-            Vector3Wide.ConditionalSelect(ref useInside, ref insideNormal, ref outsideNormal, out var localNormal);
+            Vector3Wide.ConditionalSelect(useInside, insideNormal, outsideNormal, out var localNormal);
             Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref orientationMatrixB, out manifold.Normal);
             manifold.Depth = Vector.ConditionalSelect(useInside, insideDepth, outsideDepth);
 

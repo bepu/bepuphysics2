@@ -94,14 +94,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var usePositiveOffset = Vector.LessThan(positiveDistanceSquared, negativeDistanceSquared);
             var vertexTa = Vector.ConditionalSelect(usePositiveOffset, a.HalfLength, -a.HalfLength);
             var vertexDistanceSquared = Vector.Min(positiveDistanceSquared, negativeDistanceSquared);
-            Vector3Wide.ConditionalSelect(ref usePositiveOffset, ref positiveOffset, ref negativeOffset, out var vertexNormal);
+            Vector3Wide.ConditionalSelect(usePositiveOffset, positiveOffset, negativeOffset, out var vertexNormal);
             var vertexDistance = Vector.SquareRoot(vertexDistanceSquared);
             var normalScale = Vector<float>.One / vertexDistance;
             Vector3Wide.Scale(ref vertexNormal, ref normalScale, out vertexNormal);
 
             var useEdge = Vector.LessThan(edgeDistance, vertexDistance);
             distance = Vector.Min(edgeDistance, vertexDistance) - a.Radius;
-            Vector3Wide.ConditionalSelect(ref useEdge, ref localNormal, ref vertexNormal, out localNormal);
+            Vector3Wide.ConditionalSelect(useEdge, localNormal, vertexNormal, out localNormal);
             QuaternionWide.TransformWithoutOverlap(ref localNormal, ref orientationB, out normal);
             var negativeRadius = -a.Radius;
             QuaternionWide.TransformUnitY(ref orientationA, out var worldCapsuleAxis);
