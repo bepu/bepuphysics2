@@ -35,6 +35,17 @@ namespace Demos.SpecializedTests
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            {
+                GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder> tester = default;
+                BoxWide a;
+                a.HalfWidth = a.HalfLength = a.HalfHeight = new Vector<float>(1);
+                BoxWide b;
+                b.HalfWidth = b.HalfLength = b.HalfHeight = new Vector<float>(5);
+                Vector3Wide.Broadcast(new Vector3(8.4f, 0, 0), out var offsetB);
+                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.PiOver4), out var orientationA);
+                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathHelper.PiOver4), out var orientationB);
+                tester.Test(ref a, ref b, ref offsetB, ref orientationA, ref orientationB, out var intersected, out var distance, out var closestA, out var normal);
+            }
 
             {
                 BoxPairDistanceTester tester;
@@ -50,8 +61,8 @@ namespace Demos.SpecializedTests
 
             {
                 TestFilter filter;
-                var a = new Capsule(0.5f, 0.5f);
-                var b = new Capsule(0.5f, 0.5f);
+                var a = new Box(0.5f, 0.5f, 0.5f);
+                var b = new Box(0.5f, 0.5f, 0.5f);
                 var offsetB = new Vector3(10, 0, 0);
                 var orientationA = Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.PiOver4);
                 var orientationB = Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver4);
@@ -59,8 +70,8 @@ namespace Demos.SpecializedTests
                 var velocityB = new BodyVelocity { Linear = new Vector3(-1, 0, 0), Angular = new Vector3(0, 1, 0) };
                 var task = Simulation.NarrowPhase.SweepTaskRegistry.GetTask(a.TypeId, b.TypeId);
                 var maximumT = 50;
-                var minimumProgression = 1e-1f;
-                var convergenceThreshold = 1e-1f;
+                var minimumProgression = 1e-2f;
+                var convergenceThreshold = 1e-5f;
                 var maximumIterationCount = 15;
 
                 var intersected = task.Sweep(
