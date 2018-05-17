@@ -1,6 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -353,7 +354,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 FindClosestPoint(ref terminatedMask, ref simplex, out var newDistanceSquared, out var simplexClosestA, out var simplexClosest);
 
                 //For any lane that has not yet terminated, and which has an intersecting simplex, terminate with intersection.
-                var simplexContainsOrigin = Vector.Equals(newDistanceSquared, Vector<float>.Zero);
+                //Note hardcoded fixed epsilon: this isn't ideal, but normals become unreliable at scales below this threshold.
+                //TODO: May want to make it configurable for users who don't care about normal accuracy and need smaller scale support.
+                //Sweep tests are a difficult spot for configuration.
+                var simplexContainsOrigin = Vector.LessThanOrEqual(newDistanceSquared, new Vector<float>(1e-7f));
                 intersected = Vector.BitwiseOr(intersected, Vector.AndNot(simplexContainsOrigin, terminatedMask));
                 terminatedMask = Vector.BitwiseOr(terminatedMask, simplexContainsOrigin);
                 if (Vector.EqualsAll(terminatedMask, -Vector<int>.One))
@@ -371,9 +375,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 terminatedMask = Vector.BitwiseOr(terminatedMask, aboutToTerminate);
                 if (Vector.EqualsAll(terminatedMask, -Vector<int>.One))
                     break;
-
-       
-
+                
                 Vector3Wide.Negate(ref simplexClosest, out var sampleDirection);
                 SampleMinkowskiDifference(ref a, ref rA, ref supportFinderA, ref b, ref rB, ref supportFinderB, ref offsetB, ref sampleDirection, out var vA, out var v);
 

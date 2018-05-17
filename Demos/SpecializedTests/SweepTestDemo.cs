@@ -47,17 +47,6 @@ namespace Demos.SpecializedTests
                 tester.Test(ref a, ref b, ref offsetB, ref orientationA, ref orientationB, out var intersected, out var distance, out var closestA, out var normal);
             }
 
-            {
-                BoxPairDistanceTester tester;
-                BoxWide a;
-                a.HalfWidth = a.HalfLength = a.HalfHeight = new Vector<float>(1);
-                BoxWide b;
-                b.HalfWidth = b.HalfLength = b.HalfHeight = new Vector<float>(5);
-                Vector3Wide.Broadcast(new Vector3(10, 0, 0), out var offsetB);
-                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationA);
-                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0), out var orientationB);
-                tester.Test(ref a, ref b, ref offsetB, ref orientationA, ref orientationB, out var intersected, out var distance, out var closestA, out var normal);
-            }
 
             {
                 TestFilter filter;
@@ -82,7 +71,7 @@ namespace Demos.SpecializedTests
                 Console.WriteLine($"Intersected: {intersected}, interval: {t0}, {t1}; location: {hitLocation}, normal: {hitNormal}");
 
                 int intersectionCount = 0;
-                int iterationCount = 100000;
+                int iterationCount = 10000;
                 var start = Stopwatch.GetTimestamp();
                 for (int i = 0; i < iterationCount; ++i)
                 {
