@@ -13,10 +13,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref BoxWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Vector3Wide localOffsetA, out Vector3Wide capsuleAxis, out Vector3Wide edgeCenters)
         {
-            QuaternionWide.Conjugate(ref orientationB, out var toLocalB);
-            QuaternionWide.TransformWithoutOverlap(ref offsetB, ref toLocalB, out localOffsetA);
+            QuaternionWide.Conjugate(orientationB, out var toLocalB);
+            QuaternionWide.TransformWithoutOverlap(offsetB, toLocalB, out localOffsetA);
             Vector3Wide.Negate(ref localOffsetA);
-            QuaternionWide.ConcatenateWithoutOverlap(ref orientationA, ref toLocalB, out var boxLocalOrientationA);
+            QuaternionWide.ConcatenateWithoutOverlap(orientationA, toLocalB, out var boxLocalOrientationA);
             QuaternionWide.TransformUnitY(ref boxLocalOrientationA, out capsuleAxis);
 
             //Get the capsule-axis-perpendicular offset from the box to the capsule and use it to choose which edges to test.

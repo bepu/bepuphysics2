@@ -94,8 +94,8 @@ namespace BepuPhysics.Constraints
             //Now, we choose the storage representation. The default approach would be to store JA, the effective mass, and both inverse inertias, requiring 6 + 1 + 6 + 6 scalars.  
             //The alternative is to store JAT * effectiveMass, and then also JA * inverseInertiaTensor(A/B), requiring only 3 + 3 + 3 scalars.
             //So, overall, prebaking saves us 10 scalars and a bit of iteration-time ALU.
-            QuaternionWide.TransformWithoutOverlap(ref prestep.SwivelAxisLocalA, ref orientationA, out var swivelAxis);
-            QuaternionWide.TransformWithoutOverlap(ref prestep.HingeAxisLocalB, ref orientationB, out var hingeAxis);
+            QuaternionWide.TransformWithoutOverlap(prestep.SwivelAxisLocalA, orientationA, out var swivelAxis);
+            QuaternionWide.TransformWithoutOverlap(prestep.HingeAxisLocalB, orientationB, out var hingeAxis);
             Vector3Wide jacobianA;
             Vector3Wide.CrossWithoutOverlap(ref swivelAxis, ref hingeAxis, out jacobianA);
             //In the event that the axes are parallel, there is no unique jacobian. Arbitrarily pick one.

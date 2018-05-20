@@ -457,13 +457,13 @@ namespace BepuUtilities
         }
 
         /// <summary>
-        /// Transforms the vector using a quaternion.
+        /// Transforms the vector using a quaternion, assuming that the output does not alias with the input.
         /// </summary>
         /// <param name="v">Vector to transform.</param>
         /// <param name="rotation">Rotation to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(in Vector3 v, in Quaternion rotation, out Vector3 result)
+        public static void TransformWithoutOverlap(in Vector3 v, in Quaternion rotation, out Vector3 result)
         {
             //This operation is an optimized-down version of v' = q * v * q^-1.
             //The expanded form would be to treat v as an 'axis only' quaternion
@@ -482,13 +482,23 @@ namespace BepuUtilities
             float wy2 = rotation.W * y2;
             float wz2 = rotation.W * z2;
             //Defer the component setting since they're used in computation.
-            float transformedX = v.X * (1f - yy2 - zz2) + v.Y * (xy2 - wz2) + v.Z * (xz2 + wy2);
-            float transformedY = v.X * (xy2 + wz2) + v.Y * (1f - xx2 - zz2) + v.Z * (yz2 - wx2);
-            float transformedZ = v.X * (xz2 - wy2) + v.Y * (yz2 + wx2) + v.Z * (1f - xx2 - yy2);
-            result.X = transformedX;
-            result.Y = transformedY;
-            result.Z = transformedZ;
+            result.X = v.X * (1f - yy2 - zz2) + v.Y * (xy2 - wz2) + v.Z * (xz2 + wy2);
+            result.Y = v.X * (xy2 + wz2) + v.Y * (1f - xx2 - zz2) + v.Z * (yz2 - wx2);
+            result.Z = v.X * (xz2 - wy2) + v.Y * (yz2 + wx2) + v.Z * (1f - xx2 - yy2);
+        }
 
+
+        /// <summary>
+        /// Transforms the vector using a quaternion.
+        /// </summary>
+        /// <param name="v">Vector to transform.</param>
+        /// <param name="rotation">Rotation to apply to the vector.</param>
+        /// <param name="result">Transformed vector.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Transform(in Vector3 v, in Quaternion rotation, out Vector3 result)
+        {
+            TransformWithoutOverlap(v, rotation, out var temp);
+            result = temp;
         }
 
         /// <summary>
@@ -500,8 +510,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3 Transform(Vector3 v, Quaternion rotation)
         {
-            Vector3 toReturn;
-            Transform(v, rotation, out toReturn);
+            TransformWithoutOverlap(v, rotation, out var toReturn);
             return toReturn;
         }
 

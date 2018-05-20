@@ -10,6 +10,10 @@ namespace BepuPhysics
     public struct RigidPose
     {
         public Vector3 Position;
+        //Note that we store a quaternion rather than a matrix3x3. While this often requires some overhead when performing vector transforms or extracting basis vectors, 
+        //systems needing to interact directly with this representation are often terrifically memory bound. Spending the extra ALU time to convert to a basis can actually be faster
+        //than loading the extra 5 elements needed to express the full 3x3 rotation matrix. Also, it's marginally easier to keep the rotation normalized over time.
+        //There may be an argument for the matrix variant to ALSO be stored for some bandwidth-unconstrained stages, but don't worry about that until there's a reason to worry about it.
         public BepuUtilities.Quaternion Orientation;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -122,17 +126,20 @@ namespace BepuPhysics
     public struct RigidPoses
     {
         public Vector3Wide Position;
-        //Note that we store a quaternion rather than a matrix3x3. While this often requires some overhead when performing vector transforms or extracting basis vectors, 
-        //systems needing to interact directly with this representation are often terrifically memory bound. Spending the extra ALU time to convert to a basis can actually be faster
-        //than loading the extra 5 elements needed to express the full 3x3 rotation matrix. Also, it's marginally easier to keep the rotation normalized over time.
-        //There may be an argument for the matrix variant to ALSO be stored for some bandwidth-unconstrained stages, but don't worry about that until there's a reason to worry about it.
         public QuaternionWide Orientation;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Broadcast(in RigidPose pose, out RigidPoses poses)
+        {
+            Vector3Wide.Broadcast(pose.Position, out poses.Position);
+            QuaternionWide.Broadcast(pose.Orientation, out poses.Orientation);
+        }
     }
 
     public struct BodyVelocities
     {
         public Vector3Wide Linear;
-        public Vector3Wide Angular;     
+        public Vector3Wide Angular;
     }
 
     public struct BodyInertias

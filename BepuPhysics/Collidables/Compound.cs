@@ -49,6 +49,17 @@ namespace BepuPhysics.Collidables
             Quaternion.Transform(localPose.Position, orientation, out rotatedChildPose.Position);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GetRotatedChildPose(in RigidPoses localPose, in QuaternionWide orientation, out Vector3Wide childPosition, out QuaternionWide childOrientation)
+        {
+            QuaternionWide.ConcatenateWithoutOverlap(localPose.Orientation, orientation, out childOrientation);
+            QuaternionWide.TransformWithoutOverlap(localPose.Position, orientation, out childPosition);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GetRotatedChildPose(in RigidPoses localPose, in QuaternionWide orientation, out RigidPoses rotatedChildPose)
+        {
+            GetRotatedChildPose(localPose, orientation, out rotatedChildPose.Position, out rotatedChildPose.Orientation);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetWorldPose(in RigidPose localPose, in RigidPose transform, out RigidPose worldPose)
         {
             GetRotatedChildPose(localPose, transform.Orientation, out worldPose);

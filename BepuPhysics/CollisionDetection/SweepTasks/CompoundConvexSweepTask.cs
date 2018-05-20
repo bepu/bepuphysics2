@@ -21,8 +21,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         public override unsafe bool Sweep(
-            void* shapeDataA, int shapeTypeA, in Vector3 localOffsetA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in Vector3 localOffsetB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            void* shapeDataA, int shapeTypeA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, int shapeTypeB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
@@ -47,11 +47,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     ref var child = ref compound.Children[i];
                     var childType = child.ShapeIndex.Type;
                     shapes[childType].GetShapeData(child.ShapeIndex.Index, out var childShapeData, out _);
-                    Compound.GetRotatedChildPose(child.LocalPose, orientationA, out var childPose);
                     var task = sweepTasks.GetTask(childType, shapeTypeB);
                     if (task.Sweep(
-                        childShapeData, childType, child.LocalPose.Position, childPose.Orientation, velocityA,
-                        shapeDataB, shapeTypeB, new Vector3(), offsetB - childPose.Position, orientationB, velocityB,
+                        childShapeData, childType, child.LocalPose, orientationA, velocityA,
+                        shapeDataB, shapeTypeB, new RigidPose(), offsetB, orientationB, velocityB,
                         maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                         out var t0Candidate, out var t1Candidate, out var hitLocationCandidate, out var hitNormalCandidate))
                     {

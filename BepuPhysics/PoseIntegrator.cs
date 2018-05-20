@@ -54,7 +54,7 @@ namespace BepuPhysics
             //there would need to be a reorientation step. That could be confusing, and it's probably not worth it.
             Triangular3x3.RotationSandwich(ref orientationMatrix, ref localInverseInertiaTensor, out rotatedInverseInertiaTensor);
         }
-      
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static float Cos(float x)
         {
@@ -114,30 +114,40 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose)
+        public static void Integrate(in Vector3 position, in Vector3 linearVelocity, float dt, out Vector3 integratedPosition)
         {
-            var displacement = velocity.Linear * dt;
-            integratedPose.Position = pose.Position + displacement;
+            var displacement = linearVelocity * dt;
+            integratedPosition = position + displacement;
+        }
 
-            //Integrate orientation with the latest angular velocity.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static void Integrate(in Quaternion orientation, in Vector3 angularVelocity, float dt, out Quaternion integratedOrientation)
+        {
             //Note that we don't bother with conservation of angular momentum or the gyroscopic term or anything else- 
             //it's not exactly correct, but it's stable, fast, and no one really notices. Unless they're trying to spin a multitool in space or something.
             //(But frankly, that just looks like reality has a bug.)
 
-            var speed = velocity.Angular.Length();
+            var speed = angularVelocity.Length();
             if (speed > 1e-15f)
             {
                 var halfAngle = speed * dt * 0.5f;
                 Quaternion q;
-                Unsafe.As<Quaternion, Vector3>(ref *&q) = velocity.Angular * (Sin(halfAngle) / speed);
+                Unsafe.As<Quaternion, Vector3>(ref *&q) = angularVelocity * (Sin(halfAngle) / speed);
                 q.W = Cos(halfAngle);
-                Quaternion.ConcatenateWithoutOverlap(pose.Orientation, q, out integratedPose.Orientation);
-                Quaternion.Normalize(ref integratedPose.Orientation);
+                Quaternion.ConcatenateWithoutOverlap(orientation, q, out integratedOrientation);
+                Quaternion.Normalize(ref integratedOrientation);
             }
             else
             {
-                integratedPose.Orientation = pose.Orientation;
+                integratedOrientation = orientation;
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose)
+        {
+            Integrate(pose.Position, velocity.Linear, dt, out integratedPose.Position);
+            Integrate(pose.Orientation, velocity.Angular, dt, out integratedPose.Orientation);
         }
 
         unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher)

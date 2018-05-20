@@ -155,10 +155,10 @@ namespace Demos.SpecializedTests
                     QuaternionWide.GetQuaternionBetweenNormalizedVectors(ref v1, ref v2, out var v1ToV2);
                     QuaternionWide.GetQuaternionBetweenNormalizedVectors(ref v2, ref v1, out var v2ToV1);
 #if DEBUG
-                    QuaternionWide.ConcatenateWithoutOverlap(ref v1ToV2, ref v2ToV1, out var concatenated);
-                    QuaternionWide.TransformWithoutOverlap(ref v1, ref v1ToV2, out var v1TransformedToV2);
-                    QuaternionWide.TransformWithoutOverlap(ref v2, ref v2ToV1, out var v2TransformedToV1);
-                    QuaternionWide.TransformWithoutOverlap(ref v1, ref concatenated, out var v1TransformedToV1);
+                    QuaternionWide.ConcatenateWithoutOverlap(v1ToV2, v2ToV1, out var concatenated);
+                    QuaternionWide.TransformWithoutOverlap(v1, v1ToV2, out var v1TransformedToV2);
+                    QuaternionWide.TransformWithoutOverlap(v2, v2ToV1, out var v2TransformedToV1);
+                    QuaternionWide.TransformWithoutOverlap(v1, concatenated, out var v1TransformedToV1);
 
                     Vector3Wide.Subtract(ref v1TransformedToV2, ref v2, out var v1ToV2Error);
                     Vector3Wide.LengthSquared(ref v1ToV2Error, out var v1ToV2ErrorLength);
@@ -192,10 +192,10 @@ namespace Demos.SpecializedTests
                     QuaternionWide.GetQuaternionBetweenNormalizedVectors(ref v1, ref v2, out var v1ToV2);
                     QuaternionWide.GetQuaternionBetweenNormalizedVectors(ref v2, ref v1, out var v2ToV1);
 #if DEBUG
-                    QuaternionWide.ConcatenateWithoutOverlap(ref v1ToV2, ref v2ToV1, out var concatenated);
-                    QuaternionWide.TransformWithoutOverlap(ref v1, ref v1ToV2, out var v1TransformedToV2);
-                    QuaternionWide.TransformWithoutOverlap(ref v2, ref v2ToV1, out var v2TransformedToV1);
-                    QuaternionWide.TransformWithoutOverlap(ref v1, ref concatenated, out var v1TransformedToV1);
+                    QuaternionWide.ConcatenateWithoutOverlap(v1ToV2, v2ToV1, out var concatenated);
+                    QuaternionWide.TransformWithoutOverlap(v1, v1ToV2, out var v1TransformedToV2);
+                    QuaternionWide.TransformWithoutOverlap(v2, v2ToV1, out var v2TransformedToV1);
+                    QuaternionWide.TransformWithoutOverlap(v1, concatenated, out var v1TransformedToV1);
 
                     Vector3Wide.Subtract(ref v1TransformedToV2, ref v2, out var v1ToV2Error);
                     Vector3Wide.LengthSquared(ref v1ToV2Error, out var v1ToV2ErrorLength);

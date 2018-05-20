@@ -163,7 +163,7 @@ namespace BepuUtilities
         /// <param name="rotation">Rotation to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformWithoutOverlap(ref Vector3Wide v, ref QuaternionWide rotation, out Vector3Wide result)
+        public static void TransformWithoutOverlap(in Vector3Wide v, in QuaternionWide rotation, out Vector3Wide result)
         {
             //This operation is an optimized-down version of v' = q * v * q^-1.
             //The expanded form would be to treat v as an 'axis only' quaternion
@@ -194,10 +194,10 @@ namespace BepuUtilities
         /// <param name="rotation">Rotation to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(ref Vector3Wide v, ref QuaternionWide rotation, out Vector3Wide result)
+        public static void Transform(in Vector3Wide v, in QuaternionWide rotation, out Vector3Wide result)
         {
-            var tempV = v;
-            TransformWithoutOverlap(ref tempV, ref rotation, out result);
+            TransformWithoutOverlap(v, rotation, out var temp);
+            result = temp;
         }
 
         /// <summary>
@@ -219,7 +219,6 @@ namespace BepuUtilities
             result.X = Vector<float>.One - yy2 - zz2;
             result.Y = xy2 + wz2;
             result.Z = xz2 - wy2;
-
         }
 
         /// <summary>
@@ -304,7 +303,7 @@ namespace BepuUtilities
         /// <param name="b">Second quaternion to concatenate.</param>
         /// <param name="result">Product of the concatenation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ConcatenateWithoutOverlap(ref QuaternionWide a, ref QuaternionWide b, out QuaternionWide result)
+        public static void ConcatenateWithoutOverlap(in QuaternionWide a, in QuaternionWide b, out QuaternionWide result)
         {
             result.X = a.W * b.X + a.X * b.W + a.Z * b.Y - a.Y * b.Z;
             result.Y = a.W * b.Y + a.Y * b.W + a.X * b.Z - a.Z * b.X;
@@ -320,11 +319,11 @@ namespace BepuUtilities
         /// <param name="b">Second quaternion to concatenate.</param>
         /// <param name="result">Product of the concatenation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Concatenate(ref QuaternionWide oa, ref QuaternionWide ob, out QuaternionWide result)
+        public static void Concatenate(in QuaternionWide oa, in QuaternionWide ob, out QuaternionWide result)
         {
             var tempA = oa;
             var tempB = ob;
-            ConcatenateWithoutOverlap(ref tempA, ref tempB, out result);
+            ConcatenateWithoutOverlap(tempA, tempB, out result);
         }
 
         /// <summary>
@@ -333,21 +332,21 @@ namespace BepuUtilities
         /// <param name="quaternion">Quaternion to conjugate.</param>
         /// <param name="result">Conjugated quaternion.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Conjugate(ref QuaternionWide quaternion, out QuaternionWide result)
+        public static void Conjugate(in QuaternionWide quaternion, out QuaternionWide result)
         {
             result.X = quaternion.X;
             result.Y = quaternion.Y;
             result.Z = quaternion.Z;
             result.W = -quaternion.W;
         }
-        
+
         /// <summary>
         /// Gathers values from a quaternion and places them into the first indices of the target wide quaternion.
         /// </summary>
         /// <param name="source">Quaternion to copy values from.</param>
         /// <param name="targetSlot">Wide quaternion to place values into.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GatherSlot(ref BepuUtilities.Quaternion source, ref QuaternionWide targetSlot)
+        public static void GatherSlot(ref Quaternion source, ref QuaternionWide targetSlot)
         {
             GatherScatter.GetFirst(ref targetSlot.X) = source.X;
             GatherScatter.GetFirst(ref targetSlot.Y) = source.Y;

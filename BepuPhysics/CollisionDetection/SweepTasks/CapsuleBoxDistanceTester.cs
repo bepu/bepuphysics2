@@ -103,7 +103,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var useEdge = Vector.LessThan(edgeDistance, vertexDistance);
             distance = Vector.Min(edgeDistance, vertexDistance) - a.Radius;
             Vector3Wide.ConditionalSelect(useEdge, localNormal, vertexNormal, out localNormal);
-            QuaternionWide.TransformWithoutOverlap(ref localNormal, ref orientationB, out normal);
+            QuaternionWide.TransformWithoutOverlap(localNormal, orientationB, out normal);
             var negativeRadius = -a.Radius;
             QuaternionWide.TransformUnitY(ref orientationA, out var worldCapsuleAxis);
             Vector3Wide.Scale(ref worldCapsuleAxis, ref ta, out closestA);

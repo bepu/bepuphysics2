@@ -116,8 +116,8 @@ namespace BepuPhysics.Constraints
             //it only saves a cross product. Loading 6 more scalars to save 2 cross products (12 multiplies, 6 adds) is a terrible trade, even at SIMD128.
 
             //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
-            QuaternionWide.TransformWithoutOverlap(ref prestep.LocalOffsetA, ref orientationA, out projection.OffsetA);
-            QuaternionWide.TransformWithoutOverlap(ref prestep.LocalOffsetB, ref orientationB, out projection.OffsetB);
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out projection.OffsetA);
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out projection.OffsetB);
             Triangular3x3Wide.SkewSandwichWithoutOverlap(ref projection.OffsetA, ref projection.InertiaA.InverseInertiaTensor, out var inverseEffectiveMass);
             //Note that the jacobian is technically skewSymmetric(-OffsetB), but the sign doesn't matter due to the sandwich.
             Triangular3x3Wide.SkewSandwichWithoutOverlap(ref projection.OffsetB, ref projection.InertiaB.InverseInertiaTensor, out var angularBContribution);
