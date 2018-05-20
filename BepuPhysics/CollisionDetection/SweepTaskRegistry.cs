@@ -29,12 +29,17 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public int ShapeTypeIndexB { get; protected set; }
 
+        public abstract unsafe bool Sweep(
+            void* shapeDataA, int shapeTypeA, in Vector3 localOffsetA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, int shapeTypeB, in Vector3 localOffsetB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            float minimumProgression, float convergenceThreshold, int maximumIterationCount,
+            out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal);
+
         public abstract unsafe bool Sweep<TSweepFilter>(
             void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            ref TSweepFilter filter, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal) where TSweepFilter : ISweepFilter;
-
+            ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal) where TSweepFilter : ISweepFilter;
     }
 
     public class SweepTaskRegistry

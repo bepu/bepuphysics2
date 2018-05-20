@@ -28,9 +28,9 @@ namespace Demos.Demos
             capsule.ComputeInertia(1, out var capsuleInertia);
             sphere.ComputeInertia(1, out var sphereInertia);
             //capsuleInertia.InverseInertiaTensor = new Triangular3x3();
-            var boxIndex = Simulation.Shapes.Add(ref box);
-            var capsuleIndex = Simulation.Shapes.Add(ref capsule);
-            var sphereIndex = Simulation.Shapes.Add(ref sphere);
+            var boxIndex = Simulation.Shapes.Add(box);
+            var capsuleIndex = Simulation.Shapes.Add(capsule);
+            var sphereIndex = Simulation.Shapes.Add(sphere);
             const int width = 8;
             const int height = 16;
             const int length = 8;
@@ -80,7 +80,7 @@ namespace Demos.Demos
             Simulation.Deterministic = false;
             
             var staticShape = new Box(1, 1, 1);
-            var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
+            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
             const int staticGridWidth = 100;
             const float staticSpacing = 1.2f;
             var gridOffset = -0.5f * staticGridWidth * staticSpacing;

@@ -77,9 +77,9 @@ namespace Demos
             var box = new Box(0.5f, 1.5f,1f);
             var capsule = new Capsule(0, 0.5f);
             var sphere = new Sphere(0.5f);
-            var boxIndex = Simulation.Shapes.Add(ref box);
-            var capsuleIndex = Simulation.Shapes.Add(ref capsule);
-            var sphereIndex = Simulation.Shapes.Add(ref sphere);
+            var boxIndex = Simulation.Shapes.Add(box);
+            var capsuleIndex = Simulation.Shapes.Add(capsule);
+            var sphereIndex = Simulation.Shapes.Add(sphere);
             const int width = 16;
             const int height = 16;
             const int length = 16;

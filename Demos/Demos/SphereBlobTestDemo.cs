@@ -22,7 +22,7 @@ namespace Demos.Demos
 
             var shape = new Sphere(0.5f);
             shape.ComputeInertia(1, out var sphereInertia);
-            var shapeIndex = Simulation.Shapes.Add(ref shape);
+            var shapeIndex = Simulation.Shapes.Add(shape);
             const int width = 16;
             const int height = 16;
             const int length = 16;
@@ -36,7 +36,7 @@ namespace Demos.Demos
             Simulation.Deterministic = false;
 
             var staticShape = new Sphere(4);
-            var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
+            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
             const int staticGridWidthInSpheres = 100;
             const float staticSpacing = 6;
             for (int i = 0; i < staticGridWidthInSpheres; ++i)

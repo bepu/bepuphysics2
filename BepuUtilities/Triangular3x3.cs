@@ -75,7 +75,7 @@ namespace BepuPhysics
         /// <param name="m">Matrix to intepret as symmetric.</param>
         /// <returns>Determinant of the matrix interpreted as symmetric.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float SymmetricDeterminant(ref Triangular3x3 m)
+        public static float SymmetricDeterminant(in Triangular3x3 m)
         {
             var m11 = m.YY * m.ZZ - m.ZY * m.ZY;
             var m21 = m.ZY * m.ZX - m.ZZ * m.YX;
@@ -88,7 +88,7 @@ namespace BepuPhysics
         /// <param name="m">Matrix to be inverted.</param>
         /// <param name="inverse">Inverted matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void SymmetricInvert(ref Triangular3x3 m, out Triangular3x3 inverse)
+        public unsafe static void SymmetricInvert(in Triangular3x3 m, out Triangular3x3 inverse)
         {
             var m11 = m.YY * m.ZZ - m.ZY * m.ZY;
             var m21 = m.ZY * m.ZX - m.ZZ * m.YX;

@@ -80,7 +80,7 @@ namespace Demos.SpecializedTests
             }
 
             Triangular3x3.Scale(ref numericalLocalInertia, mass / containedSampleCount, out numericalLocalInertia);
-            Triangular3x3.SymmetricInvert(ref numericalLocalInertia, out var numericalLocalInverseInertia);
+            Triangular3x3.SymmetricInvert(numericalLocalInertia, out var numericalLocalInverseInertia);
             shape.ComputeInertia(mass, out var analyticInertia);
             if (!ValuesAreSimilar(analyticInertia.InverseInertiaTensor.XX, numericalLocalInverseInertia.XX) ||
                 !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.YX, numericalLocalInverseInertia.YX) ||

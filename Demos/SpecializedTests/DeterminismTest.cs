@@ -15,7 +15,7 @@ namespace Demos.SpecializedTests
         {
             var simulation = Simulation.Create(bufferPool, new TestCallbacks());
             var shape = new Sphere(0.5f);
-            var shapeIndex = simulation.Shapes.Add(ref shape);
+            var shapeIndex = simulation.Shapes.Add(shape);
             const int width = 8;
             const int height = 8;
             const int length = 8;

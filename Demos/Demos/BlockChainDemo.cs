@@ -31,7 +31,7 @@ namespace Demos.Demos
 
             var boxShape = new Box(1, 1, 1);
             boxShape.ComputeInertia(1, out var boxInertia);
-            var boxIndex = Simulation.Shapes.Add(ref boxShape);
+            var boxIndex = Simulation.Shapes.Add(boxShape);
             const int forkCount = 20;
             const int blocksPerChain = 20;
             int[] blockHandles = new int[blocksPerChain];
@@ -71,7 +71,7 @@ namespace Demos.Demos
             }
 
             var staticShape = new Box(200, 1, 200);
-            var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
+            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
 
             var staticDescription = new StaticDescription
             {
@@ -100,7 +100,7 @@ namespace Demos.Demos
                     Orientation = BepuUtilities.Quaternion.Identity
                 },
                 Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = .01f },
-                Collidable = new CollidableDescription { Shape = Simulation.Shapes.Add(ref coinShape), SpeculativeMargin = .1f },
+                Collidable = new CollidableDescription { Shape = Simulation.Shapes.Add(coinShape), SpeculativeMargin = .1f },
             };
         }
 

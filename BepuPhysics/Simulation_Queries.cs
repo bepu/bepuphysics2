@@ -153,7 +153,7 @@ namespace BepuPhysics
                             ShapeData, ShapeType, Pose.Orientation, Velocity,
                             targetShapeData, shape.Type, targetPose->Position - Pose.Position, targetPose->Orientation, new BodyVelocity(),
                             maximumT, MinimumProgression, ConvergenceThreshold, MaximumIterationCount,
-                            ref this, out var t0, out var t1, out var hitLocation, out var hitNormal);
+                            ref this, Simulation.Shapes, Simulation.NarrowPhase.SweepTaskRegistry, out var t0, out var t1, out var hitLocation, out var hitNormal);
                         if (result)
                         {
                             if (t1 > 0)

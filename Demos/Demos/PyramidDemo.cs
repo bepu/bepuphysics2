@@ -26,7 +26,7 @@ namespace Demos.Demos
 
             var boxShape = new Box(1, 1, 1);
             boxShape.ComputeInertia(1, out var boxInertia);
-            var boxIndex = Simulation.Shapes.Add(ref boxShape);
+            var boxIndex = Simulation.Shapes.Add(boxShape);
             const int pyramidCount = 20;
             for (int pyramidIndex = 0; pyramidIndex < pyramidCount; ++pyramidIndex)
             {
@@ -56,7 +56,7 @@ namespace Demos.Demos
             }
 
             var staticShape = new Box(200, 1, 200);
-            var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
+            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
 
             var staticDescription = new StaticDescription
             {
@@ -93,7 +93,7 @@ namespace Demos.Demos
                 //Unfortunately, at the moment, bepuphysics v2 does not contain any alternative solvers, so if you can't afford to brute force the the problem away,
                 //the best solution is to cheat as much as possible to avoid the corner cases.
                 bulletShape.ComputeInertia(bulletShape.Radius * bulletShape.Radius * bulletShape.Radius, out var bulletInertia);
-                var bulletShapeIndex = Simulation.Shapes.Add(ref bulletShape);
+                var bulletShapeIndex = Simulation.Shapes.Add(bulletShape);
                 var bodyDescription = new BodyDescription
                 {
                     LocalInertia = bulletInertia,

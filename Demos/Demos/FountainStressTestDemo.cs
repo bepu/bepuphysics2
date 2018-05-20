@@ -38,7 +38,7 @@ namespace Demos.Demos
 
 
             var staticShape = new Sphere(6);
-            var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
+            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
             const int staticGridWidthInSpheres = 128;
             const float staticSpacing = 8;
             for (int i = 0; i < staticGridWidthInSpheres; ++i)
@@ -68,7 +68,7 @@ namespace Demos.Demos
 
             //A bunch of kinematic balls do acrobatics as an extra stressor.
             var kinematicShape = new Sphere(8);
-            var kinematicShapeIndex = Simulation.Shapes.Add(ref staticShape);
+            var kinematicShapeIndex = Simulation.Shapes.Add(staticShape);
             var kinematicCount = 64;
             var anglePerKinematic = MathHelper.TwoPi / kinematicCount;
             var startingRadius = 256;
@@ -189,7 +189,7 @@ namespace Demos.Demos
             {
                 //For the sake of the stress test, every single body has its own shape that gets removed when the body is removed.
                 var shape = new Sphere(0.35f + 0.35f * (float)random.NextDouble());
-                var shapeIndex = Simulation.Shapes.Add(ref shape);
+                var shapeIndex = Simulation.Shapes.Add(shape);
                 var description = new BodyDescription
                 {
                     Pose = new RigidPose

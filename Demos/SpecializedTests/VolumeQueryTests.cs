@@ -74,7 +74,7 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks());
 
             var sphere = new Sphere(0.5f);
-            var shapeIndex = Simulation.Shapes.Add(ref sphere);
+            var shapeIndex = Simulation.Shapes.Add(sphere);
             const int width = 16;
             const int height = 16;
             const int length = 16;

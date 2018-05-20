@@ -111,7 +111,7 @@ namespace Demos.Demos
     {
         static BodyReference AddBody<TShape>(TShape shape, float mass, RigidPose pose, Simulation simulation) where TShape : struct, IConvexShape
         {
-            var shapeIndex = simulation.Shapes.Add(ref shape);
+            var shapeIndex = simulation.Shapes.Add(shape);
             shape.ComputeInertia(mass, out var inertia);
             var description = new BodyDescription
             {
@@ -447,7 +447,7 @@ namespace Demos.Demos
 
 
             var staticShape = new Box(100, 1, 100);
-            var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
+            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
             var staticDescription = new StaticDescription
             {
                 Collidable = new CollidableDescription

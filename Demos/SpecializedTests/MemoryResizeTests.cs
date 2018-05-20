@@ -64,7 +64,7 @@ namespace Demos.SpecializedTests
         {
             var simulation = Simulation.Create(new BufferPool(), new TestCallbacks());
             var sphere = new Sphere(0.5f);
-            var shapeIndex = simulation.Shapes.Add(ref sphere);
+            var shapeIndex = simulation.Shapes.Add(sphere);
 
             var bodyBuilder = new RegularGridWithKinematicBaseBuilder(new Vector3(1), new Vector3(), 1, shapeIndex);
             var constraintBuilder = new BallSocketConstraintBuilder();
@@ -81,7 +81,7 @@ namespace Demos.SpecializedTests
                 {
                     //Clear and recreate.
                     simulation.Clear();
-                    shapeIndex = simulation.Shapes.Add(ref sphere);
+                    shapeIndex = simulation.Shapes.Add(sphere);
                     SimulationSetup.BuildLattice(bodyBuilder, constraintBuilder, width, height, length, simulation, out bodyHandles, out constraintHandles);
                 }
                 else

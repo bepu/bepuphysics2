@@ -112,14 +112,14 @@ namespace BepuPhysics.Collidables
             Debug.Assert(!SpanHelper.IsZeroed(ref shapes[index]),
                 "Either a shape was default constructed (which is almost certainly invalid), or this is attempting to remove a shape that was already removed.");
             //Don't have to actually clear out the shape set since everything is blittable. For debug purposes, we do, just to catch invalid usages.
-            shapes[index] = default(TShape);
+            shapes[index] = default;
         }
 
 
         //Note that shapes cannot be moved; there is no reference to the collidables using them, so we can't correct their indices.
         //But that's fine- we never directly iterate over the shapes set anyway.
         //(This doesn't mean that it's impossible to compact the shape set- it just requires doing so by iterating over collidables.)
-        public int Add(ref TShape shape)
+        public int Add(in TShape shape)
         {
             var shapeIndex = idPool.Take();
             if (shapes.Length <= shapeIndex)
@@ -317,7 +317,7 @@ namespace BepuPhysics.Collidables
         }
 
 
-        public TypedIndex Add<TShape>(ref TShape shape) where TShape : struct, IShape
+        public TypedIndex Add<TShape>(in TShape shape) where TShape : struct, IShape
         {
             var typeId = default(TShape).TypeId;
             if (RegisteredTypeSpan <= typeId)
@@ -335,7 +335,7 @@ namespace BepuPhysics.Collidables
 
             Debug.Assert(batches[typeId] is ShapeBatch<TShape>);
             var batch = Unsafe.As<ShapeBatch, ShapeBatch<TShape>>(ref batches[typeId]);
-            var index = batch.Add(ref shape);
+            var index = batch.Add(shape);
             return new TypedIndex(typeId, index);
         }
 

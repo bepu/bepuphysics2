@@ -13,7 +13,7 @@ namespace Demos.SpecializedTests
             //TODO: As more features get added, you'll probably want to revisit this and lengthen the per-execution duration.
             var simulation = Simulation.Create(bufferPool, new TestCallbacks());
             var sphere = new Sphere(0.5f);
-            var shapeIndex = simulation.Shapes.Add(ref sphere);
+            var shapeIndex = simulation.Shapes.Add(sphere);
 
             var bodyBuilder = new RegularGridWithKinematicBaseBuilder(new Vector3(1), new Vector3(), 1, shapeIndex);
             var constraintBuilder = new BallSocketConstraintBuilder();

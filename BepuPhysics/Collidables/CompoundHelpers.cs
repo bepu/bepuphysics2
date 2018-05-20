@@ -49,15 +49,15 @@ namespace BepuPhysics.Collidables
         /// <param name="localPose">Pose of the shape in the compound's local space.</param>
         /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass and scales the inertia tensor. 
         /// Otherwise, it is used for recentering.</param>
-        public void Add<TShape>(ref TShape shape, ref RigidPose localPose, float weight) where TShape : struct, IConvexShape
+        public void Add<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : struct, IConvexShape
         {
-            var shapeIndex = Shapes.Add(ref shape);
+            var shapeIndex = Shapes.Add(shape);
             ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
             child.LocalPose = localPose;
-            child.ShapeIndex = Shapes.Add(ref shape);
+            child.ShapeIndex = Shapes.Add(shape);
             child.Weight = weight;
             shape.ComputeInertia(weight, out var inertia);
-            Triangular3x3.SymmetricInvert(ref inertia.InverseInertiaTensor, out child.Inertia);
+            Triangular3x3.SymmetricInvert(inertia.InverseInertiaTensor, out child.Inertia);
         }
 
         /// <summary>
@@ -67,12 +67,12 @@ namespace BepuPhysics.Collidables
         /// <param name="shape">Shape to add.</param>
         /// <param name="localPose">Pose of the shape in the compound's local space.</param>
         /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass. Otherwise, it is used for recentering.</param>
-        public void AddForKinematic<TShape>(ref TShape shape, ref RigidPose localPose, float weight) where TShape : struct, IConvexShape
+        public void AddForKinematic<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : struct, IConvexShape
         {
-            var shapeIndex = Shapes.Add(ref shape);
+            var shapeIndex = Shapes.Add(shape);
             ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
             child.LocalPose = localPose;
-            child.ShapeIndex = Shapes.Add(ref shape);
+            child.ShapeIndex = Shapes.Add(shape);
             child.Weight = weight;
             child.Inertia = default;
         }
@@ -84,7 +84,7 @@ namespace BepuPhysics.Collidables
         /// <param name="localPose">Pose of the shape in the compound's local space.</param>
         /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass. Otherwise, it is used for recentering.</param>
         /// <param name="inverseInertia">Inverse inertia tensor of the shape being added. This is assumed to already be scaled as desired by the weight.</param>
-        public void Add(TypedIndex shape, ref RigidPose localPose, ref Triangular3x3 inverseInertia, float weight)
+        public void Add(TypedIndex shape, in RigidPose localPose, in Triangular3x3 inverseInertia, float weight)
         {
             ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
             child.LocalPose = localPose;
@@ -92,10 +92,10 @@ namespace BepuPhysics.Collidables
             child.Weight = weight;
             //This assumes the given inertia is nonsingular. That should be a valid assumption, unless the user is trying to supply an axis-locked tensor.
             //For such a use case, it's best to just lock the axis after computing a 'normal' inertia. 
-            Debug.Assert(Triangular3x3.SymmetricDeterminant(ref inverseInertia) > 0,
+            Debug.Assert(Triangular3x3.SymmetricDeterminant(inverseInertia) > 0,
                 "Shape inertia tensors should be invertible. If making an axis-locked compound, consider locking the axis on the completed inertia. " +
                 "If making a kinematic, consider using the overload which takes no inverse inertia.");
-            Triangular3x3.SymmetricInvert(ref inverseInertia, out child.Inertia);
+            Triangular3x3.SymmetricInvert(inverseInertia, out child.Inertia);
         }
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace BepuPhysics.Collidables
                 targetChild.LocalPose.Orientation = sourceChild.LocalPose.Orientation;
                 targetChild.ShapeIndex = sourceChild.ShapeIndex;
             }
-            Triangular3x3.SymmetricInvert(ref summedInertia, out inertia.InverseInertiaTensor);
+            Triangular3x3.SymmetricInvert(summedInertia, out inertia.InverseInertiaTensor);
         }
 
         /// <summary>
@@ -195,7 +195,7 @@ namespace BepuPhysics.Collidables
                 targetChild.LocalPose.Orientation = sourceChild.LocalPose.Orientation;
                 targetChild.ShapeIndex = sourceChild.ShapeIndex;
             }
-            Triangular3x3.SymmetricInvert(ref summedInertia, out inertia.InverseInertiaTensor);
+            Triangular3x3.SymmetricInvert(summedInertia, out inertia.InverseInertiaTensor);
         }
 
         /// <summary>

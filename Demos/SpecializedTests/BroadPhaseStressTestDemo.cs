@@ -24,7 +24,7 @@ namespace Demos.SpecializedTests
 
             var shape = new Sphere(0.5f);
             shape.ComputeInertia(1, out var sphereInertia);
-            var shapeIndex = Simulation.Shapes.Add(ref shape);
+            var shapeIndex = Simulation.Shapes.Add(shape);
             const int width = 64;
             const int height = 64;
             const int length = 64;

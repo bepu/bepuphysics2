@@ -24,7 +24,7 @@ namespace Demos.Demos
             var shape = new Capsule(.5f, 3.5f);
             shape.ComputeInertia(1, out var localInertia);
             //capsuleInertia.InverseInertiaTensor = new Triangular3x3();
-            var shapeIndex = Simulation.Shapes.Add(ref shape);
+            var shapeIndex = Simulation.Shapes.Add(shape);
             const int width = 4;
             const int height = 4;
             const int length = 4;
@@ -62,7 +62,7 @@ namespace Demos.Demos
             //Simulation.Bodies.Add(ref bodyDescription);
 
             var staticShape = new Sphere(4f);
-            var staticShapeIndex = Simulation.Shapes.Add(ref staticShape);
+            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
             const int staticGridWidth = 64;
             const float staticSpacing = 6;
             var gridOffset = -0.5f * staticGridWidth * staticSpacing;
