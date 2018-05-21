@@ -210,10 +210,10 @@ namespace Demos.SpecializedTests
             do
             {
                 GetUnitDirection(random, out var randomDirection);
-                Vector3x.Cross(ref normal, ref randomDirection, out basisX);
+                Vector3x.Cross(normal, randomDirection, out basisX);
                 basisXLengthSquared = basisX.LengthSquared();
             } while (basisXLengthSquared < 1e-7f);
-            Vector3x.Cross(ref normal, ref basisX, out var basisZ);
+            Vector3x.Cross(normal, basisX, out var basisZ);
             point = anchor + basisX * localPoint.X + basisZ * localPoint.Y;
         }
 

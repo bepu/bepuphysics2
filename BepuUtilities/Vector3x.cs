@@ -11,7 +11,7 @@ namespace BepuUtilities
     public struct Vector3x
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Cross(ref Vector3 a, ref Vector3 b, out Vector3 result)
+        public static void Cross(in Vector3 a, in Vector3 b, out Vector3 result)
         {
             result = new Vector3(
                 a.Y * b.Z - a.Z * b.Y,
@@ -20,7 +20,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Lerp(ref Vector3 a, ref Vector3 b, float t, out Vector3 result)
+        public static void Lerp(in Vector3 a, in Vector3 b, float t, out Vector3 result)
         {
             result = a * (1f - t) + b * t;
         }

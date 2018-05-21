@@ -571,10 +571,10 @@ namespace BepuUtilities
             float length = forward.Length();
             var z = forward / -length;
             Vector3 x;
-            Vector3x.Cross(ref upVector, ref z, out x);
+            Vector3x.Cross(upVector, z, out x);
             x = Vector3.Normalize(x);
             Vector3 y;
-            Vector3x.Cross(ref z, ref x, out y);
+            Vector3x.Cross(z, x, out y);
 
             viewMatrix.X = new Vector4(x.X, y.X, z.X, 0);
             viewMatrix.Y = new Vector4(x.Y, y.Y, z.Y, 0);

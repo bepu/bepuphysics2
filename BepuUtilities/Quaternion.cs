@@ -763,7 +763,7 @@ namespace BepuUtilities
             else
             {
                 Vector3 axis;
-                Vector3x.Cross(ref v1, ref v2, out axis);
+                Vector3x.Cross(v1, v2, out axis);
                 q = new Quaternion(axis.X, axis.Y, axis.Z, dot + 1);
             }
             q.Normalize();

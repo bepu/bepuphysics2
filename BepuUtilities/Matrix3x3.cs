@@ -89,7 +89,7 @@ namespace BepuUtilities
         {
             //Current implementation of cross far from optimal without shuffles. This assumes it'll eventually be accelerated.
             Vector3 cross;
-            Vector3x.Cross(ref Y, ref Z, out cross);
+            Vector3x.Cross(Y, Z, out cross);
             return Vector3.Dot(X, cross);
         }
 
@@ -103,10 +103,9 @@ namespace BepuUtilities
         {
             //Current implementation of cross far from optimal without shuffles, and even then this has some room for improvement.
             //Inverts should be really rare, so it's not too concerning. Use the scalar version when possible until ryujit improves (and we improve this implementation).
-            Vector3 yz, zx, xy;
-            Vector3x.Cross(ref m.Y, ref m.Z, out yz);
-            Vector3x.Cross(ref m.Z, ref m.X, out zx);
-            Vector3x.Cross(ref m.X, ref m.Y, out xy);
+            Vector3x.Cross(m.Y, m.Z, out var yz);
+            Vector3x.Cross(m.Z, m.X, out var zx);
+            Vector3x.Cross(m.X, m.Y, out var xy);
             var inverseDeterminant = 1f / Vector3.Dot(m.X, yz);
             inverse.X = yz * inverseDeterminant;
             inverse.Y = zx * inverseDeterminant;
@@ -359,7 +358,7 @@ namespace BepuUtilities
                 axis.Y * sinAngle + oneMinusCosAngle * xz,
                 -axis.X * sinAngle + oneMinusCosAngle * yz,
                 1 + oneMinusCosAngle * (zz - 1));
-            
+
         }
 
         /// <summary>
