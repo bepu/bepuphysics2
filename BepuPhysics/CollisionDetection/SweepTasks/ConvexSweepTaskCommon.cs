@@ -27,14 +27,14 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             ShapeTypeIndexB = default(TShapeB).TypeId;
         }
         public override unsafe bool Sweep(
-            void* shapeDataA, int shapeTypeA, in RigidPose localOffsetA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in RigidPose localOffsetB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            void* shapeDataA, int shapeTypeA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, int shapeTypeB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
             return ConvexSweepTaskCommon.Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
-                shapeDataA, shapeTypeA, localOffsetA, orientationA, velocityA,
-                shapeDataB, shapeTypeB, localOffsetB, offsetB, orientationB, velocityB,
+                shapeDataA, shapeTypeA, localPoseA, orientationA, velocityA,
+                shapeDataB, shapeTypeB, localPoseB, offsetB, orientationB, velocityB,
                 maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                 out t0, out t1, out hitLocation, out hitNormal);
         }
@@ -245,11 +245,14 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         interface ISweepModifier
         {
             float GetBoundingSphereRadiusExpansion(float maximumT,
-                in Quaternion orientationA, in Vector3 angularVelocityA, in Quaternion orientationB, in Vector3 angularVelocityB);
+                in Quaternion orientationA, in Vector3 angularVelocityA, float angularSpeedA,
+                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB);
             void ConstructSamples(float t0, float t1, ref Vector3Wide linearB, ref Vector3Wide angularA, ref Vector3Wide angularB,
                 ref Vector3Wide initialOffsetB, ref QuaternionWide initialOrientationA, ref QuaternionWide initialOrientationB,
                 ref Vector<float> samples, ref Vector3Wide sampleOffsetB, ref QuaternionWide sampleOrientationA, ref QuaternionWide sampleOrientationB);
-            void GetNonlinearVelocityContribution(out Vector<float> nonlinearVelocityContribution);
+            void GetNonlinearVelocityContribution(ref Vector3Wide normal,
+                out Vector<float> velocityContributionA, out Vector<float> maximumDisplacementA,
+                out Vector<float> velocityContributionB, out Vector<float> maximumDisplacementB);
             void AdjustHitLocation(in Quaternion initialOrientationA, in BodyVelocity velocityA, float t0, ref Vector3 hitLocation);
         }
 
@@ -279,22 +282,33 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public float GetBoundingSphereRadiusExpansion(float maximumT,
-                in Quaternion orientationA, in Vector3 angularVelocityA, in Quaternion orientationB, in Vector3 angularVelocityB)
+                in Quaternion orientationA, in Vector3 angularVelocityA, float angularSpeedA,
+                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB)
             {
                 return 0;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void GetNonlinearVelocityContribution(out Vector<float> nonlinearVelocityContribution)
+            public void GetNonlinearVelocityContribution(ref Vector3Wide normal,
+                out Vector<float> velocityContributionA, out Vector<float> maximumDisplacementA,
+                out Vector<float> velocityContributionB, out Vector<float> maximumDisplacementB)
             {
-                nonlinearVelocityContribution = new Vector<float>();
+                velocityContributionA = Vector<float>.Zero;
+                maximumDisplacementA = Vector<float>.Zero;
+                velocityContributionB = Vector<float>.Zero;
+                maximumDisplacementB = Vector<float>.Zero;
             }
         }
         struct OffsetSweep : ISweepModifier
         {
             public RigidPose LocalPoseA;
             public RigidPose LocalPoseB;
-            public Vector<float> NonlinearContribution;
+            public float TangentSpeedA;
+            public float TangentSpeedB;
+            public float TwiceRadiusA;
+            public float TwiceRadiusB;
+            public Vector3 AngularVelocityDirectionA;
+            public Vector3 AngularVelocityDirectionB;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void AdjustHitLocation(in Quaternion initialOrientationA, in BodyVelocity velocityA, float t0, ref Vector3 hitLocation)
@@ -329,25 +343,46 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public float GetBoundingSphereRadiusExpansion(float maximumT,
-                in Quaternion orientationA, in Vector3 angularVelocityA, in Quaternion orientationB, in Vector3 angularVelocityB)
+                in Quaternion orientationA, in Vector3 angularVelocityA, float angularSpeedA,
+                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB)
             {
                 //The tangent velocity magnitude doesn't change over the course of the sweep. Compute and cache it as an upper bound on the contribution from the offset.
                 Quaternion.TransformWithoutOverlap(LocalPoseA.Position, orientationA, out var rA);
                 Vector3x.Cross(rA, angularVelocityA, out var tangentA);
-                var tangentSpeedA = tangentA.Length();
+                TangentSpeedA = tangentA.Length();
                 Quaternion.TransformWithoutOverlap(LocalPoseB.Position, orientationB, out var rB);
                 Vector3x.Cross(rB, angularVelocityB, out var tangentB);
-                var tangentSpeedB = tangentB.Length();
-                NonlinearContribution = new Vector<float>(tangentSpeedA + tangentSpeedB);
+                TangentSpeedB = tangentB.Length();
+                TwiceRadiusA = 2 * LocalPoseA.Position.Length();
+                TwiceRadiusB = 2 * LocalPoseB.Position.Length();
+                AngularVelocityDirectionA = angularSpeedA > 1e-8f ? angularVelocityA / angularSpeedA : new Vector3();
+                AngularVelocityDirectionB = angularSpeedB > 1e-8f ? angularVelocityB / angularSpeedB : new Vector3();
                 //The maximum translation due to angular velocity is at 180 degrees, so the maximum translation induced by angular motion is 2 * radius.
                 //If the sweep covers a short enough duration that the maximum is not hit, we'll use a (loose) estimate based on extrapolating the tangent speed.
-                return Math.Min(maximumT * (tangentSpeedA + tangentSpeedB), (LocalPoseA.Position.Length() + LocalPoseA.Position.Length()) * 2);
+                return Math.Min(maximumT * (TangentSpeedA + TangentSpeedB), TwiceRadiusA + TwiceRadiusB);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void GetNonlinearVelocityContribution(out Vector<float> nonlinearVelocityContribution)
+            public void GetNonlinearVelocityContribution(ref Vector3Wide normal,
+                out Vector<float> velocityContributionA, out Vector<float> maximumDisplacementA,
+                out Vector<float> velocityContributionB, out Vector<float> maximumDisplacementB)
             {
-                nonlinearVelocityContribution = NonlinearContribution;
+                //Constant angular velocity creates circular motion on a plane. That plane's normal is the angular velocity direction.
+                //All offset-angular induced motion is constrained to this plane.
+                //So, we can bound the tangent velocity contribution along the normal fairly tightly.
+                //The same goes for the maximum displacement- 
+                //if the angular velocity is perpendicular to the normal, displacement is no more than 2 * radius. As the N * W/||W|| dot goes to 1, the maximum displacement goes to 0.
+                //(Note that you could bound this even more tightly by noting that 2 * radius is only hit when R/||R|| * NOnPlane = 1. Just didn't go that far (yet).)
+                Vector3Wide.Broadcast(AngularVelocityDirectionA, out var directionA);
+                Vector3Wide.Dot(ref normal, ref directionA, out var dotA);
+                var scaleA = Vector.SquareRoot(Vector.Max(Vector<float>.Zero, Vector<float>.One - dotA * dotA));
+                velocityContributionA = new Vector<float>(TangentSpeedA) * scaleA;
+                maximumDisplacementA = new Vector<float>(TwiceRadiusA) * scaleA;
+                Vector3Wide.Broadcast(AngularVelocityDirectionB, out var directionB);
+                Vector3Wide.Dot(ref normal, ref directionB, out var dotB);
+                var scaleB = Vector.SquareRoot(Vector.Max(Vector<float>.Zero, Vector<float>.One - dotB * dotB));
+                velocityContributionB = new Vector<float>(TangentSpeedB) * scaleB;
+                maximumDisplacementB = new Vector<float>(TwiceRadiusB) * scaleB;
             }
         }
 
@@ -382,7 +417,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var linearVelocityB = velocityB.Linear - velocityA.Linear;
             shapeA.ComputeAngularExpansionData(out var maximumRadiusA, out var maximumAngularExpansionA);
             shapeB.ComputeAngularExpansionData(out var maximumRadiusB, out var maximumAngularExpansionB);
-            var maximumNonlinearContribution = sweepModifier.GetBoundingSphereRadiusExpansion(maximumT, orientationA, velocityA.Angular, orientationB, velocityB.Angular);
+            var angularSpeedA = velocityA.Angular.Length();
+            var angularSpeedB = velocityB.Angular.Length();
+            var maximumNonlinearContribution = sweepModifier.GetBoundingSphereRadiusExpansion(maximumT,
+                orientationA, velocityA.Angular, angularSpeedA,
+                orientationB, velocityB.Angular, angularSpeedB);
             if (!GetSphereCastInterval(offsetB, linearVelocityB, maximumRadiusA + maximumRadiusB + maximumNonlinearContribution, out t0, out t1) || t0 > maximumT || t1 < 0)
             {
                 //The bounding spheres do not intersect, or the intersection interval is outside of the requested search interval.
@@ -424,8 +463,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //3) Samples are taken in a wide SIMD fashion. Rather than performing only one sample at a time, Vector<float>.Count samples are distributed.
             //(This doesn't correspond to a linear convergence speed up with SIMD width since the SIMD samples must be done in parallel, but it is significant.)
 
-            var tangentSpeedA = new Vector<float>(maximumRadiusA * velocityA.Angular.Length());
-            var tangentSpeedB = new Vector<float>(maximumRadiusB * velocityB.Angular.Length());
+            var tangentSpeedA = new Vector<float>(maximumRadiusA * angularSpeedA);
+            var tangentSpeedB = new Vector<float>(maximumRadiusB * angularSpeedB);
             var maxAngularExpansionA = new Vector<float>(maximumAngularExpansionA);
             var maxAngularExpansionB = new Vector<float>(maximumAngularExpansionB);
 
@@ -462,7 +501,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     out intersections, out distances, out closestA, out normals);
 
                 Vector3Wide.Dot(ref normals, ref wideLinearVelocityB, out var linearVelocityAlongNormal);
-                sweepModifier.GetNonlinearVelocityContribution(out var nonlinearVelocityContribution);
+                sweepModifier.GetNonlinearVelocityContribution(ref normals,
+                    out var nonlinearVelocityContributionA, out var nonlinearMaximumDisplacementA,
+                    out var nonlinearVelocityContributionB, out var nonlinearMaximumDisplacementB);
                 //Note that, for any given timespan, the maximum displacement of any point on a body is bounded.
                 //timeToNext = distances / 
                 //  (linearContribution + 
@@ -475,20 +516,21 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 //timeToNext * linearContribution + timeToNext * (maximumAngularExpansionA + maximumAngularExpansionB) / timeToNext) = distances
                 //timeToNext * linearContribution + (maximumAngularExpansionA + maximumAngularExpansionB)) = distances
                 //timeToNext = (distances - (maximumAngularExpansionA + maximumAngularExpansionB)) / linearContribution                
-                var aWorstCaseDistances = distances - maxAngularExpansionA;
-                var bWorstCaseDistances = distances - maxAngularExpansionB;
-                var bothWorstCaseDistances = aWorstCaseDistances - maxAngularExpansionB;
-                var linearMotionBound = linearVelocityAlongNormal + nonlinearVelocityContribution;
-                var bothWorstCaseNextTime = bothWorstCaseDistances / linearMotionBound;
-                var aWorstCaseNextTime = aWorstCaseDistances / (linearMotionBound + tangentSpeedB);
-                var bWorstCaseNextTime = bWorstCaseDistances / (linearMotionBound + tangentSpeedA);
-                var bestCaseNextTime = distances / (linearMotionBound + tangentSpeedA + tangentSpeedB);
+                var aWorstCaseDistances = Vector.Max(Vector<float>.Zero, distances - maxAngularExpansionA - nonlinearMaximumDisplacementA);
+                var angularDisplacementB = maxAngularExpansionB + nonlinearMaximumDisplacementB;
+                var bWorstCaseDistances = Vector.Max(Vector<float>.Zero, distances - angularDisplacementB);
+                var bothWorstCaseDistances = Vector.Max(Vector<float>.Zero, aWorstCaseDistances - angularDisplacementB);
+                var bothWorstCaseNextTime = bothWorstCaseDistances / linearVelocityAlongNormal;
+                var angularContributionA = nonlinearVelocityContributionA + tangentSpeedA;
+                var angularContributionB = nonlinearVelocityContributionB + tangentSpeedB;
+                var aWorstCaseNextTime = aWorstCaseDistances / (linearVelocityAlongNormal + angularContributionB);
+                var bWorstCaseNextTime = bWorstCaseDistances / (linearVelocityAlongNormal + angularContributionA);
+                var bestCaseNextTime = distances / (linearVelocityAlongNormal + angularContributionA + angularContributionB);
                 var timeToNext = Vector.Max(Vector.Max(bothWorstCaseNextTime, aWorstCaseNextTime), Vector.Max(bWorstCaseNextTime, bestCaseNextTime));
 
-                var backwardsLinearMotionBound = nonlinearVelocityContribution - linearVelocityAlongNormal;
-                var aWorstCasePreviousTime = aWorstCaseDistances / (tangentSpeedB + backwardsLinearMotionBound);
-                var bWorstCasePreviousTime = bWorstCaseDistances / (tangentSpeedA + backwardsLinearMotionBound);
-                var bestCasePreviousTime = distances / (tangentSpeedA + tangentSpeedB + backwardsLinearMotionBound);
+                var aWorstCasePreviousTime = aWorstCaseDistances / (angularContributionB - linearVelocityAlongNormal);
+                var bWorstCasePreviousTime = bWorstCaseDistances / (angularContributionA - linearVelocityAlongNormal);
+                var bestCasePreviousTime = distances / (angularContributionA + angularContributionB - linearVelocityAlongNormal);
                 var timeToPrevious = Vector.Max(Vector.Max(-bothWorstCaseNextTime, aWorstCasePreviousTime), Vector.Max(bWorstCasePreviousTime, bestCasePreviousTime));
 
                 var safeIntervalStart = samples - timeToPrevious;
@@ -502,20 +544,25 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 }
                 else
                 {
-                    int lastSafeIndex = 0;
+                    int firstIntersectingIndex = Vector<float>.Count;
                     for (int i = 0; i < Vector<float>.Count; ++i)
                     {
-                        lastSafeIndex = i;
-                        if (i < Vector<float>.Count - 1)
+                        if (intersections[i] < 0)
                         {
-                            var nextIndex = i + 1;
-                            if (intersections[nextIndex] < 0)
-                            {
-                                //An intersection was found. Pull the interval endpoint all the way up. No point in looking at further samples.
-                                next1 = samples[nextIndex];
-                                intersectionEncountered = true;
-                                break;
-                            }
+                            //An intersection was found. Pull the interval endpoint all the way up. No point in looking at further samples.
+                            firstIntersectingIndex = i;
+                            next1 = samples[i];
+                            intersectionEncountered = true;
+                            break;
+                        }
+                    }
+                    int lastSafeIndex = 0;
+                    for (int i = 0; i < firstIntersectingIndex; ++i)
+                    {
+                        lastSafeIndex = i;
+                        var nextIndex = i + 1;
+                        if (nextIndex < firstIntersectingIndex)
+                        {
                             //Note that we use the forced interval for testing safe traversal.
                             //This allows the root finder to skip small intersections for a substantial speedup in pathological cases.
                             if (safeIntervalStart[i + 1] > forcedIntervalEnd[i])
