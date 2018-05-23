@@ -551,6 +551,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                         {
                             //An intersection was found. Pull the interval endpoint all the way up. No point in looking at further samples.
                             firstIntersectingIndex = i;
+                            Debug.Assert(samples[i] >= t0);
                             next1 = samples[i];
                             intersectionEncountered = true;
                             break;
@@ -572,6 +573,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                             }
                         }
                     }
+                    Debug.Assert((safeIntervalEnd[lastSafeIndex] >= t0 && safeIntervalEnd[lastSafeIndex] <= t1) || !intersectionEncountered);
                     next0 = safeIntervalEnd[lastSafeIndex];
                     //Copy the best normal into the output variable. We're going to overwrite all the wide normals in the next iteration, but we need to keep the best guess around.
                     hitNormal = new Vector3(normals.X[lastSafeIndex], normals.Y[lastSafeIndex], normals.Z[lastSafeIndex]);

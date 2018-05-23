@@ -36,6 +36,19 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
             {
+                CapsuleBoxDistanceTester tester = default;
+                CapsuleWide a;
+                a.HalfLength = new Vector<float>(1);
+                a.Radius = new Vector<float>(0.5f);
+                BoxWide b;
+                b.HalfWidth = b.HalfLength = b.HalfHeight = new Vector<float>(5);
+                Vector3Wide.Broadcast(new Vector3(10f, 0, 0), out var offsetB);
+                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathHelper.PiOver4), out var orientationA);
+                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0), out var orientationB);
+                tester.Test(ref a, ref b, ref offsetB, ref orientationA, ref orientationB, out var intersected, out var distance, out var closestA, out var normal);
+            }
+
+            {
                 GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder> tester = default;
                 BoxWide a;
                 a.HalfWidth = a.HalfLength = a.HalfHeight = new Vector<float>(1);
@@ -214,10 +227,10 @@ namespace Demos.SpecializedTests
             TestSweep(
                 new Capsule(0.5f, 1f),
                 new RigidPose { Position = new Vector3(-10, 10, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
-                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(0, 0, 0) },
-                new Box(10f, 10f, 10f),
+                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 0, 1) },
+                new Box(1, 1, 1),
                 new RigidPose { Position = new Vector3(10, 10, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
-                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 0, 0) }, 50f, renderer);
+                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
             //TestSweep(
             //    new Box(0.5f, 0.5f, 0.5f),
             //    new RigidPose { Position = new Vector3(-10, 5, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
@@ -248,13 +261,13 @@ namespace Demos.SpecializedTests
             //    new Capsule(.5f, 1.5f),
             //    new RigidPose { Position = new Vector3(10, -5, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
             //    new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
-            TestSweep(
-                compound,
-                new RigidPose { Position = new Vector3(-10, -10, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
-                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 1, 1) },
-                new Box(10, 10, 10),
-                new RigidPose { Position = new Vector3(5, -10, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
-                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 0, 0) }, 50f, renderer);
+            //TestSweep(
+            //    compound,
+            //    new RigidPose { Position = new Vector3(-10, -10, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
+            //    new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 1, 1) },
+            //    new Box(10, 10, 10),
+            //    new RigidPose { Position = new Vector3(5, -10, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
+            //    new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 0, 0) }, 50f, renderer);
         }
     }
 }
