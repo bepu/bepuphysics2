@@ -239,7 +239,7 @@ namespace BepuPhysics
             var inverseVelocity = 1f / (velocity.Linear.Length() + tangentVelocity);
             var minimumProgressionT = minimumProgressionDistance * inverseVelocity;
             var convergenceThresholdT = convergenceThresholdDistance * inverseVelocity;
-            var maximumIterationCount = 12;
+            var maximumIterationCount = 25;
             Sweep(shape, pose, velocity, maximumT, ref hitHandler, minimumProgressionT, convergenceThresholdT, maximumIterationCount);
         }
     }

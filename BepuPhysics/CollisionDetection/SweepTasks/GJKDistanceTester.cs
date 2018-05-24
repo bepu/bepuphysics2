@@ -347,6 +347,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             int iterationCount = 0;
             //Note that we use hardcoded defaults if this is default constructed.
             var epsilon = new Vector<float>(TerminationEpsilon > 0 ? TerminationEpsilon : 1e-7f);
+            const float containmentEpsilonScalar = 0.000316227766f;
+            var containmentEpsilon = new Vector<float>(containmentEpsilonScalar);
+            var containmentEpsilonSquared = new Vector<float>(containmentEpsilonScalar * containmentEpsilonScalar);
             Vector<float> distanceSquared = new Vector<float>(float.MaxValue);
             while (true)
             {
@@ -357,7 +360,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 //Note hardcoded fixed epsilon: this isn't ideal, but normals become unreliable at scales below this threshold.
                 //TODO: May want to make it configurable for users who don't care about normal accuracy and need smaller scale support.
                 //Sweep tests are a difficult spot for configuration.
-                var simplexContainsOrigin = Vector.LessThanOrEqual(newDistanceSquared, new Vector<float>(1e-7f));
+                var simplexContainsOrigin = Vector.LessThanOrEqual(newDistanceSquared, containmentEpsilonSquared);
                 intersected = Vector.BitwiseOr(intersected, Vector.AndNot(simplexContainsOrigin, terminatedMask));
                 terminatedMask = Vector.BitwiseOr(terminatedMask, simplexContainsOrigin);
                 if (Vector.EqualsAll(terminatedMask, -Vector<int>.One))
@@ -410,6 +413,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //Note that this normalization will cover lanes which weren't separated- that's fine. Valid lanes are described by the intersected flag.
             distance = Vector.SquareRoot(distanceSquared);
             var inverseDistance = Vector<float>.One / distance;
+            //The containment epsilon acts as a margin around shapes that guarantees that normals remain numerically valid.
+            //To avoid a case where the distance goes from near epsilon to intersecting in sub-epsilon motion, we report the distance as be adjusted by the containment epsilon. 
+            //In other words, the shapes are spherically expanded a little. Not ideal, but not horrible.
+            distance -= containmentEpsilon;
             Vector3Wide.Scale(ref normal, ref inverseDistance, out normal);
         }
     }

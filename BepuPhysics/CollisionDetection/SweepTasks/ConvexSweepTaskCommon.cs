@@ -198,6 +198,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     out t0, out t1, out hitLocation, out hitNormal);
                 //Normals are calibrated to point from B to A by convention; retain that convention if the parameters were reversed.
                 hitNormal = -hitNormal;
+                hitLocation = hitLocation + offsetB;
                 return intersected;
             }
         }
@@ -219,10 +220,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 (shapeTypeA == default(TShapeB).TypeId && shapeTypeB == default(TShapeA).TypeId),
                 "Sweep type requirements not met.");
             OffsetSweep sweepModifier = default;
-            sweepModifier.LocalPoseA = localPoseA;
-            sweepModifier.LocalPoseB = localPoseB;
             if (shapeTypeA == default(TShapeA).TypeId)
             {
+                sweepModifier.LocalPoseA = localPoseA;
+                sweepModifier.LocalPoseB = localPoseB;
                 return Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester, OffsetSweep>(
                     shapeDataA, orientationA, velocityA,
                     shapeDataB, offsetB, orientationB, velocityB,
@@ -231,6 +232,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             }
             else
             {
+                sweepModifier.LocalPoseB = localPoseA;
+                sweepModifier.LocalPoseA = localPoseB;
                 var intersected = Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester, OffsetSweep>(
                     shapeDataB, orientationB, velocityB,
                     shapeDataA, -offsetB, orientationA, velocityA,
@@ -238,6 +241,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     out t0, out t1, out hitLocation, out hitNormal);
                 //Normals are calibrated to point from B to A by convention; retain that convention if the parameters were reversed.
                 hitNormal = -hitNormal;
+                hitLocation = hitLocation + offsetB;
                 return intersected;
             }
         }
@@ -334,11 +338,13 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 RigidPoses.Broadcast(LocalPoseA, out var localPosesA);
                 Integrate(ref initialOrientationA, ref angularA, ref halfSamples, out var integratedOrientationA);
                 Compound.GetRotatedChildPose(localPosesA, integratedOrientationA, out var childPositionA, out sampleOrientationA);
+
                 RigidPoses.Broadcast(LocalPoseB, out var localPosesB);
                 Integrate(ref initialOrientationB, ref angularB, ref halfSamples, out var integratedOrientationB);
                 Compound.GetRotatedChildPose(localPosesB, integratedOrientationB, out var childPositionB, out sampleOrientationB);
+
                 Vector3Wide.Subtract(ref childPositionB, ref childPositionA, out var netOffsetB);
-                Vector3Wide.Add(ref netOffsetB, ref sampleOffsetB, out sampleOffsetB);
+                Vector3Wide.Add(ref sampleOffsetB, ref netOffsetB, out sampleOffsetB);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -573,7 +579,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                             }
                         }
                     }
-                    Debug.Assert((safeIntervalEnd[lastSafeIndex] >= t0 && safeIntervalEnd[lastSafeIndex] <= t1) || !intersectionEncountered);
+                    //Note that it's sometimes possible for the safe interval to extend past t1 even when intersection has occurred due to numerical issues.
+                    //This isn't catastrophic for the sweep, but it does mean we can't validate that condition here.
+                    Debug.Assert((safeIntervalEnd[lastSafeIndex] >= t0) || !intersectionEncountered);
                     next0 = safeIntervalEnd[lastSafeIndex];
                     //Copy the best normal into the output variable. We're going to overwrite all the wide normals in the next iteration, but we need to keep the best guess around.
                     hitNormal = new Vector3(normals.X[lastSafeIndex], normals.Y[lastSafeIndex], normals.Z[lastSafeIndex]);

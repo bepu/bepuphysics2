@@ -97,16 +97,61 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //The depth is (boxExtentAlongNormal + capsuleExtentAlongNormal) - separationAlongNormal.
             Vector3Wide.Dot(ref offsetA, ref normal, out var baN);
             Vector3Wide.Dot(ref capsuleAxis, ref normal, out var daN);
-            depth = 
-                Vector.Abs(normal.X) * box.HalfWidth + Vector.Abs(normal.Y) * box.HalfHeight + Vector.Abs(normal.Z) * box.HalfLength + 
-                Vector.Abs(daN * capsuleHalfLength) - 
+            depth =
+                Vector.Abs(normal.X) * box.HalfWidth + Vector.Abs(normal.Y) * box.HalfHeight + Vector.Abs(normal.Z) * box.HalfLength +
+                Vector.Abs(daN * capsuleHalfLength) -
                 Vector.Abs(baN);
             //If the endpoint doesn't generate a valid normal due to containment, ignore the depth result.
             depth = Vector.ConditionalSelect(Vector.GreaterThan(length, new Vector<float>(1e-10f)), depth, new Vector<float>(float.MaxValue));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SelectForEdge(
+        static void TestVertexAxis(ref BoxWide box, ref Vector3Wide offsetA, ref Vector3Wide capsuleAxis,
+            out Vector<float> depth, out Vector3Wide normal, out Vector3Wide closestA)
+        {
+            //The available feature pairs between the capsule axis and box are:
+            //Box edge - capsule endpoints: handled by capsule endpoint clamping 
+            //Box edge - capsule axis: handled explicitly by the edge cases
+            //Box face - capsule endpoints: handled by capsule endpoint clamping
+            //Box face - capsule axis: redundant with edge-axis or face-endpoint
+            //Box vertex - capsule endpoints: handled by capsule endpoint clamping
+            //Box vertex - capsule axis: unhandled
+            //So here, we need to identify the maximum separating axis caused by vertices. 
+            //We can safely ignore cases that are handled by the endpoint clamp, too. 
+            //A brute force approach could test every vertex-axis offset as a normal, but more cleverness is possible.
+            //Note that this case requires that the capsule axis be in the voronoi region of a vertex. That is only possible if the offset from the box origin to the capsule axis
+            //supports an extreme point at the vertex. 
+            //(That extreme point relationship may also be met in cases of intersection, but that's fine- this distance tester is not concerned with intersection beyond a boolean result.)
+
+            //closest point on axis to origin = offsetA - (offsetA * capsuleAxis) * capsuleAxis
+            Vector3Wide.Dot(ref offsetA, ref capsuleAxis, out var dot);
+            Vector3Wide.Scale(ref capsuleAxis, ref dot, out var axisOffset);
+            Vector3Wide.Subtract(ref offsetA, ref axisOffset, out var closestOnAxis);
+
+            Vector3Wide vertex;
+            vertex.X = Vector.ConditionalSelect(Vector.LessThan(closestOnAxis.X, Vector<float>.Zero), -box.HalfWidth, box.HalfWidth);
+            vertex.Y = Vector.ConditionalSelect(Vector.LessThan(closestOnAxis.Y, Vector<float>.Zero), -box.HalfHeight, box.HalfHeight);
+            vertex.Z = Vector.ConditionalSelect(Vector.LessThan(closestOnAxis.Z, Vector<float>.Zero), -box.HalfLength, box.HalfLength);
+
+            //closest point on axis to vertex: ((vertex - offsetA) * capsuleAxis) * capsuleAxis + offsetA - vertex
+            Vector3Wide.Subtract(ref vertex, ref offsetA, out var capsuleCenterToVertex);
+            Vector3Wide.Dot(ref capsuleCenterToVertex, ref capsuleAxis, out var vertexDot);
+            Vector3Wide.Scale(ref capsuleAxis, ref vertexDot, out var vertexAxisOffset);
+            Vector3Wide.Add(ref vertexAxisOffset, ref offsetA, out closestA);
+            Vector3Wide.Subtract(ref closestA, ref vertex, out var vertexToClosestOnCapsule);
+
+            Vector3Wide.Length(ref vertexToClosestOnCapsule, out var length);
+            var inverseLength = Vector<float>.One / length;
+            Vector3Wide.Scale(ref vertexToClosestOnCapsule, ref inverseLength, out normal);
+            //The normal is perpendicular to the capsule axis by construction, so no need to include the capsule length extent.
+            depth = Vector.Abs(normal.X) * box.HalfWidth + Vector.Abs(normal.Y) * box.HalfHeight + Vector.Abs(normal.Z) * box.HalfLength -
+                Vector.Abs(offsetA.X * normal.X + offsetA.Y * normal.Y + offsetA.Z * normal.Z);
+            //Ignore degenerate cases. Worst outcome is that it reports intersection, which is pretty reasonable.
+            depth = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-10f)), new Vector<float>(float.MaxValue), depth);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SelectForEdge(
             ref Vector<float> edgeDepth, ref Vector3Wide edgeLocalNormal, ref Vector<int> edgeDirectionIndex,
             ref Vector<float> edgeDepthCandidate, ref Vector3Wide edgeLocalNormalCandidate, Vector<int> edgeDirectionIndexCandidate)
         {
@@ -117,7 +162,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void Select(
+        private static void Select(
             ref Vector<float> depth, ref Vector3Wide localNormal, ref Vector3Wide localClosest,
             ref Vector<float> depthCandidate, ref Vector3Wide localNormalCandidate, ref Vector3Wide localClosestCandidate)
         {
@@ -125,6 +170,15 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             depth = Vector.Min(depth, depthCandidate);
             Vector3Wide.ConditionalSelect(useCandidate, localNormalCandidate, localNormal, out localNormal);
             Vector3Wide.ConditionalSelect(useCandidate, localClosestCandidate, localClosest, out localClosest);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void Select(
+            ref Vector<float> depth, ref Vector3Wide localNormal,
+            ref Vector<float> depthCandidate, ref Vector3Wide localNormalCandidate)
+        {
+            var useCandidate = Vector.LessThan(depthCandidate, depth);
+            depth = Vector.Min(depth, depthCandidate);
+            Vector3Wide.ConditionalSelect(useCandidate, localNormalCandidate, localNormal, out localNormal);
         }
 
         public void Test(ref CapsuleWide a, ref BoxWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
@@ -138,11 +192,15 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.Negate(ref localOffsetB, out var localOffsetA);
 
             Vector3Wide.Scale(ref localCapsuleAxis, ref a.HalfLength, out var endpointOffset);
-            Vector3Wide.Subtract(ref localOffsetA, ref endpointOffset, out var localClosest);
-            TestEndpointNormal(ref localOffsetA, ref localCapsuleAxis, ref a.HalfLength, ref localClosest, ref b, out var depth, out var localNormal);
+            Vector3Wide.Subtract(ref localOffsetA, ref endpointOffset, out var endpoint0);
+            TestEndpointNormal(ref localOffsetA, ref localCapsuleAxis, ref a.HalfLength, ref endpoint0, ref b, out var depth, out var localNormal);
             Vector3Wide.Add(ref localOffsetA, ref endpointOffset, out var endpoint1);
             TestEndpointNormal(ref localOffsetA, ref localCapsuleAxis, ref a.HalfLength, ref endpoint1, ref b, out var depthCandidate, out var localNormalCandidate);
-            Select(ref depth, ref localNormal, ref localClosest, ref depthCandidate, ref localNormalCandidate, ref endpoint1);
+            Select(ref depth, ref localNormal, ref depthCandidate, ref localNormalCandidate);
+            //Note that we did not yet pick a closest point for endpoint cases. That's because each case only generates a normal and interval test, not a minimal distance test.
+            //The choice of which endpoint is actually closer is deferred until now.
+            Vector3Wide.Dot(ref localCapsuleAxis, ref localNormal, out var endpointChoiceDot);
+            Vector3Wide.ConditionalSelect(Vector.LessThan(endpointChoiceDot, Vector<float>.Zero), endpoint1, endpoint0, out var localClosest);
 
             Vector3Wide edgeLocalNormal, edgeLocalNormalCandidate;
             //Swizzle XYZ -> YZX
@@ -171,6 +229,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 Select(ref depth, ref localNormal, ref localClosest, ref edgeDepth, ref edgeLocalNormal, ref edgeLocalClosest);
             }
 
+            TestVertexAxis(ref b, ref localOffsetA, ref localCapsuleAxis, out depthCandidate, out localNormalCandidate, out var localClosestCandidate);
+            Select(ref depth, ref localNormal, ref localClosest, ref depthCandidate, ref localNormalCandidate, ref localClosestCandidate);
+
             //Transform normal and closest point back into world space.
             Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref rB, out normal);
             Matrix3x3Wide.TransformWithoutOverlap(ref localClosest, ref rB, out closestA);
@@ -182,7 +243,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
         }
 
-        
+
     }
 
 

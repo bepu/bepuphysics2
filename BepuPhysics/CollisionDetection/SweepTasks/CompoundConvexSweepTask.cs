@@ -79,12 +79,15 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var flipRequired = shapeTypeB == ShapeTypeIndexA;
             if (flipRequired)
             {
-                return PreorderedTypeSweep(
+                var hit = PreorderedTypeSweep(
                     shapeDataB, shapeTypeB, orientationB, velocityB,
                     shapeDataA, shapeTypeA, -offsetB, orientationA, velocityA,
                     maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                     flipRequired, ref filter, shapes, sweepTasks,
                     out t0, out t1, out hitLocation, out hitNormal);
+                hitNormal = -hitNormal;
+                hitLocation = hitLocation + offsetB;
+                return hit;
             }
             else
             {
