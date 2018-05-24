@@ -105,6 +105,7 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new CompoundConvexSweepTask<Capsule, CapsuleWide>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Box, BoxWide, Box, BoxWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>>());
             defaultTaskRegistry.Register(new CompoundConvexSweepTask<Box, BoxWide>());
+            defaultTaskRegistry.Register(new CompoundPairSweepTask());
 
             return defaultTaskRegistry;
         }

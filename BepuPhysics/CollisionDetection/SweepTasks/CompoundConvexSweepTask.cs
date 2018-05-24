@@ -48,7 +48,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     var childType = child.ShapeIndex.Type;
                     shapes[childType].GetShapeData(child.ShapeIndex.Index, out var childShapeData, out _);
                     var task = sweepTasks.GetTask(childType, shapeTypeB);
-                    if (task.Sweep(
+                    if (task != null && task.Sweep(
                         childShapeData, childType, child.LocalPose, orientationA, velocityA,
                         shapeDataB, shapeTypeB, new RigidPose() { Orientation = Quaternion.Identity }, offsetB, orientationB, velocityB,
                         maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,

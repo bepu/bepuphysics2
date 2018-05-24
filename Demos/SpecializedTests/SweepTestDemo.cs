@@ -268,6 +268,14 @@ namespace Demos.SpecializedTests
                 new RigidPose { Position = new Vector3(10, -10, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
                 new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
 
+            TestSweep(
+                compound,
+                new RigidPose { Position = new Vector3(-10, -15, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldA) },
+                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 0, 1) },
+                compound,
+                new RigidPose { Position = new Vector3(10, -15, 0), Orientation = Quaternion.Concatenate(Quaternion.Identity, worldB) },
+                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
+
             //Get rid of the compound children registries so that we don't spam allocations.
             for (int i = 0; i < compound.Children.Length; ++i)
             {

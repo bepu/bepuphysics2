@@ -15,14 +15,14 @@ Note that this release will lack many of v1's built in features, like:
 
 The initial version will be split into incremental stages: alpha, beta, and release. The alpha was released on March 31, 2018.
 
-### Beta (April-May 2018)
+### Beta (June 2018)
 The beta will still be missing some important pieces, but should be able to support most games.
 - Triangulated mesh colliders with boundary smoothing.
 - Tree-accelerated compound for larger collections of shapes.
 - Simulation-wide ray and shape casts.
 - A few additional common constraint types.
 
-### Release (May-July 2018)
+### Release (July-September 2018)
 Should be able to support the core features required by physically complex games.
 - Better handling of some dangerous performance corner cases in the solver.
 - Fully enabled CCD.

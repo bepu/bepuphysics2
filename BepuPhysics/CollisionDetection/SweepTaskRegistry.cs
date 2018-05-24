@@ -104,7 +104,14 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public SweepTask GetTask(int topLevelTypeA, int topLevelTypeB)
         {
-            return tasks[topLevelMatrix[topLevelTypeA][topLevelTypeB]];
+            if (topLevelTypeA >= topLevelMatrix.Length)
+                return null;
+            if (topLevelTypeB >= topLevelMatrix[topLevelTypeA].Length)
+                return null;
+            var taskIndex = topLevelMatrix[topLevelTypeA][topLevelTypeB];
+            if (taskIndex < 0)
+                return null;
+            return tasks[taskIndex];
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public SweepTask GetTask<TShapeA, TShapeB>()
