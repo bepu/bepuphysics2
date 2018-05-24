@@ -130,7 +130,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Transform(ref Vector3 position, ref AffineTransform transform, out Vector3 transformed)
         {
-            Matrix3x3.Transform(ref position, ref transform.LinearTransform, out transformed);
+            Matrix3x3.Transform(position, transform.LinearTransform, out transformed);
             transformed += transform.Translation;
         }
 
@@ -143,7 +143,7 @@ namespace BepuUtilities
         public static void Invert(ref AffineTransform transform, out AffineTransform inverse)
         {
             Matrix3x3.Invert(ref transform.LinearTransform, out inverse.LinearTransform);
-            Matrix3x3.Transform(ref transform.Translation, ref inverse.LinearTransform, out inverse.Translation);
+            Matrix3x3.Transform(transform.Translation, inverse.LinearTransform, out inverse.Translation);
             inverse.Translation = -inverse.Translation;
         }
 
@@ -156,7 +156,7 @@ namespace BepuUtilities
         public static void InvertRigid(ref AffineTransform transform, out AffineTransform inverse)
         {
             Matrix3x3.Transpose(ref transform.LinearTransform, out inverse.LinearTransform);
-            Matrix3x3.Transform(ref transform.Translation, ref inverse.LinearTransform, out inverse.Translation);
+            Matrix3x3.Transform(transform.Translation, inverse.LinearTransform, out inverse.Translation);
             inverse.Translation = -inverse.Translation;
         }
 
@@ -170,7 +170,7 @@ namespace BepuUtilities
         public static void Multiply(ref AffineTransform a, ref AffineTransform b, out AffineTransform transform)
         {
             Vector3 translation;
-            Matrix3x3.Transform(ref a.Translation, ref b.LinearTransform, out translation);
+            Matrix3x3.Transform(a.Translation, b.LinearTransform, out translation);
             transform.Translation = b.Translation + translation;
             Matrix3x3.Multiply(ref a.LinearTransform, ref b.LinearTransform, out transform.LinearTransform);
         }

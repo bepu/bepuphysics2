@@ -35,10 +35,12 @@ namespace BepuPhysics.Trees
                 else
                 {
                     var node = nodes + nodeIndex;
-                    var min = node->A.Min - expansion;
-                    var max = node->A.Max + expansion;
-                    var aIntersected = Intersects(min, max, treeRay, out var tA);
-                    var bIntersected = Intersects(min, max, treeRay, out var tB);
+                    var minA = node->A.Min - expansion;
+                    var maxA = node->A.Max + expansion;
+                    var aIntersected = Intersects(minA, maxA, treeRay, out var tA);
+                    var minB = node->B.Min - expansion;
+                    var maxB = node->B.Max + expansion;
+                    var bIntersected = Intersects(minB, maxB, treeRay, out var tB);
 
                     if (aIntersected)
                     {

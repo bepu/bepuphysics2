@@ -84,6 +84,8 @@ namespace BepuPhysics.CollisionDetection
             ActiveTree.Sweep(expansion, origin, direction, &treeRay, ref tester);
             tester.Leaves = staticLeaves;
             StaticTree.Sweep(expansion, origin, direction, &treeRay, ref tester);
+            //The sweep tester probably relies on mutation to function; copy any mutations back to the original reference.
+            sweepTester = tester.LeafTester;
         }
 
         /// <summary>

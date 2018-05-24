@@ -135,7 +135,7 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Matrix3x3.Transform(ref v, ref symmetric, out var intermediate);
+                Matrix3x3.Transform(v, symmetric, out var intermediate);
                 result = Vector3.Dot(v, intermediate);
             }
         }

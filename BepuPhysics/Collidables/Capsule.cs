@@ -58,8 +58,8 @@ namespace BepuPhysics.Collidables
             //It's convenient to work in local space, so pull the ray into the capsule's local space.
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
             var o = origin - pose.Position;
-            Matrix3x3.TransformTranspose(o, ref orientation, out o);
-            Matrix3x3.TransformTranspose(direction, ref orientation, out var d);
+            Matrix3x3.TransformTranspose(o, orientation, out o);
+            Matrix3x3.TransformTranspose(direction, orientation, out var d);
 
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
             var inverseDLength = 1f / d.Length();
@@ -111,7 +111,7 @@ namespace BepuPhysics.Collidables
                 {
                     //The hit is on the cylindrical portion of the capsule.
                     normal = new Vector3(cylinderHitLocation.X, 0, cylinderHitLocation.Z) / Radius;
-                    Matrix3x3.Transform(ref normal, ref orientation, out normal);
+                    Matrix3x3.Transform(normal, orientation, out normal);
                     t = (t + tOffset) * inverseDLength;
                     return true;
                 }
@@ -147,7 +147,7 @@ namespace BepuPhysics.Collidables
                 t = -tOffset;
             normal = (os + d * t) / Radius;
             t = (t + tOffset) * inverseDLength;
-            Matrix3x3.Transform(ref normal, ref orientation, out normal);
+            Matrix3x3.Transform(normal, orientation, out normal);
             return true;
 
         }

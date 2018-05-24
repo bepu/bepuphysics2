@@ -61,8 +61,8 @@ namespace BepuPhysics.Collidables
         {
             var offset = origin - pose.Position;
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
-            Matrix3x3.TransformTranspose(offset, ref orientation, out var localOffset);
-            Matrix3x3.TransformTranspose(direction, ref orientation, out var localDirection);
+            Matrix3x3.TransformTranspose(offset, orientation, out var localOffset);
+            Matrix3x3.TransformTranspose(direction, orientation, out var localDirection);
             //Note that this division has two odd properties:
             //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
             //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result

@@ -197,7 +197,7 @@ namespace BepuPhysics
             BoundingBoxBatcher.ExpandBoundingBox(ref min, ref max, velocity.Angular, maximumT, maximumRadius, maximumAngularExpansion);
             min += pose.Position;
             max += pose.Position;
-            var direction = velocity.Linear * maximumT;
+            var direction = velocity.Linear;
             SweepHitDispatcher<TSweepHitHandler> dispatcher;
             dispatcher.HitHandler = hitHandler;
             dispatcher.Pose = pose;
@@ -211,6 +211,8 @@ namespace BepuPhysics
             dispatcher.ConvergenceThreshold = convergenceThreshold;
             dispatcher.MaximumIterationCount = maximumIterationCount;
             BroadPhase.Sweep(min, max, direction, maximumT, ref dispatcher);
+            //The hit handler was copied to pass it into the child processing; since the user may (and probably does) rely on mutations, copy it back to the original reference.
+            hitHandler = dispatcher.HitHandler;
         }
 
         /// <summary>

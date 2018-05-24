@@ -426,8 +426,8 @@ namespace Demos
             {
                 ref var targetRay = ref testRays[i];
                 ref var sourceRay = ref source[i];
-                Matrix3x3.Transform(ref sourceRay.Origin, ref transform, out targetRay.Origin);
-                Matrix3x3.Transform(ref sourceRay.Direction, ref transform, out targetRay.Direction);
+                Matrix3x3.Transform(sourceRay.Origin, transform, out targetRay.Origin);
+                Matrix3x3.Transform(sourceRay.Direction, transform, out targetRay.Direction);
                 targetRay.MaximumT = sourceRay.MaximumT;
             }
         }

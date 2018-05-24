@@ -162,7 +162,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix to use as the transformation.</param>
         /// <param name="result">Product of the transformation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(ref Vector3 v, ref Matrix3x3 m, out Vector3 result)
+        public static void Transform(in Vector3 v, in Matrix3x3 m, out Vector3 result)
         {
             var x = new Vector3(v.X);
             var y = new Vector3(v.Y);
@@ -177,7 +177,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix to use as the transformation transpose.</param>
         /// <param name="result">Product of the transformation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformTranspose(in Vector3 v, ref Matrix3x3 m, out Vector3 result)
+        public static void TransformTranspose(in Vector3 v, in Matrix3x3 m, out Vector3 result)
         {
             result = new Vector3(
                 Vector3.Dot(v, m.X),
@@ -331,7 +331,7 @@ namespace BepuUtilities
         /// <param name="angle">Angle of the rotation.</param>
         /// <param name="result">Resulting rotation matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFromAxisAngle(ref Vector3 axis, float angle, out Matrix3x3 result)
+        public static void CreateFromAxisAngle(in Vector3 axis, float angle, out Matrix3x3 result)
         {
             //TODO: Could be better simdified.
             float xx = axis.X * axis.X;
@@ -370,7 +370,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Matrix3x3 CreateFromAxisAngle(Vector3 axis, float angle)
         {
-            CreateFromAxisAngle(ref axis, angle, out var result);
+            CreateFromAxisAngle(axis, angle, out var result);
             return result;
 
         }

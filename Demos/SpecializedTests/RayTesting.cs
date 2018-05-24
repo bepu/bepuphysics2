@@ -292,11 +292,11 @@ namespace Demos.SpecializedTests
                         var localSourcePoint = pointOnSurface + normal * (outsideMinimumDistance + (float)random.NextDouble() * outsideDistanceSpan);
                         tester.GetPointInVolume(random, volumeInnerMargin, ref shape, out var localTargetPoint);
 
-                        Matrix3x3.Transform(ref localSourcePoint, ref orientation, out var sourcePoint);
+                        Matrix3x3.Transform(localSourcePoint, orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
                         var directionScale = (0.01f + 2 * (float)random.NextDouble());
                         var localDirection = (localTargetPoint - localSourcePoint) * directionScale;
-                        Matrix3x3.Transform(ref localDirection, ref orientation, out var direction);
+                        Matrix3x3.Transform(localDirection, orientation, out var direction);
 
                         bool intersected;
                         if (intersected = shape.RayTest(pose, sourcePoint, direction, out var t, out var rayTestedNormal))
@@ -304,7 +304,7 @@ namespace Demos.SpecializedTests
                             //If the ray start is outside the shape and the target point is inside, then the ray impact should exist on the surface of the shape.
                             var hitLocation = sourcePoint + t * direction;
                             var localHitLocation = hitLocation - pose.Position;
-                            Matrix3x3.TransformTranspose(localHitLocation, ref orientation, out localHitLocation);
+                            Matrix3x3.TransformTranspose(localHitLocation, orientation, out localHitLocation);
                             if (!tester.PointIsOnSurface(ref shape, ref localHitLocation))
                             {
                                 Console.WriteLine("Outside->inside ray detected non-surface impact.");
@@ -319,7 +319,7 @@ namespace Demos.SpecializedTests
                     for (int rayIndex = 0; rayIndex < insideRays; ++rayIndex)
                     {
                         tester.GetPointInVolume(random, volumeInnerMargin, ref shape, out var localSourcePoint);
-                        Matrix3x3.Transform(ref localSourcePoint, ref orientation, out var sourcePoint);
+                        Matrix3x3.Transform(localSourcePoint, orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
 
                         var directionScale = (0.01f + 100 * (float)random.NextDouble());
@@ -351,9 +351,9 @@ namespace Demos.SpecializedTests
                         GetPointOnPlane(random, exclusion, span, ref localTargetPoint, ref localNormal, out var localSourcePoint);
                         var directionScale = (0.01f + 2 * (float)random.NextDouble());
                         var localDirection = (localTargetPoint - localSourcePoint) * directionScale;
-                        Matrix3x3.Transform(ref localSourcePoint, ref orientation, out var sourcePoint);
+                        Matrix3x3.Transform(localSourcePoint, orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
-                        Matrix3x3.Transform(ref localDirection, ref orientation, out var direction);
+                        Matrix3x3.Transform(localDirection, orientation, out var direction);
                         bool intersected;
                         if (intersected = shape.RayTest(pose, sourcePoint, direction, out var t, out var rayTestedNormal))
                         {
@@ -372,9 +372,9 @@ namespace Demos.SpecializedTests
                         } while (Vector3.Dot(localTargetPoint - localSourcePoint, localNormal) < 0);
                         var directionScale = (0.01f + 2 * (float)random.NextDouble());
                         var localDirection = (localTargetPoint - localSourcePoint) * directionScale;
-                        Matrix3x3.Transform(ref localSourcePoint, ref orientation, out var sourcePoint);
+                        Matrix3x3.Transform(localSourcePoint, orientation, out var sourcePoint);
                         sourcePoint += pose.Position;
-                        Matrix3x3.Transform(ref localDirection, ref orientation, out var direction);
+                        Matrix3x3.Transform(localDirection, orientation, out var direction);
                         bool intersected;
                         if (intersected = shape.RayTest(pose, sourcePoint, direction, out var t, out var rayTestedNormal))
                         {
