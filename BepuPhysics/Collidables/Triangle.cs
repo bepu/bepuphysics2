@@ -95,8 +95,6 @@ namespace BepuPhysics.Collidables
                 return true;
             }
             return false;
-
-
         }
 
         public void ComputeInertia(float mass, out BodyInertia inertia)
@@ -202,7 +200,8 @@ namespace BepuPhysics.Collidables
             Matrix3x3Wide.CreateFromQuaternion(ref pose.Orientation, out var orientation);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offset, ref orientation, out var localOffset);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref ray.Direction, ref orientation, out var localDirection);
-            RayTest(ref A, ref B, ref C, ref ray.Origin, ref ray.Direction, out intersected, out t, out normal);
+            RayTest(ref A, ref B, ref C, ref localOffset, ref localDirection, out intersected, out t, out var localNormal);
+            Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref orientation, out normal);
         }
     }
 }
