@@ -24,7 +24,7 @@ namespace BepuPhysics.CollisionDetection
             Vector<float> t;
             Vector3Wide normal;
             TShapeWide wide = default; //TODO: Not ideal; pointless zero init. Can improve later with blittable or compiler improvements. Or could torture the design a bit.
-            wide.Broadcast(ref shape);
+            wide.Broadcast(shape);
             RigidPoses poses;
             Vector3Wide.Broadcast(pose.Position, out poses.Position);
             QuaternionWide.Broadcast(pose.Orientation, out poses.Orientation);

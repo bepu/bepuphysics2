@@ -193,7 +193,7 @@ namespace BepuPhysics.Collidables
         public Vector<float> HalfLength;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Broadcast(ref Capsule shape)
+        public void Broadcast(in Capsule shape)
         {
             Radius = new Vector<float>(shape.Radius);
             HalfLength = new Vector<float>(shape.HalfLength);

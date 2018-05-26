@@ -38,6 +38,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<TriangleTestDemo>();
             AddOption<PyramidDemo>();
             AddOption<BlockChainDemo>();
             AddOption<ShapePileDemo>();

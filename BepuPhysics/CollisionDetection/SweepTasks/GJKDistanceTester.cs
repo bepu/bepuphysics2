@@ -167,8 +167,6 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //Expanding with identities, this transforms to:
             //((A * AB) * (AB * AC) - (A * AC) * (AB * AB)) / ((AB * AB) * (AC * AC) - (AB * AC) * (AC * AB))
             Vector3Wide.Dot(ref ab, ref ac, out var abac);
-            //Vector3Wide.Dot(ref ac, ref bc, out var acbc);
-            //Vector3Wide.Dot(ref ab, ref bc, out var abbc);
             var abcDenom = Vector<float>.One / (abab * acac - abac * abac);
             var cWeight = (abA * abac - acA * abab) * abcDenom;
             var bWeight = (abac * acA - acac * abA) * abcDenom;

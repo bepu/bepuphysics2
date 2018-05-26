@@ -410,8 +410,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //TODO: Would be nice to get rid of this pointless zero init (if the compiler doesn't eventually get rid of it).
             var wideA = default(TShapeWideA);
             var wideB = default(TShapeWideB);
-            wideA.Broadcast(ref shapeA);
-            wideB.Broadcast(ref shapeB);
+            wideA.Broadcast(shapeA);
+            wideB.Broadcast(shapeB);
             var pairTester = default(TPairDistanceTester);
             //Initialize the interval to the tighter of 1) input bounds [0, maximumT] and 2) the swept impact interval of the bounding spheres of the two shapes.
             //Note that the intersection interval of two swept spheres is equivalent to performing a single ray cast against a sphere with a combined radius.

@@ -166,7 +166,6 @@ namespace Demos.SpecializedTests
         }
     }
 
-
     public static class RayTesting
     {
         internal static void GetUnitDirection(Random random, out Vector3 direction)
@@ -276,7 +275,7 @@ namespace Demos.SpecializedTests
             for (int shapeIteration = 0; shapeIteration < shapeIterations; ++shapeIteration)
             {
                 tester.GetRandomShape(random, out var shape);
-                shapeWide.Broadcast(ref shape);
+                shapeWide.Broadcast(shape);
                 for (int transformIteration = 0; transformIteration < transformIterations; ++transformIteration)
                 {
                     RigidPose pose;

@@ -168,7 +168,7 @@ namespace BepuPhysics.Collidables
         public Vector<float> HalfLength;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Broadcast(ref Box shape)
+        public void Broadcast(in Box shape)
         {
             HalfWidth = new Vector<float>(shape.HalfWidth);
             HalfHeight = new Vector<float>(shape.HalfHeight);

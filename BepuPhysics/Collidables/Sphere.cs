@@ -117,7 +117,7 @@ namespace BepuPhysics.Collidables
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Broadcast(ref Sphere shape)
+        public void Broadcast(in Sphere shape)
         {
             Radius = new Vector<float>(shape.Radius);
         }
