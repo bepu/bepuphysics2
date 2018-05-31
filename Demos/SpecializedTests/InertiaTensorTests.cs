@@ -6,47 +6,114 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.SpecializedTests
 {
-    public interface IInertiaTester<TShape> where TShape : IShape
+    public interface IInertiaTester
     {
-        bool PointIsContained(ref TShape shape, ref Vector3 point);
+        void ComputeBounds(out Vector3 min, out Vector3 max);
+        void ComputeAnalyticInertia(float mass, out BodyInertia inverseInertia);
+        bool PointIsContained(ref Vector3 sampleSpacing, ref Vector3 point);
     }
 
-    //TODO: We might later actually bundle point depth/normal queries into the shape types themselves, but for now the demos will provide it.
-    public struct SphereInertiaTester : IInertiaTester<Sphere>
+    public struct SphereInertiaTester : IInertiaTester
     {
-        public bool PointIsContained(ref Sphere shape, ref Vector3 point)
+        public Sphere Sphere;
+
+        public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
         {
-            return point.LengthSquared() <= shape.Radius * shape.Radius;
+            Sphere.ComputeInertia(mass, out inertia);
+        }
+
+        public void ComputeBounds(out Vector3 min, out Vector3 max)
+        {
+            Sphere.ComputeBounds(Quaternion.Identity, out min, out max);
+        }
+
+        public bool PointIsContained(ref Vector3 sampleSpacing, ref Vector3 point)
+        {
+            return point.LengthSquared() <= Sphere.Radius * Sphere.Radius;
         }
     }
 
-    public struct CapsuleInertiaTester : IInertiaTester<Capsule>
+    public struct CapsuleInertiaTester : IInertiaTester
     {
-        public bool PointIsContained(ref Capsule shape, ref Vector3 point)
+        public Capsule Capsule;
+
+        public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
         {
-            var projectedPoint = new Vector3(0, Math.Max(-shape.HalfLength, Math.Min(shape.HalfLength, point.Y)), 0);
-            return (point - projectedPoint).LengthSquared() <= shape.Radius * shape.Radius;
+            Capsule.ComputeInertia(mass, out inertia);
+        }
+        public void ComputeBounds(out Vector3 min, out Vector3 max)
+        {
+            Capsule.ComputeBounds(Quaternion.Identity, out min, out max);
+        }
+
+        public bool PointIsContained(ref Vector3 sampleSpacing, ref Vector3 point)
+        {
+            var projectedPoint = new Vector3(0, Math.Max(-Capsule.HalfLength, Math.Min(Capsule.HalfLength, point.Y)), 0);
+            return (point - projectedPoint).LengthSquared() <= Capsule.Radius * Capsule.Radius;
         }
     }
-    public struct BoxInertiaTester : IInertiaTester<Box>
+    public struct BoxInertiaTester : IInertiaTester
     {
-        public bool PointIsContained(ref Box shape, ref Vector3 point)
+        public Box Box;
+        public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
         {
-            ref var extent = ref Unsafe.As<float, Vector3>(ref shape.HalfWidth);
+            Box.ComputeInertia(mass, out inertia);
+        }
+        public void ComputeBounds(out Vector3 min, out Vector3 max)
+        {
+            Box.ComputeBounds(Quaternion.Identity, out min, out max);
+        }
+        public bool PointIsContained(ref Vector3 sampleSpacing, ref Vector3 point)
+        {
+            ref var extent = ref Unsafe.As<float, Vector3>(ref Box.HalfWidth);
             var clampedPoint = Vector3.Min(extent, Vector3.Max(-extent, point));
             return point == clampedPoint;
         }
     }
 
+    public struct TriangleInertiaTester : IInertiaTester
+    {
+        public Triangle Triangle;
+        public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
+        {
+            Triangle.ComputeInertia(mass, out inertia);
+        }
+        public void ComputeBounds(out Vector3 min, out Vector3 max)
+        {
+            Triangle.ComputeBounds(Quaternion.Identity, out min, out max);
+        }
+        public bool PointIsContained(ref Vector3 sampleSpacing, ref Vector3 point)
+        {
+            //This is quite distant from an efficient implementation. That's fine.
+            var ap = point - Triangle.A;
+            var bp = point - Triangle.B;
+            var ab = Triangle.B - Triangle.A;
+            var ac = Triangle.C - Triangle.A;
+            var bc = Triangle.C - Triangle.B;
+            var nn = Vector3.Dot(Vector3.Cross(ab, ac), Vector3.Cross(ab, ac));
+            var wc = Vector3.Dot(Vector3.Cross(ab, ap), Vector3.Cross(ab, ac)) / nn;
+            var wb = Vector3.Dot(Vector3.Cross(ac, ap), Vector3.Cross(ac, ab)) / nn;
+            if (wb >= 0 && wc >= 0 && wb + wc <= 1)
+            {
+                var wa = 1 - wb - wc;
+                var pointOnTriangle = Triangle.A * wa + Triangle.B * wb + Triangle.C * wc;
+                var offset = pointOnTriangle - point;
+                //We treat a point sample as 'contained' by the triangle if it just happens to be close.
+                return Vector3.Dot(offset, offset) < Vector3.Dot(sampleSpacing, sampleSpacing);
+            }
+            return false;
+        }
+    }
+
     public static class InertiaTensorTests
     {
-        static void CheckInertia<TShape, TInertiaTester>(ref TShape shape) where TShape : IConvexShape where TInertiaTester : IInertiaTester<TShape>
+        public static void CheckInertia<TInertiaTester>(ref TInertiaTester tester) where TInertiaTester : IInertiaTester
         {
-            var orientation = BepuUtilities.Quaternion.Identity;
-            shape.ComputeBounds(orientation, out var min, out var max);
+            tester.ComputeBounds(out var min, out var max);
             var span = max - min;
             const int axisSampleCount = 64;
             var sampleSpacing = span / axisSampleCount;
@@ -54,7 +121,6 @@ namespace Demos.SpecializedTests
             //This constant value isn't meaningful- it's just here to capture mass scaling bugs in implementations.
             var mass = (float)Math.Sqrt(11f / MathHelper.Pi);
             var numericalLocalInertia = new Triangular3x3();
-            var tester = default(TInertiaTester);
             int containedSampleCount = 0;
 
             for (int i = 0; i < axisSampleCount; ++i)
@@ -64,7 +130,7 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < axisSampleCount; ++k)
                     {
                         var sampleLocation = sampleMin + new Vector3(i, j, k) * sampleSpacing;
-                        if (tester.PointIsContained(ref shape, ref sampleLocation))
+                        if (tester.PointIsContained(ref sampleSpacing, ref sampleLocation))
                         {
                             var dd = Vector3.Dot(sampleLocation, sampleLocation);
                             numericalLocalInertia.XX += dd - sampleLocation.X * sampleLocation.X;
@@ -81,7 +147,7 @@ namespace Demos.SpecializedTests
 
             Triangular3x3.Scale(ref numericalLocalInertia, mass / containedSampleCount, out numericalLocalInertia);
             Triangular3x3.SymmetricInvert(numericalLocalInertia, out var numericalLocalInverseInertia);
-            shape.ComputeInertia(mass, out var analyticInertia);
+            tester.ComputeAnalyticInertia(mass, out var analyticInertia);
             if (!ValuesAreSimilar(analyticInertia.InverseInertiaTensor.XX, numericalLocalInverseInertia.XX) ||
                 !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.YX, numericalLocalInverseInertia.YX) ||
                 !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.YY, numericalLocalInverseInertia.YY) ||
@@ -95,34 +161,40 @@ namespace Demos.SpecializedTests
 
         static bool ValuesAreSimilar(float a, float b)
         {
-            if (Math.Abs(a) > 1e-5f)
-            {
-                var ratio = a / b;
-                const float threshold = 0.01f;
-                return ratio < (1 + threshold) && ratio > 1f / (1 + threshold);
-            }
-            return Math.Abs(b) <= 1e-5;
+            var ratio = a / b;
+            const float ratioThreshold = 0.15f;
+            return MathF.Abs(a - b) < 1e-2f || (ratio < (1 + ratioThreshold) && ratio > 1f / (1 + ratioThreshold));
         }
 
         public static void Test()
         {
             var random = new Random(5);
-            const int shapeTrials = 32;
+            const int shapeTrials = 64;
             for (int i = 0; i < shapeTrials; ++i)
             {
-                var sphere = new Sphere(0.01f + (float)random.NextDouble() * 10);
-                CheckInertia<Sphere, SphereInertiaTester>(ref sphere);
+                var tester = new SphereInertiaTester { Sphere = new Sphere(0.01f + (float)random.NextDouble() * 10) };
+                CheckInertia(ref tester);
             }
             for (int i = 0; i < shapeTrials; ++i)
             {
-                var capsule = new Capsule(0.01f + (float)random.NextDouble() * 10, 0.01f + (float)random.NextDouble() * 10);
-                CheckInertia<Capsule, CapsuleInertiaTester>(ref capsule);
+                var tester = new CapsuleInertiaTester { Capsule = new Capsule(0.01f + (float)random.NextDouble() * 10, 0.01f + (float)random.NextDouble() * 10) };
+                CheckInertia(ref tester);
             }
             for (int i = 0; i < shapeTrials; ++i)
             {
-                var box = new Box(0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble());
-                CheckInertia<Box, BoxInertiaTester>(ref box);
-
+                var tester = new BoxInertiaTester { Box = new Box(0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble()) };
+                CheckInertia(ref tester);
+            }
+            for (int i = 0; i < shapeTrials; ++i)
+            {
+                var tester = new TriangleInertiaTester
+                {
+                    Triangle = new Triangle(
+                        new Vector3(-5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble()),
+                        new Vector3(-5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble()),
+                        new Vector3(-5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble())),
+                };
+                CheckInertia(ref tester);
             }
         }
     }

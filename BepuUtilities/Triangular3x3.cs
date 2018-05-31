@@ -142,5 +142,27 @@ namespace BepuPhysics
             scaled.ZZ = m.ZZ * scale;
         }
 
+        /// <summary>
+        /// Multiplies the two matrices as if they were symmetric.
+        /// </summary>
+        /// <param name="a">First matrix to multiply.</param>
+        /// <param name="b">Second matrix to multiply.</param>
+        /// <param name="result">Product of the multiplication.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SymmetricMultiplyWithoutOverlap(ref Triangular3x3 a, ref Triangular3x3 b, out Triangular3x3 result)
+        {
+            var ayxbyx = a.YX * b.YX;
+            var azxbzx = a.ZX * b.ZX;
+            var azybzy = a.ZY * b.ZY;
+            result.XX = a.XX * b.XX + ayxbyx + azxbzx;
+
+            result.YX = a.YX * b.XX + a.YY * b.YX + a.ZY * b.ZX;
+            result.YY = ayxbyx + a.YY * b.YY + azybzy;
+
+            result.ZX = a.ZX * b.XX + a.ZY * b.YX + a.ZZ * b.ZX;
+            result.ZY = a.ZX * b.YX + a.ZY * b.YY + a.ZZ * b.ZY;
+            result.ZZ = azxbzx + azybzy + a.ZZ * b.ZZ;
+        }
+
     }
 }

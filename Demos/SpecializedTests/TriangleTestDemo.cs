@@ -155,7 +155,7 @@ namespace Demos.SpecializedTests
                     GetPointOnTriangle(random, triangle, pose, out pointOnTriangle);
                     rayDirection = pointOnTriangle - rayOrigin;
                 } while (rayDirection.LengthSquared() < 1e-9f);
-                rayDirection *= (0.5f + 4 * (float)random.NextDouble()) / rayDirection.Length();
+                rayDirection *= (0.5f + 10 * (float)random.NextDouble()) / rayDirection.Length();
                 var shouldHit = Vector3.Dot(rayDirection, normal) < 0;
                 TestRay(triangle, pose, rayOrigin, rayDirection, shouldHit, pointOnTriangle);
 
@@ -165,7 +165,7 @@ namespace Demos.SpecializedTests
                     GetPointOutsideTriangle(random, triangle, pose, out pointOutsideTriangle);
                     rayDirection = pointOutsideTriangle - rayOrigin;
                 } while (rayDirection.LengthSquared() < 1e-9f);
-                rayDirection *= (0.5f + 4 * (float)random.NextDouble()) / rayDirection.Length();
+                rayDirection *= (0.5f + 10 * (float)random.NextDouble()) / rayDirection.Length();
                 TestRay(triangle, pose, rayOrigin, rayDirection, false, pointOutsideTriangle);
             }
 
