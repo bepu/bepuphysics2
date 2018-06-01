@@ -15,9 +15,102 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void Select(ref Vector<float> distanceSquared, ref Vector3Wide localNormal, ref Vector<float> distanceSquaredCandidate, ref Vector3Wide localNormalCandidate)
+        {
+            var useCandidate = Vector.LessThan(distanceSquaredCandidate, distanceSquared);
+            distanceSquared = Vector.Min(distanceSquaredCandidate, distanceSquared);
+            Vector3Wide.ConditionalSelect(useCandidate, localNormalCandidate, localNormal, out localNormal);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
         {
-            manifold = new Convex1ContactManifoldWide();
+            //Work in the local space of the triangle, since it's quicker to transform the sphere position than the vertices of the triangle.
+            Matrix3x3Wide.CreateFromQuaternion(ref orientationB, out var rB);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offsetB, ref rB, out var localOffsetB);
+
+            //Finally, perform the interior test.
+            //EdgeAB plane test: (pa x ab) * (ab x ac) >= 0
+            //EdgeAC plane test: (ac x pa) * (ab x ac) >= 0
+            //Note that these are scaled versions of the barycentric coordinates. 
+            //To normalize them such that the weights of a point within the triangle equal 1, we just need to divide by dot(ab x ac, ab x ac).
+            //In other words, to test the third edge plane, we can ensure that the unnormalized weights are both positive and sum to a value less than dot(ab x ac, ab x ac).
+            //If a point is outside of an edge plane, we know that it's not in the face region or any other edge region. It could, however, be in an adjacent vertex region.
+            //Vertex cases can be handled by clamping an edge case. 
+            //Further, note that for any query location, it is sufficient to only test one edge even if the point is outside two edge planes. If it's outside two edge planes,
+            //that just means it's going to be on the shared vertex, so a clamped edge test captures the correct closest point.
+            //So, at each edge, if the point is outside the plane, cache the edge. The last edge registering an outside result will be tested.
+
+            Vector3Wide.Subtract(ref b.B, ref b.A, out var ab);
+            Vector3Wide.Subtract(ref b.C, ref b.A, out var ac);
+            //localOffsetA = -localOffsetB, so pa = triangle.A + localOffsetB.
+            Vector3Wide.Add(ref b.A, ref localOffsetB, out var pa);
+            //(pa x ab) * (ab x ac) = (pa * ab) * (ab * ac) - (pa * ac) * (ab * ab)
+            //(ac x pa) * (ab x ac) = (ac * ab) * (pa * ac) - (ac * ac) * (pa * ab)
+            //(ab x ac) * (ab x ac) = (ab * ab) * (ac * ac) - (ab * ac) * (ab * ac) 
+            Vector3Wide.Dot(ref pa, ref ab, out var abpa);
+            Vector3Wide.Dot(ref ab, ref ac, out var abac);
+            Vector3Wide.Dot(ref ac, ref pa, out var acpa);
+            Vector3Wide.Dot(ref ac, ref ac, out var acac);
+            Vector3Wide.Dot(ref ab, ref ab, out var abab);
+            var edgePlaneTestAB = abpa * abac - acpa * abab;
+            var edgePlaneTestAC = acpa * acac - acac * abpa;
+            var triangleNormalLengthSquared = abab * acac - abac * abac;
+
+            var edgePlaneTestBC = triangleNormalLengthSquared - edgePlaneTestAB - edgePlaneTestAC;
+            var outsideAB = Vector.LessThan(edgePlaneTestAB, Vector<float>.Zero);
+            var outsideAC = Vector.LessThan(edgePlaneTestAC, Vector<float>.Zero);
+            var outsideBC = Vector.LessThan(edgePlaneTestBC, Vector<float>.Zero);
+
+            var outsideAnyEdge = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideAC, outsideBC));
+            Vector3Wide localClosestOnTriangle;
+            if (Vector.EqualsAny(outsideAnyEdge, new Vector<int>(-1)))
+            {
+                //At least one lane detected a point outside of the triangle. Choose one edge which is outside as the representative.
+                Vector3Wide.ConditionalSelect(outsideAC, ac, ab, out var edgeDirection);
+                Vector3Wide.Subtract(ref b.C, ref b.B, out var bc);
+                Vector3Wide.ConditionalSelect(outsideBC, bc, edgeDirection, out edgeDirection);
+                Vector3Wide.ConditionalSelect(outsideBC, b.B, b.A, out var edgeStart);
+
+                Vector3Wide.Add(ref edgeStart, ref localOffsetB, out var pToEdgeStart);
+                //This does some partially redundant work if the edge is AB or AC, but given that we didn't have bcbc or bcpb, it's fine.
+                Vector3Wide.Dot(ref pToEdgeStart, ref edgeDirection, out var offsetDotEdge);
+                Vector3Wide.Dot(ref edgeDirection, ref edgeDirection, out var edgeDotEdge);
+                var edgeScale = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, offsetDotEdge / edgeDotEdge));
+                Vector3Wide.Scale(ref edgeDirection, ref edgeScale, out var pointOnEdge);
+                Vector3Wide.Add(ref edgeStart, ref pointOnEdge, out pointOnEdge);
+
+                Vector3Wide.ConditionalSelect(outsideAnyEdge, pointOnEdge, localClosestOnTriangle, out localClosestOnTriangle);
+
+            }
+            if (Vector.EqualsAny(outsideAnyEdge, Vector<int>.Zero))
+            {
+                //There is a face contact on some lane. Use the barycentric coordinates to find the point on the triangle.
+                var inverseNormalLengthSquared = Vector<float>.One / triangleNormalLengthSquared;
+                var cScale = edgePlaneTestAB * inverseNormalLengthSquared;
+                var bScale = edgePlaneTestAC * inverseNormalLengthSquared;
+                var aScale = edgePlaneTestBC * inverseNormalLengthSquared;
+                Vector3Wide.Scale(ref b.C, ref cScale, out var cContribution);
+                Vector3Wide.Scale(ref b.B, ref bScale, out var bContribution);
+                Vector3Wide.Scale(ref b.A, ref aScale, out var aContribution);
+                Vector3Wide.Add(ref aContribution, ref bContribution, out var pointOnFace);
+                Vector3Wide.Add(ref cContribution, ref pointOnFace, out pointOnFace);
+
+                Vector3Wide.ConditionalSelect(outsideAnyEdge, localClosestOnTriangle, pointOnFace, out localClosestOnTriangle);
+            }
+
+            //We'll be using the contact position to perform boundary smoothing; in order to find other triangles, the contact position has to be on the mesh surface.
+            Matrix3x3Wide.TransformWithoutOverlap(ref localClosestOnTriangle, ref rB, out manifold.OffsetA);
+            Vector3Wide.Add(ref manifold.OffsetA, ref offsetB, out manifold.OffsetA);
+            Vector3Wide.Length(ref manifold.OffsetA, out var distance);
+            //Note the normal is calibrated to point from B to A.
+            var normalScale = new Vector<float>(-1) / distance;
+            Vector3Wide.Scale(ref manifold.OffsetA, ref normalScale, out manifold.Normal);
+            manifold.Depth = distance - a.Radius;
+            //In the event that the sphere's center point is touching the triangle, the normal is undefined. In that case, the 'correct' normal would be the triangle's normal.
+            //However, given that this is a pretty rare degenerate case and that we already treat triangle backfaces as noncolliding, we'll treat zero distance as a backface non-collision.
+            manifold.ContactExists = Vector.BitwiseAnd(Vector.GreaterThan(distance, Vector<float>.Zero), Vector.LessThanOrEqual(manifold.Depth, speculativeMargin));
+
         }
 
         public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex1ContactManifoldWide manifold)
@@ -25,7 +118,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             throw new NotImplementedException();
         }
     }
-    
+
     public class SphereTriangleCollisionTask : CollisionTask
     {
         public SphereTriangleCollisionTask()
