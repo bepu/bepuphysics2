@@ -6,35 +6,37 @@ ps
 
 struct Instance
 {
-	float3 Position;
+	float3 A;
 	uint PackedColor;
-	float4 Orientation;
-	float3 HalfExtents;
-	float Padding0;
+	float3 B;
+	float X;
+	float3 C;
+	float Y;
+	uint2 PackedOrientation;
+	float Z;
+	float Padding;
 };
 
 StructuredBuffer<Instance> Instances : register(t0);
 
 PSInput VSMain(uint vertexId : SV_VertexId)
 {
-	//The vertex id is used to position each vertex. 
-	//Each AABB has 8 vertices; the position is based on the 3 least significant bits.
-	int instanceId = vertexId >> 3;
+	int instanceId = vertexId / 3;
+	int triangleVertexId = vertexId - instanceId * 3;
 	PSInput output;
 	Instance instance = Instances[instanceId];
+	float3 instancePosition = float3(instance.X, instance.Y, instance.Z);
 	//Note that we move the instance location into camera local translation.
-	output.InstancePosition = instance.Position - CameraPosition;
+	output.InstancePosition = instancePosition - CameraPosition;
 	output.PackedColor = instance.PackedColor;
-	output.Orientation = instance.Orientation;
+	output.Orientation = UnpackOrientation(instance.PackedOrientation);
 
-	//Convert the vertex id to local AABB coordinates, and then into view space.
-	//Note that this id->coordinate transformation requires consistency with the index buffer
-	//to ensure proper triangle winding. A set bit in a given position makes it higher along the axis.
-	//So vertexId&1 == 1 => +x, vertexId&2 == 2 => +y, and vertexId&4 == 4 => +z.
-	float3 aabbCoordinates = float3((vertexId & 1) << 1, vertexId & 2, (vertexId & 4) >> 1) - 1;
 	float3x3 orientation = ConvertToRotationMatrix(output.Orientation);
 
-	float3 vertexPosition = output.InstancePosition + mul(instance.HalfExtents * aabbCoordinates, orientation);
+	//Note winding swap. Just for consistency with the culling mode.
+	float3 localVertex = triangleVertexId == 0 ? instance.A : triangleVertexId == 1 ? instance.C : instance.B;
+
+	float3 vertexPosition = output.InstancePosition + mul(localVertex, orientation);
 	float3 vertexViewPosition = mul(float3x3(CameraRight, CameraUp, CameraBackward), vertexPosition);
 
 	output.ToAABB = vertexPosition;

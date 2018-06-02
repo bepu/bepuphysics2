@@ -46,11 +46,14 @@ namespace Demos.Demos
                     Pose = new RigidPose
                     {
                         Position = new Vector3(1, 2, 3),
-                        Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 4)
+                        Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI * 0.333f)
                     },
                     Collidable = new CollidableDescription
                     {
-                        Shape = Simulation.Shapes.Add(new Triangle(new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1))),
+                        Shape = Simulation.Shapes.Add(new Triangle(
+                            new Vector3(-3, -.1f, -3), 
+                            new Vector3(4, 0, -3), 
+                            new Vector3(-3, 0, 4))),
                         SpeculativeMargin = 0.1f
                     }
                 };

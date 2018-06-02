@@ -20,6 +20,7 @@ namespace DemoRenderer
         public RayTracedRenderer<SphereInstance> SphereRenderer { get; private set; }
         public RayTracedRenderer<CapsuleInstance> CapsuleRenderer { get; private set; }
         public BoxRenderer BoxRenderer { get; private set; }
+        public TriangleRenderer TriangleRenderer { get; private set; }
         public ShapesExtractor Shapes { get; private set; }
         public LineRenderer LineRenderer { get; private set; }
         public LineExtractor Lines { get; private set; }
@@ -64,6 +65,7 @@ namespace DemoRenderer
             SphereRenderer = new RayTracedRenderer<SphereInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderSpheres.hlsl");
             CapsuleRenderer = new RayTracedRenderer<CapsuleInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderCapsules.hlsl");
             BoxRenderer = new BoxRenderer(surface.Device, ShaderCache);
+            TriangleRenderer = new TriangleRenderer(surface.Device, ShaderCache);
             Lines = new LineExtractor(looper);
             LineRenderer = new LineRenderer(surface.Device, ShaderCache);
             Background = new BackgroundRenderer(surface.Device, ShaderCache);
@@ -222,6 +224,7 @@ namespace DemoRenderer
             //Non-raytraced shapes just use regular opaque rendering.
             context.OutputMerger.SetBlendState(opaqueBlendState);
             BoxRenderer.Render(context, camera, Surface.Resolution, Shapes.boxes.Span.Memory, 0, Shapes.boxes.Count);
+            TriangleRenderer.Render(context, camera, Surface.Resolution, Shapes.triangles.Span.Memory, 0, Shapes.triangles.Count);
             LineRenderer.Render(context, camera, Surface.Resolution, Lines.lines.Span.Memory, 0, Lines.lines.Count);
 
             Background.Render(context, camera);

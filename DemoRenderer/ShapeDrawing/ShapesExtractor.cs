@@ -14,6 +14,7 @@ namespace DemoRenderer.ShapeDrawing
         internal QuickList<SphereInstance, Array<SphereInstance>> spheres;
         internal QuickList<CapsuleInstance, Array<CapsuleInstance>> capsules;
         internal QuickList<BoxInstance, Array<BoxInstance>> boxes;
+        internal QuickList<TriangleInstance, Array<TriangleInstance>> triangles;
 
         ParallelLooper looper;
         public ShapesExtractor(ParallelLooper looper, int initialCapacityPerShapeType = 1024)
@@ -21,6 +22,7 @@ namespace DemoRenderer.ShapeDrawing
             QuickList<SphereInstance, Array<SphereInstance>>.Create(new PassthroughArrayPool<SphereInstance>(), initialCapacityPerShapeType, out spheres);
             QuickList<CapsuleInstance, Array<CapsuleInstance>>.Create(new PassthroughArrayPool<CapsuleInstance>(), initialCapacityPerShapeType, out capsules);
             QuickList<BoxInstance, Array<BoxInstance>>.Create(new PassthroughArrayPool<BoxInstance>(), initialCapacityPerShapeType, out boxes);
+            QuickList<TriangleInstance, Array<TriangleInstance>>.Create(new PassthroughArrayPool<TriangleInstance>(), initialCapacityPerShapeType, out triangles);
             this.looper = looper;
         }
 
@@ -29,6 +31,7 @@ namespace DemoRenderer.ShapeDrawing
             spheres.Count = 0;
             capsules.Count = 0;
             boxes.Count = 0;
+            triangles.Count = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -69,6 +72,21 @@ namespace DemoRenderer.ShapeDrawing
                         instance.HalfHeight = box.HalfHeight;
                         instance.HalfLength = box.HalfLength;
                         boxes.Add(ref instance, new PassthroughArrayPool<BoxInstance>());
+                    }
+                    break;
+                case Triangle.Id:
+                    {
+                        ref var triangle = ref Unsafe.AsRef<Triangle>(shapeData);
+                        TriangleInstance instance;
+                        instance.A = triangle.A;
+                        instance.PackedColor = Helpers.PackColor(color);
+                        instance.B = triangle.B;
+                        instance.C = triangle.C;
+                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
+                        instance.X = pose.Position.X;
+                        instance.Y = pose.Position.Y;
+                        instance.Z = pose.Position.Z;
+                        triangles.Add(ref instance, new PassthroughArrayPool<TriangleInstance>());
                     }
                     break;
                 case Compound.Id:
