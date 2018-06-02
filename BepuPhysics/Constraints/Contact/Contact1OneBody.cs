@@ -96,7 +96,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PenetrationDepth0;
     }
 
-    public struct ContactManifold1OneBodyProjection
+    public struct Contact1OneBodyProjection
     {
         public BodyInertias InertiaA;
         public Vector<float> PremultipliedFrictionCoefficient;
@@ -108,11 +108,11 @@ namespace BepuPhysics.Constraints.Contact
     }
 
     public struct Contact1OneBodyFunctions :
-        IOneBodyConstraintFunctions<Contact1OneBodyPrestepData, ContactManifold1OneBodyProjection, Contact1AccumulatedImpulses>
+        IOneBodyConstraintFunctions<Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
-            float dt, float inverseDt, ref Contact1OneBodyPrestepData prestep, out ContactManifold1OneBodyProjection projection)
+            float dt, float inverseDt, ref Contact1OneBodyPrestepData prestep, out Contact1OneBodyProjection projection)
         {
             bodies.GatherInertia(ref bodyReferences, count, out projection.InertiaA);
             projection.PremultipliedFrictionCoefficient = prestep.FrictionCoefficient;
@@ -127,7 +127,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref ContactManifold1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocities wsvA, ref Contact1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(ref projection.Normal, out var x, out var z);
             TangentFrictionOneBody.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref accumulatedImpulses.Tangent, ref wsvA);
@@ -138,7 +138,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref ContactManifold1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocities wsvA, ref Contact1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(ref projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient * accumulatedImpulses.Penetration0;
@@ -158,7 +158,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 4-contact convex manifold constraints.
     /// </summary>
     public class Contact1OneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact1OneBodyPrestepData, ContactManifold1OneBodyProjection, Contact1AccumulatedImpulses, Contact1OneBodyFunctions>
+        OneBodyTypeProcessor<Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses, Contact1OneBodyFunctions>
     {
         public const int BatchTypeId = 0;
     }

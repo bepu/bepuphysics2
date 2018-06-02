@@ -24,7 +24,7 @@ namespace DemoRenderer.Constraints
         public void Extract(Bodies bodies, Solver solver, BroadPhase broadPhase, bool showConstraints = true, bool showContacts = false, bool showBoundingBoxes = false, IThreadDispatcher threadDispatcher = null)
         {
             looper.Dispatcher = threadDispatcher;
-            if (showConstraints)
+            if (showConstraints || showContacts)
                 constraints.AddInstances(bodies, solver, showConstraints, showContacts, ref lines, looper);
             if (showBoundingBoxes)
                 boundingBoxes.AddInstances(broadPhase, ref lines, looper);

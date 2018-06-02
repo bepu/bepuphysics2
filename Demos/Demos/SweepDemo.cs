@@ -124,25 +124,10 @@ namespace Demos.Demos
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void BuildOrthnormalBasis(ref Vector3 normal, out Vector3 t1, out Vector3 t2)
-        {
-            //No frisvad or friends here- just want a simple and consistent basis with only one singularity.
-            t1 = Vector3.Cross(normal, new Vector3(1, -1, 1));
-            var lengthSquared = t1.LengthSquared();
-            if (lengthSquared < 1e-8f)
-            {
-                t1 = Vector3.Cross(normal, new Vector3(-1, 1, 1));
-                lengthSquared = t1.LengthSquared();
-            }
-            t1 /= MathF.Sqrt(lengthSquared);
-            t2 = Vector3.Cross(normal, t1);
-        }
-
         unsafe void DrawImpact(Renderer renderer, ref Vector3 hitLocation, ref Vector3 hitNormal)
         {
             //The normal itself will tend to be obscured by the shapes, so instead draw two lines representing the plane.
-            BuildOrthnormalBasis(ref hitNormal, out var tangent1, out var tangent2);
+            DemoRenderer.Constraints.ContactLines.BuildOrthnormalBasis(hitNormal, out var tangent1, out var tangent2);
             renderer.Lines.Allocate() = new DemoRenderer.Constraints.LineInstance(hitLocation - tangent1, hitLocation + tangent1, new Vector3(0, 1, 0), new Vector3());
             renderer.Lines.Allocate() = new DemoRenderer.Constraints.LineInstance(hitLocation - tangent2, hitLocation + tangent2, new Vector3(0, 1, 0), new Vector3());
         }

@@ -20,11 +20,11 @@ namespace BepuPhysics.Constraints
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return BallSocketTypeBatch.BatchTypeId;
+                return BallSocketTypeProcessor.BatchTypeId;
             }
         }
 
-        public Type BatchType => typeof(BallSocketTypeBatch);
+        public Type BatchType => typeof(BallSocketTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -204,7 +204,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket constraints.
     /// </summary>
-    public class BallSocketTypeBatch : TwoBodyTypeProcessor<BallSocketPrestepData, BallSocketProjection, Vector3Wide, BallSocketFunctions>
+    public class BallSocketTypeProcessor : TwoBodyTypeProcessor<BallSocketPrestepData, BallSocketProjection, Vector3Wide, BallSocketFunctions>
     {
         public const int BatchTypeId = 22;
     }
