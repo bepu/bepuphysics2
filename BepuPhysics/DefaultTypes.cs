@@ -80,6 +80,7 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new SpherePairCollisionTask());
             defaultTaskRegistry.Register(new SphereCapsuleCollisionTask());
             defaultTaskRegistry.Register(new SphereBoxCollisionTask());
+            defaultTaskRegistry.Register(new SphereTriangleCollisionTask());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere>());
             defaultTaskRegistry.Register(new CapsulePairCollisionTask());
             defaultTaskRegistry.Register(new CapsuleBoxCollisionTask());

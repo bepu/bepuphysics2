@@ -14,7 +14,7 @@ using System.Text;
 
 namespace Demos.SpecializedTests
 {
-    public class TriangleTestDemo : Demo
+    public class TriangleRayTestDemo : Demo
     {
         void GetPointOnTriangle(Random random, in Triangle triangle, in RigidPose pose, out Vector3 pointOnTriangle)
         {
