@@ -17,10 +17,17 @@ namespace BepuPhysics
         public BepuUtilities.Quaternion Orientation;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(ref Vector3 v, ref RigidPose pose, out Vector3 result)
+        public static void Transform(in Vector3 v, in RigidPose pose, out Vector3 result)
         {
-            BepuUtilities.Quaternion.Transform(v, pose.Orientation, out result);
-            result += pose.Position;
+            BepuUtilities.Quaternion.TransformWithoutOverlap(v, pose.Orientation, out var rotated);
+            result = rotated + pose.Position;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void TransformByInverse(in Vector3 v, in RigidPose pose, out Vector3 result)
+        {
+            var translated = v - pose.Position;
+            BepuUtilities.Quaternion.Conjugate(pose.Orientation, out var conjugate);
+            BepuUtilities.Quaternion.TransformWithoutOverlap(translated, conjugate, out result);
         }
     }
 

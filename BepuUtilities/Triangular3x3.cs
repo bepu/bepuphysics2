@@ -7,6 +7,7 @@ using System.Text;
 
 namespace BepuPhysics
 {
+    //TODO: We haven't used this for anything but symmetric matrices. Might be a good idea to just rename it accordingly.
     /// <summary>
     /// Stores the lower left triangle (including diagonal) of a 3x3 matrix. Useful for triangular forms and (anti)symmetric matrices.
     /// </summary>
@@ -164,5 +165,18 @@ namespace BepuPhysics
             result.ZZ = azxbzx + azybzy + a.ZZ * b.ZZ;
         }
 
+        /// <summary>
+        /// Transforms a vector by a symmetric matrix.
+        /// </summary>
+        /// <param name="v">Vector to transform.</param>
+        /// <param name="m">Matrix to interpret as symmetric transform.</param>
+        /// <param name="result">Result of transforming the vector by the given symmetric matrix.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SymmetricTransformWithoutOverlap(in Vector3 v, in Triangular3x3 m, out Vector3 result)
+        {
+            result.X = v.X * m.XX + v.Y * m.YX + v.Z * m.ZX;
+            result.Y = v.X * m.YX + v.Y * m.YY + v.Z * m.ZY;
+            result.Z = v.X * m.ZX + v.Y * m.ZY + v.Z * m.ZZ;
+        }
     }
 }

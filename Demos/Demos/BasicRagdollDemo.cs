@@ -133,7 +133,7 @@ namespace Demos.Demos
         static RigidPose GetWorldPose(Vector3 localPosition, Quaternion localOrientation, RigidPose ragdollPose)
         {
             RigidPose worldPose;
-            RigidPose.Transform(ref localPosition, ref ragdollPose, out worldPose.Position);
+            RigidPose.Transform(localPosition, ragdollPose, out worldPose.Position);
             Quaternion.ConcatenateWithoutOverlap(localOrientation, ragdollPose.Orientation, out worldPose.Orientation);
             return worldPose;
         }

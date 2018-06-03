@@ -70,7 +70,7 @@ namespace BepuUtilities
         /// <param name="inverse">Inverse of the transform.</param>
         public static void Invert(ref RigidTransform transform, out RigidTransform inverse)
         {
-            Quaternion.Conjugate(ref transform.Orientation, out inverse.Orientation);
+            Quaternion.Conjugate(transform.Orientation, out inverse.Orientation);
             Quaternion.Transform(transform.Position, inverse.Orientation, out inverse.Position);
             inverse.Position = -inverse.Position;
         }
@@ -126,7 +126,7 @@ namespace BepuUtilities
         {
             Quaternion orientation;
             Vector3 intermediate = position - transform.Position;
-            Quaternion.Conjugate(ref transform.Orientation, out orientation);
+            Quaternion.Conjugate(transform.Orientation, out orientation);
             Quaternion.Transform(intermediate, orientation, out result);
         }
 

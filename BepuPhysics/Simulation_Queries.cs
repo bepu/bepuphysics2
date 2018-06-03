@@ -98,6 +98,8 @@ namespace BepuPhysics
             dispatcher.HitHandler = hitHandler;
             dispatcher.Simulation = this;
             BroadPhase.RayCast(origin, direction, maximumT, ref dispatcher, id);
+            //The hit handler was copied to pass it into the child processing; since the user may (and probably does) rely on mutations, copy it back to the original reference.
+            hitHandler = dispatcher.HitHandler;
         }
 
         unsafe struct SweepHitDispatcher<TSweepHitHandler> : IBroadPhaseSweepTester, ISweepFilter where TSweepHitHandler : ISweepHitHandler

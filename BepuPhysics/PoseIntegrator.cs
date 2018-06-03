@@ -147,7 +147,7 @@ namespace BepuPhysics
         public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose)
         {
             Integrate(pose.Position, velocity.Linear, dt, out integratedPose.Position);
-            Integrate(pose.Orientation, velocity.Angular, dt, out integratedPose.Orientation);
+            Integrate(pose.Orientation, velocity.Angular, dt , out integratedPose.Orientation);
         }
 
         unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher)

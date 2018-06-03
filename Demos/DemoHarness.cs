@@ -13,6 +13,7 @@ namespace Demos
         Window window;
         internal Input input;
         Camera camera;
+        Grabber grabber;
         internal Controls controls;
         Font font;
 
@@ -230,6 +231,10 @@ namespace Demos
                     input.MouseLocked = !input.MouseLocked;
                 }
 
+                grabber.Update(demo.Simulation, camera, input.MouseLocked, controls.Grab.IsDown(input), GetNormalizedMousePosition());
+
+
+
                 if (controls.ShowControls.WasTriggered(input))
                 {
                     showControls = !showControls;
@@ -268,6 +273,11 @@ namespace Demos
             timeSamples.RecordFrame(demo.Simulation);
         }
 
+        private Vector2 GetNormalizedMousePosition()
+        {
+            return new Vector2((float)input.MousePosition.X / window.Resolution.X, (float)input.MousePosition.Y / window.Resolution.Y);
+        }
+
         TextBuilder uiText = new TextBuilder(128);
         public void Render(Renderer renderer)
         {
@@ -288,7 +298,7 @@ namespace Demos
             if (showControls)
             {
                 var penPosition = new Vector2(window.Resolution.X - textHeight * 6 - 25, window.Resolution.Y - 25);
-                penPosition.Y -= 17 * lineSpacing;
+                penPosition.Y -= 18 * lineSpacing;
                 uiText.Clear().Append("Controls: ");
                 var headerHeight = textHeight * 1.2f;
                 renderer.TextBatcher.Write(uiText, penPosition - new Vector2(0.5f * GlyphBatch.MeasureLength(uiText, font, headerHeight), 0), headerHeight, textColor, font);
@@ -310,6 +320,7 @@ namespace Demos
 
                 //Conveniently, enum strings are cached. Every (Key).ToString() returns the same reference for the same key, so no garbage worries.
                 WriteName(nameof(controls.LockMouse), controls.LockMouse.ToString());
+                WriteName(nameof(controls.Grab), controls.Grab.ToString());
                 WriteName(nameof(controls.MoveForward), controls.MoveForward.ToString());
                 WriteName(nameof(controls.MoveBackward), controls.MoveBackward.ToString());
                 WriteName(nameof(controls.MoveLeft), controls.MoveLeft.ToString());
@@ -350,6 +361,7 @@ namespace Demos
                     uiText.Clear().Append(1e3 * timeSamples.Simulation[timeSamples.Simulation.End - 1], timingGraph.Description.VerticalIntervalLabelRounding).Append(" ms/step"),
                     new Vector2(window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, timingTextSize), inset), timingTextSize, timingGraph.Description.TextColor, font);
             }
+            grabber.Draw(renderer.Lines, camera, input.MouseLocked, controls.Grab.IsDown(input), GetNormalizedMousePosition());
             renderer.Shapes.AddInstances(demo.Simulation, demo.ThreadDispatcher);
             renderer.Lines.Extract(demo.Simulation.Bodies, demo.Simulation.Solver, demo.Simulation.BroadPhase, showConstraints, showContacts, showBoundingBoxes, demo.ThreadDispatcher);
         }

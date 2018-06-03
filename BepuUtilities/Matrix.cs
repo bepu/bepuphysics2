@@ -141,7 +141,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix whose transpose will be applied to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformTranspose(ref Vector4 v, ref Matrix m, out Vector4 result)
+        public static void TransformTranspose(in Vector4 v, in Matrix m, out Vector4 result)
         {
             result = new Vector4(
                 Vector4.Dot(v, m.X),
@@ -157,7 +157,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(ref Vector4 v, ref Matrix m, out Vector4 result)
+        public static void Transform(in Vector4 v, in Matrix m, out Vector4 result)
         {
             var x = new Vector4(v.X);
             var y = new Vector4(v.Y);
@@ -173,7 +173,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(ref Vector3 v, ref Matrix m, out Vector4 result)
+        public static void Transform(in Vector3 v, in Matrix m, out Vector4 result)
         {
             var x = new Vector4(v.X);
             var y = new Vector4(v.Y);
@@ -189,7 +189,7 @@ namespace BepuUtilities
         /// <param name="b">Second matrix.</param>
         /// <param name="result">Result of the matrix multiplication.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Multiply(ref Matrix a, ref Matrix b, out Matrix result)
+        public static void Multiply(in Matrix a, in Matrix b, out Matrix result)
         {
             var bX = b.X;
             var bY = b.Y;
@@ -331,7 +331,7 @@ namespace BepuUtilities
         public static Matrix operator *(Matrix m1, Matrix m2)
         {
             Matrix toReturn;
-            Multiply(ref m1, ref m2, out toReturn);
+            Multiply(m1, m2, out toReturn);
             return toReturn;
         }
 

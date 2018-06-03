@@ -50,6 +50,8 @@ namespace BepuPhysics.CollisionDetection
             ActiveTree.RayCast(&treeRay, &rayData, ref tester);
             tester.Leaves = staticLeaves;
             StaticTree.RayCast(&treeRay, &rayData, ref tester);
+            //The sweep tester probably relies on mutation to function; copy any mutations back to the original reference.
+            rayTester = tester.LeafTester;
         }
 
         struct SweepLeafTester<TSweepTester> : ISweepLeafTester where TSweepTester : IBroadPhaseSweepTester

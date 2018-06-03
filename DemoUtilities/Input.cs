@@ -72,7 +72,8 @@ namespace DemoUtilities
             get
             {
                 var state = Mouse.GetCursorState();
-                return new Int2(state.X, state.Y);
+                var clientPosition = window.PointToClient(new Point(state.X, state.Y));
+                return new Int2 { X = clientPosition.X, Y = clientPosition.Y };
             }
             set
             {

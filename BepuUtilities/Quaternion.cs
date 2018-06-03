@@ -327,7 +327,7 @@ namespace BepuUtilities
         /// <param name="quaternion">Quaternion to conjugate.</param>
         /// <param name="result">Conjugated quaternion.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Conjugate(ref Quaternion quaternion, out Quaternion result)
+        public static void Conjugate(in Quaternion quaternion, out Quaternion result)
         {
             result.X = -quaternion.X;
             result.Y = -quaternion.Y;
@@ -343,7 +343,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion Conjugate(Quaternion quaternion)
         {
-            Conjugate(ref quaternion, out Quaternion toReturn);
+            Conjugate(quaternion, out Quaternion toReturn);
             return toReturn;
         }
 
@@ -783,7 +783,7 @@ namespace BepuUtilities
         public static void GetRelativeRotationWithoutOverlap(ref Quaternion start, ref Quaternion end, out Quaternion relative)
         {
             Quaternion startInverse;
-            Conjugate(ref start, out startInverse);
+            Conjugate(start, out startInverse);
             ConcatenateWithoutOverlap(startInverse, end, out relative);
         }
 
@@ -799,7 +799,7 @@ namespace BepuUtilities
         public static void GetLocalRotationWithoutOverlap(ref Quaternion rotation, ref Quaternion targetBasis, out Quaternion localRotation)
         {
             Quaternion basisInverse;
-            Conjugate(ref targetBasis, out basisInverse);
+            Conjugate(targetBasis, out basisInverse);
             ConcatenateWithoutOverlap(rotation, basisInverse, out localRotation);
         }
 
