@@ -466,7 +466,7 @@ namespace BepuPhysics
         {
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
-            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references);            
+            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references);
             for (int i = 0; i < count; ++i)
             {
                 GatherInertiaForBody(ref Inertias[Unsafe.Add(ref baseIndexA, i)], ref GatherScatter.GetOffsetInstance(ref inertiaA, i));
@@ -520,6 +520,38 @@ namespace BepuPhysics
             //But for the most part, we don't want to pay the overhead of an abstract invocation within the inner loop of the solver. 
             //Given the current limits of C# and the compiler, the best option seems to be conditional compilation.
             Vector3Wide.Subtract(ref positionB, ref positionA, out offsetB);
+        }
+
+        /// <summary>
+        /// Gathers inertia and pose information for a body bundle into AOSOA bundles.
+        /// </summary>
+        /// <param name="references">Active body indices being gathered.</param>
+        /// <param name="count">Number of body pairs in the bundle.</param>
+        /// <param name="position">Gathered absolute position of the body.</param>
+        /// <param name="orientation">Gathered orientation of the body.</param>
+        /// <param name="inertia">Gathered inertia of the body.</param>
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GatherInertiaAndPose(ref Vector<int> references, int count,
+            out Vector3Wide position, out QuaternionWide orientation, out BodyInertias inertia)
+        {
+            //TODO: This function and its users (which should be relatively few) is a problem for large world position precision.
+            //It directly reports the position, thereby infecting vectorized logic with the high precision representation.
+            //You might be able to redesign the users of this function to not need it, but that comes with its own difficulties
+            //(for example, making the grab motor rely on having its goal offset updated every frame by the user).
+            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
+            ref var baseIndex = ref Unsafe.As<Vector<int>, int>(ref references);
+
+            ref var poses = ref ActiveSet.Poses;
+            for (int i = 0; i < count; ++i)
+            {
+                ref var indexA = ref Unsafe.Add(ref baseIndex, i);
+                ref var targetPositionSlotA = ref GatherScatter.GetOffsetInstance(ref position, i);
+                ref var targetOrientationSlotA = ref GatherScatter.GetOffsetInstance(ref orientation, i);
+                ref var targetInertiaSlotA = ref GatherScatter.GetOffsetInstance(ref inertia, i);
+                GatherPoseForBody(ref poses[indexA], ref targetPositionSlotA, ref targetOrientationSlotA);
+                GatherInertiaForBody(ref Inertias[indexA], ref targetInertiaSlotA);                
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -614,7 +646,7 @@ namespace BepuPhysics
         /// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
         /// <param name="count">Number of body pairs in the bundle.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void ScatterVelocities(ref BodyVelocities sourceVelocitiesA, ref BodyVelocities sourceVelocitiesB, ref Buffer<BodyVelocity> targetVelocities, 
+        public static unsafe void ScatterVelocities(ref BodyVelocities sourceVelocitiesA, ref BodyVelocities sourceVelocitiesB, ref Buffer<BodyVelocity> targetVelocities,
             ref TwoBodyReferences references, int count)
         {
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);

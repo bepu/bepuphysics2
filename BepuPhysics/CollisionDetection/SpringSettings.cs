@@ -9,6 +9,49 @@ namespace BepuPhysics
         //Be careful when fiddling with the memory layout. It's aligned with execution order.
         public Vector<float> AngularFrequency;
         public Vector<float> TwiceDampingRatio;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteFirst(ref SpringSettings source, ref SpringSettingsWide target)
+        {
+            GatherScatter.GetFirst(ref target.AngularFrequency) = source.AngularFrequency;
+            GatherScatter.GetFirst(ref target.TwiceDampingRatio) = source.TwiceDampingRatio;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ReadFirst(ref SpringSettingsWide source, out SpringSettings target)
+        {
+            target.AngularFrequency = source.AngularFrequency[0];
+            target.TwiceDampingRatio = source.TwiceDampingRatio[0];
+        }
+
+        /// <summary>
+        /// Computes springiness values for a set of constraints.
+        /// </summary>
+        /// <param name="settings">Spring settings associated with the constraints.</param>
+        /// <param name="dt">Duration of the time step.</param>
+        /// <param name="positionErrorToVelocity">The multiplier applied to error to get bias velocity.</param>
+        /// <param name="effectiveMassCFMScale">Scaling factor to apply to the effective mass to get the softened effective mass.</param>
+        /// <param name="softnessImpulseScale">Scaling factor to apply to the accumulated impulse during the solve to soften the target velocity.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ComputeSpringiness(ref SpringSettingsWide settings, float dt,
+            out Vector<float> positionErrorToVelocity, out Vector<float> effectiveMassCFMScale, out Vector<float> softnessImpulseScale)
+        {
+            //For more information behind these values, check the Inequality1DOF constraint comments.
+            //softenedEffectiveMass = effectiveMass * (1 + (naturalFrequency^2 * dt^2 + 2 * dampingRatio * naturalFrequency * dt)^-1)^-1
+
+            //CFM/dt * softenedEffectiveMass:
+            //(naturalFrequency^2 * dt^2 + 2 * dampingRatio * naturalFrequency * dt)^-1 * (1 + (naturalFrequency^2 * dt^2 + 2 * dampingRatio * naturalFrequency * dt)^-1)^-1
+
+            //ERP = (naturalFrequency * dt) * (naturalFrequency * dt + 2 * dampingRatio)^-1
+            //"ERP" is the error reduction per frame. Note that it can never exceed 1 given physically valid input.
+            //Since it is a *per frame* term, note that the position error is additionally scaled by inverseDt to get the target velocity
+            //needed to accomplish the desired error reduction in one frame.
+            var angularFrequencyDt = settings.AngularFrequency * new Vector<float>(dt);
+            positionErrorToVelocity = settings.AngularFrequency / (angularFrequencyDt + settings.TwiceDampingRatio);
+            var extra = Vector<float>.One / (angularFrequencyDt * (angularFrequencyDt + settings.TwiceDampingRatio));
+            effectiveMassCFMScale = Vector<float>.One / (Vector<float>.One + extra);
+            softnessImpulseScale = extra * effectiveMassCFMScale;
+        }
     }
 
     public struct SpringSettings
@@ -43,33 +86,6 @@ namespace BepuPhysics
             TwiceDampingRatio = dampingRatio * 2;
         }
 
-        /// <summary>
-        /// Computes springiness values for a set of constraints.
-        /// </summary>
-        /// <param name="settings">Spring settings associated with the constraints.</param>
-        /// <param name="dt">Duration of the time step.</param>
-        /// <param name="positionErrorToVelocity">The multiplier applied to error to get bias velocity.</param>
-        /// <param name="effectiveMassCFMScale">Scaling factor to apply to the effective mass to get the softened effective mass.</param>
-        /// <param name="softnessImpulseScale">Scaling factor to apply to the accumulated impulse during the solve to soften the target velocity.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeSpringiness(ref SpringSettingsWide settings, float dt,
-            out Vector<float> positionErrorToVelocity, out Vector<float> effectiveMassCFMScale, out Vector<float> softnessImpulseScale)
-        {
-            //For more information behind these values, check the Inequality1DOF constraint comments.
-            //softenedEffectiveMass = effectiveMass * (1 + (naturalFrequency^2 * dt^2 + 2 * dampingRatio * naturalFrequency * dt)^-1)^-1
-
-            //CFM/dt * softenedEffectiveMass:
-            //(naturalFrequency^2 * dt^2 + 2 * dampingRatio * naturalFrequency * dt)^-1 * (1 + (naturalFrequency^2 * dt^2 + 2 * dampingRatio * naturalFrequency * dt)^-1)^-1
-
-            //ERP = (naturalFrequency * dt) * (naturalFrequency * dt + 2 * dampingRatio)^-1
-            //"ERP" is the error reduction per frame. Note that it can never exceed 1 given physically valid input.
-            //Since it is a *per frame* term, note that the position error is additionally scaled by inverseDt to get the target velocity
-            //needed to accomplish the desired error reduction in one frame.
-            var angularFrequencyDt = settings.AngularFrequency * new Vector<float>(dt);
-            positionErrorToVelocity = settings.AngularFrequency / (angularFrequencyDt + settings.TwiceDampingRatio);
-            var extra = Vector<float>.One / (angularFrequencyDt * (angularFrequencyDt + settings.TwiceDampingRatio));
-            effectiveMassCFMScale = Vector<float>.One / (Vector<float>.One + extra);
-            softnessImpulseScale = extra * effectiveMassCFMScale;
-        }
+       
     }
 }
