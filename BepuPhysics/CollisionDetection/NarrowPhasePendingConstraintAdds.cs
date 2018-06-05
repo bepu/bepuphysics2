@@ -130,7 +130,7 @@ namespace BepuPhysics.CollisionDetection
                     //If a batch index failed, just try the next one. This is guaranteed to eventually work.
                     ++batchIndex;
                 }
-                simulation.Solver.ApplyDescription(ref reference, ref constraint.ConstraintDescription);
+                simulation.Solver.ApplyDescriptionWithoutWaking(ref reference, ref constraint.ConstraintDescription);
                 ref var aLocation = ref simulation.Bodies.HandleToLocation[handles];
                 Debug.Assert(aLocation.SetIndex == 0, "By the time we flush new constraints into the solver, all associated islands should be awake.");
                 simulation.Bodies.AddConstraint(aLocation.Index, constraintHandle, 0);

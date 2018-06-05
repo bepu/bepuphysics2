@@ -174,9 +174,9 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref Triangle source)
         {
-            Vector3Wide.GatherSlot(ref source.A, ref A);
-            Vector3Wide.GatherSlot(ref source.B, ref B);
-            Vector3Wide.GatherSlot(ref source.C, ref C);
+            Vector3Wide.WriteFirst(ref source.A, ref A);
+            Vector3Wide.WriteFirst(ref source.B, ref B);
+            Vector3Wide.WriteFirst(ref source.C, ref C);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

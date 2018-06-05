@@ -205,7 +205,7 @@ namespace BepuPhysics.CollisionDetection
                     Unsafe.As<TConstraintCache, int>(ref newConstraintCache) = constraintHandle;
                     PairCache.Update(workerIndex, index, ref pointers, ref collisionCache, ref newConstraintCache);
                     //There exists a constraint and it has the same type as the manifold. Directly apply the new description and impulses.
-                    Solver.ApplyDescription(ref constraintReference, ref description);
+                    Solver.ApplyDescriptionWithoutWaking(ref constraintReference, ref description);
                     accessor.ScatterNewImpulses(ref constraintReference, ref newImpulses);
                 }
                 else

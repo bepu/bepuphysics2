@@ -40,6 +40,7 @@ namespace BepuPhysics.Constraints
     public struct GrabMotor : IConstraintDescription<GrabMotor>
     {
         public Vector3 LocalOffset;
+        public Vector3 Target;
         public SpringSettings SpringSettings;
         public MotorSettings MotorSettings;
 
@@ -58,11 +59,9 @@ namespace BepuPhysics.Constraints
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<GrabMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            GetFirst(ref target.LocalOffset.X) = LocalOffset.X;
-            GetFirst(ref target.LocalOffset.Y) = LocalOffset.Y;
-            GetFirst(ref target.LocalOffset.Z) = LocalOffset.Z;
-            GetFirst(ref target.SpringSettings.AngularFrequency) = SpringSettings.AngularFrequency;
-            GetFirst(ref target.SpringSettings.TwiceDampingRatio) = SpringSettings.TwiceDampingRatio;
+            Vector3Wide.WriteFirst(ref LocalOffset, ref target.LocalOffset);
+            Vector3Wide.WriteFirst(ref Target, ref target.Target);
+            SpringSettingsWide.WriteFirst(ref SpringSettings, ref target.SpringSettings);
             MotorSettingsWide.WriteFirst(ref MotorSettings, ref target.MotorSettings);
         }
 
@@ -70,11 +69,9 @@ namespace BepuPhysics.Constraints
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<GrabMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            description.LocalOffset.X = GetFirst(ref source.LocalOffset.X);
-            description.LocalOffset.Y = GetFirst(ref source.LocalOffset.Y);
-            description.LocalOffset.Z = GetFirst(ref source.LocalOffset.Z);
-            description.SpringSettings.AngularFrequency = GetFirst(ref source.SpringSettings.AngularFrequency);
-            description.SpringSettings.TwiceDampingRatio = GetFirst(ref source.SpringSettings.TwiceDampingRatio);
+            Vector3Wide.ReadFirst(ref source.LocalOffset, out description.LocalOffset);
+            Vector3Wide.ReadFirst(ref source.Target, out description.Target);
+            SpringSettingsWide.ReadFirst(ref source.SpringSettings, out description.SpringSettings);
             MotorSettingsWide.ReadFirst(ref source.MotorSettings, out description.MotorSettings);
         }
     }
@@ -158,6 +155,7 @@ namespace BepuPhysics.Constraints
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular);
             Vector3Wide.CrossWithoutOverlap(ref velocityA.Angular, ref projection.Offset, out var angularCSV);
             Vector3Wide.Add(ref velocityA.Linear, ref angularCSV, out var csv);
+            Vector3Wide.Subtract(ref projection.BiasVelocity, ref csv, out csv);
 
             Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref csv, ref projection.EffectiveMass, out var csi);
             Vector3Wide.Scale(ref accumulatedImpulse, ref projection.SoftnessImpulseScale, out var softness);

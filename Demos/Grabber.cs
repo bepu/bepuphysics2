@@ -1,6 +1,7 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
+using BepuPhysics.Constraints;
 using BepuPhysics.Trees;
 using BepuUtilities;
 using DemoRenderer;
@@ -20,6 +21,7 @@ namespace Demos
         BodyReference body;
         float t;
         Vector3 localGrabPoint;
+        int motorHandle;
 
         struct RayHitHandler : IRayHitHandler
         {
@@ -62,11 +64,33 @@ namespace Demos
             return rayDirection;
         }
 
+        void CreateMotorDescription(in Vector3 target, float inverseMass, out GrabMotor description)
+        {
+            description = new GrabMotor
+            {
+                LocalOffset = localGrabPoint,
+                Target = target,
+                MotorSettings = new MotorSettings
+                {
+                    MaximumSpeed = float.MaxValue,
+                    MaximumForce = 4f / inverseMass
+                },
+                SpringSettings = new SpringSettings(10, 2),
+            };
+        }
+
         public void Update(Simulation simulation, Camera camera, bool mouseLocked, bool shouldGrab, in Vector2 normalizedMousePosition)
         {
-            if (active && (!shouldGrab || !body.Exists))
+            var bodyExists = body.Exists;
+            if (active && (!shouldGrab || !bodyExists))
             {
                 active = false;
+                if (bodyExists)
+                {
+                    //If the body wasn't removed, then the constraint should be removed.
+                    //(Body removal forces connected constraints to removed, so in that case we wouldn't have to worry about it.)
+                    simulation.Solver.Remove(motorHandle);
+                }
                 body = new BodyReference();
             }
             else if (shouldGrab && !active)
@@ -83,6 +107,8 @@ namespace Demos
                     var hitLocation = camera.Position + rayDirection * t;
                     RigidPose.TransformByInverse(hitLocation, body.Pose, out localGrabPoint);
                     active = true;
+                    CreateMotorDescription(hitLocation, body.LocalInertia.InverseMass, out var motorDescription);
+                    motorHandle = simulation.Solver.Add(body.Handle, ref motorDescription);
                 }
             }
             else if (active)
@@ -92,19 +118,9 @@ namespace Demos
 
                 var rayDirection = GetRayDirection(camera, mouseLocked, normalizedMousePosition);
                 var targetPoint = camera.Position + rayDirection * t;
-
-                if (!body.IsActive)
-                {
-                    simulation.Awakener.AwakenBody(body.Handle);
-                }
-                var offset = targetPoint - grabbedPoint;
-                var offsetLength = offset.Length();
-                if (offsetLength > 0)
-                {
-                    ref var localInertia = ref body.LocalInertia;
-                    var impulse = offset * (MathF.Min(offsetLength, MaximumLength) * 0.5f / (offsetLength * localInertia.InverseMass));
-                    body.ApplyImpulse(impulse, grabbedPoint);
-                }
+                
+                CreateMotorDescription(targetPoint, body.LocalInertia.InverseMass, out var motorDescription);
+                simulation.Solver.ApplyDescription(motorHandle, ref motorDescription);
             }
         }
         const float MaximumLength = 3;

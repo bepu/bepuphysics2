@@ -341,12 +341,25 @@ namespace BepuUtilities
         }
 
         /// <summary>
+        /// Gathers values from the first slot of a wide quaternion and puts them into a narrow representation.
+        /// </summary>
+        /// <param name="source">Wide quaternion to copy values from.</param>
+        /// <param name="target">Narrow quaternion to place values into.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ReadFirst(ref QuaternionWide source, ref Quaternion target)
+        {
+            target.X = source.X[0];
+            target.Y = source.Y[0];
+            target.Z = source.Z[0];
+            target.W = source.W[0];
+        }
+        /// <summary>
         /// Gathers values from a quaternion and places them into the first indices of the target wide quaternion.
         /// </summary>
         /// <param name="source">Quaternion to copy values from.</param>
         /// <param name="targetSlot">Wide quaternion to place values into.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GatherSlot(ref Quaternion source, ref QuaternionWide targetSlot)
+        public static void WriteFirst(ref Quaternion source, ref QuaternionWide targetSlot)
         {
             GatherScatter.GetFirst(ref targetSlot.X) = source.X;
             GatherScatter.GetFirst(ref targetSlot.Y) = source.Y;

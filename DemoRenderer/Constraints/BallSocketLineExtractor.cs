@@ -18,8 +18,8 @@ namespace DemoRenderer.Constraints
             //Could do bundles of constraints at a time, but eh.
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             var poseB = bodies.Sets[setIndex].Poses[bodyIndices[1]];
-            Vector3Wide.GetLane(ref prestepBundle.LocalOffsetA, innerIndex, out var localOffsetA);
-            Vector3Wide.GetLane(ref prestepBundle.LocalOffsetB, innerIndex, out var localOffsetB);
+            Vector3Wide.ReadSlot(ref prestepBundle.LocalOffsetA, innerIndex, out var localOffsetA);
+            Vector3Wide.ReadSlot(ref prestepBundle.LocalOffsetB, innerIndex, out var localOffsetB);
             Quaternion.Transform(localOffsetA, poseA.Orientation, out var worldOffsetA);
             Quaternion.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
             var endA = poseA.Position + worldOffsetA;

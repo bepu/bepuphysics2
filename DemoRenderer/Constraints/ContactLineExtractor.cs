@@ -32,8 +32,8 @@ namespace DemoRenderer.Constraints
         public static void Add(in RigidPose poseA, ref Vector3Wide offsetAWide, ref Vector3Wide normalWide, ref Vector<float> depthWide, int innerIndex, 
             in Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
         {
-            Vector3Wide.GetLane(ref offsetAWide, innerIndex, out var offsetA);
-            Vector3Wide.GetLane(ref normalWide, innerIndex, out var normal);
+            Vector3Wide.ReadSlot(ref offsetAWide, innerIndex, out var offsetA);
+            Vector3Wide.ReadSlot(ref normalWide, innerIndex, out var normal);
             var depth = depthWide[innerIndex];
             var contactPosition = offsetA + poseA.Position;
             BuildOrthnormalBasis(normal, out var t1, out var t2);

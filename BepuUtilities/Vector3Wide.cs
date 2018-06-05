@@ -228,24 +228,37 @@ namespace BepuUtilities
         /// Pulls one lane out of the wide representation.
         /// </summary>
         /// <param name="wide">Source of the lane.</param>
-        /// <param name="laneIndex">Index of the lane within the wide representation to read.</param>
+        /// <param name="slotIndex">Index of the lane within the wide representation to read.</param>
         /// <param name="narrow">Non-SIMD type to store the lane in.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetLane(ref Vector3Wide wide, int laneIndex, out Vector3 narrow)
+        public static void ReadSlot(ref Vector3Wide wide, int slotIndex, out Vector3 narrow)
         {
-            ref var start = ref Unsafe.Add(ref Unsafe.As<Vector<float>, float>(ref wide.X), laneIndex);
+            ref var start = ref Unsafe.Add(ref Unsafe.As<Vector<float>, float>(ref wide.X), slotIndex);
             narrow.X = start;
             narrow.Y = Unsafe.Add(ref start, Vector<float>.Count);
             narrow.Z = Unsafe.Add(ref start, 2 * Vector<float>.Count);
         }
-        
+
+        /// <summary>
+        /// Pulls one lane out of the wide representation.
+        /// </summary>
+        /// <param name="source">Source of the lane.</param>
+        /// <param name="target">Non-SIMD type to store the lane in.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ReadFirst(ref Vector3Wide source, out Vector3 target)
+        {
+            target.X = source.X[0];
+            target.Y = source.Y[0];
+            target.Z = source.Z[0];
+        }
+
         /// <summary>
         /// Gathers values from a vector and places them into the first indices of the target vector.
         /// </summary>
         /// <param name="source">Vector to copy values from.</param>
         /// <param name="targetSlot">Wide vectorto place values into.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GatherSlot(ref Vector3 source, ref Vector3Wide targetSlot)
+        public static void WriteFirst(ref Vector3 source, ref Vector3Wide targetSlot)
         {
             GatherScatter.GetFirst(ref targetSlot.X) = source.X;
             GatherScatter.GetFirst(ref targetSlot.Y) = source.Y;

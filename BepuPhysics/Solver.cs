@@ -421,7 +421,7 @@ namespace BepuPhysics
                 {
                     //This batch cannot hold the constraint.
                     constraintHandle = -1;
-                    reference = default(ConstraintReference);
+                    reference = default;
                     return false;
                 }
             }
@@ -450,31 +450,43 @@ namespace BepuPhysics
 
 
         /// <summary>
-        /// Applies a description to a constraint slot.
+        /// Applies a description to a constraint slot without waking up the associated island.
         /// </summary>
         /// <typeparam name="TDescription">Type of the description to apply.</typeparam>
         /// <param name="constraintReference">Reference of the constraint being updated.</param>
         /// <param name="description">Description to apply to the slot.</param>
-        public void ApplyDescription<TDescription>(ref ConstraintReference constraintReference, ref TDescription description)
+        public void ApplyDescriptionWithoutWaking<TDescription>(ref ConstraintReference constraintReference, ref TDescription description)
             where TDescription : IConstraintDescription<TDescription>
         {
             BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
             description.ApplyDescription(ref constraintReference.TypeBatch, bundleIndex, innerIndex);
         }
 
-
         /// <summary>
-        /// Applies a description to a constraint slot.
+        /// Applies a description to a constraint slot without waking up the associated island.
         /// </summary>
         /// <typeparam name="TDescription">Type of the description to apply.</typeparam>
-        /// <param name="constraintReference">Handle of the constraint being updated.</param>
+        /// <param name="constraintHandle">Handle of the constraint being updated.</param>
+        /// <param name="description">Description to apply to the slot.</param>
+        public void ApplyDescriptionWithoutWaking<TDescription>(int constraintHandle, ref TDescription description)
+            where TDescription : IConstraintDescription<TDescription>
+        {
+            GetConstraintReference(constraintHandle, out var constraintReference);
+            ApplyDescriptionWithoutWaking(ref constraintReference, ref description);
+        }
+
+
+        /// <summary>
+        /// Applies a description to a constraint slot, waking up the connected bodies if necessary.
+        /// </summary>
+        /// <typeparam name="TDescription">Type of the description to apply.</typeparam>
+        /// <param name="constraintHandle">Handle of the constraint being updated.</param>
         /// <param name="description">Description to apply to the slot.</param>
         public void ApplyDescription<TDescription>(int constraintHandle, ref TDescription description)
             where TDescription : IConstraintDescription<TDescription>
         {
-            GetConstraintReference(constraintHandle, out var constraintReference);
-            BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
-            description.ApplyDescription(ref constraintReference.TypeBatch, bundleIndex, innerIndex);
+            awakener.AwakenConstraint(constraintHandle);
+            ApplyDescriptionWithoutWaking(constraintHandle, ref description);
         }
 
 
@@ -486,7 +498,7 @@ namespace BepuPhysics
             {
                 if (TryAllocateInBatch(description.ConstraintTypeId, i, ref bodyHandles, bodyCount, out handle, out var reference))
                 {
-                    ApplyDescription(ref reference, ref description);
+                    ApplyDescriptionWithoutWaking(ref reference, ref description);
                     return;
                 }
             }
@@ -504,6 +516,11 @@ namespace BepuPhysics
         public int Add<TDescription>(ref int bodyHandles, int bodyCount, ref TDescription description)
             where TDescription : IConstraintDescription<TDescription>
         {
+            //Adding a constraint assumes that the involved bodies are active, so wake up anything that is sleeping.
+            for (int i = 0; i < bodyCount; ++i)
+            {
+                awakener.AwakenBody(Unsafe.Add(ref bodyHandles, i));
+            }
             Add(ref bodyHandles, bodyCount, ref description, out int constraintHandle);
             for (int i = 0; i < bodyCount; ++i)
             {
@@ -513,7 +530,17 @@ namespace BepuPhysics
             }
             return constraintHandle;
         }
-
+        /// <summary>
+        /// Allocates a one-body constraint slot and sets up a constraint with the specified description.
+        /// </summary>
+        /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
+        /// <param name="bodyHandle">First body of the pair.</param>
+        /// <returns>Allocated constraint handle.</returns>
+        public unsafe int Add<TDescription>(int bodyHandle, ref TDescription description)
+            where TDescription : IConstraintDescription<TDescription>
+        {
+            return Add(ref bodyHandle, 1, ref description);
+        }
         /// <summary>
         /// Allocates a two-body constraint slot and sets up a constraint with the specified description.
         /// </summary>
@@ -598,7 +625,7 @@ namespace BepuPhysics
         public void Remove(int handle)
         {
             ref var constraintLocation = ref HandleToConstraint[handle];
-            if(constraintLocation.SetIndex > 0)
+            if (constraintLocation.SetIndex > 0)
             {
                 //In order to remove a constraint, it must be active.
                 awakener.AwakenConstraint(handle);

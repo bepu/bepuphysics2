@@ -79,7 +79,7 @@ namespace Demos.SpecializedTests
             if (hit)
             {
                 Debug.Assert(Math.Abs(t - tWide[0]) < 1e-7f);
-                Vector3Wide.GetLane(ref normalWide, 0, out var normalWideLane0);
+                Vector3Wide.ReadSlot(ref normalWide, 0, out var normalWideLane0);
                 var normalDot = Vector3.Dot(normalWideLane0, normal);
                 Debug.Assert(normalDot > 0.9999f && normalDot < 1.00001f);
                 var hitLocationError = rayDirection * t + (rayOrigin - pointOnTrianglePlane);
