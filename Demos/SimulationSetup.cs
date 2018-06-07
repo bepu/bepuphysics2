@@ -113,7 +113,7 @@ namespace Demos
                     {
                         bodyBuilder.Build(columnIndex, rowIndex, sliceIndex, out var bodyDescription);
                         bodyGetter.TryGetId(columnIndex, rowIndex, sliceIndex, out var id);
-                        bodyHandles[id] = simulation.Bodies.Add(ref bodyDescription);
+                        bodyHandles[id] = simulation.Bodies.Add(bodyDescription);
                     }
                 }
             }

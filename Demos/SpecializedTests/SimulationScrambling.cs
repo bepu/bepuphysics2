@@ -191,7 +191,7 @@ namespace Demos.SpecializedTests
             var toAddIndex = random.Next(removedBodies.Count);
             var toAdd = removedBodies[toAddIndex];
             FastRemoveAt(removedBodies, toAddIndex);
-            var bodyHandle = simulation.Bodies.Add(ref bodyDescriptions[toAdd]);
+            var bodyHandle = simulation.Bodies.Add(bodyDescriptions[toAdd]);
             bodyHandlesToIdentity[bodyHandle] = toAdd;
             bodyHandles[toAdd] = bodyHandle;
             WriteLine($"Added body, handle: {bodyHandle}");

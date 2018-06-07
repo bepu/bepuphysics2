@@ -139,7 +139,7 @@ namespace BepuPhysics
         private void UpdateBounds(ref RigidPose pose, ref TypedIndex shapeIndex, out BoundingBox bounds)
         {
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
-            shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, ref pose, out bounds.Min, out bounds.Max);
+            shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, pose, out bounds.Min, out bounds.Max);
             AwakenBodiesInBounds(ref bounds);
         }
 

@@ -32,7 +32,7 @@ namespace Demos.SpecializedTests
                 LocalInertia = inertia,
                 Pose = pose
             };
-            return new BodyReference(simulation.Bodies.Add(ref description), simulation.Bodies);
+            return new BodyReference(simulation.Bodies.Add(description), simulation.Bodies);
         }
         public unsafe override void Initialize(Camera camera)
         {

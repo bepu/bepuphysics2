@@ -52,7 +52,7 @@ namespace Demos.Demos
                         Pose = new RigidPose { Position = compoundCenter, Orientation = BepuUtilities.Quaternion.Identity },
                     };
 
-                    Simulation.Bodies.Add(ref compoundDescription);
+                    Simulation.Bodies.Add(compoundDescription);
                 }
 
                 //Build a stack of sphere grids to stress manifold reduction heuristics in a convex-ish situation.
@@ -97,7 +97,7 @@ namespace Demos.Demos
                         //    gridDescription.LocalInertia = new BodyInertia();
                         //else
                         //    gridDescription.LocalInertia = gridInertia; 
-                        Simulation.Bodies.Add(ref bodyDescription);
+                        Simulation.Bodies.Add(bodyDescription);
                     }
                 }
 
@@ -138,14 +138,14 @@ namespace Demos.Demos
                         for (int i =0; i < 10; ++i)
                         {
                             tableDescription.Pose.Position = new Vector3(10, 3 + i * 1.4f, 10);
-                            Simulation.Bodies.Add(ref tableDescription);
+                            Simulation.Bodies.Add(tableDescription);
                         }
                     }
 
                     //Put a table on top of a sphere to stress out nonconvex reduction for divergent normals.
                     {
                         tableDescription.Pose.Position = new Vector3(10, 6, 0);
-                        Simulation.Bodies.Add(ref tableDescription);
+                        Simulation.Bodies.Add(tableDescription);
 
                         var sphereShape = new Sphere(3);
                         var sphereIndex = Simulation.Shapes.Add(sphereShape);
@@ -164,7 +164,7 @@ namespace Demos.Demos
                     //Put another table on the ground, but with a clamp-ish thing on it that generates opposing normals.
                     {
                         tableDescription.Pose.Position = new Vector3(10, 3, -10);
-                        Simulation.Bodies.Add(ref tableDescription);
+                        Simulation.Bodies.Add(tableDescription);
 
                         var clampPieceShape = new Box(2f, 0.1f, 0.3f);
                         clampPieceShape.ComputeInertia(1f, out var clampPieceInverseInertia);
@@ -196,7 +196,7 @@ namespace Demos.Demos
                             LocalInertia = tableInertia,
                             Pose = new RigidPose { Position = tableDescription.Pose.Position + new Vector3(2f, 0.3f, 0), Orientation = BepuUtilities.Quaternion.Identity }
                         };
-                        Simulation.Bodies.Add(ref clampDescription);
+                        Simulation.Bodies.Add(clampDescription);
                     }
 
                 }

@@ -117,7 +117,7 @@ namespace Demos.SpecializedTests
                                     Shape = shapeIndex
                                 }
                             };
-                            Simulation.Bodies.Add(ref bodyDescription);
+                            Simulation.Bodies.Add(bodyDescription);
                         }
                         else
                         {

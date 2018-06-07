@@ -50,7 +50,7 @@ namespace Demos.Demos
                             Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = .01f },
                             Collidable = new CollidableDescription { Shape = boxIndex, SpeculativeMargin = .1f }
                         };
-                        Simulation.Bodies.Add(ref bodyDescription);
+                        Simulation.Bodies.Add(bodyDescription);
                     }
                 }
             }
@@ -106,7 +106,7 @@ namespace Demos.Demos
                     Collidable = new CollidableDescription { Shape = bulletShapeIndex, SpeculativeMargin = .1f },
                     Velocity = new BodyVelocity { Linear = new Vector3(0, 0, 150) }
                 };
-                Simulation.Bodies.Add(ref bodyDescription);
+                Simulation.Bodies.Add(bodyDescription);
             }
             base.Update(input, dt);
         }

@@ -71,7 +71,7 @@ namespace Demos.Demos
                     }
                 };
                 sphere.ComputeInertia(1, out sphereDescription.LocalInertia);
-                Simulation.Bodies.Add(ref sphereDescription);
+                Simulation.Bodies.Add(sphereDescription);
             }
         }
 

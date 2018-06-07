@@ -11,14 +11,14 @@ namespace BepuPhysics
         public Vector<float> TwiceDampingRatio;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteFirst(ref SpringSettings source, ref SpringSettingsWide target)
+        public static void WriteFirst(in SpringSettings source, ref SpringSettingsWide target)
         {
             GatherScatter.GetFirst(ref target.AngularFrequency) = source.AngularFrequency;
             GatherScatter.GetFirst(ref target.TwiceDampingRatio) = source.TwiceDampingRatio;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ReadFirst(ref SpringSettingsWide source, out SpringSettings target)
+        public static void ReadFirst(in SpringSettingsWide source, out SpringSettings target)
         {
             target.AngularFrequency = source.AngularFrequency[0];
             target.TwiceDampingRatio = source.TwiceDampingRatio[0];

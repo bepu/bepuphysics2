@@ -52,7 +52,7 @@ namespace Demos.Demos
                         },
                         LocalInertia = clothNodeInertia
                     };
-                    nodeHandles[i][j] = Simulation.Bodies.Add(ref bodyDescription);
+                    nodeHandles[i][j] = Simulation.Bodies.Add(bodyDescription);
 
                 }
             }

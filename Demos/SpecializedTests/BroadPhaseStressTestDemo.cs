@@ -60,7 +60,7 @@ namespace Demos.SpecializedTests
                                 },
                                 LocalInertia = sphereInertia
                             };
-                            Simulation.Bodies.Add(ref bodyDescription);
+                            Simulation.Bodies.Add(bodyDescription);
                         }
                         else
                         {

@@ -64,7 +64,7 @@ namespace BepuPhysics
             InternalResize(initialCapacity, pool);
         }
 
-        internal int Add(ref BodyDescription bodyDescription, int handle, int minimumConstraintCapacity, BufferPool pool)
+        internal int Add(in BodyDescription bodyDescription, int handle, int minimumConstraintCapacity, BufferPool pool)
         {
             var index = Count;
             if (index == IndexToHandle.Length)
@@ -75,7 +75,7 @@ namespace BepuPhysics
             IndexToHandle[index] = handle;
             //Collidable's broad phase index is left unset. The Bodies collection is responsible for attaching that data.
             QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>.Create(pool.SpecializeFor<BodyConstraintReference>(), minimumConstraintCapacity, out Constraints[index]);
-            ApplyDescriptionByIndex(index, ref bodyDescription);
+            ApplyDescriptionByIndex(index, bodyDescription);
             return index;
         }
 
@@ -111,7 +111,7 @@ namespace BepuPhysics
             return bodyMoved;
         }
 
-        internal void ApplyDescriptionByIndex(int index, ref BodyDescription description)
+        internal void ApplyDescriptionByIndex(int index, in BodyDescription description)
         {
             BundleIndexing.GetBundleIndices(index, out var bundleIndex, out var innerIndex);
             Poses[index] = description.Pose;
@@ -128,7 +128,7 @@ namespace BepuPhysics
             activity.MinimumTimestepsUnderThreshold = description.Activity.MinimumTimestepCountUnderThreshold;
             activity.TimestepsUnderThresholdCount = 0;
             activity.SleepCandidate = false;
-            activity.Kinematic = Bodies.IsKinematic(ref description.LocalInertia);
+            activity.Kinematic = Bodies.IsKinematic(description.LocalInertia);
         }
 
         public void GetDescription(int index, out BodyDescription description)

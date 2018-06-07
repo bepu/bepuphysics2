@@ -55,7 +55,7 @@ namespace Demos.Demos
                         Collidable = new CollidableDescription { Shape = boxIndex, SpeculativeMargin = .1f },
                         Velocity = new BodyVelocity { Linear = blockIndex == blocksPerChain - 1 ? new Vector3() : new Vector3(0, -1, 0) }
                     };
-                    blockHandles[blockIndex] = Simulation.Bodies.Add(ref bodyDescription);
+                    blockHandles[blockIndex] = Simulation.Bodies.Add(bodyDescription);
                 }
                 //Build the chains.
                 for (int i = 1; i < blocksPerChain; ++i)
@@ -123,7 +123,7 @@ namespace Demos.Demos
 
                     coinDescription.Pose.Position = origin + direction * 10 * (float)random.NextDouble();
                     coinDescription.Velocity.Linear = direction * (5 + 30 * (float)random.NextDouble());
-                    Simulation.Bodies.Add(ref coinDescription);
+                    Simulation.Bodies.Add(coinDescription);
                 }
             }
             base.Update(input, dt);

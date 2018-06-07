@@ -245,7 +245,7 @@ namespace BepuUtilities
         /// <param name="source">Source of the lane.</param>
         /// <param name="target">Non-SIMD type to store the lane in.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ReadFirst(ref Vector3Wide source, out Vector3 target)
+        public static void ReadFirst(in Vector3Wide source, out Vector3 target)
         {
             target.X = source.X[0];
             target.Y = source.Y[0];
@@ -258,7 +258,7 @@ namespace BepuUtilities
         /// <param name="source">Vector to copy values from.</param>
         /// <param name="targetSlot">Wide vectorto place values into.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteFirst(ref Vector3 source, ref Vector3Wide targetSlot)
+        public static void WriteFirst(in Vector3 source, ref Vector3Wide targetSlot)
         {
             GatherScatter.GetFirst(ref targetSlot.X) = source.X;
             GatherScatter.GetFirst(ref targetSlot.Y) = source.Y;

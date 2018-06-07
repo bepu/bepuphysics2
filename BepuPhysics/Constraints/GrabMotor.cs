@@ -8,34 +8,7 @@ using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
-    public struct MotorSettings
-    {
-        public float MaximumSpeed;
-        public float BaseSpeed;
-        public float MaximumForce;
-    }
-    public struct MotorSettingsWide
-    {
-        public Vector<float> MaximumSpeed;
-        public Vector<float> BaseSpeed;
-        public Vector<float> MaximumForce;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteFirst(ref MotorSettings source, ref MotorSettingsWide target)
-        {
-            GetFirst(ref target.MaximumSpeed) = source.MaximumSpeed;
-            GetFirst(ref target.BaseSpeed) = source.BaseSpeed;
-            GetFirst(ref target.MaximumForce) = source.MaximumForce;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ReadFirst(ref MotorSettingsWide source, out MotorSettings target)
-        {
-            target.MaximumSpeed = source.MaximumSpeed[0];
-            target.BaseSpeed = source.BaseSpeed[0];
-            target.MaximumForce = source.MaximumForce[0];
-        }
-    }
 
     public struct GrabMotor : IConstraintDescription<GrabMotor>
     {
@@ -54,25 +27,25 @@ namespace BepuPhysics.Constraints
         }
 
         public Type BatchType => typeof(GrabMotorTypeProcessor);
-
+        
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<GrabMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            Vector3Wide.WriteFirst(ref LocalOffset, ref target.LocalOffset);
-            Vector3Wide.WriteFirst(ref Target, ref target.Target);
-            SpringSettingsWide.WriteFirst(ref SpringSettings, ref target.SpringSettings);
-            MotorSettingsWide.WriteFirst(ref MotorSettings, ref target.MotorSettings);
+            Vector3Wide.WriteFirst(LocalOffset, ref target.LocalOffset);
+            Vector3Wide.WriteFirst(Target, ref target.Target);
+            SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
+            MotorSettingsWide.WriteFirst(MotorSettings, ref target.MotorSettings);
         }
-
+        
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out GrabMotor description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<GrabMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            Vector3Wide.ReadFirst(ref source.LocalOffset, out description.LocalOffset);
-            Vector3Wide.ReadFirst(ref source.Target, out description.Target);
-            SpringSettingsWide.ReadFirst(ref source.SpringSettings, out description.SpringSettings);
-            MotorSettingsWide.ReadFirst(ref source.MotorSettings, out description.MotorSettings);
+            Vector3Wide.ReadFirst(source.LocalOffset, out description.LocalOffset);
+            Vector3Wide.ReadFirst(source.Target, out description.Target);
+            SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
+            MotorSettingsWide.ReadFirst(source.MotorSettings, out description.MotorSettings);
         }
     }
 

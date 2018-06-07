@@ -39,7 +39,7 @@ namespace BepuPhysics.Collidables
         }
 
         public abstract void ComputeBounds(ref BoundingBoxBatcher batcher);
-        public abstract void ComputeBounds(int shapeIndex, ref RigidPose pose, out Vector3 min, out Vector3 max);
+        public abstract void ComputeBounds(int shapeIndex, in RigidPose pose, out Vector3 min, out Vector3 max);
         public abstract bool RayTest(int shapeIndex, in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal);
         public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose rigidPose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
@@ -201,7 +201,7 @@ namespace BepuPhysics.Collidables
             batcher.ExecuteConvexBatch(this);
         }
 
-        public override void ComputeBounds(int shapeIndex, ref RigidPose pose, out Vector3 min, out Vector3 max)
+        public override void ComputeBounds(int shapeIndex, in RigidPose pose, out Vector3 min, out Vector3 max)
         {
             shapes[shapeIndex].ComputeBounds(pose.Orientation, out min, out max);
             min += pose.Position;
@@ -256,7 +256,7 @@ namespace BepuPhysics.Collidables
             batcher.ExecuteCompoundBatch(this);
         }
 
-        public override void ComputeBounds(int shapeIndex, ref RigidPose pose, out Vector3 min, out Vector3 max)
+        public override void ComputeBounds(int shapeIndex, in RigidPose pose, out Vector3 min, out Vector3 max)
         {
             shapes[shapeIndex].ComputeBounds(pose.Orientation, shapeBatches, out min, out max);
             min += pose.Position;
@@ -303,10 +303,10 @@ namespace BepuPhysics.Collidables
         /// <param name="shapeIndex">Index of the shape.</param>
         /// <param name="bounds">Bounding box of the specified shape with the specified pose.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateBounds(ref RigidPose pose, ref TypedIndex shapeIndex, out BoundingBox bounds)
+        public void UpdateBounds(in RigidPose pose, ref TypedIndex shapeIndex, out BoundingBox bounds)
         {
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
-            batches[shapeIndex.Type].ComputeBounds(shapeIndex.Index, ref pose, out bounds.Min, out bounds.Max);
+            batches[shapeIndex.Type].ComputeBounds(shapeIndex.Index, pose, out bounds.Min, out bounds.Max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

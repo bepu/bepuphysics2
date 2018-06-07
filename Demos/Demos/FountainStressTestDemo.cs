@@ -94,7 +94,7 @@ namespace Demos.Demos
                     },
                     Activity = new BodyActivityDescription { SleepThreshold = 0, MinimumTimestepCountUnderThreshold = 4 },
                 };
-                kinematicHandles[i] = Simulation.Bodies.Add(ref description);
+                kinematicHandles[i] = Simulation.Bodies.Add(description);
             }
 
             QuickQueue<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), 65536, out dynamicHandles);
@@ -219,7 +219,7 @@ namespace Demos.Demos
 
                 description.Velocity.Linear = new Vector3(-20 + 40 * (float)random.NextDouble(), 75, -20 + 40 * (float)random.NextDouble());
 
-                dynamicHandles.Enqueue(Simulation.Bodies.Add(ref description), BufferPool.SpecializeFor<int>());
+                dynamicHandles.Enqueue(Simulation.Bodies.Add(description), BufferPool.SpecializeFor<int>());
 
             }
             int targetAsymptote = 65536;

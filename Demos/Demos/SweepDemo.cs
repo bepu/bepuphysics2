@@ -79,7 +79,7 @@ namespace Demos.Demos
                                 bodyDescription.LocalInertia = sphereInertia;
                                 break;
                         }
-                        Simulation.Bodies.Add(ref bodyDescription);
+                        Simulation.Bodies.Add(bodyDescription);
 
                     }
                 }

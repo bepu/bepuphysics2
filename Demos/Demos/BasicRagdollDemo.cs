@@ -109,7 +109,7 @@ namespace Demos.Demos
 
     public class BasicRagdollDemo : Demo
     {
-        static BodyReference AddBody<TShape>(TShape shape, float mass, RigidPose pose, Simulation simulation) where TShape : struct, IConvexShape
+        static BodyReference AddBody<TShape>(TShape shape, float mass, in RigidPose pose, Simulation simulation) where TShape : struct, IConvexShape
         {
             var shapeIndex = simulation.Shapes.Add(shape);
             shape.ComputeInertia(mass, out var inertia);
@@ -127,7 +127,7 @@ namespace Demos.Demos
                 LocalInertia = inertia,
                 Pose = pose
             };
-            return new BodyReference(simulation.Bodies.Add(ref description), simulation.Bodies);
+            return new BodyReference(simulation.Bodies.Add(description), simulation.Bodies);
         }
 
         static RigidPose GetWorldPose(Vector3 localPosition, Quaternion localOrientation, RigidPose ragdollPose)

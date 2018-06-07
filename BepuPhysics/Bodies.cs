@@ -101,17 +101,17 @@ namespace BepuPhysics
             this.awakener = awakener;
         }
 
-        void AddCollidableToBroadPhase(int bodyHandle, ref RigidPose pose, ref BodyInertia localInertia, ref Collidable collidable)
+        void AddCollidableToBroadPhase(int bodyHandle, in RigidPose pose, in BodyInertia localInertia, ref Collidable collidable)
         {
             //This body has a collidable; stick it in the broadphase.
             //Note that we have to calculate an initial bounding box for the broad phase to be able to insert it efficiently.
             //(In the event of batch adds, you'll want to use batched AABB calculations or just use cached values.)
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
-            shapes.UpdateBounds(ref pose, ref collidable.Shape, out var bodyBounds);
+            shapes.UpdateBounds(pose, ref collidable.Shape, out var bodyBounds);
             //Note that new body collidables are always assumed to be active.
             collidable.BroadPhaseIndex =
                 broadPhase.AddActive(
-                    new CollidableReference(IsKinematic(ref localInertia) ? CollidableMobility.Kinematic : CollidableMobility.Dynamic, bodyHandle),
+                    new CollidableReference(IsKinematic(localInertia) ? CollidableMobility.Kinematic : CollidableMobility.Dynamic, bodyHandle),
                     ref bodyBounds);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -137,7 +137,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="description">Description of the body to add.</param>
         /// <returns>Handle of the created body.</returns>
-        public unsafe int Add(ref BodyDescription description)
+        public unsafe int Add(in BodyDescription description)
         {
             Debug.Assert(HandleToLocation.Allocated, "The backing memory of the bodies set should be initialized before use.");
             var handle = HandlePool.Take();
@@ -152,12 +152,12 @@ namespace BepuPhysics
 
             //All new bodies are active for simplicity. Someday, it may be worth offering an optimized path for inactives, but it adds complexity.
             //(Directly adding inactive bodies can be helpful in some networked open world scenarios.)
-            var index = ActiveSet.Add(ref description, handle, MinimumConstraintCapacityPerBody, pool);
+            var index = ActiveSet.Add(description, handle, MinimumConstraintCapacityPerBody, pool);
             HandleToLocation[handle] = new BodyLocation { SetIndex = 0, Index = index };
 
             if (description.Collidable.Shape.Exists)
             {
-                AddCollidableToBroadPhase(handle, ref description.Pose, ref description.LocalInertia, ref ActiveSet.Collidables[index]);
+                AddCollidableToBroadPhase(handle, description.Pose, description.LocalInertia, ref ActiveSet.Collidables[index]);
             }
             return handle;
         }
@@ -259,7 +259,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="inertia">Body inertia to analyze.</param>
         /// <returns>True if all components of inverse mass and inertia are zero, false otherwise.</returns>
-        public static bool IsKinematic(ref BodyInertia inertia)
+        public static bool IsKinematic(in BodyInertia inertia)
         {
             return inertia.InverseMass == 0 &&
                    inertia.InverseInertiaTensor.XX == 0 &&
@@ -273,7 +273,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void UpdateBroadPhaseKinematicState(int handle, ref BodyLocation location, ref BodySet set)
         {
-            Debug.Assert(set.Activity[location.Index].Kinematic == IsKinematic(ref set.LocalInertias[location.Index]),
+            Debug.Assert(set.Activity[location.Index].Kinematic == IsKinematic(set.LocalInertias[location.Index]),
                 "Activity's kinematic state should be updated prior to the broad phase update call. This function simply shares its determination.");
             ref var collidable = ref set.Collidables[location.Index];
             var kinematic = set.Activity[location.Index].Kinematic;
@@ -311,7 +311,7 @@ namespace BepuPhysics
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
             set.LocalInertias[location.Index] = inertia;
-            set.Activity[location.Index].Kinematic = IsKinematic(ref inertia);
+            set.Activity[location.Index].Kinematic = IsKinematic(inertia);
             UpdateBroadPhaseKinematicState(handle, ref location, ref set);
         }
 
@@ -324,7 +324,7 @@ namespace BepuPhysics
                 if (newShape.Exists)
                 {
                     //Add a collidable to the simulation for the new shape.
-                    AddCollidableToBroadPhase(handle, ref set.Poses[activeBodyIndex], ref set.LocalInertias[activeBodyIndex], ref set.Collidables[activeBodyIndex]);
+                    AddCollidableToBroadPhase(handle, set.Poses[activeBodyIndex], set.LocalInertias[activeBodyIndex], ref set.Collidables[activeBodyIndex]);
                 }
                 else
                 {
@@ -373,7 +373,7 @@ namespace BepuPhysics
             ref var set = ref Sets[location.SetIndex];
             ref var collidable = ref set.Collidables[location.Index];
             var oldShape = collidable.Shape;
-            set.ApplyDescriptionByIndex(location.Index, ref description);
+            set.ApplyDescriptionByIndex(location.Index, description);
             UpdateForShapeChange(handle, location.Index, oldShape, description.Collidable.Shape);
             UpdateBroadPhaseKinematicState(handle, ref location, ref set);
         }
