@@ -25,7 +25,7 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="r">Rotation matrix to create the quaternion from.</param>
         /// <param name="q">Quaternion based on the rotation matrix.</param>
-        public static void CreateFromRotationMatrix(ref Matrix3x3Wide r, out QuaternionWide q)
+        public static void CreateFromRotationMatrix(in Matrix3x3Wide r, out QuaternionWide q)
         {
             //Since we can't branch, we're going to end up calculating the possible states of all branches.
             //This requires doing more ALU work than the branching implementation, but there are a lot of common terms across the branches, and (random-ish) branches aren't free.
@@ -67,7 +67,7 @@ namespace BepuUtilities
                     Vector.ConditionalSelect(useLowerUpper, xySubYx, tW));
 
             var scale = new Vector<float>(0.5f) / Vector.SquareRoot(t);
-            Scale(ref q, ref scale, out q);
+            Scale(q, scale, out q);
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace BepuUtilities
         /// <param name="b">Second quaternion to add.</param>
         /// <param name="result">Sum of the two input quaternions.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(ref QuaternionWide a, ref QuaternionWide b, out QuaternionWide result)
+        public static void Add(in QuaternionWide a, in QuaternionWide b, out QuaternionWide result)
         {
             result.X = a.X + b.X;
             result.Y = a.Y + b.Y;
@@ -86,7 +86,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(ref QuaternionWide q, ref Vector<float> scale, out QuaternionWide result)
+        public static void Scale(in QuaternionWide q, in Vector<float> scale, out QuaternionWide result)
         {
             result.X = q.X * scale;
             result.Y = q.Y * scale;
@@ -95,17 +95,17 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetLengthSquared(ref QuaternionWide q, out Vector<float> lengthSquared)
+        public static void GetLengthSquared(in QuaternionWide q, out Vector<float> lengthSquared)
         {
             lengthSquared = q.X * q.X + q.Y * q.Y + q.Z * q.Z + q.W * q.W;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetLength(ref QuaternionWide q, out Vector<float> length)
+        public static void GetLength(in QuaternionWide q, out Vector<float> length)
         {
             length = Vector.SquareRoot(q.X * q.X + q.Y * q.Y + q.Z * q.Z + q.W * q.W);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Normalize(ref QuaternionWide q, out QuaternionWide normalized)
+        public static void Normalize(in QuaternionWide q, out QuaternionWide normalized)
         {
             var inverseNorm = Vector<float>.One / Vector.SquareRoot(q.X * q.X + q.Y * q.Y + q.Z * q.Z + q.W * q.W);
             normalized.X = q.X * inverseNorm;
@@ -115,7 +115,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Negate(ref QuaternionWide q, out QuaternionWide negated)
+        public static void Negate(in QuaternionWide q, out QuaternionWide negated)
         {
             negated.X = -q.X;
             negated.Y = -q.Y;
@@ -129,9 +129,9 @@ namespace BepuUtilities
         /// <param name="v1">First unit-length vector.</param>
         /// <param name="v2">Second unit-length vector.</param>
         /// <param name="q">Quaternion representing the rotation from v1 to v2.</param>
-        public static void GetQuaternionBetweenNormalizedVectors(ref Vector3Wide v1, ref Vector3Wide v2, out QuaternionWide q)
+        public static void GetQuaternionBetweenNormalizedVectors(in Vector3Wide v1, in Vector3Wide v2, out QuaternionWide q)
         {
-            Vector3Wide.Dot(ref v1, ref v2, out var dot);
+            Vector3Wide.Dot(v1, v2, out var dot);
             //For non-normal vectors, the multiplying the axes length squared would be necessary:
             //float w = dot + Sqrt(v1.LengthSquared() * v2.LengthSquared());
 
@@ -140,7 +140,7 @@ namespace BepuUtilities
             //One must be chosen arbitrarily. Here, we choose one by projecting onto the plane whose normal is associated with the smallest magnitude.
             //Since this is a SIMD operation, the special case is always executed and its result is conditionally selected.
 
-            Vector3Wide.CrossWithoutOverlap(ref v1, ref v2, out var cross);
+            Vector3Wide.CrossWithoutOverlap(v1, v2, out var cross);
             var useNormalCase = Vector.GreaterThan(dot, new Vector<float>(-0.999999f));
             var absX = Vector.Abs(v1.X);
             var absY = Vector.Abs(v1.Y);
@@ -152,7 +152,7 @@ namespace BepuUtilities
             q.Z = Vector.ConditionalSelect(useNormalCase, cross.Z, Vector.ConditionalSelect(xIsSmallest, v1.Y, Vector.ConditionalSelect(yIsSmaller, v1.X, Vector<float>.Zero)));
             q.W = Vector.ConditionalSelect(useNormalCase, dot + Vector<float>.One, Vector<float>.Zero);
 
-            Normalize(ref q, out q);
+            Normalize(q, out q);
         }
 
 
@@ -206,7 +206,7 @@ namespace BepuUtilities
         /// <param name="rotation">Rotation to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformUnitX(ref QuaternionWide rotation, out Vector3Wide result)
+        public static void TransformUnitX(in QuaternionWide rotation, out Vector3Wide result)
         {
             var y2 = rotation.Y + rotation.Y;
             var z2 = rotation.Z + rotation.Z;
@@ -227,7 +227,7 @@ namespace BepuUtilities
         /// <param name="rotation">Rotation to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformUnitY(ref QuaternionWide rotation, out Vector3Wide result)
+        public static void TransformUnitY(in QuaternionWide rotation, out Vector3Wide result)
         {
             var x2 = rotation.X + rotation.X;
             var y2 = rotation.Y + rotation.Y;
@@ -249,7 +249,7 @@ namespace BepuUtilities
         /// <param name="rotation">Rotation to apply to the vector.</param>
         /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformUnitZ(ref QuaternionWide rotation, out Vector3Wide result)
+        public static void TransformUnitZ(in QuaternionWide rotation, out Vector3Wide result)
         {
             var x2 = rotation.X + rotation.X;
             var y2 = rotation.Y + rotation.Y;
@@ -272,7 +272,7 @@ namespace BepuUtilities
         /// <param name="x">Transformed unit X vector.</param>
         /// <param name="y">Transformed unit Y vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformUnitXY(ref QuaternionWide rotation, out Vector3Wide x, out Vector3Wide y)
+        public static void TransformUnitXY(in QuaternionWide rotation, out Vector3Wide x, out Vector3Wide y)
         {
             var x2 = rotation.X + rotation.X;
             var y2 = rotation.Y + rotation.Y;
@@ -346,7 +346,7 @@ namespace BepuUtilities
         /// <param name="source">Wide quaternion to copy values from.</param>
         /// <param name="target">Narrow quaternion to place values into.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ReadFirst(ref QuaternionWide source, ref Quaternion target)
+        public static void ReadFirst(in QuaternionWide source, out Quaternion target)
         {
             target.X = source.X[0];
             target.Y = source.Y[0];
@@ -359,7 +359,7 @@ namespace BepuUtilities
         /// <param name="source">Quaternion to copy values from.</param>
         /// <param name="targetSlot">Wide quaternion to place values into.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteFirst(ref Quaternion source, ref QuaternionWide targetSlot)
+        public static void WriteFirst(in Quaternion source, ref QuaternionWide targetSlot)
         {
             GatherScatter.GetFirst(ref targetSlot.X) = source.X;
             GatherScatter.GetFirst(ref targetSlot.Y) = source.Y;

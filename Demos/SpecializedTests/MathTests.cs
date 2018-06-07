@@ -86,12 +86,12 @@ namespace Demos.SpecializedTests
                 q.Z = new Vector<float>((float)random.NextDouble() * 2 - 1);
                 q.W = new Vector<float>((float)random.NextDouble() * 2 - 1);
 
-                QuaternionWide.Normalize(ref q, out q);
+                QuaternionWide.Normalize(q, out q);
 
                 for (int i = 0; i < innerIterations; ++i)
                 {
-                    Matrix3x3Wide.CreateFromQuaternion(ref q, out var r);
-                    QuaternionWide.CreateFromRotationMatrix(ref r, out var qTest);
+                    Matrix3x3Wide.CreateFromQuaternion(q, out var r);
+                    QuaternionWide.CreateFromRotationMatrix(r, out var qTest);
 #if DEBUG
                     const float epsilon = 1e-6f;
                     Vector3Wide.Length(ref r.X, out var lengthX);
@@ -133,7 +133,7 @@ namespace Demos.SpecializedTests
                 GenerateRandomVectorCandidate(random, out normal);
                 while (true)
                 {
-                    Vector3Wide.LengthSquared(ref normal, out var lengthSquared);
+                    Vector3Wide.LengthSquared(normal, out var lengthSquared);
                     if (Vector.LessThanAny(lengthSquared, new Vector<float>(0.0001f)))
                     {
                         GenerateRandomVectorCandidate(random, out normal);
@@ -141,7 +141,7 @@ namespace Demos.SpecializedTests
                     else
                         break;
                 }
-                Vector3Wide.Normalize(ref normal, out normal);
+                Vector3Wide.Normalize(normal, out normal);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -152,8 +152,8 @@ namespace Demos.SpecializedTests
 
                 for (int i = 0; i < innerIterations; ++i)
                 {
-                    QuaternionWide.GetQuaternionBetweenNormalizedVectors(ref v1, ref v2, out var v1ToV2);
-                    QuaternionWide.GetQuaternionBetweenNormalizedVectors(ref v2, ref v1, out var v2ToV1);
+                    QuaternionWide.GetQuaternionBetweenNormalizedVectors(v1, v2, out var v1ToV2);
+                    QuaternionWide.GetQuaternionBetweenNormalizedVectors(v2, v1, out var v2ToV1);
 #if DEBUG
                     QuaternionWide.ConcatenateWithoutOverlap(v1ToV2, v2ToV1, out var concatenated);
                     QuaternionWide.TransformWithoutOverlap(v1, v1ToV2, out var v1TransformedToV2);
@@ -185,12 +185,12 @@ namespace Demos.SpecializedTests
             public void Test(Random random, int innerIterations)
             {
                 RotationBetweenNormalsTestSIMD.GenerateRandomNormalizedVector(random, out var v1);
-                Vector3Wide.Negate(ref v1, out var v2);
+                Vector3Wide.Negate(v1, out var v2);
 
                 for (int i = 0; i < innerIterations; ++i)
                 {
-                    QuaternionWide.GetQuaternionBetweenNormalizedVectors(ref v1, ref v2, out var v1ToV2);
-                    QuaternionWide.GetQuaternionBetweenNormalizedVectors(ref v2, ref v1, out var v2ToV1);
+                    QuaternionWide.GetQuaternionBetweenNormalizedVectors(v1, v2, out var v1ToV2);
+                    QuaternionWide.GetQuaternionBetweenNormalizedVectors(v2, v1, out var v2ToV1);
 #if DEBUG
                     QuaternionWide.ConcatenateWithoutOverlap(v1ToV2, v2ToV1, out var concatenated);
                     QuaternionWide.TransformWithoutOverlap(v1, v1ToV2, out var v1TransformedToV2);
@@ -249,8 +249,8 @@ namespace Demos.SpecializedTests
 
                 for (int i = 0; i < innerIterations; ++i)
                 {
-                    Quaternion.GetQuaternionBetweenNormalizedVectors(ref v1, ref v2, out var v1ToV2);
-                    Quaternion.GetQuaternionBetweenNormalizedVectors(ref v2, ref v1, out var v2ToV1);
+                    Quaternion.GetQuaternionBetweenNormalizedVectors(v1, v2, out var v1ToV2);
+                    Quaternion.GetQuaternionBetweenNormalizedVectors(v2, v1, out var v2ToV1);
 
 #if DEBUG
                     Quaternion.ConcatenateWithoutOverlap(v1ToV2, v2ToV1, out var concatenated);

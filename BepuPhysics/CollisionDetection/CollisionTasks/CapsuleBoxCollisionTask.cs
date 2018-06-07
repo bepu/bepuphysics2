@@ -17,13 +17,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             QuaternionWide.TransformWithoutOverlap(offsetB, toLocalB, out localOffsetA);
             Vector3Wide.Negate(ref localOffsetA);
             QuaternionWide.ConcatenateWithoutOverlap(orientationA, toLocalB, out var boxLocalOrientationA);
-            QuaternionWide.TransformUnitY(ref boxLocalOrientationA, out capsuleAxis);
+            QuaternionWide.TransformUnitY(boxLocalOrientationA, out capsuleAxis);
 
             //Get the capsule-axis-perpendicular offset from the box to the capsule and use it to choose which edges to test.
             //(Pointless to test the other 9; they're guaranteed to be further away.)
-            Vector3Wide.Dot(ref localOffsetA, ref capsuleAxis, out var axisOffsetADot);
-            Vector3Wide.Scale(ref capsuleAxis, ref axisOffsetADot, out var toRemove);
-            Vector3Wide.Subtract(ref localOffsetA, ref toRemove, out var perpendicularOffset);
+            Vector3Wide.Dot(localOffsetA, capsuleAxis, out var axisOffsetADot);
+            Vector3Wide.Scale(capsuleAxis, axisOffsetADot, out var toRemove);
+            Vector3Wide.Subtract(localOffsetA, toRemove, out var perpendicularOffset);
             edgeCenters.X = Vector.ConditionalSelect(Vector.LessThan(perpendicularOffset.X, Vector<float>.Zero), -b.HalfWidth, b.HalfWidth);
             edgeCenters.Y = Vector.ConditionalSelect(Vector.LessThan(perpendicularOffset.Y, Vector<float>.Zero), -b.HalfHeight, b.HalfHeight);
             edgeCenters.Z = Vector.ConditionalSelect(Vector.LessThan(perpendicularOffset.Z, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
@@ -113,12 +113,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         {
             TestBoxEdge(
-                ref offsetAX, ref offsetAY, ref offsetAZ, 
-                ref capsuleAxisX, ref capsuleAxisY, ref capsuleAxisZ, 
-                ref capsuleHalfLength, ref boxEdgeCenterX, ref boxEdgeCenterY, 
-                ref boxHalfWidth, ref boxHalfHeight, ref boxHalfLength, 
-                out taMin, out taMax, out var closestPointOnA, 
-                out nX, out nY, out nZ, 
+                ref offsetAX, ref offsetAY, ref offsetAZ,
+                ref capsuleAxisX, ref capsuleAxisY, ref capsuleAxisZ,
+                ref capsuleHalfLength, ref boxEdgeCenterX, ref boxEdgeCenterY,
+                ref boxHalfWidth, ref boxHalfHeight, ref boxHalfLength,
+                out taMin, out taMax, out var closestPointOnA,
+                out nX, out nY, out nZ,
                 out var ta, out var epsilon);
 
             //Compute the depth along that normal.
@@ -231,13 +231,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             scaledOffset.X = localOffsetA.X * scaleX;
             scaledOffset.Y = localOffsetA.Y * scaleY;
             scaledOffset.Z = localOffsetA.Z * scaleZ;
-            Vector3Wide.Subtract(ref scaledOffset, ref scaledExtents, out var tCandidateMin);
+            Vector3Wide.Subtract(scaledOffset, scaledExtents, out var tCandidateMin);
             var negativeHalfLength = -a.HalfLength;
-            Vector3Wide.Min(ref a.HalfLength, ref tCandidateMin, out tCandidateMin);
-            Vector3Wide.Max(ref negativeHalfLength, ref tCandidateMin, out tCandidateMin);
-            Vector3Wide.Add(ref scaledOffset, ref scaledExtents, out var tCandidateMax);
-            Vector3Wide.Min(ref a.HalfLength, ref tCandidateMax, out tCandidateMax);
-            Vector3Wide.Max(ref negativeHalfLength, ref tCandidateMax, out tCandidateMax);
+            Vector3Wide.Min(a.HalfLength, tCandidateMin, out tCandidateMin);
+            Vector3Wide.Max(negativeHalfLength, tCandidateMin, out tCandidateMin);
+            Vector3Wide.Add(scaledOffset, scaledExtents, out var tCandidateMax);
+            Vector3Wide.Min(a.HalfLength, tCandidateMax, out tCandidateMax);
+            Vector3Wide.Max(negativeHalfLength, tCandidateMax, out tCandidateMax);
             var zero = Vector<float>.Zero;
             //Face X
             TestBoxFace(ref localOffsetA.X,
@@ -282,31 +282,31 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Imagine a face collision- if the capsule axis isn't fully parallel with the plane's surface, it would be strange to use the same depth for both contacts.
             //Compute the interval of the box on the normal. Note that the normal is already calibrated to point from B to A (box to capsule).
             //(This is partially redundant with the per-case calculations, but simply redoing some cheap ALU work is easier than trying to keep track of per-contact depths across all cases.)
-            Vector3Wide.Scale(ref capsuleAxis, ref taMin, out var localA0);
-            Vector3Wide.Scale(ref capsuleAxis, ref taMax, out var localA1);
-            Vector3Wide.Add(ref localOffsetA, ref localA0, out var bToA0);
-            Vector3Wide.Add(ref localOffsetA, ref localA1, out var bToA1);
+            Vector3Wide.Scale(capsuleAxis, taMin, out var localA0);
+            Vector3Wide.Scale(capsuleAxis, taMax, out var localA1);
+            Vector3Wide.Add(localOffsetA, localA0, out var bToA0);
+            Vector3Wide.Add(localOffsetA, localA1, out var bToA1);
             var boxExtreme = Vector.Abs(localNormal.X * b.HalfWidth) + Vector.Abs(localNormal.Y * b.HalfHeight) + Vector.Abs(localNormal.Z * b.HalfLength);
-            Vector3Wide.Dot(ref localNormal, ref bToA0, out var dot0);
-            Vector3Wide.Dot(ref localNormal, ref bToA1, out var dot1);
+            Vector3Wide.Dot(localNormal, bToA0, out var dot0);
+            Vector3Wide.Dot(localNormal, bToA1, out var dot1);
             manifold.Depth0 = a.Radius + boxExtreme - dot0;
             manifold.Depth1 = a.Radius + boxExtreme - dot1;
             manifold.FeatureId0 = Vector<int>.Zero;
             manifold.FeatureId1 = Vector<int>.One;
 
             //Transform A0, A1, and the normal into world space.
-            Matrix3x3Wide.CreateFromQuaternion(ref orientationB, out var orientationMatrixB);
-            Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref orientationMatrixB, out manifold.Normal);
-            Matrix3x3Wide.TransformWithoutOverlap(ref localA0, ref orientationMatrixB, out manifold.OffsetA0);
-            Matrix3x3Wide.TransformWithoutOverlap(ref localA1, ref orientationMatrixB, out manifold.OffsetA1);
+            Matrix3x3Wide.CreateFromQuaternion(orientationB, out var orientationMatrixB);
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, orientationMatrixB, out manifold.Normal);
+            Matrix3x3Wide.TransformWithoutOverlap(localA0, orientationMatrixB, out manifold.OffsetA0);
+            Matrix3x3Wide.TransformWithoutOverlap(localA1, orientationMatrixB, out manifold.OffsetA1);
 
             //Apply the normal offset to the contact positions.           
             var negativeOffsetFromA0 = manifold.Depth0 * 0.5f - a.Radius;
             var negativeOffsetFromA1 = manifold.Depth1 * 0.5f - a.Radius;
-            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA0, out var normalPush0);
-            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA1, out var normalPush1);
-            Vector3Wide.Add(ref manifold.OffsetA0, ref normalPush0, out manifold.OffsetA0);
-            Vector3Wide.Add(ref manifold.OffsetA1, ref normalPush1, out manifold.OffsetA1);
+            Vector3Wide.Scale(manifold.Normal, negativeOffsetFromA0, out var normalPush0);
+            Vector3Wide.Scale(manifold.Normal, negativeOffsetFromA1, out var normalPush1);
+            Vector3Wide.Add(manifold.OffsetA0, normalPush0, out manifold.OffsetA0);
+            Vector3Wide.Add(manifold.OffsetA1, normalPush1, out manifold.OffsetA1);
 
             var minimumAcceptedDepth = -speculativeMargin;
             manifold.Contact0Exists = Vector.GreaterThanOrEqual(manifold.Depth0, minimumAcceptedDepth);

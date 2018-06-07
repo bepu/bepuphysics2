@@ -86,7 +86,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetPoseOffset(out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref PositionB, ref PositionA, out offsetB);
+            Vector3Wide.Subtract(PositionB, PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source)
@@ -170,7 +170,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetPoseOffset(out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref PositionB, ref PositionA, out offsetB);
+            Vector3Wide.Subtract(PositionB, PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source)
@@ -254,7 +254,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetPoseOffset(out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref PositionB, ref PositionA, out offsetB);
+            Vector3Wide.Subtract(PositionB, PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source)
@@ -330,7 +330,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetPoseOffset(out Vector3Wide offsetB)
         {
-            Vector3Wide.Subtract(ref PositionB, ref PositionA, out offsetB);
+            Vector3Wide.Subtract(PositionB, PositionA, out offsetB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source)
@@ -359,8 +359,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
     public interface IContactManifoldWide
     {
-        void ApplyFlipMask(ref Vector3Wide offsetB, ref Vector<int> flipMask);
-        void Scatter(ref Vector3Wide offsetB, ref ConvexContactManifold target);
+        void ApplyFlipMask(ref Vector3Wide offsetB, in Vector<int> flipMask);
+        void ReadFirst(in Vector3Wide offsetB, ref ConvexContactManifold target);
     }
 
     class ConvexCollisionTaskCommon
@@ -440,7 +440,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Flip back any contacts associated with pairs which had to be flipped for shape order.
                 if (pairWide.HasFlipMask)
                 {
-                    manifoldWide.ApplyFlipMask(ref offsetB, ref pairWide.GetFlipMask(ref pairWide));
+                    manifoldWide.ApplyFlipMask(ref offsetB, pairWide.GetFlipMask(ref pairWide));
                 }
 
                 for (int j = 0; j < countInBundle; ++j)
@@ -450,7 +450,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref var manifoldSource = ref Unsafe.As<float, TManifoldWide>(ref manifoldAsFloat);
                     ref var offsetAsFloat = ref Unsafe.Add(ref Unsafe.As<Vector3Wide, float>(ref offsetB), j);
                     ref var offsetSource = ref Unsafe.As<float, Vector3Wide>(ref offsetAsFloat);
-                    manifoldSource.Scatter(ref offsetSource, ref manifold);
+                    manifoldSource.ReadFirst(offsetSource, ref manifold);
                     batcher.ProcessConvexResult(&manifold, ref Unsafe.Add(ref bundleStart, j).Shared.Continuation);
                 }
             }

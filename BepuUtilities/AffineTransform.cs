@@ -35,91 +35,49 @@ namespace BepuUtilities
         /// Constructs a new affine transform.
         ///</summary>
         ///<param name="translation">Translation to use in the transform.</param>
-        public AffineTransform(ref Vector3 translation)
+        public AffineTransform(in Vector3 translation)
         {
             LinearTransform = Matrix3x3.Identity;
             Translation = translation;
         }
 
         ///<summary>
-        /// Constructs a new affine transform.
-        ///</summary>
-        ///<param name="translation">Translation to use in the transform.</param>
-        public AffineTransform(Vector3 translation)
-            : this(ref translation)
-        {
-        }
-
-        ///<summary>
         /// Constructs a new affine tranform.
         ///</summary>
         ///<param name="orientation">Orientation to use as the linear transform.</param>
         ///<param name="translation">Translation to use in the transform.</param>
-        public AffineTransform(ref Quaternion orientation, ref Vector3 translation)
+        public AffineTransform(in Quaternion orientation, in Vector3 translation)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out LinearTransform);
             Translation = translation;
         }
 
         ///<summary>
-        /// Constructs a new affine tranform.
-        ///</summary>
-        ///<param name="orientation">Orientation to use as the linear transform.</param>
-        ///<param name="translation">Translation to use in the transform.</param>
-        public AffineTransform(Quaternion orientation, Vector3 translation)
-            : this(ref orientation, ref translation)
-        {
-        }
-
-        ///<summary>
         /// Constructs a new affine transform.
         ///</summary>
         ///<param name="scaling">Scaling to apply in the linear transform.</param>
         ///<param name="orientation">Orientation to apply in the linear transform.</param>
         ///<param name="translation">Translation to apply.</param>
-        public AffineTransform(ref Vector3 scaling, ref Quaternion orientation, ref Vector3 translation)
+        public AffineTransform(in Vector3 scaling, in Quaternion orientation, in Vector3 translation)
         {
             //Create an SRT transform.
-            Matrix3x3.CreateScale(ref scaling, out LinearTransform);
-            Matrix3x3 rotation;
-            Matrix3x3.CreateFromQuaternion(orientation, out rotation);
-            Matrix3x3.Multiply(ref LinearTransform, ref rotation, out LinearTransform);
+            Matrix3x3.CreateScale(scaling, out LinearTransform);
+            Matrix3x3.CreateFromQuaternion(orientation, out var rotation);
+            Matrix3x3.Multiply(LinearTransform, rotation, out LinearTransform);
             Translation = translation;
         }
 
-        ///<summary>
-        /// Constructs a new affine transform.
-        ///</summary>
-        ///<param name="scaling">Scaling to apply in the linear transform.</param>
-        ///<param name="orientation">Orientation to apply in the linear transform.</param>
-        ///<param name="translation">Translation to apply.</param>
-        public AffineTransform(Vector3 scaling, Quaternion orientation, Vector3 translation)
-            : this(ref scaling, ref orientation, ref translation)
-        {
-        }
-
-        ///<summary>
+         ///<summary>
         /// Constructs a new affine transform.
         ///</summary>
         ///<param name="linearTransform">The linear transform component.</param>
         ///<param name="translation">Translation component of the transform.</param>
-        public AffineTransform(ref Matrix3x3 linearTransform, ref Vector3 translation)
+        public AffineTransform(in Matrix3x3 linearTransform, in Vector3 translation)
         {
             LinearTransform = linearTransform;
             Translation = translation;
 
         }
-
-        ///<summary>
-        /// Constructs a new affine transform.
-        ///</summary>
-        ///<param name="linearTransform">The linear transform component.</param>
-        ///<param name="translation">Translation component of the transform.</param>
-        public AffineTransform(Matrix3x3 linearTransform, Vector3 translation)
-            : this(ref linearTransform, ref translation)
-        {
-        }
-
 
         ///<summary>
         /// Transforms a vector by an affine transform.
@@ -128,7 +86,7 @@ namespace BepuUtilities
         ///<param name="transform">Transform to apply.</param>
         ///<param name="transformed">Transformed position.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(ref Vector3 position, ref AffineTransform transform, out Vector3 transformed)
+        public static void Transform(in Vector3 position, in AffineTransform transform, out Vector3 transformed)
         {
             Matrix3x3.Transform(position, transform.LinearTransform, out transformed);
             transformed += transform.Translation;
@@ -140,9 +98,9 @@ namespace BepuUtilities
         ///<param name="transform">Transform to invert.</param>
         /// <param name="inverse">Inverse of the transform.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Invert(ref AffineTransform transform, out AffineTransform inverse)
+        public static void Invert(in AffineTransform transform, out AffineTransform inverse)
         {
-            Matrix3x3.Invert(ref transform.LinearTransform, out inverse.LinearTransform);
+            Matrix3x3.Invert(transform.LinearTransform, out inverse.LinearTransform);
             Matrix3x3.Transform(transform.Translation, inverse.LinearTransform, out inverse.Translation);
             inverse.Translation = -inverse.Translation;
         }
@@ -153,9 +111,9 @@ namespace BepuUtilities
         ///<param name="transform">Transform to invert.</param>
         /// <param name="inverse">Inverse of the transform.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void InvertRigid(ref AffineTransform transform, out AffineTransform inverse)
+        public static void InvertRigid(in AffineTransform transform, out AffineTransform inverse)
         {
-            Matrix3x3.Transpose(ref transform.LinearTransform, out inverse.LinearTransform);
+            Matrix3x3.Transpose(transform.LinearTransform, out inverse.LinearTransform);
             Matrix3x3.Transform(transform.Translation, inverse.LinearTransform, out inverse.Translation);
             inverse.Translation = -inverse.Translation;
         }
@@ -167,12 +125,11 @@ namespace BepuUtilities
         /// <param name="b">Second transform.</param>
         /// <param name="transform">Combined transform.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Multiply(ref AffineTransform a, ref AffineTransform b, out AffineTransform transform)
+        public static void Multiply(in AffineTransform a, in AffineTransform b, out AffineTransform transform)
         {
-            Vector3 translation;
-            Matrix3x3.Transform(a.Translation, b.LinearTransform, out translation);
+            Matrix3x3.Transform(a.Translation, b.LinearTransform, out var translation);
             transform.Translation = b.Translation + translation;
-            Matrix3x3.Multiply(ref a.LinearTransform, ref b.LinearTransform, out transform.LinearTransform);
+            Matrix3x3.Multiply(a.LinearTransform, b.LinearTransform, out transform.LinearTransform);
         }
 
 

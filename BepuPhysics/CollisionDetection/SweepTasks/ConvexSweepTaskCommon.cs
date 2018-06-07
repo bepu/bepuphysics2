@@ -135,7 +135,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
         static void Integrate(ref QuaternionWide start, ref Vector3Wide angularVelocity, ref Vector<float> halfDt, out QuaternionWide integrated)
         {
-            Vector3Wide.Length(ref angularVelocity, out var speed);
+            Vector3Wide.Length(angularVelocity, out var speed);
             var halfAngle = speed * halfDt;
             QuaternionWide q;
             Sin(halfAngle, out var s);
@@ -145,7 +145,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             q.Z = angularVelocity.Z * scale;
             Cos(halfAngle, out q.W);
             QuaternionWide.ConcatenateWithoutOverlap(start, q, out integrated);
-            QuaternionWide.Normalize(ref integrated, out integrated);
+            QuaternionWide.Normalize(integrated, out integrated);
             var speedValid = Vector.GreaterThan(speed, new Vector<float>(1e-15f));
             integrated.X = Vector.ConditionalSelect(speedValid, integrated.X, start.X);
             integrated.Y = Vector.ConditionalSelect(speedValid, integrated.Y, start.Y);
@@ -275,8 +275,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             {
                 GetSampleTimes(t0, t1, ref samples);
                 //Integrate offsetB to sample locations.
-                Vector3Wide.Scale(ref linearB, ref samples, out var displacement);
-                Vector3Wide.Add(ref initialOffsetB, ref displacement, out sampleOffsetB);
+                Vector3Wide.Scale(linearB, samples, out var displacement);
+                Vector3Wide.Add(initialOffsetB, displacement, out sampleOffsetB);
 
                 //Integrate orientations to sample locations.
                 var halfSamples = samples * 0.5f;
@@ -329,8 +329,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             {
                 GetSampleTimes(t0, t1, ref samples);
                 //Integrate offsetB to sample locations.
-                Vector3Wide.Scale(ref linearB, ref samples, out var displacement);
-                Vector3Wide.Add(ref initialOffsetB, ref displacement, out sampleOffsetB);
+                Vector3Wide.Scale(linearB, samples, out var displacement);
+                Vector3Wide.Add(initialOffsetB, displacement, out sampleOffsetB);
 
                 //Note that the initial orientations are properties of the owning body, not of the child.
                 //The orientation of the child itself is the product of localOrientation * bodyOrientation.
@@ -343,8 +343,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 Integrate(ref initialOrientationB, ref angularB, ref halfSamples, out var integratedOrientationB);
                 Compound.GetRotatedChildPose(localPosesB, integratedOrientationB, out var childPositionB, out sampleOrientationB);
 
-                Vector3Wide.Subtract(ref childPositionB, ref childPositionA, out var netOffsetB);
-                Vector3Wide.Add(ref sampleOffsetB, ref netOffsetB, out sampleOffsetB);
+                Vector3Wide.Subtract(childPositionB, childPositionA, out var netOffsetB);
+                Vector3Wide.Add(sampleOffsetB, netOffsetB, out sampleOffsetB);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -380,12 +380,12 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 //if the angular velocity is perpendicular to the normal, displacement is no more than 2 * radius. As the N * W/||W|| dot goes to 1, the maximum displacement goes to 0.
                 //(Note that you could bound this even more tightly by noting that 2 * radius is only hit when R/||R|| * NOnPlane = 1. Just didn't go that far (yet).)
                 Vector3Wide.Broadcast(AngularVelocityDirectionA, out var directionA);
-                Vector3Wide.Dot(ref normal, ref directionA, out var dotA);
+                Vector3Wide.Dot(normal, directionA, out var dotA);
                 var scaleA = Vector.SquareRoot(Vector.Max(Vector<float>.Zero, Vector<float>.One - dotA * dotA));
                 velocityContributionA = new Vector<float>(TangentSpeedA) * scaleA;
                 maximumDisplacementA = new Vector<float>(TwiceRadiusA) * scaleA;
                 Vector3Wide.Broadcast(AngularVelocityDirectionB, out var directionB);
-                Vector3Wide.Dot(ref normal, ref directionB, out var dotB);
+                Vector3Wide.Dot(normal, directionB, out var dotB);
                 var scaleB = Vector.SquareRoot(Vector.Max(Vector<float>.Zero, Vector<float>.One - dotB * dotB));
                 velocityContributionB = new Vector<float>(TangentSpeedB) * scaleB;
                 maximumDisplacementB = new Vector<float>(TwiceRadiusB) * scaleB;
@@ -506,7 +506,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 pairTester.Test(ref wideA, ref wideB, ref sampleOffsetB, ref sampleOrientationA, ref sampleOrientationB,
                     out intersections, out distances, out closestA, out normals);
 
-                Vector3Wide.Dot(ref normals, ref wideLinearVelocityB, out var linearVelocityAlongNormal);
+                Vector3Wide.Dot(normals, wideLinearVelocityB, out var linearVelocityAlongNormal);
                 sweepModifier.GetNonlinearVelocityContribution(ref normals,
                     out var nonlinearVelocityContributionA, out var nonlinearMaximumDisplacementA,
                     out var nonlinearVelocityContributionB, out var nonlinearMaximumDisplacementB);

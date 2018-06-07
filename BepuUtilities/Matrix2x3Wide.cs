@@ -19,7 +19,7 @@ namespace BepuUtilities
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void MultiplyWithoutOverlap(ref Matrix2x3Wide a, ref Matrix3x3Wide b, out Matrix2x3Wide result)
+        public static void MultiplyWithoutOverlap(in Matrix2x3Wide a, in Matrix3x3Wide b, out Matrix2x3Wide result)
         {
             result.X.X = a.X.X * b.X.X + a.X.Y * b.Y.X + a.X.Z * b.Z.X;
             result.X.Y = a.X.X * b.X.Y + a.X.Y * b.Y.Y + a.X.Z * b.Z.Y;
@@ -30,7 +30,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void MultiplyWithoutOverlap(ref Matrix2x2Wide a, ref Matrix2x3Wide b, out Matrix2x3Wide result)
+        public static void MultiplyWithoutOverlap(in Matrix2x2Wide a, in Matrix2x3Wide b, out Matrix2x3Wide result)
         {
             result.X.X = a.X.X * b.X.X + a.X.Y * b.Y.X;
             result.X.Y = a.X.X * b.X.Y + a.X.Y * b.Y.Y;
@@ -47,7 +47,7 @@ namespace BepuUtilities
         /// <param name="b">Second matrix in the pair.</param>
         /// <param name="result">Result of the multiplication transpose(a) * b.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void MultiplyTransposedWithoutOverlap(ref Matrix2x2Wide a, ref Matrix2x3Wide b, out Matrix2x3Wide result)
+        public static void MultiplyTransposedWithoutOverlap(in Matrix2x2Wide a, in Matrix2x3Wide b, out Matrix2x3Wide result)
         {
             result.X.X = a.X.X * b.X.X + a.Y.X * b.Y.X;
             result.X.Y = a.X.X * b.X.Y + a.Y.X * b.Y.Y;
@@ -65,7 +65,7 @@ namespace BepuUtilities
         /// <param name="b">Matrix to be sampled as if it were transposed when multiplied with the first matrix.</param>
         /// <param name="result">Result of the multiplication a * transpose(b).</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void MultiplyByTransposeWithoutOverlap(ref Matrix2x3Wide a, ref Matrix2x3Wide b, out Matrix2x2Wide result)
+        public static void MultiplyByTransposeWithoutOverlap(in Matrix2x3Wide a, in Matrix2x3Wide b, out Matrix2x2Wide result)
         {
             result.X.X = a.X.X * b.X.X + a.X.Y * b.X.Y + a.X.Z * b.X.Z;
             result.X.Y = a.X.X * b.Y.X + a.X.Y * b.Y.Y + a.X.Z * b.Y.Z;
@@ -75,17 +75,17 @@ namespace BepuUtilities
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformByTransposeWithoutOverlap(ref Vector3Wide v, ref Matrix2x3Wide m, out Vector2Wide result)
+        public static void TransformByTransposeWithoutOverlap(in Vector3Wide v, in Matrix2x3Wide m, out Vector2Wide result)
         {
             result.X = v.X * m.X.X + v.Y * m.X.Y + v.Z * m.X.Z;
             result.Y = v.X * m.Y.X + v.Y * m.Y.Y + v.Z * m.Y.Z;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Negate(ref Matrix2x3Wide m, out Matrix2x3Wide result)
+        public static void Negate(in Matrix2x3Wide m, out Matrix2x3Wide result)
         {
-            Vector3Wide.Negate(ref m.X, out result.X);
-            Vector3Wide.Negate(ref m.Y, out result.Y);
+            Vector3Wide.Negate(m.X, out result.X);
+            Vector3Wide.Negate(m.Y, out result.Y);
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace BepuUtilities
         /// <param name="scale">Scaling value to apply to the matrix's components.</param>
         /// <param name="result">Resulting matrix with scaled components.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(ref Matrix2x3Wide m, ref Vector<float> scale, out Matrix2x3Wide result)
+        public static void Scale(in Matrix2x3Wide m, in Vector<float> scale, out Matrix2x3Wide result)
         {
             result.X.X = m.X.X * scale;
             result.X.Y = m.X.Y * scale;
@@ -106,7 +106,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Transform(ref Vector2Wide v, ref Matrix2x3Wide m, out Vector3Wide result)
+        public static void Transform(in Vector2Wide v, in Matrix2x3Wide m, out Vector3Wide result)
         {
             result.X = v.X * m.X.X + v.Y * m.Y.X;
             result.Y = v.X * m.X.Y + v.Y * m.Y.Y;
@@ -114,10 +114,10 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(ref Matrix2x3Wide a, ref Matrix2x3Wide b, out Matrix2x3Wide result)
+        public static void Add(in Matrix2x3Wide a, in Matrix2x3Wide b, out Matrix2x3Wide result)
         {
-            Vector3Wide.Add(ref a.X, ref b.X, out result.X);
-            Vector3Wide.Add(ref a.Y, ref b.Y, out result.Y);
+            Vector3Wide.Add(a.X, b.X, out result.X);
+            Vector3Wide.Add(a.Y, b.Y, out result.Y);
         }
     }
 }

@@ -134,7 +134,7 @@ namespace BepuPhysics.Constraints.Contact
             float dt, float inverseDt, ref Contact1PrestepData prestep, out Contact1Projection projection)
         {
             bodies.GatherInertia(ref bodyReferences, count, out projection.InertiaA, out projection.InertiaB);
-            Vector3Wide.Subtract(ref prestep.OffsetA0, ref prestep.OffsetB, out var offsetToManifoldCenterB);
+            Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out var offsetToManifoldCenterB);
             projection.PremultipliedFrictionCoefficient = prestep.FrictionCoefficient;
             projection.Normal = prestep.Normal;
             Helpers.BuildOrthnormalBasis(ref prestep.Normal, out var x, out var z);

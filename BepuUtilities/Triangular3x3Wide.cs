@@ -42,7 +42,7 @@ namespace BepuUtilities
         /// <param name="m">Symmetric matrix to invert.</param>
         /// <param name="inverse">Inverse of the symmetric matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SymmetricInvert(ref Triangular3x3Wide m, out Triangular3x3Wide inverse)
+        public static void SymmetricInvert(in Triangular3x3Wide m, out Triangular3x3Wide inverse)
         {
             var xx = m.YY * m.ZZ - m.ZY * m.ZY;
             var yx = m.ZY * m.ZX - m.ZZ * m.YX;
@@ -63,7 +63,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(ref Triangular3x3Wide a, ref Triangular3x3Wide b, out Triangular3x3Wide sum)
+        public static void Add(in Triangular3x3Wide a, in Triangular3x3Wide b, out Triangular3x3Wide sum)
         {
             sum.XX = a.XX + b.XX;
             sum.YX = a.YX + b.YX;
@@ -74,7 +74,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(ref Triangular3x3Wide m, ref Vector<float> scale, out Triangular3x3Wide result)
+        public static void Scale(in Triangular3x3Wide m, in Vector<float> scale, out Triangular3x3Wide result)
         {
             result.XX = m.XX * scale;
             result.YX = m.YX * scale;
@@ -108,7 +108,7 @@ namespace BepuUtilities
         /// <param name="sandwich">Result of skewSymmetric(v) * m * transpose(skewSymmetric(v)).</param>
         /// <remarks>This operation might have a formal name that isn't skew sandwich. But that's okay, its real name is skew sandwich.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SkewSandwichWithoutOverlap(ref Vector3Wide v, ref Triangular3x3Wide m, out Triangular3x3Wide sandwich)
+        public static void SkewSandwichWithoutOverlap(in Vector3Wide v, in Triangular3x3Wide m, out Triangular3x3Wide sandwich)
         {
             //27 muls, 15 adds.
             var xzy = v.X * m.ZY;
@@ -140,7 +140,7 @@ namespace BepuUtilities
         /// <param name="sandwich">Result of v * m * transpose(v) for a symmetric matrix m.</param>
         /// <remarks>Since I called the other one a skew sandwich, I really don't have a choice in the naming convention anymore.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void VectorSandwich(ref Vector3Wide v, ref Triangular3x3Wide m, out Vector<float> sandwich)
+        public static void VectorSandwich(in Vector3Wide v, in Triangular3x3Wide m, out Vector<float> sandwich)
         {
             //This isn't actually fewer flops than the equivalent explicit operation, but it does avoid some struct locals and it's a pretty common operation.
             //(And at the moment, avoiding struct locals is unfortunately helpful for codegen reasons.)
@@ -156,7 +156,7 @@ namespace BepuUtilities
         /// <param name="m">Succulent interior symmetric matrix.</param>
         /// <param name="sandwich">Result of v * m * transpose(v) for a symmetric matrix m.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void RotationSandwich(ref Matrix3x3Wide r, ref Triangular3x3Wide m, out Triangular3x3Wide sandwich)
+        public static void RotationSandwich(in Matrix3x3Wide r, in Triangular3x3Wide m, out Triangular3x3Wide sandwich)
         {
             var ixx = r.X.X * m.XX + r.Y.X * m.YX + r.Z.X * m.ZX;
             var ixy = r.X.X * m.YX + r.Y.X * m.YY + r.Z.X * m.ZY;
@@ -185,7 +185,7 @@ namespace BepuUtilities
         /// <param name="b">Matrix to be reinterpreted as symmetric for the multiply.</param>
         /// <param name="result">Result of multiplying a * b.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void MultiplyBySymmetricWithoutOverlap(ref Matrix2x3Wide a, ref Triangular3x3Wide b, out Matrix2x3Wide result)
+        public static void MultiplyBySymmetricWithoutOverlap(in Matrix2x3Wide a, in Triangular3x3Wide b, out Matrix2x3Wide result)
         {
             result.X.X = a.X.X * b.XX + a.X.Y * b.YX + a.X.Z * b.ZX;
             result.X.Y = a.X.X * b.YX + a.X.Y * b.YY + a.X.Z * b.ZY;
@@ -202,7 +202,7 @@ namespace BepuUtilities
         /// <param name="t">Succulent interior symmetric matrix.</param>
         /// <param name="sandwich">Result of m * t * mT for a symmetric matrix t.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void MatrixSandwich(ref Matrix2x3Wide m, ref Triangular3x3Wide t, out Triangular2x2Wide result)
+        public static void MatrixSandwich(in Matrix2x3Wide m, in Triangular3x3Wide t, out Triangular2x2Wide result)
         {
             var ixx = m.X.X * t.XX + m.X.Y * t.YX + m.X.Z * t.ZX;
             var ixy = m.X.X * t.YX + m.X.Y * t.YY + m.X.Z * t.ZY;
@@ -216,7 +216,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformBySymmetricWithoutOverlap(ref Vector3Wide v, ref Triangular3x3Wide m, out Vector3Wide result)
+        public static void TransformBySymmetricWithoutOverlap(in Vector3Wide v, in Triangular3x3Wide m, out Vector3Wide result)
         {
             result.X = v.X * m.XX + v.Y * m.YX + v.Z * m.ZX;
             result.Y = v.X * m.YX + v.Y * m.YY + v.Z * m.ZY;

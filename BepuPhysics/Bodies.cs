@@ -519,7 +519,7 @@ namespace BepuPhysics
             //In order to support other absolute positions, we'll need alternate implementations of this and other functions.
             //But for the most part, we don't want to pay the overhead of an abstract invocation within the inner loop of the solver. 
             //Given the current limits of C# and the compiler, the best option seems to be conditional compilation.
-            Vector3Wide.Subtract(ref positionB, ref positionA, out offsetB);
+            Vector3Wide.Subtract(positionB, positionA, out offsetB);
         }
 
         /// <summary>

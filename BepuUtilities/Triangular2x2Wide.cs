@@ -21,7 +21,7 @@ namespace BepuUtilities
         /// <param name="result">Result of m * scale * mT.</param>
         /// <remarks>This is a peculiar operation, but it's useful for computing linear effective mass contributions in 2DOF constraints.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SandwichScale(ref Matrix2x3Wide m, ref Vector<float> scale, out Triangular2x2Wide result)
+        public static void SandwichScale(in Matrix2x3Wide m, in Vector<float> scale, out Triangular2x2Wide result)
         {
             result.XX = scale * (m.X.X * m.X.X + m.X.Y * m.X.Y + m.X.Z * m.X.Z);
             result.YX = scale * (m.Y.X * m.X.X + m.Y.Y * m.X.Y + m.Y.Z * m.X.Z);
@@ -29,7 +29,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(ref Triangular2x2Wide t, ref Vector<float> scale, out Triangular2x2Wide result)
+        public static void Scale(in Triangular2x2Wide t, in Vector<float> scale, out Triangular2x2Wide result)
         {
             result.XX = t.XX * scale;
             result.YX = t.YX * scale;
@@ -37,7 +37,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(ref Triangular2x2Wide a, ref Triangular2x2Wide b, out Triangular2x2Wide result)
+        public static void Add(in Triangular2x2Wide a, in Triangular2x2Wide b, out Triangular2x2Wide result)
         {
             result.XX = a.XX + b.XX;
             result.YX = a.YX + b.YX;
@@ -45,7 +45,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Subtract(ref Triangular2x2Wide a, ref Triangular2x2Wide b, out Triangular2x2Wide result)
+        public static void Subtract(in Triangular2x2Wide a, in Triangular2x2Wide b, out Triangular2x2Wide result)
         {
             result.XX = a.XX - b.XX;
             result.YX = a.YX - b.YX;
@@ -53,7 +53,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void InvertSymmetricWithoutOverlap(ref Triangular2x2Wide m, out Triangular2x2Wide inverse)
+        public static void InvertSymmetricWithoutOverlap(in Triangular2x2Wide m, out Triangular2x2Wide inverse)
         {
             var denom = Vector<float>.One / (m.YX * m.YX - m.XX * m.YY);
             inverse.XX = -m.YY * denom;
@@ -62,7 +62,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void TransformBySymmetricWithoutOverlap(ref Vector2Wide v, ref Triangular2x2Wide m, out Vector2Wide result)
+        public static void TransformBySymmetricWithoutOverlap(in Vector2Wide v, in Triangular2x2Wide m, out Vector2Wide result)
         {
             result.X = v.X * m.XX + v.Y * m.YX;
             result.Y = v.X * m.YX + v.Y * m.YY;
@@ -75,7 +75,7 @@ namespace BepuUtilities
         /// <param name="b">Symmetric matrix to multiply.</param>
         /// <param name="result">Result of transpose(transpose(a) * b).</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void MultiplyTransposedBySymmetric(ref Matrix2x3Wide a, ref Triangular2x2Wide b, out Matrix2x3Wide result)
+        public static void MultiplyTransposedBySymmetric(in Matrix2x3Wide a, in Triangular2x2Wide b, out Matrix2x3Wide result)
         {
             result.X.X = a.X.X * b.XX + a.Y.X * b.YX;
             result.X.Y = a.X.Y * b.XX + a.Y.Y * b.YX;
@@ -92,7 +92,7 @@ namespace BepuUtilities
         /// <param name="b">Matrix to be transaposed and multiplied with a..</param>
         /// <param name="result">Symmetric result of a * transpose(b), assuming a = b * M.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CompleteMatrixSandwich(ref Matrix2x3Wide a, ref Matrix2x3Wide b, out Triangular2x2Wide result)
+        public static void CompleteMatrixSandwich(in Matrix2x3Wide a, in Matrix2x3Wide b, out Triangular2x2Wide result)
         {
             result.XX = a.X.X * b.X.X + a.X.Y * b.X.Y + a.X.Z * b.X.Z;
             result.YX = a.Y.X * b.X.X + a.Y.Y * b.X.Y + a.Y.Z * b.X.Z;

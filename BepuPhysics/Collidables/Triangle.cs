@@ -182,10 +182,10 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetBounds(ref QuaternionWide orientations, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
-            Matrix3x3Wide.CreateFromQuaternion(ref orientations, out var basis);
-            Matrix3x3Wide.TransformWithoutOverlap(ref A, ref basis, out var worldA);
-            Matrix3x3Wide.TransformWithoutOverlap(ref B, ref basis, out var worldB);
-            Matrix3x3Wide.TransformWithoutOverlap(ref C, ref basis, out var worldC);
+            Matrix3x3Wide.CreateFromQuaternion(orientations, out var basis);
+            Matrix3x3Wide.TransformWithoutOverlap(A, basis, out var worldA);
+            Matrix3x3Wide.TransformWithoutOverlap(B, basis, out var worldB);
+            Matrix3x3Wide.TransformWithoutOverlap(C, basis, out var worldC);
             min.X = Vector.Min(worldA.X, Vector.Min(worldB.X, worldC.X));
             min.Y = Vector.Min(worldA.Y, Vector.Min(worldB.Y, worldC.Y));
             min.Z = Vector.Min(worldA.Z, Vector.Min(worldB.Z, worldC.Z));
@@ -193,9 +193,9 @@ namespace BepuPhysics.Collidables
             max.Y = Vector.Max(worldA.Y, Vector.Max(worldB.Y, worldC.Y));
             max.Z = Vector.Max(worldA.Z, Vector.Max(worldB.Z, worldC.Z));
 
-            Vector3Wide.LengthSquared(ref A, out var aLengthSquared);
-            Vector3Wide.LengthSquared(ref B, out var bLengthSquared);
-            Vector3Wide.LengthSquared(ref C, out var cLengthSquared);
+            Vector3Wide.LengthSquared(A, out var aLengthSquared);
+            Vector3Wide.LengthSquared(B, out var bLengthSquared);
+            Vector3Wide.LengthSquared(C, out var cLengthSquared);
             maximumRadius = Vector.SquareRoot(Vector.Max(aLengthSquared, Vector.Max(bLengthSquared, cLengthSquared)));
             maximumAngularExpansion = maximumRadius;
         }
@@ -212,19 +212,19 @@ namespace BepuPhysics.Collidables
         public static void RayTest(ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide c, ref Vector3Wide origin, ref Vector3Wide direction, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
             //Note that this assumes clockwise winding. Rays coming from the opposite direction pass through; triangles are one sided.
-            Vector3Wide.Subtract(ref b, ref a, out var ab);
-            Vector3Wide.Subtract(ref c, ref a, out var ac);
-            Vector3Wide.CrossWithoutOverlap(ref ac, ref ab, out normal);
-            Vector3Wide.Dot(ref direction, ref normal, out var dn);
+            Vector3Wide.Subtract(b, a, out var ab);
+            Vector3Wide.Subtract(c, a, out var ac);
+            Vector3Wide.CrossWithoutOverlap(ac, ab, out normal);
+            Vector3Wide.Dot(direction, normal, out var dn);
             dn = -dn;
-            Vector3Wide.Subtract(ref origin, ref a, out var ao);
-            Vector3Wide.Dot(ref ao, ref normal, out t);
+            Vector3Wide.Subtract(origin, a, out var ao);
+            Vector3Wide.Dot(ao, normal, out t);
             t /= dn;
-            Vector3Wide.CrossWithoutOverlap(ref ao, ref direction, out var aoxd);
-            Vector3Wide.Dot(ref ac, ref aoxd, out var v);
+            Vector3Wide.CrossWithoutOverlap(ao, direction, out var aoxd);
+            Vector3Wide.Dot(ac, aoxd, out var v);
             v = -v;
-            Vector3Wide.Dot(ref ab, ref aoxd, out var w);
-            Vector3Wide.Normalize(ref normal, out normal);
+            Vector3Wide.Dot(ab, aoxd, out var w);
+            Vector3Wide.Normalize(normal, out normal);
             intersected = Vector.BitwiseAnd(
                 Vector.BitwiseAnd(
                     Vector.GreaterThan(dn, Vector<float>.Zero),
@@ -237,12 +237,12 @@ namespace BepuPhysics.Collidables
         }
         public void RayTest(ref RigidPoses pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
-            Vector3Wide.Subtract(ref ray.Origin, ref pose.Position, out var offset);
-            Matrix3x3Wide.CreateFromQuaternion(ref pose.Orientation, out var orientation);
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offset, ref orientation, out var localOffset);
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref ray.Direction, ref orientation, out var localDirection);
+            Vector3Wide.Subtract(ray.Origin, pose.Position, out var offset);
+            Matrix3x3Wide.CreateFromQuaternion(pose.Orientation, out var orientation);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(offset, orientation, out var localOffset);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ray.Direction, orientation, out var localDirection);
             RayTest(ref A, ref B, ref C, ref localOffset, ref localDirection, out intersected, out t, out var localNormal);
-            Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref orientation, out normal);
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, orientation, out normal);
         }
     }
 }

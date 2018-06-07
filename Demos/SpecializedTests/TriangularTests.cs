@@ -123,7 +123,7 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Triangular3x3Wide.VectorSandwich(ref v, ref triangular, out result);
+                Triangular3x3Wide.VectorSandwich(v, triangular, out result);
             }
         }
         struct SymmetricVectorSandwich : ITest
@@ -148,8 +148,8 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Matrix3x3Wide.Transform(ref v, ref symmetric, out var intermediate);
-                Vector3Wide.Dot(ref v, ref intermediate, out result);
+                Matrix3x3Wide.Transform(v, symmetric, out var intermediate);
+                Vector3Wide.Dot(v, intermediate, out result);
             }
         }
         struct TriangularWide2x3Sandwich : ITest
@@ -161,7 +161,7 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Triangular3x3Wide.MatrixSandwich(ref m, ref triangular, out result);
+                Triangular3x3Wide.MatrixSandwich(m, triangular, out result);
             }
         }
         struct SymmetricWide2x3Sandwich : ITest
@@ -173,8 +173,8 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Matrix2x3Wide.MultiplyWithoutOverlap(ref m, ref symmetric, out var intermediate);
-                Matrix2x3Wide.MultiplyByTransposeWithoutOverlap(ref intermediate, ref m, out result);
+                Matrix2x3Wide.MultiplyWithoutOverlap(m, symmetric, out var intermediate);
+                Matrix2x3Wide.MultiplyByTransposeWithoutOverlap(intermediate, m, out result);
             }
         }
         struct TriangularWideSkewSandwich : ITest
@@ -186,7 +186,7 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Triangular3x3Wide.SkewSandwichWithoutOverlap(ref v, ref triangular, out result);
+                Triangular3x3Wide.SkewSandwichWithoutOverlap(v, triangular, out result);
             }
         }
         struct SymmetricSkewSandwich : ITest
@@ -198,9 +198,9 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Matrix3x3.CreateCrossProduct(ref v, out var skew);
-                Matrix3x3.MultiplyTransposed(ref skew, ref symmetric, out var intermediate);
-                Matrix3x3.Multiply(ref intermediate, ref skew, out result);
+                Matrix3x3.CreateCrossProduct(v, out var skew);
+                Matrix3x3.MultiplyTransposed(skew, symmetric, out var intermediate);
+                Matrix3x3.Multiply(intermediate, skew, out result);
             }
         }
         struct SymmetricWideSkewSandwich : ITest
@@ -212,9 +212,9 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Matrix3x3Wide.CreateCrossProduct(ref v, out var skew);
-                Matrix3x3Wide.MultiplyTransposedWithoutOverlap(ref skew, ref symmetric, out var intermediate);
-                Matrix3x3Wide.MultiplyWithoutOverlap(ref intermediate, ref skew, out result);
+                Matrix3x3Wide.CreateCrossProduct(v, out var skew);
+                Matrix3x3Wide.MultiplyTransposedWithoutOverlap(skew, symmetric, out var intermediate);
+                Matrix3x3Wide.MultiplyWithoutOverlap(intermediate, skew, out result);
             }
         }
 
@@ -228,7 +228,7 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Triangular3x3Wide.RotationSandwich(ref rotation, ref triangular, out result);
+                Triangular3x3Wide.RotationSandwich(rotation, triangular, out result);
             }
         }
         struct SymmetricRotationSandwich : ITest
@@ -240,8 +240,8 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Matrix3x3.MultiplyTransposed(ref rotation, ref symmetric, out var intermediate);
-                Matrix3x3.Multiply(ref intermediate, ref rotation, out result);
+                Matrix3x3.MultiplyTransposed(rotation, symmetric, out var intermediate);
+                Matrix3x3.Multiply(intermediate, rotation, out result);
             }
         }
         struct SymmetricRotationSandwichWide : ITest
@@ -253,8 +253,8 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Matrix3x3Wide.MultiplyTransposedWithoutOverlap(ref rotation, ref symmetric, out var intermediateWide);
-                Matrix3x3Wide.MultiplyWithoutOverlap(ref intermediateWide, ref rotation, out result);
+                Matrix3x3Wide.MultiplyTransposedWithoutOverlap(rotation, symmetric, out var intermediateWide);
+                Matrix3x3Wide.MultiplyWithoutOverlap(intermediateWide, rotation, out result);
             }
         }
         struct TriangularInvertWide : ITest
@@ -265,7 +265,7 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Triangular3x3Wide.SymmetricInvert(ref triangular, out result);
+                Triangular3x3Wide.SymmetricInvert(triangular, out result);
             }
         }
         struct SymmetricInvert : ITest
@@ -276,7 +276,7 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Matrix3x3.Invert(ref symmetric, out result);
+                Matrix3x3.Invert(symmetric, out result);
             }
         }
         struct SymmetricInvertWide : ITest
@@ -287,7 +287,7 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Matrix3x3Wide.Invert(ref symmetric, out result);
+                Matrix3x3Wide.Invert(symmetric, out result);
             }
         }
 

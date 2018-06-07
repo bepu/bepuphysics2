@@ -28,10 +28,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             out Vector3Wide supportA, out Vector3Wide support)
         {
             supportFinderA.ComputeSupport(ref a, ref rA, ref direction, out supportA);
-            Vector3Wide.Negate(ref direction, out var negatedDirection);
+            Vector3Wide.Negate(direction, out var negatedDirection);
             supportFinderB.ComputeSupport(ref b, ref rB, ref negatedDirection, out var supportB);
-            Vector3Wide.Add(ref supportB, ref offsetB, out supportB);
-            Vector3Wide.Subtract(ref supportA, ref supportB, out support);
+            Vector3Wide.Add(supportB, offsetB, out supportB);
+            Vector3Wide.Subtract(supportA, supportB, out support);
 
         }
 
@@ -86,9 +86,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         void Edge(ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide aOnA, ref Vector3Wide bOnA, out Vector3Wide ab, out Vector<float> abab, out Vector<float> abA, in Vector<int> aFeatureId, in Vector<int> bFeatureId,
             ref Vector<int> mask, ref Vector<float> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId)
         {
-            Vector3Wide.Subtract(ref b, ref a, out ab);
-            Vector3Wide.Dot(ref ab, ref ab, out abab);
-            Vector3Wide.Dot(ref ab, ref a, out abA);
+            Vector3Wide.Subtract(b, a, out ab);
+            Vector3Wide.Dot(ab, ab, out abab);
+            Vector3Wide.Dot(ab, a, out abA);
             //Note that vertex B (and technically A, too) is handled by clamping the edge. No need to handle the vertices by themselves (apart from the base case).
             var abT = -abA / abab;
             var aFeatureContribution = Vector.ConditionalSelect(Vector.LessThan(abT, Vector<float>.One), aFeatureId, Vector<int>.Zero);
@@ -96,12 +96,12 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var featureIdCandidate = Vector.BitwiseOr(aFeatureContribution, bFeatureContribution);
 
             abT = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, abT));
-            Vector3Wide.Scale(ref ab, ref abT, out var closestOnAB);
-            Vector3Wide.Add(ref closestOnAB, ref a, out closestOnAB);
-            Vector3Wide.Subtract(ref bOnA, ref aOnA, out var abOnA);
-            Vector3Wide.Scale(ref abOnA, ref abT, out var closestOnABOnA);
-            Vector3Wide.Add(ref closestOnABOnA, ref aOnA, out closestOnABOnA);
-            Vector3Wide.LengthSquared(ref closestOnAB, out var distanceSquaredCandidate);
+            Vector3Wide.Scale(ab, abT, out var closestOnAB);
+            Vector3Wide.Add(closestOnAB, a, out closestOnAB);
+            Vector3Wide.Subtract(bOnA, aOnA, out var abOnA);
+            Vector3Wide.Scale(abOnA, abT, out var closestOnABOnA);
+            Vector3Wide.Add(closestOnABOnA, aOnA, out closestOnABOnA);
+            Vector3Wide.LengthSquared(closestOnAB, out var distanceSquaredCandidate);
             Select(ref mask,
                 ref distanceSquared, ref closest, ref closestA, ref featureId,
                 distanceSquaredCandidate, closestOnAB, closestOnABOnA, featureIdCandidate);
@@ -166,7 +166,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //(A x AB) * (AB x AC) / ((AB x AC) * (AB x AC))
             //Expanding with identities, this transforms to:
             //((A * AB) * (AB * AC) - (A * AC) * (AB * AB)) / ((AB * AB) * (AC * AC) - (AB * AC) * (AC * AB))
-            Vector3Wide.Dot(ref ab, ref ac, out var abac);
+            Vector3Wide.Dot(ab, ac, out var abac);
             var abcDenom = Vector<float>.One / (abab * acac - abac * abac);
             var cWeight = (abA * abac - acA * abab) * abcDenom;
             var bWeight = (abac * acA - acac * abA) * abcDenom;
@@ -176,17 +176,17 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     Vector.GreaterThanOrEqual(aWeight, Vector<float>.Zero),
                     Vector.GreaterThanOrEqual(bWeight, Vector<float>.Zero)),
                 Vector.GreaterThanOrEqual(cWeight, Vector<float>.Zero));
-            Vector3Wide.Scale(ref a, ref aWeight, out var aContribution);
-            Vector3Wide.Scale(ref b, ref bWeight, out var bContribution);
-            Vector3Wide.Scale(ref c, ref cWeight, out var cContribution);
-            Vector3Wide.Scale(ref aOnA, ref aWeight, out var aOnAContribution);
-            Vector3Wide.Scale(ref bOnA, ref bWeight, out var bOnAContribution);
-            Vector3Wide.Scale(ref cOnA, ref cWeight, out var cOnAContribution);
-            Vector3Wide.Add(ref aContribution, ref bContribution, out var closestCandidate);
-            Vector3Wide.Add(ref cContribution, ref closestCandidate, out closestCandidate);
-            Vector3Wide.Add(ref aOnAContribution, ref bOnAContribution, out var closestACandidate);
-            Vector3Wide.Add(ref cOnAContribution, ref closestACandidate, out closestACandidate);
-            Vector3Wide.LengthSquared(ref closestCandidate, out var distanceSquaredCandidate);
+            Vector3Wide.Scale(a, aWeight, out var aContribution);
+            Vector3Wide.Scale(b, bWeight, out var bContribution);
+            Vector3Wide.Scale(c, cWeight, out var cContribution);
+            Vector3Wide.Scale(aOnA, aWeight, out var aOnAContribution);
+            Vector3Wide.Scale(bOnA, bWeight, out var bOnAContribution);
+            Vector3Wide.Scale(cOnA, cWeight, out var cOnAContribution);
+            Vector3Wide.Add(aContribution, bContribution, out var closestCandidate);
+            Vector3Wide.Add(cContribution, closestCandidate, out closestCandidate);
+            Vector3Wide.Add(aOnAContribution, bOnAContribution, out var closestACandidate);
+            Vector3Wide.Add(cOnAContribution, closestACandidate, out closestACandidate);
+            Vector3Wide.LengthSquared(closestCandidate, out var distanceSquaredCandidate);
             var combinedMask = Vector.BitwiseAnd(mask, projectionInTriangle);
             Select(ref combinedMask,
                 ref distanceSquared, ref closest, ref closestA, ref featureId,
@@ -209,7 +209,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
             //Vertex A:
             //Note that simplex sizes are always at least 1.
-            Vector3Wide.LengthSquared(ref simplex.A, out distanceSquared);
+            Vector3Wide.LengthSquared(simplex.A, out distanceSquared);
             //Contributing vertices are tracked using a bitfield. A:1, B:2, C:4, D:8.
             Vector<int> featureId = new Vector<int>(1);
             //For simplicity, we'll compute the closestA at each point and cache it if it is optimal.
@@ -298,16 +298,16 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //ABD: -A * (AD x BD) >= 0
             //ACD: -A * (CD x AC) >= 0
             //BCD: -B * (BD x CD) >= 0
-            Vector3Wide.CrossWithoutOverlap(ref bc, ref ab, out var nabc);
-            Vector3Wide.CrossWithoutOverlap(ref ad, ref bd, out var nabd);
-            Vector3Wide.CrossWithoutOverlap(ref cd, ref ac, out var nacd);
-            Vector3Wide.CrossWithoutOverlap(ref bd, ref cd, out var nbdc);
-            Vector3Wide.Dot(ref ad, ref nabc, out var calibrationDotABC);
+            Vector3Wide.CrossWithoutOverlap(bc, ab, out var nabc);
+            Vector3Wide.CrossWithoutOverlap(ad, bd, out var nabd);
+            Vector3Wide.CrossWithoutOverlap(cd, ac, out var nacd);
+            Vector3Wide.CrossWithoutOverlap(bd, cd, out var nbdc);
+            Vector3Wide.Dot(ad, nabc, out var calibrationDotABC);
             var flipRequired = Vector.GreaterThanOrEqual(calibrationDotABC, Vector<float>.Zero);
-            Vector3Wide.Dot(ref nabc, ref simplex.A, out var abcDot);
-            Vector3Wide.Dot(ref nabd, ref simplex.A, out var abdDot);
-            Vector3Wide.Dot(ref nacd, ref simplex.A, out var acdDot);
-            Vector3Wide.Dot(ref nbdc, ref simplex.B, out var bdcDot);
+            Vector3Wide.Dot(nabc, simplex.A, out var abcDot);
+            Vector3Wide.Dot(nabd, simplex.A, out var abdDot);
+            Vector3Wide.Dot(nacd, simplex.A, out var acdDot);
+            Vector3Wide.Dot(nbdc, simplex.B, out var bdcDot);
             var abcInside = Vector.Xor(Vector.GreaterThanOrEqual(abcDot, Vector<float>.Zero), flipRequired);
             var abdInside = Vector.Xor(Vector.GreaterThanOrEqual(abdDot, Vector<float>.Zero), flipRequired);
             var acdInside = Vector.Xor(Vector.GreaterThanOrEqual(acdDot, Vector<float>.Zero), flipRequired);
@@ -328,8 +328,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         public void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
-            Matrix3x3Wide.CreateFromQuaternion(ref orientationA, out var rA);
-            Matrix3x3Wide.CreateFromQuaternion(ref orientationB, out var rB);
+            Matrix3x3Wide.CreateFromQuaternion(orientationA, out var rA);
+            Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
             var supportFinderA = default(TSupportFinderA);
             var supportFinderB = default(TSupportFinderB);
             Simplex simplex;
@@ -377,19 +377,19 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 if (Vector.EqualsAll(terminatedMask, -Vector<int>.One))
                     break;
                 
-                Vector3Wide.Negate(ref simplexClosest, out var sampleDirection);
+                Vector3Wide.Negate(simplexClosest, out var sampleDirection);
                 SampleMinkowskiDifference(ref a, ref rA, ref supportFinderA, ref b, ref rB, ref supportFinderB, ref offsetB, ref sampleDirection, out var vA, out var v);
 
                 //If the newly sampled is no better than the simplex-identified closest point, the lane is done.
-                Vector3Wide.Subtract(ref v, ref simplexClosest, out var progressOffset);
-                Vector3Wide.Dot(ref progressOffset, ref sampleDirection, out var progress);
+                Vector3Wide.Subtract(v, simplexClosest, out var progressOffset);
+                Vector3Wide.Dot(progressOffset, sampleDirection, out var progress);
                 //The epsilon against which the progress is measured is scaled by the largest simplex vertex squared distance from the origin.
                 //So we have shouldTerminate = (v - simplexClosest) * (-simplexClosest) <= max(a*a, b*b, c*c, d*d) * epsilon
                 //This helps avoid numerically unnecessary iterations by accepting results which are near the limit of representable values.
-                Vector3Wide.LengthSquared(ref simplex.A, out var aSquared);
-                Vector3Wide.LengthSquared(ref simplex.B, out var bSquared);
-                Vector3Wide.LengthSquared(ref simplex.C, out var cSquared);
-                Vector3Wide.LengthSquared(ref simplex.D, out var dSquared);
+                Vector3Wide.LengthSquared(simplex.A, out var aSquared);
+                Vector3Wide.LengthSquared(simplex.B, out var bSquared);
+                Vector3Wide.LengthSquared(simplex.C, out var cSquared);
+                Vector3Wide.LengthSquared(simplex.D, out var dSquared);
                 var max = Vector.ConditionalSelect(Vector.BitwiseAnd(Vector.GreaterThan(simplex.Count, new Vector<int>(1)), Vector.GreaterThan(bSquared, aSquared)), bSquared, aSquared);
                 max = Vector.ConditionalSelect(Vector.BitwiseAnd(Vector.GreaterThan(simplex.Count, new Vector<int>(2)), Vector.GreaterThan(cSquared, max)), cSquared, max);
                 max = Vector.ConditionalSelect(Vector.BitwiseAnd(Vector.GreaterThan(simplex.Count, new Vector<int>(3)), Vector.GreaterThan(dSquared, max)), dSquared, max);
@@ -415,7 +415,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //To avoid a case where the distance goes from near epsilon to intersecting in sub-epsilon motion, we report the distance as be adjusted by the containment epsilon. 
             //In other words, the shapes are spherically expanded a little. Not ideal, but not horrible.
             distance -= containmentEpsilon;
-            Vector3Wide.Scale(ref normal, ref inverseDistance, out normal);
+            Vector3Wide.Scale(normal, inverseDistance, out normal);
         }
     }
 }

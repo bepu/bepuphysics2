@@ -314,7 +314,7 @@ namespace BepuPhysics.Constraints.Contact
                 ref var projectionContact = ref Unsafe.Add(ref projectionContactStart, i);
                 projectionContact.Normal = prestepContact.Normal;
                 Helpers.BuildOrthnormalBasis(ref prestepContact.Normal, out var x, out var z);
-                Vector3Wide.Subtract(ref prestepContact.Offset, ref prestepCommon.OffsetB, out var contactOffsetB);
+                Vector3Wide.Subtract(prestepContact.Offset, prestepCommon.OffsetB, out var contactOffsetB);
                 TangentFriction.Prestep(ref x, ref z, ref prestepContact.Offset, ref contactOffsetB, ref projectionCommon.InertiaA, ref projectionCommon.InertiaB, out projectionContact.Tangent);
                 PenetrationLimit1.Prestep(ref projectionCommon.InertiaA, ref projectionCommon.InertiaB,
                     ref prestepContact.Offset, ref contactOffsetB, ref prestepContact.Normal, ref prestepContact.Depth, ref prestepCommon.SpringSettings, ref prestepCommon.MaximumRecoveryVelocity,

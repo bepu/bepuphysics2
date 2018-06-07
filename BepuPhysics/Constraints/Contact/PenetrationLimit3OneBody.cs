@@ -27,14 +27,14 @@ namespace BepuPhysics.Constraints.Contact
         public static void Prestep(ref BodyInertias inertiaA, ref Vector3Wide normal, ref Contact3OneBodyPrestepData prestep, float dt, float inverseDt,
             out Projection projection)
         {
-            Vector3Wide.CrossWithoutOverlap(ref prestep.OffsetA0, ref normal, out projection.Penetration0.AngularA);
-            Vector3Wide.CrossWithoutOverlap(ref prestep.OffsetA1, ref normal, out projection.Penetration1.AngularA);
-            Vector3Wide.CrossWithoutOverlap(ref prestep.OffsetA2, ref normal, out projection.Penetration2.AngularA);
+            Vector3Wide.CrossWithoutOverlap(prestep.OffsetA0, normal, out projection.Penetration0.AngularA);
+            Vector3Wide.CrossWithoutOverlap(prestep.OffsetA1, normal, out projection.Penetration1.AngularA);
+            Vector3Wide.CrossWithoutOverlap(prestep.OffsetA2, normal, out projection.Penetration2.AngularA);
 
             //effective mass
-            Triangular3x3Wide.VectorSandwich(ref projection.Penetration0.AngularA, ref inertiaA.InverseInertiaTensor, out var angularA0);
-            Triangular3x3Wide.VectorSandwich(ref projection.Penetration1.AngularA, ref inertiaA.InverseInertiaTensor, out var angularA1);
-            Triangular3x3Wide.VectorSandwich(ref projection.Penetration2.AngularA, ref inertiaA.InverseInertiaTensor, out var angularA2);
+            Triangular3x3Wide.VectorSandwich(projection.Penetration0.AngularA, inertiaA.InverseInertiaTensor, out var angularA0);
+            Triangular3x3Wide.VectorSandwich(projection.Penetration1.AngularA, inertiaA.InverseInertiaTensor, out var angularA1);
+            Triangular3x3Wide.VectorSandwich(projection.Penetration2.AngularA, inertiaA.InverseInertiaTensor, out var angularA2);
 
             //Linear effective mass contribution notes:
             //1) The J * M^-1 * JT can be reordered to J * JT * M^-1 for the linear components, since M^-1 is a scalar and dot(n * scalar, n) = dot(n, n) * scalar.
@@ -62,12 +62,12 @@ namespace BepuPhysics.Constraints.Contact
             ref BodyVelocities wsvA)
         {
             var linearVelocityChangeA = correctiveImpulse * inertiaA.InverseMass;
-            Vector3Wide.Scale(ref normal, ref linearVelocityChangeA, out var correctiveVelocityALinearVelocity);
-            Vector3Wide.Scale(ref projection.AngularA, ref correctiveImpulse, out var correctiveAngularImpulseA);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref correctiveAngularImpulseA, ref inertiaA.InverseInertiaTensor, out var correctiveVelocityAAngularVelocity);
+            Vector3Wide.Scale(normal, linearVelocityChangeA, out var correctiveVelocityALinearVelocity);
+            Vector3Wide.Scale(projection.AngularA, correctiveImpulse, out var correctiveAngularImpulseA);
+            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(correctiveAngularImpulseA, inertiaA.InverseInertiaTensor, out var correctiveVelocityAAngularVelocity);
 
-            Vector3Wide.Add(ref wsvA.Linear, ref correctiveVelocityALinearVelocity, out wsvA.Linear);
-            Vector3Wide.Add(ref wsvA.Angular, ref correctiveVelocityAAngularVelocity, out wsvA.Angular);
+            Vector3Wide.Add(wsvA.Linear, correctiveVelocityALinearVelocity, out wsvA.Linear);
+            Vector3Wide.Add(wsvA.Angular, correctiveVelocityAAngularVelocity, out wsvA.Angular);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -89,8 +89,8 @@ namespace BepuPhysics.Constraints.Contact
             ref Vector<float> accumulatedImpulse, out Vector<float> correctiveCSI)
         {
             //Note that we do NOT use pretransformed jacobians here; the linear jacobian sharing (normal) meant that we had the effective mass anyway.
-            Vector3Wide.Dot(ref wsvA.Linear, ref normal, out var csvaLinear);
-            Vector3Wide.Dot(ref wsvA.Angular, ref projection.AngularA, out var csvaAngular);
+            Vector3Wide.Dot(wsvA.Linear, normal, out var csvaLinear);
+            Vector3Wide.Dot(wsvA.Angular, projection.AngularA, out var csvaAngular);
             //Compute negated version to avoid the need for an explicit negate.
             var negatedCSI = accumulatedImpulse * softnessImpulseScale + (csvaLinear + csvaAngular - projection.BiasVelocity) * projection.EffectiveMass;
 

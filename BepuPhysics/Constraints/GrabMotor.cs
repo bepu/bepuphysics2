@@ -82,24 +82,24 @@ namespace BepuPhysics.Constraints
             //The grabber is roughly equivalent to a ball socket joint with a nonzero goal (and only one body).
 
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientation, out projection.Offset);
-            Triangular3x3Wide.SkewSandwichWithoutOverlap(ref projection.Offset, ref projection.Inertia.InverseInertiaTensor, out var inverseEffectiveMass);
+            Triangular3x3Wide.SkewSandwichWithoutOverlap(projection.Offset, projection.Inertia.InverseInertiaTensor, out var inverseEffectiveMass);
 
             //Linear contributions are simply I * inverseMass * I, which is just boosting the diagonal.
             inverseEffectiveMass.XX += projection.Inertia.InverseMass;
             inverseEffectiveMass.YY += projection.Inertia.InverseMass;
             inverseEffectiveMass.ZZ += projection.Inertia.InverseMass;
-            Triangular3x3Wide.SymmetricInvert(ref inverseEffectiveMass, out projection.EffectiveMass);
+            Triangular3x3Wide.SymmetricInvert(inverseEffectiveMass, out projection.EffectiveMass);
             SpringSettingsWide.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            Triangular3x3Wide.Scale(ref projection.EffectiveMass, ref effectiveMassCFMScale, out projection.EffectiveMass);
+            Triangular3x3Wide.Scale(projection.EffectiveMass, effectiveMassCFMScale, out projection.EffectiveMass);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            Vector3Wide.Add(ref projection.Offset, ref position, out var worldGrabPoint);
-            Vector3Wide.Subtract(ref prestep.Target, ref worldGrabPoint, out var error);
-            Vector3Wide.Scale(ref error, ref positionErrorToVelocity, out projection.BiasVelocity);
-            Vector3Wide.Length(ref projection.BiasVelocity, out var speed);
+            Vector3Wide.Add(projection.Offset, position, out var worldGrabPoint);
+            Vector3Wide.Subtract(prestep.Target, worldGrabPoint, out var error);
+            Vector3Wide.Scale(error, positionErrorToVelocity, out projection.BiasVelocity);
+            Vector3Wide.Length(projection.BiasVelocity, out var speed);
             var newSpeed = Vector.Min(prestep.MotorSettings.MaximumSpeed, Vector.Max(prestep.MotorSettings.BaseSpeed, speed));
             var scale = newSpeed / speed;
-            Vector3Wide.Scale(ref projection.BiasVelocity, ref scale, out var scaledVelocity);
+            Vector3Wide.Scale(projection.BiasVelocity, scale, out var scaledVelocity);
             Vector3Wide.ConditionalSelect(Vector.GreaterThan(speed, Vector<float>.Zero), scaledVelocity, projection.BiasVelocity, out projection.BiasVelocity);
 
             projection.MaximumForce = prestep.MotorSettings.MaximumForce;
@@ -108,12 +108,12 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ApplyImpulse(ref BodyVelocities velocityA, ref GrabMotorProjection projection, ref Vector3Wide csi)
         {
-            Vector3Wide.CrossWithoutOverlap(ref projection.Offset, ref csi, out var wsi);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref wsi, ref projection.Inertia.InverseInertiaTensor, out var change);
-            Vector3Wide.Add(ref velocityA.Angular, ref change, out velocityA.Angular);
+            Vector3Wide.CrossWithoutOverlap(projection.Offset, csi, out var wsi);
+            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(wsi, projection.Inertia.InverseInertiaTensor, out var change);
+            Vector3Wide.Add(velocityA.Angular, change, out velocityA.Angular);
 
-            Vector3Wide.Scale(ref csi, ref projection.Inertia.InverseMass, out change);
-            Vector3Wide.Add(ref velocityA.Linear, ref change, out velocityA.Linear);
+            Vector3Wide.Scale(csi, projection.Inertia.InverseMass, out change);
+            Vector3Wide.Add(velocityA.Linear, change, out velocityA.Linear);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -126,23 +126,23 @@ namespace BepuPhysics.Constraints
         public void Solve(ref BodyVelocities velocityA, ref GrabMotorProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular);
-            Vector3Wide.CrossWithoutOverlap(ref velocityA.Angular, ref projection.Offset, out var angularCSV);
-            Vector3Wide.Add(ref velocityA.Linear, ref angularCSV, out var csv);
-            Vector3Wide.Subtract(ref projection.BiasVelocity, ref csv, out csv);
+            Vector3Wide.CrossWithoutOverlap(velocityA.Angular, projection.Offset, out var angularCSV);
+            Vector3Wide.Add(velocityA.Linear, angularCSV, out var csv);
+            Vector3Wide.Subtract(projection.BiasVelocity, csv, out csv);
 
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref csv, ref projection.EffectiveMass, out var csi);
-            Vector3Wide.Scale(ref accumulatedImpulse, ref projection.SoftnessImpulseScale, out var softness);
-            Vector3Wide.Subtract(ref csi, ref softness, out csi);
+            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(csv, projection.EffectiveMass, out var csi);
+            Vector3Wide.Scale(accumulatedImpulse, projection.SoftnessImpulseScale, out var softness);
+            Vector3Wide.Subtract(csi, softness, out csi);
 
             //The motor has a limited maximum force, so clamp the accumulated impulse. Watch out for division by zero.
             var previous = accumulatedImpulse;
-            Vector3Wide.Add(ref accumulatedImpulse, ref csi, out accumulatedImpulse);
-            Vector3Wide.Length(ref accumulatedImpulse, out var impulseMagnitude);
+            Vector3Wide.Add(accumulatedImpulse, csi, out accumulatedImpulse);
+            Vector3Wide.Length(accumulatedImpulse, out var impulseMagnitude);
             var newMagnitude = Vector.Min(impulseMagnitude, projection.MaximumForce);
             var scale = newMagnitude / impulseMagnitude;
-            Vector3Wide.Scale(ref accumulatedImpulse, ref scale, out accumulatedImpulse);
+            Vector3Wide.Scale(accumulatedImpulse, scale, out accumulatedImpulse);
             Vector3Wide.ConditionalSelect(Vector.GreaterThan(impulseMagnitude, Vector<float>.Zero), accumulatedImpulse, previous, out accumulatedImpulse);
-            Vector3Wide.Subtract(ref accumulatedImpulse, ref previous, out csi);
+            Vector3Wide.Subtract(accumulatedImpulse, previous, out csi);
 
             ApplyImpulse(ref velocityA, ref projection, ref csi);
 

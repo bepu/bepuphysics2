@@ -180,8 +180,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion CreateFromRotationMatrix(Matrix3x3 r)
         {
-            Quaternion toReturn;
-            CreateFromRotationMatrix(ref r, out toReturn);
+            CreateFromRotationMatrix(ref r, out var toReturn);
             return toReturn;
         }
 
@@ -192,10 +191,9 @@ namespace BepuUtilities
         /// <param name="r">Rotation matrix to create the quaternion from.</param>
         /// <param name="q">Quaternion based on the rotation matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFromRotationMatrix(ref Matrix r, out Quaternion q)
+        public static void CreateFromRotationMatrix(in Matrix r, out Quaternion q)
         {
-            Matrix3x3 rotation3x3;
-            Matrix3x3.CreateFromMatrix(ref r, out rotation3x3);
+            Matrix3x3.CreateFromMatrix(r, out var rotation3x3);
             CreateFromRotationMatrix(ref rotation3x3, out q);
         }
 
@@ -204,12 +202,10 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="r">Rotation matrix to create the quaternion from.</param>
         /// <returns>Quaternion based on the rotation matrix.</returns>
-        public static Quaternion CreateFromRotationMatrix(Matrix r)
+        public static Quaternion CreateFromRotationMatrix(in Matrix r)
         {
-            Matrix3x3 rotation3x3;
-            Matrix3x3.CreateFromMatrix(ref r, out rotation3x3);
-            Quaternion q;
-            CreateFromRotationMatrix(ref rotation3x3, out q);
+            Matrix3x3.CreateFromMatrix(r, out var rotation3x3);
+            CreateFromRotationMatrix(ref rotation3x3, out var q);
             return q;
         }
 
@@ -266,7 +262,7 @@ namespace BepuUtilities
         /// <param name="interpolationAmount">Amount of the end point to use.</param>
         /// <param name="result">Interpolated intermediate quaternion.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Slerp(ref Quaternion start, ref Quaternion end, float interpolationAmount, out Quaternion result)
+        public static void Slerp(in Quaternion start, Quaternion end, float interpolationAmount, out Quaternion result)
         {
             double cosHalfTheta = start.W * end.W + start.X * end.X + start.Y * end.Y + start.Z * end.Z;
             if (cosHalfTheta < 0)
@@ -300,10 +296,6 @@ namespace BepuUtilities
             result.Y = (float)(start.Y * aFraction + end.Y * bFraction);
             result.Z = (float)(start.Z * aFraction + end.Z * bFraction);
             result.W = (float)(start.W * aFraction + end.W * bFraction);
-
-
-
-
         }
 
         /// <summary>
@@ -314,9 +306,9 @@ namespace BepuUtilities
         /// <param name="interpolationAmount">Amount of the end point to use.</param>
         /// <returns>Interpolated intermediate quaternion.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion Slerp(Quaternion start, Quaternion end, float interpolationAmount)
+        public static Quaternion Slerp(in Quaternion start, in Quaternion end, float interpolationAmount)
         {
-            Slerp(ref start, ref end, interpolationAmount, out Quaternion toReturn);
+            Slerp(start, end, interpolationAmount, out Quaternion toReturn);
             return toReturn;
         }
 
@@ -341,7 +333,7 @@ namespace BepuUtilities
         /// <param name="quaternion">Quaternion to conjugate.</param>
         /// <returns>Conjugated quaternion.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion Conjugate(Quaternion quaternion)
+        public static Quaternion Conjugate(in Quaternion quaternion)
         {
             Conjugate(quaternion, out Quaternion toReturn);
             return toReturn;
@@ -355,7 +347,7 @@ namespace BepuUtilities
         /// <param name="quaternion">Quaternion to invert.</param>
         /// <param name="result">Result of the inversion.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Inverse(ref Quaternion quaternion, out Quaternion result)
+        public static void Inverse(in Quaternion quaternion, out Quaternion result)
         {
             float inverseSquaredNorm = quaternion.X * quaternion.X + quaternion.Y * quaternion.Y + quaternion.Z * quaternion.Z + quaternion.W * quaternion.W;
             result.X = -quaternion.X * inverseSquaredNorm;
@@ -370,10 +362,9 @@ namespace BepuUtilities
         /// <param name="quaternion">Quaternion to invert.</param>
         /// <returns>Result of the inversion.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion Inverse(Quaternion quaternion)
+        public static Quaternion Inverse(in Quaternion quaternion)
         {
-            Quaternion result;
-            Inverse(ref quaternion, out result);
+            Inverse(quaternion, out var result);
             return result;
 
         }
@@ -385,7 +376,7 @@ namespace BepuUtilities
         /// <param name="b">Second quaternion to test for equivalence.</param>
         /// <returns>Whether or not the quaternions' components were equal.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator ==(Quaternion a, Quaternion b)
+        public static bool operator ==(in Quaternion a, in Quaternion b)
         {
             return a.X == b.X && a.Y == b.Y && a.Z == b.Z && a.W == b.W;
         }
@@ -397,7 +388,7 @@ namespace BepuUtilities
         /// <param name="b">Second quaternion to test for equivalence.</param>
         /// <returns>Whether the quaternions' components were not equal.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator !=(Quaternion a, Quaternion b)
+        public static bool operator !=(in Quaternion a, in Quaternion b)
         {
             return a.X != b.X || a.Y != b.Y || a.Z != b.Z || a.W != b.W;
         }
@@ -424,7 +415,7 @@ namespace BepuUtilities
         /// <param name="a">Quaternion to negate.</param>
         /// <param name="b">Negated result.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Negate(ref Quaternion a, out Quaternion b)
+        public static void Negate(in Quaternion a, out Quaternion b)
         {
             b.X = -a.X;
             b.Y = -a.Y;
@@ -438,9 +429,9 @@ namespace BepuUtilities
         /// <param name="q">Quaternion to negate.</param>
         /// <returns>Negated result.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion Negate(Quaternion q)
+        public static Quaternion Negate(in Quaternion q)
         {
-            Negate(ref q, out var result);
+            Negate(q, out var result);
             return result;
         }
 
@@ -450,9 +441,9 @@ namespace BepuUtilities
         /// <param name="q">Quaternion to negate.</param>
         /// <returns>Negated result.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion operator -(Quaternion q)
+        public static Quaternion operator -(in Quaternion q)
         {
-            Negate(ref q, out var result);
+            Negate(q, out var result);
             return result;
         }
 
@@ -508,7 +499,7 @@ namespace BepuUtilities
         /// <param name="rotation">Rotation to apply to the vector.</param>
         /// <returns>Transformed vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 Transform(Vector3 v, Quaternion rotation)
+        public static Vector3 Transform(in Vector3 v, in Quaternion rotation)
         {
             TransformWithoutOverlap(v, rotation, out var toReturn);
             return toReturn;
@@ -599,7 +590,7 @@ namespace BepuUtilities
         /// <param name="angle">Angle to rotate around the axis.</param>
         /// <returns>Quaternion representing the axis and angle rotation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion CreateFromAxisAngle(Vector3 axis, float angle)
+        public static Quaternion CreateFromAxisAngle(in Vector3 axis, float angle)
         {
             double halfAngle = angle * 0.5;
             double s = Math.Sin(halfAngle);
@@ -618,7 +609,7 @@ namespace BepuUtilities
         /// <param name="angle">Angle to rotate around the axis.</param>
         /// <param name="q">Quaternion representing the axis and angle rotation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFromAxisAngle(ref Vector3 axis, float angle, out Quaternion q)
+        public static void CreateFromAxisAngle(in Vector3 axis, float angle, out Quaternion q)
         {
             double halfAngle = angle * 0.5;
             double s = Math.Sin(halfAngle);
@@ -638,8 +629,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion CreateFromYawPitchRoll(float yaw, float pitch, float roll)
         {
-            Quaternion toReturn;
-            CreateFromYawPitchRoll(yaw, pitch, roll, out toReturn);
+            CreateFromYawPitchRoll(yaw, pitch, roll, out var toReturn);
             return toReturn;
         }
 
@@ -683,7 +673,7 @@ namespace BepuUtilities
         /// <param name="q">Quaternion to be converted.</param>
         /// <returns>Angle around the axis represented by the quaternion.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float GetAngleFromQuaternion(ref Quaternion q)
+        public static float GetAngleFromQuaternion(in Quaternion q)
         {
             float qw = Math.Abs(q.W);
             if (qw > 1)
@@ -698,7 +688,7 @@ namespace BepuUtilities
         /// <param name="axis">Axis represented by the quaternion.</param>
         /// <param name="angle">Angle around the axis represented by the quaternion.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetAxisAngleFromQuaternion(ref Quaternion q, out Vector3 axis, out float angle)
+        public static void GetAxisAngleFromQuaternion(in Quaternion q, out Vector3 axis, out float angle)
         {
 #if !WINDOWS
             axis = new Vector3();
@@ -738,7 +728,7 @@ namespace BepuUtilities
         /// <param name="v2">Second unit-length vector.</param>
         /// <param name="q">Quaternion representing the rotation from v1 to v2.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetQuaternionBetweenNormalizedVectors(ref Vector3 v1, ref Vector3 v2, out Quaternion q)
+        public static void GetQuaternionBetweenNormalizedVectors(in Vector3 v1, in Vector3 v2, out Quaternion q)
         {
             float dot = Vector3.Dot(v1, v2);
             //For non-normal vectors, the multiplying the axes length squared would be necessary:
@@ -762,8 +752,7 @@ namespace BepuUtilities
             }
             else
             {
-                Vector3 axis;
-                Vector3x.Cross(v1, v2, out axis);
+                Vector3x.Cross(v1, v2, out var axis);
                 q = new Quaternion(axis.X, axis.Y, axis.Z, dot + 1);
             }
             q.Normalize();
@@ -780,10 +769,9 @@ namespace BepuUtilities
         /// <param name="end">Ending orientation.</param>
         /// <param name="relative">Relative rotation from the start to the end orientation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetRelativeRotationWithoutOverlap(ref Quaternion start, ref Quaternion end, out Quaternion relative)
+        public static void GetRelativeRotationWithoutOverlap(in Quaternion start, in Quaternion end, out Quaternion relative)
         {
-            Quaternion startInverse;
-            Conjugate(start, out startInverse);
+            Conjugate(start, out var startInverse);
             ConcatenateWithoutOverlap(startInverse, end, out relative);
         }
 
@@ -796,10 +784,9 @@ namespace BepuUtilities
         /// <param name="targetBasis">Basis in the original frame of reference to transform the rotation into.</param>
         /// <param name="localRotation">Rotation in the local space of the target basis.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetLocalRotationWithoutOverlap(ref Quaternion rotation, ref Quaternion targetBasis, out Quaternion localRotation)
+        public static void GetLocalRotationWithoutOverlap(in Quaternion rotation, in Quaternion targetBasis, out Quaternion localRotation)
         {
-            Quaternion basisInverse;
-            Conjugate(targetBasis, out basisInverse);
+            Conjugate(targetBasis, out var basisInverse);
             ConcatenateWithoutOverlap(rotation, basisInverse, out localRotation);
         }
 

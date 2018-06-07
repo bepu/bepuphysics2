@@ -22,10 +22,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(ref SphereWide a, ref SphereWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex1ContactManifoldWide manifold)
         {
-            Vector3Wide.Length(ref offsetB, out var centerDistance);
+            Vector3Wide.Length(offsetB, out var centerDistance);
             //Note the negative 1. By convention, the normal points from B to A.
             var inverseDistance = new Vector<float>(-1f) / centerDistance;
-            Vector3Wide.Scale(ref offsetB, ref inverseDistance, out manifold.Normal);
+            Vector3Wide.Scale(offsetB, inverseDistance, out manifold.Normal);
             var normalIsValid = Vector.GreaterThan(centerDistance, Vector<float>.Zero);
             //Arbitrarily choose the (0,1,0) if the two spheres are in the same position. Any unit length vector is equally valid.
             manifold.Normal.X = Vector.ConditionalSelect(normalIsValid, manifold.Normal.X, Vector<float>.Zero);
@@ -35,7 +35,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //The contact position relative to object A is computed as the average of the extreme point along the normal toward the opposing sphere on each sphere, averaged.
             var negativeOffsetFromA = manifold.Depth * 0.5f - a.Radius;
-            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA, out manifold.OffsetA);
+            Vector3Wide.Scale(manifold.Normal, negativeOffsetFromA, out manifold.OffsetA);
             manifold.ContactExists = Vector.GreaterThan(manifold.Depth, -speculativeMargin);
         }
     }

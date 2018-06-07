@@ -18,11 +18,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //We want to minimize distance = ||(a + da * ta) - (b + db * tb)||.
             //Taking the derivative with respect to ta and doing some algebra (taking into account ||da|| == ||db|| == 1) to solve for ta yields:
             //ta = (da * (b - a) + (db * (a - b)) * (da * db)) / (1 - ((da * db) * (da * db))        
-            QuaternionWide.TransformUnitXY(ref orientationA, out var xa, out var da);
-            QuaternionWide.TransformUnitY(ref orientationB, out var db);
-            Vector3Wide.Dot(ref da, ref offsetB, out var daOffsetB);
-            Vector3Wide.Dot(ref db, ref offsetB, out var dbOffsetB);
-            Vector3Wide.Dot(ref da, ref db, out var dadb);
+            QuaternionWide.TransformUnitXY(orientationA, out var xa, out var da);
+            QuaternionWide.TransformUnitY(orientationB, out var db);
+            Vector3Wide.Dot(da, offsetB, out var daOffsetB);
+            Vector3Wide.Dot(db, offsetB, out var dbOffsetB);
+            Vector3Wide.Dot(da, db, out var dadb);
             //Note potential division by zero when the axes are parallel. Arbitrarily clamp; near zero values will instead produce extreme values which get clamped to reasonable results.
             var ta = (daOffsetB - dbOffsetB * dadb) / Vector.Max(new Vector<float>(1e-15f), Vector<float>.One - dadb * dadb);
             //tb = ta * (da * db) - db * (b - a)
@@ -43,14 +43,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ta = Vector.Min(Vector.Max(ta, aMin), aMax);
             tb = Vector.Min(Vector.Max(tb, bMin), bMax);
 
-            Vector3Wide.Scale(ref da, ref ta, out var closestPointOnA);
-            Vector3Wide.Scale(ref db, ref tb, out var closestPointOnB);
-            Vector3Wide.Add(ref closestPointOnB, ref offsetB, out closestPointOnB);
+            Vector3Wide.Scale(da, ta, out var closestPointOnA);
+            Vector3Wide.Scale(db, tb, out var closestPointOnB);
+            Vector3Wide.Add(closestPointOnB, offsetB, out closestPointOnB);
             //Note that normals are calibrated to point from B to A by convention.
-            Vector3Wide.Subtract(ref closestPointOnA, ref closestPointOnB, out manifold.Normal);
-            Vector3Wide.Length(ref manifold.Normal, out var distance);
+            Vector3Wide.Subtract(closestPointOnA, closestPointOnB, out manifold.Normal);
+            Vector3Wide.Length(manifold.Normal, out var distance);
             var inverseDistance = Vector<float>.One / distance;
-            Vector3Wide.Scale(ref manifold.Normal, ref inverseDistance, out manifold.Normal);
+            Vector3Wide.Scale(manifold.Normal, inverseDistance, out manifold.Normal);
             //In the event that the line segments are touching, the normal doesn't exist and we need an alternative. Any direction along the local horizontal (XZ) plane of either capsule
             //is valid. (Normals along the local Y axes are not guaranteed to be as quick of a path to separation due to nonzero line length.)
             var normalIsValid = Vector.GreaterThan(distance, new Vector<float>(1e-7f));
@@ -64,9 +64,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //and also that fade behavior is completely arbitrary, so we can directly use squared angle without any concern.
             //angle^2 ~= dot(da, (db x normal))^2 / ||db x normal||^2
             //Note that if ||db x normal|| is the zero, then any da should be accepted as being coplanar because there is no restriction. ConditionalSelect away the discontinuity.
-            Vector3Wide.CrossWithoutOverlap(ref db, ref manifold.Normal, out var planeNormal);
-            Vector3Wide.LengthSquared(ref planeNormal, out var planeNormalLengthSquared);
-            Vector3Wide.Dot(ref da, ref planeNormal, out var squaredAngle);
+            Vector3Wide.CrossWithoutOverlap(db, manifold.Normal, out var planeNormal);
+            Vector3Wide.LengthSquared(planeNormal, out var planeNormalLengthSquared);
+            Vector3Wide.Dot(da, planeNormal, out var squaredAngle);
             squaredAngle = Vector.ConditionalSelect(Vector.LessThan(planeNormalLengthSquared, new Vector<float>(1e-10f)), Vector<float>.Zero, squaredAngle / planeNormalLengthSquared);
 
             //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
@@ -81,8 +81,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             aMin = intervalWeight * aMin + weightedTa;
             aMax = intervalWeight * aMax + weightedTa;
 
-            Vector3Wide.Scale(ref da, ref aMin, out manifold.OffsetA0);
-            Vector3Wide.Scale(ref da, ref aMax, out manifold.OffsetA1);
+            Vector3Wide.Scale(da, aMin, out manifold.OffsetA0);
+            Vector3Wide.Scale(da, aMax, out manifold.OffsetA1);
             //In the coplanar case, there are two points. We need a method of computing depth which gives a reasonable result to the second contact.
             //Note that one of the two contacts should end up with a distance equal to the previously computed segment distance, so we're doing some redundant work here.
             //It's just easier to do that extra work than it would be to track which endpoint contributed the lower distance.
@@ -91,15 +91,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //tb0 = (ta0 - daOffsetB) / dadb
             //distance0 = dot(a0 - (offsetB + tb0 * db), normal)
             //distance1 = dot(a1 - (offsetB + tb1 * db), normal)
-            Vector3Wide.Dot(ref db, ref manifold.Normal, out var dbNormal);
-            Vector3Wide.Subtract(ref manifold.OffsetA0, ref offsetB, out var offsetB0);
-            Vector3Wide.Subtract(ref manifold.OffsetA1, ref offsetB, out var offsetB1);
+            Vector3Wide.Dot(db, manifold.Normal, out var dbNormal);
+            Vector3Wide.Subtract(manifold.OffsetA0, offsetB, out var offsetB0);
+            Vector3Wide.Subtract(manifold.OffsetA1, offsetB, out var offsetB1);
             //Note potential division by zero. In that case, treat both projected points as the closest point. (Handled by the conditional select that chooses the previously computed distance.)
             var inverseDadb = Vector<float>.One / dadb;
             var projectedTb0 = Vector.Max(bMin, Vector.Min(bMax, (aMin - daOffsetB) * inverseDadb));
             var projectedTb1 = Vector.Max(bMin, Vector.Min(bMax, (aMax - daOffsetB) * inverseDadb));
-            Vector3Wide.Dot(ref offsetB0, ref manifold.Normal, out var b0Normal);
-            Vector3Wide.Dot(ref offsetB1, ref manifold.Normal, out var b1Normal);
+            Vector3Wide.Dot(offsetB0, manifold.Normal, out var b0Normal);
+            Vector3Wide.Dot(offsetB1, manifold.Normal, out var b1Normal);
             var capsulesArePerpendicular = Vector.LessThan(Vector.Abs(dadb), new Vector<float>(1e-7f));
             var distance0 = Vector.ConditionalSelect(capsulesArePerpendicular, distance, b0Normal - dbNormal * projectedTb0);
             var distance1 = Vector.ConditionalSelect(capsulesArePerpendicular, distance, b1Normal - dbNormal * projectedTb1);
@@ -110,10 +110,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Apply the normal offset to the contact positions.           
             var negativeOffsetFromA0 = manifold.Depth0 * 0.5f - a.Radius;
             var negativeOffsetFromA1 = manifold.Depth1 * 0.5f - a.Radius;
-            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA0, out var normalPush0);
-            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromA1, out var normalPush1);
-            Vector3Wide.Add(ref manifold.OffsetA0, ref normalPush0, out manifold.OffsetA0);
-            Vector3Wide.Add(ref manifold.OffsetA1, ref normalPush1, out manifold.OffsetA1);
+            Vector3Wide.Scale(manifold.Normal, negativeOffsetFromA0, out var normalPush0);
+            Vector3Wide.Scale(manifold.Normal, negativeOffsetFromA1, out var normalPush1);
+            Vector3Wide.Add(manifold.OffsetA0, normalPush0, out manifold.OffsetA0);
+            Vector3Wide.Add(manifold.OffsetA1, normalPush1, out manifold.OffsetA1);
             manifold.FeatureId0 = Vector<int>.Zero;
             manifold.FeatureId1 = Vector<int>.One;
             var minimumAcceptedDepth = -speculativeMargin;

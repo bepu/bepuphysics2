@@ -16,18 +16,18 @@ namespace BepuPhysics.CollisionDetection
         public Vector<int> ContactExists;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ApplyFlipMask(ref Vector3Wide offsetB, ref Vector<int> flipMask)
+        public void ApplyFlipMask(ref Vector3Wide offsetB, in Vector<int> flipMask)
         {
-            Vector3Wide.Negate(ref Normal, out var flippedNormal);
-            Vector3Wide.Subtract(ref OffsetA, ref offsetB, out var flippedContactPosition);
-            Vector3Wide.Negate(ref offsetB, out var flippedOffsetB);
+            Vector3Wide.Negate(Normal, out var flippedNormal);
+            Vector3Wide.Subtract(OffsetA, offsetB, out var flippedContactPosition);
+            Vector3Wide.Negate(offsetB, out var flippedOffsetB);
             Vector3Wide.ConditionalSelect(flipMask, flippedNormal, Normal, out Normal);
             Vector3Wide.ConditionalSelect(flipMask, flippedContactPosition, OffsetA, out OffsetA);
             Vector3Wide.ConditionalSelect(flipMask, flippedOffsetB, offsetB, out offsetB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Scatter(ref Vector3Wide offsetB, ref ConvexContactManifold target)
+        public void ReadFirst(in Vector3Wide offsetB, ref ConvexContactManifold target)
         {
             if (ContactExists[0] < 0)
             {
@@ -66,12 +66,12 @@ namespace BepuPhysics.CollisionDetection
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ApplyFlipMask(ref Vector3Wide offsetB, ref Vector<int> flipMask)
+        public void ApplyFlipMask(ref Vector3Wide offsetB, in Vector<int> flipMask)
         {
-            Vector3Wide.Negate(ref Normal, out var flippedNormal);
-            Vector3Wide.Subtract(ref OffsetA0, ref offsetB, out var flippedA0);
-            Vector3Wide.Subtract(ref OffsetA1, ref offsetB, out var flippedA1);
-            Vector3Wide.Negate(ref offsetB, out var flippedOffsetB);
+            Vector3Wide.Negate(Normal, out var flippedNormal);
+            Vector3Wide.Subtract(OffsetA0, offsetB, out var flippedA0);
+            Vector3Wide.Subtract(OffsetA1, offsetB, out var flippedA1);
+            Vector3Wide.Negate(offsetB, out var flippedOffsetB);
             Vector3Wide.ConditionalSelect(flipMask, flippedNormal, Normal, out Normal);
             Vector3Wide.ConditionalSelect(flipMask, flippedA0, OffsetA0, out OffsetA0);
             Vector3Wide.ConditionalSelect(flipMask, flippedA1, OffsetA1, out OffsetA1);
@@ -79,7 +79,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Scatter(ref Vector3Wide offsetB, ref ConvexContactManifold target)
+        public void ReadFirst(in Vector3Wide offsetB, ref ConvexContactManifold target)
         {
             target.Count = 0;
             if (Contact0Exists[0] < 0)
@@ -134,14 +134,14 @@ namespace BepuPhysics.CollisionDetection
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ApplyFlipMask(ref Vector3Wide offsetB, ref Vector<int> flipMask)
+        public void ApplyFlipMask(ref Vector3Wide offsetB, in Vector<int> flipMask)
         {
-            Vector3Wide.Negate(ref Normal, out var flippedNormal);
-            Vector3Wide.Subtract(ref OffsetA0, ref offsetB, out var flippedA0);
-            Vector3Wide.Subtract(ref OffsetA1, ref offsetB, out var flippedA1);
-            Vector3Wide.Subtract(ref OffsetA2, ref offsetB, out var flippedA2);
-            Vector3Wide.Subtract(ref OffsetA3, ref offsetB, out var flippedA3);
-            Vector3Wide.Negate(ref offsetB, out var flippedOffsetB);
+            Vector3Wide.Negate(Normal, out var flippedNormal);
+            Vector3Wide.Subtract(OffsetA0, offsetB, out var flippedA0);
+            Vector3Wide.Subtract(OffsetA1, offsetB, out var flippedA1);
+            Vector3Wide.Subtract(OffsetA2, offsetB, out var flippedA2);
+            Vector3Wide.Subtract(OffsetA3, offsetB, out var flippedA3);
+            Vector3Wide.Negate(offsetB, out var flippedOffsetB);
             Vector3Wide.ConditionalSelect(flipMask, flippedNormal, Normal, out Normal);
             Vector3Wide.ConditionalSelect(flipMask, flippedA0, OffsetA0, out OffsetA0);
             Vector3Wide.ConditionalSelect(flipMask, flippedA1, OffsetA1, out OffsetA1);
@@ -151,7 +151,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Scatter(ref Vector3Wide offsetB, ref ConvexContactManifold target)
+        public void ReadFirst(in Vector3Wide offsetB, ref ConvexContactManifold target)
         {
             target.Count = 0;
             if (Contact0Exists[0] < 0)

@@ -26,16 +26,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
         {
             //Work in the local space of the triangle, since it's quicker to transform the sphere position than the vertices of the triangle.
-            Matrix3x3Wide.CreateFromQuaternion(ref orientationB, out var rB);
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offsetB, ref rB, out var localOffsetB);
+            Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, rB, out var localOffsetB);
             
 
-            Vector3Wide.Subtract(ref b.B, ref b.A, out var ab);
-            Vector3Wide.Subtract(ref b.C, ref b.A, out var ac);
+            Vector3Wide.Subtract(b.B, b.A, out var ab);
+            Vector3Wide.Subtract(b.C, b.A, out var ac);
             //localOffsetA = -localOffsetB, so pa = triangle.A + localOffsetB.
-            Vector3Wide.Add(ref b.A, ref localOffsetB, out var pa);
-            Vector3Wide.CrossWithoutOverlap(ref ab, ref ac, out var localTriangleNormal);
-            Vector3Wide.Dot(ref localTriangleNormal, ref pa, out var paN);
+            Vector3Wide.Add(b.A, localOffsetB, out var pa);
+            Vector3Wide.CrossWithoutOverlap(ab, ac, out var localTriangleNormal);
+            Vector3Wide.Dot(localTriangleNormal, pa, out var paN);
             if(Vector.LessThanAll(paN, Vector<float>.Zero))
             {
                 //No lanes can generate contacts due to the triangle's one sidedness.
@@ -56,11 +56,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //(pa x ab) * (ab x ac) = (pa * ab) * (ab * ac) - (pa * ac) * (ab * ab)
             //(ac x pa) * (ab x ac) = (ac * ab) * (pa * ac) - (ac * ac) * (pa * ab)
             //(ab x ac) * (ab x ac) = (ab * ab) * (ac * ac) - (ab * ac) * (ab * ac) 
-            Vector3Wide.Dot(ref pa, ref ab, out var abpa);
-            Vector3Wide.Dot(ref ab, ref ac, out var abac);
-            Vector3Wide.Dot(ref ac, ref pa, out var acpa);
-            Vector3Wide.Dot(ref ac, ref ac, out var acac);
-            Vector3Wide.Dot(ref ab, ref ab, out var abab);
+            Vector3Wide.Dot(pa, ab, out var abpa);
+            Vector3Wide.Dot(ab, ac, out var abac);
+            Vector3Wide.Dot(ac, pa, out var acpa);
+            Vector3Wide.Dot(ac, ac, out var acac);
+            Vector3Wide.Dot(ab, ab, out var abab);
             var edgePlaneTestAB = abpa * abac - acpa * abab;
             var edgePlaneTestAC = abac * acpa - acac * abpa;
             var triangleNormalLengthSquared = abab * acac - abac * abac;
@@ -76,17 +76,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             {
                 //At least one lane detected a point outside of the triangle. Choose one edge which is outside as the representative.
                 Vector3Wide.ConditionalSelect(outsideAC, ac, ab, out var edgeDirection);
-                Vector3Wide.Subtract(ref b.C, ref b.B, out var bc);
+                Vector3Wide.Subtract(b.C, b.B, out var bc);
                 Vector3Wide.ConditionalSelect(outsideBC, bc, edgeDirection, out edgeDirection);
                 Vector3Wide.ConditionalSelect(outsideBC, b.B, b.A, out var edgeStart);
 
-                Vector3Wide.Add(ref localOffsetB, ref edgeStart, out var negativeEdgeStartToP);
+                Vector3Wide.Add(localOffsetB, edgeStart, out var negativeEdgeStartToP);
                 //This does some partially redundant work if the edge is AB or AC, but given that we didn't have bcbc or bcpb, it's fine.
-                Vector3Wide.Dot(ref negativeEdgeStartToP, ref edgeDirection, out var negativeOffsetDotEdge);
-                Vector3Wide.Dot(ref edgeDirection, ref edgeDirection, out var edgeDotEdge);
+                Vector3Wide.Dot(negativeEdgeStartToP, edgeDirection, out var negativeOffsetDotEdge);
+                Vector3Wide.Dot(edgeDirection, edgeDirection, out var edgeDotEdge);
                 var edgeScale = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, -negativeOffsetDotEdge / edgeDotEdge));
-                Vector3Wide.Scale(ref edgeDirection, ref edgeScale, out var pointOnEdge);
-                Vector3Wide.Add(ref edgeStart, ref pointOnEdge, out pointOnEdge);
+                Vector3Wide.Scale(edgeDirection, edgeScale, out var pointOnEdge);
+                Vector3Wide.Add(edgeStart, pointOnEdge, out pointOnEdge);
 
                 Vector3Wide.ConditionalSelect(outsideAnyEdge, pointOnEdge, localClosestOnTriangle, out localClosestOnTriangle);
 
@@ -95,19 +95,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             {
                 //p + N * (pa * N) / ||N||^2 = N * (pa * N) / ||N||^2 - (-p)
                 var nScale = paN / triangleNormalLengthSquared;
-                Vector3Wide.Scale(ref localTriangleNormal, ref nScale, out var offsetToPlane);
-                Vector3Wide.Subtract(ref offsetToPlane, ref localOffsetB, out var pointOnFace);
+                Vector3Wide.Scale(localTriangleNormal, nScale, out var offsetToPlane);
+                Vector3Wide.Subtract(offsetToPlane, localOffsetB, out var pointOnFace);
 
                 Vector3Wide.ConditionalSelect(outsideAnyEdge, localClosestOnTriangle, pointOnFace, out localClosestOnTriangle);
             }
 
             //We'll be using the contact position to perform boundary smoothing; in order to find other triangles, the contact position has to be on the mesh surface.
-            Matrix3x3Wide.TransformWithoutOverlap(ref localClosestOnTriangle, ref rB, out manifold.OffsetA);
-            Vector3Wide.Add(ref manifold.OffsetA, ref offsetB, out manifold.OffsetA);
-            Vector3Wide.Length(ref manifold.OffsetA, out var distance);
+            Matrix3x3Wide.TransformWithoutOverlap(localClosestOnTriangle, rB, out manifold.OffsetA);
+            Vector3Wide.Add(manifold.OffsetA, offsetB, out manifold.OffsetA);
+            Vector3Wide.Length(manifold.OffsetA, out var distance);
             //Note the normal is calibrated to point from B to A.
             var normalScale = new Vector<float>(-1) / distance;
-            Vector3Wide.Scale(ref manifold.OffsetA, ref normalScale, out manifold.Normal);
+            Vector3Wide.Scale(manifold.OffsetA, normalScale, out manifold.Normal);
             manifold.Depth = a.Radius - distance;
             //In the event that the sphere's center point is touching the triangle, the normal is undefined. In that case, the 'correct' normal would be the triangle's normal.
             //However, given that this is a pretty rare degenerate case and that we already treat triangle backfaces as noncolliding, we'll treat zero distance as a backface non-collision.

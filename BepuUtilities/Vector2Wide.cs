@@ -10,41 +10,41 @@ namespace BepuUtilities
         public Vector<float> Y;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(ref Vector2Wide a, ref Vector2Wide b, out Vector2Wide result)
+        public static void Add(in Vector2Wide a, in Vector2Wide b, out Vector2Wide result)
         {
             result.X = a.X + b.X;
             result.Y = a.Y + b.Y;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Subtract(ref Vector2Wide a, ref Vector2Wide b, out Vector2Wide result)
+        public static void Subtract(in Vector2Wide a, in Vector2Wide b, out Vector2Wide result)
         {
             result.X = a.X - b.X;
             result.Y = a.Y - b.Y;
         }                  
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Dot(ref Vector2Wide a, ref Vector2Wide b, out Vector<float> result)
+        public static void Dot(in Vector2Wide a, in Vector2Wide b, out Vector<float> result)
         {
             result = a.X * b.X + a.Y * b.Y;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(ref Vector2Wide vector, ref Vector<float> scalar, out Vector2Wide result)
+        public static void Scale(in Vector2Wide vector, in Vector<float> scalar, out Vector2Wide result)
         {
             result.X = vector.X * scalar;
             result.Y = vector.Y * scalar;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Negate(ref Vector2Wide v, out Vector2Wide result)
+        public static void Negate(in Vector2Wide v, out Vector2Wide result)
         {
             result.X = -v.X;
             result.Y = -v.Y;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Length(ref Vector2Wide v, out Vector<float> length)
+        public static void Length(in Vector2Wide v, out Vector<float> length)
         {
             length = Vector.SquareRoot(v.X * v.X + v.Y * v.Y);
         }

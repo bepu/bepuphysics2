@@ -13,11 +13,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //We want to minimize distance = ||(a + da * ta) - (b + db * tb)||.
             //Taking the derivative with respect to ta and doing some algebra (taking into account ||da|| == ||db|| == 1) to solve for ta yields:
             //ta = (da * (b - a) + (db * (a - b)) * (da * db)) / (1 - ((da * db) * (da * db))        
-            QuaternionWide.TransformUnitXY(ref orientationA, out var xa, out var da);
-            QuaternionWide.TransformUnitY(ref orientationB, out var db);
-            Vector3Wide.Dot(ref da, ref offsetB, out var daOffsetB);
-            Vector3Wide.Dot(ref db, ref offsetB, out var dbOffsetB);
-            Vector3Wide.Dot(ref da, ref db, out var dadb);
+            QuaternionWide.TransformUnitXY(orientationA, out var xa, out var da);
+            QuaternionWide.TransformUnitY(orientationB, out var db);
+            Vector3Wide.Dot(da, offsetB, out var daOffsetB);
+            Vector3Wide.Dot(db, offsetB, out var dbOffsetB);
+            Vector3Wide.Dot(da, db, out var dadb);
             //Note potential division by zero when the axes are parallel. Arbitrarily clamp; near zero values will instead produce extreme values which get clamped to reasonable results.
             var ta = (daOffsetB - dbOffsetB * dadb) / Vector.Max(new Vector<float>(1e-15f), Vector<float>.One - dadb * dadb);
             //tb = ta * (da * db) - db * (b - a)
@@ -38,16 +38,16 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             ta = Vector.Min(Vector.Max(ta, aMin), aMax);
             tb = Vector.Min(Vector.Max(tb, bMin), bMax);
 
-            Vector3Wide.Scale(ref da, ref ta, out closestA);
-            Vector3Wide.Scale(ref db, ref tb, out var closestB);
-            Vector3Wide.Add(ref closestB, ref offsetB, out closestB);
+            Vector3Wide.Scale(da, ta, out closestA);
+            Vector3Wide.Scale(db, tb, out var closestB);
+            Vector3Wide.Add(closestB, offsetB, out closestB);
 
-            Vector3Wide.Subtract(ref closestA, ref closestB, out normal);
-            Vector3Wide.Length(ref normal, out distance);
+            Vector3Wide.Subtract(closestA, closestB, out normal);
+            Vector3Wide.Length(normal, out distance);
             var inverseDistance = Vector<float>.One / distance;
-            Vector3Wide.Scale(ref normal, ref inverseDistance, out normal);
-            Vector3Wide.Scale(ref normal, ref a.Radius, out var aOffset);
-            Vector3Wide.Subtract(ref closestA, ref aOffset, out closestA);
+            Vector3Wide.Scale(normal, inverseDistance, out normal);
+            Vector3Wide.Scale(normal, a.Radius, out var aOffset);
+            Vector3Wide.Subtract(closestA, aOffset, out closestA);
             distance = distance - a.Radius - b.Radius;
             intersected = Vector.LessThanOrEqual(distance, Vector<float>.Zero);
         }

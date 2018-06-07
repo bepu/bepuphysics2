@@ -118,24 +118,24 @@ namespace BepuPhysics.Constraints
             //Note that we must reconstruct the world offsets from the body orientations since we do not store world offsets.
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out projection.OffsetA);
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out projection.OffsetB);
-            Triangular3x3Wide.SkewSandwichWithoutOverlap(ref projection.OffsetA, ref projection.InertiaA.InverseInertiaTensor, out var inverseEffectiveMass);
+            Triangular3x3Wide.SkewSandwichWithoutOverlap(projection.OffsetA, projection.InertiaA.InverseInertiaTensor, out var inverseEffectiveMass);
             //Note that the jacobian is technically skewSymmetric(-OffsetB), but the sign doesn't matter due to the sandwich.
-            Triangular3x3Wide.SkewSandwichWithoutOverlap(ref projection.OffsetB, ref projection.InertiaB.InverseInertiaTensor, out var angularBContribution);
-            Triangular3x3Wide.Add(ref inverseEffectiveMass, ref angularBContribution, out inverseEffectiveMass);
+            Triangular3x3Wide.SkewSandwichWithoutOverlap(projection.OffsetB, projection.InertiaB.InverseInertiaTensor, out var angularBContribution);
+            Triangular3x3Wide.Add(inverseEffectiveMass, angularBContribution, out inverseEffectiveMass);
 
             //Linear contributions are simply I * inverseMass * I, which is just boosting the diagonal.
             var linearContribution = projection.InertiaA.InverseMass + projection.InertiaB.InverseMass;
             inverseEffectiveMass.XX += linearContribution;
             inverseEffectiveMass.YY += linearContribution;
             inverseEffectiveMass.ZZ += linearContribution;
-            Triangular3x3Wide.SymmetricInvert(ref inverseEffectiveMass, out projection.EffectiveMass);
+            Triangular3x3Wide.SymmetricInvert(inverseEffectiveMass, out projection.EffectiveMass);
             SpringSettingsWide.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            Triangular3x3Wide.Scale(ref projection.EffectiveMass, ref effectiveMassCFMScale, out projection.EffectiveMass);
+            Triangular3x3Wide.Scale(projection.EffectiveMass, effectiveMassCFMScale, out projection.EffectiveMass);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            Vector3Wide.Add(ref localPositionB, ref projection.OffsetB, out var localB);
-            Vector3Wide.Subtract(ref localB, ref projection.OffsetA, out var error);
-            Vector3Wide.Scale(ref error, ref positionErrorToVelocity, out projection.BiasVelocity);
+            Vector3Wide.Add(localPositionB, projection.OffsetB, out var localB);
+            Vector3Wide.Subtract(localB, projection.OffsetA, out var error);
+            Vector3Wide.Scale(error, positionErrorToVelocity, out projection.BiasVelocity);
 
             //NOTE:
             //It's possible to use local inertia tensors diagonalized to only 3 scalars per body. Given that we load orientations as a part of the prestep and so could reconstruct 
@@ -155,19 +155,19 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BallSocketProjection projection, ref Vector3Wide csi)
         {
-            Vector3Wide.CrossWithoutOverlap(ref projection.OffsetA, ref csi, out var wsi);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref wsi, ref projection.InertiaA.InverseInertiaTensor, out var change);
-            Vector3Wide.Add(ref velocityA.Angular, ref change, out velocityA.Angular);
+            Vector3Wide.CrossWithoutOverlap(projection.OffsetA, csi, out var wsi);
+            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(wsi, projection.InertiaA.InverseInertiaTensor, out var change);
+            Vector3Wide.Add(velocityA.Angular, change, out velocityA.Angular);
 
-            Vector3Wide.Scale(ref csi, ref projection.InertiaA.InverseMass, out change);
-            Vector3Wide.Add(ref velocityA.Linear, ref change, out velocityA.Linear);
+            Vector3Wide.Scale(csi, projection.InertiaA.InverseMass, out change);
+            Vector3Wide.Add(velocityA.Linear, change, out velocityA.Linear);
 
-            Vector3Wide.CrossWithoutOverlap(ref csi, ref projection.OffsetB, out wsi); //note flip-negation
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref wsi, ref projection.InertiaB.InverseInertiaTensor, out change);
-            Vector3Wide.Add(ref velocityB.Angular, ref change, out velocityB.Angular);
+            Vector3Wide.CrossWithoutOverlap(csi, projection.OffsetB, out wsi); //note flip-negation
+            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(wsi, projection.InertiaB.InverseInertiaTensor, out change);
+            Vector3Wide.Add(velocityB.Angular, change, out velocityB.Angular);
 
-            Vector3Wide.Scale(ref csi, ref projection.InertiaB.InverseMass, out change);
-            Vector3Wide.Subtract(ref velocityB.Linear, ref change, out velocityB.Linear); //note subtraction; the jacobian is -I
+            Vector3Wide.Scale(csi, projection.InertiaB.InverseMass, out change);
+            Vector3Wide.Subtract(velocityB.Linear, change, out velocityB.Linear); //note subtraction; the jacobian is -I
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -181,18 +181,18 @@ namespace BepuPhysics.Constraints
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             //Note subtraction; jLinearB = -I.
-            Vector3Wide.Subtract(ref velocityA.Linear, ref velocityB.Linear, out var csv);
-            Vector3Wide.CrossWithoutOverlap(ref velocityA.Angular, ref projection.OffsetA, out var angularCSV);
-            Vector3Wide.Add(ref csv, ref angularCSV, out csv);
+            Vector3Wide.Subtract(velocityA.Linear, velocityB.Linear, out var csv);
+            Vector3Wide.CrossWithoutOverlap(velocityA.Angular, projection.OffsetA, out var angularCSV);
+            Vector3Wide.Add(csv, angularCSV, out csv);
             //Note reversed cross order; matches the jacobian -CrossMatrix(offsetB).
-            Vector3Wide.CrossWithoutOverlap(ref projection.OffsetB, ref velocityB.Angular, out angularCSV);
-            Vector3Wide.Add(ref csv, ref angularCSV, out csv);
-            Vector3Wide.Subtract(ref projection.BiasVelocity, ref csv, out csv);
+            Vector3Wide.CrossWithoutOverlap(projection.OffsetB, velocityB.Angular, out angularCSV);
+            Vector3Wide.Add(csv, angularCSV, out csv);
+            Vector3Wide.Subtract(projection.BiasVelocity, csv, out csv);
 
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref csv, ref projection.EffectiveMass, out var csi);
-            Vector3Wide.Scale(ref accumulatedImpulse, ref projection.SoftnessImpulseScale, out var softness);
-            Vector3Wide.Subtract(ref csi, ref softness, out csi);
-            Vector3Wide.Add(ref accumulatedImpulse, ref csi, out accumulatedImpulse);
+            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(csv, projection.EffectiveMass, out var csi);
+            Vector3Wide.Scale(accumulatedImpulse, projection.SoftnessImpulseScale, out var softness);
+            Vector3Wide.Subtract(csi, softness, out csi);
+            Vector3Wide.Add(accumulatedImpulse, csi, out accumulatedImpulse);
 
             ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref csi);
 

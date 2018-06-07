@@ -18,19 +18,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public void Test(ref SphereWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
         {
             //Clamp the position of the sphere to the box.
-            Matrix3x3Wide.CreateFromQuaternion(ref orientationB, out var orientationMatrixB);
+            Matrix3x3Wide.CreateFromQuaternion(orientationB, out var orientationMatrixB);
             //Note that we're working with localOffsetB, which is the offset from A to B, even though conceptually we want to be operating on the offset from B to A.
             //Those offsets differ only by their sign, so are equivalent due to the symmetry of the box. The negation is left implicit.
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offsetB, ref orientationMatrixB, out var localOffsetB);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, orientationMatrixB, out var localOffsetB);
             Vector3Wide clampedLocalOffsetB;
             clampedLocalOffsetB.X = Vector.Min(Vector.Max(localOffsetB.X, -b.HalfWidth), b.HalfWidth);
             clampedLocalOffsetB.Y = Vector.Min(Vector.Max(localOffsetB.Y, -b.HalfHeight), b.HalfHeight);
             clampedLocalOffsetB.Z = Vector.Min(Vector.Max(localOffsetB.Z, -b.HalfLength), b.HalfLength);
             //Implicit negation to make the normal point from B to A, following convention.
-            Vector3Wide.Subtract(ref clampedLocalOffsetB, ref localOffsetB,  out var outsideNormal);
-            Vector3Wide.Length(ref outsideNormal, out var distance);
+            Vector3Wide.Subtract(clampedLocalOffsetB, localOffsetB,  out var outsideNormal);
+            Vector3Wide.Length(outsideNormal, out var distance);
             var inverseDistance = Vector<float>.One / distance;
-            Vector3Wide.Scale(ref outsideNormal, ref inverseDistance, out outsideNormal);
+            Vector3Wide.Scale(outsideNormal, inverseDistance, out outsideNormal);
             var outsideDepth = a.Radius - distance;
 
             //If the sphere center is inside the box, then the shortest local axis to exit must be chosen.
@@ -51,13 +51,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             insideDepth += a.Radius;
             var useInside = Vector.Equals(distance, Vector<float>.Zero);
             Vector3Wide.ConditionalSelect(useInside, insideNormal, outsideNormal, out var localNormal);
-            Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref orientationMatrixB, out manifold.Normal);
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, orientationMatrixB, out manifold.Normal);
             manifold.Depth = Vector.ConditionalSelect(useInside, insideDepth, outsideDepth);
 
             //The contact position relative to object A (the sphere) is computed as the average of the extreme point along the normal toward the opposing shape on each shape, averaged.
             //For capsule-sphere, this can be computed from the normal and depth.
             var negativeOffsetFromSphere = manifold.Depth * 0.5f - a.Radius;
-            Vector3Wide.Scale(ref manifold.Normal, ref negativeOffsetFromSphere, out manifold.OffsetA);
+            Vector3Wide.Scale(manifold.Normal, negativeOffsetFromSphere, out manifold.OffsetA);
             manifold.ContactExists = Vector.GreaterThan(manifold.Depth, -speculativeMargin);
         }
 

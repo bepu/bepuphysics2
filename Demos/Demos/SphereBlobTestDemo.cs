@@ -72,11 +72,5 @@ namespace Demos.Demos
 
         }
 
-        int frameIndex;
-        public override void Update(Input input, float dt)
-        {
-            base.Update(input, dt);
-        }
-
     }
 }

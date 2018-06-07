@@ -363,23 +363,7 @@ namespace Demos
         }
         Buffer<RayJob> jobs;
 
-
-        unsafe struct RayTester : IBroadPhaseBatchedRayTester
-        {
-            public int* IntersectionCount;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void RayTest(CollidableReference collidable, ref RaySource rays)
-            {
-                *IntersectionCount += rays.RayCount;
-            }
-
-            public void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT)
-            {
-                ++*IntersectionCount;
-            }
-        }
-
-
+        
         unsafe struct HitHandler : IRayHitHandler
         {
             public Buffer<RayHit> Hits;

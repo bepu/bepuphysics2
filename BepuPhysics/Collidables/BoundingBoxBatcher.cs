@@ -161,11 +161,11 @@ namespace BepuPhysics
             */
 
             Vector<float> vectorDt = new Vector<float>(dt);
-            Vector3Wide.Scale(ref velocities.Linear, ref vectorDt, out var linearDisplacement);
+            Vector3Wide.Scale(velocities.Linear, vectorDt, out var linearDisplacement);
 
             var zero = Vector<float>.Zero;
-            Vector3Wide.Min(ref zero, ref linearDisplacement, out var minDisplacement);
-            Vector3Wide.Max(ref zero, ref linearDisplacement, out var maxDisplacement);
+            Vector3Wide.Min(zero, linearDisplacement, out var minDisplacement);
+            Vector3Wide.Max(zero, linearDisplacement, out var maxDisplacement);
 
             /*
             Angular requires a bit more care. Since the goal is to create a tight bound, simply using a v = w * r approximation isn't ideal. A slightly tighter can be found:
@@ -188,7 +188,7 @@ namespace BepuPhysics
             An extra few dozen ALU cycles is unlikely to meaningfully change the execution time.
             2) Shrinking the bounding box reduces the number of collision pairs. Collision pairs are expensive- many times more expensive than the cost of shrinking the bounding box.
             */
-            Vector3Wide.Length(ref velocities.Angular, out var angularVelocityMagnitude);
+            Vector3Wide.Length(velocities.Angular, out var angularVelocityMagnitude);
             var a = Vector.Min(angularVelocityMagnitude * vectorDt, new Vector<float>(MathHelper.Pi / 3f));
             var a2 = a * a;
             var a4 = a2 * a2;
@@ -198,16 +198,16 @@ namespace BepuPhysics
             //That value, or a conservative approximation, is stored as the maximum angular expansion.
             var angularExpansion = Vector.Min(maximumAngularExpansion,
                 Vector.SquareRoot(new Vector<float>(-2f) * maximumRadius * maximumRadius * cosAngleMinusOne));
-            Vector3Wide.Subtract(ref minDisplacement, ref angularExpansion, out minDisplacement);
-            Vector3Wide.Add(ref maxDisplacement, ref angularExpansion, out maxDisplacement);
+            Vector3Wide.Subtract(minDisplacement, angularExpansion, out minDisplacement);
+            Vector3Wide.Add(maxDisplacement, angularExpansion, out maxDisplacement);
 
             //The maximum expansion passed into this function is the speculative margin for discrete mode collidables, and ~infinity for passive or continuous ones.
             var negativeMaximum = -maximumExpansion;
-            Vector3Wide.Max(ref negativeMaximum, ref minDisplacement, out minDisplacement);
-            Vector3Wide.Min(ref maximumExpansion, ref maxDisplacement, out maxDisplacement);
+            Vector3Wide.Max(negativeMaximum, minDisplacement, out minDisplacement);
+            Vector3Wide.Min(maximumExpansion, maxDisplacement, out maxDisplacement);
 
-            Vector3Wide.Add(ref min, ref minDisplacement, out min);
-            Vector3Wide.Add(ref max, ref maxDisplacement, out max);
+            Vector3Wide.Add(min, minDisplacement, out min);
+            Vector3Wide.Add(max, maxDisplacement, out max);
         }
 
         //This is simply a internally vectorized version of the above. As of this writing, it's only used for convex sweeps.
@@ -252,7 +252,7 @@ namespace BepuPhysics
                     ref var targetInstanceSlot = ref GatherScatter.GetOffsetInstance(ref instanceBundle, innerIndex);
                     targetInstanceSlot.Shape.Gather(ref shapeBatch.shapes[instance.ShapeIndex]);
                     Vector3Wide.WriteFirst(instance.Pose.Position, ref targetInstanceSlot.Pose.Position);
-                    QuaternionWide.WriteFirst(ref instance.Pose.Orientation, ref targetInstanceSlot.Pose.Orientation);
+                    QuaternionWide.WriteFirst(instance.Pose.Orientation, ref targetInstanceSlot.Pose.Orientation);
                     Vector3Wide.WriteFirst(instance.Velocities.Linear, ref targetInstanceSlot.Velocities.Linear);
                     Vector3Wide.WriteFirst(instance.Velocities.Angular, ref targetInstanceSlot.Velocities.Angular);
                     ref var collidable = ref activeSet.Collidables[instance.Continuation.BodyIndex];
@@ -263,8 +263,8 @@ namespace BepuPhysics
                 ExpandBoundingBoxes(ref bundleMin, ref bundleMax, ref instanceBundle.Velocities, dt,
                     ref maximumRadius, ref maximumAngularExpansion, ref instanceBundle.MaximumExpansion);
                 //TODO: Note that this is an area that must be updated if you change the pose representation.
-                Vector3Wide.Add(ref instanceBundle.Pose.Position, ref bundleMin, out bundleMin);
-                Vector3Wide.Add(ref instanceBundle.Pose.Position, ref bundleMax, out bundleMax);
+                Vector3Wide.Add(instanceBundle.Pose.Position, bundleMin, out bundleMin);
+                Vector3Wide.Add(instanceBundle.Pose.Position, bundleMax, out bundleMax);
 
                 for (int innerIndex = 0; innerIndex < countInBundle; ++innerIndex)
                 {

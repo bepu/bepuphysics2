@@ -186,12 +186,12 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetBounds(ref QuaternionWide orientations, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
-            Matrix3x3Wide.CreateFromQuaternion(ref orientations, out var basis);
+            Matrix3x3Wide.CreateFromQuaternion(orientations, out var basis);
             max.X = Vector.Abs(HalfWidth * basis.X.X) + Vector.Abs(HalfHeight * basis.Y.X) + Vector.Abs(HalfLength * basis.Z.X);
             max.Y = Vector.Abs(HalfWidth * basis.X.Y) + Vector.Abs(HalfHeight * basis.Y.Y) + Vector.Abs(HalfLength * basis.Z.Y);
             max.Z = Vector.Abs(HalfWidth * basis.X.Z) + Vector.Abs(HalfHeight * basis.Y.Z) + Vector.Abs(HalfLength * basis.Z.Z);
 
-            Vector3Wide.Negate(ref max, out min);
+            Vector3Wide.Negate(max, out min);
 
             maximumRadius = Vector.SquareRoot(HalfWidth * HalfWidth + HalfHeight * HalfHeight + HalfLength * HalfLength);
             maximumAngularExpansion = maximumRadius - Vector.Min(HalfLength, Vector.Min(HalfHeight, HalfLength));
@@ -208,10 +208,10 @@ namespace BepuPhysics.Collidables
 
         public void RayTest(ref RigidPoses pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
-            Vector3Wide.Subtract(ref ray.Origin, ref pose.Position, out var offset);
-            Matrix3x3Wide.CreateFromQuaternion(ref pose.Orientation, out var orientation);
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offset, ref orientation, out var localOffset);
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref ray.Direction, ref orientation, out var localDirection);
+            Vector3Wide.Subtract(ray.Origin, pose.Position, out var offset);
+            Matrix3x3Wide.CreateFromQuaternion(pose.Orientation, out var orientation);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(offset, orientation, out var localOffset);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ray.Direction, orientation, out var localDirection);
             //Note that this division has two odd properties:
             //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
             //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
@@ -251,7 +251,7 @@ namespace BepuPhysics.Collidables
             normal.X = Vector.ConditionalSelect(useX, orientation.X.X, Vector.ConditionalSelect(useY, orientation.Y.X, orientation.Z.X));
             normal.Y = Vector.ConditionalSelect(useX, orientation.X.Y, Vector.ConditionalSelect(useY, orientation.Y.Y, orientation.Z.Y));
             normal.Z = Vector.ConditionalSelect(useX, orientation.X.Z, Vector.ConditionalSelect(useY, orientation.Y.Z, orientation.Z.Z));
-            Vector3Wide.Dot(ref normal, ref offset, out var dot);
+            Vector3Wide.Dot(normal, offset, out var dot);
             var shouldNegate = Vector.LessThan(dot, Vector<float>.Zero);
             normal.X = Vector.ConditionalSelect(shouldNegate, -normal.X, normal.X);
             normal.Y = Vector.ConditionalSelect(shouldNegate, -normal.Y, normal.Y);

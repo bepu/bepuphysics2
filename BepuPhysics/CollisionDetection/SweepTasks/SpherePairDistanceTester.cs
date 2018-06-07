@@ -13,14 +13,14 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         public void Test(ref SphereWide a, ref SphereWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
-            Vector3Wide.Length(ref offsetB, out var centerDistance);
+            Vector3Wide.Length(offsetB, out var centerDistance);
             //Note the negative 1. By convention, the normal points from B to A.
             var inverseDistance = new Vector<float>(-1f) / centerDistance;
-            Vector3Wide.Scale(ref offsetB, ref inverseDistance, out normal);
+            Vector3Wide.Scale(offsetB, inverseDistance, out normal);
             distance = centerDistance - a.Radius - b.Radius;
 
             var negativeRadiusA = -a.Radius;
-            Vector3Wide.Scale(ref normal, ref negativeRadiusA, out closestA);
+            Vector3Wide.Scale(normal, negativeRadiusA, out closestA);
             intersected = Vector.LessThanOrEqual(distance, Vector<float>.Zero);
         }
     }

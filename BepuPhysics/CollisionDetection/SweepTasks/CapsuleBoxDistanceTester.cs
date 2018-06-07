@@ -33,7 +33,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             ref BoxWide box,
             ref Vector3Wide offsetA, ref Vector3Wide capsuleAxis, ref Vector<float> capsuleHalfLength, out Vector3Wide closestPointFromEdge)
         {
-            Vector3Wide.Dot(ref normal, ref offsetA, out var calibrationDot);
+            Vector3Wide.Dot(normal, offsetA, out var calibrationDot);
             var flipNormal = Vector.LessThan(calibrationDot, Vector<float>.Zero);
             normal.X = Vector.ConditionalSelect(flipNormal, -normal.X, normal.X);
             normal.Y = Vector.ConditionalSelect(flipNormal, -normal.Y, normal.Y);
@@ -59,10 +59,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //From CapsulePairCollisionTask, point of closest approach along the capsule axis, unbounded:
             //ta = (da * (b - a) + (db * (a - b)) * (da * db)) / (1 - ((da * db) * (da * db))  
             //where da = capsuleAxis, db = boxEdgeDirection, a = offsetA, b = boxEdgeCenter
-            Vector3Wide.Subtract(ref boxEdgeCenter, ref offsetA, out var ab);
-            Vector3Wide.Dot(ref ab, ref capsuleAxis, out var abda);
-            Vector3Wide.Dot(ref ab, ref boxEdgeDirection, out var abdb);
-            Vector3Wide.Dot(ref capsuleAxis, ref boxEdgeDirection, out var dadb);
+            Vector3Wide.Subtract(boxEdgeCenter, offsetA, out var ab);
+            Vector3Wide.Dot(ab, capsuleAxis, out var abda);
+            Vector3Wide.Dot(ab, boxEdgeDirection, out var abdb);
+            Vector3Wide.Dot(capsuleAxis, boxEdgeDirection, out var dadb);
 
             //Note division by zero guard.
             var ta = (abda - abdb * dadb) / Vector.Max(new Vector<float>(1e-15f), (Vector<float>.One - dadb * dadb));
@@ -75,8 +75,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var taMax = Vector.Min(capsuleHalfLength, Vector.Max(-capsuleHalfLength, abda + bOntoAOffset));
             ta = Vector.Min(Vector.Max(ta, taMin), taMax);
 
-            Vector3Wide.Scale(ref capsuleAxis, ref ta, out var offsetAlongCapsule);
-            Vector3Wide.Add(ref offsetA, ref offsetAlongCapsule, out closestPointFromEdge);
+            Vector3Wide.Scale(capsuleAxis, ta, out var offsetAlongCapsule);
+            Vector3Wide.Add(offsetA, offsetAlongCapsule, out closestPointFromEdge);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -87,16 +87,16 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             clamped.X = Vector.Min(box.HalfWidth, Vector.Max(-box.HalfWidth, endpoint.X));
             clamped.Y = Vector.Min(box.HalfHeight, Vector.Max(-box.HalfHeight, endpoint.Y));
             clamped.Z = Vector.Min(box.HalfLength, Vector.Max(-box.HalfLength, endpoint.Z));
-            Vector3Wide.Subtract(ref endpoint, ref clamped, out normal);
+            Vector3Wide.Subtract(endpoint, clamped, out normal);
 
-            Vector3Wide.Length(ref normal, out var length);
+            Vector3Wide.Length(normal, out var length);
             var inverseLength = Vector<float>.One / length;
-            Vector3Wide.Scale(ref normal, ref inverseLength, out normal);
+            Vector3Wide.Scale(normal, inverseLength, out normal);
             //The dot between the offset from B to A and the normal gives us the center offset. 
             //The dot between the capsule axis and normal gives us the (unscaled) extent of the capsule along the normal.
             //The depth is (boxExtentAlongNormal + capsuleExtentAlongNormal) - separationAlongNormal.
-            Vector3Wide.Dot(ref offsetA, ref normal, out var baN);
-            Vector3Wide.Dot(ref capsuleAxis, ref normal, out var daN);
+            Vector3Wide.Dot(offsetA, normal, out var baN);
+            Vector3Wide.Dot(capsuleAxis, normal, out var daN);
             depth =
                 Vector.Abs(normal.X) * box.HalfWidth + Vector.Abs(normal.Y) * box.HalfHeight + Vector.Abs(normal.Z) * box.HalfLength +
                 Vector.Abs(daN * capsuleHalfLength) -
@@ -124,9 +124,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //(That extreme point relationship may also be met in cases of intersection, but that's fine- this distance tester is not concerned with intersection beyond a boolean result.)
 
             //closest point on axis to origin = offsetA - (offsetA * capsuleAxis) * capsuleAxis
-            Vector3Wide.Dot(ref offsetA, ref capsuleAxis, out var dot);
-            Vector3Wide.Scale(ref capsuleAxis, ref dot, out var axisOffset);
-            Vector3Wide.Subtract(ref offsetA, ref axisOffset, out var closestOnAxis);
+            Vector3Wide.Dot(offsetA, capsuleAxis, out var dot);
+            Vector3Wide.Scale(capsuleAxis, dot, out var axisOffset);
+            Vector3Wide.Subtract(offsetA, axisOffset, out var closestOnAxis);
 
             Vector3Wide vertex;
             vertex.X = Vector.ConditionalSelect(Vector.LessThan(closestOnAxis.X, Vector<float>.Zero), -box.HalfWidth, box.HalfWidth);
@@ -134,15 +134,15 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             vertex.Z = Vector.ConditionalSelect(Vector.LessThan(closestOnAxis.Z, Vector<float>.Zero), -box.HalfLength, box.HalfLength);
 
             //closest point on axis to vertex: ((vertex - offsetA) * capsuleAxis) * capsuleAxis + offsetA - vertex
-            Vector3Wide.Subtract(ref vertex, ref offsetA, out var capsuleCenterToVertex);
-            Vector3Wide.Dot(ref capsuleCenterToVertex, ref capsuleAxis, out var vertexDot);
-            Vector3Wide.Scale(ref capsuleAxis, ref vertexDot, out var vertexAxisOffset);
-            Vector3Wide.Add(ref vertexAxisOffset, ref offsetA, out closestA);
-            Vector3Wide.Subtract(ref closestA, ref vertex, out var vertexToClosestOnCapsule);
+            Vector3Wide.Subtract(vertex, offsetA, out var capsuleCenterToVertex);
+            Vector3Wide.Dot(capsuleCenterToVertex, capsuleAxis, out var vertexDot);
+            Vector3Wide.Scale(capsuleAxis, vertexDot, out var vertexAxisOffset);
+            Vector3Wide.Add(vertexAxisOffset, offsetA, out closestA);
+            Vector3Wide.Subtract(closestA, vertex, out var vertexToClosestOnCapsule);
 
-            Vector3Wide.Length(ref vertexToClosestOnCapsule, out var length);
+            Vector3Wide.Length(vertexToClosestOnCapsule, out var length);
             var inverseLength = Vector<float>.One / length;
-            Vector3Wide.Scale(ref vertexToClosestOnCapsule, ref inverseLength, out normal);
+            Vector3Wide.Scale(vertexToClosestOnCapsule, inverseLength, out normal);
             //The normal is perpendicular to the capsule axis by construction, so no need to include the capsule length extent.
             depth = Vector.Abs(normal.X) * box.HalfWidth + Vector.Abs(normal.Y) * box.HalfHeight + Vector.Abs(normal.Z) * box.HalfLength -
                 Vector.Abs(offsetA.X * normal.X + offsetA.Y * normal.Y + offsetA.Z * normal.Z);
@@ -185,21 +185,21 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             //Bring the capsule into the box's local space.
-            Matrix3x3Wide.CreateFromQuaternion(ref orientationB, out var rB);
-            QuaternionWide.TransformUnitY(ref orientationA, out var capsuleAxis);
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref capsuleAxis, ref rB, out var localCapsuleAxis);
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offsetB, ref rB, out var localOffsetB);
-            Vector3Wide.Negate(ref localOffsetB, out var localOffsetA);
+            Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
+            QuaternionWide.TransformUnitY(orientationA, out var capsuleAxis);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(capsuleAxis, rB, out var localCapsuleAxis);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, rB, out var localOffsetB);
+            Vector3Wide.Negate(localOffsetB, out var localOffsetA);
 
-            Vector3Wide.Scale(ref localCapsuleAxis, ref a.HalfLength, out var endpointOffset);
-            Vector3Wide.Subtract(ref localOffsetA, ref endpointOffset, out var endpoint0);
+            Vector3Wide.Scale(localCapsuleAxis, a.HalfLength, out var endpointOffset);
+            Vector3Wide.Subtract(localOffsetA, endpointOffset, out var endpoint0);
             TestEndpointNormal(ref localOffsetA, ref localCapsuleAxis, ref a.HalfLength, ref endpoint0, ref b, out var depth, out var localNormal);
-            Vector3Wide.Add(ref localOffsetA, ref endpointOffset, out var endpoint1);
+            Vector3Wide.Add(localOffsetA, endpointOffset, out var endpoint1);
             TestEndpointNormal(ref localOffsetA, ref localCapsuleAxis, ref a.HalfLength, ref endpoint1, ref b, out var depthCandidate, out var localNormalCandidate);
             Select(ref depth, ref localNormal, ref depthCandidate, ref localNormalCandidate);
             //Note that we did not yet pick a closest point for endpoint cases. That's because each case only generates a normal and interval test, not a minimal distance test.
             //The choice of which endpoint is actually closer is deferred until now.
-            Vector3Wide.Dot(ref localCapsuleAxis, ref localNormal, out var endpointChoiceDot);
+            Vector3Wide.Dot(localCapsuleAxis, localNormal, out var endpointChoiceDot);
             Vector3Wide.ConditionalSelect(Vector.LessThan(endpointChoiceDot, Vector<float>.Zero), endpoint1, endpoint0, out var localClosest);
 
             Vector3Wide edgeLocalNormal, edgeLocalNormalCandidate;
@@ -233,11 +233,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Select(ref depth, ref localNormal, ref localClosest, ref depthCandidate, ref localNormalCandidate, ref localClosestCandidate);
 
             //Transform normal and closest point back into world space.
-            Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref rB, out normal);
-            Matrix3x3Wide.TransformWithoutOverlap(ref localClosest, ref rB, out closestA);
-            Vector3Wide.Add(ref closestA, ref offsetB, out closestA);
-            Vector3Wide.Scale(ref normal, ref a.Radius, out var closestOffset);
-            Vector3Wide.Subtract(ref closestA, ref closestOffset, out closestA);
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out normal);
+            Matrix3x3Wide.TransformWithoutOverlap(localClosest, rB, out closestA);
+            Vector3Wide.Add(closestA, offsetB, out closestA);
+            Vector3Wide.Scale(normal, a.Radius, out var closestOffset);
+            Vector3Wide.Subtract(closestA, closestOffset, out closestA);
             distance = -depth - a.Radius;
             intersected = Vector.LessThan(distance, Vector<float>.Zero);
 

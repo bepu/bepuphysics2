@@ -169,18 +169,18 @@ namespace BepuPhysics.Constraints.Contact
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
 
             bodies.GatherInertia(ref bodyReferences, count, out projection.InertiaA, out projection.InertiaB);
-            Vector3Wide.Add(ref prestep.OffsetA0, ref prestep.OffsetA1, out var offsetToManifoldCenterA);
+            Vector3Wide.Add(prestep.OffsetA0, prestep.OffsetA1, out var offsetToManifoldCenterA);
             var scale = new Vector<float>(0.5f);
-            Vector3Wide.Scale(ref offsetToManifoldCenterA, ref scale, out offsetToManifoldCenterA);
-            Vector3Wide.Subtract(ref offsetToManifoldCenterA, ref prestep.OffsetB, out var offsetToManifoldCenterB);
+            Vector3Wide.Scale(offsetToManifoldCenterA, scale, out offsetToManifoldCenterA);
+            Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
             projection.PremultipliedFrictionCoefficient = scale * prestep.FrictionCoefficient;
             projection.Normal = prestep.Normal;
             Helpers.BuildOrthnormalBasis(ref prestep.Normal, out var x, out var z);
             TangentFriction.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref offsetToManifoldCenterB, ref projection.InertiaA, ref projection.InertiaB, out projection.Tangent);
             PenetrationLimit2.Prestep(ref projection.InertiaA, ref projection.InertiaB, ref prestep.Normal, ref prestep, dt, inverseDt, out projection.Penetration);
             //Just assume the lever arms for B are the same. It's a good guess. (The only reason we computed the offset B is because we didn't want to go into world space.)
-            Vector3Wide.Distance(ref prestep.OffsetA0, ref offsetToManifoldCenterA, out projection.LeverArm0);
-            Vector3Wide.Distance(ref prestep.OffsetA1, ref offsetToManifoldCenterA, out projection.LeverArm1);
+            Vector3Wide.Distance(prestep.OffsetA0, offsetToManifoldCenterA, out projection.LeverArm0);
+            Vector3Wide.Distance(prestep.OffsetA1, offsetToManifoldCenterA, out projection.LeverArm1);
             TwistFriction.Prestep(ref projection.InertiaA, ref projection.InertiaB, ref prestep.Normal, out projection.Twist);
         }
 

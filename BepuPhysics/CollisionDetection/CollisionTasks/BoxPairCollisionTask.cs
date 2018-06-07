@@ -103,10 +103,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Convex4ContactManifoldWide manifold)
         {
-            Matrix3x3Wide.CreateFromQuaternion(ref orientationA, out var worldRA);
-            Matrix3x3Wide.CreateFromQuaternion(ref orientationB, out var worldRB);
-            Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(ref worldRB, ref worldRA, out var rB);
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref offsetB, ref worldRA, out var localOffsetB);
+            Matrix3x3Wide.CreateFromQuaternion(orientationA, out var worldRA);
+            Matrix3x3Wide.CreateFromQuaternion(orientationB, out var worldRB);
+            Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(worldRB, worldRA, out var rB);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, worldRA, out var localOffsetB);
 
             Vector3Wide localNormal;
             //b.X
@@ -136,9 +136,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref edgeZDepth, ref edgeZNX, ref edgeZNY, ref edgeZNZ);
 
             //Test face normals of A. Working in local space of A means potential axes are just (1,0,0) etc.
-            Vector3Wide.Abs(ref rB.X, out var absRBX);
-            Vector3Wide.Abs(ref rB.Y, out var absRBY);
-            Vector3Wide.Abs(ref rB.Z, out var absRBZ);
+            Vector3Wide.Abs(rB.X, out var absRBX);
+            Vector3Wide.Abs(rB.Y, out var absRBY);
+            Vector3Wide.Abs(rB.Z, out var absRBZ);
             var faceAXDepth = a.HalfWidth + b.HalfWidth * absRBX.X + b.HalfHeight * absRBY.X + b.HalfLength * absRBZ.X - Vector.Abs(localOffsetB.X);
             var one = Vector<float>.One;
             var zero = Vector<float>.Zero;
@@ -149,7 +149,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Select(ref depth, ref localNormal, ref faceAZDepth, ref zero, ref zero, ref one);
 
             //Test face normals of B. Rows of A->B rotation.
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(ref localOffsetB, ref rB, out var bLocalOffsetB);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(localOffsetB, rB, out var bLocalOffsetB);
             var faceBXDepth = b.HalfWidth + a.HalfWidth * absRBX.X + a.HalfHeight * absRBX.Y + a.HalfLength * absRBX.Z - Vector.Abs(bLocalOffsetB.X);
             Select(ref depth, ref localNormal, ref faceBXDepth, ref rB.X.X, ref rB.X.Y, ref rB.X.Z);
             var faceBYDepth = b.HalfHeight + a.HalfWidth * absRBY.X + a.HalfHeight * absRBY.Y + a.HalfLength * absRBY.Z - Vector.Abs(bLocalOffsetB.Y);
@@ -158,12 +158,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Select(ref depth, ref localNormal, ref faceBZDepth, ref rB.Z.X, ref rB.Z.Y, ref rB.Z.Z);
 
             //Calibrate the normal to point from B to A, matching convention.
-            Vector3Wide.Dot(ref localNormal, ref localOffsetB, out var normalDotOffsetB);
+            Vector3Wide.Dot(localNormal, localOffsetB, out var normalDotOffsetB);
             var shouldNegateNormal = Vector.GreaterThan(normalDotOffsetB, Vector<float>.Zero);
             localNormal.X = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.X, localNormal.X);
             localNormal.Y = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.Y, localNormal.Y);
             localNormal.Z = Vector.ConditionalSelect(shouldNegateNormal, -localNormal.Z, localNormal.Z);
-            Matrix3x3Wide.TransformWithoutOverlap(ref localNormal, ref worldRA, out manifold.Normal);
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, worldRA, out manifold.Normal);
 
             //Contact generation always assumes face-face clipping. Other forms of contact generation are just special cases of face-face, and since we pay
             //for all code paths, there's no point in handling them separately.
@@ -173,84 +173,78 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //We represent each face as a center position, its two tangent axes, and the length along those axes.
             //Technically, we could leave A's tangents implicit by swizzling components, but that complicates things a little bit for not much gain.
             //Since we're not taking advantage of the dimension reduction of working in A's local space from here on out, just use the world axes to avoid a final retransform.
-            Vector3Wide.Dot(ref manifold.Normal, ref worldRA.X, out var axDot);
-            Vector3Wide.Dot(ref manifold.Normal, ref worldRA.Y, out var ayDot);
-            Vector3Wide.Dot(ref manifold.Normal, ref worldRA.Z, out var azDot);
+            Vector3Wide.Dot(manifold.Normal, worldRA.X, out var axDot);
+            Vector3Wide.Dot(manifold.Normal, worldRA.Y, out var ayDot);
+            Vector3Wide.Dot(manifold.Normal, worldRA.Z, out var azDot);
             var absAXDot = Vector.Abs(axDot);
             var absAYDot = Vector.Abs(ayDot);
             var absAZDot = Vector.Abs(azDot);
             var maxADot = Vector.Max(absAXDot, Vector.Max(absAYDot, absAZDot));
             var useAX = Vector.Equals(maxADot, absAXDot);
             var useAY = Vector.AndNot(Vector.Equals(maxADot, absAYDot), useAX);
-            Vector3Wide tangentAX, tangentAY, normalA;
-            Vector<float> halfSpanAX, halfSpanAY, halfSpanAZ;
-            Vector<int> axisIdAX, axisIdAY, axisIdAZ;
-            Vector3Wide.ConditionalSelect(useAX, worldRA.X, worldRA.Z, out normalA);
+            Vector3Wide.ConditionalSelect(useAX, worldRA.X, worldRA.Z, out var normalA);
             Vector3Wide.ConditionalSelect(useAY, worldRA.Y, normalA, out normalA);
-            Vector3Wide.ConditionalSelect(useAX, worldRA.Z, worldRA.Y, out tangentAX);
+            Vector3Wide.ConditionalSelect(useAX, worldRA.Z, worldRA.Y, out var tangentAX);
             Vector3Wide.ConditionalSelect(useAY, worldRA.X, tangentAX, out tangentAX);
-            Vector3Wide.ConditionalSelect(useAX, worldRA.Y, worldRA.X, out tangentAY);
+            Vector3Wide.ConditionalSelect(useAX, worldRA.Y, worldRA.X, out var tangentAY);
             Vector3Wide.ConditionalSelect(useAY, worldRA.Z, tangentAY, out tangentAY);
-            halfSpanAX = Vector.ConditionalSelect(useAX, a.HalfLength, Vector.ConditionalSelect(useAY, a.HalfWidth, a.HalfHeight));
-            halfSpanAY = Vector.ConditionalSelect(useAX, a.HalfHeight, Vector.ConditionalSelect(useAY, a.HalfLength, a.HalfWidth));
-            halfSpanAZ = Vector.ConditionalSelect(useAX, a.HalfWidth, Vector.ConditionalSelect(useAY, a.HalfHeight, a.HalfLength));
+            var halfSpanAX = Vector.ConditionalSelect(useAX, a.HalfLength, Vector.ConditionalSelect(useAY, a.HalfWidth, a.HalfHeight));
+            var halfSpanAY = Vector.ConditionalSelect(useAX, a.HalfHeight, Vector.ConditionalSelect(useAY, a.HalfLength, a.HalfWidth));
+            var halfSpanAZ = Vector.ConditionalSelect(useAX, a.HalfWidth, Vector.ConditionalSelect(useAY, a.HalfHeight, a.HalfLength));
             //We'll construct vertex feature ids from axis ids. 
             //Vertex ids will be constructed by setting or not setting the relevant bit for each axis.
             var localXId = new Vector<int>(1);
             var localYId = new Vector<int>(4);
             var localZId = new Vector<int>(16);
-            axisIdAX = Vector.ConditionalSelect(useAX, localZId, Vector.ConditionalSelect(useAY, localXId, localYId));
-            axisIdAY = Vector.ConditionalSelect(useAX, localYId, Vector.ConditionalSelect(useAY, localZId, localXId));
-            axisIdAZ = Vector.ConditionalSelect(useAX, localXId, Vector.ConditionalSelect(useAY, localYId, localZId));
+            var axisIdAX = Vector.ConditionalSelect(useAX, localZId, Vector.ConditionalSelect(useAY, localXId, localYId));
+            var axisIdAY = Vector.ConditionalSelect(useAX, localYId, Vector.ConditionalSelect(useAY, localZId, localXId));
+            var axisIdAZ = Vector.ConditionalSelect(useAX, localXId, Vector.ConditionalSelect(useAY, localYId, localZId));
 
-            Vector3Wide.Dot(ref manifold.Normal, ref worldRB.X, out var bxDot);
-            Vector3Wide.Dot(ref manifold.Normal, ref worldRB.Y, out var byDot);
-            Vector3Wide.Dot(ref manifold.Normal, ref worldRB.Z, out var bzDot);
+            Vector3Wide.Dot(manifold.Normal, worldRB.X, out var bxDot);
+            Vector3Wide.Dot(manifold.Normal, worldRB.Y, out var byDot);
+            Vector3Wide.Dot(manifold.Normal, worldRB.Z, out var bzDot);
             var absBXDot = Vector.Abs(bxDot);
             var absBYDot = Vector.Abs(byDot);
             var absBZDot = Vector.Abs(bzDot);
             var maxBDot = Vector.Max(absBXDot, Vector.Max(absBYDot, absBZDot));
             var useBX = Vector.Equals(maxBDot, absBXDot);
             var useBY = Vector.AndNot(Vector.Equals(maxBDot, absBYDot), useBX);
-            Vector3Wide tangentBX, tangentBY, normalB;
-            Vector<float> halfSpanBX, halfSpanBY, halfSpanBZ;
-            Vector<int> axisIdBX, axisIdBY, axisIdBZ;
-            Vector3Wide.ConditionalSelect(useBX, worldRB.X, worldRB.Z, out normalB);
+            Vector3Wide.ConditionalSelect(useBX, worldRB.X, worldRB.Z, out var normalB);
             Vector3Wide.ConditionalSelect(useBY, worldRB.Y, normalB, out normalB);
-            Vector3Wide.ConditionalSelect(useBX, worldRB.Z, worldRB.Y, out tangentBX);
+            Vector3Wide.ConditionalSelect(useBX, worldRB.Z, worldRB.Y, out var tangentBX);
             Vector3Wide.ConditionalSelect(useBY, worldRB.X, tangentBX, out tangentBX);
-            Vector3Wide.ConditionalSelect(useBX, worldRB.Y, worldRB.X, out tangentBY);
+            Vector3Wide.ConditionalSelect(useBX, worldRB.Y, worldRB.X, out var tangentBY);
             Vector3Wide.ConditionalSelect(useBY, worldRB.Z, tangentBY, out tangentBY);
-            halfSpanBX = Vector.ConditionalSelect(useBX, b.HalfLength, Vector.ConditionalSelect(useBY, b.HalfWidth, b.HalfHeight));
-            halfSpanBY = Vector.ConditionalSelect(useBX, b.HalfHeight, Vector.ConditionalSelect(useBY, b.HalfLength, b.HalfWidth));
-            halfSpanBZ = Vector.ConditionalSelect(useBX, b.HalfWidth, Vector.ConditionalSelect(useBY, b.HalfHeight, b.HalfLength));
+            var halfSpanBX = Vector.ConditionalSelect(useBX, b.HalfLength, Vector.ConditionalSelect(useBY, b.HalfWidth, b.HalfHeight));
+            var halfSpanBY = Vector.ConditionalSelect(useBX, b.HalfHeight, Vector.ConditionalSelect(useBY, b.HalfLength, b.HalfWidth));
+            var halfSpanBZ = Vector.ConditionalSelect(useBX, b.HalfWidth, Vector.ConditionalSelect(useBY, b.HalfHeight, b.HalfLength));
             //We'll construct edge feature ids from axis ids. 
             //Edge ids will be 6 bits total, representing 3 possible states (-1, 0, 1) for each of the 3 axes. Multiply the axis id by 1, 2, or 3 to get the edge id contribution for the axis.
-            axisIdBX = Vector.ConditionalSelect(useBX, localZId, Vector.ConditionalSelect(useBY, localXId, localYId));
-            axisIdBY = Vector.ConditionalSelect(useBX, localYId, Vector.ConditionalSelect(useBY, localZId, localXId));
-            axisIdBZ = Vector.ConditionalSelect(useBX, localXId, Vector.ConditionalSelect(useBY, localYId, localZId));
+            var axisIdBX = Vector.ConditionalSelect(useBX, localZId, Vector.ConditionalSelect(useBY, localXId, localYId));
+            var axisIdBY = Vector.ConditionalSelect(useBX, localYId, Vector.ConditionalSelect(useBY, localZId, localXId));
+            var axisIdBZ = Vector.ConditionalSelect(useBX, localXId, Vector.ConditionalSelect(useBY, localYId, localZId));
 
             //Calibrate normalB to face toward A, and normalA to face toward B.
-            Vector3Wide.Dot(ref normalA, ref manifold.Normal, out var calibrationDotA);
+            Vector3Wide.Dot(normalA, manifold.Normal, out var calibrationDotA);
             var shouldNegateNormalA = Vector.GreaterThan(calibrationDotA, Vector<float>.Zero);
             normalA.X = Vector.ConditionalSelect(shouldNegateNormalA, -normalA.X, normalA.X);
             normalA.Y = Vector.ConditionalSelect(shouldNegateNormalA, -normalA.Y, normalA.Y);
             normalA.Z = Vector.ConditionalSelect(shouldNegateNormalA, -normalA.Z, normalA.Z);
-            Vector3Wide.Dot(ref normalB, ref manifold.Normal, out var calibrationDotB);
+            Vector3Wide.Dot(normalB, manifold.Normal, out var calibrationDotB);
             var shouldNegateNormalB = Vector.LessThan(calibrationDotB, Vector<float>.Zero);
             normalB.X = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.X, normalB.X);
             normalB.Y = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Y, normalB.Y);
             normalB.Z = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Z, normalB.Z);
 
             //Clip edges of B against the face bounds of A to collect all edge-bound contacts.       
-            Vector3Wide.Scale(ref normalB, ref halfSpanBZ, out var faceCenterB);
-            Vector3Wide.Add(ref faceCenterB, ref offsetB, out faceCenterB);
-            Vector3Wide.Scale(ref tangentBY, ref halfSpanBY, out var edgeOffsetBX);
-            Vector3Wide.Scale(ref tangentBX, ref halfSpanBX, out var edgeOffsetBY);
-            Vector3Wide.Dot(ref tangentAX, ref tangentBX, out var axbx);
-            Vector3Wide.Dot(ref tangentAY, ref tangentBX, out var aybx);
-            Vector3Wide.Dot(ref tangentAX, ref tangentBY, out var axby);
-            Vector3Wide.Dot(ref tangentAY, ref tangentBY, out var ayby);
+            Vector3Wide.Scale(normalB, halfSpanBZ, out var faceCenterB);
+            Vector3Wide.Add(faceCenterB, offsetB, out faceCenterB);
+            Vector3Wide.Scale(tangentBY, halfSpanBY, out var edgeOffsetBX);
+            Vector3Wide.Scale(tangentBX, halfSpanBX, out var edgeOffsetBY);
+            Vector3Wide.Dot(tangentAX, tangentBX, out var axbx);
+            Vector3Wide.Dot(tangentAY, tangentBX, out var aybx);
+            Vector3Wide.Dot(tangentAX, tangentBY, out var axby);
+            Vector3Wide.Dot(tangentAY, tangentBY, out var ayby);
             GetEdgeVersusFaceBoundsIntervals(ref tangentAX, ref tangentAY, ref halfSpanAX, ref halfSpanAY, ref axbx, ref aybx, ref faceCenterB, ref halfSpanBX, ref edgeOffsetBX,
                 out var bX0Min, out var bX0Max, out var bX1Min, out var bX1Max);
             GetEdgeVersusFaceBoundsIntervals(ref tangentAX, ref tangentAY, ref halfSpanAX, ref halfSpanAY, ref axby, ref ayby, ref faceCenterB, ref halfSpanBY, ref edgeOffsetBY,
@@ -298,13 +292,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBY, ref epsilonScale, ref bY1Min, ref bY1Max,
                 ref halfSpanBX, ref bY1Min, ref halfSpanBX, ref bY1Max, ref edgeIdBY1);
 
-            Vector3Wide.Scale(ref normalA, ref halfSpanAZ, out var faceCenterA);
-            Vector3Wide.Subtract(ref faceCenterA, ref faceCenterB, out var faceCenterBToFaceCenterA);
-            Vector3Wide.Scale(ref tangentAY, ref halfSpanAY, out var edgeOffsetAX);
-            Vector3Wide.Scale(ref tangentAX, ref halfSpanAX, out var edgeOffsetAY);
+            Vector3Wide.Scale(normalA, halfSpanAZ, out var faceCenterA);
+            Vector3Wide.Subtract(faceCenterA, faceCenterB, out var faceCenterBToFaceCenterA);
+            Vector3Wide.Scale(tangentAY, halfSpanAY, out var edgeOffsetAX);
+            Vector3Wide.Scale(tangentAX, halfSpanAX, out var edgeOffsetAY);
             //Vertex A -x, -y
-            Vector3Wide.Subtract(ref faceCenterBToFaceCenterA, ref edgeOffsetAX, out var vertexA);
-            Vector3Wide.Subtract(ref vertexA, ref edgeOffsetAY, out vertexA);
+            Vector3Wide.Subtract(faceCenterBToFaceCenterA, edgeOffsetAX, out var vertexA);
+            Vector3Wide.Subtract(vertexA, edgeOffsetAY, out vertexA);
             //Vertex ids only have two states per axis, so scale id by 0 or 1 before adding. Equivalent to conditional or.          
             //Note that the feature id is negated. This disambiguates between edge-edge contacts and vertex contacts.
             var vertexId = -axisIdAZ;
@@ -314,8 +308,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref candidates, ref rawContactCount);
 
             //Vertex A -x, +y
-            Vector3Wide.Subtract(ref faceCenterBToFaceCenterA, ref edgeOffsetAX, out vertexA);
-            Vector3Wide.Add(ref vertexA, ref edgeOffsetAY, out vertexA);
+            Vector3Wide.Subtract(faceCenterBToFaceCenterA, edgeOffsetAX, out vertexA);
+            Vector3Wide.Add(vertexA, edgeOffsetAY, out vertexA);
             //Vertex ids only have two states per axis, so scale id by 0 or 1 before adding. Equivalent to conditional or.          
             //Note that the feature id is negated. This disambiguates between edge-edge contacts and vertex contacts.
             vertexId = -(axisIdAZ + axisIdAY);
@@ -325,8 +319,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref candidates, ref rawContactCount);
 
             //Vertex A +x, -y
-            Vector3Wide.Add(ref faceCenterBToFaceCenterA, ref edgeOffsetAX, out vertexA);
-            Vector3Wide.Subtract(ref vertexA, ref edgeOffsetAY, out vertexA);
+            Vector3Wide.Add(faceCenterBToFaceCenterA, edgeOffsetAX, out vertexA);
+            Vector3Wide.Subtract(vertexA, edgeOffsetAY, out vertexA);
             //Vertex ids only have two states per axis, so scale id by 0 or 1 before adding. Equivalent to conditional or.          
             //Note that the feature id is negated. This disambiguates between edge-edge contacts and vertex contacts.
             vertexId = -(axisIdAZ + axisIdAX);
@@ -336,8 +330,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref candidates, ref rawContactCount);
 
             //Vertex A +x, +y
-            Vector3Wide.Add(ref faceCenterBToFaceCenterA, ref edgeOffsetAX, out vertexA);
-            Vector3Wide.Add(ref vertexA, ref edgeOffsetAY, out vertexA);
+            Vector3Wide.Add(faceCenterBToFaceCenterA, edgeOffsetAX, out vertexA);
+            Vector3Wide.Add(vertexA, edgeOffsetAY, out vertexA);
             //Vertex ids only have two states per axis, so scale id by 0 or 1 before adding. Equivalent to conditional or.          
             //Note that the feature id is negated. This disambiguates between edge-edge contacts and vertex contacts.
             vertexId = -(axisIdAZ + axisIdAX + axisIdAY);
@@ -355,12 +349,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //depth = dot(pointOnFaceB - faceCenterA, dotAxis)
             //depth = dot(faceCenterB + tangentBX * candidate.X + tangentBY * candidate.Y - faceCenterA, dotAxis)
             //depth = dot(faceCenterB - faceCenterA, dotAxis) + dot(tangentBX, dotAxis) * candidate.X + dot(tangentBY, dotAxis) * candidate.Y
-            Vector3Wide.Dot(ref normalA, ref manifold.Normal, out var axisScale);
+            Vector3Wide.Dot(normalA, manifold.Normal, out var axisScale);
             axisScale = Vector<float>.One / axisScale;
-            Vector3Wide.Scale(ref normalA, ref axisScale, out var dotAxis);
-            Vector3Wide.Dot(ref faceCenterBToFaceCenterA, ref dotAxis, out var negativeBaseDot);
-            Vector3Wide.Dot(ref tangentBX, ref dotAxis, out var xDot);
-            Vector3Wide.Dot(ref tangentBY, ref dotAxis, out var yDot);
+            Vector3Wide.Scale(normalA, axisScale, out var dotAxis);
+            Vector3Wide.Dot(faceCenterBToFaceCenterA, dotAxis, out var negativeBaseDot);
+            Vector3Wide.Dot(tangentBX, dotAxis, out var xDot);
+            Vector3Wide.Dot(tangentBY, dotAxis, out var yDot);
             //minor todo: don't really need to waste time initializing to an invalid value.
             var minDepth = new Vector<float>(float.MaxValue);
             var maxExtreme = new Vector<float>(-float.MaxValue);
@@ -459,10 +453,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref Candidate rawContact, ref Vector3Wide faceCenterB, ref Vector3Wide tangentBX, ref Vector3Wide tangentBY, ref Vector<float> minimumAcceptedDepth,
             ref Vector<int> contactExists, ref Vector3Wide manifoldOffsetA, ref Vector<float> manifoldDepth, ref Vector<int> manifoldFeatureId)
         {
-            Vector3Wide.Scale(ref tangentBX, ref rawContact.X, out manifoldOffsetA);
-            Vector3Wide.Scale(ref tangentBY, ref rawContact.Y, out var y);
-            Vector3Wide.Add(ref manifoldOffsetA, ref y, out manifoldOffsetA);
-            Vector3Wide.Add(ref manifoldOffsetA, ref faceCenterB, out manifoldOffsetA);
+            Vector3Wide.Scale(tangentBX, rawContact.X, out manifoldOffsetA);
+            Vector3Wide.Scale(tangentBY, rawContact.Y, out var y);
+            Vector3Wide.Add(manifoldOffsetA, y, out manifoldOffsetA);
+            Vector3Wide.Add(manifoldOffsetA, faceCenterB, out manifoldOffsetA);
             //Note that we delayed the speculative margin depth test until the end. This ensures area maximization has meaningful contacts to work with.
             //If we were more aggressive about the depth testing, the final manifold would tend to have more contacts, but less meaningful contacts.
             contactExists = Vector.BitwiseAnd(contactExists, Vector.GreaterThanOrEqual(rawContact.Depth, minimumAcceptedDepth));
@@ -488,8 +482,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Note that contacts outside of face B are not added; that could generate contacts outside of either representative face, which can cause some poor contact choices.
             Candidate candidate;
             candidate.FeatureId = vertexId;
-            Vector3Wide.Dot(ref faceCenterBToVertexA, ref tangentBX, out candidate.X);
-            Vector3Wide.Dot(ref faceCenterBToVertexA, ref tangentBY, out candidate.Y);
+            Vector3Wide.Dot(faceCenterBToVertexA, tangentBX, out candidate.X);
+            Vector3Wide.Dot(faceCenterBToVertexA, tangentBY, out candidate.Y);
             var containedInFaceB = Vector.BitwiseAnd(
                 Vector.BitwiseAnd(Vector.GreaterThanOrEqual(candidate.X, -halfSpanBX), Vector.LessThanOrEqual(candidate.X, halfSpanBX)),
                 Vector.BitwiseAnd(Vector.GreaterThanOrEqual(candidate.Y, -halfSpanBY), Vector.LessThanOrEqual(candidate.Y, halfSpanBY)));
@@ -545,10 +539,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             //Intersect both tangentB edges against the planes with normal equal to tangentA.
             //By protecting against division by zero while maintaining sign, the resulting intervals will still be usable.
-            Vector3Wide.Subtract(ref faceCenterB, ref edgeOffsetB, out var edgeCenter0);
-            Vector3Wide.Add(ref faceCenterB, ref edgeOffsetB, out var edgeCenter1);
-            Vector3Wide.Dot(ref edgeCenter0, ref tangentA, out var taEdgeCenter0);
-            Vector3Wide.Dot(ref edgeCenter1, ref tangentA, out var taEdgeCenter1);
+            Vector3Wide.Subtract(faceCenterB, edgeOffsetB, out var edgeCenter0);
+            Vector3Wide.Add(faceCenterB, edgeOffsetB, out var edgeCenter1);
+            Vector3Wide.Dot(edgeCenter0, tangentA, out var taEdgeCenter0);
+            Vector3Wide.Dot(edgeCenter1, tangentA, out var taEdgeCenter1);
             var inverseTangentBoundsNormal = Vector.ConditionalSelect(Vector.LessThan(tangentDotBoundsNormal, Vector<float>.Zero), -Vector<float>.One, Vector<float>.One) /
                 Vector.Max(new Vector<float>(1e-15f), Vector.Abs(tangentDotBoundsNormal));
             var axbxScaledHalfSpanAX = halfSpanA * inverseTangentBoundsNormal;

@@ -155,18 +155,18 @@ namespace BepuPhysics.Collidables
         public void RayTest(ref RigidPoses pose, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
-            Vector3Wide.Length(ref rayWide.Direction, out var inverseDLength);
+            Vector3Wide.Length(rayWide.Direction, out var inverseDLength);
             inverseDLength = Vector<float>.One / inverseDLength;
-            Vector3Wide.Scale(ref rayWide.Direction, ref inverseDLength, out var d);
+            Vector3Wide.Scale(rayWide.Direction, inverseDLength, out var d);
 
             //Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
-            Vector3Wide.Subtract(ref rayWide.Origin, ref pose.Position, out var o);
-            Vector3Wide.Dot(ref o, ref d, out var dot);
+            Vector3Wide.Subtract(rayWide.Origin, pose.Position, out var o);
+            Vector3Wide.Dot(o, d, out var dot);
             var tOffset = Vector.Max(Vector<float>.Zero, -dot - Radius);
-            Vector3Wide.Scale(ref d, ref tOffset, out var oOffset);
-            Vector3Wide.Add(ref oOffset, ref o, out o);
-            Vector3Wide.Dot(ref o, ref d, out var b);
-            Vector3Wide.Dot(ref o, ref o, out var c);
+            Vector3Wide.Scale(d, tOffset, out var oOffset);
+            Vector3Wide.Add(oOffset, o, out o);
+            Vector3Wide.Dot(o, d, out var b);
+            Vector3Wide.Dot(o, o, out var c);
             c -= Radius * Radius;
 
             //If b > 0 && c > 0, ray is outside and pointing away, no hit.
@@ -180,10 +180,10 @@ namespace BepuPhysics.Collidables
 
 
             t = Vector.Max(-tOffset, -b - Vector.SquareRoot(discriminant));
-            Vector3Wide.Scale(ref d, ref t, out oOffset);
-            Vector3Wide.Add(ref o, ref oOffset, out normal);
+            Vector3Wide.Scale(d, t, out oOffset);
+            Vector3Wide.Add(o, oOffset, out normal);
             var inverseRadius = Vector<float>.One / Radius;
-            Vector3Wide.Scale(ref normal, ref inverseRadius, out normal);
+            Vector3Wide.Scale(normal, inverseRadius, out normal);
             t = (t + tOffset) * inverseDLength;
         }
     }

@@ -30,8 +30,8 @@ namespace BepuPhysics.Constraints.Contact
             //TODO: there would be a minor benefit in eliminating this copy manually, since it's very likely that the compiler won't. And it's probably also introducing more locals init.
             jacobians.LinearA.X = tangentX;
             jacobians.LinearA.Y = tangentY;
-            Vector3Wide.CrossWithoutOverlap(ref offsetA, ref tangentX, out jacobians.AngularA.X);
-            Vector3Wide.CrossWithoutOverlap(ref offsetA, ref tangentY, out jacobians.AngularA.Y);
+            Vector3Wide.CrossWithoutOverlap(offsetA, tangentX, out jacobians.AngularA.X);
+            Vector3Wide.CrossWithoutOverlap(offsetA, tangentY, out jacobians.AngularA.Y);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -40,12 +40,12 @@ namespace BepuPhysics.Constraints.Contact
         {
             ComputeJacobians(ref tangentX, ref tangentY, ref offsetA, out var jacobians);
             //Compute effective mass matrix contributions.
-            Triangular2x2Wide.SandwichScale(ref jacobians.LinearA, ref inertiaA.InverseMass, out var linearContributionA);
-            Triangular3x3Wide.MatrixSandwich(ref jacobians.AngularA, ref inertiaA.InverseInertiaTensor, out var angularContributionA);
+            Triangular2x2Wide.SandwichScale(jacobians.LinearA, inertiaA.InverseMass, out var linearContributionA);
+            Triangular3x3Wide.MatrixSandwich(jacobians.AngularA, inertiaA.InverseInertiaTensor, out var angularContributionA);
 
             //No softening; this constraint is rigid by design. (It does support a maximum force, but that is distinct from a proper damping ratio/natural frequency.)
-            Triangular2x2Wide.Add(ref linearContributionA, ref angularContributionA, out var inverseEffectiveMass);
-            Triangular2x2Wide.InvertSymmetricWithoutOverlap(ref inverseEffectiveMass, out projection.EffectiveMass);
+            Triangular2x2Wide.Add(linearContributionA, angularContributionA, out var inverseEffectiveMass);
+            Triangular2x2Wide.InvertSymmetricWithoutOverlap(inverseEffectiveMass, out projection.EffectiveMass);
             projection.OffsetA = offsetA;
 
             //Note that friction constraints have no bias velocity. They target zero velocity.
@@ -58,13 +58,13 @@ namespace BepuPhysics.Constraints.Contact
         public static void ApplyImpulse(ref Jacobians jacobians, ref BodyInertias inertiaA,
             ref Vector2Wide correctiveImpulse, ref BodyVelocities wsvA)
         {
-            Matrix2x3Wide.Transform(ref correctiveImpulse, ref jacobians.LinearA, out var linearImpulseA);
-            Matrix2x3Wide.Transform(ref correctiveImpulse, ref jacobians.AngularA, out var angularImpulseA);
+            Matrix2x3Wide.Transform(correctiveImpulse, jacobians.LinearA, out var linearImpulseA);
+            Matrix2x3Wide.Transform(correctiveImpulse, jacobians.AngularA, out var angularImpulseA);
             BodyVelocities correctiveVelocityA;
-            Vector3Wide.Scale(ref linearImpulseA, ref inertiaA.InverseMass, out correctiveVelocityA.Linear);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(ref angularImpulseA, ref inertiaA.InverseInertiaTensor, out correctiveVelocityA.Angular);
-            Vector3Wide.Add(ref wsvA.Linear, ref correctiveVelocityA.Linear, out wsvA.Linear);
-            Vector3Wide.Add(ref wsvA.Angular, ref correctiveVelocityA.Angular, out wsvA.Angular);
+            Vector3Wide.Scale(linearImpulseA, inertiaA.InverseMass, out correctiveVelocityA.Linear);
+            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(angularImpulseA, inertiaA.InverseInertiaTensor, out correctiveVelocityA.Angular);
+            Vector3Wide.Add(wsvA.Linear, correctiveVelocityA.Linear, out wsvA.Linear);
+            Vector3Wide.Add(wsvA.Angular, correctiveVelocityA.Angular, out wsvA.Angular);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -81,21 +81,21 @@ namespace BepuPhysics.Constraints.Contact
         public static void ComputeCorrectiveImpulse(ref BodyVelocities wsvA, ref Projection data, ref Jacobians jacobians,
             ref Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, out Vector2Wide correctiveCSI)
         {
-            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.Linear, ref jacobians.LinearA, out var csvaLinear);
-            Matrix2x3Wide.TransformByTransposeWithoutOverlap(ref wsvA.Angular, ref jacobians.AngularA, out var csvaAngular);
-            Vector2Wide.Add(ref csvaLinear, ref csvaAngular, out var csv);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvA.Linear, jacobians.LinearA, out var csvaLinear);
+            Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvA.Angular, jacobians.AngularA, out var csvaAngular);
+            Vector2Wide.Add(csvaLinear, csvaAngular, out var csv);
             //Required corrective velocity is the negation of the current constraint space velocity.
-            Triangular2x2Wide.TransformBySymmetricWithoutOverlap(ref csv, ref data.EffectiveMass, out var negativeCSI);
+            Triangular2x2Wide.TransformBySymmetricWithoutOverlap(csv, data.EffectiveMass, out var negativeCSI);
 
             var previousAccumulated = accumulatedImpulse;
-            Vector2Wide.Subtract(ref accumulatedImpulse, ref negativeCSI, out accumulatedImpulse);
+            Vector2Wide.Subtract(accumulatedImpulse, negativeCSI, out accumulatedImpulse);
             //The maximum force of friction depends upon the normal impulse. The maximum is supplied per iteration.
-            Vector2Wide.Length(ref accumulatedImpulse, out var accumulatedMagnitude);
+            Vector2Wide.Length(accumulatedImpulse, out var accumulatedMagnitude);
             //Note division by zero guard.
             var scale = Vector.Min(Vector<float>.One, maximumImpulse / Vector.Max(new Vector<float>(1e-16f), accumulatedMagnitude));
-            Vector2Wide.Scale(ref accumulatedImpulse, ref scale, out accumulatedImpulse);
+            Vector2Wide.Scale(accumulatedImpulse, scale, out accumulatedImpulse);
 
-            Vector2Wide.Subtract(ref accumulatedImpulse, ref previousAccumulated, out correctiveCSI);
+            Vector2Wide.Subtract(accumulatedImpulse, previousAccumulated, out correctiveCSI);
 
         }
 
