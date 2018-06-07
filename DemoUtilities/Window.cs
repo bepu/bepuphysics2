@@ -96,7 +96,7 @@ namespace DemoUtilities
             window.Visible = true;
             Resolution = resolution;
             window.Resize += (form, args) => resized = true;
-            window.Closed += OnClose;
+            window.Closing += OnClosing;
 
             window.WindowBorder = WindowBorder.Resizable;
 
@@ -104,7 +104,7 @@ namespace DemoUtilities
 
         }
 
-        private void OnClose(object sender, EventArgs e)
+        private void OnClosing(object sender, EventArgs e)
         {
             //This will redundantly call window.Close, but that's fine.
             tryToClose = true;
@@ -136,11 +136,6 @@ namespace DemoUtilities
             {
                 if (disposed)
                     break;
-                if (tryToClose)
-                {
-                    window.Close();
-                    break;
-                }
                 if (resized)
                 {
                     //Note that minimizing or resizing the window to invalid sizes don't result in actual resize attempts. Zero width rendering surfaces aren't allowed.
@@ -151,7 +146,11 @@ namespace DemoUtilities
                     resized = false;
                 }
                 window.ProcessEvents();
-
+                if (tryToClose)
+                {
+                    window.Close();
+                    break;
+                }
                 long time = Stopwatch.GetTimestamp();
                 var dt = (float)((time - previousTime) / (double)Stopwatch.Frequency);
                 previousTime = time;

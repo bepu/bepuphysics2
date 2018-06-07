@@ -62,7 +62,7 @@ namespace Demos.SpecializedTests
 
                     if (qTest.X * q.X < 0)
                     {
-                        Quaternion.Negate(ref qTest, out qTest);
+                        Quaternion.Negate(qTest, out qTest);
                     }
                     Debug.Assert(
                         Math.Abs(qTest.X - q.X) < epsilon &&
@@ -94,9 +94,9 @@ namespace Demos.SpecializedTests
                     QuaternionWide.CreateFromRotationMatrix(r, out var qTest);
 #if DEBUG
                     const float epsilon = 1e-6f;
-                    Vector3Wide.Length(ref r.X, out var lengthX);
-                    Vector3Wide.Length(ref r.Y, out var lengthY);
-                    Vector3Wide.Length(ref r.Z, out var lengthZ);
+                    Vector3Wide.Length(r.X, out var lengthX);
+                    Vector3Wide.Length(r.Y, out var lengthY);
+                    Vector3Wide.Length(r.Z, out var lengthZ);
                     Debug.Assert(
                         Vector.LessThanAll(Vector.Abs(Vector<float>.One - lengthX), new Vector<float>(epsilon)) &&
                         Vector.LessThanAll(Vector.Abs(Vector<float>.One - lengthY), new Vector<float>(epsilon)) &&
@@ -105,7 +105,7 @@ namespace Demos.SpecializedTests
 
                     if (qTest.X[0] * q.X[0] < 0)
                     {
-                        QuaternionWide.Negate(ref qTest, out qTest);
+                        QuaternionWide.Negate(qTest, out qTest);
                     }
                     Debug.Assert(
                         Vector.LessThanAll(Vector.Abs(qTest.X - q.X), new Vector<float>(epsilon)) &&
@@ -160,12 +160,12 @@ namespace Demos.SpecializedTests
                     QuaternionWide.TransformWithoutOverlap(v2, v2ToV1, out var v2TransformedToV1);
                     QuaternionWide.TransformWithoutOverlap(v1, concatenated, out var v1TransformedToV1);
 
-                    Vector3Wide.Subtract(ref v1TransformedToV2, ref v2, out var v1ToV2Error);
-                    Vector3Wide.LengthSquared(ref v1ToV2Error, out var v1ToV2ErrorLength);
-                    Vector3Wide.Subtract(ref v2TransformedToV1, ref v1, out var v2ToV1Error);
-                    Vector3Wide.LengthSquared(ref v2ToV1Error, out var v2ToV1ErrorLength);
-                    Vector3Wide.Subtract(ref v1TransformedToV1, ref v1, out var v1ToV1Error);
-                    Vector3Wide.LengthSquared(ref v1ToV1Error, out var v1ToV1ErrorLength);
+                    Vector3Wide.Subtract(v1TransformedToV2, v2, out var v1ToV2Error);
+                    Vector3Wide.LengthSquared(v1ToV2Error, out var v1ToV2ErrorLength);
+                    Vector3Wide.Subtract(v2TransformedToV1, v1, out var v2ToV1Error);
+                    Vector3Wide.LengthSquared(v2ToV1Error, out var v2ToV1ErrorLength);
+                    Vector3Wide.Subtract(v1TransformedToV1, v1, out var v1ToV1Error);
+                    Vector3Wide.LengthSquared(v1ToV1Error, out var v1ToV1ErrorLength);
                     const float epsilon = 1e-6f;
                     Debug.Assert(
                         Vector.LessThanAll(v1ToV2ErrorLength, new Vector<float>(epsilon)) &&
@@ -197,12 +197,12 @@ namespace Demos.SpecializedTests
                     QuaternionWide.TransformWithoutOverlap(v2, v2ToV1, out var v2TransformedToV1);
                     QuaternionWide.TransformWithoutOverlap(v1, concatenated, out var v1TransformedToV1);
 
-                    Vector3Wide.Subtract(ref v1TransformedToV2, ref v2, out var v1ToV2Error);
-                    Vector3Wide.LengthSquared(ref v1ToV2Error, out var v1ToV2ErrorLength);
-                    Vector3Wide.Subtract(ref v2TransformedToV1, ref v1, out var v2ToV1Error);
-                    Vector3Wide.LengthSquared(ref v2ToV1Error, out var v2ToV1ErrorLength);
-                    Vector3Wide.Subtract(ref v1TransformedToV1, ref v1, out var v1ToV1Error);
-                    Vector3Wide.LengthSquared(ref v1ToV1Error, out var v1ToV1ErrorLength);
+                    Vector3Wide.Subtract(v1TransformedToV2, v2, out var v1ToV2Error);
+                    Vector3Wide.LengthSquared(v1ToV2Error, out var v1ToV2ErrorLength);
+                    Vector3Wide.Subtract(v2TransformedToV1, v1, out var v2ToV1Error);
+                    Vector3Wide.LengthSquared(v2ToV1Error, out var v2ToV1ErrorLength);
+                    Vector3Wide.Subtract(v1TransformedToV1, v1, out var v1ToV1Error);
+                    Vector3Wide.LengthSquared(v1ToV1Error, out var v1ToV1ErrorLength);
                     const float epsilon = 1e-6f;
                     Debug.Assert(
                         Vector.LessThanAll(v1ToV2ErrorLength, new Vector<float>(epsilon)) &&
