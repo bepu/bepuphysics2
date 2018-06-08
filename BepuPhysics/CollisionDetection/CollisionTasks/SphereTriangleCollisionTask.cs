@@ -21,14 +21,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             distanceSquared = Vector.Min(distanceSquaredCandidate, distanceSquared);
             Vector3Wide.ConditionalSelect(useCandidate, localNormalCandidate, localNormal, out localNormal);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
         {
             //Work in the local space of the triangle, since it's quicker to transform the sphere position than the vertices of the triangle.
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, rB, out var localOffsetB);
-            
+
 
             Vector3Wide.Subtract(b.B, b.A, out var ab);
             Vector3Wide.Subtract(b.C, b.A, out var ac);
@@ -36,7 +36,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(b.A, localOffsetB, out var pa);
             Vector3Wide.CrossWithoutOverlap(ab, ac, out var localTriangleNormal);
             Vector3Wide.Dot(localTriangleNormal, pa, out var paN);
-            if(Vector.LessThanAll(paN, Vector<float>.Zero))
+            var collidingWithSolidSide = Vector.GreaterThan(paN, Vector<float>.Zero);
+            if (Vector.EqualsAll(collidingWithSolidSide, Vector<int>.Zero))
             {
                 //No lanes can generate contacts due to the triangle's one sidedness.
                 manifold.ContactExists = Vector<int>.Zero;
@@ -72,7 +73,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             var outsideAnyEdge = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideAC, outsideBC));
             Vector3Wide localClosestOnTriangle;
-            if (Vector.EqualsAny(outsideAnyEdge, new Vector<int>(-1)))
+            var negativeOne = new Vector<int>(-1);
+            if (Vector.EqualsAny(Vector.BitwiseAnd(collidingWithSolidSide, outsideAnyEdge), negativeOne))
             {
                 //At least one lane detected a point outside of the triangle. Choose one edge which is outside as the representative.
                 Vector3Wide.ConditionalSelect(outsideAC, ac, ab, out var edgeDirection);
@@ -91,7 +93,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(outsideAnyEdge, pointOnEdge, localClosestOnTriangle, out localClosestOnTriangle);
 
             }
-            if (Vector.EqualsAny(outsideAnyEdge, Vector<int>.Zero))
+            if (Vector.EqualsAny(Vector.AndNot(collidingWithSolidSide, outsideAnyEdge), negativeOne))
             {
                 //p + N * (pa * N) / ||N||^2 = N * (pa * N) / ||N||^2 - (-p)
                 var nScale = paN / triangleNormalLengthSquared;
@@ -111,7 +113,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.Depth = a.Radius - distance;
             //In the event that the sphere's center point is touching the triangle, the normal is undefined. In that case, the 'correct' normal would be the triangle's normal.
             //However, given that this is a pretty rare degenerate case and that we already treat triangle backfaces as noncolliding, we'll treat zero distance as a backface non-collision.
-            manifold.ContactExists = Vector.BitwiseAnd(Vector.GreaterThan(distance, Vector<float>.Zero), Vector.GreaterThanOrEqual(manifold.Depth, -speculativeMargin));
+            manifold.ContactExists = Vector.BitwiseAnd(
+                Vector.GreaterThan(distance, Vector<float>.Zero),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(paN, Vector<float>.Zero),
+                    Vector.GreaterThanOrEqual(manifold.Depth, -speculativeMargin)));
 
         }
 
