@@ -11,8 +11,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         void TestEdge(in TriangleWide triangle, in Vector3Wide triangleCenter, in Vector3Wide triangleNormal,
             in Vector3Wide edgeStart, in Vector3Wide edgeOffset,
             in Vector3Wide capsuleCenter, in Vector3Wide capsuleAxis, in Vector<float> capsuleHalfLength,
-            ref Vector<float> bestDepth,
-            out Vector3Wide b0, out Vector<float> depth0, out Vector3Wide b1, out Vector<float> depth1, out Vector3Wide normal, out Vector<int> contactCount)
+            out Vector3Wide edgeDirection, out Vector<float> ta, out Vector<float> tb, out Vector<float> bMin, out Vector<float> bMax, out Vector<float> depth, out Vector3Wide normal)
         {
             //Borrowing logic from the capsule-capsule test:
             //Compute the closest points between the two line segments. No clamping to begin with.
@@ -27,10 +26,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(db, offsetB, out var dbOffsetB);
             Vector3Wide.Dot(capsuleAxis, db, out var dadb);
             //Note potential division by zero when the axes are parallel. Arbitrarily clamp; near zero values will instead produce extreme values which get clamped to reasonable results.
-            var ta = (daOffsetB - dbOffsetB * dadb) / Vector.Max(new Vector<float>(1e-15f), Vector<float>.One - dadb * dadb);
+            ta = (daOffsetB - dbOffsetB * dadb) / Vector.Max(new Vector<float>(1e-15f), Vector<float>.One - dadb * dadb);
             //tb = ta * (da * db) - db * (b - a)
-            var tb = ta * dadb - dbOffsetB;
-
+            tb = ta * dadb - dbOffsetB;
 
             //We cannot simply clamp the ta and tb values to the line segments. Instead, project each line segment onto the other line segment, clamping against the target's interval.
             //That new clamped projected interval is the valid solution space on that line segment. We can clamp the t value by that interval to get the correctly bounded solution.
@@ -40,8 +38,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var aMin = Vector.Max(-capsuleHalfLength, Vector.Min(capsuleHalfLength, daOffsetB));
             var aMax = Vector.Min(capsuleHalfLength, Vector.Max(-capsuleHalfLength, daOffsetB + edgeLength * dadb));
             var aOntoBOffset = capsuleHalfLength * Vector.Abs(dadb);
-            var bMin = Vector.Max(Vector<float>.Zero, Vector.Min(edgeLength, -aOntoBOffset - dbOffsetB));
-            var bMax = Vector.Min(edgeLength, Vector.Max(Vector<float>.Zero, aOntoBOffset - dbOffsetB));
+            bMin = Vector.Max(Vector<float>.Zero, Vector.Min(edgeLength, -aOntoBOffset - dbOffsetB));
+            bMax = Vector.Min(edgeLength, Vector.Max(Vector<float>.Zero, aOntoBOffset - dbOffsetB));
             ta = Vector.Min(Vector.Max(ta, aMin), aMax);
             tb = Vector.Min(Vector.Max(tb, bMin), bMax);
 
@@ -82,100 +80,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(triangle.C, normal, out var nc);
             //Normal calibration implies largest triangle value.
             var extremeOnTriangle = Vector.Max(na, Vector.Max(nb, nc));
-            var depth = extremeOnTriangle - extremeOnCapsule;
-
-            //We now have a valid normal and depth, plus the closest points associated with it.
-            var shouldUseEdgeResult = Vector.LessThan(depth, bestDepth);
-            bestDepth = Vector.Min(depth, bestDepth);
-            if (Vector.EqualsAny(shouldUseEdgeResult, new Vector<int>(-1)))
-            {
-                //TODO: Consider moving all this coplanarity stuff out so that it's only done once. Would require caching more information, but this is sufficiently complicated
-                //that it would almost certainly be worth it.
-
-                //Borrowing from capsule-capsule again:
-                //In the event that the two capsule axes are coplanar, we accept the whole interval as a source of contact.
-                //As the axes drift away from coplanarity, the accepted interval rapidly narrows to zero length, centered on ta and tb.
-                //We rate the degree of coplanarity based on the angle between the capsule axis and the plane defined by the box edge and contact normal:
-                //sin(angle) = dot(da, (db x normal)/||db x normal||)
-                //Finally, note that we are dealing with extremely small angles, and for small angles sin(angle) ~= angle,
-                //and also that fade behavior is completely arbitrary, so we can directly use squared angle without any concern.
-                //angle^2 ~= dot(da, (db x normal))^2 / ||db x normal||^2
-                //Note that if ||db x normal|| is the zero, then any da should be accepted as being coplanar because there is no restriction. ConditionalSelect away the discontinuity.
-                Vector3Wide.CrossWithoutOverlap(db, normal, out var planeNormal);
-                Vector3Wide.LengthSquared(planeNormal, out var planeNormalLengthSquared);
-                Vector3Wide.Dot(capsuleAxis, planeNormal, out var squaredAngle);
-                squaredAngle = Vector.ConditionalSelect(Vector.LessThan(planeNormalLengthSquared, new Vector<float>(1e-10f)), Vector<float>.Zero, squaredAngle / planeNormalLengthSquared);
-
-                //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
-                const float lowerThresholdAngle = 0.001f;
-                const float upperThresholdAngle = 0.005f;
-                const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
-                const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
-                var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));
-                //Note that we're working with tb, the edge parameter, rather than the capsule value. Triangle-related contacts must be on the triangle because of boundary smoothing.
-                var weightedTb = tb - tb * intervalWeight;
-                bMin = intervalWeight * bMin + weightedTb;
-                bMax = intervalWeight * bMax + weightedTb;
-
-                Vector3Wide.Scale(db, bMin, out var contactPosition0);
-                Vector3Wide.Add(contactPosition0, edgeStart, out contactPosition0);
-                Vector3Wide.Scale(db, bMax, out var contactPosition1);
-                Vector3Wide.Add(contactPosition1, edgeStart, out contactPosition1);
-                //In the coplanar case, the second contact needs to have a reasonable depth. The first contact should have the depth we already computed.
-                //However, we don't immediately know which interval endpoint is the nearer one, so we'll do both.
-                //Unproject the contact positions back onto the capsule axis.
-                //dot(-offsetB + ta0 * da, db) = tb0
-                //ta0 = (tb0 + dbOffsetB) / dadb
-                //distance0 = dot(b0 - (ta0 * da - offsetB), normal)
-                //Note potential division by zero. In that case, just use the main depth.
-                var inverseDadb = Vector<float>.One / dadb;
-                var ta0 = (bMin + dbOffsetB) * inverseDadb;
-                Vector3Wide.Scale(capsuleAxis, ta0, out var unprojected0);
-                Vector3Wide.Add(unprojected0, capsuleCenter, out unprojected0);
-                Vector3Wide.Subtract(contactPosition0, unprojected0, out var offset0);
-                Vector3Wide.Dot(offset0, normal, out var separation0);
-
-                var ta1 = (bMax + dbOffsetB) * inverseDadb;
-                Vector3Wide.Scale(capsuleAxis, ta1, out var unprojected1);
-                Vector3Wide.Add(unprojected1, capsuleCenter, out unprojected1);
-                Vector3Wide.Subtract(contactPosition1, unprojected1, out var offset1);
-                Vector3Wide.Dot(offset1, normal, out var separation1);
-
-                var perpendicular = Vector.LessThan(Vector.Abs(dadb), new Vector<float>(1e-7f));
-                var depthCandidate0 = Vector.ConditionalSelect(perpendicular, depth, -separation0);
-                var depthCandidate1 = Vector.ConditionalSelect(perpendicular, depth, -separation1);
-
-                //Put the closer contact into the first slot.
-                var use0AsFirst = Vector.LessThan(depthCandidate0, depthCandidate1);
-                depth0 = Vector.ConditionalSelect(use0AsFirst, depthCandidate0, depthCandidate1);
-                Vector3Wide.ConditionalSelect(use0AsFirst, contactPosition0, contactPosition1, out b0);
-                depth1 = Vector.ConditionalSelect(use0AsFirst, depthCandidate1, depthCandidate0);
-                Vector3Wide.ConditionalSelect(use0AsFirst, contactPosition1, contactPosition0, out b1);
-
-                contactCount = Vector.ConditionalSelect(shouldUseEdgeResult,
-                    Vector.ConditionalSelect(
-                        Vector.GreaterThan(bMax - bMin, Vector<float>.Zero), new Vector<int>(2), Vector<int>.One),
-                    Vector<int>.Zero);
-            }
-            else
-            {
-                contactCount = Vector<int>.Zero;
-            }
-
+            depth = extremeOnTriangle - extremeOnCapsule;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void Select(ref Vector<float> depth0, ref Vector3Wide b0, ref Vector<float> depth1, ref Vector3Wide b1, ref Vector3Wide edgeNormal, ref Vector<int> edgeContactCount,
-            in Vector<float> depth0Candidate, in Vector3Wide b0Candidate, in Vector<float> depth1Candidate, in Vector3Wide b1Candidate,
-            in Vector3Wide edgeNormalCandidate, in Vector<int> edgeContactCountCandidate)
+        void ClipAgainstEdgePlane(in Vector3Wide edgeStart, in Vector3Wide edgeOffset, in Vector3Wide faceNormal, in Vector3Wide capsuleCenter, in Vector3Wide capsuleAxis,
+            out Vector<float> intersection)
         {
-            var useCandidate = Vector.BitwiseAnd(Vector.GreaterThan(edgeContactCountCandidate, Vector<int>.Zero), Vector.LessThan(depth0Candidate, depth0));
-            depth0 = Vector.ConditionalSelect(useCandidate, depth0Candidate, depth0);
-            Vector3Wide.ConditionalSelect(useCandidate, b0Candidate, b0, out b0);
-            depth1 = Vector.ConditionalSelect(useCandidate, depth1Candidate, depth1);
-            Vector3Wide.ConditionalSelect(useCandidate, b1Candidate, b1, out b1);
-            Vector3Wide.ConditionalSelect(useCandidate, edgeNormalCandidate, edgeNormal, out edgeNormal);
-            Vector.ConditionalSelect(useCandidate, edgeContactCountCandidate, edgeContactCount);
+            //t = edgeToCapsule * (edgePlaneNormal / ||edgePlaneNormal||) / (capsuleAxis * (edgePlaneNormal / ||edgePlaneNormal||))
+            Vector3Wide.CrossWithoutOverlap(edgeOffset, faceNormal, out var edgePlaneNormal);
+            Vector3Wide.Subtract(capsuleCenter, edgeStart, out var edgeToCapsule);
+            Vector3Wide.Dot(edgeToCapsule, edgePlaneNormal, out var distance);
+            Vector3Wide.Dot(capsuleAxis, edgePlaneNormal, out var velocity);
+            //Note that near-zero denominators (parallel axes) result in a properly signed large finite value.
+            intersection = Vector.ConditionalSelect(Vector.LessThan(velocity, Vector<float>.Zero), -distance, distance) / Vector.Max(new Vector<float>(1e-15f), Vector.Abs(velocity));
+
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -227,44 +146,184 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //That's fine- either the edge cases will produce better results, or no contacts will be generated at all.
             var faceDepth = a.HalfLength * Vector.Abs(nDotAxis) - capsuleOffsetAlongNormal;
 
-            var bestDepth = faceDepth;
-            TestEdge(b, localTriangleCenter, faceNormal, b.A, ab, localOffsetA, localCapsuleAxis, a.HalfLength, ref bestDepth,
-                out var b0, out var depth0, out var b1, out var depth1, out var edgeNormal, out var edgeContactCount);
-            TestEdge(b, localTriangleCenter, faceNormal, b.A, ac, localOffsetA, localCapsuleAxis, a.HalfLength, ref bestDepth,
-                out var b0Candidate, out var depth0Candidate, out var b1Candidate, out var depth1Candidate, out var edgeNormalCandidate, out var edgeContactCountCandidate);
-            Select(ref depth0, ref b0, ref depth1, ref b1, ref edgeNormal, ref edgeContactCount,
-                depth0Candidate, b0Candidate, depth1Candidate, b1Candidate, edgeNormalCandidate, edgeContactCountCandidate);
-            Vector3Wide.Subtract(b.C, b.B, out var bc);
-            TestEdge(b, localTriangleCenter, faceNormal, b.B, bc, localOffsetA, localCapsuleAxis, a.HalfLength, ref bestDepth,
-                out b0Candidate, out depth0Candidate, out b1Candidate, out depth1Candidate, out edgeNormalCandidate, out edgeContactCountCandidate);
-            Select(ref depth0, ref b0, ref depth1, ref b1, ref edgeNormal, ref edgeContactCount,
-                depth0Candidate, b0Candidate, depth1Candidate, b1Candidate, edgeNormalCandidate, edgeContactCountCandidate);
+            TestEdge(b, localTriangleCenter, faceNormal, b.A, ab, localOffsetA, localCapsuleAxis, a.HalfLength,
+                out var edgeDirection, out var ta, out var tb, out var bMin, out var bMax, out var edgeDepth, out var edgeNormal);
+            TestEdge(b, localTriangleCenter, faceNormal, b.A, ac, localOffsetA, localCapsuleAxis, a.HalfLength,
+                out var edgeDirectionCandidate, out var taCandidate, out var tbCandidate, out var bMinCandidate, out var bMaxCandidate, out var edgeDepthCandidate, out var edgeNormalCandidate);
+            var useAC = Vector.LessThan(edgeDepthCandidate, edgeDepth);
+            Vector3Wide.ConditionalSelect(useAC, edgeDirectionCandidate, edgeDirection, out edgeDirection);
+            Vector3Wide.ConditionalSelect(useAC, edgeNormalCandidate, edgeNormal, out edgeNormal);
+            ta = Vector.ConditionalSelect(useAC, taCandidate, ta);
+            tb = Vector.ConditionalSelect(useAC, tbCandidate, tb);
+            bMin = Vector.ConditionalSelect(useAC, bMinCandidate, bMin);
+            bMax = Vector.ConditionalSelect(useAC, bMaxCandidate, bMax);
+            edgeDepth = Vector.Min(edgeDepthCandidate, edgeDepth);
 
-            var allowFaceNormal = Vector.GreaterThanOrEqual(capsuleOffsetAlongNormal, Vector<float>.Zero);
-            var noEdgeContacts = Vector.Equals(edgeContactCount, Vector<int>.Zero);
-            var noContacts = Vector.AndNot(noEdgeContacts, allowFaceNormal);
-            if (Vector.EqualsAll(Vector.BitwiseOr(noContacts, Vector.LessThan(bestDepth, -speculativeMargin)), new Vector<int>(-1)))
+            Vector3Wide.Subtract(b.C, b.B, out var bc);
+            TestEdge(b, localTriangleCenter, faceNormal, b.B, bc, localOffsetA, localCapsuleAxis, a.HalfLength,
+                out edgeDirectionCandidate, out taCandidate, out tbCandidate, out bMinCandidate, out bMaxCandidate, out edgeDepthCandidate, out edgeNormalCandidate);
+            var useBC = Vector.LessThan(edgeDepthCandidate, edgeDepth);
+            Vector3Wide.ConditionalSelect(useBC, b.B, b.A, out var edgeStart);
+            Vector3Wide.ConditionalSelect(useBC, edgeDirectionCandidate, edgeDirection, out edgeDirection);
+            Vector3Wide.ConditionalSelect(useBC, edgeNormalCandidate, edgeNormal, out edgeNormal);
+            ta = Vector.ConditionalSelect(useAC, taCandidate, ta);
+            tb = Vector.ConditionalSelect(useBC, tbCandidate, tb);
+            bMin = Vector.ConditionalSelect(useBC, bMinCandidate, bMin);
+            bMax = Vector.ConditionalSelect(useBC, bMaxCandidate, bMax);
+            edgeDepth = Vector.Min(edgeDepthCandidate, edgeDepth);
+
+            var depth = Vector.Min(edgeDepth, faceDepth);
+            if (Vector.EqualsAll(Vector.LessThan(depth, -speculativeMargin), new Vector<int>(-1)))
             {
                 //There are no contacts in any lane, so we can just skip the rest.
                 manifold.Contact0Exists = Vector<int>.Zero;
                 manifold.Contact1Exists = Vector<int>.Zero;
                 return;
             }
-            var useFaceNormal = Vector.BitwiseAnd(allowFaceNormal, noEdgeContacts);
-            Vector3Wide.ConditionalSelect(useFaceNormal, faceNormal, edgeNormal, out var localNormal);
+            Vector3Wide localNormal;
+            Vector3Wide b0, b1;
+            Vector<int> contactCount;
+            var useEdge = Vector.LessThan(edgeDepth, faceDepth);
+            if (Vector.EqualsAny(useEdge, new Vector<int>(-1)))
+            {
+                //At least one of the paths uses edges, so go ahead and create all edge contact related information.
+                //Borrowing from capsule-capsule again:
+                //In the event that the two capsule axes are coplanar, we accept the whole interval as a source of contact.
+                //As the axes drift away from coplanarity, the accepted interval rapidly narrows to zero length, centered on ta and tb.
+                //We rate the degree of coplanarity based on the angle between the capsule axis and the plane defined by the box edge and contact normal:
+                //sin(angle) = dot(da, (db x normal)/||db x normal||)
+                //Finally, note that we are dealing with extremely small angles, and for small angles sin(angle) ~= angle,
+                //and also that fade behavior is completely arbitrary, so we can directly use squared angle without any concern.
+                //angle^2 ~= dot(da, (db x normal))^2 / ||db x normal||^2
+                //Note that if ||db x normal|| is the zero, then any da should be accepted as being coplanar because there is no restriction. ConditionalSelect away the discontinuity.
+                Vector3Wide.CrossWithoutOverlap(edgeDirection, edgeNormal, out var planeNormal);
+                Vector3Wide.LengthSquared(planeNormal, out var planeNormalLengthSquared);
+                Vector3Wide.Dot(localCapsuleAxis, planeNormal, out var squaredAngle);
+                squaredAngle = Vector.ConditionalSelect(Vector.LessThan(planeNormalLengthSquared, new Vector<float>(1e-10f)), Vector<float>.Zero, squaredAngle / planeNormalLengthSquared);
 
+                //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
+                const float lowerThresholdAngle = 0.001f;
+                const float upperThresholdAngle = 0.005f;
+                const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
+                const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
+                var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));
+                //Note that we're working with tb, the edge parameter, rather than the capsule value. Triangle-related contacts must be on the triangle because of boundary smoothing.
+                var weightedTb = tb - tb * intervalWeight;
+                bMin = intervalWeight * bMin + weightedTb;
+                bMax = intervalWeight * bMax + weightedTb;
 
-            //Three possible cases: 0, 1, or 2 edge contacts have been created.
-            //In the event that 0 edge contacts have been created, the faceDepth must have been the best.
-            //Try to generate two contacts by clipping the capsule axis against the triangle edge planes, then projecting them onto the triangle.
-            //(Note that clipping is only required in the case where the capsule axis is perpendicular to the triangle normal because we can't rely an edge test to win numerically.)
+                Vector3Wide.Scale(edgeDirection, bMin, out b0);
+                Vector3Wide.Add(b0, edgeStart, out b0);
+                Vector3Wide.Scale(edgeDirection, bMax, out b1);
+                Vector3Wide.Add(b1, edgeStart, out b1);
 
-            //If there is one edge contact, then try creating a helper contact by projecting capsule endpoints onto the triangle plane.
-            //(This can be shared with the clipping above- the clipped interval spans all valid source points.)
-            //If the endpoint starts above the triangle and the projection is inside the triangle, use it as the second contact.
+                Vector3Wide.ConditionalSelect(useEdge, edgeNormal, faceNormal, out localNormal);
+                contactCount = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(Vector.GreaterThan(bMax, bMin), new Vector<int>(2), Vector<int>.One), Vector<int>.Zero);
+            }
+            else
+            {
+                //No edges are used; all contacts must be face contacts.
+                localNormal = faceNormal;
+                contactCount = Vector<int>.Zero;
+            }
 
-            //If there are two edge contacts, just use them.
+            Vector3Wide.Dot(localNormal, faceNormal, out var localNormalDotFaceNormal);
+            if(Vector.LessThanOrEqualAll(localNormalDotFaceNormal, Vector<float>.Zero))
+            {
+                //All contact normals are on the back of the triangle, so we can immediately quit.
+                manifold.Contact0Exists = Vector<int>.Zero;
+                manifold.Contact1Exists = Vector<int>.Zero;
+                return;
+            }
+
+            //Any edge contributions are now stored in the b0, b1, localNormal, and depth fields. 
+            //1) If face contact won (no edges contributed any contacts), then generate two contacts by clipping the capsule axis against the triangle edge planes.
+            //(Clipping is used so that the results can be shared by #2, and in case where the capsule axis is parallel to the face surface so an edge that 'should' have won, didn't.)
+            //2) If an edge contact one and only generated one contact, then try to generate one additional face contact by
+            //projecting a capsule endpoint onto the triangle if it's on the colliding side and is within the triangle's bounds.
+            //The bounds check can share the clipping done for face contacts.
+            //3) If an edge contact has generated two contacts, then no additional contacts are required.
+
+            if (Vector.LessThanOrEqualAny(contactCount, Vector<int>.One))
+            {
+                ClipAgainstEdgePlane(b.A, ab, faceNormal, localOffsetA, localCapsuleAxis, out var abIntersection);
+                ClipAgainstEdgePlane(b.A, ac, faceNormal, localOffsetA, localCapsuleAxis, out var acIntersection);
+                ClipAgainstEdgePlane(b.B, bc, faceNormal, localOffsetA, localCapsuleAxis, out var bcIntersection);
+                var triangleIntervalMin = Vector.Min(abIntersection, Vector.Min(acIntersection, bcIntersection));
+                var triangleIntervalMax = Vector.Max(abIntersection, Vector.Max(acIntersection, bcIntersection));
+
+                var overlapIntervalMin = Vector.Max(triangleIntervalMin, -a.HalfLength);
+                var overlapIntervalMax = Vector.Min(triangleIntervalMax, a.HalfLength);
+                Vector3Wide.Scale(localCapsuleAxis, overlapIntervalMin, out var clippedOnA0);
+                Vector3Wide.Add(clippedOnA0, localOffsetA, out clippedOnA0);
+                Vector3Wide.Dot(clippedOnA0, faceNormal, out var nA0);
+                Vector3Wide.Dot(localTriangleCenter, faceNormal, out var trianglePlaneOffset);
+                var distanceAlongNormalA0 = nA0 - trianglePlaneOffset;
+                Vector3Wide.Scale(faceNormal, distanceAlongNormalA0, out var toRemoveA0);
+                Vector3Wide.Subtract(clippedOnA0, toRemoveA0, out var faceCandidate0);
+
+                Vector3Wide.Scale(localCapsuleAxis, overlapIntervalMax, out var clippedOnA1);
+                Vector3Wide.Add(clippedOnA1, localOffsetA, out clippedOnA1);
+                Vector3Wide.Dot(clippedOnA1, faceNormal, out var nA1);
+                var distanceAlongNormalA1 = nA1 - trianglePlaneOffset;
+                Vector3Wide.Scale(faceNormal, distanceAlongNormalA1, out var toRemoveA1);
+                Vector3Wide.Subtract(clippedOnA1, toRemoveA1, out var faceCandidate1);
+
+                //Automatically accept the two candidates if there are no contacts.
+                var noEdgeContacts = Vector.Equals(contactCount, Vector<int>.Zero);
+                var intervalExists = Vector.GreaterThanOrEqual(overlapIntervalMax, overlapIntervalMin);
+                Vector3Wide.ConditionalSelect(noEdgeContacts, faceCandidate0, b0, out b0);
+                Vector3Wide.ConditionalSelect(noEdgeContacts, faceCandidate1, b1, out b1);
+                contactCount = Vector.ConditionalSelect(Vector.BitwiseAnd(noEdgeContacts, intervalExists), new Vector<int>(2), contactCount);
+
+                //If there's one edge contact, only one of the two face contacts should be accepted.
+                //Note that it's likely that one of the two clipped interval endpoints will end up very close to the edge contact, so picking that one would be a waste.
+                //Choose the endpoint based on which clipped interval endpoint is further from the edge contact on the capsule's axis.
+                var useFaceContact1ForSecondContact = Vector.GreaterThan(Vector.Abs(overlapIntervalMax - ta), Vector.Abs(overlapIntervalMin - ta));
+                Vector3Wide.ConditionalSelect(useFaceContact1ForSecondContact, faceCandidate1, faceCandidate0, out var secondContactCandidate);
+                var secondContactDistanceAlongNormal = Vector.ConditionalSelect(useFaceContact1ForSecondContact, distanceAlongNormalA1, distanceAlongNormalA0);
+                //To actually use this as the second contact, these conditions must be met:
+                //1) The interval is valid (max > min).
+                //2) The number of contacts == 1.
+                //3) The candidate is above the triangle.
+                var useCandidateForSecondContact = Vector.BitwiseAnd(intervalExists, 
+                    Vector.BitwiseAnd(Vector.Equals(contactCount, Vector<int>.One), Vector.GreaterThan(secondContactDistanceAlongNormal, Vector<float>.Zero)));                
+                Vector3Wide.ConditionalSelect(useCandidateForSecondContact, secondContactCandidate, b1, out b1);
+                contactCount = Vector.ConditionalSelect(useCandidateForSecondContact, new Vector<int>(2), contactCount);
+            }
+
+            //Measure the depths for the two contacts by seeing how far they are along the normal from the capsule.
+            //We'll do this by creating a plane positioned at the capsule center with a normal pointing against the contact normal.
+            //capsuleAxisPlaneNormal = (N x capsuleAxis) x capsuleAxis
+            //The depths are derived from testing a ray against that plane, starting from the contact position and going along the contact normal.
+            Vector3Wide.CrossWithoutOverlap(faceNormal, localCapsuleAxis, out var nxa);
+            Vector3Wide.CrossWithoutOverlap(nxa, localCapsuleAxis, out var capsuleAxisPlaneNormal);
+
+            Vector3Wide.Subtract(localOffsetA, b0, out var offset0);
+            Vector3Wide.Dot(capsuleAxisPlaneNormal, offset0, out var planeDistance0);
+            Vector3Wide.Subtract(localOffsetA, b1, out var offset1);
+            Vector3Wide.Dot(capsuleAxisPlaneNormal, offset1, out var planeDistance1);
+            Vector3Wide.Dot(faceNormal, capsuleAxisPlaneNormal, out var velocity);
+            var inverseVelocity = Vector<float>.One / velocity;
+            var separation0 = planeDistance0 * inverseVelocity;
+            var separation1 = planeDistance1 * inverseVelocity;
+            manifold.Depth0 = a.Radius - separation0;
+            manifold.Depth1 = a.Radius - separation1;
+
+            //Transform contact positions into world space rotation, measured as offsets from the capsule (object A).
+            Matrix3x3Wide.Transform(b0, rB, out var contact0RelativeToB);
+            Vector3Wide.Add(contact0RelativeToB, offsetB, out manifold.OffsetA0);
+            Matrix3x3Wide.Transform(b1, rB, out var contact1RelativeToB);
+            Vector3Wide.Add(contact1RelativeToB, offsetB, out manifold.OffsetA1);
+            Matrix3x3Wide.Transform(localNormal, rB, out manifold.Normal);
+
+            //If the normal we found points away from the triangle normal, then it it's hitting the wrong side and should be ignored. (Note that we had an early out for this earlier.)
+            contactCount = Vector.ConditionalSelect(Vector.GreaterThanOrEqual(localNormalDotFaceNormal, Vector<float>.Zero), contactCount, Vector<int>.Zero);
+            var depthThreshold = -speculativeMargin;
+            manifold.Contact0Exists = Vector.BitwiseAnd(Vector.GreaterThan(manifold.Depth0, depthThreshold), Vector.GreaterThan(contactCount, Vector<int>.Zero));
+            manifold.Contact1Exists = Vector.BitwiseAnd(Vector.GreaterThan(manifold.Depth1, depthThreshold), Vector.GreaterThan(contactCount, Vector<int>.One));
         }
+
 
         public void Test(ref CapsuleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex2ContactManifoldWide manifold)
         {
