@@ -35,6 +35,25 @@ namespace Demos.Demos
                 tester.Test(ref sphere, ref triangle, ref margin, ref offsetB, ref orientationB, out var manifold);
             }
             {
+                CapsuleTriangleTester tester;
+                CapsuleWide capsule;
+                capsule.Broadcast(new Capsule(0.5f, 0.5f));
+                TriangleWide triangle;
+                var a = new Vector3(0, 0, 0);
+                var b = new Vector3(1, 0, 0);
+                var c = new Vector3(0, 0, 1);
+                //var center = (a + b + c) / 3f;
+                //a -= center;
+                //b -= center;
+                //c -= center;
+                triangle.Broadcast(new Triangle(a, b, c));
+                var margin = new Vector<float>(1f);
+                Vector3Wide.Broadcast(new Vector3(-1, -1, 0), out var offsetB);
+                QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationA);
+                QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
+                tester.Test(ref capsule, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, out var manifold);
+            }
+            {
                 camera.Position = new Vector3(0, 3, 10);
                 camera.Yaw = 0;
 

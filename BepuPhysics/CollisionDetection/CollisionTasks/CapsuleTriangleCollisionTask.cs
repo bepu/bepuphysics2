@@ -20,11 +20,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //ta = (da * (b - a) + (db * (a - b)) * (da * db)) / (1 - ((da * db) * (da * db))        
             //(Probably could avoid this square root by revisiting the derivation to permit non-unit length directions, but it's fairly inconsequential.)
             Vector3Wide.Length(edgeOffset, out var edgeLength);
-            Vector3Wide.Scale(edgeOffset, Vector<float>.One / edgeLength, out var db);
+            Vector3Wide.Scale(edgeOffset, Vector<float>.One / edgeLength, out edgeDirection);
             Vector3Wide.Subtract(edgeStart, capsuleCenter, out var offsetB);
             Vector3Wide.Dot(capsuleAxis, offsetB, out var daOffsetB);
-            Vector3Wide.Dot(db, offsetB, out var dbOffsetB);
-            Vector3Wide.Dot(capsuleAxis, db, out var dadb);
+            Vector3Wide.Dot(edgeDirection, offsetB, out var dbOffsetB);
+            Vector3Wide.Dot(capsuleAxis, edgeDirection, out var dadb);
             //Note potential division by zero when the axes are parallel. Arbitrarily clamp; near zero values will instead produce extreme values which get clamped to reasonable results.
             ta = (daOffsetB - dbOffsetB * dadb) / Vector.Max(new Vector<float>(1e-15f), Vector<float>.One - dadb * dadb);
             //tb = ta * (da * db) - db * (b - a)
@@ -45,7 +45,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Vector3Wide.Scale(capsuleAxis, ta, out var closestPointOnCapsule);
             Vector3Wide.Add(closestPointOnCapsule, capsuleCenter, out closestPointOnCapsule);
-            Vector3Wide.Scale(db, tb, out var closestPointOnEdge);
+            Vector3Wide.Scale(edgeDirection, tb, out var closestPointOnEdge);
             Vector3Wide.Add(closestPointOnEdge, edgeStart, out closestPointOnEdge);
 
             Vector3Wide.Subtract(closestPointOnCapsule, closestPointOnEdge, out normal);
@@ -94,6 +94,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(capsuleAxis, edgePlaneNormal, out var velocity);
             //Note that near-zero denominators (parallel axes) result in a properly signed large finite value.
             intersection = Vector.ConditionalSelect(Vector.LessThan(velocity, Vector<float>.Zero), -distance, distance) / Vector.Max(new Vector<float>(1e-15f), Vector.Abs(velocity));
+            intersection = Vector.ConditionalSelect(
+                Vector.BitwiseAnd(
+                    Vector.LessThan(Vector.Abs(distance), new Vector<float>(1e-15f)),
+                    Vector.LessThan(Vector.Abs(velocity), new Vector<float>(1e-15f))), new Vector<float>(-float.MaxValue), intersection); 
 
         }
 
@@ -118,10 +122,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //capsuleAxis x AB
             //capsuleAxis x AC
             //capsuleAxis x BC
-            //AB X AC
+            //AC X AB
             //However, while those are sufficient for line segment-triangle testing, we are dealing with a capsule whose nonspeculative contacts require points of closest approach.
             //This adds more potential sources:
-            //Capsule endpoint vs face (redundant with AB x AC)
+            //Capsule endpoint vs face (redundant with AC x AB)
             //Capsule endpoint vs edge
             //Capsule endpoint vs vertex
             //Capsule line vs face (redundant with either axis-edge or endpoint vs face)
@@ -131,12 +135,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //While performing those additional tests explicitly would work for determining a minimal separating axis, we can consider them implicitly.
             //If all axis-edge tests compute the closest points between the edge and capsule axis bounded line segments, the triangle vertices and capsule endpoints are handled.
 
-            Vector3Wide.Subtract(b.B, b.A, out var ab);
             Vector3Wide.Subtract(b.C, b.A, out var ac);
+            Vector3Wide.Subtract(b.B, b.A, out var ab);
 
-            Vector3Wide.CrossWithoutOverlap(ab, ac, out var abxac);
-            Vector3Wide.LengthSquared(abxac, out var faceNormalLengthSquared);
-            Vector3Wide.Scale(abxac, Vector<float>.One / Vector.SquareRoot(faceNormalLengthSquared), out var faceNormal);
+            Vector3Wide.CrossWithoutOverlap(ac, ab, out var acxab);
+            Vector3Wide.LengthSquared(acxab, out var faceNormalLengthSquared);
+            Vector3Wide.Scale(acxab, Vector<float>.One / Vector.SquareRoot(faceNormalLengthSquared), out var faceNormal);
 
             Vector3Wide.Subtract(localOffsetA, localTriangleCenter, out var triangleCenterToCapsuleCenter);
             //The depth along the face normal is unaffected by the triangle's extent- the triangle has no extent along its own normal. But the capsule does.
@@ -247,10 +251,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             if (Vector.LessThanOrEqualAny(contactCount, Vector<int>.One))
             {
                 ClipAgainstEdgePlane(b.A, ab, faceNormal, localOffsetA, localCapsuleAxis, out var abIntersection);
-                ClipAgainstEdgePlane(b.A, ac, faceNormal, localOffsetA, localCapsuleAxis, out var acIntersection);
                 ClipAgainstEdgePlane(b.B, bc, faceNormal, localOffsetA, localCapsuleAxis, out var bcIntersection);
-                var triangleIntervalMin = Vector.Min(abIntersection, Vector.Min(acIntersection, bcIntersection));
-                var triangleIntervalMax = Vector.Max(abIntersection, Vector.Max(acIntersection, bcIntersection));
+                //Winding matters. ab, bc, ca.
+                Vector3Wide.Negate(ac, out var ca);
+                ClipAgainstEdgePlane(b.A, ca, faceNormal, localOffsetA, localCapsuleAxis, out var caIntersection);
+                var triangleIntervalMin = Vector.Min(abIntersection, Vector.Min(caIntersection, bcIntersection));
+                var triangleIntervalMax = Vector.Max(abIntersection, Vector.Max(caIntersection, bcIntersection));
 
                 var overlapIntervalMin = Vector.Max(triangleIntervalMin, -a.HalfLength);
                 var overlapIntervalMax = Vector.Min(triangleIntervalMax, a.HalfLength);
@@ -270,11 +276,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Subtract(clippedOnA1, toRemoveA1, out var faceCandidate1);
 
                 //Automatically accept the two candidates if there are no contacts.
+                //Note that we accept it even if the interval is negative length- if there are no edge contacts, it means that the face normal was the best option.
+                //If the face normal is the best option, there MUST be face contacts. Any disagreement on the part of clipping is simply a matter of numerical error.
+                //As a side effect of being mere numerical error, the distance between the projected points and the triangle should tend to be near epsilon.
                 var noEdgeContacts = Vector.Equals(contactCount, Vector<int>.Zero);
-                var intervalExists = Vector.GreaterThanOrEqual(overlapIntervalMax, overlapIntervalMin);
                 Vector3Wide.ConditionalSelect(noEdgeContacts, faceCandidate0, b0, out b0);
                 Vector3Wide.ConditionalSelect(noEdgeContacts, faceCandidate1, b1, out b1);
-                contactCount = Vector.ConditionalSelect(Vector.BitwiseAnd(noEdgeContacts, intervalExists), new Vector<int>(2), contactCount);
+                contactCount = Vector.ConditionalSelect(noEdgeContacts, new Vector<int>(2), contactCount);
 
                 //If there's one edge contact, only one of the two face contacts should be accepted.
                 //Note that it's likely that one of the two clipped interval endpoints will end up very close to the edge contact, so picking that one would be a waste.
@@ -286,7 +294,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //1) The interval is valid (max > min).
                 //2) The number of contacts == 1.
                 //3) The candidate is above the triangle.
-                var useCandidateForSecondContact = Vector.BitwiseAnd(intervalExists, 
+                var useCandidateForSecondContact = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(overlapIntervalMax, overlapIntervalMin), 
                     Vector.BitwiseAnd(Vector.Equals(contactCount, Vector<int>.One), Vector.GreaterThan(secondContactDistanceAlongNormal, Vector<float>.Zero)));                
                 Vector3Wide.ConditionalSelect(useCandidateForSecondContact, secondContactCandidate, b1, out b1);
                 contactCount = Vector.ConditionalSelect(useCandidateForSecondContact, new Vector<int>(2), contactCount);
@@ -296,12 +304,23 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //We'll do this by creating a plane positioned at the capsule center with a normal pointing against the contact normal.
             //capsuleAxisPlaneNormal = (N x capsuleAxis) x capsuleAxis
             //The depths are derived from testing a ray against that plane, starting from the contact position and going along the contact normal.
-            Vector3Wide.CrossWithoutOverlap(faceNormal, localCapsuleAxis, out var nxa);
+            Vector3Wide.CrossWithoutOverlap(localNormal, localCapsuleAxis, out var nxa);
             Vector3Wide.CrossWithoutOverlap(nxa, localCapsuleAxis, out var capsuleAxisPlaneNormal);
-
-            Vector3Wide.Subtract(localOffsetA, b0, out var offset0);
+            //If the resulting plane normal is near zero, then the capsule axis and face normal were roughly parallel.
+            //In that case, we can simply use the flipped face normal.
+            Vector3Wide.LengthSquared(capsuleAxisPlaneNormal, out var capsuleAxisPlaneNormalLengthSquared);
+            Vector3Wide.Negate(localNormal, out var negatedNormal);
+            Vector3Wide.ConditionalSelect(Vector.LessThan(capsuleAxisPlaneNormalLengthSquared, new Vector<float>(1e-15f)), negatedNormal, capsuleAxisPlaneNormal, out capsuleAxisPlaneNormal);
+            //Given that we have a special case that creates a plane normal that isn't perpendicular to the capsule axis, we need to pick a center point for the capsule plane
+            //which gives us the desired result- both contacts have the same depth matching the capsule endpoint closer to the triangle.
+            Vector3Wide.Dot(capsuleAxisPlaneNormal, localCapsuleAxis, out var capsuleAxisPlaneDot);
+            var planeAnchorOnCapsuleT = Vector.ConditionalSelect(Vector.LessThan(capsuleAxisPlaneDot, Vector<float>.Zero), -a.HalfLength, a.HalfLength);
+            Vector3Wide.Scale(localCapsuleAxis, planeAnchorOnCapsuleT, out var capsulePlaneAnchor);
+            Vector3Wide.Add(capsulePlaneAnchor, localOffsetA, out capsulePlaneAnchor);
+            
+            Vector3Wide.Subtract(capsulePlaneAnchor, b0, out var offset0);
             Vector3Wide.Dot(capsuleAxisPlaneNormal, offset0, out var planeDistance0);
-            Vector3Wide.Subtract(localOffsetA, b1, out var offset1);
+            Vector3Wide.Subtract(capsulePlaneAnchor, b1, out var offset1);
             Vector3Wide.Dot(capsuleAxisPlaneNormal, offset1, out var planeDistance1);
             Vector3Wide.Dot(faceNormal, capsuleAxisPlaneNormal, out var velocity);
             var inverseVelocity = Vector<float>.One / velocity;
@@ -309,6 +328,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var separation1 = planeDistance1 * inverseVelocity;
             manifold.Depth0 = a.Radius - separation0;
             manifold.Depth1 = a.Radius - separation1;
+
+            //For feature ids, note that we have a few different potential sources of contacts. While we could go through and force each potential source to output ids,
+            //there is a useful single unifying factor: where the contacts occur on the capsule axis. Using this, it doesn't matter if contacts are generated from face or edge cases,
+            //so there's a higher chance of properly reusing the previous frame's accumulated impulse.
+            //Using the depths, push the contacts out toward the capsule, and then compute their projected location along the capsule axis. In other words:
+            //ta0 = ((b0 + N * depth0) - capsuleCenter) * capsuleAxis
+            //ta1 = ((b1 + N * depth1) - capsuleCenter) * capsuleAxis
+            //If ta0 > ta1, featureId0 = 1 and featureId1 = 0, otherwise featureId0 = 0 and featureId1 = 1.
+            //This does a little bit of redundant calculation, but it's much simpler to redo that work than to track everything we'd need from all potential contact sources.
+            Vector3Wide.Scale(localNormal, manifold.Depth0, out var toAOffset0);
+            Vector3Wide.Add(b0, toAOffset0, out var a0);
+            Vector3Wide.Subtract(a0, localOffsetA, out var capsuleToA0);
+            Vector3Wide.Dot(capsuleToA0, localCapsuleAxis, out var ta0);
+            Vector3Wide.Scale(localNormal, manifold.Depth1, out var toAOffset1);
+            Vector3Wide.Add(b1, toAOffset1, out var a1);
+            Vector3Wide.Subtract(a1, localOffsetA, out var capsuleToA1);
+            Vector3Wide.Dot(capsuleToA1, localCapsuleAxis, out var ta1);
+            var flipFeatureIds = Vector.LessThan(ta1, ta0);
+            manifold.FeatureId0 = Vector.ConditionalSelect(flipFeatureIds, Vector<int>.One, Vector<int>.Zero);
+            manifold.FeatureId1 = Vector.ConditionalSelect(flipFeatureIds, Vector<int>.Zero, Vector<int>.One);
 
             //Transform contact positions into world space rotation, measured as offsets from the capsule (object A).
             Matrix3x3Wide.Transform(b0, rB, out var contact0RelativeToB);
@@ -322,6 +361,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var depthThreshold = -speculativeMargin;
             manifold.Contact0Exists = Vector.BitwiseAnd(Vector.GreaterThan(manifold.Depth0, depthThreshold), Vector.GreaterThan(contactCount, Vector<int>.Zero));
             manifold.Contact1Exists = Vector.BitwiseAnd(Vector.GreaterThan(manifold.Depth1, depthThreshold), Vector.GreaterThan(contactCount, Vector<int>.One));
+
         }
 
 
