@@ -49,7 +49,7 @@ namespace Demos.Demos
                 triangle.Broadcast(new Triangle(a, b, c));
                 var margin = new Vector<float>(1f);
                 Vector3Wide.Broadcast(new Vector3(-1, -1, 0), out var offsetB);
-                QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationA);
+                QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0), out var orientationA);
                 QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
                 tester.Test(ref capsule, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, out var manifold);
             }

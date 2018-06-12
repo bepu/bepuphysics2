@@ -85,20 +85,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void ClipAgainstEdgePlane(in Vector3Wide edgeStart, in Vector3Wide edgeOffset, in Vector3Wide faceNormal, in Vector3Wide capsuleCenter, in Vector3Wide capsuleAxis,
-            out Vector<float> intersection)
+            out Vector<float> entry, out Vector<float> exit)
         {
-            //t = edgeToCapsule * (edgePlaneNormal / ||edgePlaneNormal||) / (capsuleAxis * (edgePlaneNormal / ||edgePlaneNormal||))
-            Vector3Wide.CrossWithoutOverlap(edgeOffset, faceNormal, out var edgePlaneNormal);
+            //t = -edgeToCapsule * (edgePlaneNormal / ||edgePlaneNormal||) / (capsuleAxis * (edgePlaneNormal / ||edgePlaneNormal||))
+            Vector3Wide.CrossWithoutOverlap(faceNormal, edgeOffset, out var edgePlaneNormal);
             Vector3Wide.Subtract(capsuleCenter, edgeStart, out var edgeToCapsule);
             Vector3Wide.Dot(edgeToCapsule, edgePlaneNormal, out var distance);
             Vector3Wide.Dot(capsuleAxis, edgePlaneNormal, out var velocity);
             //Note that near-zero denominators (parallel axes) result in a properly signed large finite value.
-            intersection = Vector.ConditionalSelect(Vector.LessThan(velocity, Vector<float>.Zero), -distance, distance) / Vector.Max(new Vector<float>(1e-15f), Vector.Abs(velocity));
-            intersection = Vector.ConditionalSelect(
-                Vector.BitwiseAnd(
-                    Vector.LessThan(Vector.Abs(distance), new Vector<float>(1e-15f)),
-                    Vector.LessThan(Vector.Abs(velocity), new Vector<float>(1e-15f))), new Vector<float>(-float.MaxValue), intersection); 
-
+            var velocityIsPositive = Vector.GreaterThan(velocity, Vector<float>.Zero);
+            var t = Vector.ConditionalSelect(velocityIsPositive, -distance, distance) / Vector.Max(new Vector<float>(1e-15f), Vector.Abs(velocity));
+            //The final interval is going to be max(entryAB, entryBC, entryCA) to min(exitAB, exitBC, exitCA). 
+            //An intersection is considered an 'entry' if the ray direction opposes the plane normal.
+            entry = Vector.ConditionalSelect(velocityIsPositive, new Vector<float>(-float.MaxValue), t);
+            exit = Vector.ConditionalSelect(velocityIsPositive, t, new Vector<float>(float.MaxValue));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -232,7 +232,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             Vector3Wide.Dot(localNormal, faceNormal, out var localNormalDotFaceNormal);
-            if(Vector.LessThanOrEqualAll(localNormalDotFaceNormal, Vector<float>.Zero))
+            if (Vector.LessThanOrEqualAll(localNormalDotFaceNormal, Vector<float>.Zero))
             {
                 //All contact normals are on the back of the triangle, so we can immediately quit.
                 manifold.Contact0Exists = Vector<int>.Zero;
@@ -250,13 +250,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             if (Vector.LessThanOrEqualAny(contactCount, Vector<int>.One))
             {
-                ClipAgainstEdgePlane(b.A, ab, faceNormal, localOffsetA, localCapsuleAxis, out var abIntersection);
-                ClipAgainstEdgePlane(b.B, bc, faceNormal, localOffsetA, localCapsuleAxis, out var bcIntersection);
+                ClipAgainstEdgePlane(b.A, ab, faceNormal, localOffsetA, localCapsuleAxis, out var abEntry, out var abExit);
+                ClipAgainstEdgePlane(b.B, bc, faceNormal, localOffsetA, localCapsuleAxis, out var bcEntry, out var bcExit);
                 //Winding matters. ab, bc, ca.
                 Vector3Wide.Negate(ac, out var ca);
-                ClipAgainstEdgePlane(b.A, ca, faceNormal, localOffsetA, localCapsuleAxis, out var caIntersection);
-                var triangleIntervalMin = Vector.Min(abIntersection, Vector.Min(caIntersection, bcIntersection));
-                var triangleIntervalMax = Vector.Max(abIntersection, Vector.Max(caIntersection, bcIntersection));
+                ClipAgainstEdgePlane(b.A, ca, faceNormal, localOffsetA, localCapsuleAxis, out var caEntry, out var caExit);
+                var triangleIntervalMin = Vector.Max(abEntry, Vector.Max(bcEntry, caEntry));
+                var triangleIntervalMax = Vector.Min(abExit, Vector.Min(bcExit, caExit));
 
                 var overlapIntervalMin = Vector.Max(triangleIntervalMin, -a.HalfLength);
                 var overlapIntervalMax = Vector.Min(triangleIntervalMax, a.HalfLength);
@@ -294,8 +294,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //1) The interval is valid (max > min).
                 //2) The number of contacts == 1.
                 //3) The candidate is above the triangle.
-                var useCandidateForSecondContact = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(overlapIntervalMax, overlapIntervalMin), 
-                    Vector.BitwiseAnd(Vector.Equals(contactCount, Vector<int>.One), Vector.GreaterThan(secondContactDistanceAlongNormal, Vector<float>.Zero)));                
+                var useCandidateForSecondContact = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(overlapIntervalMax, overlapIntervalMin),
+                    Vector.BitwiseAnd(Vector.Equals(contactCount, Vector<int>.One), Vector.GreaterThan(secondContactDistanceAlongNormal, Vector<float>.Zero)));
                 Vector3Wide.ConditionalSelect(useCandidateForSecondContact, secondContactCandidate, b1, out b1);
                 contactCount = Vector.ConditionalSelect(useCandidateForSecondContact, new Vector<int>(2), contactCount);
             }
@@ -317,7 +317,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var planeAnchorOnCapsuleT = Vector.ConditionalSelect(Vector.LessThan(capsuleAxisPlaneDot, Vector<float>.Zero), -a.HalfLength, a.HalfLength);
             Vector3Wide.Scale(localCapsuleAxis, planeAnchorOnCapsuleT, out var capsulePlaneAnchor);
             Vector3Wide.Add(capsulePlaneAnchor, localOffsetA, out capsulePlaneAnchor);
-            
+
             Vector3Wide.Subtract(capsulePlaneAnchor, b0, out var offset0);
             Vector3Wide.Dot(capsuleAxisPlaneNormal, offset0, out var planeDistance0);
             Vector3Wide.Subtract(capsulePlaneAnchor, b1, out var offset1);
