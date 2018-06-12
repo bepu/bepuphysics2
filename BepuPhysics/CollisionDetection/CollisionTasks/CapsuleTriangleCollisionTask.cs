@@ -1,6 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -177,17 +178,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             edgeDepth = Vector.Min(edgeDepthCandidate, edgeDepth);
 
             var depth = Vector.Min(edgeDepth, faceDepth);
-            if (Vector.EqualsAll(Vector.LessThan(depth, -speculativeMargin), new Vector<int>(-1)))
+            var useEdge = Vector.LessThan(edgeDepth, faceDepth);
+            Vector3Wide.ConditionalSelect(useEdge, edgeNormal, faceNormal, out var localNormal);
+            Vector3Wide.Dot(localNormal, faceNormal, out var localNormalDotFaceNormal);
+            if (Vector.EqualsAll(Vector.BitwiseOr(
+                    Vector.LessThanOrEqual(localNormalDotFaceNormal, Vector<float>.Zero),
+                    Vector.LessThan(depth, -speculativeMargin)), new Vector<int>(-1)))
             {
-                //There are no contacts in any lane, so we can just skip the rest.
+                //All contact normals are on the back of the triangle or the distance is too large for the margin, so we can immediately quit.
                 manifold.Contact0Exists = Vector<int>.Zero;
                 manifold.Contact1Exists = Vector<int>.Zero;
                 return;
             }
-            Vector3Wide localNormal;
             Vector3Wide b0, b1;
             Vector<int> contactCount;
-            var useEdge = Vector.LessThan(edgeDepth, faceDepth);
             if (Vector.EqualsAny(useEdge, new Vector<int>(-1)))
             {
                 //At least one of the paths uses edges, so go ahead and create all edge contact related information.
@@ -220,25 +224,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Add(b0, edgeStart, out b0);
                 Vector3Wide.Scale(edgeDirection, bMax, out b1);
                 Vector3Wide.Add(b1, edgeStart, out b1);
-
-                Vector3Wide.ConditionalSelect(useEdge, edgeNormal, faceNormal, out localNormal);
                 contactCount = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(Vector.GreaterThan(bMax, bMin), new Vector<int>(2), Vector<int>.One), Vector<int>.Zero);
             }
             else
             {
                 //No edges are used; all contacts must be face contacts.
-                localNormal = faceNormal;
                 contactCount = Vector<int>.Zero;
             }
 
-            Vector3Wide.Dot(localNormal, faceNormal, out var localNormalDotFaceNormal);
-            if (Vector.LessThanOrEqualAll(localNormalDotFaceNormal, Vector<float>.Zero))
-            {
-                //All contact normals are on the back of the triangle, so we can immediately quit.
-                manifold.Contact0Exists = Vector<int>.Zero;
-                manifold.Contact1Exists = Vector<int>.Zero;
-                return;
-            }
 
             //Any edge contributions are now stored in the b0, b1, localNormal, and depth fields. 
             //1) If face contact won (no edges contributed any contacts), then generate two contacts by clipping the capsule axis against the triangle edge planes.
@@ -279,10 +272,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Note that we accept it even if the interval is negative length- if there are no edge contacts, it means that the face normal was the best option.
                 //If the face normal is the best option, there MUST be face contacts. Any disagreement on the part of clipping is simply a matter of numerical error.
                 //As a side effect of being mere numerical error, the distance between the projected points and the triangle should tend to be near epsilon.
+                //One exception: if the capsule's center is on the backside of the triangle, no contacts should be created. We don't want contacts to 'pull' objects through-
+                //that would create frequent nasty situations in complex meshes.
                 var noEdgeContacts = Vector.Equals(contactCount, Vector<int>.Zero);
-                Vector3Wide.ConditionalSelect(noEdgeContacts, faceCandidate0, b0, out b0);
-                Vector3Wide.ConditionalSelect(noEdgeContacts, faceCandidate1, b1, out b1);
-                contactCount = Vector.ConditionalSelect(noEdgeContacts, new Vector<int>(2), contactCount);
+                var allowFaceContacts = Vector.GreaterThanOrEqual(capsuleOffsetAlongNormal, Vector<float>.Zero);
+                var useFaceContacts = Vector.BitwiseAnd(noEdgeContacts, allowFaceContacts);
+                Vector3Wide.ConditionalSelect(useFaceContacts, faceCandidate0, b0, out b0);
+                Vector3Wide.ConditionalSelect(useFaceContacts, faceCandidate1, b1, out b1);
+                contactCount = Vector.ConditionalSelect(useFaceContacts, new Vector<int>(2), contactCount);
 
                 //If there's one edge contact, only one of the two face contacts should be accepted.
                 //Note that it's likely that one of the two clipped interval endpoints will end up very close to the edge contact, so picking that one would be a waste.
@@ -322,12 +319,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(capsuleAxisPlaneNormal, offset0, out var planeDistance0);
             Vector3Wide.Subtract(capsulePlaneAnchor, b1, out var offset1);
             Vector3Wide.Dot(capsuleAxisPlaneNormal, offset1, out var planeDistance1);
-            Vector3Wide.Dot(faceNormal, capsuleAxisPlaneNormal, out var velocity);
+            Vector3Wide.Dot(localNormal, capsuleAxisPlaneNormal, out var velocity);
             var inverseVelocity = Vector<float>.One / velocity;
             var separation0 = planeDistance0 * inverseVelocity;
             var separation1 = planeDistance1 * inverseVelocity;
             manifold.Depth0 = a.Radius - separation0;
             manifold.Depth1 = a.Radius - separation1;
+            //While zero velocity should not occur mathematically, it is possible numerically.
+            //If it happens, we assume it's an extremely temporary state and just use a hack.
+            //(Zero velocity shouldn't happen because the local normal points toward the capsule axis, so the only way for the capsuleAxisPlane and the normal to be perpendicular
+            //is for the normal and capsuleAxis to be parallel, which is explicitly protected against earlier.)
+            Debug.Assert(Vector.EqualsAll(Vector.BitwiseOr(
+                Vector.GreaterThan(Vector.Abs(velocity), new Vector<float>(1e-10f)), 
+                Vector.OnesComplement(Vector.Equals(velocity, velocity))), new Vector<int>(-1)), "Velocity should be nonzero except in numerical corner cases.");
+            var useFallbackDepth = Vector.LessThan(Vector.Abs(velocity), new Vector<float>(1e-15f));
+            manifold.Depth0 = Vector.ConditionalSelect(useFallbackDepth, Vector<float>.Zero, manifold.Depth0);
+            manifold.Depth1 = Vector.ConditionalSelect(useFallbackDepth, Vector<float>.Zero, manifold.Depth1);
 
             //For feature ids, note that we have a few different potential sources of contacts. While we could go through and force each potential source to output ids,
             //there is a useful single unifying factor: where the contacts occur on the capsule axis. Using this, it doesn't matter if contacts are generated from face or edge cases,

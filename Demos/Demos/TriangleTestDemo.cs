@@ -40,15 +40,15 @@ namespace Demos.Demos
                 capsule.Broadcast(new Capsule(0.5f, 0.5f));
                 TriangleWide triangle;
                 var a = new Vector3(0, 0, 0);
-                var b = new Vector3(1, 0, 0);
-                var c = new Vector3(0, 0, 1);
+                var b = new Vector3(2, 0, 0);
+                var c = new Vector3(0, 0, 2);
                 //var center = (a + b + c) / 3f;
                 //a -= center;
                 //b -= center;
                 //c -= center;
                 triangle.Broadcast(new Triangle(a, b, c));
-                var margin = new Vector<float>(1f);
-                Vector3Wide.Broadcast(new Vector3(-1, -1, 0), out var offsetB);
+                var margin = new Vector<float>(2f);
+                Vector3Wide.Broadcast(new Vector3(-.4f, 0.1f, -.4f), out var offsetB);
                 QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0), out var orientationA);
                 QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
                 tester.Test(ref capsule, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, out var manifold);
@@ -78,10 +78,10 @@ namespace Demos.Demos
                 };
                 Simulation.Statics.Add(ref triangleDescription);
 
-                var sphere = new Sphere(0.5f);
-                var sphereDescription = new BodyDescription
+                var shape = new Capsule(0.5f, 0.5f);
+                var bodydescription = new BodyDescription
                 {
-                    Collidable = new CollidableDescription { Shape = Simulation.Shapes.Add(sphere), SpeculativeMargin = 0.1f },
+                    Collidable = new CollidableDescription { Shape = Simulation.Shapes.Add(shape), SpeculativeMargin = 0.1f },
                     Activity = new BodyActivityDescription { SleepThreshold = -1 },
                     Pose = new RigidPose
                     {
@@ -89,8 +89,8 @@ namespace Demos.Demos
                         Orientation = BepuUtilities.Quaternion.Identity
                     }
                 };
-                sphere.ComputeInertia(1, out sphereDescription.LocalInertia);
-                Simulation.Bodies.Add(sphereDescription);
+                shape.ComputeInertia(1, out bodydescription.LocalInertia);
+                Simulation.Bodies.Add(bodydescription);
             }
         }
 
