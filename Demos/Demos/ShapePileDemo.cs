@@ -107,7 +107,7 @@ namespace Demos.Demos
                             //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0, 0, 1)), MathHelper.Pi)
                         }
                     };
-                    Simulation.Statics.Add(ref staticDescription);
+                    Simulation.Statics.Add(staticDescription);
                 }
             }
 

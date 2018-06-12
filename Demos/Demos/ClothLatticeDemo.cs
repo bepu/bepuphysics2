@@ -112,7 +112,7 @@ namespace Demos.Demos
                     Orientation = BepuUtilities.Quaternion.Identity
                 }
             };
-            Simulation.Statics.Add(ref bigBallDescription);
+            Simulation.Statics.Add(bigBallDescription);
 
             var groundShape = new Box(200, 1, 200);
             var groundShapeIndex = Simulation.Shapes.Add(groundShape);
@@ -131,7 +131,7 @@ namespace Demos.Demos
                     Orientation = BepuUtilities.Quaternion.Identity
                 }
             };
-            Simulation.Statics.Add(ref groundDescription);
+            Simulation.Statics.Add(groundDescription);
         }
 
     }

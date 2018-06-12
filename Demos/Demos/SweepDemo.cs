@@ -97,7 +97,7 @@ namespace Demos.Demos
                 },
                 Pose = new RigidPose { Position = new Vector3(0, -1, 0), Orientation = Quaternion.Identity }
             };
-            Simulation.Statics.Add(ref staticDescription);
+            Simulation.Statics.Add(staticDescription);
 
 
         }

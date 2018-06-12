@@ -154,7 +154,7 @@ namespace Demos
                                     Shape = shapeIndex
                                 }
                             };
-                            Simulation.Statics.Add(ref staticDescription);
+                            Simulation.Statics.Add(staticDescription);
                         }
 
                     }

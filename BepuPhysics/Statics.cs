@@ -136,7 +136,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void UpdateBounds(ref RigidPose pose, ref TypedIndex shapeIndex, out BoundingBox bounds)
+        private void UpdateBounds(in RigidPose pose, TypedIndex shapeIndex, out BoundingBox bounds)
         {
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
             shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, pose, out bounds.Min, out bounds.Max);
@@ -212,7 +212,7 @@ namespace BepuPhysics
         }
 
 
-        internal void ApplyDescriptionByIndex(int index, int handle, ref StaticDescription description)
+        internal void ApplyDescriptionByIndex(int index, int handle, in StaticDescription description)
         {
             BundleIndexing.GetBundleIndices(index, out var bundleIndex, out var innerIndex);
             Poses[index] = description.Pose;
@@ -225,7 +225,7 @@ namespace BepuPhysics
             //Note that we have to calculate an initial bounding box for the broad phase to be able to insert it efficiently.
             //(In the event of batch adds, you'll want to use batched AABB calculations or just use cached values.)
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
-            UpdateBounds(ref description.Pose, ref description.Collidable.Shape, out var bounds);
+            UpdateBounds(description.Pose, description.Collidable.Shape, out var bounds);
             Collidables[index].BroadPhaseIndex =
                 broadPhase.AddStatic(new CollidableReference(CollidableMobility.Static, handle), ref bounds);
         }
@@ -235,7 +235,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="description">Description of the static to add.</param>
         /// <returns>Handle of the new static.</returns>
-        public int Add(ref StaticDescription description)
+        public int Add(in StaticDescription description)
         {
             if (Count == HandleToIndex.Length)
             {
@@ -249,7 +249,7 @@ namespace BepuPhysics
             var index = Count++;
             HandleToIndex[handle] = index;
             IndexToHandle[index] = handle;
-            ApplyDescriptionByIndex(index, handle, ref description);
+            ApplyDescriptionByIndex(index, handle, description);
             return handle;
         }
 
@@ -258,14 +258,14 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the static to apply the description to.</param>
         /// <param name="description">Description to apply to the static.</param>
-        public void ApplyDescription(int handle, ref StaticDescription description)
+        public void ApplyDescription(int handle, in StaticDescription description)
         {
             ValidateExistingHandle(handle);
             var index = HandleToIndex[handle];
             Debug.Assert(description.Collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
             //Wake all bodies up in the old bounds AND the new bounds. Inactive bodies that may have been resting on the old static need to be aware of the new environment.
             AwakenBodiesInExistingBounds(ref Collidables[index]);
-            ApplyDescriptionByIndex(index, handle, ref description);
+            ApplyDescriptionByIndex(index, handle, description);
 
         }
 

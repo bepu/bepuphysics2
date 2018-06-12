@@ -138,8 +138,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //If the plane normal length is zero, then the normal and edge axis are parallel and any capsule axis will satisfy coplanarity, so just use zero.
             var squaredAngle = Vector.ConditionalSelect(Vector.LessThan(planeNormalLengthSquared, epsilon), Vector<float>.Zero, capsuleAxisDotPlaneNormal * capsuleAxisDotPlaneNormal / planeNormalLengthSquared);
             //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
-            const float lowerThresholdAngle = 0.001f;
-            const float upperThresholdAngle = 0.005f;
+            const float lowerThresholdAngle = 0.01f;
+            const float upperThresholdAngle = 0.05f;
             const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
             const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
             var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));

@@ -62,7 +62,7 @@ namespace Demos.Demos
                             Orientation = BepuUtilities.Quaternion.Identity
                         }
                     };
-                    Simulation.Statics.Add(ref staticDescription);
+                    Simulation.Statics.Add(staticDescription);
                 }
             }
 
@@ -178,7 +178,7 @@ namespace Demos.Demos
             {
                 Debug.Assert(removedStatics.Count > 0);
                 var staticDescription = removedStatics.Dequeue();
-                Simulation.Statics.Add(ref staticDescription);
+                Simulation.Statics.Add(staticDescription);
             }
 
 

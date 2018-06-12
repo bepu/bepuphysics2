@@ -462,7 +462,7 @@ namespace Demos.Demos
                     Orientation = BepuUtilities.Quaternion.Identity
                 }
             };
-            Simulation.Statics.Add(ref staticDescription);
+            Simulation.Statics.Add(staticDescription);
 
 
         }

@@ -36,8 +36,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //The projected intervals are:
             //B onto A: (0 or edgeLength) * (da * db) + da * offsetB
             //A onto B: +-AHalfLength * (da * db) - db * offsetB
-            var aMin = Vector.Max(-capsuleHalfLength, Vector.Min(capsuleHalfLength, daOffsetB));
-            var aMax = Vector.Min(capsuleHalfLength, Vector.Max(-capsuleHalfLength, daOffsetB + edgeLength * dadb));
+            var ta0 = Vector.Max(-capsuleHalfLength, Vector.Min(capsuleHalfLength, daOffsetB));
+            var ta1 = Vector.Min(capsuleHalfLength, Vector.Max(-capsuleHalfLength, daOffsetB + edgeLength * dadb));
+            var aMin = Vector.Min(ta0, ta1);
+            var aMax = Vector.Max(ta0, ta1);
             var aOntoBOffset = capsuleHalfLength * Vector.Abs(dadb);
             bMin = Vector.Max(Vector<float>.Zero, Vector.Min(edgeLength, -aOntoBOffset - dbOffsetB));
             bMax = Vector.Min(edgeLength, Vector.Max(Vector<float>.Zero, aOntoBOffset - dbOffsetB));
@@ -206,12 +208,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Note that if ||db x normal|| is the zero, then any da should be accepted as being coplanar because there is no restriction. ConditionalSelect away the discontinuity.
                 Vector3Wide.CrossWithoutOverlap(edgeDirection, edgeNormal, out var planeNormal);
                 Vector3Wide.LengthSquared(planeNormal, out var planeNormalLengthSquared);
-                Vector3Wide.Dot(localCapsuleAxis, planeNormal, out var squaredAngle);
-                squaredAngle = Vector.ConditionalSelect(Vector.LessThan(planeNormalLengthSquared, new Vector<float>(1e-10f)), Vector<float>.Zero, squaredAngle / planeNormalLengthSquared);
+                Vector3Wide.Dot(localCapsuleAxis, planeNormal, out var numeratorUnsquared);
+                var squaredAngle = Vector.ConditionalSelect(Vector.LessThan(planeNormalLengthSquared, new Vector<float>(1e-10f)), Vector<float>.Zero, numeratorUnsquared * numeratorUnsquared / planeNormalLengthSquared);
 
                 //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
-                const float lowerThresholdAngle = 0.001f;
-                const float upperThresholdAngle = 0.005f;
+                const float lowerThresholdAngle = 0.01f;
+                const float upperThresholdAngle = 0.05f;
                 const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
                 const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
                 var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));
@@ -219,6 +221,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var weightedTb = tb - tb * intervalWeight;
                 bMin = intervalWeight * bMin + weightedTb;
                 bMax = intervalWeight * bMax + weightedTb;
+
 
                 Vector3Wide.Scale(edgeDirection, bMin, out b0);
                 Vector3Wide.Add(b0, edgeStart, out b0);

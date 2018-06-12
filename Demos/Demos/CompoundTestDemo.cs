@@ -158,7 +158,7 @@ namespace Demos.Demos
                             },
                             Pose = new RigidPose { Position = new Vector3(10, 2, 0), Orientation = BepuUtilities.Quaternion.Identity }
                         };
-                        Simulation.Statics.Add(ref sphereDescription);
+                        Simulation.Statics.Add(sphereDescription);
                     }
 
                     //Put another table on the ground, but with a clamp-ish thing on it that generates opposing normals.
@@ -215,7 +215,7 @@ namespace Demos.Demos
                     },
                     Pose = new RigidPose { Position = new Vector3(0, 0, 0), Orientation = BepuUtilities.Quaternion.Identity }
                 };
-                Simulation.Statics.Add(ref groundDescription);
+                Simulation.Statics.Add(groundDescription);
             }
         }
 

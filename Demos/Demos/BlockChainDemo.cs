@@ -87,7 +87,7 @@ namespace Demos.Demos
                     Orientation = BepuUtilities.Quaternion.Identity
                 }
             };
-            Simulation.Statics.Add(ref staticDescription);
+            Simulation.Statics.Add(staticDescription);
 
             //Build the coin description for the ponz-I mean ICO.
             var coinShape = new Sphere(1f); //TODO: Obviously, when cylinders get added, this needs to be changed.
