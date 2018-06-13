@@ -18,7 +18,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     public static class ManifoldCandidateHelper
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void AddCandidate(ref ManifoldCandidate candidates, ref ManifoldCandidate candidate, ref Vector<int> newContactExists, ref Vector<int> count)
+        public static void AddCandidate(ref ManifoldCandidate candidates, ref Vector<int> count, in ManifoldCandidate candidate, in Vector<int> newContactExists)
         {
             //Incrementally maintaining a list is unfortunately a very poor fit for wide vectorization.
             //Each pair has its own count, so the target memory location for storing a new contact in the list is different.

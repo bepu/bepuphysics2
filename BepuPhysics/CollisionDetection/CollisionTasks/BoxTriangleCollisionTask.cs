@@ -94,17 +94,180 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             depth = Vector.Min(depth, depthCandidate);
         }
 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ClipBoxEdgesAgainstTriangle(in Vector3Wide vA, in Vector3Wide vB, in Vector3Wide vC, 
-            in Vector3Wide boxEdgeDirection, in Vector3Wide boxEdgeCenterOffsetDirection, in Vector<float> edgeHalfLength, in Vector<float> edgeCenterOffset, 
-            in Vector3Wide boxFaceCenter, in Vector<int> baseId, in Vector<int> edgeDirectionId, in Vector<int> edgeCenterOffsetId, 
+        void Add(in Vector3Wide pointOnTriangle, in Vector3Wide triangleCenter, in Vector3Wide triangleTangentX, in Vector3Wide triangleTangentY, in Vector<int> featureId,
+            in Vector<int> exists, ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
+        {
+            Vector3Wide.Subtract(pointOnTriangle, triangleCenter, out var offset);
+            ManifoldCandidate candidate;
+            Vector3Wide.Dot(offset, triangleTangentX, out candidate.X);
+            Vector3Wide.Dot(offset, triangleTangentY, out candidate.Y);
+            candidate.FeatureId = featureId;
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ClipBoxEdgesAgainstTriangle(in Vector3Wide vA, in Vector3Wide vB, in Vector3Wide vC,
+            in Vector3Wide abxN, in Vector3Wide bcxN, in Vector3Wide caxN,
+            in Vector3Wide triangleCenter, in Vector3Wide triangleTangentX, in Vector3Wide triangleTangentY,
+            in Vector3Wide boxEdgeDirection, in Vector3Wide boxEdgeCenterOffsetDirection, in Vector<float> edgeHalfLength, in Vector<float> edgeCenterOffset,
+            in Vector3Wide boxFaceCenter, in Vector<int> baseId, in Vector<int> edgeDirectionId, in Vector<int> edgeCenterOffsetId,
             in Vector<float> epsilonScale, ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
         {
             //The base id is the id of the vertex in the corner along the negative boxEdgeDirection and boxEdgeCenterOffsetDirection.
             //The edgeDirectionId is the amount to add when you move along the boxEdgeDirection to the other vertex.
             //The edgeCenterOffsetId is the amount to add when you move along the boxEdgeCenterOffsetDirection to the other vertex.
 
-            throw new NotImplementedException();
+            //We have three edge planes, created by abxN and vA, bcxN and vB, and caxN and vC.
+            //We want to test the box edge against all three of the edges.
+            //intersection = dot((ab x N) / ||ab x N||, vA - boxEdgeCenter) / dot((ab x N) / ||ab x N||, boxEdgeDirection) = dot(abxN, vA - boxEdgeCenter) / dot(abxN, boxEdgeDirection)
+            Vector3Wide.Scale(boxEdgeCenterOffsetDirection, edgeCenterOffset, out var boxEdgeCenterOffset);
+            Vector3Wide.Subtract(boxFaceCenter, boxEdgeCenterOffset, out var boxEdgeCenter0);
+            Vector3Wide.Add(boxFaceCenter, boxEdgeCenterOffset, out var boxEdgeCenter1);
+            Vector3Wide.Dot(boxEdgeDirection, abxN, out var abVelocity);
+            Vector3Wide.Dot(boxEdgeDirection, bcxN, out var bcVelocity);
+            Vector3Wide.Dot(boxEdgeDirection, caxN, out var caVelocity);
+            var inverseAB = Vector<float>.One / abVelocity;
+            var inverseBC = Vector<float>.One / bcVelocity;
+            var inverseCA = Vector<float>.One / caVelocity;
+            Vector3Wide.Subtract(vA, boxEdgeCenter0, out var edgeCenter0ToA);
+            Vector3Wide.Subtract(vB, boxEdgeCenter0, out var edgeCenter0ToB);
+            Vector3Wide.Subtract(vA, boxEdgeCenter1, out var edgeCenter1ToA);
+            Vector3Wide.Subtract(vB, boxEdgeCenter1, out var edgeCenter1ToB);
+            Vector3Wide.Dot(abxN, edgeCenter0ToA, out var distanceAB0);
+            Vector3Wide.Dot(bcxN, edgeCenter0ToB, out var distanceBC0);
+            Vector3Wide.Dot(caxN, edgeCenter0ToA, out var distanceCA0);
+            Vector3Wide.Dot(abxN, edgeCenter1ToA, out var distanceAB1);
+            Vector3Wide.Dot(bcxN, edgeCenter1ToB, out var distanceBC1);
+            Vector3Wide.Dot(caxN, edgeCenter1ToA, out var distanceCA1);
+            var tAB0 = distanceAB0 * inverseAB;
+            var tBC0 = distanceBC0 * inverseBC;
+            var tCA0 = distanceCA0 * inverseCA;
+            var tAB1 = distanceAB1 * inverseAB;
+            var tBC1 = distanceBC1 * inverseBC;
+            var tCA1 = distanceCA1 * inverseCA;
+            //The interval for each box edge is created from the latest entry and earliest exit.
+            //An 'entry' is when the box center starts with a nonnegative distance. An 'exit' is when the box center starts with a negative distance.
+            var ab0IsEntry = Vector.GreaterThanOrEqual(distanceAB0, Vector<float>.Zero);
+            var bc0IsEntry = Vector.GreaterThanOrEqual(distanceBC0, Vector<float>.Zero);
+            var ca0IsEntry = Vector.GreaterThanOrEqual(distanceCA0, Vector<float>.Zero);
+            var ab1IsEntry = Vector.GreaterThanOrEqual(distanceAB1, Vector<float>.Zero);
+            var bc1IsEntry = Vector.GreaterThanOrEqual(distanceBC1, Vector<float>.Zero);
+            var ca1IsEntry = Vector.GreaterThanOrEqual(distanceCA1, Vector<float>.Zero);
+            var max = new Vector<float>(float.MaxValue);
+            var min = new Vector<float>(-float.MaxValue);
+            var t0Entry = Vector.ConditionalSelect(ab0IsEntry, tAB0, min);
+            var t0Exit = Vector.ConditionalSelect(ab0IsEntry, max, tAB0);
+            t0Entry = Vector.Max(t0Entry, Vector.ConditionalSelect(bc0IsEntry, tBC0, min));
+            t0Exit = Vector.Min(t0Exit, Vector.ConditionalSelect(bc0IsEntry, max, tBC0));
+            t0Entry = Vector.Max(t0Entry, Vector.ConditionalSelect(ca0IsEntry, tCA0, min));
+            t0Exit = Vector.Min(t0Exit, Vector.ConditionalSelect(ca0IsEntry, max, tCA0));
+
+            var t1Entry = Vector.ConditionalSelect(ab1IsEntry, tAB1, min);
+            var t1Exit = Vector.ConditionalSelect(ab1IsEntry, max, tAB1);
+            t1Entry = Vector.Max(t1Entry, Vector.ConditionalSelect(bc1IsEntry, tBC1, min));
+            t1Exit = Vector.Min(t1Exit, Vector.ConditionalSelect(bc1IsEntry, max, tBC1));
+            t1Entry = Vector.Max(t1Entry, Vector.ConditionalSelect(ca1IsEntry, tCA1, min));
+            t1Exit = Vector.Min(t1Exit, Vector.ConditionalSelect(ca1IsEntry, max, tCA1));
+
+            t0Entry = Vector.Max(-edgeHalfLength, t0Entry);
+            t0Exit = Vector.Min(edgeHalfLength, t0Exit);
+            t1Entry = Vector.Max(-edgeHalfLength, t1Entry);
+            t1Exit = Vector.Min(edgeHalfLength, t1Exit);
+
+            //We now have intervals for both box edges.
+            //If -halfSpan<min<halfSpan && (max-min)>epsilon for an edge, use the min intersection as a contact.
+            //If -halfSpan<=max<=halfSpan && max>=min, use the max intersection as a contact.
+            //Note the comparisons: if the max lies on a face vertex, it is used, but if the min lies on a face vertex, it is not. This avoids redundant entries.
+
+            //Note that contact locations are orthographically projected onto the triangle's surface. 
+            //We clipped the box edges against triangle edge planes perpendicular to the triangle's normal.
+            //So, to compute the triangle tangent space locations, we can just do simple dot products.
+
+            //dot(boxEdgeCenter0 + boxEdgeDirection * t0Entry - triangleCenter, triangleTangentX)
+            //dot(boxEdgeCenter0 + boxEdgeDirection * t0Entry - triangleCenter, triangleTangentY)
+            //dot(boxEdgeCenter0 + boxEdgeDirection * t0Exit - triangleCenter, triangleTangentX)
+            //dot(boxEdgeCenter0 + boxEdgeDirection * t0Exit - triangleCenter, triangleTangentY)
+            //dot(boxEdgeCenter1 + boxEdgeDirection * t1Entry - triangleCenter, triangleTangentX)
+            //dot(boxEdgeCenter1 + boxEdgeDirection * t1Entry - triangleCenter, triangleTangentY)
+            //dot(boxEdgeCenter1 + boxEdgeDirection * t1Exit - triangleCenter, triangleTangentX)
+            //dot(boxEdgeCenter1 + boxEdgeDirection * t1Exit - triangleCenter, triangleTangentY)
+            Vector3Wide.Subtract(boxEdgeCenter0, triangleCenter, out var triangleCenterToEdge0);
+            Vector3Wide.Subtract(boxEdgeCenter1, triangleCenter, out var triangleCenterToEdge1);
+            Vector3Wide.Dot(triangleCenterToEdge0, triangleTangentX, out var triangleCenterToEdge0DotX);
+            Vector3Wide.Dot(triangleCenterToEdge0, triangleTangentY, out var triangleCenterToEdge0DotY);
+            Vector3Wide.Dot(triangleCenterToEdge1, triangleTangentX, out var triangleCenterToEdge1DotX);
+            Vector3Wide.Dot(triangleCenterToEdge1, triangleTangentY, out var triangleCenterToEdge1DotY);
+            Vector3Wide.Dot(boxEdgeDirection, triangleTangentX, out var edgeDirectionDotX);
+            Vector3Wide.Dot(boxEdgeDirection, triangleTangentY, out var edgeDirectionDotY);
+
+            //Edge feature ids:
+            //(1<<6) + (0 or 1) * boxFaceNormalId + boxEdgeDirection * (1<<2) + (0 or 1) * boxEdgeCenterOffset * (1<<4)
+            //The base 1<<6 distinguishes it from triangle vertex contacts.
+            //For contacts created from the max endpoint of an edge interval, we'll add an extra (1<<7) to distinguish it from the min endpoint.
+            var featureBase = baseId + new Vector<int>(1 << 6);
+            var exitIdOffset = new Vector<int>(1 << 7);
+            var directionContribution = edgeDirectionId * (1 << 2);
+            var edge0Id = featureBase + directionContribution;
+            var edge1Id = featureBase + directionContribution + edgeCenterOffsetId * (1 << 4);
+            ManifoldCandidate candidate;
+            var epsilon = new Vector<float>(1e-5f) * epsilonScale;
+            var six = new Vector<int>(6);
+            //Edge 0 entry
+            var exists = Vector.BitwiseAnd(
+                Vector.LessThan(candidateCount, six),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(t0Exit - t0Entry, epsilon),
+                    Vector.LessThan(Vector.Abs(t0Entry), edgeHalfLength)));
+            candidate.X = triangleCenterToEdge0DotX + edgeDirectionDotX * t0Entry;
+            candidate.Y = triangleCenterToEdge0DotY + edgeDirectionDotY * t0Entry;
+            candidate.FeatureId = edge0Id;
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists);
+            //Edge 0 exit
+            exists = Vector.BitwiseAnd(
+                Vector.LessThan(candidateCount, six),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(t0Exit, t0Entry),
+                    Vector.LessThanOrEqual(Vector.Abs(t0Exit), edgeHalfLength)));
+            candidate.X = triangleCenterToEdge0DotX + edgeDirectionDotX * t0Exit;
+            candidate.Y = triangleCenterToEdge0DotY + edgeDirectionDotY * t0Exit;
+            candidate.FeatureId = edge0Id + exitIdOffset;
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists);
+            //Edge 1 entry
+            exists = Vector.BitwiseAnd(
+                Vector.LessThan(candidateCount, six),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(t1Exit - t1Entry, epsilon),
+                    Vector.LessThan(Vector.Abs(t1Entry), edgeHalfLength)));
+            candidate.X = triangleCenterToEdge1DotX + edgeDirectionDotX * t1Entry;
+            candidate.Y = triangleCenterToEdge1DotY + edgeDirectionDotY * t1Entry;
+            candidate.FeatureId = edge1Id;
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists);
+            //Edge 1 exit
+            exists = Vector.BitwiseAnd(
+                Vector.LessThan(candidateCount, six),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(t1Exit, t1Entry),
+                    Vector.LessThanOrEqual(Vector.Abs(t1Exit), edgeHalfLength)));
+            candidate.X = triangleCenterToEdge1DotX + edgeDirectionDotX * t1Exit;
+            candidate.Y = triangleCenterToEdge1DotY + edgeDirectionDotY * t1Exit;
+            candidate.FeatureId = edge1Id + exitIdOffset;
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TryAddTriangleVertex(in Vector3Wide triangleVertex, in Vector<int> vertexId, in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY,
+            in Vector3Wide boxTangentX, in Vector3Wide boxTangentY, in Vector<float> halfExtentX, in Vector<float> halfExtentY, in Vector3Wide boxFaceCenter,
+            ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
+        {
+            Vector3Wide.Subtract(triangleVertex, boxFaceCenter, out var offset);
+            Vector3Wide.Dot(boxTangentX, offset, out var boxX);
+            Vector3Wide.Dot(boxTangentY, offset, out var boxY);
+            var contained = Vector.BitwiseAnd(
+                Vector.LessThanOrEqual(Vector.Abs(boxX), halfExtentX),
+                Vector.LessThanOrEqual(Vector.Abs(boxY), halfExtentY));
+            Add(triangleVertex, triangleCenter, triangleX, triangleY, vertexId, contained, ref candidates, ref candidateCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -202,13 +365,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var halfExtentZ = Vector.ConditionalSelect(useAX, a.HalfWidth, Vector.ConditionalSelect(useAY, a.HalfHeight, a.HalfLength));
             Vector3Wide.Scale(boxFaceNormal, halfExtentZ, out var boxFaceCenter);
 
-            //For feature ids, we will use:
-            //Triangle vertex index (0, 1, 2) for box face contacts 
-            //Box vertex index (0, 1, ... 7, 8) + 3 for triangle face contacts
-            //And (boxEdgeId (0, 1, ... 11, 12) << 4) | (triangleEdgeId (0, 1, 2) << 8)) for edge-edge contacts.
-            var localXId = new Vector<int>(1);
-            var localYId = new Vector<int>(2);
-            var localZId = new Vector<int>(4);
+            //For feature ids, we will use triangle vertex index (0, 1, 2) for box face contacts.
+            //Edge contacts are more complex- we'll use:
+            //(1<<6) + (0 or 1) * boxFaceNormalId + boxEdgeDirection * (1<<2) + (0 or 1) * boxEdgeCenterOffset * (1<<4)
+            //The base 1<<6 distinguishes it from triangle vertex contacts.
+            //For contacts created from the max endpoint of an edge interval, we'll add an extra (1<<7) to distinguish it from the min endpoint.
+            var localXId = Vector<int>.Zero;
+            var localYId = Vector<int>.One;
+            var localZId = new Vector<int>(2);
             var axisIdTangentX = Vector.ConditionalSelect(useAX, localZId, Vector.ConditionalSelect(useAY, localXId, localXId));
             var axisIdTangentY = Vector.ConditionalSelect(useAX, localYId, Vector.ConditionalSelect(useAY, localZId, localYId));
             var axisIdNormal =
@@ -234,7 +398,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //So, we'll create tangent axes from the edge and edge x normal.
             Vector3Wide.Scale(ab, Vector<float>.One / Vector.SquareRoot(abLengthSquared), out var triangleTangentX);
             Vector3Wide.CrossWithoutOverlap(triangleTangentX, triangleNormal, out var triangleTangentY);
-            
+
             //Note that we only allocate up to 6 candidates. Each triangle edge can contribute at most two contacts (any more would require a nonconvex clip region).
             //Numerical issues can cause more to occur, but they're guarded against (both directly, and in the sense of checking count before adding any candidates beyond the sixth).
             int byteCount = Unsafe.SizeOf<ManifoldCandidate>() * 6;
@@ -242,16 +406,29 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var candidateCount = Vector<int>.Zero;
             ref var candidates = ref Unsafe.As<byte, ManifoldCandidate>(ref *buffer);
 
-            ClipBoxEdgesAgainstTriangle(vA, vB, vC, boxTangentX, boxTangentY, halfExtentX, halfExtentY, boxFaceCenter,  
-                axisIdNormal, axisIdTangentX, axisIdTangentY, 
+            //While the edge clipping will find any triangleEdge-boxEdge or boxVertex--triangleFace contacts, it will not find triangleVertex-boxFace contacts.
+            //Add them independently.
+            //(Adding these firsts allows us to simply skip capacity tests, since there can only be a total of three triangle-boxface contacts.)
+            TryAddTriangleVertex(vA, Vector<int>.Zero, localTriangleCenter, triangleTangentX, triangleTangentY, boxTangentX, boxTangentY, halfExtentX, halfExtentY, boxFaceCenter, ref candidates, ref candidateCount);
+            TryAddTriangleVertex(vB, Vector<int>.One, localTriangleCenter, triangleTangentX, triangleTangentY, boxTangentX, boxTangentY, halfExtentX, halfExtentY, boxFaceCenter, ref candidates, ref candidateCount);
+            TryAddTriangleVertex(vC, new Vector<int>(2), localTriangleCenter, triangleTangentX, triangleTangentY, boxTangentX, boxTangentY, halfExtentX, halfExtentY, boxFaceCenter, ref candidates, ref candidateCount);
+
+            //Note that box edges will also add box vertices that are within the triangle bounds, so no box vertex case is required.
+            //Note that each of these calls can generate 4 contacts, so we have to start checking capacities.
+            //abxN = triangleTangentY * ||ab x N||. The magnitude of the value doesn't matter, so we just use the triangleTangentY directly for that edge plane normal.
+            Vector3Wide.CrossWithoutOverlap(bc, triangleNormal, out var bcxN);
+            Vector3Wide.CrossWithoutOverlap(ca, triangleNormal, out var caxN);
+            ClipBoxEdgesAgainstTriangle(vA, vB, vC, triangleTangentY, bcxN, caxN, 
+                localTriangleCenter, triangleTangentX, triangleTangentY, 
+                boxTangentX, boxTangentY, halfExtentX, halfExtentY, boxFaceCenter,
+                axisIdNormal, axisIdTangentX, axisIdTangentY,
                 epsilonScale, ref candidates, ref candidateCount);
-            ClipBoxEdgesAgainstTriangle(vA, vB, vC, boxTangentY, boxTangentX, halfExtentY, halfExtentX, boxFaceCenter,
+            ClipBoxEdgesAgainstTriangle(vA, vB, vC, triangleTangentY, bcxN, caxN,
+                localTriangleCenter, triangleTangentX, triangleTangentY,
+                boxTangentY, boxTangentX, halfExtentY, halfExtentX, boxFaceCenter,
                 axisIdNormal, axisIdTangentY, axisIdTangentX,
                 epsilonScale, ref candidates, ref candidateCount);
 
-            //While the edge clipping will find any triangleEdge-boxEdge or boxVertex--triangleFace contacts, it will not find triangleVertex-boxFace contacts.
-            //Add them independently.
-            //TODO: Do that!
 
 
             Vector3Wide.Subtract(boxFaceCenter, localTriangleCenter, out var faceCenterBToFaceCenterA);
