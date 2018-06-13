@@ -37,7 +37,7 @@ namespace DemoRenderer.Constraints
             var depth = depthWide[innerIndex];
             var contactPosition = offsetA + poseA.Position;
             BuildOrthnormalBasis(normal, out var t1, out var t2);
-            var packedColor = Helpers.PackColor(tint * (depth >= 0 ? new Vector3(0,1,0) : new Vector3(0.4f, 0.6f, 0.4f)));
+            var packedColor = Helpers.PackColor(tint * (depth >= 0 ? new Vector3(0,1,0) : new Vector3(0.15f, 0.25f, 0.15f)));
             t1 *= 0.5f;
             t2 *= 0.5f;
             var t1Line = new LineInstance(contactPosition - t1, contactPosition + t1, packedColor, 0);
