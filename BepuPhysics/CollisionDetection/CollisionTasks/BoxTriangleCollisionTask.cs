@@ -266,16 +266,34 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void TryAddTriangleVertex(in Vector3Wide triangleVertex, in Vector<int> vertexId, in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY,
-            in Vector3Wide boxTangentX, in Vector3Wide boxTangentY, in Vector<float> halfExtentX, in Vector<float> halfExtentY, in Vector3Wide boxFaceCenter,
+        private void TryAddTriangleVertex(in Vector3Wide triangleVertex, in Vector<int> vertexId,
+            in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY, in Vector3Wide triangleNormal,
+            in Vector3Wide boxTangentX, in Vector3Wide boxTangentY, in Vector<float> halfExtentX, in Vector<float> halfExtentY, in Vector<float> halfExtentZ,
+            in Vector3Wide boxFaceNormal, in Vector<float> inverseTriangleNormalDotBoxFaceNormal,
             ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
         {
-            Vector3Wide.Subtract(triangleVertex, boxFaceCenter, out var offset);
-            Vector3Wide.Dot(boxTangentX, offset, out var boxX);
-            Vector3Wide.Dot(boxTangentY, offset, out var boxY);
+            //Note that we cannot simply project orthographically onto the box face. All edge contacts are created by orthographic projection onto the *triangle*, so to test
+            //containment of a triangle vertex on the box face, it must first be unprojected. Ray cast from triangleVertex along triangleNormal to the box plane.
+            //t = -dot(boxFaceCenter - triangleVertex, boxFaceNormal) / dot(triangleNormal, boxFaceNormal)
+            //t = -(dot(boxFaceCenter, boxFaceNormal) - dot(triangleVertex, boxFaceNormal)) / dot(triangleNormal, boxFaceNormal)
+            //dot(boxFaceCenter, boxFaceNormal) == halfExtentZ, since the box is symmetric.
+            //t = (dot(triangleVertex, boxFaceNormal) - halfExtentZ) / dot(triangleNormal, boxFaceNormal)
+
+            //x = dot(triangleVertex + t * triangleNormal, boxX)
+            //y = dot(triangleVertex + t * triangleNormal, boxY)
+
+            Vector3Wide.Dot(triangleVertex, boxFaceNormal, out var vertexAlongBoxNormal);
+            var distance = vertexAlongBoxNormal - halfExtentZ;
+            var t = distance * inverseTriangleNormalDotBoxFaceNormal;
+
+            //Can avoid 2 add instructions here by precomputing dot products but... complexity penalty.
+            Vector3Wide.Scale(triangleNormal, t, out var offset);
+            Vector3Wide.Add(offset, triangleVertex, out var unprojectedVertex);
+            Vector3Wide.Dot(unprojectedVertex, boxTangentX, out var x);
+            Vector3Wide.Dot(unprojectedVertex, boxTangentY, out var y);
             var contained = Vector.BitwiseAnd(
-                Vector.LessThanOrEqual(Vector.Abs(boxX), halfExtentX),
-                Vector.LessThanOrEqual(Vector.Abs(boxY), halfExtentY));
+                Vector.LessThanOrEqual(Vector.Abs(x), halfExtentX),
+                Vector.LessThanOrEqual(Vector.Abs(y), halfExtentY));
             Add(triangleVertex, triangleCenter, triangleX, triangleY, vertexId, contained, ref candidates, ref candidateCount);
         }
 
@@ -315,9 +333,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var yNormalSign = Vector.ConditionalSelect(Vector.LessThan(localTriangleCenter.Y, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f));
             var zNormalSign = Vector.ConditionalSelect(Vector.LessThan(localTriangleCenter.Z, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f));
 
-            GetDepthForInterval(a.HalfWidth, xNormalSign * vA.X, xNormalSign * vB.X, xNormalSign * vC.X, out var faceAXDepth);
-            GetDepthForInterval(a.HalfHeight, yNormalSign * vA.Y, yNormalSign * vB.Y, yNormalSign * vC.Y, out var faceAYDepth);
-            GetDepthForInterval(a.HalfLength, zNormalSign * vA.Z, zNormalSign * vB.Z, zNormalSign * vC.Z, out var faceAZDepth);
+            //Note that we ignore sign on interval tests here- the depth is the same regardless of what the sign is, so we don't have to take it into account.
+            GetDepthForInterval(a.HalfWidth, vA.X, vB.X, vC.X, out var faceAXDepth);
+            GetDepthForInterval(a.HalfHeight, vA.Y, vB.Y, vC.Y, out var faceAYDepth);
+            GetDepthForInterval(a.HalfLength, vA.Z, vB.Z, vC.Z, out var faceAZDepth);
             Select(ref depth, ref localNormal, faceAXDepth, xNormalSign, Vector<float>.Zero, Vector<float>.Zero);
             Select(ref depth, ref localNormal, faceAYDepth, Vector<float>.Zero, yNormalSign, Vector<float>.Zero);
             Select(ref depth, ref localNormal, faceAZDepth, Vector<float>.Zero, Vector<float>.Zero, zNormalSign);
@@ -421,9 +440,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //While the edge clipping will find any triangleEdge-boxEdge or boxVertex--triangleFace contacts, it will not find triangleVertex-boxFace contacts.
             //Add them independently.
             //(Adding these firsts allows us to simply skip capacity tests, since there can only be a total of three triangle-boxface contacts.)
-            TryAddTriangleVertex(vA, Vector<int>.Zero, localTriangleCenter, triangleTangentX, triangleTangentY, boxTangentX, boxTangentY, halfExtentX, halfExtentY, boxFaceCenter, ref candidates, ref candidateCount);
-            TryAddTriangleVertex(vB, Vector<int>.One, localTriangleCenter, triangleTangentX, triangleTangentY, boxTangentX, boxTangentY, halfExtentX, halfExtentY, boxFaceCenter, ref candidates, ref candidateCount);
-            TryAddTriangleVertex(vC, new Vector<int>(2), localTriangleCenter, triangleTangentX, triangleTangentY, boxTangentX, boxTangentY, halfExtentX, halfExtentY, boxFaceCenter, ref candidates, ref candidateCount);
+            Vector3Wide.Dot(boxFaceNormal, triangleNormal, out var boxFaceNormalDotTriangleNormal);
+            var inverseBoxFaceNormalDotTriangleNormal = Vector.ConditionalSelect(
+                Vector.LessThan(boxFaceNormalDotTriangleNormal, Vector<float>.Zero), negativeOne, Vector<float>.One) / 
+                Vector.Max(Vector.Abs(boxFaceNormalDotTriangleNormal), new Vector<float>(1e-15f));
+            TryAddTriangleVertex(vA, Vector<int>.Zero, localTriangleCenter, triangleTangentX, triangleTangentY, triangleNormal, boxTangentX, boxTangentY, halfExtentX, halfExtentY, halfExtentZ, boxFaceNormal, inverseBoxFaceNormalDotTriangleNormal, ref candidates, ref candidateCount);
+            TryAddTriangleVertex(vB, Vector<int>.One, localTriangleCenter, triangleTangentX, triangleTangentY, triangleNormal, boxTangentX, boxTangentY, halfExtentX, halfExtentY, halfExtentZ, boxFaceNormal, inverseBoxFaceNormalDotTriangleNormal, ref candidates, ref candidateCount);
+            TryAddTriangleVertex(vC, new Vector<int>(2), localTriangleCenter, triangleTangentX, triangleTangentY, triangleNormal, boxTangentX, boxTangentY, halfExtentX, halfExtentY, halfExtentZ, boxFaceNormal, inverseBoxFaceNormalDotTriangleNormal, ref candidates, ref candidateCount);
 
             //Note that box edges will also add box vertices that are within the triangle bounds, so no box vertex case is required.
             //Note that each of these calls can generate 4 contacts, so we have to start checking capacities.
