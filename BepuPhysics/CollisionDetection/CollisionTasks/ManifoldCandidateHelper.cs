@@ -67,24 +67,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
             out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
         {
-            if (Vector.LessThanOrEqualAll(rawContactCount, new Vector<int>(4)))
-            {
-                //There is no need for a reduction; all lanes fit within a 4 contact manifold.
-                //This can result in some pretty questionably redundant contacts sometimes, but our epsilons are sufficiently small that most such things
-                //would get let through anyway. 
-                //TODO: Could play with this to see what the net impact on performance is. Probably negligible either way.
-                contact0 = candidates;
-                contact1 = Unsafe.Add(ref candidates, 1);
-                contact2 = Unsafe.Add(ref candidates, 2);
-                contact3 = Unsafe.Add(ref candidates, 3);
-                contact0Exists = Vector.GreaterThan(rawContactCount, Vector<int>.Zero);
-                contact1Exists = Vector.GreaterThan(rawContactCount, Vector<int>.One);
-                contact2Exists = Vector.GreaterThan(rawContactCount, new Vector<int>(2));
-                contact3Exists = Vector.GreaterThan(rawContactCount, new Vector<int>(3));
-                return;
-            }
             //See if we can avoid visiting some of the higher indices.
-            for (int i = maxCandidateCount; i > 4; --i)
+            for (int i = maxCandidateCount; i >= 0; --i)
             {
                 if (Vector.EqualsAny(rawContactCount, new Vector<int>(i)))
                 {
@@ -92,7 +76,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     break;
                 }
             }
-
+            if (maxCandidateCount == 0)
+            {
+                return;
+            }
             //That's too many; four is plenty. We should choose how to get rid of the extra ones.
             //It's important to keep the deepest contact if there's any significant depth disparity, so we need to calculate depths before reduction.
             //Conceptually, we project the points from the surface of face B down onto face A, then measure the separation of those two points along the normal:
@@ -107,12 +94,35 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(faceCenterBToFaceCenterA, dotAxis, out var negativeBaseDot);
             Vector3Wide.Dot(tangentBX, dotAxis, out var xDot);
             Vector3Wide.Dot(tangentBY, dotAxis, out var yDot);
+
+            if (maxCandidateCount <= 4)
+            {
+                //There is no need for a reduction; all lanes fit within a 4 contact manifold.
+                //This can result in some pretty questionably redundant contacts sometimes, but our epsilons are sufficiently small that most such things
+                //would get let through anyway. 
+                //Note that we still have to initialize depth.
+                //TODO: Could play with this to see what the net impact on performance is. Probably negligible either way.
+                for (int i = 0; i < maxCandidateCount; ++i)
+                {
+                    ref var candidate = ref Unsafe.Add(ref candidates, i);
+                    candidate.Depth = candidate.X * xDot + candidate.Y * yDot - negativeBaseDot;
+                }
+                contact0 = candidates;
+                contact1 = Unsafe.Add(ref candidates, 1);
+                contact2 = Unsafe.Add(ref candidates, 2);
+                contact3 = Unsafe.Add(ref candidates, 3);
+                contact0Exists = Vector.GreaterThan(rawContactCount, Vector<int>.Zero);
+                contact1Exists = Vector.GreaterThan(rawContactCount, Vector<int>.One);
+                contact2Exists = Vector.GreaterThan(rawContactCount, new Vector<int>(2));
+                contact3Exists = Vector.GreaterThan(rawContactCount, new Vector<int>(3));
+                return;
+            }
+
             //minor todo: don't really need to waste time initializing to an invalid value.
             var minDepth = new Vector<float>(float.MaxValue);
             var maxExtreme = new Vector<float>(-float.MaxValue);
             ManifoldCandidate deepest, extreme;
             deepest.Depth = new Vector<float>(-float.MaxValue);
-
             for (int i = 0; i < maxCandidateCount; ++i)
             {
                 ref var candidate = ref Unsafe.Add(ref candidates, i);
@@ -131,6 +141,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 minDepth = Vector.ConditionalSelect(indexIsValid, Vector.Min(candidate.Depth, minDepth), minDepth);
                 maxExtreme = Vector.ConditionalSelect(indexIsValid, extremeCandidate, maxExtreme);
             }
+
 
             //Choose the starting point for the contact reduction. Two options:
             //If depth disparity is high, use the deepest index.
