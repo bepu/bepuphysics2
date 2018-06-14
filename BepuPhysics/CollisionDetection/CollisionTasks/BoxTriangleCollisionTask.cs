@@ -321,9 +321,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Test face normal of B.
             Vector3Wide.CrossWithoutOverlap(ab, ca, out var triangleNormal);
             Vector3Wide.Length(triangleNormal, out var triangleNormalLength);
-            Vector3Wide.Scale(triangleNormal, Vector<float>.One / triangleNormalLength, out triangleNormal);
-            //Note that we do not calibrate the triangle normal. The backside of the triangle does not collide, so any normal that ends up pointing that direction will be ignored anyway.
             Vector3Wide.Dot(triangleNormal, localTriangleCenter, out var trianglePlaneOffset);
+            var negativeOne = new Vector<float>(-1f);
+            //Calibrate the normal to point from B to A. This is needed because the choice to eliminate backface contacts depends on dot(localNormal, triangleNormal).
+            Vector3Wide.Scale(triangleNormal, 
+                Vector.ConditionalSelect(Vector.GreaterThan(trianglePlaneOffset, Vector<float>.Zero), negativeOne, Vector<float>.One) / triangleNormalLength, out triangleNormal);
             var triangleFaceDepth =
                 Vector.Abs(triangleNormal.X) * a.HalfWidth + Vector.Abs(triangleNormal.Y) * a.HalfHeight + Vector.Abs(triangleNormal.Z) * a.HalfLength + trianglePlaneOffset;
             Select(ref depth, ref localNormal, triangleFaceDepth, triangleNormal);
@@ -361,7 +363,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             boxTangentY.X = Vector<float>.Zero;
             boxTangentY.Y = Vector.ConditionalSelect(Vector.BitwiseOr(useAX, useAZ), Vector<float>.One, Vector<float>.Zero);
             boxTangentY.Z = Vector.ConditionalSelect(useAY, Vector<float>.One, Vector<float>.Zero);
-            var negativeOne = new Vector<float>(-1f);
             boxFaceNormal.X = Vector.ConditionalSelect(useAX, Vector.ConditionalSelect(normalIsNegativeX, Vector<float>.One, negativeOne), Vector<float>.Zero);
             boxFaceNormal.Y = Vector.ConditionalSelect(useAY, Vector.ConditionalSelect(normalIsNegativeY, Vector<float>.One, negativeOne), Vector<float>.Zero);
             boxFaceNormal.Z = Vector.ConditionalSelect(useAZ, Vector.ConditionalSelect(normalIsNegativeZ, Vector<float>.One, negativeOne), Vector<float>.Zero);
@@ -448,6 +449,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformWithoutOverlap(triangleTangentY, worldRA, out var worldTangentBY);
             Matrix3x3Wide.TransformWithoutOverlap(localTriangleCenter, worldRA, out var worldTriangleCenter);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, worldRA, out manifold.Normal);
+            //If the local normal points against the triangle normal, then it's on the backside and should not collide.
+            Vector3Wide.Dot(localNormal, triangleNormal, out var normalDot);
+            var allowContacts = Vector.GreaterThanOrEqual(normalDot, Vector<float>.Zero);
+            manifold.Contact0Exists = Vector.BitwiseAnd(manifold.Contact0Exists, allowContacts);
+            manifold.Contact1Exists = Vector.BitwiseAnd(manifold.Contact1Exists, allowContacts);
+            manifold.Contact2Exists = Vector.BitwiseAnd(manifold.Contact2Exists, allowContacts);
+            manifold.Contact3Exists = Vector.BitwiseAnd(manifold.Contact3Exists, allowContacts);
             TransformContactToManifold(contact0, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact0Exists, out manifold.OffsetA0, out manifold.Depth0, out manifold.FeatureId0);
             TransformContactToManifold(contact1, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact1Exists, out manifold.OffsetA1, out manifold.Depth1, out manifold.FeatureId1);
             TransformContactToManifold(contact2, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact2Exists, out manifold.OffsetA2, out manifold.Depth2, out manifold.FeatureId2);
