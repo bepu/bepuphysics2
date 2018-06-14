@@ -135,7 +135,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ConditionalSelect(candidateIsDeepest, candidate, deepest, out deepest);
                 //Note X+Y instead of X or Y alone. Shapes are very often stacked in a nonrandom way; choosing +x or +y alone would lead to near-ties in such cases.
                 //This is a pretty small detail, but it is cheap enough that there's no reason not to take advantage of it.
-                var extremeCandidate = Vector.Max(maxExtreme, candidate.X + candidate.Y);
+                var extremeCandidate = candidate.X + candidate.Y;
                 var candidateIsMostExtreme = Vector.BitwiseAnd(indexIsValid, Vector.GreaterThan(extremeCandidate, maxExtreme));
                 ConditionalSelect(candidateIsMostExtreme, candidate, extreme, out extreme);
                 minDepth = Vector.ConditionalSelect(indexIsValid, Vector.Min(candidate.Depth, minDepth), minDepth);
