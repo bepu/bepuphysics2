@@ -251,9 +251,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 out var bY0Min, out var bY0Max, out var bY1Min, out var bY1Max);
 
             //Note that we only allocate up to 8 candidates. It is not possible for this process to generate more than 8 (unless there are numerical problems, which we guard against).
-            int byteCount = Unsafe.SizeOf<Candidate>() * 8;
+            int byteCount = Unsafe.SizeOf<ManifoldCandidate>() * 8;
             var buffer = stackalloc byte[byteCount];
-            ref var candidates = ref Unsafe.As<byte, Candidate>(ref *buffer);
+            ref var candidates = ref Unsafe.As<byte, ManifoldCandidate>(ref *buffer);
 
             //Note that using a raw absolute epsilon would have a varying effect based on the scale of the involved boxes.
             //The minimum across the maxes is intended to avoid cases like a huge box being used as a plane, causing a massive size disparity.
@@ -340,105 +340,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref tangentBX, ref tangentBY, ref halfSpanBX, ref halfSpanBY,
                 ref candidates, ref rawContactCount);
 
-
-            //There are up to 8 contacts in the raw set. That's too many; four is plenty. We should choose how to get rid of the extra ones.
-            //It's important to keep the deepest contact if there's any significant depth disparity, so we need to calculate depths before reduction.
-            //Conceptually, we project the points from the surface of face B down onto face A, then measure the separation of those two points along the normal:
-            //depth = dot(pointOnFaceB - faceCenterA, faceNormalA) / dot(faceNormalA, normal)
-            //dotAxis = faceNormalA / dot(faceNormalA, normal)
-            //depth = dot(pointOnFaceB - faceCenterA, dotAxis)
-            //depth = dot(faceCenterB + tangentBX * candidate.X + tangentBY * candidate.Y - faceCenterA, dotAxis)
-            //depth = dot(faceCenterB - faceCenterA, dotAxis) + dot(tangentBX, dotAxis) * candidate.X + dot(tangentBY, dotAxis) * candidate.Y
-            Vector3Wide.Dot(normalA, manifold.Normal, out var axisScale);
-            axisScale = Vector<float>.One / axisScale;
-            Vector3Wide.Scale(normalA, axisScale, out var dotAxis);
-            Vector3Wide.Dot(faceCenterBToFaceCenterA, dotAxis, out var negativeBaseDot);
-            Vector3Wide.Dot(tangentBX, dotAxis, out var xDot);
-            Vector3Wide.Dot(tangentBY, dotAxis, out var yDot);
-            //minor todo: don't really need to waste time initializing to an invalid value.
-            var minDepth = new Vector<float>(float.MaxValue);
-            var maxExtreme = new Vector<float>(-float.MaxValue);
-            Candidate deepest, extreme;
-            deepest.Depth = new Vector<float>(-float.MaxValue);
-            //minor todo: could try with a horizontal min on counts to avoid checking all 8 if no manifolds have all 8.
-
-            for (int i = 0; i < 8; ++i)
-            {
-                ref var candidate = ref Unsafe.Add(ref candidates, i);
-                candidate.Depth = candidate.X * xDot + candidate.Y * yDot - negativeBaseDot;
-                //Note X+Y instead of X or Y alone. Boxes are very often stacked in a nonrandom way; choosing +x or +y alone would lead to near-ties in such cases.
-                //This is a pretty small detail, but it is cheap enough that there's no reason not to take advantage of it.
-                var index = new Vector<int>(i);
-                var indexIsValid = Vector.LessThan(new Vector<int>(i), rawContactCount);
-                var candidateIsDeepest = Vector.BitwiseAnd(indexIsValid, Vector.GreaterThan(candidate.Depth, deepest.Depth));
-                //Note that we gather the candidate into a local variable rather than storing an index. This avoids the need for a gather (or scalar gather emulation).
-                //May be worth doing deeper testing on whether that's worth it, but it'll be a minor difference regardless.
-                ConditionalSelect(ref candidateIsDeepest, ref candidate, ref deepest, ref deepest);
-                var extremeCandidate = Vector.Max(maxExtreme, candidate.X + candidate.Y);
-                var candidateIsMostExtreme = Vector.BitwiseAnd(indexIsValid, Vector.GreaterThan(extremeCandidate, maxExtreme));
-                ConditionalSelect(ref candidateIsMostExtreme, ref candidate, ref extreme, ref extreme);
-                minDepth = Vector.ConditionalSelect(indexIsValid, Vector.Min(candidate.Depth, minDepth), minDepth);
-                maxExtreme = Vector.ConditionalSelect(indexIsValid, extremeCandidate, maxExtreme);
-            }
-
-            //Choose the starting point for the contact reduction. Two options:
-            //If depth disparity is high, use the deepest index.
-            //If depth disparity is too small, use the extreme X index to avoid flickering between manifold start locations.
-            var useDepthIndex = Vector.GreaterThan(deepest.Depth - minDepth, new Vector<float>(1e-2f) * epsilonScale);
-            Candidate contact0;
-            ConditionalSelect(ref useDepthIndex, ref deepest, ref extreme, ref contact0);
-            manifold.Contact0Exists = Vector.GreaterThan(rawContactCount, Vector<int>.Zero);
-
-            //Find the most distant point from the starting contact.
-            var maxDistanceSquared = Vector<float>.Zero;
-            Candidate contact1;
-            for (int i = 0; i < 8; ++i)
-            {
-                ref var candidate = ref Unsafe.Add(ref candidates, i);
-                var offsetX = candidate.X - contact0.X;
-                var offsetY = candidate.Y - contact0.Y;
-                var distanceSquared = offsetX * offsetX + offsetY * offsetY;
-                var indexIsValid = Vector.LessThan(new Vector<int>(i), rawContactCount);
-                var candidateIsMostDistant = Vector.BitwiseAnd(Vector.GreaterThan(distanceSquared, maxDistanceSquared), indexIsValid);
-                maxDistanceSquared = Vector.ConditionalSelect(candidateIsMostDistant, distanceSquared, maxDistanceSquared);
-                ConditionalSelect(ref candidateIsMostDistant, ref candidate, ref contact1, ref contact1);
-            }
-            //There's no point in additional contacts if the distance between the first and second candidates is zero. Note that this captures the case where there is 0 or 1 contact.
-            manifold.Contact1Exists = Vector.GreaterThan(maxDistanceSquared, epsilonScale * epsilonScale * new Vector<float>(1e-6f));
-
-            //Now identify two more points. Using the two existing contacts as a starting edge, pick the points which, when considered as a triangle with the edge,
-            //have the largest magnitude negative and positive signed areas.
-            var edgeOffsetX = contact1.X - contact0.X;
-            var edgeOffsetY = contact1.Y - contact0.Y;
-            var minSignedArea = Vector<float>.Zero;
-            var maxSignedArea = Vector<float>.Zero;
-            Candidate contact2, contact3;
-            for (int i = 0; i < 8; ++i)
-            {
-                //The area of a triangle is proportional to the magnitude of the cross product of two of its edge offsets. 
-                //To retain sign, we will conceptually dot against the face's normal. Since we're working on the surface of face B, the arithmetic simplifies heavily to a perp-dot product.
-                ref var candidate = ref Unsafe.Add(ref candidates, i);
-                var candidateOffsetX = candidate.X - contact0.X;
-                var candidateOffsetY = candidate.Y - contact0.Y;
-                var signedArea = candidateOffsetX * edgeOffsetY - candidateOffsetY * edgeOffsetX;
-
-                var indexIsValid = Vector.LessThan(new Vector<int>(i), rawContactCount);
-                var isMinArea = Vector.BitwiseAnd(Vector.LessThan(signedArea, minSignedArea), indexIsValid);
-                minSignedArea = Vector.ConditionalSelect(isMinArea, signedArea, minSignedArea);
-                ConditionalSelect(ref isMinArea, ref candidate, ref contact2, ref contact2);
-                var isMaxArea = Vector.BitwiseAnd(Vector.GreaterThan(signedArea, maxSignedArea), indexIsValid);
-                maxSignedArea = Vector.ConditionalSelect(isMaxArea, signedArea, maxSignedArea);
-                ConditionalSelect(ref isMaxArea, ref candidate, ref contact3, ref contact3);
-            }
-
-            //Area can be appropximated as a box for the purposes of an epsilon test: (edgeLength0 * span)^2 = (edgeLength0 * edgeLength0 * span * span).
-            //This comparison is basically checking if 'span' is irrelevantly small, so we can change this to:
-            //edgeLength0 * edgeLength0 * (edgeLength0 * tinyNumber) * (edgeLength0 * tinyNumber) = (edgeLength0^2) * (edgelength0^2) * (tinyNumber^2)
-            var epsilon = maxDistanceSquared * maxDistanceSquared * new Vector<float>(1e-6f);
-            //Note that minSignedArea is guaranteed to be zero or lower by construction, so it's safe to square for magnitude comparison.
-            //Note that these epsilons capture the case where there are two or less raw contacts.
-            manifold.Contact2Exists = Vector.GreaterThan(minSignedArea * minSignedArea, epsilon);
-            manifold.Contact3Exists = Vector.GreaterThan(maxSignedArea * maxSignedArea, epsilon);
+            ManifoldCandidateHelper.Reduce(ref candidates, rawContactCount, 8, normalA, manifold.Normal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale,
+              out var contact0, out var contact1, out var contact2, out var contact3,
+              out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
             //Transform the contacts into the manifold.
             var minimumAcceptedDepth = -speculativeMargin;
@@ -450,7 +354,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void TransformContactToManifold(
-            ref Candidate rawContact, ref Vector3Wide faceCenterB, ref Vector3Wide tangentBX, ref Vector3Wide tangentBY, ref Vector<float> minimumAcceptedDepth,
+            ref ManifoldCandidate rawContact, ref Vector3Wide faceCenterB, ref Vector3Wide tangentBX, ref Vector3Wide tangentBY, ref Vector<float> minimumAcceptedDepth,
             ref Vector<int> contactExists, ref Vector3Wide manifoldOffsetA, ref Vector<float> manifoldDepth, ref Vector<int> manifoldFeatureId)
         {
             Vector3Wide.Scale(tangentBX, rawContact.X, out manifoldOffsetA);
@@ -465,22 +369,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ConditionalSelect(ref Vector<int> useA, ref Candidate a, ref Candidate b, ref Candidate result)
-        {
-            result.X = Vector.ConditionalSelect(useA, a.X, b.X);
-            result.Y = Vector.ConditionalSelect(useA, a.Y, b.Y);
-            result.Depth = Vector.ConditionalSelect(useA, a.Depth, b.Depth);
-            result.FeatureId = Vector.ConditionalSelect(useA, a.FeatureId, b.FeatureId);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void AddFaceVertexContact(ref Vector3Wide faceCenterBToVertexA, ref Vector<int> vertexId,
             ref Vector3Wide tangentBX, ref Vector3Wide tangentBY, ref Vector<float> halfSpanBX, ref Vector<float> halfSpanBY,
-            ref Candidate candidates, ref Vector<int> rawContactCount)
+            ref ManifoldCandidate candidates, ref Vector<int> rawContactCount)
         {
             //Get the closest point on face B to vertex A.
             //Note that contacts outside of face B are not added; that could generate contacts outside of either representative face, which can cause some poor contact choices.
-            Candidate candidate;
+            ManifoldCandidate candidate;
             candidate.FeatureId = vertexId;
             Vector3Wide.Dot(faceCenterBToVertexA, tangentBX, out candidate.X);
             Vector3Wide.Dot(faceCenterBToVertexA, tangentBY, out candidate.Y);
@@ -494,12 +389,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //but it is very cheap and guarantees no memory stomping with a pretty reasonable fallback.
             var belowBufferCapacity = Vector.LessThan(rawContactCount, new Vector<int>(8));
             var contactExists = Vector.BitwiseAnd(containedInFaceB, belowBufferCapacity);
-            AddContactCandidate(ref candidates, ref candidate, ref contactExists, ref rawContactCount);
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, contactExists);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void AddEdgeContacts(
-            ref Candidate candidates, ref Vector<int> rawContactCount,
+            ref ManifoldCandidate candidates, ref Vector<int> rawContactCount,
             ref Vector<float> halfSpanB, ref Vector<float> epsilonScale,
             ref Vector<float> tMin, ref Vector<float> tMax,
             ref Vector<float> candidateMinX, ref Vector<float> candidateMinY,
@@ -511,7 +406,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Note the comparisons: if the max lies on a face vertex, it is used, but if the min lies on a face vertex, it is not. This avoids redundant entries.
 
             //Note that the candidates are stored in terms of locations on the face of B along the tangentBX and tangentBY.
-            Candidate candidate;
+            ManifoldCandidate candidate;
             candidate.X = candidateMinX;
             candidate.Y = candidateMinY;
             //Note that we use only the edge id of B, regardless of which face bounds contributed to the contact. This is a little permissive, since changes to the 
@@ -521,7 +416,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.GreaterThanOrEqual(tMax, tMin),
                 Vector.GreaterThan(tMin, -halfSpanB)),
                 Vector.LessThan(tMin, halfSpanB));
-            AddContactCandidate(ref candidates, ref candidate, ref minContactExists, ref rawContactCount);
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, minContactExists);
             candidate.X = candidateMaxX;
             candidate.Y = candidateMaxY;
             candidate.FeatureId = edgeIdB + new Vector<int>(64);
@@ -529,7 +424,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.GreaterThan(tMax, -halfSpanB),
                 Vector.LessThanOrEqual(tMax, halfSpanB)),
                 Vector.GreaterThan(tMax - tMin, new Vector<float>(1e-5f) * epsilonScale));
-            AddContactCandidate(ref candidates, ref candidate, ref maxContactExists, ref rawContactCount);
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, maxContactExists);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -581,49 +476,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             b0Max = Vector.Min(halfSpanB, Vector.Min(tAX0Max, tAY0Max));
             b1Min = Vector.Max(negativeHalfSpanB, Vector.Max(tAX1Min, tAY1Min));
             b1Max = Vector.Min(halfSpanB, Vector.Min(tAX1Max, tAY1Max));
-        }
-
-        struct Candidate
-        {
-            public Vector<float> X;
-            public Vector<float> Y;
-            public Vector<float> Depth;
-            public Vector<int> FeatureId;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void AddContactCandidate(ref Candidate candidates, ref Candidate candidate, ref Vector<int> newContactExists, ref Vector<int> count)
-        {
-            //Incrementally maintaining a list is unfortunately a very poor fit for wide vectorization.
-            //Each pair has its own count, so the target memory location for storing a new contact in the list is different.
-            //If we had efficient scatters, this would look something like:
-            //stride = Unsafe.SizeOf<Candidate>() / Unsafe.SizeOf<float>();
-            //laneIndices = new Vector<int> { 0, 1, 2, 3... }
-            //targetIndices = count * stride + laneIndices;
-            //Scatter(ref candidate.X, ref Unsafe.As<Vector<float>, float>(ref candidates[0].X), count)
-            //Scatter(ref candidate.Y, ref Unsafe.As<Vector<float>, float>(ref candidates[0].Y), count)
-            //Scatter(ref candidate.FeatureId, ref Unsafe.As<Vector<int>, float>(ref candidates[0].FeatureId), count)
-            //But we don't have scatter at the moment. We have two options:
-            //1) Maintain the vectorized pipeline and emulate the scatters as well as we can with scalar operations. Some risk for running into undefined behavior or compiler issues.
-            //2) Immediately drop to full scalar mode, and output an array of AOS ContactManifolds from this test.
-            //Note that we perform a conceptual scatter after the completion of each bundle for vectorized pairs anyway, so this wouldn't be catastrophic- 
-            //we did get SOME benefit out of vectorization for all the math above. 
-            //My guess is that #2 would have a slight advantage overall, but it requires more work at the API level- we'd need a version of the ExecuteBatch that could handle AOS output.
-            //For now, we're going to proceed with #1. Emulate the scatters as best we can with scalar code, and maintain the vectorized API.
-
-            for (int i = 0; i < Vector<int>.Count; ++i)
-            {
-                if (newContactExists[i] < 0)
-                {
-                    var targetIndex = count[i];
-                    ref var target = ref GetOffsetInstance(ref Unsafe.Add(ref candidates, targetIndex), i);
-                    //TODO: Check codegen. May be worth doing another offset instance for source data if the compiler inserts bounds checks.
-                    GetFirst(ref target.X) = candidate.X[i];
-                    GetFirst(ref target.Y) = candidate.Y[i];
-                    GetFirst(ref target.FeatureId) = candidate.FeatureId[i];
-                }
-            }
-            count = Vector.ConditionalSelect(newContactExists, count + Vector<int>.One, count);
         }
 
         public void Test(ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex4ContactManifoldWide manifold)
