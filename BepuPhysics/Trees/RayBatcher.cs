@@ -247,7 +247,7 @@ namespace BepuPhysics.Trees
 
             tMin = Vector.Max(Vector.Max(Vector<float>.Zero, tMinX), Vector.Max(tMinY, tMinZ));
             var tMax = Vector.Min(Vector.Min(ray.MaximumT, tMaxX), Vector.Min(tMaxY, tMaxZ));
-            intersected = Vector.LessThan(tMin, tMax);
+            intersected = Vector.LessThanOrEqual(tMin, tMax);
         }
 
 

@@ -90,6 +90,7 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new BoxPairCollisionTask());
             defaultTaskRegistry.Register(new BoxTriangleCollisionTask());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Box>());
+            defaultTaskRegistry.Register(new TrianglePairCollisionTask());
             defaultTaskRegistry.Register(new CompoundPairCollisionTask());
             return defaultTaskRegistry;
         }
