@@ -439,7 +439,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //While the edge clipping will find any triangleEdge-boxEdge or boxVertex--triangleFace contacts, it will not find triangleVertex-boxFace contacts.
             //Add them independently.
-            //(Adding these firsts allows us to simply skip capacity tests, since there can only be a total of three triangle-boxface contacts.)
+            //(Adding these first allows us to simply skip capacity tests, since there can only be a total of three triangle-boxface contacts.)
             Vector3Wide.Dot(boxFaceNormal, triangleNormal, out var boxFaceNormalDotTriangleNormal);
             var inverseBoxFaceNormalDotTriangleNormal = Vector.ConditionalSelect(
                 Vector.LessThan(boxFaceNormalDotTriangleNormal, Vector<float>.Zero), negativeOne, Vector<float>.One) / 
