@@ -109,20 +109,21 @@ namespace Demos.Demos
                 };
                 Simulation.Statics.Add(triangleDescription);
 
-                var shape = new Triangle(new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1));
-                var bodydescription = new BodyDescription
+                var shape = new Triangle(new Vector3(0, 0, 0), new Vector3(0, 0, 1), new Vector3(0, 1, 0));
+                var bodyDescription = new BodyDescription
                 {
                     Collidable = new CollidableDescription { Shape = Simulation.Shapes.Add(shape), SpeculativeMargin = 0.1f },
                     Activity = new BodyActivityDescription { SleepThreshold = -1 },
                     Pose = new RigidPose
                     {
-                        Position = new Vector3(1, 2, 1),
-                        Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0)
+                        Position = new Vector3(1, -0.01f, 1),
+                        Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)
                         //Orientation = BepuUtilities.Quaternion.Identity
                     }
                 };
-                shape.ComputeInertia(1, out bodydescription.LocalInertia);
-                Simulation.Bodies.Add(bodydescription);
+                shape.ComputeInertia(1, out bodyDescription.LocalInertia);
+                bodyDescription.LocalInertia.InverseInertiaTensor = new Triangular3x3();
+                Simulation.Bodies.Add(bodyDescription);
             }
         }
 
