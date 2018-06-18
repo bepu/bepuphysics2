@@ -89,7 +89,7 @@ namespace Demos.Demos
                 camera.Yaw = 0;
 
                 Simulation = Simulation.Create(BufferPool, new TestCallbacks());
-                //Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+                Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
                 var triangleDescription = new StaticDescription
                 {
@@ -109,7 +109,7 @@ namespace Demos.Demos
                 };
                 Simulation.Statics.Add(triangleDescription);
 
-                var shape = new Triangle(new Vector3(0, 0, 0), new Vector3(0, 0, 1), new Vector3(0, 1, 0));
+                var shape = new Triangle(new Vector3(0, 0, 1), new Vector3(0, 0, 0), new Vector3(-1, 1, 0));
                 var bodyDescription = new BodyDescription
                 {
                     Collidable = new CollidableDescription { Shape = Simulation.Shapes.Add(shape), SpeculativeMargin = 0.1f },
@@ -122,7 +122,7 @@ namespace Demos.Demos
                     }
                 };
                 shape.ComputeInertia(1, out bodyDescription.LocalInertia);
-                bodyDescription.LocalInertia.InverseInertiaTensor = new Triangular3x3();
+                //bodyDescription.LocalInertia.InverseInertiaTensor = new Triangular3x3();
                 Simulation.Bodies.Add(bodyDescription);
             }
         }
