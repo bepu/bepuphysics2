@@ -73,7 +73,7 @@ namespace Demos
                 MotorSettings = new MotorSettings
                 {
                     MaximumSpeed = float.MaxValue,
-                    MaximumForce = 4f / inverseMass
+                    MaximumForce = 240f / inverseMass
                 },
                 SpringSettings = new SpringSettings(10, 2),
             };

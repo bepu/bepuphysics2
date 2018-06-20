@@ -132,9 +132,10 @@ namespace BepuPhysics
             {
                 var halfAngle = speed * dt * 0.5f;
                 Quaternion q;
-                Unsafe.As<Quaternion, Vector3>(ref *&q) = angularVelocity * ((float)Math.Sin(halfAngle) / speed);
-                q.W = (float)Math.Cos(halfAngle);
-                Quaternion.ConcatenateWithoutOverlap(orientation, q, out integratedOrientation);
+                Unsafe.As<Quaternion, Vector3>(ref *&q) = angularVelocity * (Sin(halfAngle) / speed);
+                q.W = Cos(halfAngle);
+                //Note that the input and output may overlap.
+                Quaternion.Concatenate(orientation, q, out integratedOrientation);
                 Quaternion.Normalize(ref integratedOrientation);
             }
             else
@@ -147,7 +148,7 @@ namespace BepuPhysics
         public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose)
         {
             Integrate(pose.Position, velocity.Linear, dt, out integratedPose.Position);
-            Integrate(pose.Orientation, velocity.Angular, dt , out integratedPose.Orientation);
+            Integrate(pose.Orientation, velocity.Angular, dt, out integratedPose.Orientation);
         }
 
         unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher)

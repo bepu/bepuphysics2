@@ -66,7 +66,7 @@ namespace BepuPhysics.Constraints
         public Vector3Wide BiasVelocity;
         public Symmetric3x3Wide EffectiveMass;
         public Vector<float> SoftnessImpulseScale;
-        public Vector<float> MaximumForce;
+        public Vector<float> MaximumImpulse;
         public BodyInertias Inertia;
     }
 
@@ -102,7 +102,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Scale(projection.BiasVelocity, scale, out var scaledVelocity);
             Vector3Wide.ConditionalSelect(Vector.GreaterThan(speed, Vector<float>.Zero), scaledVelocity, projection.BiasVelocity, out projection.BiasVelocity);
 
-            projection.MaximumForce = prestep.MotorSettings.MaximumForce;
+            projection.MaximumImpulse = prestep.MotorSettings.MaximumForce * dt;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -138,7 +138,7 @@ namespace BepuPhysics.Constraints
             var previous = accumulatedImpulse;
             Vector3Wide.Add(accumulatedImpulse, csi, out accumulatedImpulse);
             Vector3Wide.Length(accumulatedImpulse, out var impulseMagnitude);
-            var newMagnitude = Vector.Min(impulseMagnitude, projection.MaximumForce);
+            var newMagnitude = Vector.Min(impulseMagnitude, projection.MaximumImpulse);
             var scale = newMagnitude / impulseMagnitude;
             Vector3Wide.Scale(accumulatedImpulse, scale, out accumulatedImpulse);
             Vector3Wide.ConditionalSelect(Vector.GreaterThan(impulseMagnitude, Vector<float>.Zero), accumulatedImpulse, previous, out accumulatedImpulse);

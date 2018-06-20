@@ -95,15 +95,30 @@ namespace BepuUtilities
             result.W = a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z;
         }
 
+        /// <summary>
+        /// Concatenates the transforms of two quaternions together such that the resulting quaternion, applied as an orientation to a vector v, is equivalent to
+        /// transformed = (v * a) * b.
+        /// </summary>
+        /// <param name="a">First quaternion to concatenate.</param>
+        /// <param name="b">Second quaternion to concatenate.</param>
+        /// <param name="result">Product of the concatenation.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Concatenate(in Quaternion a, in Quaternion b, out Quaternion result)
+        {
+            ConcatenateWithoutOverlap(a, b, out var temp);
+            result = temp;
+        }
+
 
         /// <summary>
-        /// Multiplies two quaternions together in opposite order.
+        /// Concatenates the transforms of two quaternions together such that the resulting quaternion, applied as an orientation to a vector v, is equivalent to
+        /// transformed = (v * a) * b.
         /// </summary>
         /// <param name="a">First quaternion to multiply.</param>
         /// <param name="b">Second quaternion to multiply.</param>
         /// <returns>Product of the multiplication.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion Concatenate(Quaternion a, Quaternion b)
+        public static Quaternion Concatenate(in Quaternion a, in Quaternion b)
         {
             ConcatenateWithoutOverlap(a, b, out var result);
             return result;

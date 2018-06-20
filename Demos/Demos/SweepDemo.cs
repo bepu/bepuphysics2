@@ -260,7 +260,7 @@ namespace Demos.Demos
             base.Render(renderer, text, font);
             var position = new Vector3(0, 60, -75);
 
-            var triangle = new Triangle(new Vector3(0, 0, 0), new Vector3(3, 0, -1), new Vector3(-1, 0, 4));
+            var triangle = new Triangle(new Vector3(0, 0, 0), new Vector3(2, 0, -1), new Vector3(-1, 0, 1.5f));
             var triangleCenter = (triangle.A + triangle.B + triangle.C) / 3f;
             triangle.A -= triangleCenter;
             triangle.B -= triangleCenter;

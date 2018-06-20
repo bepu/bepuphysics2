@@ -53,7 +53,6 @@ namespace Demos.Demos
                         },
                         Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = .01f },
                         Collidable = new CollidableDescription { Shape = boxIndex, SpeculativeMargin = .1f },
-                        Velocity = new BodyVelocity { Linear = blockIndex == blocksPerChain - 1 ? new Vector3() : new Vector3(0, -1, 0) }
                     };
                     blockHandles[blockIndex] = Simulation.Bodies.Add(bodyDescription);
                 }
