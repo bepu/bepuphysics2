@@ -87,7 +87,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.Length(localNormal, out var localNormalLength);
             Vector3Wide.Scale(localNormal, new Vector<float>(-1f) / localNormalLength, out localNormal);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out normal);
+            Vector3Wide.Scale(normal, -a.Radius, out closestA);
             distance = localNormalLength - a.Radius;
+            intersected = Vector.LessThanOrEqual(distance, Vector<float>.Zero);
 
             
         }

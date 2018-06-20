@@ -19,7 +19,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.Dot(shape.C, localDirection, out var c);
             var max = Vector.Max(a, Vector.Max(b, c));
             Vector3Wide.ConditionalSelect(Vector.Equals(max, a), shape.A, shape.B, out var localSupport);
-            Vector3Wide.ConditionalSelect(Vector.Equals(max, b), localSupport, shape.C, out localSupport);
+            Vector3Wide.ConditionalSelect(Vector.Equals(max, c), shape.C, localSupport, out localSupport);
             Matrix3x3Wide.TransformWithoutOverlap(localSupport, orientation, out support);
         }
     }

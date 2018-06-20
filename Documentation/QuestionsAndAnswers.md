@@ -77,3 +77,11 @@ Frequency and damping ratio can achieve some of the same effects as restitution.
 The reason for this is speculative contacts. v1 used them too, but v2 pushes their usage much further and uses them as the primary form of continuous collision detection. Most of the problems caused by speculative contacts (like ghost contacts) have been smoothed over, but the naive implementation of velocity-flip restitution simply doesn't work with speculative contacts.
 
 I'd like to see if the frequency/damping ratio can suffice for most use cases. If this is a critical problem for what you are trying to do, let me know. I can't guarantee I'll fix it in the near term, but if it becomes a blocking problem for a large number of people (or myself) there's a better chance that I'll spend the time to add a workaround.
+
+##### Swept shape tests against the backfaces of meshes don't go through, but collisions do. What's going on?
+
+While ray and collision testing against triangles is always one sided, swept shape tests are double sided. This is pretty strange, and there isn't a secret good reason for it.
+
+The not-great reason for it is that shape sweep tests use a root finder operating on top of a distance tester subroutine to support angular motion. One sided triangles make this much more complicated, and I haven't gotten around to building an efficient dedicated implementation.
+
+This isn't a top priority for now since sweeps against the back faces of meshes should be pretty rare in practice. If you've got a use case where this addressing this inconsistency is critical, open an issue- but I can't guarantee a fix.

@@ -20,7 +20,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var distanceChange = new Vector<float>(GJKTester.ContainmentEpsilonDefault) - a.Radius;
             distance += distanceChange;
             Vector3Wide.Scale(normal, distanceChange, out var closestPointOffset);
-            Vector3Wide.Subtract(closestPointOffset, closestA, out closestA);
+            Vector3Wide.Add(closestA, closestPointOffset, out closestA);
+            intersected = Vector.BitwiseOr(intersected, Vector.LessThan(distance, Vector<float>.Zero));
         }
     }
 
