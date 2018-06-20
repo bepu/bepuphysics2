@@ -526,19 +526,20 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 var angularDisplacementB = maxAngularExpansionB + nonlinearMaximumDisplacementB;
                 var bWorstCaseDistances = Vector.Max(Vector<float>.Zero, distances - angularDisplacementB);
                 var bothWorstCaseDistances = Vector.Max(Vector<float>.Zero, aWorstCaseDistances - angularDisplacementB);
-                var bothWorstCaseNextTime = bothWorstCaseDistances / linearVelocityAlongNormal;
+                //Divisions by zero velocity should result in a large (but finite) safe interval.
+                //Negative (separating) velocity can be treated in the same way.
+                var divisionGuard = new Vector<float>(1e-15f);
+                var bothWorstCaseNextTime = bothWorstCaseDistances / Vector.Max(divisionGuard, linearVelocityAlongNormal);
                 var angularContributionA = nonlinearVelocityContributionA + tangentSpeedA;
                 var angularContributionB = nonlinearVelocityContributionB + tangentSpeedB;
-                var aWorstCaseNextTime = aWorstCaseDistances / (linearVelocityAlongNormal + angularContributionB);
-                var bWorstCaseNextTime = bWorstCaseDistances / (linearVelocityAlongNormal + angularContributionA);
-                var bestCaseNextTime = distances / (linearVelocityAlongNormal + angularContributionA + angularContributionB);
+                var aWorstCaseNextTime = aWorstCaseDistances / Vector.Max(divisionGuard, (linearVelocityAlongNormal + angularContributionB));
+                var bWorstCaseNextTime = bWorstCaseDistances / Vector.Max(divisionGuard, (linearVelocityAlongNormal + angularContributionA));
+                var bestCaseNextTime = distances / Vector.Max(divisionGuard, linearVelocityAlongNormal + angularContributionA + angularContributionB);
                 var timeToNext = Vector.Max(Vector.Max(bothWorstCaseNextTime, aWorstCaseNextTime), Vector.Max(bWorstCaseNextTime, bestCaseNextTime));
-
-                var aWorstCasePreviousTime = aWorstCaseDistances / (angularContributionB - linearVelocityAlongNormal);
-                var bWorstCasePreviousTime = bWorstCaseDistances / (angularContributionA - linearVelocityAlongNormal);
-                var bestCasePreviousTime = distances / (angularContributionA + angularContributionB - linearVelocityAlongNormal);
+                var aWorstCasePreviousTime = aWorstCaseDistances / Vector.Max(divisionGuard, angularContributionB - linearVelocityAlongNormal);
+                var bWorstCasePreviousTime = bWorstCaseDistances / Vector.Max(divisionGuard, angularContributionA - linearVelocityAlongNormal);
+                var bestCasePreviousTime = distances / Vector.Max(divisionGuard, angularContributionA + angularContributionB - linearVelocityAlongNormal);
                 var timeToPrevious = Vector.Max(Vector.Max(-bothWorstCaseNextTime, aWorstCasePreviousTime), Vector.Max(bWorstCasePreviousTime, bestCasePreviousTime));
-
                 var safeIntervalStart = samples - timeToPrevious;
                 var safeIntervalEnd = samples + timeToNext;
                 var forcedIntervalEnd = samples + Vector.Max(timeToNext, minimumProgressionWide);

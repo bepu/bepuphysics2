@@ -18,8 +18,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         where TSupportFinderA : struct, ISupportFinder<TShapeA, TShapeWideA>
         where TSupportFinderB : struct, ISupportFinder<TShapeB, TShapeWideB>
     {
+        public const float TerminationEpsilonDefault = 1e-7f;
+        public const float ContainmentEpsilonDefault = 0.000316227766f;
 
         public float TerminationEpsilon;
+        public float ContainmentEpsilon;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void SampleMinkowskiDifference(
@@ -91,6 +94,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.Dot(ab, a, out abA);
             //Note that vertex B (and technically A, too) is handled by clamping the edge. No need to handle the vertices by themselves (apart from the base case).
             var abT = -abA / abab;
+            //Protect against division by zero. It's a degenerate edge, so just pick vertex a as a representative.
+            abT = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(abab), new Vector<float>(1e-15f)), abT, Vector<float>.Zero);
             var aFeatureContribution = Vector.ConditionalSelect(Vector.LessThan(abT, Vector<float>.One), aFeatureId, Vector<int>.Zero);
             var bFeatureContribution = Vector.ConditionalSelect(Vector.GreaterThan(abT, Vector<float>.Zero), bFeatureId, Vector<int>.Zero);
             var featureIdCandidate = Vector.BitwiseOr(aFeatureContribution, bFeatureContribution);
@@ -167,6 +172,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //Expanding with identities, this transforms to:
             //((A * AB) * (AB * AC) - (A * AC) * (AB * AB)) / ((AB * AB) * (AC * AC) - (AB * AC) * (AC * AB))
             Vector3Wide.Dot(ab, ac, out var abac);
+            //Note that degenerate triangles can result in a division by zero.
+            //In that case, bWeight and cWeight will be NaN. By IEEE754, all comparisons with NaN return false, so the projectionInTriangle is guaranteed to evaluate to false.
             var abcDenom = Vector<float>.One / (abab * acac - abac * abac);
             var cWeight = (abA * abac - acA * abab) * abcDenom;
             var bWeight = (abac * acA - acac * abA) * abcDenom;
@@ -186,7 +193,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.Add(cContribution, closestCandidate, out closestCandidate);
             Vector3Wide.Add(aOnAContribution, bOnAContribution, out var closestACandidate);
             Vector3Wide.Add(cOnAContribution, closestACandidate, out closestACandidate);
-            Vector3Wide.LengthSquared(closestCandidate, out var distanceSquaredCandidate);
+            Vector3Wide.LengthSquared(closestCandidate, out var distanceSquaredCandidate);          
             var combinedMask = Vector.BitwiseAnd(mask, projectionInTriangle);
             Select(ref combinedMask,
                 ref distanceSquared, ref closest, ref closestA, ref featureId,
@@ -344,10 +351,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             intersected = Vector<int>.Zero;
             int iterationCount = 0;
             //Note that we use hardcoded defaults if this is default constructed.
-            var epsilon = new Vector<float>(TerminationEpsilon > 0 ? TerminationEpsilon : 1e-7f);
-            const float containmentEpsilonScalar = 0.000316227766f;
-            var containmentEpsilon = new Vector<float>(containmentEpsilonScalar);
-            var containmentEpsilonSquared = new Vector<float>(containmentEpsilonScalar * containmentEpsilonScalar);
+            var epsilon = new Vector<float>(TerminationEpsilon > 0 ? TerminationEpsilon : TerminationEpsilonDefault);
+            var containmentEpsilon = new Vector<float>(ContainmentEpsilon > 0 ? ContainmentEpsilon : ContainmentEpsilonDefault);
+            var containmentEpsilonSquared = containmentEpsilon * containmentEpsilon;
             Vector<float> distanceSquared = new Vector<float>(float.MaxValue);
             while (true)
             {
@@ -376,7 +382,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 terminatedMask = Vector.BitwiseOr(terminatedMask, aboutToTerminate);
                 if (Vector.EqualsAll(terminatedMask, -Vector<int>.One))
                     break;
-                
+
                 Vector3Wide.Negate(simplexClosest, out var sampleDirection);
                 SampleMinkowskiDifference(ref a, ref rA, ref supportFinderA, ref b, ref rB, ref supportFinderB, ref offsetB, ref sampleDirection, out var vA, out var v);
 

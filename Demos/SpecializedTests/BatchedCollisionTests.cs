@@ -158,16 +158,16 @@ namespace Demos.SpecializedTests
             }
 
 
-            //Test(ref sphere, ref sphere, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            //Test(ref sphere, ref capsule, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            //Test(ref sphere, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            //Test(ref sphere, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            //Test(ref capsule, ref capsule, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            //Test(ref capsule, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            //Test(ref capsule, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            //Test(ref box, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            //Test(ref box, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            //Test(ref triangle, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref sphere, ref sphere, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref sphere, ref capsule, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref sphere, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref sphere, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref capsule, ref capsule, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref capsule, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref capsule, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref box, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref box, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref triangle, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
 
 
             Test<Sphere, SphereWide, Sphere, SphereWide, SpherePairDistanceTester>(sphere, sphere, ref posesA, ref posesB, iterationCount);
