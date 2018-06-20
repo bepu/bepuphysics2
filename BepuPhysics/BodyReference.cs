@@ -156,7 +156,7 @@ namespace BepuPhysics
         /// Computes the world space inverse inertia tensor for the body based on the LocalInertia and Pose.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeInverseInertia(out Triangular3x3 inverseInertia)
+        public void ComputeInverseInertia(out Symmetric3x3 inverseInertia)
         {
             ref var location = ref Location;
             ref var set = ref Bodies.Sets[Location.SetIndex];
@@ -183,7 +183,7 @@ namespace BepuPhysics
             var offset = impulseLocation - pose.Position;
             velocity.Linear += impulse * LocalInertia.InverseMass;
             Vector3x.Cross(offset, impulse, out var angularImpulse);
-            Triangular3x3.SymmetricTransformWithoutOverlap(angularImpulse, inverseInertiaTensor, out var angularVelocityChange);
+            Symmetric3x3.TransformWithoutOverlap(angularImpulse, inverseInertiaTensor, out var angularVelocityChange);
             velocity.Angular += angularVelocityChange;
             
 

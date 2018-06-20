@@ -17,7 +17,7 @@ namespace BepuPhysics.Constraints.Contact
             out TwistFrictionProjection projection)
         {
             //Compute effective mass matrix contributions. No linear contributions for the twist constraint.
-            Triangular3x3Wide.VectorSandwich(angularJacobianA, inertiaA.InverseInertiaTensor, out var inverseEffectiveMass);
+            Symmetric3x3Wide.VectorSandwich(angularJacobianA, inertiaA.InverseInertiaTensor, out var inverseEffectiveMass);
     
             //No softening; this constraint is rigid by design. (It does support a maximum force, but that is distinct from a proper damping ratio/natural frequency.)
             //Note that we have to guard against two bodies with infinite inertias. This is a valid state! 
@@ -40,7 +40,7 @@ namespace BepuPhysics.Constraints.Contact
             ref Vector<float> correctiveImpulse, ref BodyVelocities wsvA)
         {
             Vector3Wide.Scale(angularJacobianA, correctiveImpulse, out var worldCorrectiveImpulseA);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(worldCorrectiveImpulseA, inertiaA.InverseInertiaTensor, out var worldCorrectiveVelocityA);
+            Symmetric3x3Wide.TransformWithoutOverlap(worldCorrectiveImpulseA, inertiaA.InverseInertiaTensor, out var worldCorrectiveVelocityA);
             Vector3Wide.Add(wsvA.Angular, worldCorrectiveVelocityA, out wsvA.Angular);
         }
 

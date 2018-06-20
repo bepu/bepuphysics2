@@ -120,7 +120,7 @@ namespace Demos.SpecializedTests
             var sampleMin = min + sampleSpacing * 0.5f;
             //This constant value isn't meaningful- it's just here to capture mass scaling bugs in implementations.
             var mass = (float)Math.Sqrt(11f / MathHelper.Pi);
-            var numericalLocalInertia = new Triangular3x3();
+            var numericalLocalInertia = new Symmetric3x3();
             int containedSampleCount = 0;
 
             for (int i = 0; i < axisSampleCount; ++i)
@@ -145,8 +145,8 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            Triangular3x3.Scale(ref numericalLocalInertia, mass / containedSampleCount, out numericalLocalInertia);
-            Triangular3x3.SymmetricInvert(numericalLocalInertia, out var numericalLocalInverseInertia);
+            Symmetric3x3.Scale(numericalLocalInertia, mass / containedSampleCount, out numericalLocalInertia);
+            Symmetric3x3.Invert(numericalLocalInertia, out var numericalLocalInverseInertia);
             tester.ComputeAnalyticInertia(mass, out var analyticInertia);
             if (!ValuesAreSimilar(analyticInertia.InverseInertiaTensor.XX, numericalLocalInverseInertia.XX) ||
                 !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.YX, numericalLocalInverseInertia.YX) ||

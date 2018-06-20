@@ -120,9 +120,9 @@ namespace BepuPhysics.Constraints
             //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
 
             //This computes the effective mass using the usual (J * M^-1 * JT)^-1 formulation, but we actually make use of the intermediate result J * M^-1 so we compute it directly.
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
+            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
             //Note that we don't use -jacobianA here, so we're actually storing out the negated version of the transform. That's fine; we'll simply subtract in the iteration.
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(jacobianA, inertiaB.InverseInertiaTensor, out projection.NegatedImpulseToVelocityB);
+            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaB.InverseInertiaTensor, out projection.NegatedImpulseToVelocityB);
             Vector3Wide.Dot(projection.ImpulseToVelocityA, jacobianA, out var angularA);
             Vector3Wide.Dot(projection.NegatedImpulseToVelocityB, jacobianA, out var angularB);
 

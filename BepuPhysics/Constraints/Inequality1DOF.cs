@@ -80,8 +80,8 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Dot(projection.CSIToWSVLinearB, jacobians.LinearB, out var linearB);
 
             //The angular components are a little more involved; (J * I^-1) * JT is explicitly computed.
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(jacobians.AngularA, inertiaA.InverseInertiaTensor, out projection.CSIToWSVAngularA);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(jacobians.AngularB, inertiaB.InverseInertiaTensor, out projection.CSIToWSVAngularB);
+            Symmetric3x3Wide.TransformWithoutOverlap(jacobians.AngularA, inertiaA.InverseInertiaTensor, out projection.CSIToWSVAngularA);
+            Symmetric3x3Wide.TransformWithoutOverlap(jacobians.AngularB, inertiaB.InverseInertiaTensor, out projection.CSIToWSVAngularB);
             Vector3Wide.Dot(projection.CSIToWSVAngularA, jacobians.AngularA, out var angularA);
             Vector3Wide.Dot(projection.CSIToWSVAngularB, jacobians.AngularB, out var angularB);
 

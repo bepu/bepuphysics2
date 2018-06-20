@@ -20,7 +20,7 @@ namespace BepuPhysics.Constraints.Contact
             //The tangents are reconstructed from the surface basis.
             //This saves 11 floats per constraint relative to the seminaive baseline of two shared linear jacobians and four angular jacobians. 
             public Vector3Wide OffsetA;
-            public Triangular2x2Wide EffectiveMass;
+            public Symmetric2x2Wide EffectiveMass;
         }
 
         //Since this is an unshared specialized implementation, the jacobian calculation is kept in here rather than in the batch.
@@ -40,12 +40,12 @@ namespace BepuPhysics.Constraints.Contact
         {
             ComputeJacobians(ref tangentX, ref tangentY, ref offsetA, out var jacobians);
             //Compute effective mass matrix contributions.
-            Triangular2x2Wide.SandwichScale(jacobians.LinearA, inertiaA.InverseMass, out var linearContributionA);
-            Triangular3x3Wide.MatrixSandwich(jacobians.AngularA, inertiaA.InverseInertiaTensor, out var angularContributionA);
+            Symmetric2x2Wide.SandwichScale(jacobians.LinearA, inertiaA.InverseMass, out var linearContributionA);
+            Symmetric3x3Wide.MatrixSandwich(jacobians.AngularA, inertiaA.InverseInertiaTensor, out var angularContributionA);
 
             //No softening; this constraint is rigid by design. (It does support a maximum force, but that is distinct from a proper damping ratio/natural frequency.)
-            Triangular2x2Wide.Add(linearContributionA, angularContributionA, out var inverseEffectiveMass);
-            Triangular2x2Wide.InvertSymmetricWithoutOverlap(inverseEffectiveMass, out projection.EffectiveMass);
+            Symmetric2x2Wide.Add(linearContributionA, angularContributionA, out var inverseEffectiveMass);
+            Symmetric2x2Wide.InvertWithoutOverlap(inverseEffectiveMass, out projection.EffectiveMass);
             projection.OffsetA = offsetA;
 
             //Note that friction constraints have no bias velocity. They target zero velocity.
@@ -62,7 +62,7 @@ namespace BepuPhysics.Constraints.Contact
             Matrix2x3Wide.Transform(correctiveImpulse, jacobians.AngularA, out var angularImpulseA);
             BodyVelocities correctiveVelocityA;
             Vector3Wide.Scale(linearImpulseA, inertiaA.InverseMass, out correctiveVelocityA.Linear);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(angularImpulseA, inertiaA.InverseInertiaTensor, out correctiveVelocityA.Angular);
+            Symmetric3x3Wide.TransformWithoutOverlap(angularImpulseA, inertiaA.InverseInertiaTensor, out correctiveVelocityA.Angular);
             Vector3Wide.Add(wsvA.Linear, correctiveVelocityA.Linear, out wsvA.Linear);
             Vector3Wide.Add(wsvA.Angular, correctiveVelocityA.Angular, out wsvA.Angular);
         }
@@ -85,7 +85,7 @@ namespace BepuPhysics.Constraints.Contact
             Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvA.Angular, jacobians.AngularA, out var csvaAngular);
             Vector2Wide.Add(csvaLinear, csvaAngular, out var csv);
             //Required corrective velocity is the negation of the current constraint space velocity.
-            Triangular2x2Wide.TransformBySymmetricWithoutOverlap(csv, data.EffectiveMass, out var negativeCSI);
+            Symmetric2x2Wide.TransformWithoutOverlap(csv, data.EffectiveMass, out var negativeCSI);
 
             var previousAccumulated = accumulatedImpulse;
             Vector2Wide.Subtract(accumulatedImpulse, negativeCSI, out accumulatedImpulse);

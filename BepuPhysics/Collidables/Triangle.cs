@@ -124,7 +124,7 @@ namespace BepuPhysics.Collidables
             //density * abs(determinant) = density * volume * 2 = mass * 2
             //So there's no need to actually compute the determinant/area since we were given the mass directly.
             var diagonalScaling = mass * (2f / 12f);
-            Triangular3x3 inertiaTensor;
+            Symmetric3x3 inertiaTensor;
             inertiaTensor.XX = diagonalScaling * (
                 A.Y * A.Y + A.Z * A.Z + B.Y * B.Y + B.Z * B.Z + C.Y * C.Y + C.Z * C.Z +
                 A.Y * B.Y + A.Z * B.Z + A.Y * C.Y + B.Y * C.Y + A.Z * C.Z + B.Z * C.Z);
@@ -141,7 +141,7 @@ namespace BepuPhysics.Collidables
             //TODO: Note that the above implementation isn't exactly optimal. Assuming for now that the performance isn't going to be relevant.
             //That could change given certain convex hull use cases, but in that situation you should probably just jump to vectorizing over multiple tetrahedra at a time.
             //(Plus some basic term caching.)
-            Triangular3x3.SymmetricInvert(inertiaTensor, out inertia.InverseInertiaTensor);
+            Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
         }
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)

@@ -7,11 +7,10 @@ using System.Text;
 
 namespace BepuPhysics
 {
-    //TODO: We haven't used this for anything but symmetric matrices. Might be a good idea to just rename it accordingly.
     /// <summary>
-    /// Stores the lower left triangle (including diagonal) of a 3x3 matrix. Useful for triangular forms and (anti)symmetric matrices.
+    /// Lower left triangle (including diagonal) of a symmetric 3x3 matrix.
     /// </summary>
-    public struct Triangular3x3
+    public struct Symmetric3x3
     {
         /// <summary>
         /// First row, first column of the matrix.
@@ -45,7 +44,7 @@ namespace BepuPhysics
         /// <param name="m">Succulent interior symmetric matrix.</param>
         /// <param name="sandwich">Result of v * m * transpose(v) for a symmetric matrix m.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void RotationSandwich(ref Matrix3x3 r, ref Triangular3x3 m, out Triangular3x3 sandwich)
+        public static void RotationSandwich(in Matrix3x3 r, in Symmetric3x3 m, out Symmetric3x3 sandwich)
         {
             //TODO: We just copied this from the wide implementation. There are a lot of ways to improve this, should it be necessary.
             //(There's virtually no chance that optimizing this to a serious degree would be worth it- at the time of writing, it's only called by the pose integrator, which is 
@@ -76,20 +75,21 @@ namespace BepuPhysics
         /// <param name="m">Matrix to intepret as symmetric.</param>
         /// <returns>Determinant of the matrix interpreted as symmetric.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float SymmetricDeterminant(in Triangular3x3 m)
+        public static float Determinant(in Symmetric3x3 m)
         {
             var m11 = m.YY * m.ZZ - m.ZY * m.ZY;
             var m21 = m.ZY * m.ZX - m.ZZ * m.YX;
             var m31 = m.YX * m.ZY - m.ZX * m.YY;
             return m11 * m.XX + m21 * m.YX + m31 * m.ZX;
         }
+
         /// <summary>
         /// Inverts the given matix.
         /// </summary>
         /// <param name="m">Matrix to be inverted.</param>
         /// <param name="inverse">Inverted matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void SymmetricInvert(in Triangular3x3 m, out Triangular3x3 inverse)
+        public unsafe static void Invert(in Symmetric3x3 m, out Symmetric3x3 inverse)
         {
             var m11 = m.YY * m.ZZ - m.ZY * m.ZY;
             var m21 = m.ZY * m.ZX - m.ZZ * m.YX;
@@ -116,7 +116,7 @@ namespace BepuPhysics
         /// <param name="b">Second matrix to add.</param>
         /// <param name="result">Matrix with components equal to the components of the two input matrices added together.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(ref Triangular3x3 a, ref Triangular3x3 b, out Triangular3x3 result)
+        public static void Add(in Symmetric3x3 a, in Symmetric3x3 b, out Symmetric3x3 result)
         {
             result.XX = a.XX + b.XX;
             result.YX = a.YX + b.YX;
@@ -133,7 +133,7 @@ namespace BepuPhysics
         /// <param name="scale">Scale to apply to every component of the original matrix.</param>
         /// <param name="scaled">Scaled result.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(ref Triangular3x3 m, float scale, out Triangular3x3 scaled)
+        public static void Scale(in Symmetric3x3 m, float scale, out Symmetric3x3 scaled)
         {
             scaled.XX = m.XX * scale;
             scaled.YX = m.YX * scale;
@@ -150,7 +150,7 @@ namespace BepuPhysics
         /// <param name="b">Second matrix to multiply.</param>
         /// <param name="result">Product of the multiplication.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SymmetricMultiplyWithoutOverlap(ref Triangular3x3 a, ref Triangular3x3 b, out Triangular3x3 result)
+        public static void MultiplyWithoutOverlap(in Symmetric3x3 a, in Symmetric3x3 b, out Symmetric3x3 result)
         {
             var ayxbyx = a.YX * b.YX;
             var azxbzx = a.ZX * b.ZX;
@@ -172,7 +172,7 @@ namespace BepuPhysics
         /// <param name="m">Matrix to interpret as symmetric transform.</param>
         /// <param name="result">Result of transforming the vector by the given symmetric matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SymmetricTransformWithoutOverlap(in Vector3 v, in Triangular3x3 m, out Vector3 result)
+        public static void TransformWithoutOverlap(in Vector3 v, in Symmetric3x3 m, out Vector3 result)
         {
             result.X = v.X * m.XX + v.Y * m.YX + v.Z * m.ZX;
             result.Y = v.X * m.YX + v.Y * m.YY + v.Z * m.ZY;

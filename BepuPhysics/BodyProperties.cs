@@ -40,7 +40,7 @@ namespace BepuPhysics
 
     public struct BodyInertia
     {
-        public Triangular3x3 InverseInertiaTensor;
+        public Symmetric3x3 InverseInertiaTensor;
         public float InverseMass;
     }
 
@@ -65,7 +65,7 @@ namespace BepuPhysics
 
     public struct BodyInertias
     {
-        public Triangular3x3Wide InverseInertiaTensor;
+        public Symmetric3x3Wide InverseInertiaTensor;
         //Note that the inverse mass is included in the BodyInertias bundle. InverseMass is rotationally invariant, so it doesn't need to be updated...
         //But it's included alongside the rotated inertia tensor because to split it out would require that constraint presteps suffer another cache miss when they
         //gather the inverse mass in isolation. (From the solver's perspective, inertia/mass gathering is incoherent.)

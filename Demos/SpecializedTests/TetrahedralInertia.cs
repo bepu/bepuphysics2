@@ -57,7 +57,7 @@ namespace Demos.SpecializedTests
                 //density * abs(determinant) = density * volume * 6 = mass * 6
                 //So there's no need to actually compute the determinant/volume since we were given the mass directly.
                 var diagonalScaling = mass * (6f / 60f);
-                Triangular3x3 inertiaTensor;
+                Symmetric3x3 inertiaTensor;
                 inertiaTensor.XX = diagonalScaling * (
                     A.Y * A.Y + A.Z * A.Z + B.Y * B.Y + B.Z * B.Z + C.Y * C.Y + C.Z * C.Z + D.Y * D.Y + D.Z * D.Z +
                     B.Y * C.Y + B.Z * C.Z +
@@ -89,7 +89,7 @@ namespace Demos.SpecializedTests
                 //TODO: Note that the above implementation isn't exactly optimal. Assuming for now that the performance isn't going to be relevant.
                 //That could change given certain convex hull use cases, but in that situation you should probably just jump to vectorizing over multiple tetrahedra at a time.
                 //(Plus some basic term caching.)
-                Triangular3x3.SymmetricInvert(inertiaTensor, out inertia.InverseInertiaTensor);
+                Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
 
             }
 

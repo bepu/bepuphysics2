@@ -85,14 +85,14 @@ namespace BepuPhysics.Constraints.Contact
             Vector3Wide.CrossWithoutOverlap(normal, offsetB3, out projection.Penetration3.AngularB);
 
             //effective mass
-            Triangular3x3Wide.VectorSandwich(projection.Penetration0.AngularA, inertiaA.InverseInertiaTensor, out var angularA0);
-            Triangular3x3Wide.VectorSandwich(projection.Penetration0.AngularB, inertiaB.InverseInertiaTensor, out var angularB0);
-            Triangular3x3Wide.VectorSandwich(projection.Penetration1.AngularA, inertiaA.InverseInertiaTensor, out var angularA1);
-            Triangular3x3Wide.VectorSandwich(projection.Penetration1.AngularB, inertiaB.InverseInertiaTensor, out var angularB1);
-            Triangular3x3Wide.VectorSandwich(projection.Penetration2.AngularA, inertiaA.InverseInertiaTensor, out var angularA2);
-            Triangular3x3Wide.VectorSandwich(projection.Penetration2.AngularB, inertiaB.InverseInertiaTensor, out var angularB2);
-            Triangular3x3Wide.VectorSandwich(projection.Penetration3.AngularA, inertiaA.InverseInertiaTensor, out var angularA3);
-            Triangular3x3Wide.VectorSandwich(projection.Penetration3.AngularB, inertiaB.InverseInertiaTensor, out var angularB3);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration0.AngularA, inertiaA.InverseInertiaTensor, out var angularA0);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration0.AngularB, inertiaB.InverseInertiaTensor, out var angularB0);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration1.AngularA, inertiaA.InverseInertiaTensor, out var angularA1);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration1.AngularB, inertiaB.InverseInertiaTensor, out var angularB1);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration2.AngularA, inertiaA.InverseInertiaTensor, out var angularA2);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration2.AngularB, inertiaB.InverseInertiaTensor, out var angularB2);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration3.AngularA, inertiaA.InverseInertiaTensor, out var angularA3);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration3.AngularB, inertiaB.InverseInertiaTensor, out var angularB3);
 
             //Linear effective mass contribution notes:
             //1) The J * M^-1 * JT can be reordered to J * JT * M^-1 for the linear components, since M^-1 is a scalar and dot(n * scalar, n) = dot(n, n) * scalar.
@@ -125,12 +125,12 @@ namespace BepuPhysics.Constraints.Contact
             var linearVelocityChangeA = correctiveImpulse * inertiaA.InverseMass;
             Vector3Wide.Scale(normal, linearVelocityChangeA, out var correctiveVelocityALinearVelocity);
             Vector3Wide.Scale(projection.AngularA, correctiveImpulse, out var correctiveAngularImpulseA);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(correctiveAngularImpulseA, inertiaA.InverseInertiaTensor, out var correctiveVelocityAAngularVelocity);
+            Symmetric3x3Wide.TransformWithoutOverlap(correctiveAngularImpulseA, inertiaA.InverseInertiaTensor, out var correctiveVelocityAAngularVelocity);
 
             var linearVelocityChangeB = correctiveImpulse * inertiaB.InverseMass;
             Vector3Wide.Scale(normal, linearVelocityChangeB, out var correctiveVelocityBLinearVelocity);
             Vector3Wide.Scale(projection.AngularB, correctiveImpulse, out var correctiveAngularImpulseB);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(correctiveAngularImpulseB, inertiaB.InverseInertiaTensor, out var correctiveVelocityBAngularVelocity);
+            Symmetric3x3Wide.TransformWithoutOverlap(correctiveAngularImpulseB, inertiaB.InverseInertiaTensor, out var correctiveVelocityBAngularVelocity);
 
             Vector3Wide.Add(wsvA.Linear, correctiveVelocityALinearVelocity, out wsvA.Linear);
             Vector3Wide.Add(wsvA.Angular, correctiveVelocityAAngularVelocity, out wsvA.Angular);

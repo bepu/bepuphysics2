@@ -65,10 +65,10 @@ namespace BepuPhysics.Constraints.Contact
             Vector3Wide.CrossWithoutOverlap(prestep.OffsetA3, normal, out projection.Penetration3.AngularA);
 
             //effective mass
-            Triangular3x3Wide.VectorSandwich(projection.Penetration0.AngularA, inertiaA.InverseInertiaTensor, out var angularA0);
-            Triangular3x3Wide.VectorSandwich(projection.Penetration1.AngularA, inertiaA.InverseInertiaTensor, out var angularA1);
-            Triangular3x3Wide.VectorSandwich(projection.Penetration2.AngularA, inertiaA.InverseInertiaTensor, out var angularA2);
-            Triangular3x3Wide.VectorSandwich(projection.Penetration3.AngularA, inertiaA.InverseInertiaTensor, out var angularA3);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration0.AngularA, inertiaA.InverseInertiaTensor, out var angularA0);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration1.AngularA, inertiaA.InverseInertiaTensor, out var angularA1);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration2.AngularA, inertiaA.InverseInertiaTensor, out var angularA2);
+            Symmetric3x3Wide.VectorSandwich(projection.Penetration3.AngularA, inertiaA.InverseInertiaTensor, out var angularA3);
 
             //Linear effective mass contribution notes:
             //1) The J * M^-1 * JT can be reordered to J * JT * M^-1 for the linear components, since M^-1 is a scalar and dot(n * scalar, n) = dot(n, n) * scalar.
@@ -100,7 +100,7 @@ namespace BepuPhysics.Constraints.Contact
             var linearVelocityChangeA = correctiveImpulse * inertiaA.InverseMass;
             Vector3Wide.Scale(normal, linearVelocityChangeA, out var correctiveVelocityALinearVelocity);
             Vector3Wide.Scale(projection.AngularA, correctiveImpulse, out var correctiveAngularImpulseA);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(correctiveAngularImpulseA, inertiaA.InverseInertiaTensor, out var correctiveVelocityAAngularVelocity);
+            Symmetric3x3Wide.TransformWithoutOverlap(correctiveAngularImpulseA, inertiaA.InverseInertiaTensor, out var correctiveVelocityAAngularVelocity);
             
             Vector3Wide.Add(wsvA.Linear, correctiveVelocityALinearVelocity, out wsvA.Linear);
             Vector3Wide.Add(wsvA.Angular, correctiveVelocityAAngularVelocity, out wsvA.Angular);

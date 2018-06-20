@@ -45,14 +45,14 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void RotateInverseInertia(ref Triangular3x3 localInverseInertiaTensor, ref Quaternion orientation, out Triangular3x3 rotatedInverseInertiaTensor)
+        public static void RotateInverseInertia(ref Symmetric3x3 localInverseInertiaTensor, ref Quaternion orientation, out Symmetric3x3 rotatedInverseInertiaTensor)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var orientationMatrix);
             //I^-1 = RT * Ilocal^-1 * R 
             //NOTE: If you were willing to confuse users a little bit, the local inertia could be required to be diagonal.
             //This would be totally fine for all the primitive types which happen to have diagonal inertias, but for more complex shapes (convex hulls, meshes), 
             //there would need to be a reorientation step. That could be confusing, and it's probably not worth it.
-            Triangular3x3.RotationSandwich(ref orientationMatrix, ref localInverseInertiaTensor, out rotatedInverseInertiaTensor);
+            Symmetric3x3.RotationSandwich(orientationMatrix, localInverseInertiaTensor, out rotatedInverseInertiaTensor);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -132,8 +132,8 @@ namespace BepuPhysics
             {
                 var halfAngle = speed * dt * 0.5f;
                 Quaternion q;
-                Unsafe.As<Quaternion, Vector3>(ref *&q) = angularVelocity * (Sin(halfAngle) / speed);
-                q.W = Cos(halfAngle);
+                Unsafe.As<Quaternion, Vector3>(ref *&q) = angularVelocity * ((float)Math.Sin(halfAngle) / speed);
+                q.W = (float)Math.Cos(halfAngle);
                 Quaternion.ConcatenateWithoutOverlap(orientation, q, out integratedOrientation);
                 Quaternion.Normalize(ref integratedOrientation);
             }

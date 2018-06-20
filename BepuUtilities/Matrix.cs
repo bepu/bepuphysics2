@@ -265,8 +265,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Matrix CreateFromAxisAngle(in Vector3 axis, float angle)
         {
-            Matrix result;
-            CreateFromAxisAngle(axis, angle, out result);
+            CreateFromAxisAngle(axis, angle, out Matrix result);
             return result;
 
         }

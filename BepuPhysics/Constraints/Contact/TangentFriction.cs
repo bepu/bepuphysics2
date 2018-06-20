@@ -17,7 +17,7 @@ namespace BepuPhysics.Constraints.Contact
             //This saves 11 floats per constraint relative to the seminaive baseline of two shared linear jacobians and four angular jacobians. 
             public Vector3Wide OffsetA;
             public Vector3Wide OffsetB;
-            public Triangular2x2Wide EffectiveMass;
+            public Symmetric2x2Wide EffectiveMass;
         }
 
         public struct Jacobians
@@ -70,17 +70,17 @@ namespace BepuPhysics.Constraints.Contact
         {
             ComputeJacobians(ref tangentX, ref tangentY, ref offsetA, ref offsetB, out var jacobians);
             //Compute effective mass matrix contributions.
-            Triangular2x2Wide.SandwichScale(jacobians.LinearA, inertiaA.InverseMass, out var linearContributionA);
-            Triangular2x2Wide.SandwichScale(jacobians.LinearA, inertiaB.InverseMass, out var linearContributionB);
+            Symmetric2x2Wide.SandwichScale(jacobians.LinearA, inertiaA.InverseMass, out var linearContributionA);
+            Symmetric2x2Wide.SandwichScale(jacobians.LinearA, inertiaB.InverseMass, out var linearContributionB);
 
-            Triangular3x3Wide.MatrixSandwich(jacobians.AngularA, inertiaA.InverseInertiaTensor, out var angularContributionA);
-            Triangular3x3Wide.MatrixSandwich(jacobians.AngularB, inertiaB.InverseInertiaTensor, out var angularContributionB);
+            Symmetric3x3Wide.MatrixSandwich(jacobians.AngularA, inertiaA.InverseInertiaTensor, out var angularContributionA);
+            Symmetric3x3Wide.MatrixSandwich(jacobians.AngularB, inertiaB.InverseInertiaTensor, out var angularContributionB);
 
             //No softening; this constraint is rigid by design. (It does support a maximum force, but that is distinct from a proper damping ratio/natural frequency.)
-            Triangular2x2Wide.Add(linearContributionA, linearContributionB, out var linear);
-            Triangular2x2Wide.Add(angularContributionA, angularContributionB, out var angular);
-            Triangular2x2Wide.Add(linear, angular, out var inverseEffectiveMass);
-            Triangular2x2Wide.InvertSymmetricWithoutOverlap(inverseEffectiveMass, out projection.EffectiveMass);
+            Symmetric2x2Wide.Add(linearContributionA, linearContributionB, out var linear);
+            Symmetric2x2Wide.Add(angularContributionA, angularContributionB, out var angular);
+            Symmetric2x2Wide.Add(linear, angular, out var inverseEffectiveMass);
+            Symmetric2x2Wide.InvertWithoutOverlap(inverseEffectiveMass, out projection.EffectiveMass);
             projection.OffsetA = offsetA;
             projection.OffsetB = offsetB;
 
@@ -99,9 +99,9 @@ namespace BepuPhysics.Constraints.Contact
             Matrix2x3Wide.Transform(correctiveImpulse, jacobians.AngularB, out var angularImpulseB);
             BodyVelocities correctiveVelocityA, correctiveVelocityB;
             Vector3Wide.Scale(linearImpulseA, inertiaA.InverseMass, out correctiveVelocityA.Linear);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(angularImpulseA, inertiaA.InverseInertiaTensor, out correctiveVelocityA.Angular);
+            Symmetric3x3Wide.TransformWithoutOverlap(angularImpulseA, inertiaA.InverseInertiaTensor, out correctiveVelocityA.Angular);
             Vector3Wide.Scale(linearImpulseA, inertiaB.InverseMass, out correctiveVelocityB.Linear);
-            Triangular3x3Wide.TransformBySymmetricWithoutOverlap(angularImpulseB, inertiaB.InverseInertiaTensor, out correctiveVelocityB.Angular);
+            Symmetric3x3Wide.TransformWithoutOverlap(angularImpulseB, inertiaB.InverseInertiaTensor, out correctiveVelocityB.Angular);
             Vector3Wide.Add(wsvA.Linear, correctiveVelocityA.Linear, out wsvA.Linear);
             Vector3Wide.Add(wsvA.Angular, correctiveVelocityA.Angular, out wsvA.Angular);
             Vector3Wide.Subtract(wsvB.Linear, correctiveVelocityB.Linear, out wsvB.Linear); //note subtract- we based it on the LinearA jacobian.
@@ -134,7 +134,7 @@ namespace BepuPhysics.Constraints.Contact
             Vector2Wide.Add(csvaAngular, csvbAngular, out var csvAngular);
             Vector2Wide.Subtract(csvLinear, csvAngular, out var csv);
 
-            Triangular2x2Wide.TransformBySymmetricWithoutOverlap(csv, data.EffectiveMass, out var csi);
+            Symmetric2x2Wide.TransformWithoutOverlap(csv, data.EffectiveMass, out var csi);
 
             var previousAccumulated = accumulatedImpulse;
             Vector2Wide.Add(accumulatedImpulse, csi, out accumulatedImpulse);

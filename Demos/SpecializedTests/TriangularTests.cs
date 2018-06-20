@@ -44,7 +44,7 @@ namespace Demos.SpecializedTests
                 throw new Exception("Too much error on wide vs scalar 1x1.");
             }
         }
-        static void Compare(ref Matrix3x3 m, ref Triangular3x3Wide t)
+        static void Compare(ref Matrix3x3 m, ref Symmetric3x3Wide t)
         {
             var se12 = MeasureError(m.X.Y, m.Y.X);
             var se13 = MeasureError(m.X.Z, m.Z.X);
@@ -71,7 +71,7 @@ namespace Demos.SpecializedTests
                 throw new Exception("Too much error in Matrix3x3 vs Triangular3x3Wide.");
             }
         }
-        static void Compare(ref Matrix2x2Wide m, ref Triangular2x2Wide t)
+        static void Compare(ref Matrix2x2Wide m, ref Symmetric2x2Wide t)
         {
             var se12 = MeasureError(m.X.Y[0], m.Y.X[0]);
             if (se12 > epsilon)
@@ -116,14 +116,14 @@ namespace Demos.SpecializedTests
         }
         struct TriangularWideVectorSandwich : ITest
         {
-            public Triangular3x3Wide triangular;
+            public Symmetric3x3Wide triangular;
             public Vector3Wide v;
             public Vector<float> result;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Triangular3x3Wide.VectorSandwich(v, triangular, out result);
+                Symmetric3x3Wide.VectorSandwich(v, triangular, out result);
             }
         }
         struct SymmetricVectorSandwich : ITest
@@ -154,14 +154,14 @@ namespace Demos.SpecializedTests
         }
         struct TriangularWide2x3Sandwich : ITest
         {
-            public Triangular3x3Wide triangular;
+            public Symmetric3x3Wide triangular;
             public Matrix2x3Wide m;
-            public Triangular2x2Wide result;
+            public Symmetric2x2Wide result;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Triangular3x3Wide.MatrixSandwich(m, triangular, out result);
+                Symmetric3x3Wide.MatrixSandwich(m, triangular, out result);
             }
         }
         struct SymmetricWide2x3Sandwich : ITest
@@ -179,14 +179,14 @@ namespace Demos.SpecializedTests
         }
         struct TriangularWideSkewSandwich : ITest
         {
-            public Triangular3x3Wide triangular;
+            public Symmetric3x3Wide triangular;
             public Vector3Wide v;
-            public Triangular3x3Wide result;
+            public Symmetric3x3Wide result;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Triangular3x3Wide.SkewSandwichWithoutOverlap(v, triangular, out result);
+                Symmetric3x3Wide.SkewSandwichWithoutOverlap(v, triangular, out result);
             }
         }
         struct SymmetricSkewSandwich : ITest
@@ -221,14 +221,14 @@ namespace Demos.SpecializedTests
 
         struct TriangularRotationSandwichWide : ITest
         {
-            public Triangular3x3Wide triangular;
+            public Symmetric3x3Wide triangular;
             public Matrix3x3Wide rotation;
-            public Triangular3x3Wide result;
+            public Symmetric3x3Wide result;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Triangular3x3Wide.RotationSandwich(rotation, triangular, out result);
+                Symmetric3x3Wide.RotationSandwich(rotation, triangular, out result);
             }
         }
         struct SymmetricRotationSandwich : ITest
@@ -259,13 +259,13 @@ namespace Demos.SpecializedTests
         }
         struct TriangularInvertWide : ITest
         {
-            public Triangular3x3Wide triangular;
-            public Triangular3x3Wide result;
+            public Symmetric3x3Wide triangular;
+            public Symmetric3x3Wide result;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Triangular3x3Wide.SymmetricInvert(triangular, out result);
+                Symmetric3x3Wide.Invert(triangular, out result);
             }
         }
         struct SymmetricInvert : ITest
@@ -324,7 +324,7 @@ namespace Demos.SpecializedTests
 
                 var m2x3Wide = new Matrix2x3Wide() { X = axisWide, Y = new Vector3Wide { X = -axisWide.Y, Y = axisWide.Z, Z = axisWide.X } };
 
-                var triangular = new Triangular3x3
+                var triangular = new Symmetric3x3
                 {
                     XX = (float)random.NextDouble() * 2 + 1,
                     YX = (float)random.NextDouble() * 1 + 1,
@@ -333,7 +333,7 @@ namespace Demos.SpecializedTests
                     ZY = (float)random.NextDouble() * 1 + 1,
                     ZZ = (float)random.NextDouble() * 2 + 1,
                 };
-                Triangular3x3Wide triangularWide;
+                Symmetric3x3Wide triangularWide;
                 triangularWide.XX = new Vector<float>(triangular.XX);
                 triangularWide.YX = new Vector<float>(triangular.YX);
                 triangularWide.YY = new Vector<float>(triangular.YY);

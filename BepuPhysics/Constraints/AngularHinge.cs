@@ -144,17 +144,17 @@ namespace BepuPhysics.Constraints
 
             //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
             //This computes the effective mass using the usual (J * M^-1 * JT)^-1 formulation, but we actually make use of the intermediate result J * M^-1 so we compute it directly.
-            Triangular3x3Wide.MultiplyBySymmetricWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
+            Symmetric3x3Wide.MultiplyWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
             //Note that we don't use -jacobianA here, so we're actually storing out the negated version of the transform. That's fine; we'll simply subtract in the iteration.
-            Triangular3x3Wide.MultiplyBySymmetricWithoutOverlap(jacobianA, inertiaB.InverseInertiaTensor, out projection.NegatedImpulseToVelocityB);
-            Triangular2x2Wide.CompleteMatrixSandwich(projection.ImpulseToVelocityA, jacobianA, out var angularA);
-            Triangular2x2Wide.CompleteMatrixSandwich(projection.NegatedImpulseToVelocityB, jacobianA, out var angularB);
-            Triangular2x2Wide.Add(angularA, angularB, out var inverseEffectiveMass);
-            Triangular2x2Wide.InvertSymmetricWithoutOverlap(inverseEffectiveMass, out var effectiveMass);
+            Symmetric3x3Wide.MultiplyWithoutOverlap(jacobianA, inertiaB.InverseInertiaTensor, out projection.NegatedImpulseToVelocityB);
+            Symmetric2x2Wide.CompleteMatrixSandwich(projection.ImpulseToVelocityA, jacobianA, out var angularA);
+            Symmetric2x2Wide.CompleteMatrixSandwich(projection.NegatedImpulseToVelocityB, jacobianA, out var angularB);
+            Symmetric2x2Wide.Add(angularA, angularB, out var inverseEffectiveMass);
+            Symmetric2x2Wide.InvertWithoutOverlap(inverseEffectiveMass, out var effectiveMass);
 
             SpringSettingsWide.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            Triangular2x2Wide.Scale(effectiveMass, effectiveMassCFMScale, out effectiveMass);
-            Triangular2x2Wide.MultiplyTransposedBySymmetric(jacobianA, effectiveMass, out projection.VelocityToImpulseA);
+            Symmetric2x2Wide.Scale(effectiveMass, effectiveMassCFMScale, out effectiveMass);
+            Symmetric2x2Wide.MultiplyTransposed(jacobianA, effectiveMass, out projection.VelocityToImpulseA);
 
             //Compute the position error and bias velocities.
             //Now we just have the slight annoyance that our error function contains inverse trigonometry.
@@ -195,7 +195,7 @@ namespace BepuPhysics.Constraints
             //Note the negation: we want to oppose the separation. TODO: arguably, should bake the negation into positionErrorToVelocity, given its name.
             positionErrorToVelocity = -positionErrorToVelocity;
             Vector2Wide.Scale(errorAngle, positionErrorToVelocity, out var biasVelocity);
-            Triangular2x2Wide.TransformBySymmetricWithoutOverlap(biasVelocity, effectiveMass, out projection.BiasImpulse);
+            Symmetric2x2Wide.TransformWithoutOverlap(biasVelocity, effectiveMass, out projection.BiasImpulse);
 
         }
 
