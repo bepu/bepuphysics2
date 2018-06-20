@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace BepuPhysics.Trees
 {
-    partial class Tree
+    partial struct Tree
     {
         public class MultithreadedIntertreeTest<TOverlapHandler> where TOverlapHandler : struct, IOverlapHandler
         {
@@ -40,7 +40,7 @@ namespace BepuPhysics.Trees
             /// </summary>
             /// <param name="overlapHandlers">Callbacks used to handle individual overlaps detected by the self test.</param>
             /// <param name="threadCount">Number of threads to prepare jobs for.</param>
-            public unsafe void PrepareJobs(Tree treeA, Tree treeB, TOverlapHandler[] overlapHandlers, int threadCount)
+            public unsafe void PrepareJobs(ref Tree treeA, ref Tree treeB, TOverlapHandler[] overlapHandlers, int threadCount)
             {
                 if (treeA.leafCount == 0 || treeB.leafCount == 0)
                 {
@@ -126,7 +126,7 @@ namespace BepuPhysics.Trees
                     if (overlap.B >= 0)
                     {
                         //Different internal nodes.
-                        TreeA.GetOverlapsBetweenDifferentNodes(TreeA.nodes + overlap.A, TreeB.nodes + overlap.B, TreeB, ref OverlapHandlers[workerIndex]);
+                        TreeA.GetOverlapsBetweenDifferentNodes(TreeA.nodes + overlap.A, TreeB.nodes + overlap.B, ref TreeB, ref OverlapHandlers[workerIndex]);
                     }
                     else
                     {
@@ -143,7 +143,7 @@ namespace BepuPhysics.Trees
                     var leafIndex = Encode(overlap.A);
                     var leaf = TreeA.leaves + leafIndex;
                     ref var childOwningLeaf = ref (&TreeA.nodes[leaf->NodeIndex].A)[leaf->ChildIndex];
-                    TreeA.TestLeafAgainstNode(leafIndex, ref childOwningLeaf.Min, ref childOwningLeaf.Max, overlap.B, TreeB, ref OverlapHandlers[workerIndex]);
+                    TreeA.TestLeafAgainstNode(leafIndex, ref childOwningLeaf.Min, ref childOwningLeaf.Max, overlap.B, ref TreeB, ref OverlapHandlers[workerIndex]);
 
                     //NOTE THAT WE DO NOT HANDLE THE CASE THAT BOTH A AND B ARE LEAVES HERE.
                     //The collection routine should take care of that, since it has more convenient access to bounding boxes and because a single test isn't worth an atomic increment.
@@ -164,12 +164,12 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            unsafe void DispatchTestForLeaf(Tree nodeOwner, int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, int nodeLeafCount, ref TOverlapHandler results)
+            unsafe void DispatchTestForLeaf(ref Tree nodeOwner, int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, int nodeLeafCount, ref TOverlapHandler results)
             {
                 if (nodeIndex < 0)
                 {
                     //Maintain the order of trees. Leaves from tree A should always be the first parameter.
-                    if (nodeOwner == TreeA)
+                    if (Tree.Equals(nodeOwner, TreeA))
                         results.Handle(Encode(nodeIndex), leafIndex);
                     else
                         results.Handle(leafIndex, Encode(nodeIndex));
@@ -179,17 +179,17 @@ namespace BepuPhysics.Trees
                     if (nodeLeafCount <= leafThreshold)
                     {
                         //Maintain the order of trees. Leaves from tree A should always be the first parameter.
-                        if (nodeOwner == TreeA)
+                        if (Tree.Equals(nodeOwner, TreeA))
                             jobs.Add(new Job { B = Encode(leafIndex), A = nodeIndex }, Pool.SpecializeFor<Job>());
                         else
                             jobs.Add(new Job { A = Encode(leafIndex), B = nodeIndex }, Pool.SpecializeFor<Job>());
                     }
                     else
-                        TestLeafAgainstNode(nodeOwner, leafIndex, ref leafMin, ref leafMax, nodeIndex, ref results);
+                        TestLeafAgainstNode(ref nodeOwner, leafIndex, ref leafMin, ref leafMax, nodeIndex, ref results);
                 }
             }
 
-            unsafe void TestLeafAgainstNode(Tree nodeOwner, int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, ref TOverlapHandler results)
+            unsafe void TestLeafAgainstNode(ref Tree nodeOwner, int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, ref TOverlapHandler results)
             {
                 var node = nodeOwner.nodes + nodeIndex;
                 ref var a = ref node->A;
@@ -204,11 +204,11 @@ namespace BepuPhysics.Trees
                 var bIntersects = BoundingBox.Intersects(leafMin, leafMax, b.Min, b.Max);
                 if (aIntersects)
                 {
-                    DispatchTestForLeaf(nodeOwner, leafIndex, ref leafMin, ref leafMax, a.Index, a.LeafCount, ref results);
+                    DispatchTestForLeaf(ref nodeOwner, leafIndex, ref leafMin, ref leafMax, a.Index, a.LeafCount, ref results);
                 }
                 if (bIntersects)
                 {
-                    DispatchTestForLeaf(nodeOwner, leafIndex, ref leafMin, ref leafMax, bIndex, bLeafCount, ref results);
+                    DispatchTestForLeaf(ref nodeOwner, leafIndex, ref leafMin, ref leafMax, bIndex, bLeafCount, ref results);
                 }
             }
 
@@ -228,13 +228,13 @@ namespace BepuPhysics.Trees
                     else
                     {
                         //leaf B versus node A.
-                        TestLeafAgainstNode(TreeA, Encode(b.Index), ref b.Min, ref b.Max, a.Index, ref results);
+                        TestLeafAgainstNode(ref TreeA, Encode(b.Index), ref b.Min, ref b.Max, a.Index, ref results);
                     }
                 }
                 else if (b.Index >= 0)
                 {
                     //leaf A versus node B.
-                    TestLeafAgainstNode(TreeB, Encode(a.Index), ref a.Min, ref a.Max, b.Index, ref results);
+                    TestLeafAgainstNode(ref TreeB, Encode(a.Index), ref a.Min, ref a.Max, b.Index, ref results);
                 }
                 else
                 {

@@ -64,7 +64,7 @@ namespace BepuPhysics.Trees
     }
 
 
-    partial class Tree
+    partial struct Tree
     {
         const int MaximumBinCount = 64;
 

@@ -167,7 +167,7 @@ namespace BepuPhysics.Trees
         }
     }
 
-    partial class Tree
+    partial struct Tree
     {
 
         public unsafe void CollectSubtrees(int nodeIndex, int maximumSubtrees, SubtreeHeapEntry* entries,

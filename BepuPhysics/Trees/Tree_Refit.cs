@@ -5,7 +5,7 @@ using System.Numerics;
 
 namespace BepuPhysics.Trees
 {
-    partial class Tree
+    partial struct Tree
     {
         //TODO: Recursive approach is a bit silly. Our earlier nonrecursive implementations weren't great, but we could do better.
         //This is especially true if we end up changing the memory layout. If we go back to a contiguous array per level, refit becomes trivial.

@@ -13,6 +13,7 @@ namespace BepuPhysics.CollisionDetection
     {
         internal Buffer<CollidableReference> activeLeaves;
         internal Buffer<CollidableReference> staticLeaves;
+        public BufferPool Pool { get; private set; }
         public Tree ActiveTree;
         public Tree StaticTree;
         Tree.RefitAndRefineMultithreadedContext activeRefineContext;
@@ -21,6 +22,7 @@ namespace BepuPhysics.CollisionDetection
 
         public BroadPhase(BufferPool pool, int initialActiveLeafCapacity = 4096, int initialStaticLeafCapacity = 8192)
         {
+            Pool = pool;
             ActiveTree = new Tree(pool, initialActiveLeafCapacity);
             StaticTree = new Tree(pool, initialStaticLeafCapacity);
             pool.SpecializeFor<CollidableReference>().Take(initialActiveLeafCapacity, out activeLeaves);
@@ -31,18 +33,18 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int Add(CollidableReference collidable, ref BoundingBox bounds, Tree tree, ref Buffer<CollidableReference> leaves)
+        private static int Add(CollidableReference collidable, ref BoundingBox bounds, ref Tree tree, BufferPool pool, ref Buffer<CollidableReference> leaves)
         {
-            var leafIndex = tree.Add(ref bounds);
+            var leafIndex = tree.Add(ref bounds, pool);
             if (leafIndex >= leaves.Length)
             {
-                tree.Pool.SpecializeFor<CollidableReference>().Resize(ref leaves, tree.LeafCount + 1, leaves.Length);
+                pool.Resize(ref leaves, tree.LeafCount + 1, leaves.Length);
             }
             leaves[leafIndex] = collidable;
             return leafIndex;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool RemoveAt(int index, Tree tree, ref Buffer<CollidableReference> leaves, out CollidableReference movedLeaf)
+        public static bool RemoveAt(int index, ref Tree tree, ref Buffer<CollidableReference> leaves, out CollidableReference movedLeaf)
         {
             Debug.Assert(index >= 0);
             var movedLeafIndex = tree.RemoveAt(index);
@@ -58,29 +60,29 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AddActive(CollidableReference collidable, ref BoundingBox bounds)
         {
-            return Add(collidable, ref bounds, ActiveTree, ref activeLeaves);
+            return Add(collidable, ref bounds, ref ActiveTree, Pool, ref activeLeaves);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool RemoveActiveAt(int index, out CollidableReference movedLeaf)
         {
-            return RemoveAt(index, ActiveTree, ref activeLeaves, out movedLeaf);
+            return RemoveAt(index, ref ActiveTree, ref activeLeaves, out movedLeaf);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AddStatic(CollidableReference collidable, ref BoundingBox bounds)
         {
-            return Add(collidable, ref bounds, StaticTree, ref staticLeaves);
+            return Add(collidable, ref bounds, ref StaticTree, Pool, ref staticLeaves);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool RemoveStaticAt(int index, out CollidableReference movedLeaf)
         {
-            return RemoveAt(index, StaticTree, ref staticLeaves, out movedLeaf);
+            return RemoveAt(index, ref StaticTree, ref staticLeaves, out movedLeaf);
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void GetBoundsPointers(int broadPhaseIndex, Tree tree, out Vector3* minPointer, out Vector3* maxPointer)
+        static void GetBoundsPointers(int broadPhaseIndex, ref Tree tree, out Vector3* minPointer, out Vector3* maxPointer)
         {
             var leaf = tree.Leaves[broadPhaseIndex];
             var nodeChild = (&tree.NodesPointer[leaf.NodeIndex].A) + leaf.ChildIndex;
@@ -90,12 +92,12 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetActiveBoundsPointers(int index, out Vector3* minPointer, out Vector3* maxPointer)
         {
-            GetBoundsPointers(index, ActiveTree, out minPointer, out maxPointer);
+            GetBoundsPointers(index, ref ActiveTree, out minPointer, out maxPointer);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetStaticBoundsPointers(int index, out Vector3* minPointer, out Vector3* maxPointer)
         {
-            GetBoundsPointers(index, StaticTree, out minPointer, out maxPointer);
+            GetBoundsPointers(index, ref StaticTree, out minPointer, out maxPointer);
         }
 
         int frameIndex;
@@ -105,11 +107,11 @@ namespace BepuPhysics.CollisionDetection
                 frameIndex = 0;
             if (threadDispatcher != null)
             {
-                activeRefineContext.RefitAndRefine(ActiveTree, threadDispatcher, frameIndex);
+                activeRefineContext.RefitAndRefine(ref ActiveTree, Pool, threadDispatcher, frameIndex);
             }
             else
             {
-                ActiveTree.RefitAndRefine(frameIndex);
+                ActiveTree.RefitAndRefine(Pool, frameIndex);
             }
 
             //TODO: for now, the inactive/static tree is simply updated like another active tree. This is enormously inefficient compared to the ideal-
@@ -118,11 +120,11 @@ namespace BepuPhysics.CollisionDetection
             //in other words, generate jobs from both trees and dispatch over all of them together. No internal dispatch.
             if (threadDispatcher != null)
             {
-                staticRefineContext.RefitAndRefine(StaticTree, threadDispatcher, frameIndex);
+                staticRefineContext.RefitAndRefine(ref StaticTree, Pool, threadDispatcher, frameIndex);
             }
             else
             {
-                StaticTree.RefitAndRefine(frameIndex);
+                StaticTree.RefitAndRefine(Pool, frameIndex);
             }
             ++frameIndex;
         }
@@ -136,25 +138,25 @@ namespace BepuPhysics.CollisionDetection
             StaticTree.Clear();
         }
 
-        void EnsureCapacity(Tree tree, ref Buffer<CollidableReference> leaves, int capacity)
+        void EnsureCapacity(ref Tree tree, ref Buffer<CollidableReference> leaves, int capacity)
         {
             if (tree.Leaves.Length < capacity)
-                tree.Resize(capacity);
+                tree.Resize(Pool, capacity);
             if (leaves.Length < capacity)
-                tree.Pool.SpecializeFor<CollidableReference>().Resize(ref leaves, capacity, tree.LeafCount);
+                Pool.Resize(ref leaves, capacity, tree.LeafCount);
         }
-        void ResizeCapacity(Tree tree, ref Buffer<CollidableReference> leaves, int capacity)
+        void ResizeCapacity(ref Tree tree, ref Buffer<CollidableReference> leaves, int capacity)
         {
             capacity = Math.Max(capacity, tree.LeafCount);
             if (tree.Leaves.Length != BufferPool<Leaf>.GetLowestContainingElementCount(capacity))
-                tree.Resize(capacity);
+                tree.Resize(Pool, capacity);
             if (leaves.Length != BufferPool<CollidableReference>.GetLowestContainingElementCount(capacity))
-                tree.Pool.SpecializeFor<CollidableReference>().Resize(ref leaves, capacity, tree.LeafCount);
+                Pool.Resize(ref leaves, capacity, tree.LeafCount);
         }
-        void Dispose(Tree tree, ref Buffer<CollidableReference> leaves)
+        void Dispose(ref Tree tree, ref Buffer<CollidableReference> leaves)
         {
-            tree.Pool.SpecializeFor<CollidableReference>().Return(ref leaves);
-            tree.Dispose();
+            Pool.SpecializeFor<CollidableReference>().Return(ref leaves);
+            tree.Dispose(Pool);
         }
         /// <summary>
         /// Ensures that the broad phase structures can hold at least the given number of leaves.
@@ -163,8 +165,8 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="staticCapacity">Number of leaves to allocate space for in the static tree.</param>
         public void EnsureCapacity(int activeCapacity, int staticCapacity)
         {
-            EnsureCapacity(ActiveTree, ref activeLeaves, activeCapacity);
-            EnsureCapacity(StaticTree, ref staticLeaves, staticCapacity);
+            EnsureCapacity(ref ActiveTree, ref activeLeaves, activeCapacity);
+            EnsureCapacity(ref StaticTree, ref staticLeaves, staticCapacity);
         }
 
         /// <summary>
@@ -174,8 +176,8 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="staticCapacity">Number of leaves to allocate space for in the static tree.</param>
         public void Resize(int activeCapacity, int staticCapacity)
         {
-            ResizeCapacity(ActiveTree, ref activeLeaves, activeCapacity);
-            ResizeCapacity(StaticTree, ref staticLeaves, staticCapacity);
+            ResizeCapacity(ref ActiveTree, ref activeLeaves, activeCapacity);
+            ResizeCapacity(ref StaticTree, ref staticLeaves, staticCapacity);
         }
 
         /// <summary>
@@ -183,8 +185,8 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public void Dispose()
         {
-            Dispose(ActiveTree, ref activeLeaves);
-            Dispose(StaticTree, ref staticLeaves);
+            Dispose(ref ActiveTree, ref activeLeaves);
+            Dispose(ref StaticTree, ref staticLeaves);
         }
 
     }

@@ -414,7 +414,7 @@ namespace BepuPhysics.Trees
         /// Tests any batched rays against the given tree.
         /// </summary>
         /// <param name="tree">Tree to test the accumulated rays against.</param>
-        public unsafe void TestRays<TLeafTester>(Tree tree, ref TLeafTester leafTester) where TLeafTester : IBatchedRayLeafTester
+        public unsafe void TestRays<TLeafTester>(ref Tree tree, ref TLeafTester leafTester) where TLeafTester : IBatchedRayLeafTester
         {
             Debug.Assert(stackPointerA0 == 0 && stackPointerB == 0 && stackPointerA1 == 0 && stackPointer == 0,
                 "At the beginning of the traversal, there should exist no entries on the traversal stack.");

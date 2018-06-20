@@ -6,9 +6,8 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Trees
 {
-    public unsafe partial class Tree : IDisposable
+    public unsafe partial struct Tree
     {
-        public BufferPool Pool;
         public Buffer<Node> Nodes;
         public Buffer<Metanode> Metanodes;
         //We cache a raw pointer for now. Buffer indexing isn't completely free yet. Also, this implementation was originally developed on raw pointers, so changing it would require effort.
@@ -60,13 +59,12 @@ namespace BepuPhysics.Trees
         /// Constructs an empty tree.
         /// </summary>
         /// <param name="initialLeafCapacity">Initial number of leaves to allocate room for.</param>
-        public unsafe Tree(BufferPool pool, int initialLeafCapacity = 4096)
+        public unsafe Tree(BufferPool pool, int initialLeafCapacity = 4096) : this()
         {
             if (initialLeafCapacity <= 0)
                 throw new ArgumentException("Initial leaf capacity must be positive.");
-
-            Pool = pool;
-            Resize(initialLeafCapacity);
+            
+            Resize(pool, initialLeafCapacity);
 
         }
 
@@ -91,8 +89,9 @@ namespace BepuPhysics.Trees
         /// <summary>
         /// Resizes the buffers backing the tree's nodes and leaves. Will not shrink the buffers below the size needed by the currently resident nodes and leaves.
         /// </summary>
+        /// <param name="pool">Pool from which to take and return resources.</param>
         /// <param name="targetLeafSlotCount">The desired number of available leaf slots.</param>
-        public void Resize(int targetLeafSlotCount)
+        public void Resize(BufferPool pool, int targetLeafSlotCount)
         {
             //Note that it's not safe to resize below the size of potentially used leaves. If the user wants to go smaller, they'll need to explicitly deal with the leaves somehow first.
             var leafCapacityForTarget = BufferPool<Leaf>.GetLowestContainingElementCount(Math.Max(leafCount, targetLeafSlotCount));
@@ -104,20 +103,20 @@ namespace BepuPhysics.Trees
             Debug.Assert(Leaves.Allocated == Nodes.Allocated);
             if (leafCapacityForTarget != Leaves.Length)
             {
-                Pool.SpecializeFor<Leaf>().Resize(ref Leaves, leafCapacityForTarget, leafCount);
+                pool.SpecializeFor<Leaf>().Resize(ref Leaves, leafCapacityForTarget, leafCount);
                 leaves = (Leaf*)Leaves.Memory;
             }
             if (nodeCapacityForTarget != Nodes.Length)
             {
-                Pool.SpecializeFor<Node>().Resize(ref Nodes, nodeCapacityForTarget, nodeCount);
+                pool.SpecializeFor<Node>().Resize(ref Nodes, nodeCapacityForTarget, nodeCount);
                 nodes = (Node*)Nodes.Memory;
             }
             if (metanodeCapacityForTarget != Metanodes.Length)
             {
-                Pool.SpecializeFor<Metanode>().Resize(ref Metanodes, metanodeCapacityForTarget, nodeCount);
+                pool.SpecializeFor<Metanode>().Resize(ref Metanodes, metanodeCapacityForTarget, nodeCount);
                 //A node's RefineFlag must be 0, so just clear out the node set. 
                 //TODO: This won't be necessary if we get rid of refineflags as a concept.
-                Nodes.Clear(nodeCount, Nodes.Length - nodeCount);
+                Metanodes.Clear(nodeCount, Nodes.Length - nodeCount);
                 metanodes = (Metanode*)Metanodes.Memory;
             }
             if (!wasAllocated)
@@ -139,16 +138,29 @@ namespace BepuPhysics.Trees
         /// <summary>
         /// Disposes the tree's backing resources, returning them to the Pool currently associated with the tree.
         /// </summary>
+        /// <param name="pool">Pool to return resources to.</param>
         /// <remarks>Disposed trees can be reused if EnsureCapacity or Resize is used to rehydrate them.</remarks>
-        public void Dispose()
+        public void Dispose(BufferPool pool)
         {
             Debug.Assert(Nodes.Allocated == Leaves.Allocated && Nodes.Allocated == Metanodes.Allocated, "Nodes and leaves should have consistent lifetimes.");
             if (Nodes.Allocated)
             {
-                Pool.SpecializeFor<Node>().Return(ref Nodes);
-                Pool.SpecializeFor<Metanode>().Return(ref Metanodes);
-                Pool.SpecializeFor<Leaf>().Return(ref Leaves);
+                pool.Return(ref Nodes);
+                pool.Return(ref Metanodes);
+                pool.Return(ref Leaves);
             }
+        }
+
+        /// <summary>
+        /// Tests if two tree references point to the same data.
+        /// </summary>
+        /// <param name="a">First tree to compare.</param>
+        /// <param name="b">Second tree to compare.</param>
+        /// <returns>True if the two trees have the same nodes and node count, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Equals(in Tree a, in Tree b)
+        {
+            return a.nodes == b.nodes && a.nodeCount == b.nodeCount;
         }
 
     }

@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace BepuPhysics.Trees
 {
-    partial class Tree
+    partial struct Tree
     {
         /// <summary>
         /// Caches input and output for the multithreaded execution of a tree's refit and refinement operations.
@@ -44,7 +44,7 @@ namespace BepuPhysics.Trees
                 CacheOptimizeAction = CacheOptimize;
             }
 
-            public unsafe void RefitAndRefine(Tree tree, IThreadDispatcher threadDispatcher, int frameIndex,
+            public unsafe void RefitAndRefine(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher, int frameIndex,
                 float refineAggressivenessScale = 1, float cacheOptimizeAggressivenessScale = 1)
             {
                 if (tree.leafCount <= 2)
@@ -58,10 +58,10 @@ namespace BepuPhysics.Trees
                 Tree = tree;
                 //Note that we create per-thread refinement candidates. That's because candidates are found during the multithreaded refit and mark phase, and 
                 //we don't want to spend the time doing sync work. The candidates are then pruned down to a target single target set for the refine pass.
-                Tree.Pool.SpecializeFor<QuickList<int, Buffer<int>>>().Take(threadDispatcher.ThreadCount, out RefinementCandidates);
+                pool.Take(threadDispatcher.ThreadCount, out RefinementCandidates);
                 tree.GetRefitAndMarkTuning(out MaximumSubtrees, out var estimatedRefinementCandidateCount, out RefinementLeafCountThreshold);
                 //Note that the number of refit nodes is not necessarily bound by MaximumSubtrees. It is just a heuristic estimate. Resizing has to be supported.
-                QuickList<int, Buffer<int>>.Create(tree.Pool.SpecializeFor<int>(), MaximumSubtrees, out RefitNodes);
+                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), MaximumSubtrees, out RefitNodes);
                 //Note that we haven't rigorously guaranteed a refinement count maximum, so it's possible that the workers will need to resize the per-thread refinement candidate lists.
                 for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
                 {
@@ -72,7 +72,7 @@ namespace BepuPhysics.Trees
                 if (multithreadingLeafCountThreshold < RefinementLeafCountThreshold)
                     multithreadingLeafCountThreshold = RefinementLeafCountThreshold;
                 CollectNodesForMultithreadedRefit(0, multithreadingLeafCountThreshold, ref RefitNodes, RefinementLeafCountThreshold, ref RefinementCandidates[0],
-                    threadDispatcher.GetThreadMemoryPool(0).SpecializeFor<int>());
+                    pool, threadDispatcher.GetThreadMemoryPool(0).SpecializeFor<int>());
 
                 RefitNodeIndex = -1;
                 threadDispatcher.DispatchWorkers(RefitAndMarkAction);
@@ -84,7 +84,7 @@ namespace BepuPhysics.Trees
                 }
                 Tree.GetRefineTuning(frameIndex, refinementCandidatesCount, refineAggressivenessScale, RefitCostChange,
                     out var targetRefinementCount, out var period, out var offset);
-                QuickList<int, Buffer<int>>.Create(tree.Pool.SpecializeFor<int>(), targetRefinementCount, out RefinementTargets);
+                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), targetRefinementCount, out RefinementTargets);
 
                 //Note that only a subset of all refinement *candidates* will become refinement *targets*.
                 //We start at a semirandom offset and then skip through the set to accumulate targets.
@@ -132,7 +132,7 @@ namespace BepuPhysics.Trees
                 var cacheOptimizationTasks = threadDispatcher.ThreadCount * 2;
                 PerWorkerCacheOptimizeCount = cacheOptimizeCount / cacheOptimizationTasks;
                 var startIndex = (int)(((long)frameIndex * PerWorkerCacheOptimizeCount) % Tree.nodeCount);
-                QuickList<int, Buffer<int>>.Create(Tree.Pool.SpecializeFor<int>(), cacheOptimizationTasks, out CacheOptimizeStarts);
+                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), cacheOptimizationTasks, out CacheOptimizeStarts);
                 CacheOptimizeStarts.AddUnsafely(startIndex);
 
                 var optimizationSpacing = Tree.nodeCount / threadDispatcher.ThreadCount;
@@ -163,17 +163,17 @@ namespace BepuPhysics.Trees
                     //Note the use of the thread memory pool. Each thread allocated their own memory for the list since resizes were possible.
                     RefinementCandidates[i].Dispose(threadDispatcher.GetThreadMemoryPool(i).SpecializeFor<int>());
                 }
-                Tree.Pool.SpecializeFor<QuickList<int, Buffer<int>>>().Return(ref RefinementCandidates);
-                RefitNodes.Dispose(Tree.Pool.SpecializeFor<int>());
-                RefinementTargets.Dispose(Tree.Pool.SpecializeFor<int>());
-                CacheOptimizeStarts.Dispose(Tree.Pool.SpecializeFor<int>());
-                Tree = null;
+                pool.Return(ref RefinementCandidates);
+                RefitNodes.Dispose(pool.SpecializeFor<int>());
+                RefinementTargets.Dispose(pool.SpecializeFor<int>());
+                CacheOptimizeStarts.Dispose(pool.SpecializeFor<int>());
+                Tree = default;
                 this.threadDispatcher = null;
             }
 
             unsafe void CollectNodesForMultithreadedRefit(int nodeIndex,
                 int multithreadingLeafCountThreshold, ref QuickList<int, Buffer<int>> refitAndMarkTargets,
-                int refinementLeafCountThreshold, ref QuickList<int, Buffer<int>> refinementCandidates, BufferPool<int> threadIntPool)
+                int refinementLeafCountThreshold, ref QuickList<int, Buffer<int>> refinementCandidates, BufferPool pool, BufferPool<int> threadIntPool)
             {
                 var node = Tree.nodes + nodeIndex;
                 var metanode = Tree.metanodes + nodeIndex;
@@ -195,16 +195,16 @@ namespace BepuPhysics.Trees
                                 //It's possible that a wavefront node is this high in the tree, so it has to be captured here because the postpass won't find it.
                                 refinementCandidates.Add(child.Index, threadIntPool);
                                 //Encoding the child index tells the thread to use RefitAndMeasure instead of RefitAndMark since this was a wavefront node.
-                                refitAndMarkTargets.Add(Encode(child.Index), Tree.Pool.SpecializeFor<int>());
+                                refitAndMarkTargets.Add(Encode(child.Index), pool.SpecializeFor<int>());
                             }
                             else
                             {
-                                refitAndMarkTargets.Add(child.Index, Tree.Pool.SpecializeFor<int>());
+                                refitAndMarkTargets.Add(child.Index, pool.SpecializeFor<int>());
                             }
                         }
                         else
                         {
-                            CollectNodesForMultithreadedRefit(child.Index, multithreadingLeafCountThreshold, ref refitAndMarkTargets, refinementLeafCountThreshold, ref refinementCandidates, threadIntPool);
+                            CollectNodesForMultithreadedRefit(child.Index, multithreadingLeafCountThreshold, ref refitAndMarkTargets, refinementLeafCountThreshold, ref refinementCandidates, pool, threadIntPool);
                         }
                     }
                 }

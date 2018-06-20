@@ -56,7 +56,7 @@ namespace Demos.SpecializedTests
             //    leafIndexToHandle[handleToLeafIndex[i]] = i;
 
             //}
-            tree.SweepBuild(leafBounds, handleToLeafIndex, 0, prebuiltCount);
+            tree.SweepBuild(pool, leafBounds, handleToLeafIndex, 0, prebuiltCount);
             for (int i = 0; i < prebuiltCount; ++i)
             {
                 leafIndexToHandle[handleToLeafIndex[i]] = i;
@@ -66,7 +66,7 @@ namespace Demos.SpecializedTests
 
             for (int i = prebuiltCount; i < leafCount; ++i)
             {
-                handleToLeafIndex[i] = tree.Add(ref leafBounds[i]);
+                handleToLeafIndex[i] = tree.Add(ref leafBounds[i], pool);
                 leafIndexToHandle[handleToLeafIndex[i]] = i;
 
             }
@@ -118,7 +118,7 @@ namespace Demos.SpecializedTests
                         var indexInRemovedList = random.Next(removedLeafHandles.Count);
                         var handleToAdd = removedLeafHandles[indexInRemovedList];
                         removedLeafHandles.FastRemoveAt(indexInRemovedList);
-                        var leafIndex = tree.Add(ref leafBounds[handleToAdd]);
+                        var leafIndex = tree.Add(ref leafBounds[handleToAdd], pool);
                         leafIndexToHandle[leafIndex] = handleToAdd;
                         handleToLeafIndex[handleToAdd] = leafIndex;
 
@@ -129,20 +129,20 @@ namespace Demos.SpecializedTests
                 tree.Refit();
                 tree.Validate();
 
-                tree.RefitAndRefine(i);
+                tree.RefitAndRefine(pool, i);
                 tree.Validate();
 
                 var handler = new OverlapHandler();
                 tree.GetSelfOverlaps(ref handler);
                 tree.Validate();
 
-                refineContext.RefitAndRefine(tree, threadDispatcher, i);
+                refineContext.RefitAndRefine(ref tree, pool, threadDispatcher, i);
                 tree.Validate();
                 for (int k = 0; k < threadDispatcher.ThreadCount; ++k)
                 {
                     overlapHandlers[k] = new OverlapHandler();
                 }
-                selfTestContext.PrepareJobs(tree, overlapHandlers, threadDispatcher.ThreadCount);
+                selfTestContext.PrepareJobs(ref tree, overlapHandlers, threadDispatcher.ThreadCount);
                 threadDispatcher.DispatchWorkers(pairTestAction);
                 selfTestContext.CompleteSelfTest();
                 tree.Validate();

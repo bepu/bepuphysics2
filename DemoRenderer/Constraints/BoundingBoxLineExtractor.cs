@@ -81,7 +81,7 @@ namespace DemoRenderer.Constraints
         }
 
 
-        void CreateJobsForTree(Tree tree, bool active, ref QuickList<ThreadJob, Array<ThreadJob>> jobs)
+        void CreateJobsForTree(in Tree tree, bool active, ref QuickList<ThreadJob, Array<ThreadJob>> jobs)
         {
             var maximumJobCount = jobsPerThread * Environment.ProcessorCount;
             var possibleLeavesPerJob = tree.LeafCount / maximumJobCount;

@@ -112,7 +112,7 @@ namespace BepuPhysics
 
 
 
-        private int ValidateAndCountShapefulBodies(ref BodySet bodySet, Tree tree, ref Buffer<CollidableReference> leaves)
+        private int ValidateAndCountShapefulBodies(ref BodySet bodySet, ref Tree tree, ref Buffer<CollidableReference> leaves)
         {
             int shapefulBodyCount = 0;
             for (int i = 0; i < bodySet.Count; ++i)
@@ -135,7 +135,7 @@ namespace BepuPhysics
         [Conditional("DEBUG")]
         internal void ValidateCollidables()
         {
-            var activeShapefulBodyCount = ValidateAndCountShapefulBodies(ref Bodies.ActiveSet, BroadPhase.ActiveTree, ref BroadPhase.activeLeaves);
+            var activeShapefulBodyCount = ValidateAndCountShapefulBodies(ref Bodies.ActiveSet, ref BroadPhase.ActiveTree, ref BroadPhase.activeLeaves);
             Debug.Assert(BroadPhase.ActiveTree.LeafCount == activeShapefulBodyCount);
 
             int inactiveShapefulBodyCount = 0;
@@ -145,7 +145,7 @@ namespace BepuPhysics
                 ref var set = ref Bodies.Sets[setIndex];
                 if (set.Allocated)
                 {
-                    inactiveShapefulBodyCount += ValidateAndCountShapefulBodies(ref set, BroadPhase.StaticTree, ref BroadPhase.staticLeaves);
+                    inactiveShapefulBodyCount += ValidateAndCountShapefulBodies(ref set, ref BroadPhase.StaticTree, ref BroadPhase.staticLeaves);
                 }
             }
             Debug.Assert(inactiveShapefulBodyCount + Statics.Count == BroadPhase.StaticTree.LeafCount);

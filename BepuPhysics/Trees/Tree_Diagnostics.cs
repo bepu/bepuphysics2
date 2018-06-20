@@ -10,7 +10,7 @@ using System.Text;
 
 namespace BepuPhysics.Trees
 {
-    partial class Tree
+    partial struct Tree
     {
         //TODO: Note that this heuristic does not fully capture the cost of a node.
         //It assumes that traversing a node with 2 children is about the same as traversing a node with 8 children.

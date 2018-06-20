@@ -381,7 +381,17 @@ namespace BepuUtilities.Memory
             pools[powerIndex].ValidateBufferIsContained(ref buffer);
 #endif
             ReturnUnsafely(buffer.Id);
-            buffer = new RawBuffer();
+            buffer = default;
+        }
+        /// <summary>
+        /// Returns a buffer to the pool.
+        /// </summary>
+        /// <param name="buffer">Buffer to return to the pool.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void Return<T>(ref Buffer<T> buffer)
+        {
+            ReturnUnsafely(buffer.Id);
+            buffer = default;
         }
 
         /// <summary>

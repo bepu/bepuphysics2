@@ -26,7 +26,7 @@ namespace Demos.SpecializedTests
             }
         }
 
-        static void GetBoundsForLeaf(Tree tree, int leafIndex, out BoundingBox bounds)
+        static void GetBoundsForLeaf(in Tree tree, int leafIndex, out BoundingBox bounds)
         {
             ref var leaf = ref tree.Leaves[leafIndex];
             ref var node = ref tree.Nodes[leaf.NodeIndex];
@@ -66,29 +66,29 @@ namespace Demos.SpecializedTests
             {
                 GetRandomLocation(random, ref aBounds, out var center);
                 var bounds = new BoundingBox(center - aOffset, center + aOffset);
-                treeA.Add(ref bounds);
+                treeA.Add(ref bounds, pool);
             }
             for (int i = 0; i < bCount; ++i)
             {
                 GetRandomLocation(random, ref bBounds, out var center);
                 var bounds = new BoundingBox(center - bOffset, center + bOffset);
-                treeB.Add(ref bounds);
+                treeB.Add(ref bounds, pool);
             }
-
+            
             {
                 var indexToRemove = 1;
                 GetBoundsForLeaf(treeB, indexToRemove, out var removedBounds);
                 treeB.RemoveAt(indexToRemove);
-                treeA.Add(ref removedBounds);
+                treeA.Add(ref removedBounds, pool);
             }
-
+            
             var singleThreadedResults = new OverlapHandler { Pairs = new List<(int a, int b)>() };
-            treeA.GetOverlaps(treeB, ref singleThreadedResults);
+            treeA.GetOverlaps(ref treeB, ref singleThreadedResults);
             SortPairs(singleThreadedResults.Pairs);
             for (int i = 0; i < 10; ++i)
             {
-                treeA.RefitAndRefine(i);
-                treeB.RefitAndRefine(i);
+                treeA.RefitAndRefine(pool, i);
+                treeB.RefitAndRefine(pool, i);
             }
             treeA.Validate();
             treeB.Validate();
@@ -99,7 +99,7 @@ namespace Demos.SpecializedTests
             {
                 handlers[i].Pairs = new List<(int a, int b)>();
             }
-            context.PrepareJobs(treeA, treeB, handlers, threadDispatcher.ThreadCount);
+            context.PrepareJobs(ref treeA, ref treeB, handlers, threadDispatcher.ThreadCount);
             threadDispatcher.DispatchWorkers(context.PairTest);
             context.CompleteTest();
             List<(int a, int b)> multithreadedResults = new List<(int, int)>();
@@ -161,8 +161,8 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            treeA.Dispose();
-            treeB.Dispose();
+            treeA.Dispose(pool);
+            treeB.Dispose(pool);
         }
 
         struct BruteForceResultsEnumerator : IBreakableForEach<int>

@@ -8,7 +8,7 @@ using System.Numerics;
 
 namespace BepuPhysics.Trees
 {
-    partial class Tree
+    partial struct Tree
     {
 
         unsafe float RefitAndMeasure(ref NodeChild child)
@@ -189,17 +189,17 @@ namespace BepuPhysics.Trees
 
 
 
-        public unsafe void RefitAndRefine(int frameIndex, float refineAggressivenessScale = 1, float cacheOptimizeAggressivenessScale = 1)
+        public unsafe void RefitAndRefine(BufferPool pool, int frameIndex, float refineAggressivenessScale = 1, float cacheOptimizeAggressivenessScale = 1)
         {
             //Don't proceed if the tree has no refitting or refinement required. This also guarantees that any nodes that do exist have two children.
             if (leafCount <= 2)
                 return;
             GetRefitAndMarkTuning(out int maximumSubtrees, out int estimatedRefinementCandidateCount, out int leafCountThreshold);
-            var intPool = Pool.SpecializeFor<int>();
+            var intPool = pool.SpecializeFor<int>();
             QuickList<int, Buffer<int>>.Create(intPool, estimatedRefinementCandidateCount, out var refinementCandidates);
 
             //Collect the refinement candidates.
-            var costChange = RefitAndMark(leafCountThreshold, ref refinementCandidates, Pool.SpecializeFor<int>());
+            var costChange = RefitAndMark(leafCountThreshold, ref refinementCandidates, pool.SpecializeFor<int>());
 
 
             GetRefineTuning(frameIndex, refinementCandidates.Count, refineAggressivenessScale, costChange, out int targetRefinementCount, out int period, out int offset);
@@ -229,22 +229,22 @@ namespace BepuPhysics.Trees
             QuickList<int, Buffer<int>>.Create(intPool, maximumSubtrees, out var subtreeReferences);
             QuickList<int, Buffer<int>>.Create(intPool, maximumSubtrees, out var treeletInternalNodes);
 
-            CreateBinnedResources(Pool, maximumSubtrees, out var buffer, out var resources);
+            CreateBinnedResources(pool, maximumSubtrees, out var buffer, out var resources);
 
             for (int i = 0; i < refinementTargets.Count; ++i)
             {
 
                 subtreeReferences.Count = 0;
                 treeletInternalNodes.Count = 0;
-                BinnedRefine(refinementTargets[i], ref subtreeReferences, maximumSubtrees, ref treeletInternalNodes, ref resources, Pool);
+                BinnedRefine(refinementTargets[i], ref subtreeReferences, maximumSubtrees, ref treeletInternalNodes, ref resources, pool);
                 //TODO: Should this be moved into a post-loop? It could permit some double work, but that's not terrible.
                 //It's not invalid from a multithreading perspective, either- setting the refine flag to zero is essentially an unlock.
                 //If other threads don't see it updated due to cache issues, it doesn't really matter- it's not a signal or anything like that.
                 metanodes[refinementTargets[i]].RefineFlag = 0;
 
             }
-
-            Pool.Return(ref buffer);
+            
+            pool.Return(ref buffer);
             subtreeReferences.Dispose(intPool);
             treeletInternalNodes.Dispose(intPool);
             refinementTargets.Dispose(intPool);

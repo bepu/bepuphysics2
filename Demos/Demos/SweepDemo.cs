@@ -244,10 +244,10 @@ namespace Demos.Demos
             TestSweep(
                 a,
                 new RigidPose { Position = new Vector3(-10, 0, 0) + position, Orientation = initialOrientationA },
-                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(0, 0, 0) },
+                new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 0, 1) },
                 b,
                 new RigidPose { Position = new Vector3(10, 0, 0) + position, Orientation = initialOrientationB },
-                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 0, 0) }, 50f, renderer);
+                new BodyVelocity { Linear = new Vector3(-1, -1, 0), Angular = new Vector3(0, 1, 0) }, 50f, renderer);
             position.Y -= 5;
         }
         public override void Render(Renderer renderer, TextBuilder text, Font font)
@@ -262,9 +262,9 @@ namespace Demos.Demos
 
             var triangle = new Triangle(new Vector3(0, 0, 0), new Vector3(3, 0, -1), new Vector3(-1, 0, 4));
             var triangleCenter = (triangle.A + triangle.B + triangle.C) / 3f;
-            //triangle.A -= triangleCenter;
-            //triangle.B -= triangleCenter;
-            //triangle.C -= triangleCenter;
+            triangle.A -= triangleCenter;
+            triangle.B -= triangleCenter;
+            triangle.C -= triangleCenter;
             StandardTestSweep(new Sphere(0.5f), new Sphere(.25f), ref position, worldA, worldB, renderer);
             StandardTestSweep(new Sphere(0.5f), new Capsule(.25f, 1f), ref position, worldA, worldB, renderer);
             StandardTestSweep(new Sphere(0.5f), new Box(.5f, 1f, 1.5f), ref position, worldA, worldB, renderer);

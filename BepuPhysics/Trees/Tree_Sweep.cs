@@ -12,7 +12,7 @@ namespace BepuPhysics.Trees
     {
         unsafe void TestLeaf(int leafIndex, ref float maximumT);
     }
-    partial class Tree
+    partial struct Tree
     {
         internal unsafe void Sweep<TLeafTester>(int nodeIndex, in Vector3 expansion, in Vector3 origin, in Vector3 direction, TreeRay* treeRay, int* stack, ref TLeafTester leafTester) where TLeafTester : ISweepLeafTester
         {

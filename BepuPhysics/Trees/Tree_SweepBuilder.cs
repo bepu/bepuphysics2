@@ -1,5 +1,6 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
+using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -8,7 +9,7 @@ using System.Numerics;
 
 namespace BepuPhysics.Trees
 {
-    partial class Tree
+    partial struct Tree
     {
         internal unsafe struct SweepResources
         {
@@ -220,7 +221,7 @@ namespace BepuPhysics.Trees
         }
 
 
-        public unsafe void SweepBuild(BoundingBox[] leafBounds, int[] outputLeafIndices, int start = 0, int length = -1)
+        public unsafe void SweepBuild(BufferPool pool, BoundingBox[] leafBounds, int[] outputLeafIndices, int start = 0, int length = -1)
         {
             if (length == 0)
                 throw new ArgumentException("Length must be positive.");
@@ -240,20 +241,20 @@ namespace BepuPhysics.Trees
             //Guarantee that no resizes will occur during the build.
             if (Leaves.Length < length)
             {
-                Resize(leafBounds.Length);
+                Resize(pool, leafBounds.Length);
             }
 
             //Gather necessary information and put it into a convenient format.
 
-            var intPool = Pool.SpecializeFor<int>();
-            var floatPool = Pool.SpecializeFor<float>();
+            var intPool = pool.SpecializeFor<int>();
+            var floatPool = pool.SpecializeFor<float>();
             intPool.Take(length, out var indexMapX);
             intPool.Take(length, out var indexMapY);
             intPool.Take(length, out var indexMapZ);
             floatPool.Take(length, out var centroidsX);
             floatPool.Take(length, out var centroidsY);
             floatPool.Take(length, out var centroidsZ);
-            Pool.SpecializeFor<BoundingBox>().Take(length, out var merged);
+            pool.SpecializeFor<BoundingBox>().Take(length, out var merged);
             //TODO: Would ideally use spans here, rather than assuming managed input. We could check generic type parameters to efficiently get pointers out.
             fixed (BoundingBox* leafBoundsPointer = &leafBounds[start])
             fixed (int* indexMapPointer = &outputLeafIndices[start])
@@ -294,7 +295,7 @@ namespace BepuPhysics.Trees
             intPool.Return(ref indexMapX);
             intPool.Return(ref indexMapY);
             intPool.Return(ref indexMapZ);
-            Pool.SpecializeFor<BoundingBox>().Return(ref merged);
+            pool.SpecializeFor<BoundingBox>().Return(ref merged);
 
         }
     }

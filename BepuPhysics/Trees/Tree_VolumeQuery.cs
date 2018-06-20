@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Trees
 {
-    partial class Tree
+    partial struct Tree
     {       
         unsafe void GetOverlaps<TEnumerator>(int nodeIndex, in Vector3 min, in Vector3 max, int* stack, ref TEnumerator leafEnumerator) where TEnumerator : IBreakableForEach<int>
         {

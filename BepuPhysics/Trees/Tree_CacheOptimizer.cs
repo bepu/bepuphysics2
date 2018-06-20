@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace BepuPhysics.Trees
 {
-    partial class Tree
+    partial struct Tree
     {
         unsafe void SwapNodes(int indexA, int indexB)
         {

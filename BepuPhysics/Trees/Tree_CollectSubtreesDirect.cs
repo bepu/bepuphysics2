@@ -6,7 +6,7 @@ namespace BepuPhysics.Trees
 {
 
 
-    partial class Tree
+    partial struct Tree
     {
         unsafe void CollectSubtreesForNodeDirect(int nodeIndex, int remainingDepth, 
             ref QuickList<int, Buffer<int>> subtrees, ref QuickQueue<int, Buffer<int>> internalNodes, out float treeletCost)

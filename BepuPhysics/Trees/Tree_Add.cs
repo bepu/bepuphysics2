@@ -3,10 +3,11 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System;
 using System.Diagnostics;
+using BepuUtilities.Memory;
 
 namespace BepuPhysics.Trees
 {
-    partial class Tree
+    partial struct Tree
     {
         /// <summary>
         /// Merges a new leaf node with an existing leaf node, producing a new internal node referencing both leaves, and then returns the index of the leaf node.
@@ -16,7 +17,7 @@ namespace BepuPhysics.Trees
         /// <param name="indexInParent">Index of the child wtihin the parent node that the existing leaf belongs to.</param>
         /// <param name="merged">Bounding box holding both the new and existing leaves.</param>
         /// <returns>Index of the leaf </returns>
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe int MergeLeafNodes(ref BoundingBox newLeafBounds, int parentIndex, int indexInParent, ref BoundingBox merged)
         {
             //It's a leaf node.
@@ -55,7 +56,7 @@ namespace BepuPhysics.Trees
             return leafIndex;
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe int InsertLeafIntoEmptySlot(ref BoundingBox leafBox, int nodeIndex, int childIndex, Node* node)
         {
             var leafIndex = AddLeaf(nodeIndex, childIndex);
@@ -72,7 +73,7 @@ namespace BepuPhysics.Trees
             Traverse
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void CreateMerged(ref Vector3 minA, ref Vector3 maxA, ref Vector3 minB, ref Vector3 maxB, out BoundingBox merged)
         {
             merged.Min = Vector3.Min(minA, minB);
@@ -80,7 +81,7 @@ namespace BepuPhysics.Trees
         }
 
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe BestInsertionChoice ComputeBestInsertionChoice(ref BoundingBox bounds, ref NodeChild child, out BoundingBox mergedCandidate, out float costChange)
         {
             CreateMerged(ref child.Min, ref child.Max, ref bounds.Min, ref bounds.Max, out mergedCandidate);
@@ -97,21 +98,21 @@ namespace BepuPhysics.Trees
             }
 
         }
-
+       
         /// <summary>
         /// Adds a leaf to the tree with the given bounding box and returns the index of the added leaf.
         /// </summary>
         /// <param name="bounds">Extents of the leaf bounds.</param>
+        /// <param name="pool">Resource pool to use if resizing is required.</param>
         /// <returns>Index of the leaf allocated in the tree's leaf array.</returns>
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public unsafe int Add(ref BoundingBox bounds)
+        public unsafe int Add(ref BoundingBox bounds, BufferPool pool)
         {
             //The rest of the function assumes we have sufficient room. We don't want to deal with invalidated pointers mid-add.
             if (Leaves.Length == leafCount)
             {
                 //Note that, while we add 1, the underlying pool will request the next higher power of 2 in bytes that can hold it.
                 //Since we're already at capacity, that will be ~double the size.
-                Resize(leafCount + 1);
+                Resize(pool, leafCount + 1);
             }
             
             //Assumption: Index 0 is always the root if it exists, and an empty tree will have a 'root' with a child count of 0.

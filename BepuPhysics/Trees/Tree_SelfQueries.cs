@@ -10,7 +10,7 @@ namespace BepuPhysics.Trees
     }
 
 
-    partial class Tree
+    partial struct Tree
     {
         //TODO: This contains a lot of empirically tested implementations on much older runtimes.
         //I suspect results would be different on modern versions of ryujit. In particular, recursion is very unlikely to be the fastest approach.

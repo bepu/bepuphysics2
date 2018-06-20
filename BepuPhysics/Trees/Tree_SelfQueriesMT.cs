@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace BepuPhysics.Trees
 {
-    partial class Tree
+    partial struct Tree
     {
         //TODO: 
         //There are a some issues inherited from the prototype that we'd like to address at some point:
@@ -69,7 +69,7 @@ namespace BepuPhysics.Trees
             /// <param name="tree">Tree to test against itself.</param>
             /// <param name="overlapHandlers">Callbacks used to handle individual overlaps detected by the self test.</param>
             /// <param name="threadCount">Number of threads to prepare jobs for.</param>
-            public void PrepareJobs(Tree tree, TOverlapHandler[] overlapHandlers, int threadCount)
+            public void PrepareJobs(ref Tree tree, TOverlapHandler[] overlapHandlers, int threadCount)
             {
                 //If there are not multiple children, there's no need to recurse.
                 //This provides a guarantee that there are at least 2 children in each internal node considered by GetOverlapsInNode.

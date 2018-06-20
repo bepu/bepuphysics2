@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace BepuPhysics.Trees
 {
-    partial class Tree
+    partial struct Tree
     {
         unsafe void RemoveNodeAt(int nodeIndex)
         {
