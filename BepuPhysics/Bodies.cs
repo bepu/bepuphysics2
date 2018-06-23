@@ -407,6 +407,27 @@ namespace BepuPhysics
             Debug.Assert(set.IndexToHandle[location.Index] == handle, "Handle->index must match index->handle map.");
         }
 
+        [Conditional("CHECKMATH")]
+        internal void ValidateMotionStates()
+        {
+            for (int i =0; i < Sets.Length; ++i)
+            {
+                ref var set = ref Sets[i];
+                if(set.Allocated)
+                {
+                    for (int j =0; j < set.Count; ++j)
+                    {
+                        ref var pose = ref set.Poses[j];
+                        ref var velocity = ref set.Velocities[j];
+                        pose.Position.Validate();
+                        pose.Orientation.Validate();
+                        velocity.Linear.Validate();
+                        velocity.Angular.Validate();
+                    }
+                }
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void GatherInertiaForBody(ref BodyInertia source, ref BodyInertias targetSlot)
         {

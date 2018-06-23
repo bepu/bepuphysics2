@@ -22,12 +22,12 @@ namespace Demos.Demos
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
-            var shape = new Capsule(.5f, 3.5f);
+            var shape = new Capsule(.5f, .5f);
             shape.ComputeInertia(1, out var localInertia);
             var shapeIndex = Simulation.Shapes.Add(shape);
-            const int width = 4;
-            const int height = 10;
-            const int length = 4;
+            const int width = 1;
+            const int height = 1;
+            const int length = 1;
             for (int i = 0; i < width; ++i)
             {
                 for (int j = 0; j < height; ++j)
@@ -44,18 +44,37 @@ namespace Demos.Demos
                                 Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2),
                                 Position = location
                             },
-                            Collidable = new CollidableDescription { SpeculativeMargin = 0.1f, Shape = shapeIndex }
+                            Collidable = new CollidableDescription { SpeculativeMargin = 50.1f, Shape = shapeIndex }
                         };
                         Simulation.Bodies.Add(bodyDescription);
 
                     }
                 }
             }
-            
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), new CollidableDescription { SpeculativeMargin = 0.1f, Shape = Simulation.Shapes.Add(new Box(100, 1, 100)) }));
+            var boxShape = new Box(0.5f, 0.5f, 0.5f);
+            boxShape.ComputeInertia(1, out var boxLocalInertia);
+            var boxDescription = new BodyDescription
+            {
+                Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = -0.01f },
+                LocalInertia = boxLocalInertia,
+                Pose = new RigidPose
+                {
+                    Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2),
+                    Position = new Vector3(0, 2, 0)
+                },
+                Collidable = new CollidableDescription { SpeculativeMargin = 50.1f, Shape = Simulation.Shapes.Add(boxShape) }
+            };
+            Simulation.Bodies.Add(boxDescription);
+
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), new CollidableDescription { SpeculativeMargin = 0.1f, Shape = Simulation.Shapes.Add(new Box(10, 1, 10)) }));
 
         }
 
-
+        public override void Update(Input input, float dt)
+        {
+            if (input.WasDown(OpenTK.Input.Key.P))
+                Console.WriteLine("$");
+            base.Update(input, dt);
+        }
     }
 }

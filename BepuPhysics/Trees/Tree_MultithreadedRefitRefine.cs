@@ -59,7 +59,7 @@ namespace BepuPhysics.Trees
                 //Note that we create per-thread refinement candidates. That's because candidates are found during the multithreaded refit and mark phase, and 
                 //we don't want to spend the time doing sync work. The candidates are then pruned down to a target single target set for the refine pass.
                 pool.Take(threadDispatcher.ThreadCount, out RefinementCandidates);
-                tree.GetRefitAndMarkTuning(out MaximumSubtrees, out var estimatedRefinementCandidateCount, out RefinementLeafCountThreshold);
+                Tree.GetRefitAndMarkTuning(out MaximumSubtrees, out var estimatedRefinementCandidateCount, out RefinementLeafCountThreshold);
                 //Note that the number of refit nodes is not necessarily bound by MaximumSubtrees. It is just a heuristic estimate. Resizing has to be supported.
                 QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), MaximumSubtrees, out RefitNodes);
                 //Note that we haven't rigorously guaranteed a refinement count maximum, so it's possible that the workers will need to resize the per-thread refinement candidate lists.
@@ -105,15 +105,15 @@ namespace BepuPhysics.Trees
                     }
                     Debug.Assert(index < RefinementCandidates[currentCandidatesIndex].Count && index >= 0);
                     var nodeIndex = RefinementCandidates[currentCandidatesIndex][index];
-                    Debug.Assert(tree.metanodes[nodeIndex].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
+                    Debug.Assert(Tree.metanodes[nodeIndex].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
                     RefinementTargets.AddUnsafely(nodeIndex);
-                    tree.metanodes[nodeIndex].RefineFlag = 1;
+                    Tree.metanodes[nodeIndex].RefineFlag = 1;
                 }
                 //Note that the root node is only refined if it was not picked as a target earlier.
-                if (tree.metanodes->RefineFlag != 1)
+                if (Tree.metanodes->RefineFlag != 1)
                 {
                     RefinementTargets.AddUnsafely(0);
-                    tree.metanodes->RefineFlag = 1;
+                    Tree.metanodes->RefineFlag = 1;
                 }
                 RefineIndex = -1;
 

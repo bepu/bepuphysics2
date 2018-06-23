@@ -156,24 +156,32 @@ namespace BepuPhysics.Constraints.Contact
         IConstraintFunctions<Contact2PrestepData, Contact2Projection, Contact2AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ComputeFrictionCenter(in Vector3Wide offsetA0, in Vector3Wide offsetA1, in Vector<float> depth0, in Vector<float> depth1, out Vector3Wide center)
+        {
+            //This can sometimes cause a weird center of friction. That's a bit strange, but the alternative is often stranger:
+            //Without this, if one contact is active and the other is speculative, friction will use the manifold center as halfway between the two points. If something is holding 
+            //the inactive contact side up and swinging it around, the existence of speculative contacts would make friction work against the free swinging.
+            var weight0 = Vector.ConditionalSelect(Vector.LessThan(depth0, Vector<float>.Zero), Vector<float>.Zero, Vector<float>.One);
+            var weight1 = Vector.ConditionalSelect(Vector.LessThan(depth1, Vector<float>.Zero), Vector<float>.Zero, Vector<float>.One);
+            var weightSum = weight0 + weight1;
+            var useFallback = Vector.Equals(weightSum, Vector<float>.Zero);
+            weightSum = Vector.ConditionalSelect(useFallback, new Vector<float>(2), weightSum);
+            var inverseWeightSum = Vector<float>.One / weightSum;
+            weight0 = Vector.ConditionalSelect(useFallback, inverseWeightSum, weight0 * inverseWeightSum);
+            weight1 = Vector.ConditionalSelect(useFallback, inverseWeightSum, weight1 * inverseWeightSum);
+            Vector3Wide.Scale(offsetA0, weight0, out var a0Contribution);
+            Vector3Wide.Scale(offsetA1, weight1, out var a1Contribution);
+            Vector3Wide.Add(a0Contribution, a1Contribution, out center);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
             float dt, float inverseDt, ref Contact2PrestepData prestep, out Contact2Projection projection)
         {
-            //Some speculative compression options not (yet) pursued:
-            //1) Store the surface basis in a compressed fashion. It could be stored within 32 bits by using standard compression schemes, but we lack the necessary
-            //instructions to properly SIMDify the decode operation (e.g. shift). Even with the potential savings of 3 floats (relative to uncompressed storage), it would be questionable.
-            //We could drop one of the four components of the quaternion and reconstruct it relatively easily- that would just require that the encoder ensures the W component is positive.
-            //It would require a square root, but it might still be a net win. On an IVB, sqrt has a 7 cycle throughput. 4 bytes saved * 4 lanes = 16 bytes, which takes 
-            //about 16 / 5.5GBps = 2.9ns, where 5.5 is roughly the per-core bandwidth on a 3770K. 7 cycles is only 2ns at 3.5ghz. 
-            //There are a couple of other instructions necessary to decode, but sqrt is by far the heaviest; it's likely a net win.
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
-
             bodies.GatherInertia(ref bodyReferences, count, out projection.InertiaA, out projection.InertiaB);
-            Vector3Wide.Add(prestep.OffsetA0, prestep.OffsetA1, out var offsetToManifoldCenterA);
-            var scale = new Vector<float>(0.5f);
-            Vector3Wide.Scale(offsetToManifoldCenterA, scale, out offsetToManifoldCenterA);
+            ComputeFrictionCenter(prestep.OffsetA0, prestep.OffsetA1, prestep.PenetrationDepth0, prestep.PenetrationDepth1, out var offsetToManifoldCenterA);
             Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);
-            projection.PremultipliedFrictionCoefficient = scale * prestep.FrictionCoefficient;
+            projection.PremultipliedFrictionCoefficient = 0.5f * prestep.FrictionCoefficient;
             projection.Normal = prestep.Normal;
             Helpers.BuildOrthnormalBasis(ref prestep.Normal, out var x, out var z);
             TangentFriction.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref offsetToManifoldCenterB, ref projection.InertiaA, ref projection.InertiaB, out projection.Tangent);

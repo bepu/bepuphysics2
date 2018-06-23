@@ -280,17 +280,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //Each contact may have its own depth.
             //Imagine a face collision- if the capsule axis isn't fully parallel with the plane's surface, it would be strange to use the same depth for both contacts.
-            //Compute the interval of the box on the normal. Note that the normal is already calibrated to point from B to A (box to capsule).
-            //(This is partially redundant with the per-case calculations, but simply redoing some cheap ALU work is easier than trying to keep track of per-contact depths across all cases.)
+            //To compute the depth, unproject the capsule points onto the surface of the box, and measure the distance along the local normal.
+            //separation = dot(capsulePoint - pointOnFace, faceNormal) / dot(localNormal, faceNormal)
             Vector3Wide.Scale(capsuleAxis, taMin, out var localA0);
             Vector3Wide.Scale(capsuleAxis, taMax, out var localA1);
             Vector3Wide.Add(localOffsetA, localA0, out var bToA0);
             Vector3Wide.Add(localOffsetA, localA1, out var bToA1);
-            var boxExtreme = Vector.Abs(localNormal.X * b.HalfWidth) + Vector.Abs(localNormal.Y * b.HalfHeight) + Vector.Abs(localNormal.Z * b.HalfLength);
-            Vector3Wide.Dot(localNormal, bToA0, out var dot0);
-            Vector3Wide.Dot(localNormal, bToA1, out var dot1);
-            manifold.Depth0 = a.Radius + boxExtreme - dot0;
-            manifold.Depth1 = a.Radius + boxExtreme - dot1;
+            var facePlaneOffset = Vector.ConditionalSelect(useX, b.HalfWidth, Vector.ConditionalSelect(useY, b.HalfHeight, b.HalfLength));
+            var offsetAlongFaceNormalA0 = Vector.ConditionalSelect(useX, fxn * bToA0.X, Vector.ConditionalSelect(useY, fyn * bToA0.Y, fzn * bToA0.Z)) - facePlaneOffset;
+            var offsetAlongFaceNormalA1 = Vector.ConditionalSelect(useX, fxn * bToA1.X, Vector.ConditionalSelect(useY, fyn * bToA1.Y, fzn * bToA1.Z)) - facePlaneOffset;
+            //If the normals are perpendicular, just produce a large finite number.
+            var inverseFaceNormalDotLocalNormal = Vector<float>.One / Vector.Max(new Vector<float>(1e-15f), Vector.ConditionalSelect(useX, xDot, Vector.ConditionalSelect(useY, yDot, zDot)));
+            manifold.Depth0 = a.Radius - offsetAlongFaceNormalA0 * inverseFaceNormalDotLocalNormal;
+            manifold.Depth1 = a.Radius - offsetAlongFaceNormalA1 * inverseFaceNormalDotLocalNormal;
+           
             manifold.FeatureId0 = Vector<int>.Zero;
             manifold.FeatureId1 = Vector<int>.One;
 

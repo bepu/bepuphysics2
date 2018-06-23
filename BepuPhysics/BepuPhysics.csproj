@@ -30,7 +30,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseStrip|AnyCPU'">
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <Optimize>true</Optimize>
-    <DefineConstants>TRACE;RELEASE;PROFILE;NETSTANDARD2_0</DefineConstants>
+    <DefineConstants>TRACE;RELEASE;PROFILE;NETSTANDARD2_0;RELEASESTRIP</DefineConstants>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
     <Optimize>true</Optimize>

@@ -149,11 +149,8 @@ namespace BepuPhysics.Constraints.Contact
             float dt, float inverseDt, ref Contact3OneBodyPrestepData prestep, out Contact3OneBodyProjection projection)
         {
             bodies.GatherInertia(ref bodyReferences, count, out projection.InertiaA);
-            Vector3Wide.Add(prestep.OffsetA0, prestep.OffsetA1, out var offsetToManifoldCenterA);
-            Vector3Wide.Add(prestep.OffsetA2, offsetToManifoldCenterA, out offsetToManifoldCenterA);
-            var scale = new Vector<float>(0.25f);
-            Vector3Wide.Scale(offsetToManifoldCenterA, scale, out offsetToManifoldCenterA);
-            projection.PremultipliedFrictionCoefficient = scale * prestep.FrictionCoefficient;
+            Contact3Functions.ComputeFrictionCenter(prestep.OffsetA0, prestep.OffsetA1, prestep.OffsetA2, prestep.PenetrationDepth0, prestep.PenetrationDepth1, prestep.PenetrationDepth2, out var offsetToManifoldCenterA);
+            projection.PremultipliedFrictionCoefficient = (1f / 3f) * prestep.FrictionCoefficient;
             projection.Normal = prestep.Normal;
             Helpers.BuildOrthnormalBasis(ref prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref projection.InertiaA, out projection.Tangent);

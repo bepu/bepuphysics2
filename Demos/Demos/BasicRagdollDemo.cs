@@ -111,19 +111,14 @@ namespace Demos.Demos
     {
         static BodyReference AddBody<TShape>(TShape shape, float mass, in RigidPose pose, Simulation simulation) where TShape : struct, IConvexShape
         {
+            //Note that this always registers a new shape instance. You could be more clever/efficient and share shapes, but the goal here is to show the most basic option.
+            //Also, the cost of registering different shapes isn't that high for tiny implicit shapes.
             var shapeIndex = simulation.Shapes.Add(shape);
             shape.ComputeInertia(mass, out var inertia);
             var description = new BodyDescription
             {
-                Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
-                Collidable = new CollidableDescription
-                {
-                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                    SpeculativeMargin = .1f,
-                    //Note that this always registers a new shape instance. You could be more clever/efficient and share shapes, but the goal here is to show the most basic option.
-                    //Also, the cost of registering different shapes isn't that high for tiny implicit shapes.
-                    Shape = shapeIndex
-                },
+                Activity = new BodyActivityDescription(0.01f, 32),
+                Collidable = new CollidableDescription(shapeIndex, 0.1f),
                 LocalInertia = inertia,
                 Pose = pose
             };
@@ -429,7 +424,7 @@ namespace Demos.Demos
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             int ragdollIndex = 0;
-            var spacing = new Vector3(5, 5, 3);
+            var spacing = new Vector3(5, 5,3);
             int width = 4;
             int height = 4;
             int length = 4;
@@ -446,7 +441,7 @@ namespace Demos.Demos
             }
 
 
-            var staticShape = new Box(100, 1, 100);
+            var staticShape = new Box(300, 1, 300);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
             var staticDescription = new StaticDescription
             {
