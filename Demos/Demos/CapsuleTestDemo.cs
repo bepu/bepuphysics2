@@ -34,7 +34,7 @@ namespace Demos.Demos
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        var location = new Vector3(1.5f, 1.5f, 4.4f) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 1.5f, -length * 1.5f);
+                        var location = new Vector3(1.5f, 1.5f, 4.4f) * new Vector3(i, j, k) + new Vector3(-width * 0.5f, 0.5f, -length * 0.5f);
                         var bodyDescription = new BodyDescription
                         {
                             Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.01f },
@@ -51,7 +51,7 @@ namespace Demos.Demos
                     }
                 }
             }
-            var boxShape = new Box(0.5f, 0.5f, 0.5f);
+            var boxShape = new Box(0.5f, 0.5f, 2.5f);
             boxShape.ComputeInertia(1, out var boxLocalInertia);
             var boxDescription = new BodyDescription
             {
@@ -59,14 +59,14 @@ namespace Demos.Demos
                 LocalInertia = boxLocalInertia,
                 Pose = new RigidPose
                 {
-                    Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2),
-                    Position = new Vector3(0, 2, 0)
+                    Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0),
+                    Position = new Vector3(1, -0.5f, 0)
                 },
                 Collidable = new CollidableDescription { SpeculativeMargin = 50.1f, Shape = Simulation.Shapes.Add(boxShape) }
             };
             Simulation.Bodies.Add(boxDescription);
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), new CollidableDescription { SpeculativeMargin = 0.1f, Shape = Simulation.Shapes.Add(new Box(10, 1, 10)) }));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), new CollidableDescription { SpeculativeMargin = 0.1f, Shape = Simulation.Shapes.Add(new Box(4, 1, 4)) }));
 
         }
 
