@@ -71,7 +71,7 @@ namespace BepuPhysics.Constraints.Contact
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
 
         }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void CopyManifoldWideProperties(ref Vector3 offsetB, ref Vector3 normal, ref PairMaterialProperties material)
         {
@@ -153,7 +153,7 @@ namespace BepuPhysics.Constraints.Contact
             PenetrationLimit1.WarmStart(ref projection.Penetration, ref projection.InertiaA, ref projection.InertiaB,
                 ref projection.Normal,
                 ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
-            TwistFriction.WarmStart(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
+            TwistFriction.WarmStart(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB); 
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

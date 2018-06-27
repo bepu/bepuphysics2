@@ -228,7 +228,7 @@ namespace BepuPhysics
             ProfilerStart(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(NarrowPhase);
-            
+
             ProfilerStart(Solver);
             if (threadDispatcher == null)
                 Solver.Update(dt);

@@ -125,7 +125,7 @@ namespace BepuPhysics.Constraints
                 function.Solve(ref wsvA, ref projection, ref accumulatedImpulses);
                 Bodies.ScatterVelocities(ref wsvA, ref bodyVelocities, ref bodyReferences, count);
             }
-        }        
+        }
 
     }
 }

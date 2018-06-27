@@ -159,8 +159,27 @@ namespace BepuUtilities
                     throw new InvalidOperationException($"Invalid floating point value: {value}.");
                 }
             }
-
         }
+
+        [Conditional("CHECKMATH")]
+        public static void Validate(this Vector<float> f, Vector<int> lanesToTest)
+        {
+            ref var castedValues = ref Unsafe.As<Vector<float>, float>(ref f);
+            ref var castedMask = ref Unsafe.As<Vector<int>, int>(ref lanesToTest);
+            for (int i = 0; i < Vector<float>.Count; ++i)
+            {
+                var mask = Unsafe.Add(ref castedMask, i);
+                if (mask != 0)
+                {
+                    var value = Unsafe.Add(ref castedValues, i);
+                    if (float.IsNaN(value) || float.IsInfinity(value))
+                    {
+                        throw new InvalidOperationException($"Invalid floating point value: {value}.");
+                    }
+                }
+            }
+        }
+
         [Conditional("CHECKMATH")]
         public static void Validate(this Vector2Wide v, int laneCount = -1)
         {
@@ -200,6 +219,47 @@ namespace BepuUtilities
             m.Y.Validate(laneCount);
             m.Z.Validate(laneCount);
             m.W.Validate(laneCount);
+        }
+
+        [Conditional("CHECKMATH")]
+        public static void Validate(this Vector2Wide v, Vector<int> laneMask)
+        {
+            v.X.Validate(laneMask);
+            v.Y.Validate(laneMask);
+        }
+        [Conditional("CHECKMATH")]
+        public static void Validate(this Vector3Wide v, Vector<int> laneMask)
+        {
+            v.X.Validate(laneMask);
+            v.Y.Validate(laneMask);
+            v.Z.Validate(laneMask);
+        }
+        [Conditional("CHECKMATH")]
+        public static void Validate(this Matrix2x2Wide m, Vector<int> laneMask)
+        {
+            m.X.Validate(laneMask);
+            m.Y.Validate(laneMask);
+        }
+        [Conditional("CHECKMATH")]
+        public static void Validate(this Matrix2x3Wide m, Vector<int> laneMask)
+        {
+            m.X.Validate(laneMask);
+            m.Y.Validate(laneMask);
+        }
+        [Conditional("CHECKMATH")]
+        public static void Validate(this Matrix3x3Wide m, Vector<int> laneMask)
+        {
+            m.X.Validate(laneMask);
+            m.Y.Validate(laneMask);
+            m.Z.Validate(laneMask);
+        }
+        [Conditional("CHECKMATH")]
+        public static void Validate(this QuaternionWide m, Vector<int> laneMask)
+        {
+            m.X.Validate(laneMask);
+            m.Y.Validate(laneMask);
+            m.Z.Validate(laneMask);
+            m.W.Validate(laneMask);
         }
     }
 }

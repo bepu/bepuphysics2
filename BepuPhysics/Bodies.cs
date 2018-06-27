@@ -410,19 +410,28 @@ namespace BepuPhysics
         [Conditional("CHECKMATH")]
         internal void ValidateMotionStates()
         {
-            for (int i =0; i < Sets.Length; ++i)
+            for (int i = 0; i < Sets.Length; ++i)
             {
                 ref var set = ref Sets[i];
-                if(set.Allocated)
+                if (set.Allocated)
                 {
-                    for (int j =0; j < set.Count; ++j)
+                    for (int j = 0; j < set.Count; ++j)
                     {
                         ref var pose = ref set.Poses[j];
                         ref var velocity = ref set.Velocities[j];
-                        pose.Position.Validate();
-                        pose.Orientation.Validate();
-                        velocity.Linear.Validate();
-                        velocity.Angular.Validate();
+                        try
+                        {
+                            pose.Position.Validate();
+                            pose.Orientation.Validate();
+                            velocity.Linear.Validate();
+                            velocity.Angular.Validate();
+                        }
+                        catch
+                        {
+                            Console.WriteLine($"Validation failed on body {i} of set {j}. Position: {pose.Position}, orientation: {pose.Orientation}, linear: {velocity.Linear}, angular: {velocity.Angular}");
+                            throw;
+                        }
+
                     }
                 }
             }
@@ -571,7 +580,7 @@ namespace BepuPhysics
                 ref var targetOrientationSlotA = ref GatherScatter.GetOffsetInstance(ref orientation, i);
                 ref var targetInertiaSlotA = ref GatherScatter.GetOffsetInstance(ref inertia, i);
                 GatherPoseForBody(ref poses[indexA], ref targetPositionSlotA, ref targetOrientationSlotA);
-                GatherInertiaForBody(ref Inertias[indexA], ref targetInertiaSlotA);                
+                GatherInertiaForBody(ref Inertias[indexA], ref targetInertiaSlotA);
             }
         }
 

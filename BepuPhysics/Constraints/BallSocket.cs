@@ -195,7 +195,6 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Add(accumulatedImpulse, csi, out accumulatedImpulse);
 
             ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref csi);
-
         }
 
     }

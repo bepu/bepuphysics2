@@ -78,6 +78,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             if (maxCandidateCount == 0)
             {
+                contact0Exists = Vector<int>.Zero;
+                contact1Exists = Vector<int>.Zero;
+                contact2Exists = Vector<int>.Zero;
+                contact3Exists = Vector<int>.Zero;
                 return;
             }
             //That's too many; four is plenty. We should choose how to get rid of the extra ones.

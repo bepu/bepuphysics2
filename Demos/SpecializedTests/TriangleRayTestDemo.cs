@@ -66,7 +66,7 @@ namespace Demos.SpecializedTests
         {
             var hit = triangle.RayTest(pose, rayOrigin, rayDirection, out var t, out var normal);
 
-            TriangleWide wide;
+            TriangleWide wide = default;
             wide.Broadcast(triangle);
             RigidPoses.Broadcast(pose, out var poses);
             RayWide rayWide;

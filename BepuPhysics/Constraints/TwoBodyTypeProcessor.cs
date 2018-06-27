@@ -84,7 +84,7 @@ namespace BepuPhysics.Constraints
                 //Especially incremental ones, like the refinement we use in the dynamic BVH broadphase.
             }
         }
-        
+
 
         internal sealed override void GenerateSortKeysAndCopyReferences(
             ref TypeBatch typeBatch,

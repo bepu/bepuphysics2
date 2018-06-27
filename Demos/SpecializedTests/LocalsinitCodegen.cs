@@ -371,7 +371,7 @@ namespace Demos.SpecializedTests
         [MethodImpl(MethodImplOptions.NoInlining)]
         static void TestStruct()
         {
-            Vector<float> f;
+            Vector<float> f = default;
             for (int i = 0; i < 100; ++i)
             {
                 DoSomeWorkWithAStruct(ref f, out f);
@@ -381,7 +381,7 @@ namespace Demos.SpecializedTests
         [MethodImpl(MethodImplOptions.NoInlining)]
         static void TestStructManuallyInlined()
         {
-            Vector<float> f;
+            Vector<float> f = default;
             for (int i = 0; i < 100; ++i)
             {
                 StructType u;
@@ -410,7 +410,7 @@ namespace Demos.SpecializedTests
         [MethodImpl(MethodImplOptions.NoInlining)]
         static void TestStructless()
         {
-            Vector<float> f;
+            Vector<float> f = default;
             for (int i = 0; i < 100; ++i)
             {
                 DoSomeWorkStructless(ref f, out f);

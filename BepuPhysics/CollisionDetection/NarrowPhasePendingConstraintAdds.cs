@@ -14,8 +14,6 @@ using BepuPhysics.Constraints.Contact;
 
 namespace BepuPhysics.CollisionDetection
 {
-    //TODO: This class's massive switches and per-type hardcoding are completely impractical in the long run. We have to change it somehow, even if it means accepting slightly more overhead.
-    //We can likely reduce at least some of the hardcoding without any overhead at all.
     /// <summary>
     /// When notified of a new constraint, immediately adds it to the solver.
     /// </summary>
@@ -123,8 +121,7 @@ namespace BepuPhysics.CollisionDetection
                 ref var handles = ref Unsafe.As<TBodyHandles, int>(ref constraint.BodyHandles);
                 while (!simulation.Solver.TryAllocateInBatch(
                     default(TDescription).ConstraintTypeId, batchIndex,
-                    ref Unsafe.As<TBodyHandles, int>(ref constraint.BodyHandles),
-                    typeof(TBodyHandles) == typeof(TwoBodyHandles) ? 2 : 1,
+                    ref handles, typeof(TBodyHandles) == typeof(TwoBodyHandles) ? 2 : 1,
                     out constraintHandle, out reference))
                 {
                     //If a batch index failed, just try the next one. This is guaranteed to eventually work.

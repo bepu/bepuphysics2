@@ -18,9 +18,9 @@ namespace Demos.Demos
         {
             {
                 SphereTriangleTester tester;
-                SphereWide sphere;
+                SphereWide sphere = default;
                 sphere.Broadcast(new Sphere(0.5f));
-                TriangleWide triangle;
+                TriangleWide triangle = default;
                 var a = new Vector3(0, 0, 0);
                 var b = new Vector3(1, 0, 0);
                 var c = new Vector3(0, 0, 1);
@@ -36,9 +36,9 @@ namespace Demos.Demos
             }
             {
                 CapsuleTriangleTester tester;
-                CapsuleWide capsule;
+                CapsuleWide capsule = default;
                 capsule.Broadcast(new Capsule(0.5f, 0.5f));
-                TriangleWide triangle;
+                TriangleWide triangle = default;
                 var a = new Vector3(0, 0, 0);
                 var b = new Vector3(1, 0, 0);
                 var c = new Vector3(0, 0, 1);
@@ -55,9 +55,9 @@ namespace Demos.Demos
             }
             {
                 BoxTriangleTester tester;
-                BoxWide shape;
+                BoxWide shape = default; 
                 shape.Broadcast(new Box(1f, 1f, 1f));
-                TriangleWide triangle;
+                TriangleWide triangle = default;
                 var a = new Vector3(0, 0, 0);
                 var b = new Vector3(1, 0, 0);
                 var c = new Vector3(0, 0, 1);
@@ -74,7 +74,7 @@ namespace Demos.Demos
             }
             {
                 TrianglePairTester tester;
-                TriangleWide a, b;
+                TriangleWide a = default, b = default;
                 a.Broadcast(new Triangle(new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1)));
                 b.Broadcast(new Triangle(new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1)));
 

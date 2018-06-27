@@ -33,7 +33,7 @@ namespace BepuPhysics.Constraints
         /// <param name="innerIndex">Index of the source constraint within its bundle.</param>
         /// <param name="description">Description of the constraint.</param>
         void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TDescription description);
-
+        
         /// <summary>
         /// Gets the type id of the constraint that this is a description of.
         /// </summary>

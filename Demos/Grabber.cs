@@ -121,6 +121,7 @@ namespace Demos
                 
                 CreateMotorDescription(targetPoint, body.LocalInertia.InverseMass, out var motorDescription);
                 simulation.Solver.ApplyDescription(motorHandle, ref motorDescription);
+                body.Activity.TimestepsUnderThresholdCount = 0;
             }
         }
         const float MaximumLength = 3;

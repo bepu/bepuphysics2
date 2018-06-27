@@ -230,7 +230,6 @@ namespace BepuPhysics.Constraints.Contact
                 accumulatedImpulses.Penetration2 * projection.LeverArm2);
             TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
-
     }
 
     /// <summary>
