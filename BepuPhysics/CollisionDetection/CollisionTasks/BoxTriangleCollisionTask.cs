@@ -488,6 +488,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             TransformContactToManifold(contact1, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact1Exists, out manifold.OffsetA1, out manifold.Depth1, out manifold.FeatureId1);
             TransformContactToManifold(contact2, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact2Exists, out manifold.OffsetA2, out manifold.Depth2, out manifold.FeatureId2);
             TransformContactToManifold(contact3, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact3Exists, out manifold.OffsetA3, out manifold.Depth3, out manifold.FeatureId3);
+            var faceFlag = Vector.ConditionalSelect(Vector.Equals(triangleFaceDepth, depth), new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
+            manifold.FeatureId0 += faceFlag;
+            manifold.FeatureId1 += faceFlag;
+            manifold.FeatureId2 += faceFlag;
+            manifold.FeatureId3 += faceFlag;
         }
 
 

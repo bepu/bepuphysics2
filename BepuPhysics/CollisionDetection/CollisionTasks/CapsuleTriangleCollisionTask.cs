@@ -359,6 +359,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.FeatureId0 = Vector.ConditionalSelect(flipFeatureIds, Vector<int>.One, Vector<int>.Zero);
             manifold.FeatureId1 = Vector.ConditionalSelect(flipFeatureIds, Vector<int>.Zero, Vector<int>.One);
 
+            var faceFlag = Vector.ConditionalSelect(useEdge, Vector<int>.Zero, new Vector<int>(MeshReduction.FaceCollisionFlag));
+            manifold.FeatureId0 += faceFlag;
+            manifold.FeatureId1 += faceFlag;
+
             //Transform contact positions into world space rotation, measured as offsets from the capsule (object A).
             Matrix3x3Wide.Transform(b0, rB, out var contact0RelativeToB);
             Vector3Wide.Add(contact0RelativeToB, offsetB, out manifold.OffsetA0);

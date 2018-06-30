@@ -53,6 +53,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(useInside, insideNormal, outsideNormal, out var localNormal);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, orientationMatrixB, out manifold.Normal);
             manifold.Depth = Vector.ConditionalSelect(useInside, insideDepth, outsideDepth);
+            manifold.FeatureId = Vector<int>.Zero;
 
             //The contact position relative to object A (the sphere) is computed as the average of the extreme point along the normal toward the opposing shape on each shape, averaged.
             //For capsule-sphere, this can be computed from the normal and depth.

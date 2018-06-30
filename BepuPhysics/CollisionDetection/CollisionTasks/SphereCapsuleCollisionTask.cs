@@ -37,6 +37,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //My guess is that computing x will be so cheap as to be irrelevant.
             Vector3Wide.ConditionalSelect(normalIsValid, manifold.Normal, x, out manifold.Normal);
             manifold.Depth = a.Radius + b.Radius - internalDistance;
+            manifold.FeatureId = Vector<int>.Zero;
 
             //The contact position relative to object A (the sphere) is computed as the average of the extreme point along the normal toward the opposing shape on each shape, averaged.
             //For capsule-sphere, this can be computed from the normal and depth.

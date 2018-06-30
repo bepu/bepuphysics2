@@ -236,8 +236,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.CrossWithoutOverlap(abB, caB, out var faceNormalB);
             Vector3Wide.Length(faceNormalB, out var faceNormalBLength);
             Vector3Wide.Scale(faceNormalB, Vector<float>.One / faceNormalBLength, out faceNormalB);
-            GetDepthForNormal(a.A, a.B, a.C, bA, bB, bC, faceNormalB, out depthCandidate);
-            Select(ref depth, ref localNormal, depthCandidate, faceNormalB);
+            GetDepthForNormal(a.A, a.B, a.C, bA, bB, bC, faceNormalB, out var faceDepthB);
+            Select(ref depth, ref localNormal, faceDepthB, faceNormalB);
 
             //Point the normal from B to A by convention.
             Vector3Wide.Subtract(localTriangleCenterB, localTriangleCenterA, out var centerAToCenterB);
@@ -323,6 +323,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             TransformContactToManifold(contact1, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact1Exists, out manifold.OffsetA1, out manifold.Depth1, out manifold.FeatureId1);
             TransformContactToManifold(contact2, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact2Exists, out manifold.OffsetA2, out manifold.Depth2, out manifold.FeatureId2);
             TransformContactToManifold(contact3, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact3Exists, out manifold.OffsetA3, out manifold.Depth3, out manifold.FeatureId3);
+            //Note that we privilege triangle B. Boundary smoothing is only performed on one of the two meshes.
+            var faceFlag = Vector.ConditionalSelect(Vector.Equals(faceDepthB, depth), new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
+            manifold.FeatureId0 += faceFlag;
+            manifold.FeatureId1 += faceFlag;
+            manifold.FeatureId2 += faceFlag;
+            manifold.FeatureId3 += faceFlag;
         }
 
 

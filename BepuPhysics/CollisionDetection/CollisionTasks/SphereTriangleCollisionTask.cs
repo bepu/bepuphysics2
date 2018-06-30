@@ -103,6 +103,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(outsideAnyEdge, localClosestOnTriangle, pointOnFace, out localClosestOnTriangle);
             }
 
+            manifold.FeatureId = Vector.ConditionalSelect(outsideAnyEdge, Vector<int>.Zero, new Vector<int>(MeshReduction.FaceCollisionFlag));
+
             //We'll be using the contact position to perform boundary smoothing; in order to find other triangles, the contact position has to be on the mesh surface.
             Matrix3x3Wide.TransformWithoutOverlap(localClosestOnTriangle, rB, out manifold.OffsetA);
             Vector3Wide.Add(manifold.OffsetA, offsetB, out manifold.OffsetA);
@@ -118,7 +120,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.BitwiseAnd(
                     Vector.GreaterThanOrEqual(paN, Vector<float>.Zero),
                     Vector.GreaterThanOrEqual(manifold.Depth, -speculativeMargin)));
-
         }
 
         public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex1ContactManifoldWide manifold)
