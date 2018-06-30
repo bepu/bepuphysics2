@@ -113,10 +113,12 @@ namespace BepuPhysics
             minimumBatchIndex = shapes.RegisteredTypeSpan;
             maximumBatchIndex = -1;
         }
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ExpandBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max, ref BodyVelocities velocities, float dt,
-            ref Vector<float> maximumRadius, ref Vector<float> maximumAngularExpansion, ref Vector<float> maximumExpansion)
-        {
+        public static void GetBoundsExpansion(ref Vector3Wide linearVelocity, ref Vector3Wide angularVelocity, float dt, 
+            ref Vector<float> maximumRadius, ref Vector<float> maximumAngularExpansion, out Vector3Wide minExpansion, out Vector3Wide maxExpansion)
+        {     
             /*
             If an object sitting on a plane had a raw (unexpanded) AABB that is just barely above the plane, no contacts would be generated. 
             If the velocity of the object would shove it down into the plane in the next frame, then it would generate contacts in the next frame- and, 
@@ -161,11 +163,11 @@ namespace BepuPhysics
             */
 
             Vector<float> vectorDt = new Vector<float>(dt);
-            Vector3Wide.Scale(velocities.Linear, vectorDt, out var linearDisplacement);
+            Vector3Wide.Scale(linearVelocity, vectorDt, out var linearDisplacement);
 
             var zero = Vector<float>.Zero;
-            Vector3Wide.Min(zero, linearDisplacement, out var minDisplacement);
-            Vector3Wide.Max(zero, linearDisplacement, out var maxDisplacement);
+            Vector3Wide.Min(zero, linearDisplacement, out minExpansion);
+            Vector3Wide.Max(zero, linearDisplacement, out maxExpansion);
 
             /*
             Angular requires a bit more care. Since the goal is to create a tight bound, simply using a v = w * r approximation isn't ideal. A slightly tighter can be found:
@@ -188,7 +190,7 @@ namespace BepuPhysics
             An extra few dozen ALU cycles is unlikely to meaningfully change the execution time.
             2) Shrinking the bounding box reduces the number of collision pairs. Collision pairs are expensive- many times more expensive than the cost of shrinking the bounding box.
             */
-            Vector3Wide.Length(velocities.Angular, out var angularVelocityMagnitude);
+            Vector3Wide.Length(angularVelocity, out var angularVelocityMagnitude);
             var a = Vector.Min(angularVelocityMagnitude * vectorDt, new Vector<float>(MathHelper.Pi / 3f));
             var a2 = a * a;
             var a4 = a2 * a2;
@@ -198,17 +200,23 @@ namespace BepuPhysics
             //That value, or a conservative approximation, is stored as the maximum angular expansion.
             var angularExpansion = Vector.Min(maximumAngularExpansion,
                 Vector.SquareRoot(new Vector<float>(-2f) * maximumRadius * maximumRadius * cosAngleMinusOne));
-            Vector3Wide.Subtract(minDisplacement, angularExpansion, out minDisplacement);
-            Vector3Wide.Add(maxDisplacement, angularExpansion, out maxDisplacement);
+            Vector3Wide.Subtract(minExpansion, angularExpansion, out minExpansion);
+            Vector3Wide.Add(maxExpansion, angularExpansion, out maxExpansion);
+        }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ExpandBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max, ref BodyVelocities velocities, float dt,
+            ref Vector<float> maximumRadius, ref Vector<float> maximumAngularExpansion, ref Vector<float> maximumExpansion)
+        {
+            GetBoundsExpansion(ref velocities.Linear, ref velocities.Angular, dt, ref maximumRadius, ref maximumAngularExpansion, out var minDisplacement, out var maxDisplacement);
             //The maximum expansion passed into this function is the speculative margin for discrete mode collidables, and ~infinity for passive or continuous ones.
-            var negativeMaximum = -maximumExpansion;
-            Vector3Wide.Max(negativeMaximum, minDisplacement, out minDisplacement);
+            Vector3Wide.Max(-maximumExpansion, minDisplacement, out minDisplacement);
             Vector3Wide.Min(maximumExpansion, maxDisplacement, out maxDisplacement);
 
             Vector3Wide.Add(min, minDisplacement, out min);
             Vector3Wide.Add(max, maxDisplacement, out max);
         }
+
 
         //This is simply a internally vectorized version of the above. As of this writing, it's only used for convex sweeps.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -250,7 +258,7 @@ namespace BepuPhysics
                 {
                     ref var instance = ref Unsafe.Add(ref bundleInstancesStart, innerIndex);
                     ref var targetInstanceSlot = ref GatherScatter.GetOffsetInstance(ref instanceBundle, innerIndex);
-                    targetInstanceSlot.Shape.Gather(ref shapeBatch.shapes[instance.ShapeIndex]);
+                    targetInstanceSlot.Shape.WriteFirst(ref shapeBatch.shapes[instance.ShapeIndex]);
                     Vector3Wide.WriteFirst(instance.Pose.Position, ref targetInstanceSlot.Pose.Position);
                     QuaternionWide.WriteFirst(instance.Pose.Orientation, ref targetInstanceSlot.Pose.Orientation);
                     Vector3Wide.WriteFirst(instance.Velocities.Linear, ref targetInstanceSlot.Velocities.Linear);

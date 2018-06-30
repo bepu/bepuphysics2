@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
@@ -209,5 +210,124 @@ namespace BepuUtilities
         {
             return x < 0 ? -1 : 1;
         }
+
+        //Note that these cos/sin implementations are not here for performance, but rather to:
+        //1) Provide a SIMD accelerated version for wide processing, and
+        //2) Provide a scalar implementation that is consistent with the SIMD version for systems which need to match its behavior.
+        //The main motivating use case is the pose integrator (which is scalar) and the sweep tests (which are widely vectorized).
+
+        /// <summary>
+        /// Computes an approximation of cosine. Maximum error a little above 3e-6.
+        /// </summary>
+        /// <param name="x">Value to take the cosine of.</param>
+        /// <returns>Approximate cosine of the input value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float Cos(float x)
+        {
+            //This exists primarily for consistency between the PoseIntegrator and sweeps, not necessarily for raw performance relative to Math.Cos.
+            if (x < 0)
+                x = -x;
+            var intervalIndex = x * (1f / TwoPi);
+            x -= (int)intervalIndex * TwoPi;
+
+            //[0, pi/2] = f(x)
+            //(pi/2, pi] = -f(Pi - x)
+            //(pi, 3 * pi / 2] = -f(x - Pi)
+            //(3*pi/2, 2*pi] = f(2 * Pi - x)
+            //This could be done more cleverly.
+            bool negate;
+            if (x < Pi)
+            {
+                if (x < PiOver2)
+                {
+                    negate = false;
+                }
+                else
+                {
+                    x = Pi - x;
+                    negate = true;
+                }
+            }
+            else
+            {
+                if (x < 3 * PiOver2)
+                {
+                    x = x - Pi;
+                    negate = true;
+                }
+                else
+                {
+                    x = TwoPi - x;
+                    negate = false;
+                }
+            }
+
+            //The expression is a rational interpolation from 0 to Pi/2. Maximum error is a little more than 3e-6.
+            var x2 = x * x;
+            var x3 = x2 * x;
+            //TODO: This could be reorganized into two streams of FMAs if that was available.
+            var numerator = 1 - 0.24f * x - 0.4266f * x2 + 0.110838f * x3;
+            var denominator = 1 - 0.240082f * x + 0.0741637f * x2 - 0.0118786f * x3;
+            var result = numerator / denominator;
+            return negate ? -result : result;
+
+        }
+        /// <summary>
+        /// Computes an approximation of sine. Maximum error a little above 3e-6.
+        /// </summary>
+        /// <param name="x">Value to take the sine of.</param>
+        /// <returns>Approximate sine of the input value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float Sin(float x)
+        {
+            return Cos(x - PiOver2);
+        }
+
+        /// <summary>
+        /// Computes an approximation of cosine. Maximum error a little above 3e-6.
+        /// </summary>
+        /// <param name="x">Values to take the cosine of.</param>
+        /// <returns>Approximate cosine of the input values.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Cos(in Vector<float> x, out Vector<float> result)
+        {
+            //This exists primarily for consistency between the PoseIntegrator and sweeps, not necessarily for raw performance relative to Math.Cos.
+            var periodX = Vector.Abs(x);
+            //TODO: No floor or truncate available... may want to revisit later.
+            periodX = periodX - TwoPi * Vector.ConvertToSingle(Vector.ConvertToInt32(periodX * (1f / TwoPi)));
+
+            //[0, pi/2] = f(x)
+            //(pi/2, pi] = -f(Pi - x)
+            //(pi, 3 * pi / 2] = -f(x - Pi)
+            //(3*pi/2, 2*pi] = f(2 * Pi - x)
+            //This could be done more cleverly.
+            Vector<float> y;
+            y = Vector.ConditionalSelect(Vector.GreaterThan(periodX, new Vector<float>(PiOver2)), new Vector<float>(Pi) - periodX, periodX);
+            y = Vector.ConditionalSelect(Vector.GreaterThan(periodX, new Vector<float>(Pi)), new Vector<float>(-Pi) + periodX, y);
+            y = Vector.ConditionalSelect(Vector.GreaterThan(periodX, new Vector<float>(3 * PiOver2)), new Vector<float>(TwoPi) - periodX, y);
+
+            //The expression is a rational interpolation from 0 to Pi/2. Maximum error is a little more than 3e-6.
+            var y2 = y * y;
+            var y3 = y2 * y;
+            //TODO: This could be reorganized into two streams of FMAs if that was available.
+            var numerator = Vector<float>.One - 0.24f * y - 0.4266f * y2 + 0.110838f * y3;
+            var denominator = Vector<float>.One - 0.240082f * y + 0.0741637f * y2 - 0.0118786f * y3;
+            result = numerator / denominator;
+            result = Vector.ConditionalSelect(
+                Vector.BitwiseAnd(
+                    Vector.GreaterThan(periodX, new Vector<float>(PiOver2)),
+                    Vector.LessThan(periodX, new Vector<float>(3 * PiOver2))), -result, result);
+        }
+        /// <summary>
+        /// Computes an approximation of sine. Maximum error a little above 3e-6.
+        /// </summary>
+        /// <param name="x">Value to take the sine of.</param>
+        /// <returns>Approximate sine of the input value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Sin(in Vector<float> x, out Vector<float> result)
+        {
+            Cos(x - new Vector<float>(PiOver2), out result);
+        }
+
     }
 }

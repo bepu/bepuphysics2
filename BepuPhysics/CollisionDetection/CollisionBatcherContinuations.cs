@@ -15,6 +15,10 @@ namespace BepuPhysics.CollisionDetection
             where TCallbacks : struct, ICollisionCallbacks;
         unsafe void OnChildCompletedEmpty<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
+        unsafe bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher)
+            where TCallbacks : struct, ICollisionCallbacks;
+
+
     }
 
     /// <summary>
@@ -30,12 +34,12 @@ namespace BepuPhysics.CollisionDetection
         /// Marks a pair as part of a set of a higher (potentially multi-manifold) pair, potentially requiring contact reduction.
         /// </summary>
         NonconvexReduction,
+        /// <summary>
+        /// Marks a pair as a part of a set of mesh-convex collisions, potentially requiring mesh boundary smoothing.
+        /// </summary>
+        BoundarySmoothedMesh,
         //TODO: We don't yet support boundary smoothing for meshes or convexes. Most likely, boundary smoothed convexes won't make it into the first release of the engine at all;
         //they're a pretty experimental feature with limited applications.
-        ///// <summary>
-        ///// Marks a pair as a part of a set of mesh-convex collisions, potentially requiring mesh boundary smoothing.
-        ///// </summary>
-        //BoundarySmoothedMesh,
         ///// <summary>
         ///// Marks a pair as a part of a set of convex-convex collisions, potentially requiring general convex boundary smoothing.
         ///// </summary>
@@ -105,7 +109,13 @@ namespace BepuPhysics.CollisionDetection
         public unsafe void ContributeChildToContinuation<TCallbacks>(ref PairContinuation continuation, ConvexContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
         {
-            Continuations[continuation.Index].OnChildCompleted(ref continuation, manifold, ref batcher);
+            ref var slot = ref Continuations[continuation.Index];
+            slot.OnChildCompleted(ref continuation, manifold, ref batcher);
+            if (slot.TryFlush(continuation.PairId, ref batcher))
+            {
+                //The entire continuation has completed; free the slot.
+                IdPool.Return(continuation.Index, batcher.Pool.SpecializeFor<int>());
+            }
         }
 
 

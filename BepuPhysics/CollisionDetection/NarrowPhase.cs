@@ -104,6 +104,7 @@ namespace BepuPhysics.CollisionDetection
         //TODO: It is possible that some types will benefit from per-overlap data, like separating axes. For those, we should have type-dedicated overlap dictionaries.
         //The majority of type pairs, however, only require a constraint handle.
         public PairCache PairCache;
+        internal float timestepDuration;
 
         internal ContactConstraintAccessor[] contactConstraintAccessors;
         public void RegisterContactConstraintAccessor(ContactConstraintAccessor contactConstraintAccessor)
@@ -123,8 +124,9 @@ namespace BepuPhysics.CollisionDetection
             flushWorkerLoop = FlushWorkerLoop;
         }
 
-        public void Prepare(IThreadDispatcher threadDispatcher = null)
+        public void Prepare(float dt, IThreadDispatcher threadDispatcher = null)
         {
+            timestepDuration = dt;
             OnPrepare(threadDispatcher);
             PairCache.Prepare(threadDispatcher);
             ConstraintRemover.Prepare(threadDispatcher);
@@ -252,8 +254,7 @@ namespace BepuPhysics.CollisionDetection
 
             public OverlapWorker(int workerIndex, BufferPool pool, NarrowPhase<TCallbacks> narrowPhase)
             {
-                //Note that we give ownership of the 
-                Batcher = new CollisionBatcher<CollisionCallbacks>(pool, narrowPhase.Shapes, narrowPhase.CollisionTaskRegistry,
+                Batcher = new CollisionBatcher<CollisionCallbacks>(pool, narrowPhase.Shapes, narrowPhase.CollisionTaskRegistry, narrowPhase.timestepDuration,
                     new CollisionCallbacks(workerIndex, pool, narrowPhase));
                 PendingConstraints = new PendingConstraintAddCache(pool);
                 QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out PendingSetAwakenings);

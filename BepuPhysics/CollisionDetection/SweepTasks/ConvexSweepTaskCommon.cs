@@ -96,54 +96,17 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             return true;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void Cos(in Vector<float> x, out Vector<float> result)
-        {
-            //This exists primarily for consistency between the PoseIntegrator and sweeps, not necessarily for raw performance relative to Math.Cos.
-            var periodX = Vector.Abs(x);
-            //TODO: No floor or truncate available... may want to revisit later.
-            periodX = periodX - MathHelper.TwoPi * Vector.ConvertToSingle(Vector.ConvertToInt32(periodX * (1f / MathHelper.TwoPi)));
-
-            //[0, pi/2] = f(x)
-            //(pi/2, pi] = -f(Pi - x)
-            //(pi, 3 * pi / 2] = -f(x - Pi)
-            //(3*pi/2, 2*pi] = f(2 * Pi - x)
-            //This could be done more cleverly.
-            Vector<float> y;
-            y = Vector.ConditionalSelect(Vector.GreaterThan(periodX, new Vector<float>(MathHelper.PiOver2)), new Vector<float>(MathHelper.Pi) - periodX, periodX);
-            y = Vector.ConditionalSelect(Vector.GreaterThan(periodX, new Vector<float>(MathHelper.Pi)), new Vector<float>(-MathHelper.Pi) + periodX, y);
-            y = Vector.ConditionalSelect(Vector.GreaterThan(periodX, new Vector<float>(3 * MathHelper.PiOver2)), new Vector<float>(MathHelper.TwoPi) - periodX, y);
-
-            //The expression is a rational interpolation from 0 to Pi/2. Maximum error is a little more than 3e-6.
-            var y2 = y * y;
-            var y3 = y2 * y;
-            //TODO: This could be reorganized into two streams of FMAs if that was available.
-            var numerator = Vector<float>.One - 0.24f * y - 0.4266f * y2 + 0.110838f * y3;
-            var denominator = Vector<float>.One - 0.240082f * y + 0.0741637f * y2 - 0.0118786f * y3;
-            result = numerator / denominator;
-            result = Vector.ConditionalSelect(
-                Vector.BitwiseAnd(
-                    Vector.GreaterThan(periodX, new Vector<float>(MathHelper.PiOver2)),
-                    Vector.LessThan(periodX, new Vector<float>(3 * MathHelper.PiOver2))), -result, result);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void Sin(in Vector<float> x, out Vector<float> result)
-        {
-            Cos(x - new Vector<float>(MathHelper.PiOver2), out result);
-        }
-
         static void Integrate(ref QuaternionWide start, ref Vector3Wide angularVelocity, ref Vector<float> halfDt, out QuaternionWide integrated)
         {
             Vector3Wide.Length(angularVelocity, out var speed);
             var halfAngle = speed * halfDt;
             QuaternionWide q;
-            Sin(halfAngle, out var s);
+            MathHelper.Sin(halfAngle, out var s);
             var scale = s / speed;
             q.X = angularVelocity.X * scale;
             q.Y = angularVelocity.Y * scale;
             q.Z = angularVelocity.Z * scale;
-            Cos(halfAngle, out q.W);
+            MathHelper.Cos(halfAngle, out q.W);
             QuaternionWide.ConcatenateWithoutOverlap(start, q, out var concatenated);
             QuaternionWide.Normalize(concatenated, out integrated);
             var speedValid = Vector.GreaterThan(speed, new Vector<float>(1e-15f));

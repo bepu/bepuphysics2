@@ -176,7 +176,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref Box source)
+        public void WriteFirst(ref Box source)
         {
             Unsafe.As<Vector<float>, float>(ref HalfWidth) = source.HalfWidth;
             Unsafe.As<Vector<float>, float>(ref HalfHeight) = source.HalfHeight;

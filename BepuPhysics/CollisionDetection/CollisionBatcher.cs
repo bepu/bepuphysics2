@@ -36,6 +36,10 @@ namespace BepuPhysics.CollisionDetection
         public Shapes Shapes;
         CollisionTaskRegistry typeMatrix;
         public TCallbacks Callbacks;
+        /// <summary>
+        /// Timestep duration used by pairs which rely on velocity to compute local bounding boxes for pruning.
+        /// </summary>
+        public float Dt;
 
         int minimumBatchIndex, maximumBatchIndex;
         //The streaming batcher contains batches for pending work submitted by the user.
@@ -46,17 +50,20 @@ namespace BepuPhysics.CollisionDetection
         //For example, compound collisions generate multiple convex-convex manifolds which need to be reduced and combined into a single nonconvex manifold for 
         //efficiency in constraint solving.
         public BatcherContinuations<NonconvexReduction> NonconvexReductions;
+        public BatcherContinuations<MeshReduction> MeshReductions;
 
-        public unsafe CollisionBatcher(BufferPool pool, Shapes shapes, CollisionTaskRegistry collisionTypeMatrix, TCallbacks callbacks)
+        public unsafe CollisionBatcher(BufferPool pool, Shapes shapes, CollisionTaskRegistry collisionTypeMatrix, float dt, TCallbacks callbacks)
         {
             Pool = pool;
             Shapes = shapes;
-            Callbacks = callbacks;
             typeMatrix = collisionTypeMatrix;
+            Dt = dt;
+            Callbacks = callbacks;
             pool.Take(collisionTypeMatrix.tasks.Length, out batches);
             //Clearing is required ensure that we know when a batch needs to be created and when a batch needs to be disposed.
             batches.Clear(0, collisionTypeMatrix.tasks.Length);
             NonconvexReductions = new BatcherContinuations<NonconvexReduction>();
+            MeshReductions = new BatcherContinuations<MeshReduction>();
             minimumBatchIndex = collisionTypeMatrix.tasks.Length;
             maximumBatchIndex = -1;
         }
@@ -197,6 +204,11 @@ namespace BepuPhysics.CollisionDetection
                     case CollisionContinuationType.NonconvexReduction:
                         {
                             NonconvexReductions.ContributeChildToContinuation(ref continuation, manifold, ref this);
+                        }
+                        break;
+                    case CollisionContinuationType.BoundarySmoothedMesh:
+                        {
+                            MeshReductions.ContributeChildToContinuation(ref continuation, manifold, ref this);
                         }
                         break;
                 }

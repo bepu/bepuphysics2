@@ -43,7 +43,7 @@ namespace BepuPhysics
         /// Note that this can only affect determinism locally- different processor architectures may implement instructions differently.
         /// </summary>
         public bool Deterministic { get; set; }
-
+        
         protected Simulation(BufferPool bufferPool, SimulationAllocationSizes initialAllocationSizes)
         {
             BufferPool = bufferPool;
@@ -222,7 +222,7 @@ namespace BepuPhysics
             ProfilerEnd(BroadPhase);
             
             ProfilerStart(BroadPhaseOverlapFinder);
-            BroadPhaseOverlapFinder.DispatchOverlaps(threadDispatcher);
+            BroadPhaseOverlapFinder.DispatchOverlaps(dt, threadDispatcher);
             ProfilerEnd(BroadPhaseOverlapFinder);
             
             ProfilerStart(NarrowPhase);

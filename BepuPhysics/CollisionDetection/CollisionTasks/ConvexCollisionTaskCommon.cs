@@ -91,8 +91,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source)
         {
-            A.Gather(ref source.A);
-            B.Gather(ref source.B);
+            A.WriteFirst(ref source.A);
+            B.WriteFirst(ref source.B);
             ref var shared = ref source.Shared;
             GetFirst(ref FlipMask) = shared.FlipMask;
             GetFirst(ref PositionA.X) = shared.PoseA.Position.X;
@@ -175,8 +175,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source)
         {
-            A.Gather(ref source.A);
-            B.Gather(ref source.B);
+            A.WriteFirst(ref source.A);
+            B.WriteFirst(ref source.B);
             ref var shared = ref source.Shared;
             GetFirst(ref PositionA.X) = shared.PoseA.Position.X;
             GetFirst(ref PositionA.Y) = shared.PoseA.Position.Y;
@@ -259,8 +259,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source)
         {
-            A.Gather(ref source.A);
-            B.Gather(ref source.B);
+            A.WriteFirst(ref source.A);
+            B.WriteFirst(ref source.B);
             ref var shared = ref source.Shared;
             GetFirst(ref FlipMask) = shared.FlipMask;
             GetFirst(ref PositionA.X) = shared.PoseA.Position.X;
@@ -335,8 +335,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Gather(ref TestPair<TShapeA, TShapeB> source)
         {
-            A.Gather(ref source.A);
-            B.Gather(ref source.B);
+            A.WriteFirst(ref source.A);
+            B.WriteFirst(ref source.B);
             ref var shared = ref source.Shared;
             GetFirst(ref PositionA.X) = shared.PoseA.Position.X;
             GetFirst(ref PositionA.Y) = shared.PoseA.Position.Y;

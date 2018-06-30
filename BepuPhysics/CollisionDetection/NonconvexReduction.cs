@@ -258,9 +258,8 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void FlushIfCompleted<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
+        public unsafe void Flush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
         {
-            ++CompletedChildCount;
             Debug.Assert(ChildCount > 0);
             if (ChildCount == CompletedChildCount)
             {
@@ -315,17 +314,29 @@ namespace BepuPhysics.CollisionDetection
 #endif
             }
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ConvexContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
         {
             Children[report.ChildIndex].Manifold = *manifold;
-            FlushIfCompleted(report.PairId, ref batcher);
+            ++CompletedChildCount;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnChildCompletedEmpty<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
         {
             Children[report.ChildIndex].Manifold.Count = 0;
-            FlushIfCompleted(report.PairId, ref batcher);
+            ++CompletedChildCount;
+        }
+
+        public bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
+        {
+            if (CompletedChildCount == ChildCount)
+            {
+                Flush(pairId, ref batcher);
+                return true;
+            }
+            return false;
         }
     }
 }

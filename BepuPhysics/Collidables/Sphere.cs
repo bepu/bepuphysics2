@@ -123,7 +123,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref Sphere source)
+        public void WriteFirst(ref Sphere source)
         {
             Unsafe.As<Vector<float>, float>(ref Radius) = source.Radius;
         }

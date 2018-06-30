@@ -200,7 +200,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref Capsule source)
+        public void WriteFirst(ref Capsule source)
         {
             Unsafe.As<Vector<float>, float>(ref Radius) = source.Radius;
             Unsafe.As<Vector<float>, float>(ref HalfLength) = source.HalfLength;

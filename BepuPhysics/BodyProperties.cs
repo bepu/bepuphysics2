@@ -2,6 +2,7 @@
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Memory;
+using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Quaternion = BepuUtilities.Quaternion;
@@ -54,6 +55,13 @@ namespace BepuPhysics
         {
             Vector3Wide.Broadcast(pose.Position, out poses.Position);
             QuaternionWide.Broadcast(pose.Orientation, out poses.Orientation);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteFirst(in RigidPose pose, ref RigidPoses poses)
+        {
+            Vector3Wide.WriteFirst(pose.Position, ref poses.Position);
+            QuaternionWide.WriteFirst(pose.Orientation, ref poses.Orientation);
         }
     }
 

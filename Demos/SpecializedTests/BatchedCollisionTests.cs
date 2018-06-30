@@ -48,7 +48,7 @@ namespace Demos.SpecializedTests
             ref TestCollisionCallbacks callbacks, BufferPool pool, Shapes shapes, CollisionTaskRegistry registry, int iterationCount)
             where TA : struct, IShape where TB : struct, IShape
         {
-            var batcher = new CollisionBatcher<TestCollisionCallbacks>(pool, shapes, registry, callbacks);
+            var batcher = new CollisionBatcher<TestCollisionCallbacks>(pool, shapes, registry, 1 / 60f, callbacks);
             for (int i = 0; i < iterationCount; ++i)
             {
                 batcher.Add(a, b, ref posesA[i], ref posesB[i], 0.1f, 0);

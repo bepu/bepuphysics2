@@ -172,7 +172,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref Triangle source)
+        public void WriteFirst(ref Triangle source)
         {
             Vector3Wide.WriteFirst(source.A, ref A);
             Vector3Wide.WriteFirst(source.B, ref B);

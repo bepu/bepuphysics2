@@ -66,7 +66,7 @@ namespace BepuPhysics.Collidables
         /// <remarks>Note that we are effectively using the TShapeWide as a stride.
         /// The base address is offset by the user of this function, so the implementation only ever considers the first slot.</remarks>
         /// <param name="source">AOS-formatted shape to gather from.</param>
-        void Gather(ref TShape source);
+        void WriteFirst(ref TShape source);
         void Broadcast(in TShape shape);
 
         void GetBounds(ref QuaternionWide orientations, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max);
