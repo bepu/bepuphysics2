@@ -45,7 +45,81 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
+        private static unsafe void ComputeMeshSpaceContacts(in ConvexContactManifold manifold, in Matrix3x3 meshOrientation, bool requiresFlip, Vector3* meshSpaceContacts, out Vector3 meshSpaceNormal)
+        {
+            throw new NotImplementedException();
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe void CorrectNormal(in Triangle triangle, Vector3* meshSpaceContacts, int contactCount, ref Vector3 meshSpaceNormal)
+        {
+            var ab = triangle.B - triangle.A;
+            var bc = triangle.C - triangle.B;
+            var ca = triangle.A - triangle.C;
+            //TODO: This threshold might result in bumps when dealing with small triangles. May want to include a different source of scale information, like from the original convex test.
+            var distanceSquaredThreshold = 1e-8f * MathHelper.Max(ab.LengthSquared(), bc.LengthSquared());
+            Vector3x.Cross(ab, bc, out var n);
+            //Edge normals point outward.
+            Vector3x.Cross(ab, n, out var edgeNormalAB);
+            Vector3x.Cross(bc, n, out var edgeNormalBC);
+            Vector3x.Cross(ca, n, out var edgeNormalCA);
+
+            // distanceFromPlane = (Position - a) * N / ||N||
+            // distanceFromPlane^2 = ((Position - a) * N)^2 / (N * N)
+            // distanceAlongEdgeNormal^2 = ((Position - edgeStart) * edgeN)^2 / ||edgeN||^2
+
+            //aWeight = (BC x BP) * (AB x BC) / ((AB x BC) * (AB x BC))
+            //bWeight = (CA x CP) * (AB x BC) / ((AB x BC) * (AB x BC))
+            //cWeight = (AB x AP) * (AB x BC) / ((AB x BC) * (AB x BC))
+            //Expanding with identities, this transforms to:
+            //aWeight = ((BC * AB) * (BP * BC) - (BC * BC) * (BP * AB)) / ((AB * AB) * (BC * BC) - (AB * BC) * (BC * AB))
+            //bWeight = ((CA * AB) * (CP * BC) - (CA * BC) * (CP * AB)) / ((AB * AB) * (BC * BC) - (AB * BC) * (BC * AB))
+            //cWeight = ((AB * AB) * (AP * BC) - (AB * BC) * (AP * AB)) / ((AB * AB) * (BC * BC) - (AB * BC) * (BC * AB))
+
+            var inverseLengthSquared = Vector4.One / new Vector4(n.LengthSquared(), edgeNormalAB.LengthSquared(), edgeNormalBC.LengthSquared(), edgeNormalCA.LengthSquared());
+            var nX = new Vector4(n.X, edgeNormalAB.X, edgeNormalBC.X, edgeNormalCA.X);
+            var nY = new Vector4(n.Y, edgeNormalAB.Y, edgeNormalBC.Y, edgeNormalCA.Y);
+            var nZ = new Vector4(n.Z, edgeNormalAB.Z, edgeNormalBC.Z, edgeNormalCA.Z);
+            var anchorX = new Vector4(triangle.A.X, triangle.A.X, triangle.B.X, triangle.C.X);
+            var anchorY = new Vector4(triangle.A.Y, triangle.A.Y, triangle.B.Y, triangle.C.Y);
+            var anchorZ = new Vector4(triangle.A.Z, triangle.A.Z, triangle.B.Z, triangle.C.Z);
+            //While we don't have a decent way to do truly scaling SIMD operations within the context of a single manifold vs triangle test, we can at least use 4-wide operations
+            //to accelerate each individual contact test. 
+            for (int i = 0; i < contactCount; ++i)
+            {
+                //There are four lanes:
+                //X: Plane normal
+                //Y: AB edge normal
+                //Z: BC edge normal
+                //W: CA edge normal
+                //They're all the same operation, so we can do them 4-wide. That's better than doing a bunch of individual horizontal dot products.
+                ref var contact = ref meshSpaceContacts[i];
+                var px = new Vector4(contact.X);
+                var py = new Vector4(contact.Y);
+                var pz = new Vector4(contact.Z);
+                var offsetX = px - anchorX;
+                var offsetY = py - anchorY;
+                var offsetZ = pz - anchorZ;
+                var dot = offsetX * nX + offsetY * nY + offsetZ * nZ;
+                //This dot represents the distance along the lane normal, scaled by the lane normal length.
+                //So, to get squared distance, square it and divide by the squared lane normal length.
+                //Sidenote: if we scale the dot by the inverse *plane* normal length, we get the barycentric weights for the vertices. (Y is weight C, Z is weight A, W is weight B).
+                var distanceAlongNormalSquared = dot * dot * inverseLengthSquared;
+                if (distanceAlongNormalSquared.X <= distanceSquaredThreshold && 
+                    distanceAlongNormalSquared.Y <= distanceSquaredThreshold && 
+                    distanceAlongNormalSquared.Z <= distanceSquaredThreshold && 
+                    distanceAlongNormalSquared.W <= distanceSquaredThreshold)
+                {
+                    //The contact position is close enough to the triangle to check for blockage.
+                    //If this contact resulted in a correction, we can skip the remaining contacts in this manifold.
+                    break;
+                }
+
+
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
         {
             Debug.Assert(Inner.ChildCount > 0);
             if (Inner.CompletedChildCount == Inner.ChildCount)
@@ -70,6 +144,34 @@ namespace BepuPhysics.CollisionDetection
                 //Contacts generated by face collisions are marked with a special feature id flag. If it is present, we can skip the contact. The collision tester also provided unique feature ids
                 //beyond that flag, so we can strip the flag now. (We effectively just hijacked the feature id to store some temporary metadata.)
 
+                //TODO: Note that we perform contact correction prior to reduction. Reduction depends on normals to compute its 'constrainedness' heuristic.
+                //You could sacrifice a little bit of reduction quality for faster contact correction (since reduction outputs a low fixed number of contacts), but
+                //we should only pursue that if contact correction is a meaningful cost.
+
+                Matrix3x3.CreateFromQuaternion(MeshOrientation, out var meshOrientation);
+
+                var meshSpaceContacts = stackalloc Vector3[4];
+                for (int i = 0; i < Inner.ChildCount; ++i)
+                {
+                    ref var sourceChild = ref Inner.Children[i];
+                    //Can't correct contacts that don't exist, or which were created by face collisions.
+                    if (sourceChild.Manifold.Count > 0 && (sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) < 0)
+                    {
+                        ComputeMeshSpaceContacts(sourceChild.Manifold, meshOrientation, RequiresFlip, meshSpaceContacts, out var meshSpaceNormal);
+                        for (int j = 0; j < Inner.ChildCount; ++j)
+                        {
+                            //No point in trying to correct a normal against its own triangle, or against triangles which turned out to not be involved.
+                            if (i != j && Inner.Children[j].Manifold.Count > 0)
+                            {
+                                ref var triangle = ref Triangles[j];
+                                CorrectNormal(triangle, meshSpaceContacts, sourceChild.Manifold.Count, ref meshSpaceNormal);
+                            }
+                        }
+                        //Bring the corrected normal back into world space.
+                        Matrix3x3.Transform(RequiresFlip ? -meshSpaceNormal : meshSpaceNormal, meshOrientation, out sourceChild.Manifold.Normal);
+                    }
+                }
+
 
 
                 //Now that boundary smoothing analysis is done, we no longer need the triangle list.
@@ -79,5 +181,6 @@ namespace BepuPhysics.CollisionDetection
             }
             return false;
         }
+
     }
 }

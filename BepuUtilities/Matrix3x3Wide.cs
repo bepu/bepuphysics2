@@ -20,6 +20,20 @@ namespace BepuUtilities
         public Vector3Wide Z;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Broadcast(in Matrix3x3 source, out Matrix3x3Wide broadcasted)
+        {
+            broadcasted.X.X = new Vector<float>(source.X.X);
+            broadcasted.X.Y = new Vector<float>(source.X.Y);
+            broadcasted.X.Z = new Vector<float>(source.X.Z);
+            broadcasted.Y.X = new Vector<float>(source.Y.X);
+            broadcasted.Y.Y = new Vector<float>(source.Y.Y);
+            broadcasted.Y.Z = new Vector<float>(source.Y.Z);
+            broadcasted.Z.X = new Vector<float>(source.Z.X);
+            broadcasted.Z.Y = new Vector<float>(source.Z.Y);
+            broadcasted.Z.Z = new Vector<float>(source.Z.Z);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void MultiplyWithoutOverlap(in Matrix3x3Wide a, in Matrix3x3Wide b, out Matrix3x3Wide result)
         {
             result.X.X = a.X.X * b.X.X + a.X.Y * b.Y.X + a.X.Z * b.Z.X;
@@ -127,7 +141,7 @@ namespace BepuUtilities
             inverse.Y.Z = m23 * determinantInverse;
             inverse.Z.Z = m33 * determinantInverse;
         }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CreateCrossProduct(in Vector3Wide v, out Matrix3x3Wide skew)
         {
