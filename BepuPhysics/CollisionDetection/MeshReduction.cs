@@ -45,48 +45,82 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe void ComputeMeshSpaceContacts(in ConvexContactManifold manifold, in Matrix3x3 meshOrientation, bool requiresFlip, Vector3* meshSpaceContacts, out Vector3 meshSpaceNormal)
+        private static unsafe void ComputeMeshSpaceContacts(in ConvexContactManifold manifold, in Matrix3x3 inverseMeshOrientation, bool requiresFlip, Vector3* meshSpaceContacts, out Vector3 meshSpaceNormal)
         {
-            throw new NotImplementedException();
+            //First, if the manifold considers the mesh and its triangles to be shape B, then we need to flip it.
+            if (requiresFlip)
+            {
+                //If the manifold considers the mesh and its triangles to be shape B, it needs to be flipped before being transformed.
+                for (int i = 0; i < manifold.Count; ++i)
+                {
+                    Matrix3x3.Transform(manifold.Contact0.Offset - manifold.OffsetB, inverseMeshOrientation, out meshSpaceContacts[i]);
+                }
+                Matrix3x3.Transform(-manifold.Normal, inverseMeshOrientation, out meshSpaceNormal);
+            }
+            else
+            {
+                //No flip required.
+                for (int i = 0; i < manifold.Count; ++i)
+                {
+                    Matrix3x3.Transform(manifold.Contact0.Offset, inverseMeshOrientation, out meshSpaceContacts[i]);
+                }
+                Matrix3x3.Transform(manifold.Normal, inverseMeshOrientation, out meshSpaceNormal);
+            }
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe void CorrectNormal(in Triangle triangle, Vector3* meshSpaceContacts, int contactCount, ref Vector3 meshSpaceNormal)
+
+        struct TestTriangle
         {
-            var ab = triangle.B - triangle.A;
-            var bc = triangle.C - triangle.B;
-            var ca = triangle.A - triangle.C;
-            //TODO: This threshold might result in bumps when dealing with small triangles. May want to include a different source of scale information, like from the original convex test.
-            var distanceSquaredThreshold = 1e-8f * MathHelper.Max(ab.LengthSquared(), bc.LengthSquared());
-            Vector3x.Cross(ab, bc, out var n);
-            //Edge normals point outward.
-            Vector3x.Cross(ab, n, out var edgeNormalAB);
-            Vector3x.Cross(bc, n, out var edgeNormalBC);
-            Vector3x.Cross(ca, n, out var edgeNormalCA);
+            //The test triangle contains AOS-ified layouts for quicker per contact testing.
+            public Vector4 AnchorX;
+            public Vector4 AnchorY;
+            public Vector4 AnchorZ;
+            public Vector4 NX;
+            public Vector4 NY;
+            public Vector4 NZ;
+            public Vector4 InverseLengthSquared;
+            public Vector3 TriangleNormal;
+            public float DistanceSquaredThreshold;
+            public int ChildIndex;
 
-            // distanceFromPlane = (Position - a) * N / ||N||
-            // distanceFromPlane^2 = ((Position - a) * N)^2 / (N * N)
-            // distanceAlongEdgeNormal^2 = ((Position - edgeStart) * edgeN)^2 / ||edgeN||^2
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public TestTriangle(in Triangle triangle, int sourceChildIndex)
+            {
+                var ab = triangle.B - triangle.A;
+                var bc = triangle.C - triangle.B;
+                var ca = triangle.A - triangle.C;
+                //TODO: This threshold might result in bumps when dealing with small triangles. May want to include a different source of scale information, like from the original convex test.
+                DistanceSquaredThreshold = 1e-8f * MathHelper.Max(ab.LengthSquared(), bc.LengthSquared());
+                Vector3x.Cross(ab, bc, out var n);
+                //Edge normals point outward.
+                Vector3x.Cross(ab, n, out var edgeNormalAB);
+                Vector3x.Cross(bc, n, out var edgeNormalBC);
+                Vector3x.Cross(ca, n, out var edgeNormalCA);
 
-            //aWeight = (BC x BP) * (AB x BC) / ((AB x BC) * (AB x BC))
-            //bWeight = (CA x CP) * (AB x BC) / ((AB x BC) * (AB x BC))
-            //cWeight = (AB x AP) * (AB x BC) / ((AB x BC) * (AB x BC))
-            //Expanding with identities, this transforms to:
-            //aWeight = ((BC * AB) * (BP * BC) - (BC * BC) * (BP * AB)) / ((AB * AB) * (BC * BC) - (AB * BC) * (BC * AB))
-            //bWeight = ((CA * AB) * (CP * BC) - (CA * BC) * (CP * AB)) / ((AB * AB) * (BC * BC) - (AB * BC) * (BC * AB))
-            //cWeight = ((AB * AB) * (AP * BC) - (AB * BC) * (AP * AB)) / ((AB * AB) * (BC * BC) - (AB * BC) * (BC * AB))
+                InverseLengthSquared = Vector4.One / new Vector4(n.LengthSquared(), edgeNormalAB.LengthSquared(), edgeNormalBC.LengthSquared(), edgeNormalCA.LengthSquared());
+                TriangleNormal = n * (float)Math.Sqrt(InverseLengthSquared.X);
+                NX = new Vector4(n.X, edgeNormalAB.X, edgeNormalBC.X, edgeNormalCA.X);
+                NY = new Vector4(n.Y, edgeNormalAB.Y, edgeNormalBC.Y, edgeNormalCA.Y);
+                NZ = new Vector4(n.Z, edgeNormalAB.Z, edgeNormalBC.Z, edgeNormalCA.Z);
+                AnchorX = new Vector4(triangle.A.X, triangle.A.X, triangle.B.X, triangle.C.X);
+                AnchorY = new Vector4(triangle.A.Y, triangle.A.Y, triangle.B.Y, triangle.C.Y);
+                AnchorZ = new Vector4(triangle.A.Z, triangle.A.Z, triangle.B.Z, triangle.C.Z);
 
-            var inverseLengthSquared = Vector4.One / new Vector4(n.LengthSquared(), edgeNormalAB.LengthSquared(), edgeNormalBC.LengthSquared(), edgeNormalCA.LengthSquared());
-            var nX = new Vector4(n.X, edgeNormalAB.X, edgeNormalBC.X, edgeNormalCA.X);
-            var nY = new Vector4(n.Y, edgeNormalAB.Y, edgeNormalBC.Y, edgeNormalCA.Y);
-            var nZ = new Vector4(n.Z, edgeNormalAB.Z, edgeNormalBC.Z, edgeNormalCA.Z);
-            var anchorX = new Vector4(triangle.A.X, triangle.A.X, triangle.B.X, triangle.C.X);
-            var anchorY = new Vector4(triangle.A.Y, triangle.A.Y, triangle.B.Y, triangle.C.Y);
-            var anchorZ = new Vector4(triangle.A.Z, triangle.A.Z, triangle.B.Z, triangle.C.Z);
+                ChildIndex = sourceChildIndex;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe bool TryCorrectNormal(in TestTriangle triangle, Vector3* meshSpaceContacts, int contactCount, ref Vector3 meshSpaceNormal)
+        {
             //While we don't have a decent way to do truly scaling SIMD operations within the context of a single manifold vs triangle test, we can at least use 4-wide operations
             //to accelerate each individual contact test. 
             for (int i = 0; i < contactCount; ++i)
             {
-                //There are four lanes:
+                // distanceFromPlane = (Position - a) * N / ||N||
+                // distanceFromPlane^2 = ((Position - a) * N)^2 / (N * N)
+                // distanceAlongEdgeNormal^2 = ((Position - edgeStart) * edgeN)^2 / ||edgeN||^2
+
+                //There are four lanes, one for each plane of consideration:
                 //X: Plane normal
                 //Y: AB edge normal
                 //Z: BC edge normal
@@ -96,26 +130,49 @@ namespace BepuPhysics.CollisionDetection
                 var px = new Vector4(contact.X);
                 var py = new Vector4(contact.Y);
                 var pz = new Vector4(contact.Z);
-                var offsetX = px - anchorX;
-                var offsetY = py - anchorY;
-                var offsetZ = pz - anchorZ;
-                var dot = offsetX * nX + offsetY * nY + offsetZ * nZ;
+                var offsetX = px - triangle.AnchorX;
+                var offsetY = py - triangle.AnchorY;
+                var offsetZ = pz - triangle.AnchorZ;
+                var dot = offsetX * triangle.NX + offsetY * triangle.NY + offsetZ * triangle.NZ;
                 //This dot represents the distance along the lane normal, scaled by the lane normal length.
                 //So, to get squared distance, square it and divide by the squared lane normal length.
                 //Sidenote: if we scale the dot by the inverse *plane* normal length, we get the barycentric weights for the vertices. (Y is weight C, Z is weight A, W is weight B).
-                var distanceAlongNormalSquared = dot * dot * inverseLengthSquared;
-                if (distanceAlongNormalSquared.X <= distanceSquaredThreshold && 
-                    distanceAlongNormalSquared.Y <= distanceSquaredThreshold && 
-                    distanceAlongNormalSquared.Z <= distanceSquaredThreshold && 
-                    distanceAlongNormalSquared.W <= distanceSquaredThreshold)
+                var distanceAlongNormalSquared = dot * dot * triangle.InverseLengthSquared;
+                //Note that very very thin triangles can result in questionable acceptance due to not checking for true distance- 
+                //a position might be way outside a vertex, but still within edge plane thresholds. We're assuming that the impact of this problem will be minimal.
+                if (distanceAlongNormalSquared.X <= triangle.DistanceSquaredThreshold &&
+                    distanceAlongNormalSquared.Y <= triangle.DistanceSquaredThreshold &&
+                    distanceAlongNormalSquared.Z <= triangle.DistanceSquaredThreshold &&
+                    distanceAlongNormalSquared.W <= triangle.DistanceSquaredThreshold)
                 {
-                    //The contact position is close enough to the triangle to check for blockage.
-                    //If this contact resulted in a correction, we can skip the remaining contacts in this manifold.
-                    break;
+                    //The contact is near the triangle. Is the normal infringing on the triangle's face region?
+                    //This occurs when:
+                    //1) The contact is near an edge, and the normal points inward along the edge normal.
+                    //2) The contact is on the inside of the triangle.
+                    var negativeThreshold = -triangle.DistanceSquaredThreshold;
+                    var onAB = distanceAlongNormalSquared.Y >= negativeThreshold;
+                    var onBC = distanceAlongNormalSquared.Z >= negativeThreshold;
+                    var onCA = distanceAlongNormalSquared.W >= negativeThreshold;
+                    if (!onAB && !onBC && !onCA)
+                    {
+                        //The contact is within the triangle. 
+                        meshSpaceNormal = triangle.TriangleNormal;
+                        //If this contact resulted in a correction, we can skip the remaining contacts in this manifold.
+                        return true;
+                    }
+                    else
+                    {
+                        //The contact is on the border of the triangle. Is the normal pointing inward on any edge that the contact is on?
+                        var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
+                        if ((onAB && normalDot.Y < 0) || (onBC && normalDot.Z < 0) || (onCA && normalDot.W < 0))
+                        {
+                            meshSpaceNormal = triangle.TriangleNormal;
+                            return true;
+                        }
+                    }
                 }
-
-
             }
+            return false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -149,30 +206,46 @@ namespace BepuPhysics.CollisionDetection
                 //we should only pursue that if contact correction is a meaningful cost.
 
                 Matrix3x3.CreateFromQuaternion(MeshOrientation, out var meshOrientation);
+                Matrix3x3.Transpose(meshOrientation, out var meshInverseOrientation);
 
-                var meshSpaceContacts = stackalloc Vector3[4];
+                //Allocate enough space for all potential triangles, even though we're only going to be enumerating over the subset which actually have contacts.
+                int activeChildCount = 0;
+                var activeTriangles = stackalloc TestTriangle[Inner.ChildCount];
                 for (int i = 0; i < Inner.ChildCount; ++i)
                 {
-                    ref var sourceChild = ref Inner.Children[i];
-                    //Can't correct contacts that don't exist, or which were created by face collisions.
-                    if (sourceChild.Manifold.Count > 0 && (sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) < 0)
+                    if (Inner.Children[i].Manifold.Count > 0)
                     {
-                        ComputeMeshSpaceContacts(sourceChild.Manifold, meshOrientation, RequiresFlip, meshSpaceContacts, out var meshSpaceNormal);
-                        for (int j = 0; j < Inner.ChildCount; ++j)
-                        {
-                            //No point in trying to correct a normal against its own triangle, or against triangles which turned out to not be involved.
-                            if (i != j && Inner.Children[j].Manifold.Count > 0)
-                            {
-                                ref var triangle = ref Triangles[j];
-                                CorrectNormal(triangle, meshSpaceContacts, sourceChild.Manifold.Count, ref meshSpaceNormal);
-                            }
-                        }
-                        //Bring the corrected normal back into world space.
-                        Matrix3x3.Transform(RequiresFlip ? -meshSpaceNormal : meshSpaceNormal, meshOrientation, out sourceChild.Manifold.Normal);
+                        activeTriangles[activeChildCount] = new TestTriangle(Triangles[i], i);
+                        ++activeChildCount;
                     }
                 }
-
-
+                var meshSpaceContacts = stackalloc Vector3[4];
+                for (int i = 0; i < activeChildCount; ++i)
+                {
+                    ref var sourceTriangle = ref activeTriangles[i];
+                    ref var sourceChild = ref Inner.Children[sourceTriangle.ChildIndex];
+                    //Can't correct contacts that were created by face collisions.
+                    if ((sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) < 0)
+                    {
+                        ComputeMeshSpaceContacts(sourceChild.Manifold, meshInverseOrientation, RequiresFlip, meshSpaceContacts, out var meshSpaceNormal);
+                        for (int j = 0; j < activeChildCount; ++j)
+                        {
+                            //No point in trying to correct a normal against its own triangle.
+                            if (i != j)
+                            {
+                                ref var targetTriangle = ref activeTriangles[j];
+                                if (TryCorrectNormal(targetTriangle, meshSpaceContacts, sourceChild.Manifold.Count, ref meshSpaceNormal))
+                                {
+                                    //Bring the corrected normal back into world space.
+                                    Matrix3x3.Transform(RequiresFlip ? -meshSpaceNormal : meshSpaceNormal, meshOrientation, out sourceChild.Manifold.Normal);
+                                    //Since corrections result in the normal being set to the triangle normal, multiple corrections in sequence would just overwrite each other.
+                                    //There is no sequence which is more correct than another, so once we find one correction, we can just quit.
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
 
                 //Now that boundary smoothing analysis is done, we no longer need the triangle list.
                 batcher.Pool.Return(ref Triangles);
