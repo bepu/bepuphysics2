@@ -24,9 +24,7 @@ namespace Demos.SpecializedTests
             const int leafCountAlongYAxis = 13;
             const int leafCountAlongZAxis = 15;
             var leafCount = leafCountAlongXAxis * leafCountAlongYAxis * leafCountAlongZAxis;
-            var leafBounds = new BoundingBox[leafCount];
-            var handleToLeafIndex = new int[leafCount];
-            var leafIndexToHandle = new int[leafCount];
+            pool.Take<BoundingBox>(leafCount, out var leafBounds);
 
             const float boundsSpan = 2;
             const float spanRange = 2;
@@ -49,28 +47,23 @@ namespace Demos.SpecializedTests
 
             var prebuiltCount = Math.Max(leafCount / 2, 1);
 
-            //for (int i = 0; i < prebuiltCount; ++i)
-            //{
-            //    handleToLeafIndex[i] = tree.Add(ref leafBounds[i]);
-            //    tree.Validate();
-            //    leafIndexToHandle[handleToLeafIndex[i]] = i;
-
-            //}
-            tree.SweepBuild(pool, leafBounds, handleToLeafIndex, 0, prebuiltCount);
-            for (int i = 0; i < prebuiltCount; ++i)
-            {
-                leafIndexToHandle[handleToLeafIndex[i]] = i;
-            }
+            tree.SweepBuild(pool, leafBounds.Slice(0, prebuiltCount));
             tree.Validate();
 
 
             for (int i = prebuiltCount; i < leafCount; ++i)
             {
-                handleToLeafIndex[i] = tree.Add(ref leafBounds[i], pool);
-                leafIndexToHandle[handleToLeafIndex[i]] = i;
-
+                tree.Add(ref leafBounds[i], pool);
             }
             tree.Validate();
+
+            pool.Take<int>(leafCount, out var handleToLeafIndex);
+            pool.Take<int>(leafCount, out var leafIndexToHandle);
+            for (int i = 0; i < leafCount; ++i)
+            {
+                handleToLeafIndex[i] = i;
+                leafIndexToHandle[i] = i;
+            }
 
             const int iterations = 100000;
             const int maximumChangesPerIteration = 20;
@@ -95,7 +88,6 @@ namespace Demos.SpecializedTests
                         var movedLeafIndex = tree.RemoveAt(leafIndexToRemove);
                         if (movedLeafIndex >= 0)
                         {
-                            //A leaf was moved from the end into the removed leaf's slot.
                             var movedHandle = leafIndexToHandle[movedLeafIndex];
                             handleToLeafIndex[movedHandle] = leafIndexToRemove;
                             leafIndexToHandle[leafIndexToRemove] = movedHandle;

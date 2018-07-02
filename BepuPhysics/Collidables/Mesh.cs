@@ -30,9 +30,18 @@ namespace BepuPhysics.Collidables
 
         public Mesh(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool) : this()
         {
+            Triangles = triangles;
             Tree = new Tree(pool, triangles.Length);
             pool.Take<BoundingBox>(triangles.Length, out var boundingBoxes);
-            //Tree.SweepBuild(pool, ref boundingBoxes, ref )
+            for (int i = 0; i < triangles.Length; ++i)
+            {
+                ref var t = ref triangles[i];
+                ref var bounds = ref boundingBoxes[i];
+                bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
+                bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
+            }
+            Tree.SweepBuild(pool, boundingBoxes);
+            Scale = scale;
         }
 
         public void ComputeBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max)
@@ -83,7 +92,7 @@ namespace BepuPhysics.Collidables
 
         public void FindOverlaps(ref Buffer<IntPtr> meshes, in Vector3Wide min, in Vector3Wide max, int count, BufferPool pool, ref Buffer<QuickList<Triangle, Buffer<Triangle>>> overlaps, ref Buffer<QuickList<int, Buffer<int>>> childIndices)
         {
-            for (int i =0; i < count; ++i)
+            for (int i = 0; i < count; ++i)
             {
                 overlaps[i] = default;
                 childIndices[i] = default;
