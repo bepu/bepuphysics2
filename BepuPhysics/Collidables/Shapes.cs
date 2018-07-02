@@ -227,17 +227,31 @@ namespace BepuPhysics.Collidables
         }
     }
 
-    public class BroadcastableShapeBatch<TShape, TShapeWide> : ConvexShapeBatch<TShape, TShapeWide>
-        where TShape : struct, IBroadcastableShape<TShape, TShapeWide>
-        where TShapeWide : struct, IShapeWide<TShape>
+    public class MeshShapeBatch<TShape> : ShapeBatch<TShape> where TShape : struct, IMeshShape
     {
-        public BroadcastableShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
+        public MeshShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
         {
         }
 
-        public override void RayTest<TRayHitHandler>(int index, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler)
+        public override void ComputeBounds(ref BoundingBoxBatcher batcher)
         {
-            WideRayTester.Test<RaySource, TShape, TShapeWide, TRayHitHandler>(ref shapes[index], pose, ref rays, ref hitHandler);
+            batcher.ExecuteMeshBatch(this);
+        }
+
+        public override void ComputeBounds(int shapeIndex, in RigidPose pose, out Vector3 min, out Vector3 max)
+        {
+            shapes[shapeIndex].ComputeBounds(pose.Orientation, out min, out max);
+            min += pose.Position;
+            max += pose.Position;
+        }
+        public override bool RayTest(int shapeIndex, in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        {
+            return shapes[shapeIndex].RayTest(pose, origin, direction, out t, out normal);
+        }
+
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler)
+        {
+            shapes[shapeIndex].RayTest(pose, ref rays, ref hitHandler);
         }
     }
 
@@ -272,6 +286,7 @@ namespace BepuPhysics.Collidables
             shapes[shapeIndex].RayTest(pose, shapeBatches, ref rays, ref hitHandler);
         }
     }
+
 
 
     public class Shapes

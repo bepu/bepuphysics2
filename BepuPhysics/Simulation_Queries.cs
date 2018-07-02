@@ -196,9 +196,9 @@ namespace BepuPhysics
             //Build a bounding box.
             shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
             shape.ComputeBounds(pose.Orientation, out var min, out var max);
-            BoundingBoxBatcher.ExpandBoundingBox(ref min, ref max, velocity.Angular, maximumT, maximumRadius, maximumAngularExpansion);
-            min += pose.Position;
-            max += pose.Position;
+            BoundingBoxBatcher.GetAngularBoundsExpansion(velocity.Angular, maximumT, maximumRadius, maximumAngularExpansion, out var angularExpansion);
+            min = min - angularExpansion + pose.Position;
+            max = max + angularExpansion + pose.Position;
             var direction = velocity.Linear;
             SweepHitDispatcher<TSweepHitHandler> dispatcher;
             dispatcher.HitHandler = hitHandler;

@@ -116,9 +116,9 @@ namespace BepuPhysics
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetBoundsExpansion(ref Vector3Wide linearVelocity, ref Vector3Wide angularVelocity, float dt, 
+        public static void GetBoundsExpansion(ref Vector3Wide linearVelocity, ref Vector3Wide angularVelocity, float dt,
             ref Vector<float> maximumRadius, ref Vector<float> maximumAngularExpansion, out Vector3Wide minExpansion, out Vector3Wide maxExpansion)
-        {     
+        {
             /*
             If an object sitting on a plane had a raw (unexpanded) AABB that is just barely above the plane, no contacts would be generated. 
             If the velocity of the object would shove it down into the plane in the next frame, then it would generate contacts in the next frame- and, 
@@ -218,10 +218,10 @@ namespace BepuPhysics
         }
 
 
-        //This is simply a internally vectorized version of the above. As of this writing, it's only used for convex sweeps.
+        //This is simply a internally vectorized version of the above.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ExpandBoundingBox(ref Vector3 min, ref Vector3 max, in Vector3 angularVelocity, float dt,
-            float maximumRadius, float maximumAngularExpansion)
+        public static void GetAngularBoundsExpansion(in Vector3 angularVelocity, float dt,
+            float maximumRadius, float maximumAngularExpansion, out Vector3 expansion)
         {
             var angularVelocityMagnitude = angularVelocity.Length();
             var a = MathHelper.Min(angularVelocityMagnitude * dt, MathHelper.Pi / 3f);
@@ -231,11 +231,25 @@ namespace BepuPhysics
             var cosAngleMinusOne = a2 * (-1f / 2f) + a4 * (1f / 24f) - a6 * (1f / 720f);
             //Note that it's impossible for angular motion to cause an increase in bounding box size beyond (maximumRadius-minimumRadius) on any given axis.
             //That value, or a conservative approximation, is stored as the maximum angular expansion.
-            var angularExpansion = new Vector3(MathHelper.Min(maximumAngularExpansion,
+            expansion = new Vector3(MathHelper.Min(maximumAngularExpansion,
                 (float)Math.Sqrt(-2f * maximumRadius * maximumRadius * cosAngleMinusOne)));
+        }
 
-            min -= angularExpansion;
-            max += angularExpansion;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ExpandBoundingBox(ref Vector3 min, ref Vector3 max, in Vector3 linearVelocity, in Vector3 angularVelocity, float dt,
+        float maximumRadius, float maximumAngularExpansion, float maximumAllowedExpansion)
+        {
+            var linearDisplacement = linearVelocity * dt;
+            Vector3 zero = default;
+            var minExpansion = Vector3.Min(zero, linearDisplacement);
+            var maxExpansion = Vector3.Max(zero, linearDisplacement);
+            GetAngularBoundsExpansion(angularVelocity, dt, maximumRadius, maximumAngularExpansion, out var angularExpansion);
+
+            var maximumAllowedExpansionBroadcasted = new Vector3(maximumAllowedExpansion);
+            minExpansion = Vector3.Max(-maximumAllowedExpansionBroadcasted, minExpansion - angularExpansion);
+            maxExpansion = Vector3.Min(maximumAllowedExpansionBroadcasted, maxExpansion + angularExpansion);
+            min += minExpansion;
+            max += maxExpansion;
         }
 
         public unsafe void ExecuteConvexBatch<TShape, TShapeWide>(ConvexShapeBatch<TShape, TShapeWide> shapeBatch) where TShape : struct, IConvexShape where TShapeWide : struct, IShapeWide<TShape>
@@ -298,6 +312,32 @@ namespace BepuPhysics
             }
         }
 
+        public unsafe void ExecuteMeshBatch<TShape>(MeshShapeBatch<TShape> shapeBatch) where TShape : struct, IMeshShape
+        {
+            ref var batch = ref batches[shapeBatch.TypeId];
+            ref var activeSet = ref bodies.ActiveSet;
+            var minValue = new Vector3(float.MaxValue);
+            var maxValue = new Vector3(-float.MaxValue);
+            for (int i = 0; i < batch.Count; ++i)
+            {
+                ref var instance = ref batch[i];
+                var bodyIndex = instance.Continuation.BodyIndex;
+                ref var collidable = ref activeSet.Collidables[bodyIndex];
+                broadPhase.GetActiveBoundsPointers(collidable.BroadPhaseIndex, out var min, out var max);
+                var maximumAllowedExpansion = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : collidable.SpeculativeMargin;
+                shapeBatch[instance.ShapeIndex].ComputeBounds(instance.Pose.Orientation, out *min, out *max);
+                //Working on the assumption that dynamic meshes are extremely rare, and that dynamic meshes with extremely high angular velocity are even rarer,
+                //we're just going to use a simplistic upper bound for angular expansion. This simplifies the mesh bounding box calculation quite a bit (no dot products).
+                var absMin = Vector3.Abs(*min);
+                var absMax = Vector3.Abs(*max);
+                var maximumRadius = Vector3.Max(absMin, absMax).Length();
+
+                var minimumComponents = Vector3.Min(absMin, absMax);
+                var minimumRadius = MathHelper.Min(minimumComponents.X, MathHelper.Min(minimumComponents.Y, minimumComponents.Z));
+                ExpandBoundingBox(ref *min, ref *max, instance.Velocities.Linear, instance.Velocities.Angular, dt, maximumRadius, maximumRadius - minimumRadius, maximumAllowedExpansion);
+            }
+        }
+
         public unsafe void ExecuteCompoundBatch<TShape>(CompoundShapeBatch<TShape> shapeBatch) where TShape : struct, ICompoundShape
         {
             ref var batch = ref batches[shapeBatch.TypeId];
@@ -315,6 +355,7 @@ namespace BepuPhysics
                 shapeBatch.shapes[instance.ShapeIndex].AddChildBoundsToBatcher(ref this, ref instance.Pose, ref instance.Velocities, bodyIndex);
             }
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Add(TypedIndex shapeIndex, ref RigidPose pose, ref BodyVelocity velocity, BoundsContinuation continuation)

@@ -10,13 +10,6 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public unsafe interface IMeshShape : IShape
-    {
-        void FindOverlaps(in Vector3 min, in Vector3 max, BufferPool pool, out QuickList<Triangle, Buffer<Triangle>> overlaps);
-        void FindOverlaps(ref Buffer<IntPtr> meshes, in Vector3Wide min, in Vector3Wide max, int count, BufferPool pool,
-            ref Buffer<QuickList<Triangle, Buffer<Triangle>>> overlaps, ref Buffer<QuickList<int, Buffer<int>>> childIndices);
-    }
-
     public unsafe struct ConvexMeshTestPair<TConvex> where TConvex : struct, IConvexShape
     {
         public TConvex Convex;
