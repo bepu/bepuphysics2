@@ -56,17 +56,17 @@ namespace BepuPhysics.Collidables
     }
 
     public unsafe interface IMeshShape : IShape
-    {        
+    {
         //Meshes have homogenous child types, so internal vectorization is in principle possible. And it's hard to vectorize over multiple meshes.
         //And the speed of mesh bounds calculation is pretty irrelevant, since meshes should essentially always be static.
         void ComputeBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max);
-        
+
         bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal);
         void RayTest<TRayHitHandler>(RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
-        void FindOverlaps(in Vector3 min, in Vector3 max, BufferPool pool, out QuickList<Triangle, Buffer<Triangle>> overlaps);
-        void FindOverlaps(ref Buffer<IntPtr> meshes, in Vector3Wide min, in Vector3Wide max, int count, BufferPool pool,
-            ref Buffer<QuickList<Triangle, Buffer<Triangle>>> overlaps, ref Buffer<QuickList<int, Buffer<int>>> childIndices);
+        void FindOverlaps(in Vector3 min, in Vector3 max, BufferPool pool, ref QuickList<int, Buffer<int>> overlappedChildren);
+        void FindOverlaps(ref Buffer<IntPtr> meshes, ref Vector3Wide min, ref Vector3Wide max, int count, BufferPool pool, ref Buffer<QuickList<int, Buffer<int>>> overlappedChildren);
+        void GetTriangles(ref QuickList<int, Buffer<int>> childIndices, ref Buffer<Triangle> triangles);
     }
 
     public interface IShapeWide<TShape> where TShape : IShape

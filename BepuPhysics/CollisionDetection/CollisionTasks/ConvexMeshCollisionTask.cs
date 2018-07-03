@@ -65,8 +65,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide angularVelocityB = default;
             Vector<float> maximumAllowedExpansion = default;
             batcher.Pool.Take<IntPtr>(Vector<float>.Count, out var meshes);
-            batcher.Pool.Take<QuickList<Triangle, Buffer<Triangle>>>(Vector<float>.Count, out var meshTriangles);
             batcher.Pool.Take<QuickList<int, Buffer<int>>>(Vector<float>.Count, out var meshTriangleIndices);
+            for (int i = 0; i < Vector<float>.Count; ++i)
+            {
+                //Overallocating on child indices doesn't really matter. A few kilobytes of wasted space is nothing and doesn't impact memory bandwidth or anything, and avoiding 
+                //resizes is handy.
+                QuickList<int, Buffer<int>>.Create(batcher.Pool.SpecializeFor<int>(), 128, out meshTriangleIndices[i]);
+            }
             for (int i = 0; i < batch.Count; i += Vector<float>.Count)
             {
                 var count = batch.Count - i;
@@ -143,23 +148,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Add(minExpansion, min, out min);
                 Vector3Wide.Add(maxExpansion, max, out max);
 
-                meshFunctions.FindOverlaps(ref meshes, min, max, count, batcher.Pool, ref meshTriangles, ref meshTriangleIndices);
+                meshFunctions.FindOverlaps(ref meshes, ref min, ref max, count, batcher.Pool, ref meshTriangleIndices);
 
 
                 for (int j = 0; j < count; ++j)
                 {
-                    ref var triangles = ref meshTriangles[j];
-                    if (triangles.Count > 0)
+
+                    ref var triangleIndices = ref meshTriangleIndices[j];
+                    if (triangleIndices.Count > 0)
                     {
+
                         ref var pair = ref pairs[i + j];
-                        ref var triangleIndices = ref meshTriangleIndices[j];
-                        ref var continuation = ref batcher.MeshReductions.CreateContinuation(triangles.Count, batcher.Pool, out var continuationIndex);
+                        ref var continuation = ref batcher.MeshReductions.CreateContinuation(triangleIndices.Count, batcher.Pool, out var continuationIndex);
                         continuation.MeshOrientation = pair.MeshOrientation;
                         //Pass ownership of the triangles to the continuation. It'll dispose of the buffer.
-                        continuation.Triangles = triangles.Span;
+                        batcher.Pool.Take<Triangle>(triangleIndices.Count, out var triangles);
+                        Unsafe.AsRef<TMesh>(pair.Mesh).GetTriangles(ref triangleIndices, ref triangles);
+                        continuation.Triangles = triangles;
 
                         int nextContinuationChildIndex = 0;
-                        for (int k = 0; k < triangles.Count; ++k)
+                        for (int k = 0; k < triangleIndices.Count; ++k)
                         {
                             //Note that we have to take into account whether we flipped the shapes to match the expected memory layout.
                             //The caller expects results according to the submitted pair order, not the batcher's memory layout order.
@@ -214,9 +222,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             }
             batcher.Pool.ReturnUnsafely(meshes.Id);
+            for (int i = 0; i < Vector<float>.Count; ++i)
+            {
+                meshTriangleIndices[i].Dispose(batcher.Pool.SpecializeFor<int>());
+            }
             batcher.Pool.ReturnUnsafely(meshTriangleIndices.Id);
-            //Note that the actual triangle lists are not disposed here. Those are handed off to the continuations for further analysis.
-            batcher.Pool.ReturnUnsafely(meshTriangles.Id);
+            //Note that the triangle lists are not disposed here. Those are handed off to the continuations for further analysis.
         }
     }
 }

@@ -5,6 +5,7 @@ using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Collidables
 {
@@ -84,18 +85,50 @@ namespace BepuPhysics.Collidables
         public void RayTest<TRayHitHandler>(RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
         }
-
-        public void FindOverlaps(in Vector3 min, in Vector3 max, BufferPool pool, out QuickList<Triangle, Buffer<Triangle>> overlaps)
+        struct Enumerator : IBreakableForEach<int>
         {
-            overlaps = default;
+            public BufferPool<int> Pool;
+            public QuickList<int, Buffer<int>> Children;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool LoopBody(int i)
+            {
+                Children.Add(i, Pool);
+                return true;
+            }
         }
 
-        public void FindOverlaps(ref Buffer<IntPtr> meshes, in Vector3Wide min, in Vector3Wide max, int count, BufferPool pool, ref Buffer<QuickList<Triangle, Buffer<Triangle>>> overlaps, ref Buffer<QuickList<int, Buffer<int>>> childIndices)
+        public unsafe void FindOverlaps(in Vector3 min, in Vector3 max, BufferPool pool, ref QuickList<int, Buffer<int>> childIndices)
+        {
+            Debug.Assert(childIndices.Span.Memory != null, "The given list reference is expected to already be constructed and ready for use.");
+            var scaledMin = min * inverseScale;
+            var scaledMax = max * inverseScale;
+            Enumerator enumerator;
+            enumerator.Pool = pool.SpecializeFor<int>();
+            enumerator.Children = childIndices;
+            Tree.GetOverlaps(min, max, ref enumerator);
+            childIndices = enumerator.Children;
+        }
+
+        public unsafe void FindOverlaps(ref Buffer<IntPtr> meshes, ref Vector3Wide min, ref Vector3Wide max, int count, BufferPool pool, ref Buffer<QuickList<int, Buffer<int>>> childIndices)
         {
             for (int i = 0; i < count; ++i)
             {
-                overlaps[i] = default;
-                childIndices[i] = default;
+                Vector3Wide.ReadSlot(ref min, i, out var narrowMin);
+                Vector3Wide.ReadSlot(ref max, i, out var narrowMax);
+                Unsafe.AsRef<Mesh>(meshes[i].ToPointer()).FindOverlaps(narrowMin, narrowMax, pool, ref childIndices[i]);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void GetTriangles(ref QuickList<int, Buffer<int>> childIndices, ref Buffer<Triangle> triangles)
+        {
+            for (int i = 0; i < childIndices.Count; ++i)
+            {
+                ref var source = ref Triangles[childIndices[i]];
+                ref var target = ref triangles[i];
+                target.A = scale * source.A;
+                target.B = scale * source.B;
+                target.C = scale * source.C;
             }
         }
         public int TypeId => 6;
