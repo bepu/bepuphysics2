@@ -4,349 +4,11 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using static BepuUtilities.GatherScatter;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
-{
-    public interface ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide>
-        where TShapeA : struct, IShape where TShapeB : struct, IShape
-        where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
-    {
-        bool HasFlipMask { get; }
-        int OrientationCount { get; }
-        void GetPoseOffset(out Vector3Wide offsetB);
-        //Note the pair parameter. This is just to get around the fact that you cannot ref return struct fields like you can with classes, at least right now
-        ref Vector<int> GetFlipMask(ref TPairWide pair);
-        ref Vector<float> GetSpeculativeMargin(ref TPairWide pair);
-        ref TShapeWideA GetShapeA(ref TPairWide pair);
-        ref TShapeWideB GetShapeB(ref TPairWide pair);
-        ref QuaternionWide GetOrientationA(ref TPairWide pair);
-        ref QuaternionWide GetOrientationB(ref TPairWide pair);
-        void Gather(ref TestPair<TShapeA, TShapeB> source);
-
-    }
-
-    public struct TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> : ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB>>
-        where TShapeA : struct, IShape where TShapeB : struct, IShape
-        where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
-    {
-        public TShapeWideA A;
-        public TShapeWideB B;
-        public Vector<float> SpeculativeMargin;
-        public Vector<int> FlipMask;
-        public Vector3Wide PositionA;
-        public QuaternionWide OrientationA;
-        public Vector3Wide PositionB;
-        public QuaternionWide OrientationB;
-
-        public bool HasFlipMask
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return true; }
-        }
-
-        public int OrientationCount
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return 2; }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<int> GetFlipMask(ref TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.FlipMask;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.SpeculativeMargin;
-        }
-        //Little unfortunate that we can't return ref of struct instances.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideA GetShapeA(ref TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.A;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideB GetShapeB(ref TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.B;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationA(ref TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.OrientationA;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationB(ref TestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.OrientationB;
-        }
-        //TODO: This looks a bit too simple to have a function dedicated to it, but it is intentionally separated out in case we end up changing the pose representation.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPoseOffset(out Vector3Wide offsetB)
-        {
-            Vector3Wide.Subtract(PositionB, PositionA, out offsetB);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref TestPair<TShapeA, TShapeB> source)
-        {
-            A.WriteFirst(ref source.A);
-            B.WriteFirst(ref source.B);
-            ref var shared = ref source.Shared;
-            GetFirst(ref FlipMask) = shared.FlipMask;
-            GetFirst(ref PositionA.X) = shared.PoseA.Position.X;
-            GetFirst(ref PositionA.Y) = shared.PoseA.Position.Y;
-            GetFirst(ref PositionA.Z) = shared.PoseA.Position.Z;
-            GetFirst(ref OrientationA.X) = shared.PoseA.Orientation.X;
-            GetFirst(ref OrientationA.Y) = shared.PoseA.Orientation.Y;
-            GetFirst(ref OrientationA.Z) = shared.PoseA.Orientation.Z;
-            GetFirst(ref OrientationA.W) = shared.PoseA.Orientation.W;
-            GetFirst(ref PositionB.X) = shared.PoseB.Position.X;
-            GetFirst(ref PositionB.Y) = shared.PoseB.Position.Y;
-            GetFirst(ref PositionB.Z) = shared.PoseB.Position.Z;
-            GetFirst(ref OrientationB.X) = shared.PoseB.Orientation.X;
-            GetFirst(ref OrientationB.Y) = shared.PoseB.Orientation.Y;
-            GetFirst(ref OrientationB.Z) = shared.PoseB.Orientation.Z;
-            GetFirst(ref OrientationB.W) = shared.PoseB.Orientation.W;
-            GetFirst(ref SpeculativeMargin) = shared.SpeculativeMargin;
-        }
-    }
-    public struct UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> : ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB>>
-        where TShapeA : struct, IShape where TShapeB : struct, IShape
-        where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
-    {
-        public TShapeWideA A;
-        public TShapeWideB B;
-        public Vector<float> SpeculativeMargin;
-        public Vector3Wide PositionA;
-        public QuaternionWide OrientationA;
-        public Vector3Wide PositionB;
-        public QuaternionWide OrientationB;
-
-        public bool HasFlipMask
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return false; }
-        }
-
-        public int OrientationCount
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return 2; }
-        }
-
-        public ref Vector<int> GetFlipMask(ref UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            throw new NotImplementedException();
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.SpeculativeMargin;
-        }
-        //Little unfortunate that we can't return ref of struct instances.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideA GetShapeA(ref UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.A;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideB GetShapeB(ref UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.B;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationA(ref UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.OrientationA;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationB(ref UnflippableTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.OrientationB;
-        }
-        //TODO: This looks a bit too simple to have a function dedicated to it, but it is intentionally separated out in case we end up changing the pose representation.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPoseOffset(out Vector3Wide offsetB)
-        {
-            Vector3Wide.Subtract(PositionB, PositionA, out offsetB);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref TestPair<TShapeA, TShapeB> source)
-        {
-            A.WriteFirst(ref source.A);
-            B.WriteFirst(ref source.B);
-            ref var shared = ref source.Shared;
-            GetFirst(ref PositionA.X) = shared.PoseA.Position.X;
-            GetFirst(ref PositionA.Y) = shared.PoseA.Position.Y;
-            GetFirst(ref PositionA.Z) = shared.PoseA.Position.Z;
-            GetFirst(ref OrientationA.X) = shared.PoseA.Orientation.X;
-            GetFirst(ref OrientationA.Y) = shared.PoseA.Orientation.Y;
-            GetFirst(ref OrientationA.Z) = shared.PoseA.Orientation.Z;
-            GetFirst(ref OrientationA.W) = shared.PoseA.Orientation.W;
-            GetFirst(ref PositionB.X) = shared.PoseB.Position.X;
-            GetFirst(ref PositionB.Y) = shared.PoseB.Position.Y;
-            GetFirst(ref PositionB.Z) = shared.PoseB.Position.Z;
-            GetFirst(ref OrientationB.X) = shared.PoseB.Orientation.X;
-            GetFirst(ref OrientationB.Y) = shared.PoseB.Orientation.Y;
-            GetFirst(ref OrientationB.Z) = shared.PoseB.Orientation.Z;
-            GetFirst(ref OrientationB.W) = shared.PoseB.Orientation.W;
-            GetFirst(ref SpeculativeMargin) = shared.SpeculativeMargin;
-        }
-    }
-    public struct OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> : ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB>>
-        where TShapeA : struct, IShape where TShapeB : struct, IShape
-        where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
-    {
-        public TShapeWideA A;
-        public TShapeWideB B;
-        public Vector<int> FlipMask;
-        public Vector<float> SpeculativeMargin;
-        public Vector3Wide PositionA;
-        public Vector3Wide PositionB;
-        public QuaternionWide OrientationB;
-
-        public bool HasFlipMask
-        {
-            //Because the shapes are guaranteed to be distinct (one is apparently a sphere and the other isn't), there will always be a flip mask.
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return true; }
-        }
-
-        public int OrientationCount
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return 1; }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<int> GetFlipMask(ref OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.FlipMask;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.SpeculativeMargin;
-        }
-        //Little unfortunate that we can't return ref of struct instances.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideA GetShapeA(ref OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.A;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideB GetShapeB(ref OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.B;
-        }
-        public ref QuaternionWide GetOrientationA(ref OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            throw new NotImplementedException();
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationB(ref OneOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.OrientationB;
-        }
-        //TODO: This looks a bit too simple to have a function dedicated to it, but it is intentionally separated out in case we end up changing the pose representation.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPoseOffset(out Vector3Wide offsetB)
-        {
-            Vector3Wide.Subtract(PositionB, PositionA, out offsetB);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref TestPair<TShapeA, TShapeB> source)
-        {
-            A.WriteFirst(ref source.A);
-            B.WriteFirst(ref source.B);
-            ref var shared = ref source.Shared;
-            GetFirst(ref FlipMask) = shared.FlipMask;
-            GetFirst(ref PositionA.X) = shared.PoseA.Position.X;
-            GetFirst(ref PositionA.Y) = shared.PoseA.Position.Y;
-            GetFirst(ref PositionA.Z) = shared.PoseA.Position.Z;
-            GetFirst(ref PositionB.X) = shared.PoseB.Position.X;
-            GetFirst(ref PositionB.Y) = shared.PoseB.Position.Y;
-            GetFirst(ref PositionB.Z) = shared.PoseB.Position.Z;
-            GetFirst(ref OrientationB.X) = shared.PoseB.Orientation.X;
-            GetFirst(ref OrientationB.Y) = shared.PoseB.Orientation.Y;
-            GetFirst(ref OrientationB.Z) = shared.PoseB.Orientation.Z;
-            GetFirst(ref OrientationB.W) = shared.PoseB.Orientation.W;
-            GetFirst(ref SpeculativeMargin) = shared.SpeculativeMargin;
-        }
-    }
-    public struct NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> :
-        ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB>>
-        where TShapeA : struct, IShape where TShapeB : struct, IShape
-        where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
-    {
-        public TShapeWideA A;
-        public TShapeWideB B;
-        public Vector<float> SpeculativeMargin;
-        public Vector3Wide PositionA;
-        public Vector3Wide PositionB;
-
-        public bool HasFlipMask
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return false; }
-        }
-        public int OrientationCount
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return 0; }
-        }
-
-        public ref Vector<int> GetFlipMask(ref NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            throw new NotImplementedException();
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.SpeculativeMargin;
-        }
-        //Little unfortunate that we can't return ref of struct instances.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideA GetShapeA(ref NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.A;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideB GetShapeB(ref NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.B;
-        }
-        public ref QuaternionWide GetOrientationA(ref NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            throw new NotImplementedException();
-        }
-        public ref QuaternionWide GetOrientationB(ref NoOrientationTestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            throw new NotImplementedException();
-        }
-        //TODO: This looks a bit too simple to have a function dedicated to it, but it is intentionally separated out in case we end up changing the pose representation.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPoseOffset(out Vector3Wide offsetB)
-        {
-            Vector3Wide.Subtract(PositionB, PositionA, out offsetB);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Gather(ref TestPair<TShapeA, TShapeB> source)
-        {
-            A.WriteFirst(ref source.A);
-            B.WriteFirst(ref source.B);
-            ref var shared = ref source.Shared;
-            GetFirst(ref PositionA.X) = shared.PoseA.Position.X;
-            GetFirst(ref PositionA.Y) = shared.PoseA.Position.Y;
-            GetFirst(ref PositionA.Z) = shared.PoseA.Position.Z;
-            GetFirst(ref PositionB.X) = shared.PoseB.Position.X;
-            GetFirst(ref PositionB.Y) = shared.PoseB.Position.Y;
-            GetFirst(ref PositionB.Z) = shared.PoseB.Position.Z;
-            GetFirst(ref SpeculativeMargin) = shared.SpeculativeMargin;
-        }
-    }
+{   
 
     public interface IPairTester<TShapeWideA, TShapeWideB, TManifoldWideType>
     {
@@ -366,16 +28,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     class ConvexCollisionTaskCommon
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void ExecuteBatch<TCallbacks, TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide, TManifoldWide, TPairTester>
+        public static unsafe void ExecuteBatch<TCallbacks, TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPair, TPairWide, TManifoldWide, TPairTester>
             (ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
             where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
-            where TPairWide : struct, ITestPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairWide>
+            where TPair : struct, ICollisionPair<TPair>
+            where TPairWide : struct, ICollisionPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPair, TPairWide>
             where TPairTester : struct, IPairTester<TShapeWideA, TShapeWideB, TManifoldWide>
             where TManifoldWide : IContactManifoldWide
             where TCallbacks : struct, ICollisionCallbacks
         {
-            ref var start = ref Unsafe.As<byte, TestPair<TShapeA, TShapeB>>(ref batch.Buffer[0]);
+            ref var start = ref Unsafe.As<byte, TPair>(ref batch.Buffer[0]);
             //With any luck, the compiler will eventually get rid of these unnecessary zero inits. 
             //Might be able to get rid of manifoldWide and defaultPairTester with some megahacks, but it comes with significant forward danger and questionable benefit.
             var pairWide = default(TPairWide);
@@ -396,17 +59,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //Reposition the wide reference so that the first lane of the alias matches the target lane in the underlying memory.
                     ref var offsetFloatStart = ref Unsafe.Add(ref Unsafe.As<TPairWide, float>(ref pairWide), j);
                     ref var target = ref Unsafe.As<float, TPairWide>(ref offsetFloatStart);
-                    target.Gather(ref Unsafe.Add(ref bundleStart, j));
+                    target.WriteFirst(ref Unsafe.Add(ref bundleStart, j));
                 }
-
-                pairWide.GetPoseOffset(out var offsetB);
+                
                 if (pairWide.OrientationCount == 2)
                 {
                     defaultPairTester.Test(
                         ref pairWide.GetShapeA(ref pairWide),
                         ref pairWide.GetShapeB(ref pairWide),
                         ref pairWide.GetSpeculativeMargin(ref pairWide),
-                        ref offsetB,
+                        ref pairWide.GetOffsetB(ref pairWide),
                         ref pairWide.GetOrientationA(ref pairWide),
                         ref pairWide.GetOrientationB(ref pairWide),
                         out manifoldWide);
@@ -420,7 +82,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         ref pairWide.GetShapeA(ref pairWide),
                         ref pairWide.GetShapeB(ref pairWide),
                         ref pairWide.GetSpeculativeMargin(ref pairWide),
-                        ref offsetB,
+                        ref pairWide.GetOffsetB(ref pairWide),
                         ref pairWide.GetOrientationB(ref pairWide),
                         out manifoldWide);
                 }
@@ -433,14 +95,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         ref pairWide.GetShapeA(ref pairWide),
                         ref pairWide.GetShapeB(ref pairWide),
                         ref pairWide.GetSpeculativeMargin(ref pairWide),
-                        ref offsetB,
+                        ref pairWide.GetOffsetB(ref pairWide),
                         out manifoldWide);
                 }
 
                 //Flip back any contacts associated with pairs which had to be flipped for shape order.
                 if (pairWide.HasFlipMask)
                 {
-                    manifoldWide.ApplyFlipMask(ref offsetB, pairWide.GetFlipMask(ref pairWide));
+                    manifoldWide.ApplyFlipMask(ref pairWide.GetOffsetB(ref pairWide), pairWide.GetFlipMask(ref pairWide));
                 }
 
                 for (int j = 0; j < countInBundle; ++j)
@@ -448,10 +110,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //TODO: You could just use the vector indexer here. Far more likely to work in the long run; use it if the performance is comparable.
                     ref var manifoldAsFloat = ref Unsafe.Add(ref Unsafe.As<TManifoldWide, float>(ref manifoldWide), j);
                     ref var manifoldSource = ref Unsafe.As<float, TManifoldWide>(ref manifoldAsFloat);
-                    ref var offsetAsFloat = ref Unsafe.Add(ref Unsafe.As<Vector3Wide, float>(ref offsetB), j);
+                    ref var offsetAsFloat = ref Unsafe.Add(ref Unsafe.As<Vector3Wide, float>(ref pairWide.GetOffsetB(ref pairWide)), j);
                     ref var offsetSource = ref Unsafe.As<float, Vector3Wide>(ref offsetAsFloat);
                     manifoldSource.ReadFirst(offsetSource, ref manifold);
-                    batcher.ProcessConvexResult(&manifold, ref Unsafe.Add(ref bundleStart, j).Shared.Continuation);
+                    ref var pair = ref Unsafe.Add(ref bundleStart, j);
+                    batcher.ProcessConvexResult(&manifold, ref pair.GetContinuation(ref pair));
                 }
             }
 

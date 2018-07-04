@@ -141,7 +141,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             ConvexCollisionTaskCommon.ExecuteBatch
                 <TCallbacks,
-                Sphere, SphereWide, Triangle, TriangleWide, OneOrientationTestPairWide<Sphere, SphereWide, Triangle, TriangleWide>,
+                Sphere, SphereWide, Triangle, TriangleWide, SphereIncludingPairWide<Sphere, SphereWide, Triangle, TriangleWide>,
                 Convex1ContactManifoldWide, SphereTriangleTester>(ref batch, ref batcher);
         }
     }

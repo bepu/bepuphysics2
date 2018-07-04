@@ -405,7 +405,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             ConvexCollisionTaskCommon.ExecuteBatch
                 <TCallbacks,
-                Capsule, CapsuleWide, Triangle, TriangleWide, TestPairWide<Capsule, CapsuleWide, Triangle, TriangleWide>,
+                Capsule, CapsuleWide, Triangle, TriangleWide, ConvexPairWide<Capsule, CapsuleWide, Triangle, TriangleWide>,
                 Convex2ContactManifoldWide, CapsuleTriangleTester>(ref batch, ref batcher);
         }
     }

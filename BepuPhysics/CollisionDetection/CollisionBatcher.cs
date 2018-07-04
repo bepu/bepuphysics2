@@ -6,28 +6,6 @@ using System.Runtime.InteropServices;
 
 namespace BepuPhysics.CollisionDetection
 {
-    public struct TestPair
-    {
-        /// <summary>
-        /// Stores whether the types involved in pair require that the resulting contact manifold be flipped to be consistent with the user-requested pair order.
-        /// </summary>
-        public int FlipMask;
-        public RigidPose PoseA;
-        public RigidPose PoseB;
-        public float SpeculativeMargin;
-        public PairContinuation Continuation;
-    }
-
-    //Writes by the narrowphase write shape data without type knowledge, so they can't easily operate on regular packing rules. Emulate this with a pack of 1.
-    //This allows the reader to still have a quick way to interpret data rather than casting individual shapes.
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct TestPair<TShapeA, TShapeB>
-            where TShapeA : struct, IShape where TShapeB : struct, IShape
-    {
-        public TShapeA A;
-        public TShapeB B;
-        public TestPair Shared;
-    }
 
     public struct CollisionBatcher<TCallbacks> where TCallbacks : struct, ICollisionCallbacks
     {
@@ -94,7 +72,8 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
-            int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin,
+            int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, 
+            ref RigidPose poseA, ref RigidPose poseB, ref BodyVelocity velocityA, ref BodyVelocity velocityB, float speculativeMargin,
             ref PairContinuation pairContinuationInfo)
         {
             ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
@@ -106,6 +85,20 @@ namespace BepuPhysics.CollisionDetection
                 return;
             }
             ref var batch = ref batches[reference.TaskIndex];
+            //The reference cached which type of pair the collision task expects. Populate it with the provided data.
+            switch (reference.PairType)
+            {
+                case CollisionTaskPairType.ConvexPair:
+                    break;
+                case CollisionTaskPairType.FliplessPair:
+                    break;
+                case CollisionTaskPairType.SpherePair:
+                    break;
+                case CollisionTaskPairType.SphereIncludingPair:
+                    break;
+                case CollisionTaskPairType.BoundsTestedPair:
+                    break;
+            }
             var pairSize = shapeSizeA + shapeSizeB + Unsafe.SizeOf<TestPair>();
             if (!batch.Buffer.Allocated)
             {

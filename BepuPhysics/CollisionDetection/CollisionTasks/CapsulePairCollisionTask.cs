@@ -152,7 +152,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             ConvexCollisionTaskCommon.ExecuteBatch
                 <TCallbacks,
-                Capsule, CapsuleWide, Capsule, CapsuleWide, UnflippableTestPairWide<Capsule, CapsuleWide, Capsule, CapsuleWide>,
+                Capsule, CapsuleWide, Capsule, CapsuleWide, FliplessPairWide<Capsule, CapsuleWide, Capsule, CapsuleWide>,
                 Convex2ContactManifoldWide, CapsulePairTester>(ref batch, ref batcher);
         }
     }

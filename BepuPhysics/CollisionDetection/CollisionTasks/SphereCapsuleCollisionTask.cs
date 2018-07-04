@@ -67,7 +67,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             ConvexCollisionTaskCommon.ExecuteBatch
                 <TCallbacks,
-                Sphere, SphereWide, Capsule, CapsuleWide, OneOrientationTestPairWide<Sphere, SphereWide, Capsule, CapsuleWide>,
+                Sphere, SphereWide, Capsule, CapsuleWide, SphereIncludingPairWide<Sphere, SphereWide, Capsule, CapsuleWide>,
                 Convex1ContactManifoldWide, SphereCapsuleTester>(ref batch, ref batcher);
         }
     }

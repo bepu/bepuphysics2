@@ -51,6 +51,10 @@ namespace BepuPhysics.CollisionDetection
         /// Gets whether the task is capable of generating subtasks. Note that subtask generators cannot generate subtasks that are themselves subtask generators.
         /// </summary>
         public bool SubtaskGenerator { get; protected set; }
+        /// <summary>
+        /// Gets the pair type that the ExecuteBatch call requires.
+        /// </summary>
+        public CollisionTaskPairType PairType { get; protected set; }
 
         //Note that we leave the details of input and output of a task's execution to be undefined.
         //A task can reach into the batcher and create new entries or trigger continuations as required.
@@ -67,11 +71,37 @@ namespace BepuPhysics.CollisionDetection
 
     }
 
+    public enum CollisionTaskPairType
+    {
+        /// <summary>
+        /// General pair for two convex shapes with full pose and flip mask.
+        /// </summary>
+        ConvexPair,
+        /// <summary>
+        /// Pair specialized for convex pairs between two shapes of the same type.
+        /// </summary>
+        FliplessPair,
+        /// <summary>
+        /// Pair specialized for two spheres, requiring no flip mask or orientations.
+        /// </summary>
+        SpherePair,
+        /// <summary>
+        /// Pair specialized for convex pairs that involve one sphere which requires no orientation.
+        /// </summary>
+        SphereIncludingPair,
+        /// <summary>
+        /// Pair that requires computing local bounding boxes, and so requires extra information like velocity.
+        /// </summary>
+        BoundsTestedPair
+
+    }
+
     public struct CollisionTaskReference
     {
         public int TaskIndex;
         public int BatchSize;
         public int ExpectedFirstTypeId;
+        public CollisionTaskPairType PairType;
     }
 
     public class CollisionTaskRegistry

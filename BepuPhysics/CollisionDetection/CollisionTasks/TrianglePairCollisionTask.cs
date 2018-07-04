@@ -374,7 +374,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             ConvexCollisionTaskCommon.ExecuteBatch
                 <TCallbacks,
-                Triangle, TriangleWide, Triangle, TriangleWide, UnflippableTestPairWide<Triangle, TriangleWide, Triangle, TriangleWide>,
+                Triangle, TriangleWide, Triangle, TriangleWide, FliplessPairWide<Triangle, TriangleWide, Triangle, TriangleWide>,
                 Convex4ContactManifoldWide, TrianglePairTester>(ref batch, ref batcher);
         }
     }

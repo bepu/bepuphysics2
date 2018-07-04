@@ -496,6 +496,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             BatchSize = 32;
             ShapeTypeIndexA = default(Box).TypeId;
             ShapeTypeIndexB = default(Box).TypeId;
+            PairType = CollisionTaskPairType.FliplessPair;
         }
 
 
@@ -504,7 +505,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             ConvexCollisionTaskCommon.ExecuteBatch
                 <TCallbacks,
-                Box, BoxWide, Box, BoxWide, UnflippableTestPairWide<Box, BoxWide, Box, BoxWide>,
+                Box, BoxWide, Box, BoxWide, FliplessPairWide<Box, BoxWide>,
                 Convex4ContactManifoldWide, BoxPairTester>(ref batch, ref batcher);
         }
     }

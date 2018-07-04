@@ -10,23 +10,6 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public unsafe struct ConvexMeshTestPair<TConvex> where TConvex : struct, IConvexShape
-    {
-        public TConvex Convex;
-        //Meshes are fairly large, and we require that they are stored in a shapes set, so we can just store a pointer on a per-pair basis.
-        public void* Mesh;
-        public int FlipMask;
-        public Vector3 OffsetToMesh;
-        public Quaternion ConvexOrientation;
-        public Quaternion MeshOrientation;
-        public Vector3 RelativeLinearVelocityA;
-        public Vector3 AngularVelocityA;
-        public Vector3 AngularVelocityB;
-        public float MaximumExpansion;
-        public float SpeculativeMargin;
-        public PairContinuation Continuation;
-    }
-
 
     public class ConvexMeshCollisionTask<TConvex, TConvexWide, TMesh, TMeshOverlapFinder> : CollisionTask
         where TConvex : struct, IConvexShape
@@ -52,10 +35,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
         {
-            var pairs = batch.Buffer.As<ConvexMeshTestPair<TConvex>>();
+            var pairs = batch.Buffer.As<BoundsTestedPair<TConvex, TMesh>>();
             //It doesn't matter which mesh instance is used to invoke the mesh functions, so we just grab a representative.
             //(The only reason this exists is a lack of language expressiveness- static interface functions, for example, would eliminate this.)
-            ref var meshFunctions = ref Unsafe.AsRef<TMesh>(pairs[0].Mesh);
+            ref var meshFunctions = ref pairs[0].B;
             TConvexWide convexWide = default;
             Vector3Wide offsetB = default;
             QuaternionWide orientationA = default;
@@ -85,13 +68,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 for (int j = 0; j < count; ++j)
                 {
                     ref var pair = ref pairs[i + j];
-                    meshes[j] = (IntPtr)pair.Mesh;
+                    meshes[j] = (IntPtr)Unsafe.AsPointer(ref pair.B);
                     Debug.Assert(pair.Continuation.ChildA == 0 && pair.Continuation.ChildB == 0 && pair.Continuation.Type == CollisionContinuationType.Direct,
                         "Mesh-involving pairs cannot be marked as children of other pairs.");
-                    GatherScatter.GetOffsetInstance(ref convexWide, j).WriteFirst(ref pair.Convex);
-                    Vector3Wide.WriteFirst(pair.OffsetToMesh, ref GatherScatter.GetOffsetInstance(ref offsetB, j));
-                    QuaternionWide.WriteFirst(pair.ConvexOrientation, ref GatherScatter.GetOffsetInstance(ref orientationA, j));
-                    QuaternionWide.WriteFirst(pair.MeshOrientation, ref GatherScatter.GetOffsetInstance(ref orientationB, j));
+                    GatherScatter.GetOffsetInstance(ref convexWide, j).WriteFirst(ref pair.A);
+                    Vector3Wide.WriteFirst(pair.OffsetB, ref GatherScatter.GetOffsetInstance(ref offsetB, j));
+                    QuaternionWide.WriteFirst(pair.OrientationA, ref GatherScatter.GetOffsetInstance(ref orientationA, j));
+                    QuaternionWide.WriteFirst(pair.OrientationB, ref GatherScatter.GetOffsetInstance(ref orientationB, j));
                     Vector3Wide.WriteFirst(pair.RelativeLinearVelocityA, ref GatherScatter.GetOffsetInstance(ref relativeLinearVelocityA, j));
                     Vector3Wide.WriteFirst(pair.AngularVelocityA, ref GatherScatter.GetOffsetInstance(ref angularVelocityA, j));
                     Vector3Wide.WriteFirst(pair.AngularVelocityB, ref GatherScatter.GetOffsetInstance(ref angularVelocityB, j));
@@ -160,10 +143,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                         ref var pair = ref pairs[i + j];
                         ref var continuation = ref batcher.MeshReductions.CreateContinuation(triangleIndices.Count, batcher.Pool, out var continuationIndex);
-                        continuation.MeshOrientation = pair.MeshOrientation;
+                        continuation.MeshOrientation = pair.OrientationB;
                         //Pass ownership of the triangles to the continuation. It'll dispose of the buffer.
                         batcher.Pool.Take<Triangle>(triangleIndices.Count, out var triangles);
-                        Unsafe.AsRef<TMesh>(pair.Mesh).GetTriangles(ref triangleIndices, ref triangles);
+                        pair.B.GetTriangles(ref triangleIndices, ref triangles);
                         continuation.Triangles = triangles;
 
                         int nextContinuationChildIndex = 0;
