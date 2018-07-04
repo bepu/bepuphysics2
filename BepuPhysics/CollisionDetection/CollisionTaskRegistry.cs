@@ -74,9 +74,9 @@ namespace BepuPhysics.CollisionDetection
     public enum CollisionTaskPairType
     {
         /// <summary>
-        /// General pair for two convex shapes with full pose and flip mask.
+        /// General pair for two shapes with full pose and flip mask, but no bounds related data.
         /// </summary>
-        ConvexPair,
+        StandardPair,
         /// <summary>
         /// Pair specialized for convex pairs between two shapes of the same type.
         /// </summary>

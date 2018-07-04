@@ -9,6 +9,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     //Individual pair testers are designed to be used outside of the narrow phase. They need to be usable for queries and such, so all necessary data must be gathered externally.
     public struct SpherePairTester : IPairTester<SphereWide, SphereWide, Convex1ContactManifoldWide>
     {
+        public int BatchSize => 32;
+
         public void Test(ref SphereWide a, ref SphereWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
@@ -37,24 +39,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var negativeOffsetFromA = manifold.Depth * 0.5f - a.Radius;
             Vector3Wide.Scale(manifold.Normal, negativeOffsetFromA, out manifold.OffsetA);
             manifold.ContactExists = Vector.GreaterThan(manifold.Depth, -speculativeMargin);
-        }
-    }
-
-    public class SpherePairCollisionTask : CollisionTask
-    {
-        public SpherePairCollisionTask()
-        {
-            BatchSize = 32;
-            ShapeTypeIndexA = default(Sphere).TypeId;
-            ShapeTypeIndexB = ShapeTypeIndexA;
-        }
-        
-        public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
-        {
-            ConvexCollisionTaskCommon.ExecuteBatch
-                <TCallbacks, 
-                Sphere, SphereWide, Sphere, SphereWide, NoOrientationTestPairWide<Sphere, SphereWide, Sphere, SphereWide>,
-                Convex1ContactManifoldWide, SpherePairTester>(ref batch, ref batcher);
         }
     }
 }

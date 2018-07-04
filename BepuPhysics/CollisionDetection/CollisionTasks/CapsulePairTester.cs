@@ -8,6 +8,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct CapsulePairTester : IPairTester<CapsuleWide, CapsuleWide, Convex2ContactManifoldWide>
     {
+        public int BatchSize => 32;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(
             ref CapsuleWide a, ref CapsuleWide b, ref Vector<float> speculativeMargin,
@@ -134,26 +136,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
-        }
-    }
-
-    public class CapsulePairCollisionTask : CollisionTask
-    {
-        public CapsulePairCollisionTask()
-        {
-            BatchSize = 32;
-            ShapeTypeIndexA = default(Capsule).TypeId;
-            ShapeTypeIndexB = default(Capsule).TypeId;
-        }
-
-
-        //Every single collision task type will mirror this general layout.
-        public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
-        {
-            ConvexCollisionTaskCommon.ExecuteBatch
-                <TCallbacks,
-                Capsule, CapsuleWide, Capsule, CapsuleWide, FliplessPairWide<Capsule, CapsuleWide, Capsule, CapsuleWide>,
-                Convex2ContactManifoldWide, CapsulePairTester>(ref batch, ref batcher);
         }
     }
 }

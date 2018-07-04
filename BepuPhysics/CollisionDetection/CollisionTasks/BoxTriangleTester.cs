@@ -3,12 +3,13 @@ using BepuUtilities;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using static BepuUtilities.GatherScatter;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct BoxTriangleTester : IPairTester<BoxWide, TriangleWide, Convex4ContactManifoldWide>
     {
+        public int BatchSize => 32;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void GetDepthForInterval(in Vector<float> boxExtreme, in Vector<float> a, in Vector<float> b, in Vector<float> c, out Vector<float> depth)
         {
@@ -520,26 +521,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public void Test(ref BoxWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
-        }
-    }
-
-    public class BoxTriangleCollisionTask : CollisionTask
-    {
-        public BoxTriangleCollisionTask()
-        {
-            BatchSize = 32;
-            ShapeTypeIndexA = default(Box).TypeId;
-            ShapeTypeIndexB = default(Triangle).TypeId;
-        }
-
-
-        //Every single collision task type will mirror this general layout.
-        public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
-        {
-            ConvexCollisionTaskCommon.ExecuteBatch
-                <TCallbacks,
-                Box, BoxWide, Triangle, TriangleWide, ConvexPairWide<Box, BoxWide, Triangle, TriangleWide>,
-                Convex4ContactManifoldWide, BoxTriangleTester>(ref batch, ref batcher);
         }
     }
 }

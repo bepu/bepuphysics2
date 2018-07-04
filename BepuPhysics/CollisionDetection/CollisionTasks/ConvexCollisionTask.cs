@@ -8,10 +8,14 @@ using System.Runtime.InteropServices;
 using static BepuUtilities.GatherScatter;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
-{   
-
+{
     public interface IPairTester<TShapeWideA, TShapeWideB, TManifoldWideType>
     {
+        /// <summary>
+        /// Gets the nubmer of pairs which would ideally be gathered together before executing a wide test.
+        /// </summary>
+        int BatchSize { get; }
+
         //Note that, while the interface requires all three of these implementations, concrete implementers will only ever have one defined or called.
         //Including the other unused functions is just here to simplify its use in the batch execution loop.
         void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, out TManifoldWideType manifold);
@@ -25,18 +29,24 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         void ReadFirst(in Vector3Wide offsetB, ref ConvexContactManifold target);
     }
 
-    class ConvexCollisionTaskCommon
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void ExecuteBatch<TCallbacks, TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPair, TPairWide, TManifoldWide, TPairTester>
-            (ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
+    public class ConvexCollisionTask<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPair, TPairWide, TManifoldWide, TPairTester> : CollisionTask
             where TShapeA : struct, IShape where TShapeB : struct, IShape
             where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
             where TPair : struct, ICollisionPair<TPair>
             where TPairWide : struct, ICollisionPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPair, TPairWide>
             where TPairTester : struct, IPairTester<TShapeWideA, TShapeWideB, TManifoldWide>
             where TManifoldWide : IContactManifoldWide
-            where TCallbacks : struct, ICollisionCallbacks
+    {
+        public ConvexCollisionTask()
+        {
+            BatchSize = default(TPairTester).BatchSize;
+            ShapeTypeIndexA = default(TShapeA).TypeId;
+            ShapeTypeIndexB = default(TShapeB).TypeId;
+            PairType = default(TPair).PairType;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public override unsafe void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
         {
             ref var start = ref Unsafe.As<byte, TPair>(ref batch.Buffer[0]);
             //With any luck, the compiler will eventually get rid of these unnecessary zero inits. 
@@ -61,7 +71,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref var target = ref Unsafe.As<float, TPairWide>(ref offsetFloatStart);
                     target.WriteFirst(ref Unsafe.Add(ref bundleStart, j));
                 }
-                
+
                 if (pairWide.OrientationCount == 2)
                 {
                     defaultPairTester.Test(
@@ -119,5 +129,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
         }
+
     }
 }

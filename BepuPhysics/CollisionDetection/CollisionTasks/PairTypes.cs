@@ -22,18 +22,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     /// <typeparam name="TPair"></typeparam>
     public interface ICollisionPair<TPair> where TPair : ICollisionPair<TPair>
     {
+        /// <summary>
+        /// Gets the enumeration type associated with this pair type.
+        /// </summary>
+        CollisionTaskPairType PairType { get; }
         ref PairContinuation GetContinuation(ref TPair pair);
     }
-
-
-    //Writes by the narrowphase write shape data without type knowledge, so they can't easily operate on regular packing rules. Emulate this with a pack of 1.
-    //This allows the reader to still have a quick way to interpret data rather than casting individual shapes.
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct ConvexPair<TShapeA, TShapeB> : ICollisionPair<ConvexPair<TShapeA, TShapeB>>
-            where TShapeA : struct, IConvexShape where TShapeB : struct, IConvexShape
+    
+    public unsafe struct CollisionPair : ICollisionPair<CollisionPair>
     {
-        public TShapeA A;
-        public TShapeB B;
+        public void* A;
+        public void* B;
         /// <summary>
         /// Stores whether the types involved in pair require that the resulting contact manifold be flipped to be consistent with the user-requested pair order.
         /// </summary>
@@ -44,25 +43,29 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
+        public CollisionTaskPairType PairType => CollisionTaskPairType.StandardPair;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref PairContinuation GetContinuation(ref ConvexPair<TShapeA, TShapeB> pair)
+        public ref PairContinuation GetContinuation(ref CollisionPair pair)
         {
             return ref pair.Continuation;
         }
+
     }
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct FliplessPair<TShape> : ICollisionPair<FliplessPair<TShape>> where TShape : struct, IConvexShape
+    public unsafe struct FliplessPair : ICollisionPair<FliplessPair>
     {
-        public TShape A;
-        public TShape B;
+        public void* A;
+        public void* B;
         public Vector3 OffsetB;
         public Quaternion OrientationA;
         public Quaternion OrientationB;
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
+        public CollisionTaskPairType PairType => CollisionTaskPairType.FliplessPair;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref PairContinuation GetContinuation(ref FliplessPair<TShape> pair)
+        public ref PairContinuation GetContinuation(ref FliplessPair pair)
         {
             return ref pair.Continuation;
         }
@@ -76,6 +79,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
+        public CollisionTaskPairType PairType => CollisionTaskPairType.SpherePair;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref PairContinuation GetContinuation(ref SpherePair pair)
         {
@@ -83,10 +88,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
     }
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct SphereIncludingPair<TShape> : ICollisionPair<SphereIncludingPair<TShape>> where TShape : struct, IConvexShape
+    public unsafe struct SphereIncludingPair : ICollisionPair<SphereIncludingPair>
     {
         public Sphere A;
-        public TShape B;
+        public void* B;
         /// <summary>
         /// Stores whether the types involved in pair require that the resulting contact manifold be flipped to be consistent with the user-requested pair order.
         /// </summary>
@@ -96,8 +101,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
+        public CollisionTaskPairType PairType => CollisionTaskPairType.SphereIncludingPair;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref PairContinuation GetContinuation(ref SphereIncludingPair<TShape> pair)
+        public ref PairContinuation GetContinuation(ref SphereIncludingPair pair)
         {
             return ref pair.Continuation;
         }
@@ -107,10 +114,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     /// </summary>
     /// <typeparam name="TA">Type of the first shape in the pair.</typeparam>
     /// <typeparam name="TB">Type of the second shape in the pair.</typeparam>
-    public unsafe struct BoundsTestedPair<TA, TB> : ICollisionPair<BoundsTestedPair<TA, TB>> where TA : struct, IShape where TB : struct, IShape
+    public unsafe struct BoundsTestedPair : ICollisionPair<BoundsTestedPair>
     {
-        public TA A;
-        public TB B;
+        public void* A;
+        public void* B;
         public int FlipMask;
         public Vector3 OffsetB;
         public Quaternion OrientationB;
@@ -122,8 +129,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public float SpeculativeMargin;
         public PairContinuation Continuation;
 
+        public CollisionTaskPairType PairType => CollisionTaskPairType.BoundsTestedPair;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref PairContinuation GetContinuation(ref BoundsTestedPair<TA, TB> pair)
+        public ref PairContinuation GetContinuation(ref BoundsTestedPair pair)
         {
             return ref pair.Continuation;
         }
@@ -149,7 +158,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
 
     public struct ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> :
-        ICollisionPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, ConvexPair<TShapeA, TShapeB>, ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB>>
+        ICollisionPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, CollisionPair, ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB>>
         where TShapeA : struct, IConvexShape where TShapeB : struct, IConvexShape
         where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
     {
@@ -210,10 +219,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return ref pair.OrientationB;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteFirst(ref ConvexPair<TShapeA, TShapeB> source)
+        public unsafe void WriteFirst(ref CollisionPair source)
         {
-            A.WriteFirst(ref source.A);
-            B.WriteFirst(ref source.B);
+            A.WriteFirst(ref Unsafe.AsRef<TShapeA>(source.A));
+            B.WriteFirst(ref Unsafe.AsRef<TShapeB>(source.B));
             GetFirst(ref FlipMask) = source.FlipMask;
             Vector3Wide.WriteFirst(source.OffsetB, ref OffsetB);
             QuaternionWide.WriteFirst(source.OrientationA, ref OrientationA);
@@ -221,7 +230,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             GetFirst(ref SpeculativeMargin) = source.SpeculativeMargin;
         }
     }
-    public struct FliplessPairWide<TShape, TShapeWide> : ICollisionPairWide<TShape, TShapeWide, TShape, TShapeWide, FliplessPair<TShape>, FliplessPairWide<TShape, TShapeWide>>
+    public struct FliplessPairWide<TShape, TShapeWide> : ICollisionPairWide<TShape, TShapeWide, TShape, TShapeWide, FliplessPair, FliplessPairWide<TShape, TShapeWide>>
         where TShape : struct, IConvexShape where TShapeWide : struct, IShapeWide<TShape>
     {
         public TShapeWide A;
@@ -279,17 +288,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return ref pair.OrientationB;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteFirst(ref FliplessPair<TShape> source)
+        public unsafe void WriteFirst(ref FliplessPair source)
         {
-            A.WriteFirst(ref source.A);
-            B.WriteFirst(ref source.B);
+            A.WriteFirst(ref Unsafe.AsRef<TShape>(source.A));
+            B.WriteFirst(ref Unsafe.AsRef<TShape>(source.B));
             Vector3Wide.WriteFirst(source.OffsetB, ref OffsetB);
             QuaternionWide.WriteFirst(source.OrientationA, ref OrientationA);
             QuaternionWide.WriteFirst(source.OrientationB, ref OrientationB);
             GetFirst(ref SpeculativeMargin) = source.SpeculativeMargin;
         }
     }
-    public struct SphereIncludingPairWide<TShape, TShapeWide> : ICollisionPairWide<Sphere, SphereWide, TShape, TShapeWide, SphereIncludingPair<TShape>, SphereIncludingPairWide<TShape, TShapeWide>>
+    public struct SphereIncludingPairWide<TShape, TShapeWide> : ICollisionPairWide<Sphere, SphereWide, TShape, TShapeWide, SphereIncludingPair, SphereIncludingPairWide<TShape, TShapeWide>>
         where TShape : struct, IConvexShape where TShapeWide : struct, IShapeWide<TShape>
     {
         public SphereWide A;
@@ -348,10 +357,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return ref pair.OrientationB;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteFirst(ref SphereIncludingPair<TShape> source)
+        public unsafe void WriteFirst(ref SphereIncludingPair source)
         {
             A.WriteFirst(ref source.A);
-            B.WriteFirst(ref source.B);
+            B.WriteFirst(ref Unsafe.AsRef<TShape>(source.B));
             GetFirst(ref FlipMask) = source.FlipMask;
             Vector3Wide.WriteFirst(source.OffsetB, ref OffsetB);
             QuaternionWide.WriteFirst(source.OrientationB, ref OrientationB);
@@ -417,87 +426,5 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.WriteFirst(source.OffsetB, ref OffsetB);
             GetFirst(ref SpeculativeMargin) = source.SpeculativeMargin;
         }
-    }
-
-    public struct BoundsTestedPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> :
-        ICollisionPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, BoundsTestedPair<TShapeA, TShapeB>, BoundsTestedPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB>>
-        where TShapeA : struct, IConvexShape where TShapeB : struct, IConvexShape
-        where TShapeWideA : struct, IShapeWide<TShapeA> where TShapeWideB : struct, IShapeWide<TShapeB>
-    {
-        public TShapeWideA A;
-        public TShapeWideB B;
-        public Vector<int> FlipMask;
-        public Vector3Wide OffsetB;
-        public QuaternionWide OrientationA;
-        public QuaternionWide OrientationB;
-        public Vector3Wide RelativeLinearVelocityA;
-        public Vector3Wide AngularVelocityA;
-        public Vector3Wide AngularVelocityB;
-        public Vector<float> MaximumExpansion;
-        public Vector<float> SpeculativeMargin;
-
-        public bool HasFlipMask
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return true; }
-        }
-
-        public int OrientationCount
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return 2; }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<int> GetFlipMask(ref BoundsTestedPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.FlipMask;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref BoundsTestedPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.SpeculativeMargin;
-        }
-        //Little unfortunate that we can't return ref of struct instances.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideA GetShapeA(ref BoundsTestedPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.A;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref TShapeWideB GetShapeB(ref BoundsTestedPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.B;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector3Wide GetOffsetB(ref BoundsTestedPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.OffsetB;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationA(ref BoundsTestedPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.OrientationA;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref QuaternionWide GetOrientationB(ref BoundsTestedPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
-        {
-            return ref pair.OrientationB;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteFirst(ref BoundsTestedPair<TShapeA, TShapeB> source)
-        {
-            A.WriteFirst(ref source.A);
-            B.WriteFirst(ref source.B);
-            GetFirst(ref FlipMask) = source.FlipMask;
-            Vector3Wide.WriteFirst(source.OffsetB, ref OffsetB);
-            QuaternionWide.WriteFirst(source.OrientationA, ref OrientationA);
-            QuaternionWide.WriteFirst(source.OrientationB, ref OrientationB);
-            Vector3Wide.WriteFirst(source.RelativeLinearVelocityA, ref RelativeLinearVelocityA);
-            Vector3Wide.WriteFirst(source.AngularVelocityA, ref AngularVelocityA);
-            Vector3Wide.WriteFirst(source.AngularVelocityB, ref AngularVelocityB);
-            GetFirst(ref MaximumExpansion) = source.MaximumExpansion;
-            GetFirst(ref SpeculativeMargin) = source.SpeculativeMargin;
-        }
-    }
+    }    
 }

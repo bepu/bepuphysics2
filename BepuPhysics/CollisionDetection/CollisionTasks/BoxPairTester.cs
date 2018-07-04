@@ -9,6 +9,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct BoxPairTester : IPairTester<BoxWide, BoxWide, Convex4ContactManifoldWide>
     {
+        public int BatchSize => 32;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TestEdgeEdge(
             ref Vector<float> halfWidthA, ref Vector<float> halfHeightA, ref Vector<float> halfLengthA,
@@ -486,27 +488,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public void Test(ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
-        }
-    }
-
-    public class BoxPairCollisionTask : CollisionTask
-    {
-        public BoxPairCollisionTask()
-        {
-            BatchSize = 32;
-            ShapeTypeIndexA = default(Box).TypeId;
-            ShapeTypeIndexB = default(Box).TypeId;
-            PairType = CollisionTaskPairType.FliplessPair;
-        }
-
-
-        //Every single collision task type will mirror this general layout.
-        public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
-        {
-            ConvexCollisionTaskCommon.ExecuteBatch
-                <TCallbacks,
-                Box, BoxWide, Box, BoxWide, FliplessPairWide<Box, BoxWide>,
-                Convex4ContactManifoldWide, BoxPairTester>(ref batch, ref batcher);
         }
     }
 }

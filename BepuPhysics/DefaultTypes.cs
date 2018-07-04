@@ -78,19 +78,19 @@ namespace BepuPhysics
         public static CollisionTaskRegistry CreateDefaultCollisionTaskRegistry()
         {
             var defaultTaskRegistry = new CollisionTaskRegistry();
-            defaultTaskRegistry.Register(new SpherePairCollisionTask());
-            defaultTaskRegistry.Register(new SphereCapsuleCollisionTask());
-            defaultTaskRegistry.Register(new SphereBoxCollisionTask());
-            defaultTaskRegistry.Register(new SphereTriangleCollisionTask());
+            defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, Sphere, SphereWide, SpherePair, SpherePairWide, Convex1ContactManifoldWide, SpherePairTester>());
+            defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, Capsule, CapsuleWide, SphereIncludingPair, SphereIncludingPairWide<Capsule, CapsuleWide>, Convex1ContactManifoldWide, SphereCapsuleTester>());
+            defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, Box, BoxWide, SphereIncludingPair, SphereIncludingPairWide<Box, BoxWide>, Convex1ContactManifoldWide, SphereBoxTester>());
+            defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, Triangle, TriangleWide, SphereIncludingPair, SphereIncludingPairWide<Triangle, TriangleWide>, Convex1ContactManifoldWide, SphereTriangleTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere>());
-            defaultTaskRegistry.Register(new CapsulePairCollisionTask());
-            defaultTaskRegistry.Register(new CapsuleBoxCollisionTask());
-            defaultTaskRegistry.Register(new CapsuleTriangleCollisionTask());
+            defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, Capsule, CapsuleWide, FliplessPair, FliplessPairWide<Capsule, CapsuleWide>, Convex2ContactManifoldWide, CapsulePairTester>());
+            defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, Box, BoxWide, CollisionPair, ConvexPairWide<Capsule, CapsuleWide, Box, BoxWide>, Convex2ContactManifoldWide, CapsuleBoxTester>());
+            defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, Triangle, TriangleWide, CollisionPair, ConvexPairWide<Capsule, CapsuleWide, Triangle, TriangleWide>, Convex2ContactManifoldWide, CapsuleTriangleTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule>());
-            defaultTaskRegistry.Register(new BoxPairCollisionTask());
-            defaultTaskRegistry.Register(new BoxTriangleCollisionTask());
+            defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Box, BoxWide, FliplessPair, FliplessPairWide<Box, BoxWide>, Convex4ContactManifoldWide, BoxPairTester>());
+            defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Triangle, TriangleWide, CollisionPair, ConvexPairWide<Box, BoxWide, Triangle, TriangleWide>, Convex4ContactManifoldWide, BoxTriangleTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Box>());
-            defaultTaskRegistry.Register(new TrianglePairCollisionTask());
+            defaultTaskRegistry.Register(new ConvexCollisionTask<Triangle, TriangleWide, Triangle, TriangleWide, FliplessPair, FliplessPairWide<Triangle, TriangleWide>, Convex4ContactManifoldWide, TrianglePairTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle>());
             defaultTaskRegistry.Register(new CompoundPairCollisionTask());
             return defaultTaskRegistry;

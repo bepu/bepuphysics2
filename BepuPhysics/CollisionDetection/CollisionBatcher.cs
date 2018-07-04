@@ -88,7 +88,7 @@ namespace BepuPhysics.CollisionDetection
             //The reference cached which type of pair the collision task expects. Populate it with the provided data.
             switch (reference.PairType)
             {
-                case CollisionTaskPairType.ConvexPair:
+                case CollisionTaskPairType.StandardPair:
                     break;
                 case CollisionTaskPairType.FliplessPair:
                     break;

@@ -9,6 +9,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct CapsuleTriangleTester : IPairTester<CapsuleWide, TriangleWide, Convex2ContactManifoldWide>
     {
+        public int BatchSize => 32;
+
         public static void TestEdge(in TriangleWide triangle, in Vector3Wide triangleCenter, in Vector3Wide triangleNormal,
             in Vector3Wide edgeStart, in Vector3Wide edgeOffset,
             in Vector3Wide capsuleCenter, in Vector3Wide capsuleAxis, in Vector<float> capsuleHalfLength,
@@ -387,26 +389,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public void Test(ref CapsuleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
-        }
-    }
-
-    public class CapsuleTriangleCollisionTask : CollisionTask
-    {
-        public CapsuleTriangleCollisionTask()
-        {
-            BatchSize = 32;
-            ShapeTypeIndexA = default(Capsule).TypeId;
-            ShapeTypeIndexB = default(Triangle).TypeId;
-        }
-
-
-        //Every single collision task type will mirror this general layout.
-        public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
-        {
-            ConvexCollisionTaskCommon.ExecuteBatch
-                <TCallbacks,
-                Capsule, CapsuleWide, Triangle, TriangleWide, ConvexPairWide<Capsule, CapsuleWide, Triangle, TriangleWide>,
-                Convex2ContactManifoldWide, CapsuleTriangleTester>(ref batch, ref batcher);
         }
     }
 }

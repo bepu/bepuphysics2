@@ -9,6 +9,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     //Individual pair testers are designed to be used outside of the narrow phase. They need to be usable for queries and such, so all necessary data must be gathered externally.
     public struct SphereBoxTester : IPairTester<SphereWide, BoxWide, Convex1ContactManifoldWide>
     {
+        public int BatchSize => 32;
+
         public void Test(ref SphereWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
@@ -27,7 +29,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             clampedLocalOffsetB.Y = Vector.Min(Vector.Max(localOffsetB.Y, -b.HalfHeight), b.HalfHeight);
             clampedLocalOffsetB.Z = Vector.Min(Vector.Max(localOffsetB.Z, -b.HalfLength), b.HalfLength);
             //Implicit negation to make the normal point from B to A, following convention.
-            Vector3Wide.Subtract(clampedLocalOffsetB, localOffsetB,  out var outsideNormal);
+            Vector3Wide.Subtract(clampedLocalOffsetB, localOffsetB, out var outsideNormal);
             Vector3Wide.Length(outsideNormal, out var distance);
             var inverseDistance = Vector<float>.One / distance;
             Vector3Wide.Scale(outsideNormal, inverseDistance, out outsideNormal);
@@ -65,26 +67,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public void Test(ref SphereWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
-        }
-    }
-
-    public class SphereBoxCollisionTask : CollisionTask
-    {
-        public SphereBoxCollisionTask()
-        {
-            BatchSize = 32;
-            ShapeTypeIndexA = default(Sphere).TypeId;
-            ShapeTypeIndexB = default(Box).TypeId;
-        }
-
-
-        //Every single collision task type will mirror this general layout.
-        public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
-        {
-            ConvexCollisionTaskCommon.ExecuteBatch
-                <TCallbacks,
-                Sphere, SphereWide, Box, BoxWide, SphereIncludingPairWide<Sphere, SphereWide, Box, BoxWide>,
-                Convex1ContactManifoldWide, SphereBoxTester>(ref batch, ref batcher);
         }
     }
 }
