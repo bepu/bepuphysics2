@@ -3,9 +3,32 @@ using BepuPhysics.Collidables;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using BepuPhysics.CollisionDetection.CollisionTasks;
+using System.Numerics;
+using System;
 
 namespace BepuPhysics.CollisionDetection
 {
+    unsafe struct UntypedBlob
+    {
+        public RawBuffer Buffer;
+        public int ByteCount;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public byte* Allocate(int allocationSizeInBytes)
+        {
+            var newByteCount = ByteCount + allocationSizeInBytes;
+            Debug.Assert(newByteCount <= Buffer.Length, "This collection doesn't auto-resize! You forgot to initialize this, or initialized it to an insufficient capacity.");
+            var toReturn = Buffer.Memory + ByteCount;
+            ByteCount = newByteCount;
+            return toReturn;
+        }
+    }
+    struct CollisionBatch
+    {
+        public UntypedList Pairs;
+        public UntypedBlob Shapes;
+    }
 
     public struct CollisionBatcher<TCallbacks> where TCallbacks : struct, ICollisionCallbacks
     {
@@ -23,7 +46,7 @@ namespace BepuPhysics.CollisionDetection
         //The streaming batcher contains batches for pending work submitted by the user.
         //This pending work can be top level pairs like sphere versus sphere, but it may also be subtasks of submitted work.
         //Consider two compound bodies colliding. The pair will decompose into a set of potentially many convex subpairs.
-        Buffer<UntypedList> batches;
+        Buffer<CollisionBatch> batches;
         //These collision tasks can then call upon some of the batcher's fixed function post processing stages.
         //For example, compound collisions generate multiple convex-convex manifolds which need to be reduced and combined into a single nonconvex manifold for 
         //efficiency in constraint solving.
@@ -47,105 +70,187 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void Add(ref CollisionTaskReference reference,
-            int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin,
-            int flipMask, ref PairContinuation pairContinuationInfo)
+        unsafe ref TPair AllocatePair<TPair>(ref CollisionBatch batch, ref CollisionTaskReference reference) where TPair : ICollisionPair<TPair>
         {
-            ref var batch = ref batches[reference.TaskIndex];
-            var pairData = batch.AllocateUnsafely();
-            Unsafe.CopyBlockUnaligned(pairData, shapeA, (uint)shapeSizeA);
-            Unsafe.CopyBlockUnaligned(pairData += shapeSizeA, shapeB, (uint)shapeSizeB);
-            var poses = (TestPair*)(pairData += shapeSizeB);
-            poses->FlipMask = flipMask;
-            poses->PoseA = poseA;
-            poses->PoseB = poseB;
-            poses->SpeculativeMargin = speculativeMargin;
-            poses->Continuation = pairContinuationInfo;
-            if (batch.Count == reference.BatchSize)
+            if (!batch.Pairs.Buffer.Allocated)
             {
-                typeMatrix[reference.TaskIndex].ExecuteBatch(ref batch, ref this);
-                batch.Count = 0;
-                batch.ByteCount = 0;
-            }
-        }
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(
-            int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, 
-            ref RigidPose poseA, ref RigidPose poseB, ref BodyVelocity velocityA, ref BodyVelocity velocityB, float speculativeMargin,
-            ref PairContinuation pairContinuationInfo)
-        {
-            ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
-            if (reference.TaskIndex < 0)
-            {
-                //There is no task for this shape type pair. Immediately respond with an empty manifold.
-                var manifold = new ConvexContactManifold();
-                Callbacks.OnPairCompleted(pairContinuationInfo.PairId, &manifold);
-                return;
-            }
-            ref var batch = ref batches[reference.TaskIndex];
-            //The reference cached which type of pair the collision task expects. Populate it with the provided data.
-            switch (reference.PairType)
-            {
-                case CollisionTaskPairType.StandardPair:
-                    break;
-                case CollisionTaskPairType.FliplessPair:
-                    break;
-                case CollisionTaskPairType.SpherePair:
-                    break;
-                case CollisionTaskPairType.SphereIncludingPair:
-                    break;
-                case CollisionTaskPairType.BoundsTestedPair:
-                    break;
-            }
-            var pairSize = shapeSizeA + shapeSizeB + Unsafe.SizeOf<TestPair>();
-            if (!batch.Buffer.Allocated)
-            {
-                batch = new UntypedList(pairSize, reference.BatchSize, Pool);
+                batch.Pairs = new UntypedList(Unsafe.SizeOf<TPair>(), reference.BatchSize, Pool);
                 if (minimumBatchIndex > reference.TaskIndex)
                     minimumBatchIndex = reference.TaskIndex;
                 if (maximumBatchIndex < reference.TaskIndex)
                     maximumBatchIndex = reference.TaskIndex;
             }
-            Debug.Assert(batch.Buffer.Allocated && batch.ElementSizeInBytes > 0 && batch.ElementSizeInBytes < 131072, "How'd the batch get corrupted?");
+            return ref batch.Pairs.AllocateUnsafely<TPair>();
+        }
+
+        private unsafe void Add(ref CollisionTaskReference reference, int flipMask, int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
+            in RigidPose poseA, in RigidPose poseB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
+            in PairContinuation continuation)
+        {
+            ref var batch = ref batches[reference.TaskIndex];
+            Debug.Assert(batch.Pairs.Buffer.Allocated && batch.Pairs.ElementSizeInBytes > 0 && batch.Pairs.ElementSizeInBytes < 131072, "How'd the batch get corrupted?");
+            var offsetB = poseB.Position - poseA.Position;
+            switch (reference.PairType)
+            {
+                case CollisionTaskPairType.StandardPair:
+                    {
+                        ref var pair = ref AllocatePair<CollisionPair>(ref batch, ref reference);
+                        pair.A = shapeA;
+                        pair.B = shapeB;
+                        pair.FlipMask = flipMask;
+                        pair.OffsetB = poseB.Position - poseA.Position;
+                        pair.OrientationA = poseA.Orientation;
+                        pair.OrientationB = poseB.Orientation;
+                        pair.SpeculativeMargin = speculativeMargin;
+                        pair.Continuation = continuation;
+                    }
+                    break;
+                case CollisionTaskPairType.FliplessPair:
+                    {
+                        ref var pair = ref AllocatePair<FliplessPair>(ref batch, ref reference);
+                        pair.A = shapeA;
+                        pair.B = shapeB;
+                        pair.OffsetB = poseB.Position - poseA.Position;
+                        pair.OrientationA = poseA.Orientation;
+                        pair.OrientationB = poseB.Orientation;
+                        pair.SpeculativeMargin = speculativeMargin;
+                        pair.Continuation = continuation;
+                    }
+                    break;
+                case CollisionTaskPairType.SpherePair:
+                    {
+                        ref var pair = ref AllocatePair<SpherePair>(ref batch, ref reference);
+                        pair.A = Unsafe.AsRef<Sphere>(shapeA);
+                        pair.B = Unsafe.AsRef<Sphere>(shapeB);
+                        pair.OffsetB = poseB.Position - poseA.Position;
+                        pair.SpeculativeMargin = speculativeMargin;
+                        pair.Continuation = continuation;
+                    }
+                    break;
+                case CollisionTaskPairType.SphereIncludingPair:
+                    {
+                        ref var pair = ref AllocatePair<SphereIncludingPair>(ref batch, ref reference);
+                        pair.A = Unsafe.AsRef<Sphere>(shapeA);
+                        pair.B = shapeB;
+                        pair.FlipMask = flipMask;
+                        pair.OffsetB = poseB.Position - poseA.Position;
+                        pair.OrientationB = poseB.Orientation;
+                        pair.SpeculativeMargin = speculativeMargin;
+                        pair.Continuation = continuation;
+                    }
+                    break;
+                case CollisionTaskPairType.BoundsTestedPair:
+                    {
+                        ref var pair = ref AllocatePair<BoundsTestedPair>(ref batch, ref reference);
+                        pair.A = shapeA;
+                        pair.B = shapeB;
+                        pair.FlipMask = flipMask;
+                        pair.OffsetB = poseB.Position - poseA.Position;
+                        pair.OrientationA = poseA.Orientation;
+                        pair.OrientationB = poseB.Orientation;
+                        pair.RelativeLinearVelocityA = velocityA.Linear - velocityB.Linear;
+                        pair.AngularVelocityA = velocityA.Angular;
+                        pair.AngularVelocityB = velocityB.Angular;
+                        pair.MaximumExpansion = maximumExpansion;
+                        pair.SpeculativeMargin = speculativeMargin;
+                        pair.Continuation = continuation;
+                    }
+                    break;
+            }
+            if (batch.Pairs.Count == reference.BatchSize)
+            {
+                typeMatrix[reference.TaskIndex].ExecuteBatch(ref batch.Pairs, ref this);
+                batch.Pairs.Count = 0;
+                batch.Pairs.ByteCount = 0;
+                batch.Shapes.ByteCount = 0;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe void AddDirectly(
+          ref CollisionTaskReference reference, int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
+          in RigidPose poseA, in RigidPose poseB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
+          in PairContinuation pairContinuation)
+        {
+            if (reference.TaskIndex < 0)
+            {
+                //There is no task for this shape type pair. Immediately respond with an empty manifold.
+                var manifold = new ConvexContactManifold();
+                Callbacks.OnPairCompleted(pairContinuation.PairId, &manifold);
+                return;
+            }
             if (shapeTypeA != reference.ExpectedFirstTypeId)
             {
-                //The inputs need to be reordered to guarantee that the collision tasks are handed data in the proper order.
-                Add(ref reference, shapeSizeB, shapeSizeA, shapeB, shapeA, ref poseB, ref poseA, speculativeMargin, -1, ref pairContinuationInfo);
+                Debug.Assert(shapeTypeB == reference.ExpectedFirstTypeId);
+                Add(ref reference, -1, shapeTypeB, shapeTypeA, shapeB, shapeA, poseB, poseA, velocityB, velocityA, speculativeMargin, maximumExpansion, pairContinuation);
             }
             else
             {
-                Add(ref reference, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, speculativeMargin, 0, ref pairContinuationInfo);
+                Add(ref reference, 0, shapeTypeA, shapeTypeB, shapeA, shapeB, poseA, poseB, velocityA, velocityB, speculativeMargin, maximumExpansion, pairContinuation);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void AddDirectly(
+            int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
+            in RigidPose poseA, in RigidPose poseB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
+            in PairContinuation pairContinuation)
+        {
+            ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
+            AddDirectly(ref reference, shapeTypeA, shapeTypeB, shapeA, shapeB, poseA, poseB, velocityA, velocityB, speculativeMargin, maximumExpansion, pairContinuation);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void AddDirectly(int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
+            in RigidPose poseA, in RigidPose poseB, float speculativeMargin, in PairContinuation pairContinuation)
+        {
+            AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, poseA, poseB, default, default, speculativeMargin, default, pairContinuation);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe void CacheShapes(ref CollisionTaskReference reference, void* shapeA, void* shapeB, int shapeSizeA, int shapeSizeB, out void* cachedShapeA, out void* cachedShapeB)
+        {
+            //TODO: This does some pointless allocations and copies for sphere pairs...
+            ref var batch = ref batches[reference.TaskIndex];
+            if (!batch.Shapes.Buffer.Allocated)
+            {
+                var size = reference.BatchSize * (shapeSizeA + shapeSizeB);
+                Pool.Take(size, out batch.Shapes.Buffer);
+                Debug.Assert(batch.Shapes.ByteCount == 0);
+            }
+            cachedShapeA = batch.Shapes.Allocate(shapeSizeA);
+            cachedShapeB = batch.Shapes.Allocate(shapeSizeB);
+            //TODO: Given the size of these copies, it's not clear that this copy implementation is ideal. Wouldn't worry too much about it.
+            Buffer.MemoryCopy(shapeA, cachedShapeA, shapeSizeA, shapeSizeA);
+            Buffer.MemoryCopy(shapeB, cachedShapeB, shapeSizeB, shapeSizeB);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
-           int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin,
-           int pairId)
+           int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, in RigidPose poseA, in RigidPose poseB, float speculativeMargin, int pairId)
         {
-            var pairContinuationInfo = new PairContinuation(pairId);
-            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, speculativeMargin, ref pairContinuationInfo);
+            ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
+            CacheShapes(ref reference, shapeA, shapeB, shapeSizeA, shapeSizeB, out var cachedShapeA, out var cachedShapeB);
+            AddDirectly(ref reference, shapeTypeA, shapeTypeB, cachedShapeA, cachedShapeB, poseA, poseB, default, default, speculativeMargin, default, new PairContinuation(pairId));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin,
-            ref PairContinuation pairContinuationInfo)
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, in RigidPose poseA, in RigidPose poseB, float speculativeMargin,
+            in PairContinuation continuation)
         {
             var shapeTypeA = shapeIndexA.Type;
             var shapeTypeB = shapeIndexB.Type;
             Shapes[shapeIndexA.Type].GetShapeData(shapeIndexA.Index, out var shapeA, out var shapeSizeA);
             Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
-            Add(shapeTypeA, shapeTypeB, shapeSizeA, shapeSizeB, shapeA, shapeB, ref poseA, ref poseB, speculativeMargin, ref pairContinuationInfo);
+            AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, poseA, poseB, speculativeMargin, continuation);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin, int pairId)
         {
             var pairContinuationInfo = new PairContinuation(pairId);
-            Add(shapeIndexA, shapeIndexB, ref poseA, ref poseB, speculativeMargin, ref pairContinuationInfo);
+            Add(shapeIndexA, shapeIndexB, poseA, poseB, speculativeMargin, pairContinuationInfo);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin, int pairId)
+        public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, in RigidPose poseA, in RigidPose poseB, float speculativeMargin, int pairId)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
         {
             //Note that the shapes are passed by copy to avoid a GC hole. This isn't optimal, but it does allow a single code path, and the underlying function is the one
@@ -154,7 +259,7 @@ namespace BepuPhysics.CollisionDetection
             //(We could also have an explicit 'unsafe' overload, but that API complexity doesn't seem worthwhile. My guess is nontrivial uses will all use the underlying function directly.)
             var continuation = new PairContinuation(pairId);
             Add(shapeA.TypeId, shapeB.TypeId, Unsafe.SizeOf<TShapeA>(), Unsafe.SizeOf<TShapeB>(), Unsafe.AsPointer(ref shapeA), Unsafe.AsPointer(ref shapeB),
-                ref poseA, ref poseB, speculativeMargin, ref continuation);
+                poseA, poseB, speculativeMargin, continuation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -165,18 +270,21 @@ namespace BepuPhysics.CollisionDetection
             for (int i = minimumBatchIndex; i <= maximumBatchIndex; ++i)
             {
                 ref var batch = ref batches[i];
-                if (batch.Count > 0)
+                if (batch.Pairs.Count > 0)
                 {
-                    typeMatrix.tasks[i].ExecuteBatch(ref batch, ref this);
+                    typeMatrix.tasks[i].ExecuteBatch(ref batch.Pairs, ref this);
                 }
                 //Dispose of the batch and any associated buffers; since the flush is one pass, we won't be needing this again.
-                if (batch.Buffer.Allocated)
+                if (batch.Pairs.Buffer.Allocated)
                 {
-                    Pool.Return(ref batch.Buffer);
+                    Pool.Return(ref batch.Pairs.Buffer);
+                }
+                if (batch.Shapes.Buffer.Allocated)
+                {
+                    Pool.Return(ref batch.Shapes.Buffer);
                 }
             }
-            var listPool = Pool.SpecializeFor<UntypedList>();
-            listPool.Return(ref batches);
+            Pool.Return(ref batches);
             NonconvexReductions.Dispose(Pool);
         }
 
