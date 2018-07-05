@@ -137,13 +137,13 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
         }
-        
+
         public int Register(CollisionTask task)
         {
             //Some tasks can generate tasks. Note that this can only be one level deep; nesting compounds is not allowed.
             //All such generators will be placed at the beginning.
             var index = task.SubtaskGenerator ? 0 : count;
- 
+
             //This allocates a lot of garbage due to frequently resizing, but it does not matter- task registration a one time thing at program initialization.
             //Having tight bounds is more useful for performance in the end (by virtue of having a marginally simpler heap).
             int newCount = count + 1;
@@ -178,7 +178,13 @@ namespace BepuPhysics.CollisionDetection
                 //there is no need for them to appear in the top level matrix.
                 if (highestShapeIndex >= topLevelMatrix.Length)
                     ResizeMatrix(highestShapeIndex + 1);
-                var taskInfo = new CollisionTaskReference { TaskIndex = index, BatchSize = task.BatchSize, ExpectedFirstTypeId = task.ShapeTypeIndexA };
+                var taskInfo = new CollisionTaskReference
+                {
+                    TaskIndex = index,
+                    BatchSize = task.BatchSize,
+                    ExpectedFirstTypeId = task.ShapeTypeIndexA,
+                    PairType = task.PairType
+                };
                 topLevelMatrix[a][b] = taskInfo;
                 topLevelMatrix[b][a] = taskInfo;
             }
@@ -188,9 +194,9 @@ namespace BepuPhysics.CollisionDetection
             bool encounteredNongenerator = false;
             for (int i = 0; i < count; ++i)
             {
-                if(encounteredNongenerator)
+                if (encounteredNongenerator)
                 {
-                    Debug.Assert(!tasks[i].SubtaskGenerator, 
+                    Debug.Assert(!tasks[i].SubtaskGenerator,
                         "To avoid cycles, the tasks list should be partitioned into two contiguous groups: subtask generators, followed by non-subtask generators.");
                 }
                 else

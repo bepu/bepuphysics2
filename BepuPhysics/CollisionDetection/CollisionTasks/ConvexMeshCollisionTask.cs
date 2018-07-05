@@ -22,6 +22,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ShapeTypeIndexA = default(TConvex).TypeId;
             ShapeTypeIndexB = default(TMesh).TypeId;
             SubtaskGenerator = true;
+            PairType = CollisionTaskPairType.BoundsTestedPair;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -35,10 +36,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
         {
-            var pairs = batch.Buffer.As<BoundsTestedPair<TConvex, TMesh>>();
+            var pairs = batch.Buffer.As<BoundsTestedPair>();
             //It doesn't matter which mesh instance is used to invoke the mesh functions, so we just grab a representative.
             //(The only reason this exists is a lack of language expressiveness- static interface functions, for example, would eliminate this.)
-            ref var meshFunctions = ref pairs[0].B;
+            ref var meshFunctions = ref Unsafe.AsRef<TMesh>(pairs[0].B);
             TConvexWide convexWide = default;
             Vector3Wide offsetB = default;
             QuaternionWide orientationA = default;
@@ -68,10 +69,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 for (int j = 0; j < count; ++j)
                 {
                     ref var pair = ref pairs[i + j];
-                    meshes[j] = (IntPtr)Unsafe.AsPointer(ref pair.B);
+                    meshes[j] = (IntPtr)pair.B;
                     Debug.Assert(pair.Continuation.ChildA == 0 && pair.Continuation.ChildB == 0 && pair.Continuation.Type == CollisionContinuationType.Direct,
                         "Mesh-involving pairs cannot be marked as children of other pairs.");
-                    GatherScatter.GetOffsetInstance(ref convexWide, j).WriteFirst(ref pair.A);
+                    GatherScatter.GetOffsetInstance(ref convexWide, j).WriteFirst(ref Unsafe.AsRef<TConvex>(pair.A));
                     Vector3Wide.WriteFirst(pair.OffsetB, ref GatherScatter.GetOffsetInstance(ref offsetB, j));
                     QuaternionWide.WriteFirst(pair.OrientationA, ref GatherScatter.GetOffsetInstance(ref orientationA, j));
                     QuaternionWide.WriteFirst(pair.OrientationB, ref GatherScatter.GetOffsetInstance(ref orientationB, j));
@@ -146,7 +147,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         continuation.MeshOrientation = pair.OrientationB;
                         //Pass ownership of the triangles to the continuation. It'll dispose of the buffer.
                         batcher.Pool.Take<Triangle>(triangleIndices.Count, out var triangles);
-                        pair.B.GetTriangles(ref triangleIndices, ref triangles);
+                        Unsafe.AsRef<TMesh>(pair.B).GetTriangles(ref triangleIndices, ref triangles);
                         continuation.Triangles = triangles;
 
                         int nextContinuationChildIndex = 0;
@@ -167,11 +168,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             }
                             if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
                             {
-                                ref var triangle = ref triangles[k];
 
-                                //Note that we can safely take a pointer to the pair-stored shape:
-                                //1) It's stored in a buffer, which is guaranteed GC safe
-                                //2) The data contained is copied by the time Add returns, so there's no concern about invalid pointers getting stored.
                                 var continuationChildIndex = nextContinuationChildIndex++;
                                 var continuationInfo = new PairContinuation(pair.Continuation.PairId, childA, childB,
                                     CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
@@ -182,16 +179,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                                 continuationChild.OffsetB = default;
                                 continuationChild.ChildIndexB = childB;
 
+                                //Note that the triangles list persists until the continuation completes, which means the memory will be validly accessible for all of the spawned collision tasks.
+                                //In other words, we can pass a pointer to it to avoid the need for additional batcher shape copying.
+                                ref var triangle = ref triangles[k];
+                                ref var convex = ref Unsafe.AsRef<TConvex>(pair.A);
                                 if (pair.FlipMask < 0)
                                 {
                                     //By reversing the order of the parameters, the manifold orientation is flipped. This compensates for the flip induced by order requirements on this task.                          
-                                    //batcher.Add(triangle.TypeId, pair.Convex.TypeId, Unsafe.SizeOf<Triangle>(), Unsafe.SizeOf<TConvex>(), Unsafe.AsPointer(ref triangle), Unsafe.AsPointer(ref pair.Convex),
-                                    //    -pair.OffsetToMesh, pair.MeshOrientation, pair.ConvexOrientation, pair.SpeculativeMargin, ref continuationInfo);
+                                    batcher.AddDirectly(triangle.TypeId, convex.TypeId, Unsafe.AsPointer(ref triangle), pair.A,
+                                        -pair.OffsetB, pair.OrientationB, pair.OrientationA, pair.SpeculativeMargin, continuationInfo);
                                 }
                                 else
                                 {
-                                    //batcher.Add(pair.Convex.TypeId, triangle.TypeId, Unsafe.SizeOf<TConvex>(), Unsafe.SizeOf<Triangle>(), Unsafe.AsPointer(ref pair.Convex), Unsafe.AsPointer(ref triangle),
-                                    //    pair.OffsetToMesh, pair.ConvexOrientation, pair.MeshOrientation, pair.SpeculativeMargin, ref continuationInfo);
+                                    batcher.AddDirectly(convex.TypeId, triangle.TypeId, pair.A, Unsafe.AsPointer(ref triangle),
+                                        pair.OffsetB, pair.OrientationA, pair.OrientationB, pair.SpeculativeMargin, continuationInfo);
                                 }
                             }
                             else

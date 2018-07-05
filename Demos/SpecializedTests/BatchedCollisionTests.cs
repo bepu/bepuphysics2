@@ -51,7 +51,9 @@ namespace Demos.SpecializedTests
             var batcher = new CollisionBatcher<TestCollisionCallbacks>(pool, shapes, registry, 1 / 60f, callbacks);
             for (int i = 0; i < iterationCount; ++i)
             {
-                batcher.Add(a, b, ref posesA[i], ref posesB[i], 0.1f, 0);
+                ref var poseA = ref posesA[i];
+                ref var poseB = ref posesB[i];
+                batcher.Add(a, b, poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, 0.1f, 0);
             }
             batcher.Flush();
         }

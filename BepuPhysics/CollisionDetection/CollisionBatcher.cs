@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 using System.Numerics;
 using System;
+using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -84,12 +85,13 @@ namespace BepuPhysics.CollisionDetection
         }
 
         private unsafe void Add(ref CollisionTaskReference reference, int flipMask, int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
-            in RigidPose poseA, in RigidPose poseB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
+            in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
             in PairContinuation continuation)
         {
             ref var batch = ref batches[reference.TaskIndex];
-            Debug.Assert(batch.Pairs.Buffer.Allocated && batch.Pairs.ElementSizeInBytes > 0 && batch.Pairs.ElementSizeInBytes < 131072, "How'd the batch get corrupted?");
-            var offsetB = poseB.Position - poseA.Position;
+            //If you find yourself needing to add a significant number of variations here, you may want to consider moving to a more flexible form of indirection.
+            //Giving collision tasks the ability to create their own pairs (which would therefore properly match the ExecuteBatch's expectations by default)
+            //would be easy enough, and the performance penatly would be essentially nonexistent.
             switch (reference.PairType)
             {
                 case CollisionTaskPairType.StandardPair:
@@ -98,9 +100,9 @@ namespace BepuPhysics.CollisionDetection
                         pair.A = shapeA;
                         pair.B = shapeB;
                         pair.FlipMask = flipMask;
-                        pair.OffsetB = poseB.Position - poseA.Position;
-                        pair.OrientationA = poseA.Orientation;
-                        pair.OrientationB = poseB.Orientation;
+                        pair.OffsetB = offsetB;
+                        pair.OrientationA = orientationA;
+                        pair.OrientationB = orientationB;
                         pair.SpeculativeMargin = speculativeMargin;
                         pair.Continuation = continuation;
                     }
@@ -110,9 +112,9 @@ namespace BepuPhysics.CollisionDetection
                         ref var pair = ref AllocatePair<FliplessPair>(ref batch, ref reference);
                         pair.A = shapeA;
                         pair.B = shapeB;
-                        pair.OffsetB = poseB.Position - poseA.Position;
-                        pair.OrientationA = poseA.Orientation;
-                        pair.OrientationB = poseB.Orientation;
+                        pair.OffsetB = offsetB;
+                        pair.OrientationA = orientationA;
+                        pair.OrientationB = orientationB;
                         pair.SpeculativeMargin = speculativeMargin;
                         pair.Continuation = continuation;
                     }
@@ -122,7 +124,7 @@ namespace BepuPhysics.CollisionDetection
                         ref var pair = ref AllocatePair<SpherePair>(ref batch, ref reference);
                         pair.A = Unsafe.AsRef<Sphere>(shapeA);
                         pair.B = Unsafe.AsRef<Sphere>(shapeB);
-                        pair.OffsetB = poseB.Position - poseA.Position;
+                        pair.OffsetB = offsetB;
                         pair.SpeculativeMargin = speculativeMargin;
                         pair.Continuation = continuation;
                     }
@@ -133,8 +135,8 @@ namespace BepuPhysics.CollisionDetection
                         pair.A = Unsafe.AsRef<Sphere>(shapeA);
                         pair.B = shapeB;
                         pair.FlipMask = flipMask;
-                        pair.OffsetB = poseB.Position - poseA.Position;
-                        pair.OrientationB = poseB.Orientation;
+                        pair.OffsetB = offsetB;
+                        pair.OrientationB = orientationB;
                         pair.SpeculativeMargin = speculativeMargin;
                         pair.Continuation = continuation;
                     }
@@ -145,9 +147,9 @@ namespace BepuPhysics.CollisionDetection
                         pair.A = shapeA;
                         pair.B = shapeB;
                         pair.FlipMask = flipMask;
-                        pair.OffsetB = poseB.Position - poseA.Position;
-                        pair.OrientationA = poseA.Orientation;
-                        pair.OrientationB = poseB.Orientation;
+                        pair.OffsetB = offsetB;
+                        pair.OrientationA = orientationA;
+                        pair.OrientationB = orientationB;
                         pair.RelativeLinearVelocityA = velocityA.Linear - velocityB.Linear;
                         pair.AngularVelocityA = velocityA.Angular;
                         pair.AngularVelocityB = velocityB.Angular;
@@ -157,6 +159,7 @@ namespace BepuPhysics.CollisionDetection
                     }
                     break;
             }
+            Debug.Assert(batch.Pairs.Buffer.Allocated && batch.Pairs.ElementSizeInBytes > 0 && batch.Pairs.ElementSizeInBytes < 131072, "How'd the batch get corrupted?");
             if (batch.Pairs.Count == reference.BatchSize)
             {
                 typeMatrix[reference.TaskIndex].ExecuteBatch(ref batch.Pairs, ref this);
@@ -168,9 +171,9 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void AddDirectly(
-          ref CollisionTaskReference reference, int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
-          in RigidPose poseA, in RigidPose poseB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
-          in PairContinuation pairContinuation)
+            ref CollisionTaskReference reference, int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
+            in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
+            in PairContinuation pairContinuation)
         {
             if (reference.TaskIndex < 0)
             {
@@ -182,29 +185,29 @@ namespace BepuPhysics.CollisionDetection
             if (shapeTypeA != reference.ExpectedFirstTypeId)
             {
                 Debug.Assert(shapeTypeB == reference.ExpectedFirstTypeId);
-                Add(ref reference, -1, shapeTypeB, shapeTypeA, shapeB, shapeA, poseB, poseA, velocityB, velocityA, speculativeMargin, maximumExpansion, pairContinuation);
+                Add(ref reference, -1, shapeTypeB, shapeTypeA, shapeB, shapeA, -offsetB, orientationB, orientationA, velocityB, velocityA, speculativeMargin, maximumExpansion, pairContinuation);
             }
             else
             {
-                Add(ref reference, 0, shapeTypeA, shapeTypeB, shapeA, shapeB, poseA, poseB, velocityA, velocityB, speculativeMargin, maximumExpansion, pairContinuation);
+                Add(ref reference, 0, shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, velocityA, velocityB, speculativeMargin, maximumExpansion, pairContinuation);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void AddDirectly(
-            int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
-            in RigidPose poseA, in RigidPose poseB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
-            in PairContinuation pairContinuation)
+           int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
+           in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
+           in PairContinuation pairContinuation)
         {
             ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
-            AddDirectly(ref reference, shapeTypeA, shapeTypeB, shapeA, shapeB, poseA, poseB, velocityA, velocityB, speculativeMargin, maximumExpansion, pairContinuation);
+            AddDirectly(ref reference, shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, velocityA, velocityB, speculativeMargin, maximumExpansion, pairContinuation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void AddDirectly(int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
-            in RigidPose poseA, in RigidPose poseB, float speculativeMargin, in PairContinuation pairContinuation)
+            in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, float speculativeMargin, in PairContinuation pairContinuation)
         {
-            AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, poseA, poseB, default, default, speculativeMargin, default, pairContinuation);
+            AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, default, default, speculativeMargin, default, pairContinuation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -226,40 +229,39 @@ namespace BepuPhysics.CollisionDetection
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
-           int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, in RigidPose poseA, in RigidPose poseB, float speculativeMargin, int pairId)
+           int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, float speculativeMargin, int pairId)
         {
             ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
             CacheShapes(ref reference, shapeA, shapeB, shapeSizeA, shapeSizeB, out var cachedShapeA, out var cachedShapeB);
-            AddDirectly(ref reference, shapeTypeA, shapeTypeB, cachedShapeA, cachedShapeB, poseA, poseB, default, default, speculativeMargin, default, new PairContinuation(pairId));
+            AddDirectly(ref reference, shapeTypeA, shapeTypeB, cachedShapeA, cachedShapeB, offsetB, orientationA, orientationB, default, default, speculativeMargin, default, new PairContinuation(pairId));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, in RigidPose poseA, in RigidPose poseB, float speculativeMargin,
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, float speculativeMargin,
             in PairContinuation continuation)
         {
             var shapeTypeA = shapeIndexA.Type;
             var shapeTypeB = shapeIndexB.Type;
             Shapes[shapeIndexA.Type].GetShapeData(shapeIndexA.Index, out var shapeA, out var shapeSizeA);
             Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
-            AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, poseA, poseB, speculativeMargin, continuation);
+            AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, speculativeMargin, continuation);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, ref RigidPose poseA, ref RigidPose poseB, float speculativeMargin, int pairId)
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, float speculativeMargin, int pairId)
         {
             var pairContinuationInfo = new PairContinuation(pairId);
-            Add(shapeIndexA, shapeIndexB, poseA, poseB, speculativeMargin, pairContinuationInfo);
+            Add(shapeIndexA, shapeIndexB, offsetB, orientationA, orientationB, speculativeMargin, pairContinuationInfo);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, in RigidPose poseA, in RigidPose poseB, float speculativeMargin, int pairId)
+        public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, float speculativeMargin, int pairId)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
         {
             //Note that the shapes are passed by copy to avoid a GC hole. This isn't optimal, but it does allow a single code path, and the underlying function is the one
             //that's actually used by the narrowphase (and which will likely be used for most performance sensitive cases).
             //TODO: You could recover the performance and safety once generic pointers exist. By having pointers in the parameter list, we can require that the user handle GC safety.
             //(We could also have an explicit 'unsafe' overload, but that API complexity doesn't seem worthwhile. My guess is nontrivial uses will all use the underlying function directly.)
-            var continuation = new PairContinuation(pairId);
             Add(shapeA.TypeId, shapeB.TypeId, Unsafe.SizeOf<TShapeA>(), Unsafe.SizeOf<TShapeB>(), Unsafe.AsPointer(ref shapeA), Unsafe.AsPointer(ref shapeB),
-                poseA, poseB, speculativeMargin, continuation);
+                offsetB, orientationA, orientationB, speculativeMargin, pairId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

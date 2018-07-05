@@ -15,24 +15,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ShapeTypeIndexA = default(TConvex).TypeId;
             ShapeTypeIndexB = default(Compound).TypeId;
             SubtaskGenerator = true;
+            PairType = CollisionTaskPairType.StandardPair;
         }
 
         public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
         {
-            var testPairs = batch.Buffer.As<TestPair<TConvex, Compound>>();
+            var testPairs = batch.Buffer.As<CollisionPair>();
             for (int i = 0; i < batch.Count; ++i)
             {
-                ref var pair = ref Buffer<TestPair<TConvex, Compound>>.Get(ref batch.Buffer, i);
-                Debug.Assert(pair.Shared.Continuation.ChildA == 0 && pair.Shared.Continuation.ChildB == 0 && pair.Shared.Continuation.Type == CollisionContinuationType.Direct,
+                ref var pair = ref testPairs[i];
+                Debug.Assert(pair.Continuation.ChildA == 0 && pair.Continuation.ChildB == 0 && pair.Continuation.Type == CollisionContinuationType.Direct,
                     "Compound-involving pairs cannot be marked as children of compound pairs. Convex-convex children of such pairs will be.");
-                ref var continuation = ref batcher.NonconvexReductions.CreateContinuation(pair.B.Children.Length, batcher.Pool, out var continuationIndex);
+                ref var b = ref Unsafe.AsRef<Compound>(pair.B);
+                ref var continuation = ref batcher.NonconvexReductions.CreateContinuation(b.Children.Length, batcher.Pool, out var continuationIndex);
                 int nextContinuationChildIndex = 0;
-                for (int j = 0; j < pair.B.Children.Length; ++j)
+                for (int j = 0; j < b.Children.Length; ++j)
                 {
                     //Note that we have to take into account whether we flipped the shapes to match the expected memory layout.
                     //The caller expects results according to the submitted pair order, not the batcher's memory layout order.
                     int childA, childB;
-                    if (pair.Shared.FlipMask < 0)
+                    if (pair.FlipMask < 0)
                     {
                         childA = j;
                         childB = 0;
@@ -42,49 +44,42 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         childA = 0;
                         childB = j;
                     }
-                    if (batcher.Callbacks.AllowCollisionTesting(pair.Shared.Continuation.PairId, childA, childB))
+                    if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
                     {
-                        ref var child = ref pair.B.Children[j];
-                        Compound.GetRotatedChildPose(child.LocalPose, pair.Shared.PoseB.Orientation, out var childPose);
+                        ref var child = ref b.Children[j];
+                        Compound.GetRotatedChildPose(child.LocalPose, pair.OrientationB, out var childPose);
 
                         var childShapeType = child.ShapeIndex.Type;
                         batcher.Shapes[childShapeType].GetShapeData(child.ShapeIndex.Index, out var childShapePointer, out var childShapeSize);
-
-                        //Note that we can safely take a pointer to the pair-stored shape:
-                        //1) It's stored in a buffer, which is guaranteed GC safe
-                        //2) The data contained is copied by the time Add returns, so there's no concern about invalid pointers getting stored.
+                        
                         var continuationChildIndex = nextContinuationChildIndex++;
-                        var continuationInfo = new PairContinuation(pair.Shared.Continuation.PairId, childA, childB,
+                        var subpairContinuation = new PairContinuation(pair.Continuation.PairId, childA, childB,
                             CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
                         ref var continuationChild = ref batcher.NonconvexReductions.Continuations[continuationIndex].Children[continuationChildIndex];
 
-                        if (pair.Shared.FlipMask < 0)
+                        ref var a = ref Unsafe.AsRef<TConvex>(pair.A);
+                        continuationChild.ChildIndexA = childA;
+                        continuationChild.ChildIndexB = childB;
+                        if (pair.FlipMask < 0)
                         {
                             //By reversing the order of the parameters, the manifold orientation is flipped. This compensates for the compound collision task's flip.
                             continuationChild.OffsetA = childPose.Position;
-                            continuationChild.ChildIndexA = childB;
                             continuationChild.OffsetB = default;
-                            continuationChild.ChildIndexB = childA;
-                            //Move the child into world space to be consistent with the other convex.
-                            childPose.Position += pair.Shared.PoseB.Position;
-                            batcher.Add(child.ShapeIndex.Type, pair.A.TypeId, childShapeSize, Unsafe.SizeOf<TConvex>(), childShapePointer, Unsafe.AsPointer(ref pair.A),
-                                ref childPose, ref pair.Shared.PoseA, pair.Shared.SpeculativeMargin, ref continuationInfo);
+                            batcher.AddDirectly(child.ShapeIndex.Type, a.TypeId, childShapePointer, pair.A,
+                                -childPose.Position - pair.OffsetB, childPose.Orientation, pair.OrientationA, pair.SpeculativeMargin, subpairContinuation);
                         }
                         else
                         {
                             continuationChild.OffsetA = default;
-                            continuationChild.ChildIndexA = childA;
                             continuationChild.OffsetB = childPose.Position;
-                            continuationChild.ChildIndexB = childB;
                             //Move the child into world space to be consistent with the other convex.
-                            childPose.Position += pair.Shared.PoseB.Position;
-                            batcher.Add(pair.A.TypeId, child.ShapeIndex.Type, Unsafe.SizeOf<TConvex>(), childShapeSize, Unsafe.AsPointer(ref pair.A), childShapePointer,
-                                ref pair.Shared.PoseA, ref childPose, pair.Shared.SpeculativeMargin, ref continuationInfo);
+                            batcher.AddDirectly(a.TypeId, child.ShapeIndex.Type, pair.A, childShapePointer,
+                                childPose.Position + pair.OffsetB, pair.OrientationA, childPose.Orientation, pair.SpeculativeMargin, subpairContinuation);
                         }
                     }
                     else
                     {
-                        continuation.OnChildCompletedEmpty(ref pair.Shared.Continuation, ref batcher);
+                        continuation.OnChildCompletedEmpty(ref pair.Continuation, ref batcher);
                     }
                 }
 

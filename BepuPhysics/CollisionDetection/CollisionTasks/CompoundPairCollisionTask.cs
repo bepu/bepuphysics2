@@ -15,54 +15,53 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ShapeTypeIndexA = default(Compound).TypeId;
             ShapeTypeIndexB = default(Compound).TypeId;
             SubtaskGenerator = true;
+            PairType = CollisionTaskPairType.FliplessPair;
         }
 
         public unsafe override void ExecuteBatch<TCallbacks>(ref UntypedList batch, ref CollisionBatcher<TCallbacks> batcher)
         {
-            var testPairs = batch.Buffer.As<TestPair<Compound, Compound>>();
+            var testPairs = batch.Buffer.As<FliplessPair>();
             for (int i = 0; i < batch.Count; ++i)
             {
-                ref var pair = ref Buffer<TestPair<Compound, Compound>>.Get(ref batch.Buffer, i);
-                Debug.Assert(pair.Shared.Continuation.ChildA == 0 && pair.Shared.Continuation.ChildB == 0 && pair.Shared.Continuation.Type == CollisionContinuationType.Direct,
+                ref var pair = ref testPairs[i];
+                ref var a = ref Unsafe.AsRef<Compound>(pair.A);
+                ref var b = ref Unsafe.AsRef<Compound>(pair.B);
+                Debug.Assert(pair.Continuation.ChildA == 0 && pair.Continuation.ChildB == 0 && pair.Continuation.Type == CollisionContinuationType.Direct,
                     "Compound-involving pairs cannot be marked as children of compound pairs. Convex-convex children of such pairs will be.");
-                ref var continuation = ref batcher.NonconvexReductions.CreateContinuation(pair.A.Children.Length * pair.B.Children.Length, batcher.Pool, out var continuationIndex);
-                Debug.Assert(pair.Shared.FlipMask == 0, "Compound-compound should be unflippable; they're the same shape type.");
+                ref var continuation = ref batcher.NonconvexReductions.CreateContinuation(a.Children.Length * b.Children.Length, batcher.Pool, out var continuationIndex);
                 int nextContinuationChildIndex = 0;
-                for (int childAIndex = 0; childAIndex < pair.A.Children.Length; ++childAIndex)
+                for (int childAIndex = 0; childAIndex < a.Children.Length; ++childAIndex)
                 {
-                    ref var childA = ref pair.A.Children[childAIndex];
-                    Compound.GetRotatedChildPose(childA.LocalPose, pair.Shared.PoseA.Orientation, out var childAPose);
-                    RigidPose childAWorldPose;
-                    childAWorldPose.Orientation = childAPose.Orientation;
-                    childAWorldPose.Position = childAPose.Position + pair.Shared.PoseA.Position;
-                    for (int childBIndex = 0; childBIndex < pair.B.Children.Length; ++childBIndex)
+                    ref var childA = ref a.Children[childAIndex];
+                    Compound.GetRotatedChildPose(childA.LocalPose, pair.OrientationA, out var childAPose);
+                    for (int childBIndex = 0; childBIndex < b.Children.Length; ++childBIndex)
                     {
-                        if (batcher.Callbacks.AllowCollisionTesting(pair.Shared.Continuation.PairId, childAIndex, childBIndex))
+                        if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childAIndex, childBIndex))
                         {
-                            ref var childB = ref pair.B.Children[childBIndex];
+                            ref var childB = ref b.Children[childBIndex];
                             //You could avoid recalculating this pose for every childA, but the value is limited and it adds nontrivial complexity. Only bother if it shows up.
-                            Compound.GetRotatedChildPose(childB.LocalPose, pair.Shared.PoseB.Orientation, out var childBPose);
+                            Compound.GetRotatedChildPose(childB.LocalPose, pair.OrientationB, out var childBPose);
 
                             var childShapeType = childB.ShapeIndex.Type;
                             batcher.Shapes[childShapeType].GetShapeData(childB.ShapeIndex.Index, out var childShapePointer, out var childShapeSize);
 
                             var continuationChildIndex = nextContinuationChildIndex++;
-                            var continuationInfo = new PairContinuation(pair.Shared.Continuation.PairId, childAIndex, childBIndex,
+                            var subpairContinuation = new PairContinuation(pair.Continuation.PairId, childAIndex, childBIndex,
                                 CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
                             ref var continuationChild = ref batcher.NonconvexReductions.Continuations[continuationIndex].Children[continuationChildIndex];
-                            
+
                             continuationChild.OffsetA = childAPose.Position;
                             continuationChild.ChildIndexA = childAIndex;
                             continuationChild.OffsetB = childBPose.Position;
                             continuationChild.ChildIndexB = childBIndex;
-                            //Move the child into world space to be consistent with the other convex.
-                            childBPose.Position += pair.Shared.PoseB.Position;
-                            batcher.Add(childA.ShapeIndex, childB.ShapeIndex, ref childAWorldPose, ref childBPose, pair.Shared.SpeculativeMargin, ref continuationInfo);
+
+                            batcher.Add(childA.ShapeIndex, childB.ShapeIndex, 
+                                childBPose.Position + pair.OffsetB - childAPose.Position, childAPose.Orientation, childBPose.Orientation, pair.SpeculativeMargin, subpairContinuation);
 
                         }
                         else
                         {
-                            continuation.OnChildCompletedEmpty(ref pair.Shared.Continuation, ref batcher);
+                            continuation.OnChildCompletedEmpty(ref pair.Continuation, ref batcher);
                         }
                     }
                 }

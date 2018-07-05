@@ -27,7 +27,6 @@ namespace Demos.Demos
             box.ComputeInertia(1, out var boxInertia);
             capsule.ComputeInertia(1, out var capsuleInertia);
             sphere.ComputeInertia(1, out var sphereInertia);
-            //capsuleInertia.InverseInertiaTensor = new Triangular3x3();
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);
