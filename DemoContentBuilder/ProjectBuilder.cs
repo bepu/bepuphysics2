@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DemoContentLoader;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -22,17 +23,12 @@ namespace DemoContentBuilder
 
         unsafe static void CollectContentPaths(string projectPath, out string workingPath,
             out List<string> shaderPaths,
-            out List<string> fontPaths)
+            out List<ContentBuildInput> contentToBuild)
         {
-            //NOTE:
-            //This project builder takes dependencies on a lot of things which really should not be depended upon.
-            //It would be nice to figure out a more solid way to do it. Is there are better way to query the dotnet build tools?
-            //A fallback option is to just create our own 'project'- just a little file with references alongside the csproj that triggered this build step.
-            //We would have complete control over the format.
             projectPath = Path.GetFullPath(projectPath);
             workingPath = Path.GetDirectoryName(projectPath);
             shaderPaths = new List<string>();
-            fontPaths = new List<string>();
+            contentToBuild = new List<ContentBuildInput>();
             try
             {
                 using (var stream = new StreamReader(File.OpenRead(projectPath)))
@@ -54,7 +50,10 @@ namespace DemoContentBuilder
                                         break;
                                     case ".ttf":
                                     case ".otf":
-                                        fontPaths.Add(path);
+                                        contentToBuild.Add(new ContentBuildInput { Path = path, Type = ContentType.Font });
+                                        break;
+                                    case ".obj":
+                                        contentToBuild.Add(new ContentBuildInput { Path = path, Type = ContentType.Mesh });
                                         break;
                                 }
                             }
@@ -69,7 +68,7 @@ namespace DemoContentBuilder
             catch (Exception e)
             {
                 Console.WriteLine($"{projectPath}: error: Content list read exception: {e.Message}");
-            }                        
+            }
         }
 
 
@@ -116,7 +115,7 @@ namespace DemoContentBuilder
             }
             foreach (var targetPath in targetPaths)
             {
-                CollectContentPaths(targetPath, out var workingPath, out var shaderPaths, out var fontPaths);
+                CollectContentPaths(targetPath, out var workingPath, out var shaderPaths, out var contentPaths);
                 var cachePathStart = Path.Combine(workingPath, Path.GetFileNameWithoutExtension(targetPath));
                 //Shaders are stored a little differently than the rest of content. This is partially for legacy reasons.
                 //You could make the argument for bundling them together, but shaders do have some unique macro and dependency management that other kinds of content lack.
@@ -134,7 +133,7 @@ namespace DemoContentBuilder
                 }
                 ContentBuilder.BuildContent(workingPath,
                     cachePathStart + ".contentbuildcache",
-                    cachePathStart + ".contentarchive", fontPaths, out var contentWarnings, out var contentErrors);
+                    cachePathStart + ".contentarchive", contentPaths, out var contentWarnings, out var contentErrors);
                 foreach (var error in contentErrors)
                 {
                     Console.WriteLine($"{error.File}: error: {error.Message}");

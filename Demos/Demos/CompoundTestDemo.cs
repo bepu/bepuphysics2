@@ -130,12 +130,12 @@ namespace Demos.Demos
                             SpeculativeMargin = 0.1f,
                         },
                         LocalInertia = tableInertia,
-                        Pose = new RigidPose {  Orientation = BepuUtilities.Quaternion.Identity }
+                        Pose = new RigidPose { Orientation = BepuUtilities.Quaternion.Identity }
                     };
 
                     //Stack some tables.
                     {
-                        for (int i =0; i < 10; ++i)
+                        for (int i = 0; i < 10; ++i)
                         {
                             tableDescription.Pose.Position = new Vector3(10, 3 + i * 1.4f, 10);
                             Simulation.Bodies.Add(tableDescription);
@@ -193,7 +193,7 @@ namespace Demos.Demos
                                 Shape = Simulation.Shapes.Add(clamp),
                                 SpeculativeMargin = 0.1f,
                             },
-                            LocalInertia = tableInertia,
+                            LocalInertia = clampInertia,
                             Pose = new RigidPose { Position = tableDescription.Pose.Position + new Vector3(2f, 0.3f, 0), Orientation = BepuUtilities.Quaternion.Identity }
                         };
                         Simulation.Bodies.Add(clampDescription);
@@ -201,7 +201,7 @@ namespace Demos.Demos
 
                 }
             }
-            
+
             //Prevent stuff from falling into the infinite void.
             {
                 var boxShape = new Box(100, 1, 100);

@@ -18,7 +18,7 @@ namespace Demos.Demos
     {
         public unsafe override void Initialize(Camera camera)
         {
-            camera.Position = new Vector3(-30, 8, -60);
+            camera.Position = new Vector3(-30, 8, -110);
             camera.Yaw = MathHelper.Pi * 3f / 4;
 
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
@@ -27,7 +27,7 @@ namespace Demos.Demos
             var boxShape = new Box(1, 1, 1);
             boxShape.ComputeInertia(1, out var boxInertia);
             var boxIndex = Simulation.Shapes.Add(boxShape);
-            const int pyramidCount = 20;
+            const int pyramidCount = 40;
             for (int pyramidIndex = 0; pyramidIndex < pyramidCount; ++pyramidIndex)
             {
                 const int rowCount = 20;
@@ -55,7 +55,7 @@ namespace Demos.Demos
                 }
             }
 
-            var staticShape = new Box(200, 1, 200);
+            var staticShape = new Box(1500, 1, 1500);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
 
             var staticDescription = new StaticDescription
@@ -99,7 +99,7 @@ namespace Demos.Demos
                     LocalInertia = bulletInertia,
                     Pose = new RigidPose
                     {
-                        Position = new Vector3(0, 8, -100),
+                        Position = new Vector3(0, 8, -130),
                         Orientation = BepuUtilities.Quaternion.Identity
                     },
                     Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = .01f },

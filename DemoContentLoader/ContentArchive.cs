@@ -8,7 +8,7 @@ namespace DemoContentLoader
     public enum ContentType
     {
         Font = 1,
-        YargleBargle = 2
+        Mesh = 2
     }
     public interface IContent
     {
@@ -42,6 +42,8 @@ namespace DemoContentLoader
             {
                 case ContentType.Font:
                     return FontIO.Load(reader);
+                case ContentType.Mesh:
+                    return MeshIO.Load(reader);
             }
             throw new ArgumentException($"Given content type {type} cannot be loaded; no loader is specified. Is the archive corrupted?");
         }
@@ -52,6 +54,9 @@ namespace DemoContentLoader
             {
                 case ContentType.Font:
                     FontIO.Save((FontContent)content, writer);
+                    return;
+                case ContentType.Mesh:
+                    MeshIO.Save((MeshContent)content, writer);
                     return;
             }
             throw new ArgumentException("Given content type cannot be saved; no archiver is specified.");
