@@ -202,3 +202,6 @@ ModelManifest.xml
 
 # Some more VS stuff.
 .vs/
+
+# Don't ignore content files that happen to use the .obj extension.
+!Demos/Content/*.obj

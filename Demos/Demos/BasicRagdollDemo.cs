@@ -9,6 +9,7 @@ using BepuPhysics.CollisionDetection;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using BepuPhysics.Constraints;
+using DemoContentLoader;
 
 namespace Demos.Demos
 {
@@ -412,7 +413,7 @@ namespace Demos.Demos
             masks[head.Handle] = headMask;
         }
 
-        public unsafe override void Initialize(Camera camera)
+        public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-20, 10, -20);
             //camera.Yaw = MathHelper.Pi ; 

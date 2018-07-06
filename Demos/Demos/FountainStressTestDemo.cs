@@ -8,6 +8,7 @@ using System.Numerics;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using System.Diagnostics;
+using DemoContentLoader;
 
 namespace Demos.Demos
 {
@@ -16,7 +17,7 @@ namespace Demos.Demos
         QuickQueue<StaticDescription, Buffer<StaticDescription>> removedStatics;
         QuickQueue<int, Buffer<int>> dynamicHandles;
         Random random;
-        public unsafe override void Initialize(Camera camera)
+        public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-15f, 20, -15f);
             camera.Yaw = MathHelper.Pi * 3f / 4;

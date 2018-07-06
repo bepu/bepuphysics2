@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using DemoRenderer.UI;
+using DemoContentLoader;
 
 namespace Demos
 {
@@ -34,7 +35,7 @@ namespace Demos
             ThreadDispatcher = new SimpleThreadDispatcher(Environment.ProcessorCount);
         }
 
-        public abstract void Initialize(Camera camera);
+        public abstract void Initialize(ContentArchive content, Camera camera);
 
         public virtual void Update(Input input, float dt)
         {

@@ -1,4 +1,5 @@
 ﻿using BepuUtilities;
+using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using Demos.UI;
@@ -11,6 +12,7 @@ namespace Demos
     public class DemoHarness : IDisposable
     {
         Window window;
+        ContentArchive content;
         internal Input input;
         Camera camera;
         Grabber grabber;
@@ -41,22 +43,25 @@ namespace Demos
             if (demoIndex >= 0 && demoIndex < demoSet.Count)
             {
                 demo.Dispose();
-                demo = demoSet.Build(demoIndex, camera);
+                demo = demoSet.Build(demoIndex, content, camera);
             }
         }
 
         SimulationTimeSamples timeSamples = new SimulationTimeSamples(512);
 
-        public DemoHarness(Window window, Input input, Camera camera, Font font,
+        public DemoHarness(GameLoop loop, ContentArchive content,
             Controls? controls = null)
         {
-            this.window = window;
-            this.input = input;
-            this.camera = camera;
+            this.window = loop.Window;
+            this.input = loop.Input;
+            this.camera = loop.Camera;
+            this.content = content;
             if (controls == null)
                 this.controls = Controls.Default;
-            this.font = font;
-
+            
+            var fontContent = content.Load<FontContent>(@"Content\Carlito-Regular.ttf");
+            font = new Font(loop.Surface.Device, loop.Surface.Context, fontContent);
+            
             timingGraph = new Graph(new GraphDescription
             {
                 BodyLineColor = new Vector3(1, 1, 1),
@@ -98,7 +103,7 @@ namespace Demos
             timingGraph.AddSeries("Batch Compress", new Vector3(0, 0.5f, 0), 0.125f, timeSamples.BatchCompressor);
 
             demoSet = new DemoSet();
-            demo = demoSet.Build(0, camera);
+            demo = demoSet.Build(0, content, camera);
 
             OnResize(window.Resolution);
         }

@@ -9,6 +9,7 @@ using System.Diagnostics;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using BepuPhysics.Constraints;
+using DemoContentLoader;
 
 namespace Demos.SpecializedTests
 {
@@ -34,7 +35,7 @@ namespace Demos.SpecializedTests
             };
             return new BodyReference(simulation.Bodies.Add(description), simulation.Bodies);
         }
-        public unsafe override void Initialize(Camera camera)
+        public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-20, 10, -20);
             //camera.Yaw = MathHelper.Pi ; 

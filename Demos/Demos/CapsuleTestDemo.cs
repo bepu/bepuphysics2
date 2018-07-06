@@ -8,12 +8,13 @@ using System.Numerics;
 using System.Diagnostics;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
+using DemoContentLoader;
 
 namespace Demos.Demos
 {
     public class CapsuleTestDemo : Demo
     {
-        public unsafe override void Initialize(Camera camera)
+        public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-10, 5, -10);
             //camera.Yaw = MathHelper.Pi ; 

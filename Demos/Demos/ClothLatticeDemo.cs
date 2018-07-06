@@ -9,12 +9,13 @@ using System.Diagnostics;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using BepuPhysics.Constraints;
+using DemoContentLoader;
 
 namespace Demos.Demos
 {
     public class ClothLatticeDemo : Demo
     {
-        public unsafe override void Initialize(Camera camera)
+        public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-120, 30, -120);
             camera.Yaw = MathHelper.Pi * 3f / 4;

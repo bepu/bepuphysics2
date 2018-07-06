@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Debug": {
-      "commandName": "Project",
-      "commandLineArgs": "\"../DemoRenderer/DemoRenderer.content\" \"../Demos/Demos.content\""
-    }
-  }
-}

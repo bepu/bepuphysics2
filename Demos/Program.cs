@@ -21,10 +21,7 @@ namespace Demos
             {
                 content = ContentArchive.Load(stream);
             }
-            //var fontContent = content.Load<FontContent>(@"Content\Courier Prime Sans.ttf");
-            var fontContent = content.Load<FontContent>(@"Content\Carlito-Regular.ttf");
-            var font = new Font(loop.Surface.Device, loop.Surface.Context, fontContent);
-            var demo = new DemoHarness(window, loop.Input, loop.Camera, font);
+            var demo = new DemoHarness(loop, content);
             loop.Run(demo);
             loop.Dispose();
             window.Dispose();

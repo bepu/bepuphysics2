@@ -15,6 +15,7 @@ using DemoRenderer.UI;
 using DemoRenderer.Constraints;
 using System.Threading;
 using Demos.SpecializedTests;
+using DemoContentLoader;
 
 namespace Demos
 {
@@ -66,7 +67,7 @@ namespace Demos
             {
             }
         }
-        public unsafe override void Initialize(Camera camera)
+        public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-20f, 13, -20f);
             camera.Yaw = MathHelper.Pi * 3f / 4;

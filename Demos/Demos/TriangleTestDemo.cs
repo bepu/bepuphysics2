@@ -9,12 +9,13 @@ using System.Diagnostics;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using BepuPhysics.CollisionDetection.CollisionTasks;
+using DemoContentLoader;
 
 namespace Demos.Demos
 {
     public class TriangleTestDemo : Demo
     {
-        public unsafe override void Initialize(Camera camera)
+        public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             {
                 SphereTriangleTester tester;

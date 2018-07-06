@@ -1,5 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
+using DemoContentLoader;
 using DemoUtilities;
 using System;
 using System.Collections.Generic;
@@ -10,10 +11,10 @@ namespace Demos.SpecializedTests
 {
     static class HeadlessDemo
     {
-        public static void Test<T>(int warmUpFrames, int frameCount) where T : Demo, new()
+        public static void Test<T>(ContentArchive content, int warmUpFrames, int frameCount) where T : Demo, new()
         {
             var demo = new T();
-            demo.Initialize(new DemoRenderer.Camera(1, 1, 1, 1));
+            demo.Initialize(content, new DemoRenderer.Camera(1, 1, 1, 1));
             for (int i = 0; i < warmUpFrames; ++i)
             {
                 demo.Update(null, 1 / 60f);

@@ -12,7 +12,7 @@ using DemoContentLoader;
 
 namespace Demos.Demos
 {
-    public class ShapePileDemo : Demo
+    public class MeshDemo : Demo
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
@@ -75,41 +75,32 @@ namespace Demos.Demos
                     }
                 }
             }
-            
+
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
             Simulation.Deterministic = false;
-            
-            var staticShape = new Box(1, 1, 1);
-            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
-            const int staticGridWidth = 100;
-            const float staticSpacing = 1.2f;
-            var gridOffset = -0.5f * staticGridWidth * staticSpacing;
-            for (int i = 0; i < staticGridWidth; ++i)
+
+            var meshContent = content.Load<MeshContent>(@"Content\box.obj");
+            BufferPool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);
+            for (int i = 0; i < meshContent.Triangles.Length; ++i)
             {
-                for (int j = 0; j < staticGridWidth; ++j)
-                {
-                    var staticDescription = new StaticDescription
-                    {
-                        Collidable = new CollidableDescription
-                        {
-                            Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                            Shape = staticShapeIndex,
-                            SpeculativeMargin = 0.1f
-                        },
-                        Pose = new RigidPose
-                        {
-                            Position = new Vector3(
-                                1 + gridOffset + i * staticSpacing,
-                                -0.707f,
-                                0.5f + gridOffset + j * staticSpacing),
-                            //Orientation = BepuUtilities.Quaternion.Identity
-                            Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1 + i, i * j % 10, -10 + -j)), (i ^ j) * 0.5f * (MathHelper.PiOver4))
-                            //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0, 0, 1)), MathHelper.Pi)
-                        }
-                    };
-                    Simulation.Statics.Add(staticDescription);
-                }
+                triangles[i] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
             }
+            var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(1, 1, 1), BufferPool);
+            var staticShapeIndex = Simulation.Shapes.Add(meshShape);
+
+            var staticDescription = new StaticDescription
+            {
+                Collidable = new CollidableDescription(staticShapeIndex, 0.1f),
+                Pose = new RigidPose
+                {
+                    Position = new Vector3(0, -10, 0),
+                    Orientation = BepuUtilities.Quaternion.Identity
+                    //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1 + i, i * j % 10, -10 + -j)), (i ^ j) * 0.5f * (MathHelper.PiOver4))
+                    //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0, 0, 1)), MathHelper.Pi)
+                }
+            };
+            Simulation.Statics.Add(staticDescription);
+
 
         }
 

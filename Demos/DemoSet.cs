@@ -1,4 +1,5 @@
-﻿using DemoRenderer;
+﻿using DemoContentLoader;
+using DemoRenderer;
 using Demos.Demos;
 using Demos.SpecializedTests;
 using System;
@@ -15,7 +16,7 @@ namespace Demos
         struct Option
         {
             public string Name;
-            public Func<Camera, Demo> Builder;
+            public Func<ContentArchive, Camera, Demo> Builder;
         }
 
         List<Option> options = new List<Option>();
@@ -23,13 +24,13 @@ namespace Demos
         {
             options.Add(new Option
             {
-                Builder = (camera) =>
+                Builder = (content, camera) =>
                 {
                     //Note that the actual work is done in the Initialize function rather than a constructor.
                     //The 'new T()' syntax actually uses reflection and repackages exceptions in an inconvenient way.
                     //By using Initialize instead, the stack trace and debugger will go right to the source.
                     var demo = new T();
-                    demo.Initialize(camera);
+                    demo.Initialize(content, camera);
                     return demo;
                 },
                 Name = typeof(T).Name
@@ -38,8 +39,7 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<CapsuleTestDemo>();
-            AddOption<TriangleTestDemo>();
+            AddOption<MeshDemo>();
             AddOption<PyramidDemo>();
             AddOption<BlockChainDemo>();
             AddOption<ShapePileDemo>();
@@ -59,9 +59,9 @@ namespace Demos
             return options[index].Name;
         }
 
-        public Demo Build(int index, Camera camera)
+        public Demo Build(int index, ContentArchive content, Camera camera)
         {
-            return options[index].Builder(camera);
+            return options[index].Builder(content, camera);
         }
     }
 }

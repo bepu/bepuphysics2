@@ -8,12 +8,13 @@ using System.Numerics;
 using System.Diagnostics;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
+using DemoContentLoader;
 
 namespace Demos.Demos
 {
     public class SphereBlobTestDemo : Demo
     {
-        public unsafe override void Initialize(Camera camera)
+        public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-20f, 13, -20f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
