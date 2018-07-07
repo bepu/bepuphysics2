@@ -212,6 +212,8 @@ namespace DemoRenderer
                 OnResize();
             }
             var context = Surface.Context;
+            Shapes.MeshCache.FlushPendingUploads(context);
+
             context.Rasterizer.SetViewport(0, 0, Surface.Resolution.X, Surface.Resolution.Y, 0.0f, 1.0f);
 
             //Note reversed depth.
@@ -230,6 +232,7 @@ namespace DemoRenderer
             context.OutputMerger.SetBlendState(opaqueBlendState);
             BoxRenderer.Render(context, camera, Surface.Resolution, Shapes.boxes.Span.Memory, 0, Shapes.boxes.Count);
             TriangleRenderer.Render(context, camera, Surface.Resolution, Shapes.triangles.Span.Memory, 0, Shapes.triangles.Count);
+            MeshRenderer.Render(context, camera, Surface.Resolution, Shapes.meshes.Span.Memory, 0, Shapes.meshes.Count);
             LineRenderer.Render(context, camera, Surface.Resolution, Lines.lines.Span.Memory, 0, Lines.lines.Count);
 
             Background.Render(context, camera);
@@ -264,6 +267,9 @@ namespace DemoRenderer
 
                 SphereRenderer.Dispose();
                 CapsuleRenderer.Dispose();
+                BoxRenderer.Dispose();
+                TriangleRenderer.Dispose();
+                MeshRenderer.Dispose();
 
                 UILineRenderer.Dispose();
                 GlyphRenderer.Dispose();

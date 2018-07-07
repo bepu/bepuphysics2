@@ -119,7 +119,8 @@ namespace DemoRenderer.ShapeDrawing
                         instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
                         instance.Scale = mesh.Scale;
                         var id = (ulong)mesh.Triangles.Memory ^ (ulong)mesh.Triangles.Length;
-                        if (MeshCache.Allocate(id, mesh.Triangles.Length * 3, out instance.VertexStart, out var vertices))
+                        instance.VertexCount = mesh.Triangles.Length * 3;
+                        if (MeshCache.Allocate(id, instance.VertexCount, out instance.VertexStart, out var vertices))
                         {
                             //This is a fresh allocation, so we need to upload vertex data.
                             for (int i = 0; i < mesh.Triangles.Length; ++i)
@@ -131,6 +132,7 @@ namespace DemoRenderer.ShapeDrawing
                                 vertices[baseVertexIndex + 2] = triangle.C;
                             }
                         }
+                        meshes.Add(ref instance, new PassthroughArrayPool<MeshInstance>());
                     }
                     break;
             }

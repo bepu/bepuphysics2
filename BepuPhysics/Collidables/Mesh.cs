@@ -58,9 +58,9 @@ namespace BepuPhysics.Collidables
                 //-Even better would be a set of extreme points that are known to fully enclose the mesh, eliminating the need to test the vast majority.
                 //But optimizing this only makes sense if dynamic meshes are common, and they really, really, really should not be.
                 ref var triangle = ref Triangles[i];
-                Matrix3x3.Transform(triangle.A, r, out var a);
-                Matrix3x3.Transform(triangle.B, r, out var b);
-                Matrix3x3.Transform(triangle.C, r, out var c);
+                Matrix3x3.Transform(scale * triangle.A, r, out var a);
+                Matrix3x3.Transform(scale * triangle.B, r, out var b);
+                Matrix3x3.Transform(scale * triangle.C, r, out var c);
                 var min0 = Vector3.Min(a, b);
                 var min1 = Vector3.Min(c, min);
                 var max0 = Vector3.Max(a, b);

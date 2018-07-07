@@ -1,9 +1,11 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
+using BepuUtilities.Memory;
 using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Quaternion = BepuUtilities.Quaternion;
 
@@ -28,7 +30,7 @@ namespace DemoRenderer.ShapeDrawing
     public class MeshRenderer : IDisposable
     {
         MeshCache meshCache;
-   
+
         ConstantsBuffer<RasterizedVertexConstants> vertexConstants;
 
         StructuredBuffer<MeshInstance> instances;
@@ -47,8 +49,49 @@ namespace DemoRenderer.ShapeDrawing
             pixelShader = new PixelShader(device, cache.GetShader(@"ShapeDrawing\RenderMeshes.hlsl.pshader"));
         }
 
-        public void Render(DeviceContext context, Camera camera, Int2 screenResolution, MeshInstance[] instances, int start, int count)
+        public unsafe void Render(DeviceContext context, Camera camera, Int2 screenResolution, MeshInstance[] instances, int start, int count)
         {
+            //Examine the set of instances and batch them into groups using the same mesh data.
+            var keyPool = meshCache.Pool.SpecializeFor<ulong>();
+            var valuePool = meshCache.Pool.SpecializeFor<QuickList<MeshInstance, Buffer<MeshInstance>>>();
+            var tablePool = meshCache.Pool.SpecializeFor<int>();
+            var instancePool = meshCache.Pool.SpecializeFor<MeshInstance>();
+            //(but is this ENOUGH generics?)
+            QuickDictionary<
+                ulong, QuickList<MeshInstance,
+                Buffer<MeshInstance>>, Buffer<ulong>,
+                Buffer<QuickList<MeshInstance, Buffer<MeshInstance>>>, Buffer<int>,
+                PrimitiveComparer<ulong>>.Create(keyPool, valuePool, tablePool, 4, 3, out var batches);
+            var end = start + count;
+            for (int i = start; i < end; ++i)
+            {
+                ref var instance = ref instances[i];
+                ref var id = ref Unsafe.As<int, ulong>(ref instance.VertexStart);
+
+                if (batches.GetTableIndices(ref id, out var tableIndex, out var elementIndex))
+                {
+                    //The id was already present.
+                    batches.Values[elementIndex].Add(ref instance, instancePool);
+                }
+                else
+                {
+                    //There is no batch for this vertex region, so create one.
+                    var newCount = batches.Count + 1;
+                    if (newCount > batches.Keys.Length)
+                    {
+                        batches.Resize(newCount, keyPool, valuePool, tablePool);
+                        //Resizing will change the table indices, so we have to grab it again.
+                        batches.GetTableIndices(ref id, out tableIndex, out _);
+                    }
+                    batches.Keys[batches.Count] = id;
+                    ref var listSlot = ref batches.Values[batches.Count];
+                    QuickList<MeshInstance, Buffer<MeshInstance>>.Create(instancePool, 64, out listSlot);
+                    listSlot.Add(ref instance, instancePool);
+                    batches.Table[tableIndex] = newCount;
+                    batches.Count = newCount;
+                }
+            }
+
             var vertexConstantsData = new RasterizedVertexConstants
             {
                 Projection = Matrix.Transpose(camera.Projection), //compensate for the shader packing.
@@ -67,16 +110,23 @@ namespace DemoRenderer.ShapeDrawing
             context.VertexShader.SetShaderResource(0, this.instances.SRV);
             context.VertexShader.SetShaderResource(1, meshCache.TriangleBuffer.SRV);
             context.PixelShader.Set(pixelShader);
-            
 
-            while (count > 0)
+            for (int i = 0; i < batches.Count; ++i)
             {
-                var batchCount = Math.Min(this.instances.Capacity, count);
-                this.instances.Update(context, instances, batchCount, start);
-                //context.DrawInstanced()
-                count -= batchCount;
-                start += batchCount;
+                ref var batch = ref batches.Values[i];
+                var batchVertexCount = batch[0].VertexCount;
+                while (batch.Count > 0)
+                {
+                    var subbatchStart = Math.Max(0, batch.Count - this.instances.Capacity);
+                    var subbatchCount = batch.Count - subbatchStart;
+                    this.instances.Update(context, new Span<MeshInstance>((MeshInstance*)batch.Span.Memory + subbatchStart, subbatchCount));
+                    context.DrawInstanced(batchVertexCount, subbatchCount, 0, 0);
+                    batch.Count -= subbatchCount;
+                }
+                batch.Dispose(instancePool);
             }
+            batches.Dispose(keyPool, valuePool, tablePool);
+            
         }
 
         bool disposed;

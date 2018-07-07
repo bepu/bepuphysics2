@@ -85,21 +85,24 @@ namespace Demos.Demos
             {
                 triangles[i] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
             }
-            var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(1, 1, 1), BufferPool);
+            var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(5, 1, 5), BufferPool);
             var staticShapeIndex = Simulation.Shapes.Add(meshShape);
 
-            var staticDescription = new StaticDescription
+            for (int i = 0; i < 10; ++i)
             {
-                Collidable = new CollidableDescription(staticShapeIndex, 0.1f),
-                Pose = new RigidPose
+                var staticDescription = new StaticDescription
                 {
-                    Position = new Vector3(0, -10, 0),
-                    Orientation = BepuUtilities.Quaternion.Identity
-                    //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1 + i, i * j % 10, -10 + -j)), (i ^ j) * 0.5f * (MathHelper.PiOver4))
-                    //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0, 0, 1)), MathHelper.Pi)
-                }
-            };
-            Simulation.Statics.Add(staticDescription);
+                    Collidable = new CollidableDescription(staticShapeIndex, 0.1f),
+                    Pose = new RigidPose
+                    {
+                        Position = new Vector3(i * 10, -10, 0),
+                        Orientation = BepuUtilities.Quaternion.Identity
+                        //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1 + i, i * j % 10, -10 + -j)), (i ^ j) * 0.5f * (MathHelper.PiOver4))
+                        //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0, 0, 1)), MathHelper.Pi)
+                    }
+                };
+                Simulation.Statics.Add(staticDescription);
+            }
 
 
         }
