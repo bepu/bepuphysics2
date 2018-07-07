@@ -133,7 +133,7 @@ namespace DemoRenderer
         /// </summary>
         /// <param name="context">Device context used to update the buffer.</param>
         /// <param name="newValues">Values to load into the buffer.</param>
-        public void Update(DeviceContext context, T[] newValues)
+        public void Update(DeviceContext context, Span<T> newValues)
         {
             context.UpdateBuffer(buffer, newValues, newValues.Length);
         }
@@ -146,7 +146,7 @@ namespace DemoRenderer
         /// <param name="sourceOffset">Offset from which to begin reading the new values.</param>
         /// <param name="count">Number of elements from the source array to read.</param>
         /// <param name="destinationOffset">Index at which the stored values should start in the buffer.</param>
-        public void Update(DeviceContext context, T[] newValues, int count, int sourceOffset = 0, int destinationOffset = 0)
+        public void Update(DeviceContext context, Span<T> newValues, int count, int sourceOffset = 0, int destinationOffset = 0)
         {
             context.UpdateBuffer(buffer, newValues, count, sourceOffset, destinationOffset);
         }

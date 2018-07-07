@@ -7,6 +7,7 @@ using SharpDX.DXGI;
 using System;
 using DemoRenderer.ShapeDrawing;
 using DemoRenderer.Constraints;
+using BepuUtilities.Memory;
 
 namespace DemoRenderer
 {
@@ -21,6 +22,7 @@ namespace DemoRenderer
         public RayTracedRenderer<CapsuleInstance> CapsuleRenderer { get; private set; }
         public BoxRenderer BoxRenderer { get; private set; }
         public TriangleRenderer TriangleRenderer { get; private set; }
+        public MeshRenderer MeshRenderer { get; private set; }
         public ShapesExtractor Shapes { get; private set; }
         public LineRenderer LineRenderer { get; private set; }
         public LineExtractor Lines { get; private set; }
@@ -33,6 +35,7 @@ namespace DemoRenderer
 
 
         ParallelLooper looper;
+        BufferPool pool;
 
         Texture2D depthBuffer;
         DepthStencilView dsv;
@@ -61,11 +64,13 @@ namespace DemoRenderer
             {
                 ShaderCache = ShaderCache.Load(stream);
             }
-            Shapes = new ShapesExtractor(looper);
+            pool = new BufferPool();
+            Shapes = new ShapesExtractor(Surface.Device, looper, pool);
             SphereRenderer = new RayTracedRenderer<SphereInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderSpheres.hlsl");
             CapsuleRenderer = new RayTracedRenderer<CapsuleInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderCapsules.hlsl");
             BoxRenderer = new BoxRenderer(surface.Device, ShaderCache);
             TriangleRenderer = new TriangleRenderer(surface.Device, ShaderCache);
+            MeshRenderer = new MeshRenderer(surface.Device, Shapes.MeshCache, ShaderCache);
             Lines = new LineExtractor(looper);
             LineRenderer = new LineRenderer(surface.Device, ShaderCache);
             Background = new BackgroundRenderer(surface.Device, ShaderCache);
@@ -277,6 +282,8 @@ namespace DemoRenderer
                 a2cBlendState.Dispose();
                 uiDepthState.Dispose();
                 uiBlendState.Dispose();
+
+                Shapes.Dispose();
             }
         }
 

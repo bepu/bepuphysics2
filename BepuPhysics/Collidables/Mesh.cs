@@ -131,6 +131,10 @@ namespace BepuPhysics.Collidables
                 target.C = scale * source.C;
             }
         }
-        public int TypeId => 6;
+        /// <summary>
+        /// Type id of mesh shapes.
+        /// </summary>
+        public const int Id = 6;
+        public int TypeId => Id;
     }
 }

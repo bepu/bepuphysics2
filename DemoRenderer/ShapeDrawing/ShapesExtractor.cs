@@ -5,24 +5,31 @@ using BepuPhysics;
 using BepuPhysics.Collidables;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using SharpDX.Direct3D11;
+using System;
 
 namespace DemoRenderer.ShapeDrawing
 {
-    public class ShapesExtractor
+    public class ShapesExtractor : IDisposable
     {
         //For now, we only have spheres. Later, once other shapes exist, this will be responsible for bucketing the different shape types and when necessary caching shape models.
         internal QuickList<SphereInstance, Array<SphereInstance>> spheres;
         internal QuickList<CapsuleInstance, Array<CapsuleInstance>> capsules;
         internal QuickList<BoxInstance, Array<BoxInstance>> boxes;
         internal QuickList<TriangleInstance, Array<TriangleInstance>> triangles;
+        internal QuickList<MeshInstance, Array<MeshInstance>> meshes;
+
+        public MeshCache MeshCache;
 
         ParallelLooper looper;
-        public ShapesExtractor(ParallelLooper looper, int initialCapacityPerShapeType = 1024)
+        public ShapesExtractor(Device device, ParallelLooper looper, BufferPool pool, int initialCapacityPerShapeType = 1024)
         {
             QuickList<SphereInstance, Array<SphereInstance>>.Create(new PassthroughArrayPool<SphereInstance>(), initialCapacityPerShapeType, out spheres);
             QuickList<CapsuleInstance, Array<CapsuleInstance>>.Create(new PassthroughArrayPool<CapsuleInstance>(), initialCapacityPerShapeType, out capsules);
             QuickList<BoxInstance, Array<BoxInstance>>.Create(new PassthroughArrayPool<BoxInstance>(), initialCapacityPerShapeType, out boxes);
             QuickList<TriangleInstance, Array<TriangleInstance>>.Create(new PassthroughArrayPool<TriangleInstance>(), initialCapacityPerShapeType, out triangles);
+            QuickList<MeshInstance, Array<MeshInstance>>.Create(new PassthroughArrayPool<MeshInstance>(), initialCapacityPerShapeType, out meshes);
+            this.MeshCache = new MeshCache(device, pool);
             this.looper = looper;
         }
 
@@ -32,11 +39,14 @@ namespace DemoRenderer.ShapeDrawing
             capsules.Count = 0;
             boxes.Count = 0;
             triangles.Count = 0;
+            meshes.Count = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void AddShape(void* shapeData, int shapeType, Shapes shapes, ref RigidPose pose, in Vector3 color)
         {
+            //TODO: This should likely be swapped over to a registration-based virtualized table approach to more easily support custom shape extractors-
+            //generic terrain windows and examples like voxel grids would benefit.
             switch (shapeType)
             {
                 case Sphere.Id:
@@ -97,6 +107,29 @@ namespace DemoRenderer.ShapeDrawing
                             ref var child = ref compound.Children[i];
                             Compound.GetWorldPose(child.LocalPose, pose, out var childPose);
                             AddShape(shapes, child.ShapeIndex, ref childPose, color);
+                        }
+                    }
+                    break;
+                case Mesh.Id:
+                    {
+                        ref var mesh = ref Unsafe.AsRef<Mesh>(shapeData);
+                        MeshInstance instance;
+                        instance.Position = pose.Position;
+                        instance.PackedColor = Helpers.PackColor(color);
+                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
+                        instance.Scale = mesh.Scale;
+                        var id = (ulong)mesh.Triangles.Memory ^ (ulong)mesh.Triangles.Length;
+                        if (MeshCache.Allocate(id, mesh.Triangles.Length * 3, out instance.VertexStart, out var vertices))
+                        {
+                            //This is a fresh allocation, so we need to upload vertex data.
+                            for (int i = 0; i < mesh.Triangles.Length; ++i)
+                            {
+                                ref var triangle = ref mesh.Triangles[i];
+                                var baseVertexIndex = i * 3;
+                                vertices[baseVertexIndex] = triangle.A;
+                                vertices[baseVertexIndex + 1] = triangle.B;
+                                vertices[baseVertexIndex + 2] = triangle.C;
+                            }
                         }
                     }
                     break;
@@ -188,6 +221,11 @@ namespace DemoRenderer.ShapeDrawing
             {
                 AddStaticShape(simulation.Shapes, simulation.Statics, i);
             }
+        }
+
+        public void Dispose()
+        {
+            MeshCache.Dispose();
         }
     }
 }

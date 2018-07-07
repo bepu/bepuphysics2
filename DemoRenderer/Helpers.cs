@@ -22,31 +22,7 @@ namespace DemoRenderer
         {
             inputAssembler.SetIndexBuffer(binding.Buffer, binding.Format, offset);
         }
-
-
-        /// <summary>
-        /// Updates a buffer using MapSubresource..
-        /// </summary>
-        /// <typeparam name="T">Type of the elements in the buffer.</typeparam>
-        /// <param name="context">Context used to update the buffer.</param>
-        /// <param name="buffer">Buffer to update.</param>
-        /// <param name="newValues">Values to upload into the buffer.</param>
-        /// <param name="sourceOffset">Starting index in the new values array to read from.</param>
-        /// <param name="count">Number of elements in the values to upload into the buffer.</param>
-        /// <param name="destinationOffset">Offset from the beginning of the buffer to store the new values.</param>
-        public static void MapUpdateBuffer<T>(this DeviceContext context, Buffer buffer, T[] newValues, int count, int sourceOffset = 0, int destinationOffset = 0) where T : struct
-        {
-            var dataBox = context.MapSubresource(buffer, 0, MapMode.WriteDiscard, MapFlags.None);
-            unsafe
-            {
-                var bytesPointer = (byte*)dataBox.DataPointer;
-                bytesPointer += destinationOffset * Utilities.SizeOf<T>();
-                Utilities.Write(new IntPtr(bytesPointer), newValues, sourceOffset, count);
-            }
-            context.UnmapSubresource(buffer, 0);
-        }
-
-
+        
         /// <summary>
         /// Updates a buffer using UpdateSubresource.
         /// </summary>
@@ -57,17 +33,19 @@ namespace DemoRenderer
         /// <param name="sourceOffset">Starting index in the new values array to read from.</param>
         /// <param name="count">Number of elements in the values to upload into the buffer.</param>
         /// <param name="destinationOffset">Offset from the beginning of the buffer to store the new values.</param>
-        public static unsafe void UpdateBuffer<T>(this DeviceContext context, Buffer buffer, T[] newValues, int count, int sourceOffset = 0, int destinationOffset = 0) where T : struct
+        public static unsafe void UpdateBuffer<T>(this DeviceContext context, Buffer buffer, Span<T> newValues, int count, int sourceOffset = 0, int destinationOffset = 0) where T : struct
         {
-            var handle = GCHandle.Alloc(newValues, GCHandleType.Pinned);
-            var bytes = (byte*)handle.AddrOfPinnedObject();
-            var strideInBytes = Unsafe.SizeOf<T>();
-            context.UpdateSubresource(
-                new DataBox(new IntPtr(bytes + sourceOffset * strideInBytes)), buffer, 0,
-                new ResourceRegion(
-                    destinationOffset * strideInBytes, 0, 0,
-                    (destinationOffset + count) * strideInBytes, 1, 1));
-            handle.Free();
+            ref var raw = ref MemoryMarshal.GetReference(newValues);
+            fixed (byte* bytes = &Unsafe.As<T, byte>(ref raw))
+            {
+                var strideInBytes = Unsafe.SizeOf<T>();
+                context.UpdateSubresource(
+                    new DataBox(new IntPtr(bytes + sourceOffset * strideInBytes)), buffer, 0,
+                    new ResourceRegion(
+                        destinationOffset * strideInBytes, 0, 0,
+                        (destinationOffset + count) * strideInBytes, 1, 1));
+            }
+
         }
 
         /// <summary>

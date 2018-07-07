@@ -1,57 +1,53 @@
 ﻿using BepuUtilities;
+using BepuUtilities.Collections;
 using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using Quaternion = BepuUtilities.Quaternion;
 
 namespace DemoRenderer.ShapeDrawing
 {
-    [StructLayout(LayoutKind.Explicit)]
-    struct RasterizedVertexConstants
+    [StructLayout(LayoutKind.Explicit, Size = 48)]
+    public struct MeshInstance
     {
         [FieldOffset(0)]
-        public Matrix Projection;
-        [FieldOffset(64)]
-        public Vector3 CameraPosition;
-        [FieldOffset(80)]
-        public Vector3 CameraRight;
-        [FieldOffset(96)]
-        public Vector3 CameraUp;
-        [FieldOffset(112)]
-        public Vector3 CameraBackward;
+        public Vector3 Position;
+        [FieldOffset(12)]
+        public uint PackedColor;
+        [FieldOffset(16)]
+        public ulong PackedOrientation;
+        [FieldOffset(24)]
+        public int VertexStart;
+        [FieldOffset(28)]
+        public int VertexCount;
+        [FieldOffset(32)]
+        public Vector3 Scale;
     }
-    public class RasterizedRenderer<TInstance> : IDisposable where TInstance : struct
-    {       
+    public class MeshRenderer : IDisposable
+    {
+        MeshCache meshCache;
+   
         ConstantsBuffer<RasterizedVertexConstants> vertexConstants;
 
-        StructuredBuffer<TInstance> instances;
+        StructuredBuffer<MeshInstance> instances;
 
         VertexShader vertexShader;
         PixelShader pixelShader;
 
-        public RasterizedRenderer(Device device, ShaderCache cache, string shaderPath, int maximumInstancesPerDraw = 2048)
+        public MeshRenderer(Device device, MeshCache meshCache, ShaderCache cache, int maximumInstancesPerDraw = 2048)
         {
-            string instanceTypeName = typeof(TInstance).Name;
-            instances = new StructuredBuffer<TInstance>(device, maximumInstancesPerDraw, $"{instanceTypeName} Instances");
-            
-            vertexConstants = new ConstantsBuffer<RasterizedVertexConstants>(device, debugName: $"{instanceTypeName} Renderer Vertex Constants");
+            this.meshCache = meshCache;
+            instances = new StructuredBuffer<MeshInstance>(device, maximumInstancesPerDraw, $"Mesh Instances");
 
-            vertexShader = new VertexShader(device, cache.GetShader($"{shaderPath}.vshader"));
-            pixelShader = new PixelShader(device, cache.GetShader($"{shaderPath}.pshader"));
+            vertexConstants = new ConstantsBuffer<RasterizedVertexConstants>(device, debugName: $"Mesh Renderer Vertex Constants");
+
+            vertexShader = new VertexShader(device, cache.GetShader(@"ShapeDrawing\RenderMeshes.hlsl.vshader"));
+            pixelShader = new PixelShader(device, cache.GetShader(@"ShapeDrawing\RenderMeshes.hlsl.pshader"));
         }
 
-        protected virtual void OnDrawSetup(DeviceContext context)
-        {
-
-        }
-
-        protected virtual void OnBatchDraw(DeviceContext context, int batchCount)
-        {
-
-        }
-
-        public void Render(DeviceContext context, Camera camera, Int2 screenResolution, TInstance[] instances, int start, int count)
+        public void Render(DeviceContext context, Camera camera, Int2 screenResolution, MeshInstance[] instances, int start, int count)
         {
             var vertexConstantsData = new RasterizedVertexConstants
             {
@@ -66,27 +62,23 @@ namespace DemoRenderer.ShapeDrawing
             //This assumes that render states have been set appropriately for opaque rendering.
             context.InputAssembler.InputLayout = null;
             context.InputAssembler.PrimitiveTopology = SharpDX.Direct3D.PrimitiveTopology.TriangleList;
-            OnDrawSetup(context);
             context.VertexShader.Set(vertexShader);
             context.VertexShader.SetConstantBuffer(0, vertexConstants.Buffer);
             context.VertexShader.SetShaderResource(0, this.instances.SRV);
+            context.VertexShader.SetShaderResource(1, meshCache.TriangleBuffer.SRV);
             context.PixelShader.Set(pixelShader);
+            
 
             while (count > 0)
             {
                 var batchCount = Math.Min(this.instances.Capacity, count);
                 this.instances.Update(context, instances, batchCount, start);
-                OnBatchDraw(context, batchCount);
+                //context.DrawInstanced()
                 count -= batchCount;
                 start += batchCount;
             }
         }
 
-
-        protected virtual void OnDispose()
-        {
-
-        }
         bool disposed;
         public void Dispose()
         {
@@ -97,12 +89,11 @@ namespace DemoRenderer.ShapeDrawing
                 pixelShader.Dispose();
                 instances.Dispose();
                 vertexConstants.Dispose();
-                OnDispose();
             }
         }
 
 #if DEBUG
-        ~RasterizedRenderer()
+        ~MeshRenderer()
         {
             Helpers.CheckForUndisposed(disposed, this);
         }

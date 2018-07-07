@@ -2,6 +2,7 @@
 ShapeDrawing\RenderCapsules.hlsl
 ShapeDrawing\RenderBoxes.hlsl
 ShapeDrawing\RenderTriangles.hlsl
+ShapeDrawing\RenderMeshes.hlsl
 Constraints\RenderLines.hlsl
 UI\RenderUILines.hlsl
 UI\RenderGlyphs.hlsl
