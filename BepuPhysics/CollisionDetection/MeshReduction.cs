@@ -77,9 +77,9 @@ namespace BepuPhysics.CollisionDetection
             public Vector4 NX;
             public Vector4 NY;
             public Vector4 NZ;
-            public Vector4 InverseLengthSquared;
+            public Vector4 InverseLength;
             public Vector3 TriangleNormal;
-            public float DistanceSquaredThreshold;
+            public float DistanceThreshold;
             public int ChildIndex;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -89,18 +89,19 @@ namespace BepuPhysics.CollisionDetection
                 var bc = triangle.C - triangle.B;
                 var ca = triangle.A - triangle.C;
                 //TODO: This threshold might result in bumps when dealing with small triangles. May want to include a different source of scale information, like from the original convex test.
-                DistanceSquaredThreshold = 1e-8f * MathHelper.Max(ab.LengthSquared(), bc.LengthSquared());
+                DistanceThreshold = 1e-4f * (float)Math.Sqrt(MathHelper.Max(ab.LengthSquared(), bc.LengthSquared()));
                 Vector3x.Cross(ab, bc, out var n);
                 //Edge normals point outward.
                 Vector3x.Cross(ab, n, out var edgeNormalAB);
                 Vector3x.Cross(bc, n, out var edgeNormalBC);
                 Vector3x.Cross(ca, n, out var edgeNormalCA);
-
-                InverseLengthSquared = Vector4.One / new Vector4(n.LengthSquared(), edgeNormalAB.LengthSquared(), edgeNormalBC.LengthSquared(), edgeNormalCA.LengthSquared());
-                TriangleNormal = n * (float)Math.Sqrt(InverseLengthSquared.X);
+                
                 NX = new Vector4(n.X, edgeNormalAB.X, edgeNormalBC.X, edgeNormalCA.X);
                 NY = new Vector4(n.Y, edgeNormalAB.Y, edgeNormalBC.Y, edgeNormalCA.Y);
                 NZ = new Vector4(n.Z, edgeNormalAB.Z, edgeNormalBC.Z, edgeNormalCA.Z);
+                var normalLengthSquared = NX * NX + NY * NY + NZ * NZ;
+                InverseLength = Vector4.One / Vector4.SquareRoot(normalLengthSquared);
+                TriangleNormal = n * InverseLength.X;
                 AnchorX = new Vector4(triangle.A.X, triangle.A.X, triangle.B.X, triangle.C.X);
                 AnchorY = new Vector4(triangle.A.Y, triangle.A.Y, triangle.B.Y, triangle.C.Y);
                 AnchorZ = new Vector4(triangle.A.Z, triangle.A.Z, triangle.B.Z, triangle.C.Z);
@@ -135,24 +136,24 @@ namespace BepuPhysics.CollisionDetection
                 var offsetZ = pz - triangle.AnchorZ;
                 var dot = offsetX * triangle.NX + offsetY * triangle.NY + offsetZ * triangle.NZ;
                 //This dot represents the distance along the lane normal, scaled by the lane normal length.
-                //So, to get squared distance, square it and divide by the squared lane normal length.
+                //So, to get distance, divide by the lane normal length.
                 //Sidenote: if we scale the dot by the inverse *plane* normal length, we get the barycentric weights for the vertices. (Y is weight C, Z is weight A, W is weight B).
-                var distanceAlongNormalSquared = dot * dot * triangle.InverseLengthSquared;
+                var distanceAlongNormal = dot * triangle.InverseLength;
                 //Note that very very thin triangles can result in questionable acceptance due to not checking for true distance- 
                 //a position might be way outside a vertex, but still within edge plane thresholds. We're assuming that the impact of this problem will be minimal.
-                if (distanceAlongNormalSquared.X <= triangle.DistanceSquaredThreshold &&
-                    distanceAlongNormalSquared.Y <= triangle.DistanceSquaredThreshold &&
-                    distanceAlongNormalSquared.Z <= triangle.DistanceSquaredThreshold &&
-                    distanceAlongNormalSquared.W <= triangle.DistanceSquaredThreshold)
+                if (distanceAlongNormal.X <= triangle.DistanceThreshold &&
+                    distanceAlongNormal.Y <= triangle.DistanceThreshold &&
+                    distanceAlongNormal.Z <= triangle.DistanceThreshold &&
+                    distanceAlongNormal.W <= triangle.DistanceThreshold)
                 {
                     //The contact is near the triangle. Is the normal infringing on the triangle's face region?
                     //This occurs when:
                     //1) The contact is near an edge, and the normal points inward along the edge normal.
                     //2) The contact is on the inside of the triangle.
-                    var negativeThreshold = -triangle.DistanceSquaredThreshold;
-                    var onAB = distanceAlongNormalSquared.Y >= negativeThreshold;
-                    var onBC = distanceAlongNormalSquared.Z >= negativeThreshold;
-                    var onCA = distanceAlongNormalSquared.W >= negativeThreshold;
+                    var negativeThreshold = -triangle.DistanceThreshold;
+                    var onAB = distanceAlongNormal.Y >= negativeThreshold;
+                    var onBC = distanceAlongNormal.Z >= negativeThreshold;
+                    var onCA = distanceAlongNormal.W >= negativeThreshold;
                     if (!onAB && !onBC && !onCA)
                     {
                         //The contact is within the triangle. 
@@ -163,8 +164,11 @@ namespace BepuPhysics.CollisionDetection
                     else
                     {
                         //The contact is on the border of the triangle. Is the normal pointing inward on any edge that the contact is on?
+                        //Remember, the contact has been pushed into mesh space. The position is on the surface of the triangle, and the normal points from mesh to convex.
+                        //The edge plane normals point outward from the triangle, so if the contact normal is detected as facing the same direction as the edge plane normal,
+                        //then it is infringing.
                         var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
-                        if ((onAB && normalDot.Y < 0) || (onBC && normalDot.Z < 0) || (onCA && normalDot.W < 0))
+                        if ((onAB && normalDot.Y > 0) || (onBC && normalDot.Z > 0) || (onCA && normalDot.W > 0))
                         {
                             meshSpaceNormal = triangle.TriangleNormal;
                             return true;
@@ -225,7 +229,7 @@ namespace BepuPhysics.CollisionDetection
                     ref var sourceTriangle = ref activeTriangles[i];
                     ref var sourceChild = ref Inner.Children[sourceTriangle.ChildIndex];
                     //Can't correct contacts that were created by face collisions.
-                    if ((sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) < 0)
+                    if ((sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) == 0)
                     {
                         ComputeMeshSpaceContacts(sourceChild.Manifold, meshInverseOrientation, RequiresFlip, meshSpaceContacts, out var meshSpaceNormal);
                         for (int j = 0; j < activeChildCount; ++j)

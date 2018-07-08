@@ -21,6 +21,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             //camera.Pitch = MathHelper.PiOver2 * 0.999f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             var box = new Box(1f, 3f, 2f);
             var capsule = new Capsule(1f, 1f);
@@ -76,8 +77,6 @@ namespace Demos.Demos
                 }
             }
 
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
-            Simulation.Deterministic = false;
 
             var meshContent = content.Load<MeshContent>(@"Content\box.obj");
             BufferPool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);

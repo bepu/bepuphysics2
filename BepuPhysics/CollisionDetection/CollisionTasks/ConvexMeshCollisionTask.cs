@@ -150,7 +150,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         //Pass ownership of the triangles to the continuation. It'll dispose of the buffer.
                         batcher.Pool.Take(triangleIndices.Count, out continuation.Triangles);
                         Unsafe.AsRef<TMesh>(pair.B).GetTriangles(ref triangleIndices, ref continuation.Triangles);
-                        continuation.RequiresFlip = pair.FlipMask != 0;
+                        //A flip is required in mesh reduction whenever contacts are being generated as if the triangle is in slot B, which is whenever this pair has *not* been flipped.
+                        continuation.RequiresFlip = pair.FlipMask == 0;
 
                         int nextContinuationChildIndex = 0;
                         for (int k = 0; k < triangleIndices.Count; ++k)
