@@ -127,9 +127,10 @@ namespace DemoRenderer.ShapeDrawing
                             {
                                 ref var triangle = ref mesh.Triangles[i];
                                 var baseVertexIndex = i * 3;
+                                //Note winding flip for rendering.
                                 vertices[baseVertexIndex] = triangle.A;
-                                vertices[baseVertexIndex + 1] = triangle.B;
-                                vertices[baseVertexIndex + 2] = triangle.C;
+                                vertices[baseVertexIndex + 1] = triangle.C;
+                                vertices[baseVertexIndex + 2] = triangle.B;
                             }
                         }
                         meshes.Add(ref instance, new PassthroughArrayPool<MeshInstance>());

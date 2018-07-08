@@ -85,7 +85,7 @@ namespace Demos.Demos
             {
                 triangles[i] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
             }
-            var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(1, 1, 1), BufferPool);
+            var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(5, 1, 5), BufferPool);
             var staticShapeIndex = Simulation.Shapes.Add(meshShape);
 
             for (int i = 0; i < 1; ++i)

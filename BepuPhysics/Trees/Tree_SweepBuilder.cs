@@ -169,7 +169,8 @@ namespace BepuPhysics.Trees
             {
                 Debug.Assert(leafCountA == 1);
                 //Only one leaf. Don't create another node.
-                var leafIndex = AddLeaf(nodeIndex, 0);
+                var leafIndex = leaves.IndexMap[start];
+                this.leaves[leafIndex] = new Leaf(nodeIndex, 0);
                 a.Index = Encode(leafIndex);
             }
             if (leafCountB > 1)
@@ -180,7 +181,8 @@ namespace BepuPhysics.Trees
             {
                 Debug.Assert(leafCountB == 1);
                 //Only one leaf. Don't create another node.
-                var leafIndex = AddLeaf(nodeIndex, 1);
+                var leafIndex = leaves.IndexMap[splitIndex];
+                this.leaves[leafIndex] = new Leaf(nodeIndex, 1);
                 b.Index = Encode(leafIndex);
             }
         }
@@ -200,11 +202,13 @@ namespace BepuPhysics.Trees
                 var children = &nodes[nodeIndex].A;
                 for (int i = 0; i < count; ++i)
                 {
-                    var index = leaves.IndexMap[i + start];
-                    var leafIndex = AddLeaf(nodeIndex, i);
+                    //The sweep builder preallocated space for leaves and set the leafCount to match.
+                    //The index map tells us which of those original leaves to create.
+                    var leafIndex = leaves.IndexMap[i + start];
+                    this.leaves[leafIndex] = new Leaf(nodeIndex, i);
                     ref var child = ref children[i];
-                    child.Min = leaves.Bounds[index].Min;
-                    child.Max = leaves.Bounds[index].Max;
+                    child.Min = leaves.Bounds[leafIndex].Min;
+                    child.Max = leaves.Bounds[leafIndex].Max;
                     child.Index = Encode(leafIndex);
                     child.LeafCount = 1;
                 }
@@ -237,6 +241,7 @@ namespace BepuPhysics.Trees
             {
                 Resize(pool, leafBounds.Length);
             }
+            leafCount = leafBounds.Length;
 
 
             pool.Take<int>(leafBounds.Length, out var indexMap);
@@ -258,9 +263,11 @@ namespace BepuPhysics.Trees
             leaves.CentroidsZ = (float*)centroidsZ.Memory;
             leaves.Merged = (BoundingBox*)merged.Memory;
 
+
             for (int i = 0; i < leafBounds.Length; ++i)
             {
                 var bounds = leaves.Bounds[i];
+                //The index map relates an index in traversal back to the original leaf location.
                 leaves.IndexMap[i] = i;
                 //Per-axis index maps don't need to be initialized here. They're filled in at the time of use.
 

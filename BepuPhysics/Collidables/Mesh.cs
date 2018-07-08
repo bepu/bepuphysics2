@@ -105,7 +105,7 @@ namespace BepuPhysics.Collidables
             Enumerator enumerator;
             enumerator.Pool = pool.SpecializeFor<int>();
             enumerator.Children = childIndices;
-            Tree.GetOverlaps(min, max, ref enumerator);
+            Tree.GetOverlaps(scaledMin, scaledMax, ref enumerator);
             childIndices = enumerator.Children;
         }
 
