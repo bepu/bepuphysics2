@@ -111,7 +111,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe bool TryCorrectNormal(in TestTriangle triangle, Vector3* meshSpaceContacts, int contactCount, ref Vector3 meshSpaceNormal)
+        private static unsafe bool ShouldCorrectNormal(in TestTriangle triangle, Vector3* meshSpaceContacts, int contactCount, in Vector3 meshSpaceNormal)
         {
             //While we don't have a decent way to do truly scaling SIMD operations within the context of a single manifold vs triangle test, we can at least use 4-wide operations
             //to accelerate each individual contact test. 
@@ -157,7 +157,6 @@ namespace BepuPhysics.CollisionDetection
                     if (!onAB && !onBC && !onCA)
                     {
                         //The contact is within the triangle. 
-                        meshSpaceNormal = triangle.TriangleNormal;
                         //If this contact resulted in a correction, we can skip the remaining contacts in this manifold.
                         return true;
                     }
@@ -170,7 +169,6 @@ namespace BepuPhysics.CollisionDetection
                         var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
                         if ((onAB && normalDot.Y > 0) || (onBC && normalDot.Z > 0) || (onCA && normalDot.W > 0))
                         {
-                            meshSpaceNormal = triangle.TriangleNormal;
                             return true;
                         }
                     }
@@ -238,10 +236,21 @@ namespace BepuPhysics.CollisionDetection
                             if (i != j)
                             {
                                 ref var targetTriangle = ref activeTriangles[j];
-                                if (TryCorrectNormal(targetTriangle, meshSpaceContacts, sourceChild.Manifold.Count, ref meshSpaceNormal))
+                                if (ShouldCorrectNormal(targetTriangle, meshSpaceContacts, sourceChild.Manifold.Count, meshSpaceNormal))
                                 {
+                                    //Correct the contact depths. This is a simple scaling operation that conceptually projects the depth interval on the original normal onto the new normal.
+                                    //This never changes the sign of the depth (unless there's some numerical issue afoot), so speculative contacts stay speculative and vice versa.
+                                    //The depth will, however, get closer to zero.
+                                    var depthScale = Vector3.Dot(meshSpaceNormal, targetTriangle.TriangleNormal);
+                                    Debug.Assert(depthScale >= 0, "Make sure that this is caused by a numerical issue rather than a bug. This is not an unrecoverable failure.");
+                                    if (depthScale < 0)
+                                        depthScale = 0;
+                                    for (int k = 0; k < sourceChild.Manifold.Count; ++k)
+                                    {
+                                        Unsafe.Add(ref sourceChild.Manifold.Contact0, k).Depth *= depthScale;
+                                    }
                                     //Bring the corrected normal back into world space.
-                                    Matrix3x3.Transform(RequiresFlip ? -meshSpaceNormal : meshSpaceNormal, meshOrientation, out sourceChild.Manifold.Normal);
+                                    Matrix3x3.Transform(RequiresFlip ? -targetTriangle.TriangleNormal : targetTriangle.TriangleNormal, meshOrientation, out sourceChild.Manifold.Normal);
                                     //Since corrections result in the normal being set to the triangle normal, multiple corrections in sequence would just overwrite each other.
                                     //There is no sequence which is more correct than another, so once we find one correction, we can just quit.
                                     break;
