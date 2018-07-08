@@ -105,19 +105,29 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void UseContact(ref QuickList<Int2, Buffer<Int2>> remainingChildren, int index, ref Buffer<NonconvexReductionChild> children, NonconvexContactManifold* targetManifold)
+        unsafe static void AddContact(ref NonconvexReductionChild child, int contactIndexInChild, NonconvexContactManifold* targetManifold)
         {
-            ref var childIndex = ref remainingChildren[index];
-            ref var child = ref children[childIndex.X];
-            ref var contact = ref Unsafe.Add(ref child.Manifold.Contact0, childIndex.Y);
+            ref var contact = ref Unsafe.Add(ref child.Manifold.Contact0, contactIndexInChild);
             ref var target = ref NonconvexContactManifold.Allocate(targetManifold);
             target.Offset = contact.Offset;
             target.Normal = child.Manifold.Normal;
             //Mix the convex-generated feature id with the child indices.
             target.FeatureId = contact.FeatureId ^ ((child.ChildIndexA << 8) ^ (child.ChildIndexB << 16));
             target.Depth = contact.Depth;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe static void UseContact(ref QuickList<Int2, Buffer<Int2>> remainingChildren, int index, ref Buffer<NonconvexReductionChild> children, NonconvexContactManifold* targetManifold)
+        {
+            ref var childIndex = ref remainingChildren[index];
+            ref var child = ref children[childIndex.X];
+            AddContact(ref children[childIndex.X], childIndex.Y, targetManifold);
             remainingChildren.FastRemoveAt(index);
         }
+        /// <summary>
+        /// The maximum number of contacts that can exist within a nonconvex manifold.
+        /// </summary>
+        const int MaximumContactCount = 4;
         unsafe void ChooseMostConstraining(NonconvexContactManifold* manifold, BufferPool pool)
         {
             //The end goal of contact reduction is to choose a reasonably stable subset of contacts which offer the greatest degree of constraint.
@@ -156,7 +166,7 @@ namespace BepuPhysics.CollisionDetection
                     //Feature id stability doesn't matter much if there is no stable contact.
                     if (contact.Depth >= 0)
                     {
-                        var extent = contact.Offset.X + contact.Offset.Y + contact.Offset.Y;
+                        var extent = contact.Offset.X + contact.Offset.Y + contact.Offset.Z;
                         if (extent < minimumExtent)
                         {
                             minimumExtent = extent;
@@ -207,7 +217,7 @@ namespace BepuPhysics.CollisionDetection
             //TODO: This could be significantly optimized. Many approximations would get 95% of the benefit, and even the full version could be vectorized in a few different ways.
             var depthScale = 5f / maximumDistance;
             var reducedContacts = &manifold->Contact0;
-            while (remainingChildren.Count > 0 && manifold->Count < 4)
+            while (remainingChildren.Count > 0 && manifold->Count < MaximumContactCount)
             {
                 float bestScore = -1;
                 int bestScoreIndex = 0;
@@ -267,10 +277,13 @@ namespace BepuPhysics.CollisionDetection
                 int populatedChildManifolds = 0;
                 //We cache an index in case there is only one populated manifold. Order of discovery doesn't matter- this value only gets used when there's one manifold.
                 int samplePopulatedChildIndex = 0;
+                int totalContactCount = 0;
                 for (int i = 0; i < ChildCount; ++i)
                 {
-                    if (Children[i].Manifold.Count > 0)
+                    var childManifoldCount = Children[i].Manifold.Count;
+                    if (childManifoldCount > 0)
                     {
+                        totalContactCount += childManifoldCount;
                         ++populatedChildManifolds;
                         samplePopulatedChildIndex = i;
                     }
@@ -283,9 +296,25 @@ namespace BepuPhysics.CollisionDetection
                     //We should assume that the stack memory backing the reduced manifold is uninitialized. We rely on the count, so initialize it manually.
                     reducedManifold.Count = 0;
 
-                    //ChooseBadly(&reducedManifold);
-                    //ChooseDeepest(&reducedManifold);
-                    ChooseMostConstraining(&reducedManifold, batcher.Pool);
+                    if (totalContactCount <= MaximumContactCount)
+                    {
+                        //No reduction required; we can fit every contact.
+                        //TODO: If you have any redundant contact removal, you'd have to do it before running this.
+                        for (int i = 0; i < ChildCount; ++i)
+                        {
+                            ref var child = ref Children[i];
+                            for (int j = 0; j < child.Manifold.Count; ++j)
+                            {
+                                AddContact(ref child, j, &reducedManifold);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        //ChooseBadly(&reducedManifold);
+                        //ChooseDeepest(&reducedManifold);
+                        ChooseMostConstraining(&reducedManifold, batcher.Pool);
+                    }
 
                     //The manifold offsetB is the offset from shapeA origin to shapeB origin.
                     reducedManifold.OffsetB = sampleChild->Manifold.OffsetB - sampleChild->OffsetB + sampleChild->OffsetA;

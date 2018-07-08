@@ -33,7 +33,7 @@ namespace Demos.Demos
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);
             const int width = 1;
-            const int height = 1;
+            const int height = 3;
             const int length = 1;
             for (int i = 0; i < width; ++i)
             {
@@ -59,13 +59,13 @@ namespace Demos.Demos
                         switch (j % 3)
                         {
                             case 0:
-                                //bodyDescription.Collidable.Shape = boxIndex;
-                                //bodyDescription.LocalInertia = boxInertia;
-                                //break;
+                                bodyDescription.Collidable.Shape = boxIndex;
+                                bodyDescription.LocalInertia = boxInertia;
+                                break;
                             case 1:
-                                //bodyDescription.Collidable.Shape = capsuleIndex;
-                                //bodyDescription.LocalInertia = capsuleInertia;
-                                //break;
+                                bodyDescription.Collidable.Shape = capsuleIndex;
+                                bodyDescription.LocalInertia = capsuleInertia;
+                                break;
                             case 2:
                                 bodyDescription.Collidable.Shape = sphereIndex;
                                 bodyDescription.LocalInertia = sphereInertia;
@@ -79,12 +79,18 @@ namespace Demos.Demos
 
 
             var meshContent = content.Load<MeshContent>(@"Content\box.obj");
-            BufferPool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);
-            for (int i = 0; i < meshContent.Triangles.Length; ++i)
+            //BufferPool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);
+            //for (int i = 0; i < meshContent.Triangles.Length; ++i)
+            //{
+            //    triangles[i] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
+            //}
+            //var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(5, 1, 5), BufferPool);
+            BufferPool.Take<Triangle>(2, out var triangles);
+            for (int i = 2; i < 4; ++i)
             {
-                triangles[i] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
+                triangles[i - 2] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
             }
-            var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(5, 1, 5), BufferPool);
+            var meshShape = new Mesh(triangles.Slice(0, 2), new Vector3(5, 1, 5), BufferPool);
             var staticShapeIndex = Simulation.Shapes.Add(meshShape);
 
             for (int i = 0; i < 1; ++i)
