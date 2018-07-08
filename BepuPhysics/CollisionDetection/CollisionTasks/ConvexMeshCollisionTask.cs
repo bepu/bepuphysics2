@@ -11,7 +11,7 @@ using Quaternion = BepuUtilities.Quaternion;
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
 
-    public class ConvexMeshCollisionTask<TConvex, TConvexWide, TMesh, TMeshOverlapFinder> : CollisionTask
+    public class ConvexMeshCollisionTask<TConvex, TConvexWide, TMesh> : CollisionTask
         where TConvex : struct, IConvexShape
         where TConvexWide : struct, IShapeWide<TConvex>
         where TMesh : struct, IMeshShape
@@ -131,8 +131,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 Vector3Wide.Add(minExpansion, min, out min);
                 Vector3Wide.Add(maxExpansion, max, out max);
+                Vector3Wide.Subtract(min, offsetB, out min);
+                Vector3Wide.Subtract(max, offsetB, out max);
 
-                meshFunctions.FindOverlaps(ref meshes, ref min, ref max, count, batcher.Pool, ref meshTriangleIndices);
+                meshFunctions.FindLocalOverlaps(ref meshes, ref min, ref max, count, batcher.Pool, ref meshTriangleIndices);
 
 
                 for (int j = 0; j < count; ++j)
@@ -146,9 +148,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         ref var continuation = ref batcher.MeshReductions.CreateContinuation(triangleIndices.Count, batcher.Pool, out var continuationIndex);
                         continuation.MeshOrientation = pair.OrientationB;
                         //Pass ownership of the triangles to the continuation. It'll dispose of the buffer.
-                        batcher.Pool.Take<Triangle>(triangleIndices.Count, out var triangles);
-                        Unsafe.AsRef<TMesh>(pair.B).GetTriangles(ref triangleIndices, ref triangles);
-                        continuation.Triangles = triangles;
+                        batcher.Pool.Take(triangleIndices.Count, out continuation.Triangles);
+                        Unsafe.AsRef<TMesh>(pair.B).GetTriangles(ref triangleIndices, ref continuation.Triangles);
+                        continuation.RequiresFlip = pair.FlipMask != 0;
 
                         int nextContinuationChildIndex = 0;
                         for (int k = 0; k < triangleIndices.Count; ++k)
@@ -171,8 +173,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                                 var continuationChildIndex = nextContinuationChildIndex++;
                                 var continuationInfo = new PairContinuation(pair.Continuation.PairId, childA, childB,
-                                    CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
-                                ref var continuationChild = ref batcher.NonconvexReductions.Continuations[continuationIndex].Children[continuationChildIndex];
+                                    CollisionContinuationType.MeshReduction, continuationIndex, continuationChildIndex);
+                                ref var continuationChild = ref continuation.Inner.Children[continuationChildIndex];
                                 //In meshes, the triangle's vertices already contain the offset, so there is no additional offset.
                                 continuationChild.OffsetA = default;
                                 continuationChild.ChildIndexA = childA;
@@ -181,7 +183,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                                 //Note that the triangles list persists until the continuation completes, which means the memory will be validly accessible for all of the spawned collision tasks.
                                 //In other words, we can pass a pointer to it to avoid the need for additional batcher shape copying.
-                                ref var triangle = ref triangles[k];
+                                ref var triangle = ref continuation.Triangles[k];
                                 ref var convex = ref Unsafe.AsRef<TConvex>(pair.A);
                                 if (pair.FlipMask < 0)
                                 {

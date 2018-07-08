@@ -24,26 +24,26 @@ namespace Demos.Demos
 
             var box = new Box(1f, 3f, 2f);
             var capsule = new Capsule(1f, 1f);
-            var sphere = new Sphere(1.5f);
+            var sphere = new Sphere(.5f);
             box.ComputeInertia(1, out var boxInertia);
             capsule.ComputeInertia(1, out var capsuleInertia);
             sphere.ComputeInertia(1, out var sphereInertia);
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);
-            const int width = 8;
-            const int height = 16;
-            const int length = 8;
+            const int width = 1;
+            const int height = 1;
+            const int length = 1;
             for (int i = 0; i < width; ++i)
             {
                 for (int j = 0; j < height; ++j)
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        var location = new Vector3(3, 3, 3) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 1.5f, -length * 1.5f);
+                        var location = new Vector3(3, 3, 3) * new Vector3(i, j, k);// + new Vector3(-width * 1.5f, 1.5f, -length * 1.5f);
                         var bodyDescription = new BodyDescription
                         {
-                            Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.01f },
+                            Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = -0.01f },
                             Pose = new RigidPose
                             {
                                 Orientation = BepuUtilities.Quaternion.Identity,
@@ -58,13 +58,13 @@ namespace Demos.Demos
                         switch (j % 3)
                         {
                             case 0:
-                                bodyDescription.Collidable.Shape = boxIndex;
-                                bodyDescription.LocalInertia = boxInertia;
-                                break;
+                                //bodyDescription.Collidable.Shape = boxIndex;
+                                //bodyDescription.LocalInertia = boxInertia;
+                                //break;
                             case 1:
-                                bodyDescription.Collidable.Shape = capsuleIndex;
-                                bodyDescription.LocalInertia = capsuleInertia;
-                                break;
+                                //bodyDescription.Collidable.Shape = capsuleIndex;
+                                //bodyDescription.LocalInertia = capsuleInertia;
+                                //break;
                             case 2:
                                 bodyDescription.Collidable.Shape = sphereIndex;
                                 bodyDescription.LocalInertia = sphereInertia;
@@ -85,10 +85,10 @@ namespace Demos.Demos
             {
                 triangles[i] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
             }
-            var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(5, 1, 5), BufferPool);
+            var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(1, 1, 1), BufferPool);
             var staticShapeIndex = Simulation.Shapes.Add(meshShape);
 
-            for (int i = 0; i < 10; ++i)
+            for (int i = 0; i < 1; ++i)
             {
                 var staticDescription = new StaticDescription
                 {
@@ -105,6 +105,13 @@ namespace Demos.Demos
             }
 
 
+        }
+
+        public override void Update(Input input, float dt)
+        {
+            if (input.IsDown(OpenTK.Input.Key.P))
+                Console.Write("SDF");
+            base.Update(input, dt);
         }
 
     }

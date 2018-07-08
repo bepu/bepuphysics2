@@ -41,7 +41,7 @@ namespace BepuPhysics.Collidables
                 bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
                 bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
             }
-            Tree.SweepBuild(pool, boundingBoxes);
+            Tree.SweepBuild(pool, boundingBoxes.Slice(0, triangles.Length));
             Scale = scale;
         }
 
@@ -97,7 +97,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public unsafe void FindOverlaps(in Vector3 min, in Vector3 max, BufferPool pool, ref QuickList<int, Buffer<int>> childIndices)
+        public unsafe void FindLocalOverlaps(in Vector3 min, in Vector3 max, BufferPool pool, ref QuickList<int, Buffer<int>> childIndices)
         {
             Debug.Assert(childIndices.Span.Memory != null, "The given list reference is expected to already be constructed and ready for use.");
             var scaledMin = min * inverseScale;
@@ -109,13 +109,13 @@ namespace BepuPhysics.Collidables
             childIndices = enumerator.Children;
         }
 
-        public unsafe void FindOverlaps(ref Buffer<IntPtr> meshes, ref Vector3Wide min, ref Vector3Wide max, int count, BufferPool pool, ref Buffer<QuickList<int, Buffer<int>>> childIndices)
+        public unsafe void FindLocalOverlaps(ref Buffer<IntPtr> meshes, ref Vector3Wide min, ref Vector3Wide max, int count, BufferPool pool, ref Buffer<QuickList<int, Buffer<int>>> childIndices)
         {
             for (int i = 0; i < count; ++i)
             {
                 Vector3Wide.ReadSlot(ref min, i, out var narrowMin);
                 Vector3Wide.ReadSlot(ref max, i, out var narrowMax);
-                Unsafe.AsRef<Mesh>(meshes[i].ToPointer()).FindOverlaps(narrowMin, narrowMax, pool, ref childIndices[i]);
+                Unsafe.AsRef<Mesh>(meshes[i].ToPointer()).FindLocalOverlaps(narrowMin, narrowMax, pool, ref childIndices[i]);
             }
         }
 

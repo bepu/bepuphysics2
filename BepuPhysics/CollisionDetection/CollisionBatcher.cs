@@ -210,6 +210,26 @@ namespace BepuPhysics.CollisionDetection
             AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, default, default, speculativeMargin, default, pairContinuation);
         }
 
+       
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, 
+            in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, 
+            float speculativeMargin, float maximumExpansion,
+            in PairContinuation continuation)
+        {
+            var shapeTypeA = shapeIndexA.Type;
+            var shapeTypeB = shapeIndexB.Type;
+            Shapes[shapeIndexA.Type].GetShapeData(shapeIndexA.Index, out var shapeA, out var shapeSizeA);
+            Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
+            AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, velocityA, velocityB, speculativeMargin, maximumExpansion, continuation);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB,
+            float speculativeMargin, in PairContinuation continuation)
+        {
+            Add(shapeIndexA, shapeIndexB, offsetB, orientationA, orientationB, default, default, speculativeMargin, default, continuation);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void CacheShapes(ref CollisionTaskReference reference, void* shapeA, void* shapeB, int shapeSizeA, int shapeSizeB, out void* cachedShapeA, out void* cachedShapeB)
         {
@@ -227,6 +247,7 @@ namespace BepuPhysics.CollisionDetection
             Buffer.MemoryCopy(shapeA, cachedShapeA, shapeSizeA, shapeSizeA);
             Buffer.MemoryCopy(shapeB, cachedShapeB, shapeSizeB, shapeSizeB);
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
            int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, float speculativeMargin, int pairId)
@@ -235,23 +256,6 @@ namespace BepuPhysics.CollisionDetection
             CacheShapes(ref reference, shapeA, shapeB, shapeSizeA, shapeSizeB, out var cachedShapeA, out var cachedShapeB);
             AddDirectly(ref reference, shapeTypeA, shapeTypeB, cachedShapeA, cachedShapeB, offsetB, orientationA, orientationB, default, default, speculativeMargin, default, new PairContinuation(pairId));
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, float speculativeMargin,
-            in PairContinuation continuation)
-        {
-            var shapeTypeA = shapeIndexA.Type;
-            var shapeTypeB = shapeIndexB.Type;
-            Shapes[shapeIndexA.Type].GetShapeData(shapeIndexA.Index, out var shapeA, out var shapeSizeA);
-            Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
-            AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, speculativeMargin, continuation);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, float speculativeMargin, int pairId)
-        {
-            var pairContinuationInfo = new PairContinuation(pairId);
-            Add(shapeIndexA, shapeIndexB, offsetB, orientationA, orientationB, speculativeMargin, pairContinuationInfo);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB, float speculativeMargin, int pairId)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
@@ -309,7 +313,7 @@ namespace BepuPhysics.CollisionDetection
                             NonconvexReductions.ContributeChildToContinuation(ref continuation, manifold, ref this);
                         }
                         break;
-                    case CollisionContinuationType.BoundarySmoothedMesh:
+                    case CollisionContinuationType.MeshReduction:
                         {
                             MeshReductions.ContributeChildToContinuation(ref continuation, manifold, ref this);
                         }
