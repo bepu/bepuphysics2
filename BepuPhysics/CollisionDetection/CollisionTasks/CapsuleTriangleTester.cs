@@ -256,8 +256,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var triangleIntervalMin = Vector.Max(abEntry, Vector.Max(bcEntry, caEntry));
                 var triangleIntervalMax = Vector.Min(abExit, Vector.Min(bcExit, caExit));
 
-                var overlapIntervalMin = Vector.Max(triangleIntervalMin, -a.HalfLength);
+                var negativeHalfLength = -a.HalfLength;
+                var overlapIntervalMin = Vector.Max(triangleIntervalMin, negativeHalfLength);
                 var overlapIntervalMax = Vector.Min(triangleIntervalMax, a.HalfLength);
+                //We'll be clamping from both sides for the purposes of generating good face contacts, but that means the one contact case won't have a unilaterally clamped interval to work with.
+                //So perform that test up front.
+                var intervalIsValidForSecondContact = Vector.GreaterThanOrEqual(overlapIntervalMax, overlapIntervalMin);
+                overlapIntervalMin = Vector.Min(overlapIntervalMin, a.HalfLength);
+                overlapIntervalMax = Vector.Max(overlapIntervalMax, negativeHalfLength);
                 Vector3Wide.Scale(localCapsuleAxis, overlapIntervalMin, out var clippedOnA0);
                 Vector3Wide.Add(clippedOnA0, localOffsetA, out clippedOnA0);
                 Vector3Wide.Dot(clippedOnA0, faceNormal, out var nA0);
@@ -296,7 +302,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //1) The interval is valid (max > min).
                 //2) The number of contacts == 1.
                 //3) The candidate is above the triangle.
-                var useCandidateForSecondContact = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(overlapIntervalMax, overlapIntervalMin),
+                var useCandidateForSecondContact = Vector.BitwiseAnd(intervalIsValidForSecondContact,
                     Vector.BitwiseAnd(Vector.Equals(contactCount, Vector<int>.One), Vector.GreaterThan(secondContactDistanceAlongNormal, Vector<float>.Zero)));
                 Vector3Wide.ConditionalSelect(useCandidateForSecondContact, secondContactCandidate, b1, out b1);
                 contactCount = Vector.ConditionalSelect(useCandidateForSecondContact, new Vector<int>(2), contactCount);
