@@ -77,8 +77,6 @@ namespace BepuPhysics.CollisionDetection
             public Vector4 NX;
             public Vector4 NY;
             public Vector4 NZ;
-            public Vector4 InverseLength;
-            public Vector3 TriangleNormal;
             public float DistanceThreshold;
             public int ChildIndex;
 
@@ -100,8 +98,10 @@ namespace BepuPhysics.CollisionDetection
                 NY = new Vector4(n.Y, edgeNormalAB.Y, edgeNormalBC.Y, edgeNormalCA.Y);
                 NZ = new Vector4(n.Z, edgeNormalAB.Z, edgeNormalBC.Z, edgeNormalCA.Z);
                 var normalLengthSquared = NX * NX + NY * NY + NZ * NZ;
-                InverseLength = Vector4.One / Vector4.SquareRoot(normalLengthSquared);
-                TriangleNormal = n * InverseLength.X;
+                var inverseLength = Vector4.One / Vector4.SquareRoot(normalLengthSquared);
+                NX *= inverseLength;
+                NY *= inverseLength;
+                NZ *= inverseLength;
                 AnchorX = new Vector4(triangle.A.X, triangle.A.X, triangle.B.X, triangle.C.X);
                 AnchorY = new Vector4(triangle.A.Y, triangle.A.Y, triangle.B.Y, triangle.C.Y);
                 AnchorZ = new Vector4(triangle.A.Z, triangle.A.Z, triangle.B.Z, triangle.C.Z);
@@ -134,11 +134,7 @@ namespace BepuPhysics.CollisionDetection
                 var offsetX = px - triangle.AnchorX;
                 var offsetY = py - triangle.AnchorY;
                 var offsetZ = pz - triangle.AnchorZ;
-                var dot = offsetX * triangle.NX + offsetY * triangle.NY + offsetZ * triangle.NZ;
-                //This dot represents the distance along the lane normal, scaled by the lane normal length.
-                //So, to get distance, divide by the lane normal length.
-                //Sidenote: if we scale the dot by the inverse *plane* normal length, we get the barycentric weights for the vertices. (Y is weight C, Z is weight A, W is weight B).
-                var distanceAlongNormal = dot * triangle.InverseLength;
+                var distanceAlongNormal = offsetX * triangle.NX + offsetY * triangle.NY + offsetZ * triangle.NZ;
                 //Note that very very thin triangles can result in questionable acceptance due to not checking for true distance- 
                 //a position might be way outside a vertex, but still within edge plane thresholds. We're assuming that the impact of this problem will be minimal.
                 if (distanceAlongNormal.X <= triangle.DistanceThreshold &&
@@ -167,7 +163,7 @@ namespace BepuPhysics.CollisionDetection
                         //The edge plane normals point outward from the triangle, so if the contact normal is detected as facing the same direction as the edge plane normal,
                         //then it is infringing.
                         var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
-                        if ((onAB && normalDot.Y > 0) || (onBC && normalDot.Z > 0) || (onCA && normalDot.W > 0))
+                        if ((onAB && normalDot.Y > 5e-5f) || (onBC && normalDot.Z > 5e-5f) || (onCA && normalDot.W > 5e-5f))
                         {
                             return true;
                         }
@@ -238,19 +234,18 @@ namespace BepuPhysics.CollisionDetection
                                 ref var targetTriangle = ref activeTriangles[j];
                                 if (ShouldCorrectNormal(targetTriangle, meshSpaceContacts, sourceChild.Manifold.Count, meshSpaceNormal))
                                 {
-                                    //Correct the contact depths. This is a simple scaling operation that conceptually projects the depth interval on the original normal onto the new normal.
-                                    //This never changes the sign of the depth (unless there's some numerical issue afoot), so speculative contacts stay speculative and vice versa.
-                                    //The depth will, however, get closer to zero.
-                                    var depthScale = Vector3.Dot(meshSpaceNormal, targetTriangle.TriangleNormal);
-                                    Debug.Assert(depthScale >= 0, "Make sure that this is caused by a numerical issue rather than a bug. This is not an unrecoverable failure.");
-                                    if (depthScale < 0)
-                                        depthScale = 0;
+                                    //This is a bit of a hack. We arbitrarily say that any corrected contact is not allowed to contribute to position correction at all.
+                                    //Further, despite changing the normal, we keep the depth of speculative contacts the same, even though the projected depth is less.
+                                    //We don't want to make false collisions *more* prominent.
                                     for (int k = 0; k < sourceChild.Manifold.Count; ++k)
                                     {
-                                        Unsafe.Add(ref sourceChild.Manifold.Contact0, k).Depth *= depthScale;
+                                        ref var depth = ref Unsafe.Add(ref sourceChild.Manifold.Contact0, k).Depth;
+                                        if (depth > 0)
+                                            depth = 0;
                                     }
                                     //Bring the corrected normal back into world space.
-                                    Matrix3x3.Transform(RequiresFlip ? -targetTriangle.TriangleNormal : targetTriangle.TriangleNormal, meshOrientation, out sourceChild.Manifold.Normal);
+                                    var triangleNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
+                                    Matrix3x3.Transform(RequiresFlip ? -triangleNormal : triangleNormal, meshOrientation, out sourceChild.Manifold.Normal);
                                     //Since corrections result in the normal being set to the triangle normal, multiple corrections in sequence would just overwrite each other.
                                     //There is no sequence which is more correct than another, so once we find one correction, we can just quit.
                                     break;

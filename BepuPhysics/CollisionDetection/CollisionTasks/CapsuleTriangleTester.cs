@@ -175,7 +175,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(useBC, b.B, b.A, out var edgeStart);
             Vector3Wide.ConditionalSelect(useBC, edgeDirectionCandidate, edgeDirection, out edgeDirection);
             Vector3Wide.ConditionalSelect(useBC, edgeNormalCandidate, edgeNormal, out edgeNormal);
-            ta = Vector.ConditionalSelect(useAC, taCandidate, ta);
+            ta = Vector.ConditionalSelect(useBC, taCandidate, ta);
             tb = Vector.ConditionalSelect(useBC, tbCandidate, tb);
             bMin = Vector.ConditionalSelect(useBC, bMinCandidate, bMin);
             bMax = Vector.ConditionalSelect(useBC, bMaxCandidate, bMax);
