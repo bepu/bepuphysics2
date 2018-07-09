@@ -95,7 +95,7 @@ namespace BepuPhysics.CollisionDetection
                 Vector3x.Cross(ab, n, out var edgeNormalAB);
                 Vector3x.Cross(bc, n, out var edgeNormalBC);
                 Vector3x.Cross(ca, n, out var edgeNormalCA);
-                
+
                 NX = new Vector4(n.X, edgeNormalAB.X, edgeNormalBC.X, edgeNormalCA.X);
                 NY = new Vector4(n.Y, edgeNormalAB.Y, edgeNormalBC.Y, edgeNormalCA.Y);
                 NZ = new Vector4(n.Z, edgeNormalAB.Z, edgeNormalBC.Z, edgeNormalCA.Z);
@@ -256,6 +256,12 @@ namespace BepuPhysics.CollisionDetection
                                     break;
                                 }
                             }
+                        }
+                        //Clear the face flags. This isn't *required* since they're coherent enough anyway and the accumulated impulse redistributor is a decent fallback,
+                        //but it costs basically nothing to do this.
+                        for (int k = 0; k < sourceChild.Manifold.Count; ++k)
+                        {
+                            Unsafe.Add(ref sourceChild.Manifold.Contact0, k).FeatureId &= ~FaceCollisionFlag;
                         }
                     }
                 }

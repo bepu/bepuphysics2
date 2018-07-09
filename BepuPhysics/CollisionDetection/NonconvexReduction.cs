@@ -159,13 +159,12 @@ namespace BepuPhysics.CollisionDetection
                         deepestDepthInManifold = contact.Depth;
                         deepestIndexInManifold = remainingChildren.Count;
                     }
-                    //Go ahead and apply the child's offset to the contact position, since we're going to be working in the parent's space.
-                    contact.Offset = contact.Offset + child.OffsetA;
                     //Note that we only consider 'extreme' contacts that have positive depth to avoid selecting purely speculative contacts as a starting point.
                     //If there are no contacts with positive depth, it's fine to just rely on the 'deepest' speculative contact. 
                     //Feature id stability doesn't matter much if there is no stable contact.
                     if (contact.Depth >= 0)
                     {
+                        //Note that we assume that the contact offsets have already been moved into the parent's space.
                         var extent = contact.Offset.X + contact.Offset.Y + contact.Offset.Z;
                         if (extent < minimumExtent)
                         {
@@ -253,6 +252,9 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                     var score = linear.LengthSquared() + angular.LengthSquared();
+                    //Heavily penalize speculative contacts. They can sometimes be worth it, but active contacts are almost always the priority unless they're redundant.
+                    if (contact.Depth < 0)
+                        score *= 0.25f;
                     if (score > bestScore)
                     {
                         bestScore = score;
@@ -280,15 +282,22 @@ namespace BepuPhysics.CollisionDetection
                 int totalContactCount = 0;
                 for (int i = 0; i < ChildCount; ++i)
                 {
-                    var childManifoldCount = Children[i].Manifold.Count;
+                    ref var child = ref Children[i];     
+                    var childManifoldCount = child.Manifold.Count;
                     if (childManifoldCount > 0)
                     {
                         totalContactCount += childManifoldCount;
                         ++populatedChildManifolds;
                         samplePopulatedChildIndex = i;
+                        for (int j = 0; j < child.Manifold.Count; ++j)
+                        {
+                            //Push all contacts into the space of the parent object.
+                            Unsafe.Add(ref child.Manifold.Contact0, j).Offset += child.OffsetA;
+                        }
                     }
                 }
                 var sampleChild = (NonconvexReductionChild*)Children.Memory + samplePopulatedChildIndex;
+  
                 if (populatedChildManifolds > 1)
                 {
                     //There are multiple contributing child manifolds, so just assume that the resulting manifold is going to be nonconvex.
@@ -329,11 +338,6 @@ namespace BepuPhysics.CollisionDetection
                     //and that we can only hit this codepath if all manifolds are empty, reporting manifold 0 is perfectly fine.
                     //The manifold offsetB is the offset from shapeA origin to shapeB origin.
                     sampleChild->Manifold.OffsetB = sampleChild->Manifold.OffsetB - sampleChild->OffsetB + sampleChild->OffsetA;
-                    var contacts = &sampleChild->Manifold.Contact0;
-                    for (int i = 0; i < sampleChild->Manifold.Count; ++i)
-                    {
-                        contacts[i].Offset += sampleChild->OffsetA;
-                    }
                     batcher.Callbacks.OnPairCompleted(pairId, &sampleChild->Manifold);
                 }
                 batcher.Pool.ReturnUnsafely(Children.Id);
