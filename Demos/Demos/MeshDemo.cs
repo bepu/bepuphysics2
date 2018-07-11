@@ -16,12 +16,12 @@ namespace Demos.Demos
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(-30, 10, -30);
+            camera.Position = new Vector3(-10, 0, -10);
             //camera.Yaw = MathHelper.Pi ; 
             camera.Yaw = MathHelper.Pi * 3f / 4;
             //camera.Pitch = MathHelper.PiOver2 * 0.999f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            //Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             var box = new Box(1f, 3f, 2f);
             var capsule = new Capsule(1f, 1f);
@@ -71,12 +71,25 @@ namespace Demos.Demos
                                 bodyDescription.LocalInertia = sphereInertia;
                                 break;
                         }
-                        Simulation.Bodies.Add(bodyDescription);
+                        //Simulation.Bodies.Add(bodyDescription);
 
                     }
                 }
             }
-
+            Simulation.Bodies.Add(new BodyDescription
+            {
+                Activity = new BodyActivityDescription(-1),
+                Pose = new RigidPose(new Vector3(1, 2.999f, 0), BepuUtilities.Quaternion.CreateFromYawPitchRoll(0, 0, -0.00001f)),
+                Collidable = new CollidableDescription(capsuleIndex, 1),
+                LocalInertia = capsuleInertia
+            });
+            Simulation.Bodies.Add(new BodyDescription
+            {
+                Activity = new BodyActivityDescription(-1),
+                Pose = new RigidPose(new Vector3(0, 0, 0), BepuUtilities.Quaternion.Identity),
+                Collidable = new CollidableDescription(boxIndex, 1),
+                LocalInertia = boxInertia
+            });
 
             var meshContent = content.Load<MeshContent>(@"Content\box.obj");
             //BufferPool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);

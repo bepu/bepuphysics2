@@ -16,7 +16,14 @@ namespace BepuPhysics
         //systems needing to interact directly with this representation are often terrifically memory bound. Spending the extra ALU time to convert to a basis can actually be faster
         //than loading the extra 5 elements needed to express the full 3x3 rotation matrix. Also, it's marginally easier to keep the rotation normalized over time.
         //There may be an argument for the matrix variant to ALSO be stored for some bandwidth-unconstrained stages, but don't worry about that until there's a reason to worry about it.
-        public BepuUtilities.Quaternion Orientation;
+        public Quaternion Orientation;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public RigidPose(in Vector3 position, in Quaternion orientation)
+        {
+            Position = position;
+            Orientation = orientation;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Transform(in Vector3 v, in RigidPose pose, out Vector3 result)

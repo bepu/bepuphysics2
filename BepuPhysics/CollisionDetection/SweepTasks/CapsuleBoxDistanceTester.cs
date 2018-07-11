@@ -106,7 +106,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void TestVertexAxis(ref BoxWide box, ref Vector3Wide offsetA, ref Vector3Wide capsuleAxis,
+        static void TestVertexAxis(ref BoxWide box, ref Vector3Wide offsetA, ref Vector3Wide capsuleAxis, ref Vector<float> capsuleHalfLength,
             out Vector<float> depth, out Vector3Wide normal, out Vector3Wide closestA)
         {
             //The available feature pairs between the capsule axis and box are:
@@ -125,7 +125,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
             //closest point on axis to origin = offsetA - (offsetA * capsuleAxis) * capsuleAxis
             Vector3Wide.Dot(offsetA, capsuleAxis, out var dot);
-            Vector3Wide.Scale(capsuleAxis, dot, out var axisOffset);
+            var clampedDot = Vector.Min(capsuleHalfLength, Vector.Max(-capsuleHalfLength, dot));
+            Vector3Wide.Scale(capsuleAxis, clampedDot, out var axisOffset);
             Vector3Wide.Subtract(offsetA, axisOffset, out var closestOnAxis);
 
             Vector3Wide vertex;
@@ -229,7 +230,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 Select(ref depth, ref localNormal, ref localClosest, ref edgeDepth, ref edgeLocalNormal, ref edgeLocalClosest);
             }
 
-            TestVertexAxis(ref b, ref localOffsetA, ref localCapsuleAxis, out depthCandidate, out localNormalCandidate, out var localClosestCandidate);
+            TestVertexAxis(ref b, ref localOffsetA, ref localCapsuleAxis, ref a.HalfLength, out depthCandidate, out localNormalCandidate, out var localClosestCandidate);
             Select(ref depth, ref localNormal, ref localClosest, ref depthCandidate, ref localNormalCandidate, ref localClosestCandidate);
 
             //Transform normal and closest point back into world space.

@@ -12,7 +12,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void Prepare(
-            ref BoxWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+            ref CapsuleWide a, ref BoxWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Vector3Wide localOffsetA, out Vector3Wide capsuleAxis, out Vector3Wide edgeCenters)
         {
             QuaternionWide.Conjugate(orientationB, out var toLocalB);
@@ -21,14 +21,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             QuaternionWide.ConcatenateWithoutOverlap(orientationA, toLocalB, out var boxLocalOrientationA);
             QuaternionWide.TransformUnitY(boxLocalOrientationA, out capsuleAxis);
 
-            //Get the capsule-axis-perpendicular offset from the box to the capsule and use it to choose which edges to test.
+            //Get the closest point on the capsule segment to the box center to choose which edge to use.
             //(Pointless to test the other 9; they're guaranteed to be further away.)
-            Vector3Wide.Dot(localOffsetA, capsuleAxis, out var axisOffsetADot);
-            Vector3Wide.Scale(capsuleAxis, axisOffsetADot, out var toRemove);
-            Vector3Wide.Subtract(localOffsetA, toRemove, out var perpendicularOffset);
-            edgeCenters.X = Vector.ConditionalSelect(Vector.LessThan(perpendicularOffset.X, Vector<float>.Zero), -b.HalfWidth, b.HalfWidth);
-            edgeCenters.Y = Vector.ConditionalSelect(Vector.LessThan(perpendicularOffset.Y, Vector<float>.Zero), -b.HalfHeight, b.HalfHeight);
-            edgeCenters.Z = Vector.ConditionalSelect(Vector.LessThan(perpendicularOffset.Z, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+            //closestPointOnCapsuleToBoxPosition = clamp((boxPosition - capsulePosition) * capsuleAxis, halfLength) * capsuleAxis + capsulePosition
+            //offsetFromBoxToCapsule = closestPointOnCapsuleToBoxPosition - boxPosition
+            //offsetFromBoxToCapsule = clamp(-localOffsetA * capsuleAxis, halfLength) * capsuleAxis + localOffsetA
+            //offsetFromBoxToCapsule = localOffsetA - clamp(localOffsetA * capsuleAxis, halfLength) * capsuleAxis
+
+            Vector3Wide.Dot(localOffsetA, capsuleAxis, out var dot);
+            var clampedDot = Vector.Min(a.HalfLength, Vector.Max(-a.HalfLength, dot));
+            Vector3Wide.Scale(capsuleAxis, clampedDot, out var offsetToCapsuleFromBox);
+            Vector3Wide.Subtract(localOffsetA, offsetToCapsuleFromBox, out offsetToCapsuleFromBox);
+            edgeCenters.X = Vector.ConditionalSelect(Vector.LessThan(offsetToCapsuleFromBox.X, Vector<float>.Zero), -b.HalfWidth, b.HalfWidth);
+            edgeCenters.Y = Vector.ConditionalSelect(Vector.LessThan(offsetToCapsuleFromBox.Y, Vector<float>.Zero), -b.HalfHeight, b.HalfHeight);
+            edgeCenters.Z = Vector.ConditionalSelect(Vector.LessThan(offsetToCapsuleFromBox.Z, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
         }
 
         //Hideous parameter list because this function is used with swizzled vectors.
@@ -173,7 +179,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             out Convex2ContactManifoldWide manifold)
         {
-            Prepare(ref b, ref offsetB, ref orientationA, ref orientationB, out var localOffsetA, out var capsuleAxis, out var edgeCenters);
+            Prepare(ref a, ref b, ref offsetB, ref orientationA, ref orientationB, out var localOffsetA, out var capsuleAxis, out var edgeCenters);
 
             //Swizzle XYZ -> YZX
             Vector3Wide localNormal;
