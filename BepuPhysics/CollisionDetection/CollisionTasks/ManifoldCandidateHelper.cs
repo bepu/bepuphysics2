@@ -61,9 +61,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             result.FeatureId = Vector.ConditionalSelect(useA, a.FeatureId, b.FeatureId);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void CandidateExists(in ManifoldCandidate candidate, in Vector<float> minimumDepth, in Vector<int> rawContactCount, int i, out Vector<int> exists)
+        {
+            exists = Vector.BitwiseAnd(Vector.GreaterThan(candidate.Depth, minimumDepth), Vector.LessThan(new Vector<int>(i), rawContactCount));
+        }
+
         public static void Reduce(ref ManifoldCandidate candidates, in Vector<int> rawContactCount, int maxCandidateCount,
             in Vector3Wide faceNormalA, in Vector3Wide normal, in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
-            in Vector<float> epsilonScale,
+            in Vector<float> epsilonScale, in Vector<float> minimumDepth,
             out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
             out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
         {
@@ -99,60 +105,55 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(tangentBX, dotAxis, out var xDot);
             Vector3Wide.Dot(tangentBY, dotAxis, out var yDot);
 
+            for (int i = 0; i < maxCandidateCount; ++i)
+            {
+                ref var candidate = ref Unsafe.Add(ref candidates, i);
+                candidate.Depth = candidate.X * xDot + candidate.Y * yDot - negativeBaseDot;
+            }
+            //See if we can compress the count any due to depth-rejected candidates.
+            for (int i = maxCandidateCount - 1; i >= 0; --i)
+            {
+                ref var candidate = ref Unsafe.Add(ref candidates, i);
+                if (Vector.GreaterThanAny(candidate.Depth, minimumDepth))
+                {
+                    maxCandidateCount = i + 1;
+                    break;
+                }
+            }
+
             if (maxCandidateCount <= 4)
             {
                 //There is no need for a reduction; all lanes fit within a 4 contact manifold.
                 //This can result in some pretty questionably redundant contacts sometimes, but our epsilons are sufficiently small that most such things
                 //would get let through anyway. 
-                //Note that we still have to initialize depth.
                 //TODO: Could play with this to see what the net impact on performance is. Probably negligible either way.
-                for (int i = 0; i < maxCandidateCount; ++i)
-                {
-                    ref var candidate = ref Unsafe.Add(ref candidates, i);
-                    candidate.Depth = candidate.X * xDot + candidate.Y * yDot - negativeBaseDot;
-                }
                 contact0 = candidates;
                 contact1 = Unsafe.Add(ref candidates, 1);
                 contact2 = Unsafe.Add(ref candidates, 2);
                 contact3 = Unsafe.Add(ref candidates, 3);
-                contact0Exists = Vector.GreaterThan(rawContactCount, Vector<int>.Zero);
-                contact1Exists = Vector.GreaterThan(rawContactCount, Vector<int>.One);
-                contact2Exists = Vector.GreaterThan(rawContactCount, new Vector<int>(2));
-                contact3Exists = Vector.GreaterThan(rawContactCount, new Vector<int>(3));
+                CandidateExists(contact0, minimumDepth, rawContactCount, 0, out contact0Exists);
+                CandidateExists(contact1, minimumDepth, rawContactCount, 1, out contact1Exists);
+                CandidateExists(contact2, minimumDepth, rawContactCount, 2, out contact2Exists);
+                CandidateExists(contact3, minimumDepth, rawContactCount, 3, out contact3Exists);
                 return;
             }
 
             //minor todo: don't really need to waste time initializing to an invalid value.
-            var minDepth = new Vector<float>(float.MaxValue);
-            var maxExtreme = new Vector<float>(-float.MaxValue);
-            ManifoldCandidate deepest, extreme;
-            deepest.Depth = new Vector<float>(-float.MaxValue);
+            var bestScore = new Vector<float>(-float.MaxValue);
+            //While depth is the dominant heuristic, extremity is used as a bias to keep initial contact selection a little more consistent in near-equal cases.
+            var extremityScale = epsilonScale * 1e-4f;
             for (int i = 0; i < maxCandidateCount; ++i)
             {
                 ref var candidate = ref Unsafe.Add(ref candidates, i);
-                candidate.Depth = candidate.X * xDot + candidate.Y * yDot - negativeBaseDot;
-                var index = new Vector<int>(i);
-                var indexIsValid = Vector.LessThan(new Vector<int>(i), rawContactCount);
-                var candidateIsDeepest = Vector.BitwiseAnd(indexIsValid, Vector.GreaterThan(candidate.Depth, deepest.Depth));
-                //Note that we gather the candidate into a local variable rather than storing an index. This avoids the need for a gather (or scalar gather emulation).
-                //May be worth doing deeper testing on whether that's worth it, but it'll be a minor difference regardless.
-                ConditionalSelect(candidateIsDeepest, candidate, deepest, out deepest);
+                CandidateExists(candidate, minimumDepth, rawContactCount, i, out var candidateExists);
                 //Note X+Y instead of X or Y alone. Shapes are very often stacked in a nonrandom way; choosing +x or +y alone would lead to near-ties in such cases.
-                //This is a pretty small detail, but it is cheap enough that there's no reason not to take advantage of it.
-                var extremeCandidate = candidate.X + candidate.Y;
-                var candidateIsMostExtreme = Vector.BitwiseAnd(indexIsValid, Vector.GreaterThan(extremeCandidate, maxExtreme));
-                ConditionalSelect(candidateIsMostExtreme, candidate, extreme, out extreme);
-                minDepth = Vector.ConditionalSelect(indexIsValid, Vector.Min(candidate.Depth, minDepth), minDepth);
-                maxExtreme = Vector.ConditionalSelect(indexIsValid, extremeCandidate, maxExtreme);
+                //This is a pretty small detail3, but it is cheap enough that there's no reason not to take advantage of it.
+                var candidateScore = candidate.Depth + (candidate.X + candidate.Y) * extremityScale;
+                var candidateIsHighestScore = Vector.BitwiseAnd(candidateExists, Vector.GreaterThan(candidateScore, bestScore));
+                ConditionalSelect(candidateIsHighestScore, candidate, contact0, out contact0);
+                bestScore = Vector.ConditionalSelect(candidateIsHighestScore, candidateScore, bestScore);
             }
-
-
-            //Choose the starting point for the contact reduction. Two options:
-            //If depth disparity is high, use the deepest index.
-            //If depth disparity is too small, use the extreme X index to avoid flickering between manifold start locations.
-            var useDepthIndex = Vector.GreaterThan(deepest.Depth - minDepth, new Vector<float>(1e-2f) * epsilonScale);
-            ConditionalSelect(useDepthIndex, deepest, extreme, out contact0);
-            contact0Exists = Vector.GreaterThan(rawContactCount, Vector<int>.Zero);
+            contact0Exists = Vector.GreaterThan(bestScore, new Vector<float>(-float.MaxValue));
 
             //Find the most distant point from the starting contact.
             var maxDistanceSquared = Vector<float>.Zero;
@@ -162,8 +163,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var offsetX = candidate.X - contact0.X;
                 var offsetY = candidate.Y - contact0.Y;
                 var distanceSquared = offsetX * offsetX + offsetY * offsetY;
-                var indexIsValid = Vector.LessThan(new Vector<int>(i), rawContactCount);
-                var candidateIsMostDistant = Vector.BitwiseAnd(Vector.GreaterThan(distanceSquared, maxDistanceSquared), indexIsValid);
+                //Penalize speculative contacts; they are not as important in general.
+                distanceSquared = Vector.ConditionalSelect(Vector.LessThan(candidate.Depth, Vector<float>.Zero), 0.125f * distanceSquared, distanceSquared);
+                CandidateExists(candidate, minimumDepth, rawContactCount, i, out var candidateExists);
+                var candidateIsMostDistant = Vector.BitwiseAnd(Vector.GreaterThan(distanceSquared, maxDistanceSquared), candidateExists);
                 maxDistanceSquared = Vector.ConditionalSelect(candidateIsMostDistant, distanceSquared, maxDistanceSquared);
                 ConditionalSelect(candidateIsMostDistant, candidate, contact1, out contact1);
             }
@@ -184,12 +187,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var candidateOffsetX = candidate.X - contact0.X;
                 var candidateOffsetY = candidate.Y - contact0.Y;
                 var signedArea = candidateOffsetX * edgeOffsetY - candidateOffsetY * edgeOffsetX;
+                //Penalize speculative contacts; they are not as important in general.
+                signedArea = Vector.ConditionalSelect(Vector.LessThan(candidate.Depth, Vector<float>.Zero), 0.25f * signedArea, signedArea);
 
-                var indexIsValid = Vector.LessThan(new Vector<int>(i), rawContactCount);
-                var isMinArea = Vector.BitwiseAnd(Vector.LessThan(signedArea, minSignedArea), indexIsValid);
+                CandidateExists(candidate, minimumDepth, rawContactCount, i, out var candidateExists);
+                var isMinArea = Vector.BitwiseAnd(Vector.LessThan(signedArea, minSignedArea), candidateExists);
                 minSignedArea = Vector.ConditionalSelect(isMinArea, signedArea, minSignedArea);
                 ConditionalSelect(isMinArea, candidate, contact2, out contact2);
-                var isMaxArea = Vector.BitwiseAnd(Vector.GreaterThan(signedArea, maxSignedArea), indexIsValid);
+                var isMaxArea = Vector.BitwiseAnd(Vector.GreaterThan(signedArea, maxSignedArea), candidateExists);
                 maxSignedArea = Vector.ConditionalSelect(isMaxArea, signedArea, maxSignedArea);
                 ConditionalSelect(isMaxArea, candidate, contact3, out contact3);
             }

@@ -342,30 +342,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref tangentBX, ref tangentBY, ref halfSpanBX, ref halfSpanBY,
                 ref candidates, ref rawContactCount);
 
-            ManifoldCandidateHelper.Reduce(ref candidates, rawContactCount, 8, normalA, manifold.Normal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale,
+            ManifoldCandidateHelper.Reduce(ref candidates, rawContactCount, 8, normalA, manifold.Normal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin,
               out var contact0, out var contact1, out var contact2, out var contact3,
               out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
             //Transform the contacts into the manifold.
-            var minimumAcceptedDepth = -speculativeMargin;
-            TransformContactToManifold(ref contact0, ref faceCenterB, ref tangentBX, ref tangentBY, ref minimumAcceptedDepth, ref manifold.Contact0Exists, ref manifold.OffsetA0, ref manifold.Depth0, ref manifold.FeatureId0);
-            TransformContactToManifold(ref contact1, ref faceCenterB, ref tangentBX, ref tangentBY, ref minimumAcceptedDepth, ref manifold.Contact1Exists, ref manifold.OffsetA1, ref manifold.Depth1, ref manifold.FeatureId1);
-            TransformContactToManifold(ref contact2, ref faceCenterB, ref tangentBX, ref tangentBY, ref minimumAcceptedDepth, ref manifold.Contact2Exists, ref manifold.OffsetA2, ref manifold.Depth2, ref manifold.FeatureId2);
-            TransformContactToManifold(ref contact3, ref faceCenterB, ref tangentBX, ref tangentBY, ref minimumAcceptedDepth, ref manifold.Contact3Exists, ref manifold.OffsetA3, ref manifold.Depth3, ref manifold.FeatureId3);
+            TransformContactToManifold(ref contact0, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA0, ref manifold.Depth0, ref manifold.FeatureId0);
+            TransformContactToManifold(ref contact1, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA1, ref manifold.Depth1, ref manifold.FeatureId1);
+            TransformContactToManifold(ref contact2, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA2, ref manifold.Depth2, ref manifold.FeatureId2);
+            TransformContactToManifold(ref contact3, ref faceCenterB, ref tangentBX, ref tangentBY, ref manifold.OffsetA3, ref manifold.Depth3, ref manifold.FeatureId3);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void TransformContactToManifold(
-            ref ManifoldCandidate rawContact, ref Vector3Wide faceCenterB, ref Vector3Wide tangentBX, ref Vector3Wide tangentBY, ref Vector<float> minimumAcceptedDepth,
-            ref Vector<int> contactExists, ref Vector3Wide manifoldOffsetA, ref Vector<float> manifoldDepth, ref Vector<int> manifoldFeatureId)
+            ref ManifoldCandidate rawContact, ref Vector3Wide faceCenterB, ref Vector3Wide tangentBX, ref Vector3Wide tangentBY,
+            ref Vector3Wide manifoldOffsetA, ref Vector<float> manifoldDepth, ref Vector<int> manifoldFeatureId)
         {
             Vector3Wide.Scale(tangentBX, rawContact.X, out manifoldOffsetA);
             Vector3Wide.Scale(tangentBY, rawContact.Y, out var y);
             Vector3Wide.Add(manifoldOffsetA, y, out manifoldOffsetA);
             Vector3Wide.Add(manifoldOffsetA, faceCenterB, out manifoldOffsetA);
-            //Note that we delayed the speculative margin depth test until the end. This ensures area maximization has meaningful contacts to work with.
-            //If we were more aggressive about the depth testing, the final manifold would tend to have more contacts, but less meaningful contacts.
-            contactExists = Vector.BitwiseAnd(contactExists, Vector.GreaterThanOrEqual(rawContact.Depth, minimumAcceptedDepth));
             manifoldDepth = rawContact.Depth;
             manifoldFeatureId = rawContact.FeatureId;
         }

@@ -76,19 +76,26 @@ namespace Demos.Demos
                     }
                 }
             }
-            Simulation.Bodies.Add(new BodyDescription
-            {
-                Activity = new BodyActivityDescription(-1),
-                Pose = new RigidPose(new Vector3(1, 2.999f, 0), BepuUtilities.Quaternion.CreateFromYawPitchRoll(0, 0, -0.00001f)),
-                Collidable = new CollidableDescription(capsuleIndex, 1),
-                LocalInertia = capsuleInertia
-            });
+            //Simulation.Bodies.Add(new BodyDescription
+            //{
+            //    Activity = new BodyActivityDescription(-1),
+            //    Pose = new RigidPose(new Vector3(1, 2.999f, 0), BepuUtilities.Quaternion.CreateFromYawPitchRoll(0, 0, -0.00001f)),
+            //    Collidable = new CollidableDescription(capsuleIndex, 1),
+            //    LocalInertia = capsuleInertia
+            //});
             Simulation.Bodies.Add(new BodyDescription
             {
                 Activity = new BodyActivityDescription(-1),
                 Pose = new RigidPose(new Vector3(0, 0, 0), BepuUtilities.Quaternion.Identity),
-                Collidable = new CollidableDescription(boxIndex, 1),
+                Collidable = new CollidableDescription(boxIndex, .1f),
                 LocalInertia = boxInertia
+            });
+            Simulation.Bodies.Add(new BodyDescription
+            {
+                Activity = new BodyActivityDescription(-1),
+                Pose = new RigidPose(new Vector3(1, 3, 0), BepuUtilities.Quaternion.Identity),
+                Collidable = new CollidableDescription(boxIndex, .1f),
+                LocalInertia = new BodyInertia()
             });
 
             var meshContent = content.Load<MeshContent>(@"Content\box.obj");

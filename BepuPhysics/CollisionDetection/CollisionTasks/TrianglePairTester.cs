@@ -301,12 +301,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, caA, a.C, new Vector<int>(5), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount);
 
             Vector3Wide.Subtract(localTriangleCenterA, localTriangleCenterB, out var faceCenterBToFaceCenterA);
-            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, faceNormalA, localNormal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale,
+            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, faceNormalA, localNormal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin,
                 out var contact0, out var contact1, out var contact2, out var contact3,
                 out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
             //Transform the contacts into the manifold.
-            var minimumAcceptedDepth = -speculativeMargin;
             //Move the basis into world rotation so that we don't have to transform the individual contacts.
             Matrix3x3Wide.TransformWithoutOverlap(tangentBX, worldRA, out var worldTangentBX);
             Matrix3x3Wide.TransformWithoutOverlap(tangentBY, worldRA, out var worldTangentBY);
@@ -320,10 +319,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.Contact1Exists = Vector.BitwiseAnd(manifold.Contact1Exists, allowContacts);
             manifold.Contact2Exists = Vector.BitwiseAnd(manifold.Contact2Exists, allowContacts);
             manifold.Contact3Exists = Vector.BitwiseAnd(manifold.Contact3Exists, allowContacts);
-            TransformContactToManifold(contact0, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact0Exists, out manifold.OffsetA0, out manifold.Depth0, out manifold.FeatureId0);
-            TransformContactToManifold(contact1, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact1Exists, out manifold.OffsetA1, out manifold.Depth1, out manifold.FeatureId1);
-            TransformContactToManifold(contact2, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact2Exists, out manifold.OffsetA2, out manifold.Depth2, out manifold.FeatureId2);
-            TransformContactToManifold(contact3, worldTriangleCenter, worldTangentBX, worldTangentBY, minimumAcceptedDepth, ref manifold.Contact3Exists, out manifold.OffsetA3, out manifold.Depth3, out manifold.FeatureId3);
+            TransformContactToManifold(contact0, worldTriangleCenter, worldTangentBX, worldTangentBY, out manifold.OffsetA0, out manifold.Depth0, out manifold.FeatureId0);
+            TransformContactToManifold(contact1, worldTriangleCenter, worldTangentBX, worldTangentBY, out manifold.OffsetA1, out manifold.Depth1, out manifold.FeatureId1);
+            TransformContactToManifold(contact2, worldTriangleCenter, worldTangentBX, worldTangentBY, out manifold.OffsetA2, out manifold.Depth2, out manifold.FeatureId2);
+            TransformContactToManifold(contact3, worldTriangleCenter, worldTangentBX, worldTangentBY, out manifold.OffsetA3, out manifold.Depth3, out manifold.FeatureId3);
             //Note that we privilege triangle B. Boundary smoothing is only performed on one of the two meshes.
             var faceFlag = Vector.ConditionalSelect(Vector.Equals(faceDepthB, depth), new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
             manifold.FeatureId0 += faceFlag;
@@ -335,16 +334,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void TransformContactToManifold(
-            in ManifoldCandidate rawContact, in Vector3Wide faceCenterB, in Vector3Wide tangentBX, in Vector3Wide tangentBY, in Vector<float> minimumAcceptedDepth,
-            ref Vector<int> contactExists, out Vector3Wide manifoldOffsetA, out Vector<float> manifoldDepth, out Vector<int> manifoldFeatureId)
+            in ManifoldCandidate rawContact, in Vector3Wide faceCenterB, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
+            out Vector3Wide manifoldOffsetA, out Vector<float> manifoldDepth, out Vector<int> manifoldFeatureId)
         {
             Vector3Wide.Scale(tangentBX, rawContact.X, out manifoldOffsetA);
             Vector3Wide.Scale(tangentBY, rawContact.Y, out var y);
             Vector3Wide.Add(manifoldOffsetA, y, out manifoldOffsetA);
             Vector3Wide.Add(manifoldOffsetA, faceCenterB, out manifoldOffsetA);
-            //Note that we delayed the speculative margin depth test until the end. This ensures area maximization has meaningful contacts to work with.
-            //If we were more aggressive about the depth testing, the final manifold would tend to have more contacts, but less meaningful contacts.
-            contactExists = Vector.BitwiseAnd(contactExists, Vector.GreaterThanOrEqual(rawContact.Depth, minimumAcceptedDepth));
             manifoldDepth = rawContact.Depth;
             manifoldFeatureId = rawContact.FeatureId;
         }
