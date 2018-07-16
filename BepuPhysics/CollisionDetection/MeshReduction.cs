@@ -88,11 +88,11 @@ namespace BepuPhysics.CollisionDetection
                 var ca = triangle.A - triangle.C;
                 //TODO: This threshold might result in bumps when dealing with small triangles. May want to include a different source of scale information, like from the original convex test.
                 DistanceThreshold = 1e-4f * (float)Math.Sqrt(MathHelper.Max(ab.LengthSquared(), bc.LengthSquared()));
-                Vector3x.Cross(ab, bc, out var n);
+                Vector3x.Cross(ab, ca, out var n);
                 //Edge normals point outward.
-                Vector3x.Cross(ab, n, out var edgeNormalAB);
-                Vector3x.Cross(bc, n, out var edgeNormalBC);
-                Vector3x.Cross(ca, n, out var edgeNormalCA);
+                Vector3x.Cross(n, ab, out var edgeNormalAB);
+                Vector3x.Cross(n, bc, out var edgeNormalBC);
+                Vector3x.Cross(n, ca, out var edgeNormalCA);
 
                 NX = new Vector4(n.X, edgeNormalAB.X, edgeNormalBC.X, edgeNormalCA.X);
                 NY = new Vector4(n.Y, edgeNormalAB.Y, edgeNormalBC.Y, edgeNormalCA.Y);
@@ -159,11 +159,12 @@ namespace BepuPhysics.CollisionDetection
                     else
                     {
                         //The contact is on the border of the triangle. Is the normal pointing inward on any edge that the contact is on?
-                        //Remember, the contact has been pushed into mesh space. The position is on the surface of the triangle, and the normal points from mesh to convex.
-                        //The edge plane normals point outward from the triangle, so if the contact normal is detected as facing the same direction as the edge plane normal,
+                        //Remember, the contact has been pushed into mesh space. The position is on the surface of the triangle, and the normal points from convex to mesh.
+                        //The edge plane normals point outward from the triangle, so if the contact normal is detected as pointing along the edge plane normal,
                         //then it is infringing.
                         var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
-                        if ((onAB && normalDot.Y > 5e-5f) || (onBC && normalDot.Z > 5e-5f) || (onCA && normalDot.W > 5e-5f))
+                        const float infringementEpsilon = 5e-5f;
+                        if ((onAB && normalDot.Y > infringementEpsilon) || (onBC && normalDot.Z > infringementEpsilon) || (onCA && normalDot.W > infringementEpsilon))
                         {
                             return true;
                         }
@@ -245,7 +246,7 @@ namespace BepuPhysics.CollisionDetection
                                     }
                                     //Bring the corrected normal back into world space.
                                     var triangleNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
-                                    Matrix3x3.Transform(RequiresFlip ? -triangleNormal : triangleNormal, meshOrientation, out sourceChild.Manifold.Normal);
+                                    Matrix3x3.Transform(RequiresFlip ? triangleNormal : -triangleNormal, meshOrientation, out sourceChild.Manifold.Normal);
                                     //Since corrections result in the normal being set to the triangle normal, multiple corrections in sequence would just overwrite each other.
                                     //There is no sequence which is more correct than another, so once we find one correction, we can just quit.
                                     break;

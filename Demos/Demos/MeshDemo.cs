@@ -21,7 +21,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             //camera.Pitch = MathHelper.PiOver2 * 0.999f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
-            //Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             var box = new Box(1f, 3f, 2f);
             var capsule = new Capsule(1f, 1f);
@@ -99,18 +99,18 @@ namespace Demos.Demos
             });
 
             var meshContent = content.Load<MeshContent>(@"Content\box.obj");
-            //BufferPool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);
-            //for (int i = 0; i < meshContent.Triangles.Length; ++i)
-            //{
-            //    triangles[i] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
-            //}
-            //var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(5, 1, 5), BufferPool);
-            BufferPool.Take<Triangle>(2, out var triangles);
-            for (int i = 2; i < 4; ++i)
+            BufferPool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);
+            for (int i = 0; i < meshContent.Triangles.Length; ++i)
             {
-                triangles[i - 2] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
+                triangles[i] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
             }
-            var meshShape = new Mesh(triangles.Slice(0, 2), new Vector3(5, 1, 5), BufferPool);
+            var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(5, 1, 5), BufferPool);
+            //BufferPool.Take<Triangle>(1, out var triangles);
+            //for (int i = 3; i < 4; ++i)
+            //{
+            //    triangles[i - 3] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
+            //}
+            //var meshShape = new Mesh(triangles.Slice(0, 1), new Vector3(5, 1, 5), BufferPool);
             var staticShapeIndex = Simulation.Shapes.Add(meshShape);
 
             for (int i = 0; i < 1; ++i)

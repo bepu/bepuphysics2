@@ -49,11 +49,11 @@ namespace Demos
         {
         }
 
-
         protected virtual void OnDispose()
         {
 
         }
+
         bool disposed;
         public void Dispose()
         {

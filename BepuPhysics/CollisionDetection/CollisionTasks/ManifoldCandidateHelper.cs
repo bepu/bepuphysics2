@@ -92,7 +92,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             //That's too many; four is plenty. We should choose how to get rid of the extra ones.
             //It's important to keep the deepest contact if there's any significant depth disparity, so we need to calculate depths before reduction.
-            //Conceptually, we project the points from the surface of face B down onto face A, then measure the separation of those two points along the normal:
+            //Conceptually, we cast a ray from the point on face B toward the plane of face A along the contact normal:
             //depth = dot(pointOnFaceB - faceCenterA, faceNormalA) / dot(faceNormalA, normal)
             //dotAxis = faceNormalA / dot(faceNormalA, normal)
             //depth = dot(pointOnFaceB - faceCenterA, dotAxis)
@@ -141,14 +141,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //minor todo: don't really need to waste time initializing to an invalid value.
             var bestScore = new Vector<float>(-float.MaxValue);
             //While depth is the dominant heuristic, extremity is used as a bias to keep initial contact selection a little more consistent in near-equal cases.
-            var extremityScale = epsilonScale * 1e-4f;
+            var extremityScale = epsilonScale * 1e-2f;
             for (int i = 0; i < maxCandidateCount; ++i)
             {
                 ref var candidate = ref Unsafe.Add(ref candidates, i);
                 CandidateExists(candidate, minimumDepth, rawContactCount, i, out var candidateExists);
-                //Note X+Y instead of X or Y alone. Shapes are very often stacked in a nonrandom way; choosing +x or +y alone would lead to near-ties in such cases.
-                //This is a pretty small detail3, but it is cheap enough that there's no reason not to take advantage of it.
-                var candidateScore = candidate.Depth + (candidate.X + candidate.Y) * extremityScale;
+                //Note extremity heuristic. We want a few properties:
+                //1) Somewhat resilient to collisions in common cases.
+                //2) Cheap.
+                //3) Incapable of resulting in a speculative contact over an active contact.
+                //While conditionally using a scaled abs(candidate.X) works fine for 2 and 3, many use cases result in ties along the x axis alone.
+                //X and Y added together is slightly better, but 45 degree angles are not uncommon and can result in the same problem.
+                //So we just use a dot product with an arbitrary direction.
+                //This is a pretty small detail, but it is cheap enough that there's no reason not to take advantage of it.
+                var extremity = Vector.Abs(candidate.X) * 0.7946897654f + Vector.Abs(candidate.Y) * 0.60701579614f;
+                var candidateScore = candidate.Depth + Vector.ConditionalSelect(Vector.GreaterThanOrEqual(candidate.Depth, Vector<float>.Zero), extremity * extremityScale, Vector<float>.Zero);
                 var candidateIsHighestScore = Vector.BitwiseAnd(candidateExists, Vector.GreaterThan(candidateScore, bestScore));
                 ConditionalSelect(candidateIsHighestScore, candidate, contact0, out contact0);
                 bestScore = Vector.ConditionalSelect(candidateIsHighestScore, candidateScore, bestScore);

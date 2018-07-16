@@ -1,6 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -107,7 +108,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Add(in Vector3Wide pointOnTriangle, in Vector3Wide triangleCenter, in Vector3Wide triangleTangentX, in Vector3Wide triangleTangentY, in Vector<int> featureId,
+        static void Add(in Vector3Wide pointOnTriangle, in Vector3Wide triangleCenter, in Vector3Wide triangleTangentX, in Vector3Wide triangleTangentY, in Vector<int> featureId,
             in Vector<int> exists, ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
         {
             Vector3Wide.Subtract(pointOnTriangle, triangleCenter, out var offset);
@@ -115,187 +116,164 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(offset, triangleTangentX, out candidate.X);
             Vector3Wide.Dot(offset, triangleTangentY, out candidate.Y);
             candidate.FeatureId = featureId;
+            Debug.Assert(Vector.EqualsAll(Vector.BitwiseOr(Vector.OnesComplement(exists), Vector.LessThan(candidateCount, new Vector<int>(6))), new Vector<int>(-1)), "Can't add more than 6 contacts to any candidate manifold.");
             ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void AddEdge(in Vector<float> tEntry, in Vector<float> tExit, in Vector<int> flip, in Vector<float> edgeHalfLength,
-            in Vector<float> triangleCenterToEdgeDotX, in Vector<float> triangleCenterToEdgeDotY,
-            in Vector<float> edgeDirectionDotX, in Vector<float> edgeDirectionDotY,
-            in Vector<int> edgeId, in Vector<int> exitIdOffset,
-            in Vector<float> epsilon, in Vector<int> six, ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
+        private static void ClipTriangleEdgeAgainstPlanes(in Vector3Wide edgeDirection, in Vector3Wide triangleEdgeStartToBoxEdgeAnchor0, in Vector3Wide triangleEdgeStartToBoxEdgeAnchor1,
+            in Vector3Wide boxEdgePlaneNormal, out Vector<float> min, out Vector<float> max)
         {
-            ManifoldCandidate candidate;
-            //This doesn't actually need to be a dynamic choice, but this was just the simplest way to do it. Could revisit it later, but... saving 16 instructions is hard to justify.
-            var entry = Vector.ConditionalSelect(flip, -tExit, tEntry);
-            var exit = Vector.ConditionalSelect(flip, -tEntry, tExit);
-            var directionDotX = Vector.ConditionalSelect(flip, -edgeDirectionDotX, edgeDirectionDotX);
-            var directionDotY = Vector.ConditionalSelect(flip, -edgeDirectionDotY, edgeDirectionDotY);
-            //Entry
-            var exists = Vector.BitwiseAnd(
-                Vector.LessThan(candidateCount, six),
-                Vector.BitwiseAnd(
-                    Vector.GreaterThanOrEqual(exit - entry, epsilon),
-                    Vector.LessThan(Vector.Abs(entry), edgeHalfLength)));
-            candidate.X = triangleCenterToEdgeDotX + directionDotX * entry;
-            candidate.Y = triangleCenterToEdgeDotY + directionDotY * entry;
-            candidate.FeatureId = edgeId;
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists);
-            //Edge 0 exit
-            exists = Vector.BitwiseAnd(
-                Vector.LessThan(candidateCount, six),
-                Vector.BitwiseAnd(
-                    Vector.GreaterThanOrEqual(exit, entry),
-                    Vector.LessThanOrEqual(Vector.Abs(exit), edgeHalfLength)));
-            candidate.X = triangleCenterToEdgeDotX + directionDotX * exit;
-            candidate.Y = triangleCenterToEdgeDotY + directionDotY * exit;
-            candidate.FeatureId = edgeId + exitIdOffset;
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists);
+            Vector3Wide.Dot(triangleEdgeStartToBoxEdgeAnchor0, boxEdgePlaneNormal, out var distance0);
+            Vector3Wide.Dot(triangleEdgeStartToBoxEdgeAnchor1, boxEdgePlaneNormal, out var distance1);
+            Vector3Wide.Dot(boxEdgePlaneNormal, edgeDirection, out var velocity);
+            var inverseVelocity = Vector<float>.One / velocity;
+
+            //If the distances to the planes have opposing signs, then the start must be between the two.
+            var edgeStartIsInside = Vector.LessThanOrEqual(distance0 * distance1, Vector<float>.Zero);
+            var dontUseFallback = Vector.GreaterThan(Vector.Abs(velocity), new Vector<float>(1e-15f));
+            var t0 = distance0 * inverseVelocity;
+            var t1 = distance1 * inverseVelocity;
+            //If the edge direction and plane surface is parallel, then the interval is defined entirely by whether the edge starts inside or outside.
+            //If it's inside, then it's -inf to inf. If it's outside, then there is no overlap and we'll use inf to -inf.
+            var largeNegative = new Vector<float>(-float.MaxValue);
+            var largePositive = new Vector<float>(float.MaxValue);
+            min = Vector.ConditionalSelect(dontUseFallback, Vector.Min(t0, t1), Vector.ConditionalSelect(edgeStartIsInside, largeNegative, largePositive));
+            max = Vector.ConditionalSelect(dontUseFallback, Vector.Max(t0, t1), Vector.ConditionalSelect(edgeStartIsInside, largePositive, largeNegative));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ClipBoxEdgesAgainstTriangle(in Vector3Wide vA, in Vector3Wide vB, in Vector3Wide vC,
-            in Vector3Wide abxN, in Vector3Wide bcxN, in Vector3Wide caxN,
+        private static void ClipTriangleEdgeAgainstBoxFace(in Vector3Wide edgeStart, in Vector3Wide edgeDirection, in Vector<int> edgeId,
+            in Vector3Wide boxVertex00, in Vector3Wide boxVertex11, in Vector3Wide edgePlaneNormalX, in Vector3Wide edgePlaneNormalY,
             in Vector3Wide triangleCenter, in Vector3Wide triangleTangentX, in Vector3Wide triangleTangentY,
-            in Vector3Wide boxEdgeDirection, in Vector3Wide boxEdgeCenterOffsetDirection, in Vector<float> edgeHalfLength, in Vector<float> edgeCenterOffset,
-            in Vector3Wide boxFaceCenter, in Vector<int> baseId, in Vector<int> edgeDirectionId, in Vector<int> edgeCenterOffsetId,
-            in Vector<int> flip0, in Vector<int> flip1, in Vector<float> epsilonScale, ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
+            in Vector<int> allowContacts, ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
         {
-            //The base id is the id of the vertex in the corner along the negative boxEdgeDirection and boxEdgeCenterOffsetDirection.
-            //The edgeDirectionId is the amount to add when you move along the boxEdgeDirection to the other vertex.
-            //The edgeCenterOffsetId is the amount to add when you move along the boxEdgeCenterOffsetDirection to the other vertex.
-
-            //We have three edge planes, created by abxN and vA, bcxN and vB, and caxN and vC.
-            //We want to test the box edge against all three of the edges.
-            //intersection = dot((ab x N) / ||ab x N||, vA - boxEdgeCenter) / dot((ab x N) / ||ab x N||, boxEdgeDirection) = dot(abxN, vA - boxEdgeCenter) / dot(abxN, boxEdgeDirection)
-            Vector3Wide.Scale(boxEdgeCenterOffsetDirection, edgeCenterOffset, out var boxEdgeCenterOffset);
-            Vector3Wide.Subtract(boxFaceCenter, boxEdgeCenterOffset, out var boxEdgeCenter0);
-            Vector3Wide.Add(boxFaceCenter, boxEdgeCenterOffset, out var boxEdgeCenter1);
-            Vector3Wide.Dot(boxEdgeDirection, abxN, out var abVelocity);
-            Vector3Wide.Dot(boxEdgeDirection, bcxN, out var bcVelocity);
-            Vector3Wide.Dot(boxEdgeDirection, caxN, out var caVelocity);
-            var inverseAB = Vector<float>.One / abVelocity;
-            var inverseBC = Vector<float>.One / bcVelocity;
-            var inverseCA = Vector<float>.One / caVelocity;
-            Vector3Wide.Subtract(vA, boxEdgeCenter0, out var edgeCenter0ToA);
-            Vector3Wide.Subtract(vB, boxEdgeCenter0, out var edgeCenter0ToB);
-            Vector3Wide.Subtract(vA, boxEdgeCenter1, out var edgeCenter1ToA);
-            Vector3Wide.Subtract(vB, boxEdgeCenter1, out var edgeCenter1ToB);
-            Vector3Wide.Dot(abxN, edgeCenter0ToA, out var distanceAB0);
-            Vector3Wide.Dot(bcxN, edgeCenter0ToB, out var distanceBC0);
-            Vector3Wide.Dot(caxN, edgeCenter0ToA, out var distanceCA0);
-            Vector3Wide.Dot(abxN, edgeCenter1ToA, out var distanceAB1);
-            Vector3Wide.Dot(bcxN, edgeCenter1ToB, out var distanceBC1);
-            Vector3Wide.Dot(caxN, edgeCenter1ToA, out var distanceCA1);
-            var tAB0 = distanceAB0 * inverseAB;
-            var tBC0 = distanceBC0 * inverseBC;
-            var tCA0 = distanceCA0 * inverseCA;
-            var tAB1 = distanceAB1 * inverseAB;
-            var tBC1 = distanceBC1 * inverseBC;
-            var tCA1 = distanceCA1 * inverseCA;
-            //The interval for each box edge is created from the latest entry and earliest exit.
-            //An 'entry' is when the box center starts with a nonnegative distance. An 'exit' is when the box center starts with a negative distance.
-            var abIsEntry = Vector.GreaterThanOrEqual(abVelocity, Vector<float>.Zero);
-            var bcIsEntry = Vector.GreaterThanOrEqual(bcVelocity, Vector<float>.Zero);
-            var caIsEntry = Vector.GreaterThanOrEqual(caVelocity, Vector<float>.Zero);
-            var max = new Vector<float>(float.MaxValue);
-            var min = new Vector<float>(-float.MaxValue);
-            var t0Entry = Vector.ConditionalSelect(abIsEntry, tAB0, min);
-            var t0Exit = Vector.ConditionalSelect(abIsEntry, max, tAB0);
-            t0Entry = Vector.Max(t0Entry, Vector.ConditionalSelect(bcIsEntry, tBC0, min));
-            t0Exit = Vector.Min(t0Exit, Vector.ConditionalSelect(bcIsEntry, max, tBC0));
-            t0Entry = Vector.Max(t0Entry, Vector.ConditionalSelect(caIsEntry, tCA0, min));
-            t0Exit = Vector.Min(t0Exit, Vector.ConditionalSelect(caIsEntry, max, tCA0));
-
-            var t1Entry = Vector.ConditionalSelect(abIsEntry, tAB1, min);
-            var t1Exit = Vector.ConditionalSelect(abIsEntry, max, tAB1);
-            t1Entry = Vector.Max(t1Entry, Vector.ConditionalSelect(bcIsEntry, tBC1, min));
-            t1Exit = Vector.Min(t1Exit, Vector.ConditionalSelect(bcIsEntry, max, tBC1));
-            t1Entry = Vector.Max(t1Entry, Vector.ConditionalSelect(caIsEntry, tCA1, min));
-            t1Exit = Vector.Min(t1Exit, Vector.ConditionalSelect(caIsEntry, max, tCA1));
-
-            t0Entry = Vector.Max(-edgeHalfLength, t0Entry);
-            t0Exit = Vector.Min(edgeHalfLength, t0Exit);
-            t1Entry = Vector.Max(-edgeHalfLength, t1Entry);
-            t1Exit = Vector.Min(edgeHalfLength, t1Exit);
+            Vector3Wide.Subtract(boxVertex00, edgeStart, out var triangleEdgeStartToV00);
+            Vector3Wide.Subtract(boxVertex11, edgeStart, out var triangleEdgeStartToV11);
+            ClipTriangleEdgeAgainstPlanes(edgeDirection, triangleEdgeStartToV00, triangleEdgeStartToV11, edgePlaneNormalX, out var minX, out var maxX);
+            ClipTriangleEdgeAgainstPlanes(edgeDirection, triangleEdgeStartToV00, triangleEdgeStartToV11, edgePlaneNormalY, out var minY, out var maxY);
+            var min = Vector.Max(minX, minY);
+            var max = Vector.Min(Vector<float>.One, Vector.Min(maxX, maxY));
+            Vector3Wide.Scale(edgeDirection, min, out var minLocation);
+            Vector3Wide.Scale(edgeDirection, max, out var maxLocation);
+            Vector3Wide.Add(edgeStart, minLocation, out minLocation);
+            Vector3Wide.Add(edgeStart, maxLocation, out maxLocation);
 
             //We now have intervals for both box edges.
-            //If -halfSpan<min<halfSpan && (max-min)>epsilon for an edge, use the min intersection as a contact.
-            //If -halfSpan<=max<=halfSpan && max>=min, use the max intersection as a contact.
+            //If 0<min<1 && (max-min)>epsilon for an edge, use the min intersection as a contact.
+            //If 0<=max<=1 && max>=min, use the max intersection as a contact.
             //Note the comparisons: if the max lies on a face vertex, it is used, but if the min lies on a face vertex, it is not. This avoids redundant entries.
-
-            //Note that contact locations are orthographically projected onto the triangle's surface. 
-            //We clipped the box edges against triangle edge planes perpendicular to the triangle's normal.
-            //So, to compute the triangle tangent space locations, we can just do simple dot products.
-
-            //dot(boxEdgeCenter0 + boxEdgeDirection * t0Entry - triangleCenter, triangleTangentX)
-            //dot(boxEdgeCenter0 + boxEdgeDirection * t0Entry - triangleCenter, triangleTangentY)
-            //dot(boxEdgeCenter0 + boxEdgeDirection * t0Exit - triangleCenter, triangleTangentX)
-            //dot(boxEdgeCenter0 + boxEdgeDirection * t0Exit - triangleCenter, triangleTangentY)
-            //dot(boxEdgeCenter1 + boxEdgeDirection * t1Entry - triangleCenter, triangleTangentX)
-            //dot(boxEdgeCenter1 + boxEdgeDirection * t1Entry - triangleCenter, triangleTangentY)
-            //dot(boxEdgeCenter1 + boxEdgeDirection * t1Exit - triangleCenter, triangleTangentX)
-            //dot(boxEdgeCenter1 + boxEdgeDirection * t1Exit - triangleCenter, triangleTangentY)
-            Vector3Wide.Subtract(boxEdgeCenter0, triangleCenter, out var triangleCenterToEdge0);
-            Vector3Wide.Subtract(boxEdgeCenter1, triangleCenter, out var triangleCenterToEdge1);
-            Vector3Wide.Dot(triangleCenterToEdge0, triangleTangentX, out var triangleCenterToEdge0DotX);
-            Vector3Wide.Dot(triangleCenterToEdge0, triangleTangentY, out var triangleCenterToEdge0DotY);
-            Vector3Wide.Dot(triangleCenterToEdge1, triangleTangentX, out var triangleCenterToEdge1DotX);
-            Vector3Wide.Dot(triangleCenterToEdge1, triangleTangentY, out var triangleCenterToEdge1DotY);
-            Vector3Wide.Dot(boxEdgeDirection, triangleTangentX, out var edgeDirectionDotX);
-            Vector3Wide.Dot(boxEdgeDirection, triangleTangentY, out var edgeDirectionDotY);
-
-            //Edge feature ids:
-            //(1<<6) + (0 or 1) * boxFaceNormalId + boxEdgeDirection * (1<<2) + (0 or 1) * boxEdgeCenterOffset * (1<<4)
-            //The base 1<<6 distinguishes it from triangle vertex contacts.
-            //For contacts created from the max endpoint of an edge interval, we'll add an extra (1<<7) to distinguish it from the min endpoint.
-            var featureBase = baseId + new Vector<int>(1 << 6);
-            var exitIdOffset = new Vector<int>(1 << 7);
-            var directionContribution = edgeDirectionId * (1 << 2);
-            var edge0Id = featureBase + directionContribution;
-            var edge1Id = featureBase + directionContribution + edgeCenterOffsetId * (1 << 4);
-            var epsilon = new Vector<float>(1e-5f) * epsilonScale;
+            //Note that the epsilon is a fixed value. That's because the max and min values are in terms of the edge direction length, so it already compensates for shape size.
             var six = new Vector<int>(6);
+            var minExists = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(
+                    Vector.BitwiseAnd(
+                        allowContacts,
+                        Vector.LessThan(candidateCount, six)),
+                    Vector.GreaterThanOrEqual(max - min, new Vector<float>(1e-5f))),
+                Vector.BitwiseAnd(
+                    Vector.LessThan(min, Vector<float>.One),
+                    Vector.GreaterThan(min, Vector<float>.Zero)));
+            Add(minLocation, triangleCenter, triangleTangentX, triangleTangentY, edgeId, minExists, ref candidates, ref candidateCount);
 
-            AddEdge(t0Entry, t0Exit, flip0,
-                edgeHalfLength, triangleCenterToEdge0DotX, triangleCenterToEdge0DotY,
-                edgeDirectionDotX, edgeDirectionDotY, edge0Id, exitIdOffset, epsilon, six, ref candidates, ref candidateCount);
-            AddEdge(t1Entry, t1Exit, flip1,
-                edgeHalfLength, triangleCenterToEdge1DotX, triangleCenterToEdge1DotY,
-                edgeDirectionDotX, edgeDirectionDotY, edge1Id, exitIdOffset, epsilon, six, ref candidates, ref candidateCount);
+            var maxExists = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(
+                    Vector.BitwiseAnd(
+                        allowContacts,
+                        Vector.LessThan(candidateCount, six)),
+                    Vector.GreaterThanOrEqual(max, min)),
+                Vector.BitwiseAnd(
+                    Vector.LessThanOrEqual(max, Vector<float>.One),
+                    Vector.GreaterThanOrEqual(max, Vector<float>.Zero)));
+            Add(maxLocation, triangleCenter, triangleTangentX, triangleTangentY, edgeId + new Vector<int>(8), maxExists, ref candidates, ref candidateCount);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ClipTriangleEdgesAgainstBoxFace(
+            in Vector3Wide a, in Vector3Wide b, in Vector3Wide c, in Vector3Wide triangleCenter, in Vector3Wide triangleTangentX, in Vector3Wide triangleTangentY,
+            in Vector3Wide ab, in Vector3Wide bc, in Vector3Wide ca,
+            in Vector3Wide boxVertex00, in Vector3Wide boxVertex11, in Vector3Wide boxTangentX, in Vector3Wide boxTangentY, in Vector3Wide contactNormal,
+            in Vector<int> allowContacts, ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
+        {
+            //The critical observation here is that we are working in a contact plane defined by the contact normal- not the triangle face normal or the box face normal.
+            //So, when performing clipping, we actually want to clip on the contact normal plane.
+            //This is consistent with the box vertex test where we cast a ray from the box vertex to triangle along the contact normal.
+
+            //This is almost identical to testing against the unmodified box face, but we need to change the face edge plane normals.
+            //Rather than being the simple tangent axes, we must compute the plane normals such that the plane embeds the box edge while being perpendicular to the contact normal.
+            Vector3Wide.CrossWithoutOverlap(boxTangentY, contactNormal, out var edgePlaneNormalX);
+            Vector3Wide.CrossWithoutOverlap(boxTangentX, contactNormal, out var edgePlaneNormalY);
+
+            //Edge feature ids:
+            //4 + [0, 1, 2], depending on which traingle edge is used.
+            //The extra 4 distinguishes it from box vertex contacts.
+            //For contacts created from the max endpoint of an edge interval, we'll add an extra 8 to distinguish it from the min endpoint.
+
+            //Note that winding is important- need to follow the edge vectors consistently so that the max of one edge butts up against the min of the next edge.
+            //We assume that when deciding what contacts to create for each edge (only max endpoints generate contacts when unbounded by a box face).
+            var baseId = new Vector<int>(4);
+            ClipTriangleEdgeAgainstBoxFace(a, ab, baseId, boxVertex00, boxVertex11, edgePlaneNormalX, edgePlaneNormalY, triangleCenter, triangleTangentX, triangleTangentY, allowContacts, ref candidates, ref candidateCount);
+            ClipTriangleEdgeAgainstBoxFace(b, bc, baseId + Vector<int>.One, boxVertex00, boxVertex11, edgePlaneNormalX, edgePlaneNormalY, triangleCenter, triangleTangentX, triangleTangentY, allowContacts, ref candidates, ref candidateCount);
+            ClipTriangleEdgeAgainstBoxFace(c, ca, baseId + new Vector<int>(2), boxVertex00, boxVertex11, edgePlaneNormalX, edgePlaneNormalY, triangleCenter, triangleTangentX, triangleTangentY, allowContacts, ref candidates, ref candidateCount);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void TryAddTriangleVertex(in Vector3Wide triangleVertex, in Vector<int> vertexId,
-            in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY, in Vector3Wide triangleNormal,
-            in Vector3Wide boxTangentX, in Vector3Wide boxTangentY, in Vector<float> halfExtentX, in Vector<float> halfExtentY, in Vector<float> halfExtentZ,
-            in Vector3Wide boxFaceNormal, in Vector<float> inverseTriangleNormalDotBoxFaceNormal,
-            ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
+        static void AddBoxVertex(in Vector3Wide a, in Vector3Wide b, in Vector3Wide v, in Vector3Wide triangleNormal, in Vector3Wide contactNormal, in Vector<float> inverseNormalDot,
+            in Vector3Wide abEdgePlaneNormal, in Vector3Wide bcEdgePlaneNormal, in Vector3Wide caEdgePlaneNormal,
+            in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY, in Vector<int> featureId,
+            in Vector<int> allowContacts, ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
         {
-            //Note that we cannot simply project orthographically onto the box face. All edge contacts are created by orthographic projection onto the *triangle*, so to test
-            //containment of a triangle vertex on the box face, it must first be unprojected. Ray cast from triangleVertex along triangleNormal to the box plane.
-            //t = -dot(boxFaceCenter - triangleVertex, boxFaceNormal) / dot(triangleNormal, boxFaceNormal)
-            //t = -(dot(boxFaceCenter, boxFaceNormal) - dot(triangleVertex, boxFaceNormal)) / dot(triangleNormal, boxFaceNormal)
-            //dot(boxFaceCenter, boxFaceNormal) == halfExtentZ, since the box is symmetric.
-            //t = (dot(triangleVertex, boxFaceNormal) - halfExtentZ) / dot(triangleNormal, boxFaceNormal)
+            //TODO: There are some other ways to express this. For example, containment testing using barycentric coordinates, or using edge plane normals based on the contact normal.
+            //This is just a very direct implementation- some value in simplicity.
 
-            //x = dot(triangleVertex + t * triangleNormal, boxX)
-            //y = dot(triangleVertex + t * triangleNormal, boxY)
+            //Cast a ray from the box vertex down to the triangle along the contact normal.
+            Vector3Wide.Subtract(v, a, out var pointOnTriangleToBoxVertex);
+            Vector3Wide.Dot(triangleNormal, pointOnTriangleToBoxVertex, out var planeDistance);
+            Vector3Wide.Scale(contactNormal, planeDistance * inverseNormalDot, out var offset);
+            //Contact normal points from triangle to box by convention, so we have to subtract.
+            Vector3Wide.Subtract(v, offset, out var vOnPlane);
 
-            Vector3Wide.Dot(triangleVertex, boxFaceNormal, out var vertexAlongBoxNormal);
-            var distance = vertexAlongBoxNormal - halfExtentZ;
-            var t = distance * inverseTriangleNormalDotBoxFaceNormal;
+            //Test the unprojected location against the edge normals.
+            Vector3Wide.Subtract(vOnPlane, a, out var aToV);
+            Vector3Wide.Subtract(vOnPlane, b, out var bToV);
+            Vector3Wide.Dot(aToV, abEdgePlaneNormal, out var abDot);
+            Vector3Wide.Dot(bToV, bcEdgePlaneNormal, out var bcDot);
+            Vector3Wide.Dot(aToV, caEdgePlaneNormal, out var caDot);
 
-            //Can avoid 2 add instructions here by precomputing dot products but... complexity penalty.
-            Vector3Wide.Scale(triangleNormal, t, out var offset);
-            Vector3Wide.Add(offset, triangleVertex, out var unprojectedVertex);
-            Vector3Wide.Dot(unprojectedVertex, boxTangentX, out var x);
-            Vector3Wide.Dot(unprojectedVertex, boxTangentY, out var y);
+            //Note that plane normals are assumed to point inward.
             var contained = Vector.BitwiseAnd(
-                Vector.LessThanOrEqual(Vector.Abs(x), halfExtentX),
-                Vector.LessThanOrEqual(Vector.Abs(y), halfExtentY));
-            Add(triangleVertex, triangleCenter, triangleX, triangleY, vertexId, contained, ref candidates, ref candidateCount);
+                Vector.BitwiseAnd(
+                    allowContacts,
+                    Vector.GreaterThanOrEqual(abDot, Vector<float>.Zero)),
+                Vector.BitwiseAnd(
+                    Vector.GreaterThanOrEqual(bcDot, Vector<float>.Zero),
+                    Vector.GreaterThanOrEqual(caDot, Vector<float>.Zero)));
+
+            Add(vOnPlane, triangleCenter, triangleX, triangleY, featureId, contained, ref candidates, ref candidateCount);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AddBoxVertices(in Vector3Wide a, in Vector3Wide b, in Vector3Wide ab, in Vector3Wide bc, in Vector3Wide ca, in Vector3Wide triangleNormal, in Vector3Wide contactNormal,
+            in Vector3Wide v00, in Vector3Wide v01, in Vector3Wide v10, in Vector3Wide v11,
+            in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY, in Vector<int> baseFeatureId, in Vector<int> featureIdX, in Vector<int> featureIdY,
+            in Vector<int> allowContacts, ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
+        {
+            Vector3Wide.Dot(triangleNormal, contactNormal, out var normalDot);
+            //Note that we don't worry about cases where the triangle normal faces away from the contact normal- those cases don't generate contacts anyway.
+            var inverseNormalDot = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(normalDot), new Vector<float>(1e-10f)), Vector<float>.One / normalDot, new Vector<float>(float.MaxValue));
+
+            //Edge plane normals point inward for these tests.
+            Vector3Wide.CrossWithoutOverlap(ab, triangleNormal, out var abEdgePlaneNormal);
+            Vector3Wide.CrossWithoutOverlap(bc, triangleNormal, out var bcEdgePlaneNormal);
+            Vector3Wide.CrossWithoutOverlap(ca, triangleNormal, out var caEdgePlaneNormal);
+
+            AddBoxVertex(a, b, v00, triangleNormal, contactNormal, inverseNormalDot, abEdgePlaneNormal, bcEdgePlaneNormal, caEdgePlaneNormal,
+                triangleCenter, triangleX, triangleY, baseFeatureId, allowContacts, ref candidates, ref candidateCount);
+            AddBoxVertex(a, b, v01, triangleNormal, contactNormal, inverseNormalDot, abEdgePlaneNormal, bcEdgePlaneNormal, caEdgePlaneNormal,
+                triangleCenter, triangleX, triangleY, baseFeatureId + featureIdY, allowContacts, ref candidates, ref candidateCount);
+            AddBoxVertex(a, b, v10, triangleNormal, contactNormal, inverseNormalDot, abEdgePlaneNormal, bcEdgePlaneNormal, caEdgePlaneNormal,
+                triangleCenter, triangleX, triangleY, baseFeatureId + featureIdX, allowContacts, ref candidates, ref candidateCount);
+            AddBoxVertex(a, b, v11, triangleNormal, contactNormal, inverseNormalDot, abEdgePlaneNormal, bcEdgePlaneNormal, caEdgePlaneNormal,
+                triangleCenter, triangleX, triangleY, baseFeatureId + featureIdX + featureIdY, allowContacts, ref candidates, ref candidateCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -397,10 +375,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var halfExtentZ = Vector.ConditionalSelect(useAX, a.HalfWidth, Vector.ConditionalSelect(useAY, a.HalfHeight, a.HalfLength));
             Vector3Wide.Scale(boxFaceNormal, halfExtentZ, out var boxFaceCenter);
 
-            //For feature ids, we will use triangle vertex index (0, 1, 2) for box face contacts.
+            //For feature ids, we will use box vertex index for triangle face contacts: (x > 0 ? 1 : 0) + (y > 0 ? 2 : 0) + (z > 0 ? 4 : 0)
             //Edge contacts are more complex- we'll use:
             //(1<<6) + (0 or 1) * boxFaceNormalId + boxEdgeDirection * (1<<2) + (0 or 1) * boxEdgeCenterOffset * (1<<4)
-            //The base 1<<6 distinguishes it from triangle vertex contacts.
+            //The base 1<<6 distinguishes it from box vertex contacts.
             //For contacts created from the max endpoint of an edge interval, we'll add an extra (1<<7) to distinguish it from the min endpoint.
             var localXId = Vector<int>.Zero;
             var localYId = Vector<int>.One;
@@ -414,7 +392,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     normalIsNegativeY, localYId, Vector<int>.Zero),
                 Vector.ConditionalSelect(
                     normalIsNegativeZ, localZId, Vector<int>.Zero)));
-
 
             //Note that using a raw absolute epsilon would have a varying effect based on the scale of the involved shapes.
             //The minimum across the maxes is intended to avoid cases like a huge box being used as a plane, causing a massive size disparity.
@@ -438,33 +415,27 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var candidateCount = Vector<int>.Zero;
             ref var candidates = ref Unsafe.As<byte, ManifoldCandidate>(ref *buffer);
 
-            //While the edge clipping will find any triangleEdge-boxEdge or boxVertex--triangleFace contacts, it will not find triangleVertex-boxFace contacts.
+            //While the edge clipping will find any triangleEdge-boxEdge or triangleVertex-boxFace contacts, it will not find boxVertex-triangleFace contacts.
             //Add them independently.
-            //(Adding these first allows us to simply skip capacity tests, since there can only be a total of three triangle-boxface contacts.)
-            Vector3Wide.Dot(boxFaceNormal, triangleNormal, out var boxFaceNormalDotTriangleNormal);
-            var inverseBoxFaceNormalDotTriangleNormal = Vector.ConditionalSelect(
-                Vector.LessThan(boxFaceNormalDotTriangleNormal, Vector<float>.Zero), negativeOne, Vector<float>.One) /
-                Vector.Max(Vector.Abs(boxFaceNormalDotTriangleNormal), new Vector<float>(1e-15f));
-            TryAddTriangleVertex(vA, Vector<int>.Zero, localTriangleCenter, triangleTangentX, triangleTangentY, triangleNormal, boxTangentX, boxTangentY, halfExtentX, halfExtentY, halfExtentZ, boxFaceNormal, inverseBoxFaceNormalDotTriangleNormal, ref candidates, ref candidateCount);
-            TryAddTriangleVertex(vB, Vector<int>.One, localTriangleCenter, triangleTangentX, triangleTangentY, triangleNormal, boxTangentX, boxTangentY, halfExtentX, halfExtentY, halfExtentZ, boxFaceNormal, inverseBoxFaceNormalDotTriangleNormal, ref candidates, ref candidateCount);
-            TryAddTriangleVertex(vC, new Vector<int>(2), localTriangleCenter, triangleTangentX, triangleTangentY, triangleNormal, boxTangentX, boxTangentY, halfExtentX, halfExtentY, halfExtentZ, boxFaceNormal, inverseBoxFaceNormalDotTriangleNormal, ref candidates, ref candidateCount);
+            //(Adding these first allows us to simply skip capacity tests, since there can only be a total of three triangle-boxface contacts.)            
+            Vector3Wide.Scale(boxTangentX, halfExtentX, out var boxEdgeOffsetX);
+            Vector3Wide.Scale(boxTangentY, halfExtentY, out var boxEdgeOffsetY);
+            Vector3Wide.Add(boxFaceCenter, boxEdgeOffsetX, out var positiveX);
+            Vector3Wide.Subtract(boxFaceCenter, boxEdgeOffsetX, out var negativeX);
+            Vector3Wide.Subtract(negativeX, boxEdgeOffsetY, out var boxVertex00);
+            Vector3Wide.Add(negativeX, boxEdgeOffsetY, out var boxVertex01);
+            Vector3Wide.Subtract(positiveX, boxEdgeOffsetY, out var boxVertex10);
+            Vector3Wide.Add(positiveX, boxEdgeOffsetY, out var boxVertex11);
+            //If the local normal points against the triangle normal, then it's on the backside and should not collide.
+            Vector3Wide.Dot(localNormal, triangleNormal, out var normalDot);
+            var allowContacts = Vector.GreaterThanOrEqual(normalDot, Vector<float>.Zero);
+            AddBoxVertices(vA, vB, ab, bc, ca, triangleNormal, localNormal, boxVertex00, boxVertex01, boxVertex10, boxVertex11,
+                localTriangleCenter, triangleTangentX, triangleTangentY, axisIdNormal, axisIdTangentX, axisIdTangentY, allowContacts, ref candidates, ref candidateCount);
 
-            //Note that box edges will also add box vertices that are within the triangle bounds, so no box vertex case is required.
-            //Note that each of these calls can generate 4 contacts, so we have to start checking capacities.
-            //abxN = triangleTangentY * ||ab x N||. The magnitude of the value doesn't matter, so we just use the triangleTangentY directly for that edge plane normal.
-            //Note that we flip the second X edge, and the first Y edge. That ensures winding so that the contacts generated at the max end of edge box edge don't end up in redundant spots.
-            Vector3Wide.CrossWithoutOverlap(bc, triangleNormal, out var bcxN);
-            Vector3Wide.CrossWithoutOverlap(ca, triangleNormal, out var caxN);
-            ClipBoxEdgesAgainstTriangle(vA, vB, vC, triangleTangentY, bcxN, caxN,
-                localTriangleCenter, triangleTangentX, triangleTangentY,
-                boxTangentX, boxTangentY, halfExtentX, halfExtentY, boxFaceCenter,
-                axisIdNormal, axisIdTangentX, axisIdTangentY,
-                Vector<int>.Zero, new Vector<int>(-1), epsilonScale, ref candidates, ref candidateCount);
-            ClipBoxEdgesAgainstTriangle(vA, vB, vC, triangleTangentY, bcxN, caxN,
-                localTriangleCenter, triangleTangentX, triangleTangentY,
-                boxTangentY, boxTangentX, halfExtentY, halfExtentX, boxFaceCenter,
-                axisIdNormal, axisIdTangentY, axisIdTangentX,
-                new Vector<int>(-1), Vector<int>.Zero, epsilonScale, ref candidates, ref candidateCount);
+            //Note that triangle edges will also add triangle vertices that are within the box's bounds, so no triangle vertex case is required.
+            //Note that these functions will have to check capacity since we might have added up to four contacts in the box vertex pass.
+            ClipTriangleEdgesAgainstBoxFace(vA, vB, vC, localTriangleCenter, triangleTangentX, triangleTangentY, ab, bc, ca,
+                boxVertex00, boxVertex11, boxTangentX, boxTangentY, localNormal, allowContacts, ref candidates, ref candidateCount);
 
             Vector3Wide.Subtract(boxFaceCenter, localTriangleCenter, out var faceCenterBToFaceCenterA);
             ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, boxFaceNormal, localNormal, faceCenterBToFaceCenterA, triangleTangentX, triangleTangentY, epsilonScale, -speculativeMargin,
@@ -477,13 +448,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformWithoutOverlap(triangleTangentY, worldRA, out var worldTangentBY);
             Matrix3x3Wide.TransformWithoutOverlap(localTriangleCenter, worldRA, out var worldTriangleCenter);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, worldRA, out manifold.Normal);
-            //If the local normal points against the triangle normal, then it's on the backside and should not collide.
-            Vector3Wide.Dot(localNormal, triangleNormal, out var normalDot);
-            var allowContacts = Vector.GreaterThanOrEqual(normalDot, Vector<float>.Zero);
-            manifold.Contact0Exists = Vector.BitwiseAnd(manifold.Contact0Exists, allowContacts);
-            manifold.Contact1Exists = Vector.BitwiseAnd(manifold.Contact1Exists, allowContacts);
-            manifold.Contact2Exists = Vector.BitwiseAnd(manifold.Contact2Exists, allowContacts);
-            manifold.Contact3Exists = Vector.BitwiseAnd(manifold.Contact3Exists, allowContacts);
             TransformContactToManifold(contact0, worldTriangleCenter, worldTangentBX, worldTangentBY, out manifold.OffsetA0, out manifold.Depth0, out manifold.FeatureId0);
             TransformContactToManifold(contact1, worldTriangleCenter, worldTangentBX, worldTangentBY, out manifold.OffsetA1, out manifold.Depth1, out manifold.FeatureId1);
             TransformContactToManifold(contact2, worldTriangleCenter, worldTangentBX, worldTangentBY, out manifold.OffsetA2, out manifold.Depth2, out manifold.FeatureId2);

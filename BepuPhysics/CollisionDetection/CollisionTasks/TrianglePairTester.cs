@@ -274,9 +274,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(faceNormalA, faceNormalB, out var faceNormalsDot);
             var inverseFaceNormalsDot = Vector<float>.One / faceNormalsDot;
             var faceNormalsDotIsValid = Vector.GreaterThan(Vector.Abs(faceNormalsDot), new Vector<float>(1e-10f));
-            Vector3Wide.Cross(abA, faceNormalA, out var edgeABPlaneNormalA);
-            Vector3Wide.Cross(bcA, faceNormalA, out var edgeBCPlaneNormalA);
-            Vector3Wide.Cross(caA, faceNormalA, out var edgeCAPlaneNormalA);
+            Vector3Wide.CrossWithoutOverlap(abA, faceNormalA, out var edgeABPlaneNormalA);
+            Vector3Wide.CrossWithoutOverlap(bcA, faceNormalA, out var edgeBCPlaneNormalA);
+            Vector3Wide.CrossWithoutOverlap(caA, faceNormalA, out var edgeCAPlaneNormalA);
             TryAddTriangleBVertex(bA, Vector<int>.Zero, tangentBX, tangentBY, localTriangleCenterB, faceNormalB, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, faceNormalsDotIsValid, inverseFaceNormalsDot, ref candidates, ref candidateCount);
             TryAddTriangleBVertex(bB, Vector<int>.One, tangentBX, tangentBY, localTriangleCenterB, faceNormalB, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, faceNormalsDotIsValid, inverseFaceNormalsDot, ref candidates, ref candidateCount);
             TryAddTriangleBVertex(bC, new Vector<int>(2), tangentBX, tangentBY, localTriangleCenterB, faceNormalB, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, faceNormalsDotIsValid, inverseFaceNormalsDot, ref candidates, ref candidateCount);
@@ -293,9 +293,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.Max(abBLengthSquared, caBLengthSquared)));
             var edgeEpsilon = new Vector<float>(1e-5f) * epsilonScale;
             var exitIdOffset = new Vector<int>(3);
-            Vector3Wide.Cross(abB, faceNormalB, out var edgeABPlaneNormalB);
-            Vector3Wide.Cross(bcB, faceNormalB, out var edgeBCPlaneNormalB);
-            Vector3Wide.Cross(caB, faceNormalB, out var edgeCAPlaneNormalB);
+            Vector3Wide.CrossWithoutOverlap(abB, faceNormalB, out var edgeABPlaneNormalB);
+            Vector3Wide.CrossWithoutOverlap(bcB, faceNormalB, out var edgeBCPlaneNormalB);
+            Vector3Wide.CrossWithoutOverlap(caB, faceNormalB, out var edgeCAPlaneNormalB);
             ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, abA, a.A, new Vector<int>(3), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount);
             ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, bcA, a.B, new Vector<int>(4), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount);
             ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, caA, a.C, new Vector<int>(5), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount);

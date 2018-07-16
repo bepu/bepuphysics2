@@ -165,7 +165,7 @@ namespace BepuPhysics.CollisionDetection
                     if (contact.Depth >= 0)
                     {
                         //Note that we assume that the contact offsets have already been moved into the parent's space.
-                        var extent = contact.Offset.X + contact.Offset.Y + contact.Offset.Z;
+                        var extent = contact.Offset.X * 0.280454652f + contact.Offset.Y * 0.55873544499f + contact.Offset.Z * 0.7804869574f;
                         if (extent < minimumExtent)
                         {
                             minimumExtent = extent;

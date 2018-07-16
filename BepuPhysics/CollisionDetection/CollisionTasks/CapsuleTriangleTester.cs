@@ -63,7 +63,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             normalLengthSquared = Vector.ConditionalSelect(useFallbackNormal, fallbackNormalLengthSquared, normalLengthSquared);
             //Unfortunately, if the edge and axis are parallel, the cross product will ALSO be zero, so we need another fallback. We'll use the edge plane normal.
             //Unless the triangle is degenerate, this can't be zero length.
-            Vector3Wide.Cross(triangleNormal, edgeOffset, out var secondFallbackNormal);
+            Vector3Wide.CrossWithoutOverlap(triangleNormal, edgeOffset, out var secondFallbackNormal);
             Vector3Wide.LengthSquared(fallbackNormal, out var secondFallbackNormalLengthSquared);
             var useSecondFallbackNormal = Vector.LessThan(normalLengthSquared, new Vector<float>(1e-15f));
             Vector3Wide.ConditionalSelect(useSecondFallbackNormal, secondFallbackNormal, normal, out normal);
