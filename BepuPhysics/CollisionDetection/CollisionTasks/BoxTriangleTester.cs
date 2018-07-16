@@ -377,9 +377,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //For feature ids, we will use box vertex index for triangle face contacts: (x > 0 ? 1 : 0) + (y > 0 ? 2 : 0) + (z > 0 ? 4 : 0)
             //Edge contacts are more complex- we'll use:
-            //(1<<6) + (0 or 1) * boxFaceNormalId + boxEdgeDirection * (1<<2) + (0 or 1) * boxEdgeCenterOffset * (1<<4)
-            //The base 1<<6 distinguishes it from box vertex contacts.
-            //For contacts created from the max endpoint of an edge interval, we'll add an extra (1<<7) to distinguish it from the min endpoint.
+            //4 + triangleEdgeId + (0 if min contact, 1 if max contact) * 8
+            //The base 4 distinguishes it from box vertex contacts.
             var localXId = Vector<int>.Zero;
             var localYId = Vector<int>.One;
             var localZId = new Vector<int>(2);

@@ -76,13 +76,20 @@ namespace Demos.Demos
                     }
                 }
             }
-            //Simulation.Bodies.Add(new BodyDescription
-            //{
-            //    Activity = new BodyActivityDescription(-1),
-            //    Pose = new RigidPose(new Vector3(1, 2.999f, 0), BepuUtilities.Quaternion.CreateFromYawPitchRoll(0, 0, -0.00001f)),
-            //    Collidable = new CollidableDescription(capsuleIndex, 1),
-            //    LocalInertia = capsuleInertia
-            //});
+            Simulation.Bodies.Add(new BodyDescription
+            {
+                Activity = new BodyActivityDescription(-1),
+                Pose = new RigidPose(new Vector3(1, 9, 0), BepuUtilities.Quaternion.CreateFromYawPitchRoll(0, 0, -0.00001f)),
+                Collidable = new CollidableDescription(sphereIndex, 1),
+                LocalInertia = capsuleInertia
+            });
+            Simulation.Bodies.Add(new BodyDescription
+            {
+                Activity = new BodyActivityDescription(-1),
+                Pose = new RigidPose(new Vector3(1, 6, 0), BepuUtilities.Quaternion.CreateFromYawPitchRoll(0, 0, -0.00001f)),
+                Collidable = new CollidableDescription(capsuleIndex, 1),
+                LocalInertia = capsuleInertia
+            });
             Simulation.Bodies.Add(new BodyDescription
             {
                 Activity = new BodyActivityDescription(-1),

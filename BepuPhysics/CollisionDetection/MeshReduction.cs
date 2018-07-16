@@ -111,7 +111,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe bool ShouldCorrectNormal(in TestTriangle triangle, Vector3* meshSpaceContacts, int contactCount, in Vector3 meshSpaceNormal)
+        private static unsafe bool ShouldBlockNormal(in TestTriangle triangle, Vector3* meshSpaceContacts, int contactCount, in Vector3 meshSpaceNormal)
         {
             //While we don't have a decent way to do truly scaling SIMD operations within the context of a single manifold vs triangle test, we can at least use 4-wide operations
             //to accelerate each individual contact test. 
@@ -158,12 +158,12 @@ namespace BepuPhysics.CollisionDetection
                     }
                     else
                     {
-                        //The contact is on the border of the triangle. Is the normal pointing inward on any edge that the contact is on?
+                        //The contact is on the border of the triangle. Is the normal pointing outward on any edge that the contact is on?
                         //Remember, the contact has been pushed into mesh space. The position is on the surface of the triangle, and the normal points from convex to mesh.
                         //The edge plane normals point outward from the triangle, so if the contact normal is detected as pointing along the edge plane normal,
                         //then it is infringing.
                         var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
-                        const float infringementEpsilon = 5e-5f;
+                        const float infringementEpsilon = 5e-3f;
                         if ((onAB && normalDot.Y > infringementEpsilon) || (onBC && normalDot.Z > infringementEpsilon) || (onCA && normalDot.W > infringementEpsilon))
                         {
                             return true;
@@ -219,6 +219,8 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
                 var meshSpaceContacts = stackalloc Vector3[4];
+                var manifoldIndicesToClear = stackalloc int[activeChildCount];
+                int manifoldsToClearCount = 0;
                 for (int i = 0; i < activeChildCount; ++i)
                 {
                     ref var sourceTriangle = ref activeTriangles[i];
@@ -226,40 +228,33 @@ namespace BepuPhysics.CollisionDetection
                     //Can't correct contacts that were created by face collisions.
                     if ((sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) == 0)
                     {
-                        ComputeMeshSpaceContacts(sourceChild.Manifold, meshInverseOrientation, RequiresFlip, meshSpaceContacts, out var meshSpaceNormal);
-                        for (int j = 0; j < activeChildCount; ++j)
-                        {
-                            //No point in trying to correct a normal against its own triangle.
-                            if (i != j)
-                            {
-                                ref var targetTriangle = ref activeTriangles[j];
-                                if (ShouldCorrectNormal(targetTriangle, meshSpaceContacts, sourceChild.Manifold.Count, meshSpaceNormal))
-                                {
-                                    //This is a bit of a hack. We arbitrarily say that any corrected contact is not allowed to contribute to position correction at all.
-                                    //Further, despite changing the normal, we keep the depth of speculative contacts the same, even though the projected depth is less.
-                                    //We don't want to make false collisions *more* prominent.
-                                    for (int k = 0; k < sourceChild.Manifold.Count; ++k)
-                                    {
-                                        ref var depth = ref Unsafe.Add(ref sourceChild.Manifold.Contact0, k).Depth;
-                                        if (depth > 0)
-                                            depth = 0;
-                                    }
-                                    //Bring the corrected normal back into world space.
-                                    var triangleNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
-                                    Matrix3x3.Transform(RequiresFlip ? triangleNormal : -triangleNormal, meshOrientation, out sourceChild.Manifold.Normal);
-                                    //Since corrections result in the normal being set to the triangle normal, multiple corrections in sequence would just overwrite each other.
-                                    //There is no sequence which is more correct than another, so once we find one correction, we can just quit.
-                                    break;
-                                }
-                            }
-                        }
                         //Clear the face flags. This isn't *required* since they're coherent enough anyway and the accumulated impulse redistributor is a decent fallback,
                         //but it costs basically nothing to do this.
                         for (int k = 0; k < sourceChild.Manifold.Count; ++k)
                         {
                             Unsafe.Add(ref sourceChild.Manifold.Contact0, k).FeatureId &= ~FaceCollisionFlag;
                         }
+                        ComputeMeshSpaceContacts(sourceChild.Manifold, meshInverseOrientation, RequiresFlip, meshSpaceContacts, out var meshSpaceNormal);
+                        for (int j = 0; j < activeChildCount; ++j)
+                        {
+                            //No point in trying to check a normal against its own triangle.
+                            if (i != j)
+                            {
+                                ref var targetTriangle = ref activeTriangles[j];
+                                if (ShouldBlockNormal(targetTriangle, meshSpaceContacts, sourceChild.Manifold.Count, meshSpaceNormal))
+                                {
+                                    //This submanifold was blocked. Don't need to test its contacts against any more triangles.
+                                    //Note that we defer the clearing the manifold until after the loop completes. That keeps the child as a blocker for other manifolds.
+                                    manifoldIndicesToClear[manifoldsToClearCount++] = i;
+                                    break;
+                                }
+                            }
+                        }
                     }
+                }
+                for (int i = 0; i < manifoldsToClearCount; ++i)
+                {
+                    Inner.Children[manifoldIndicesToClear[i]].Manifold.Count = 0;
                 }
 
                 //Now that boundary smoothing analysis is done, we no longer need the triangle list.
