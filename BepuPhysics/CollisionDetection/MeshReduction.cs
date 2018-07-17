@@ -45,7 +45,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe void ComputeMeshSpaceContacts(in ConvexContactManifold manifold, in Matrix3x3 inverseMeshOrientation, bool requiresFlip, Vector3* meshSpaceContacts, out Vector3 meshSpaceNormal)
+        private static unsafe void ComputeMeshSpaceContacts(ref ConvexContactManifold manifold, in Matrix3x3 inverseMeshOrientation, bool requiresFlip, Vector3* meshSpaceContacts, out Vector3 meshSpaceNormal)
         {
             //First, if the manifold considers the mesh and its triangles to be shape B, then we need to flip it.
             if (requiresFlip)
@@ -53,7 +53,7 @@ namespace BepuPhysics.CollisionDetection
                 //If the manifold considers the mesh and its triangles to be shape B, it needs to be flipped before being transformed.
                 for (int i = 0; i < manifold.Count; ++i)
                 {
-                    Matrix3x3.Transform(manifold.Contact0.Offset - manifold.OffsetB, inverseMeshOrientation, out meshSpaceContacts[i]);
+                    Matrix3x3.Transform(Unsafe.Add(ref manifold.Contact0, i).Offset - manifold.OffsetB, inverseMeshOrientation, out meshSpaceContacts[i]);
                 }
                 Matrix3x3.Transform(-manifold.Normal, inverseMeshOrientation, out meshSpaceNormal);
             }
@@ -62,7 +62,7 @@ namespace BepuPhysics.CollisionDetection
                 //No flip required.
                 for (int i = 0; i < manifold.Count; ++i)
                 {
-                    Matrix3x3.Transform(manifold.Contact0.Offset, inverseMeshOrientation, out meshSpaceContacts[i]);
+                    Matrix3x3.Transform(Unsafe.Add(ref manifold.Contact0, i).Offset, inverseMeshOrientation, out meshSpaceContacts[i]);
                 }
                 Matrix3x3.Transform(manifold.Normal, inverseMeshOrientation, out meshSpaceNormal);
             }
@@ -234,7 +234,7 @@ namespace BepuPhysics.CollisionDetection
                         {
                             Unsafe.Add(ref sourceChild.Manifold.Contact0, k).FeatureId &= ~FaceCollisionFlag;
                         }
-                        ComputeMeshSpaceContacts(sourceChild.Manifold, meshInverseOrientation, RequiresFlip, meshSpaceContacts, out var meshSpaceNormal);
+                        ComputeMeshSpaceContacts(ref sourceChild.Manifold, meshInverseOrientation, RequiresFlip, meshSpaceContacts, out var meshSpaceNormal);
                         for (int j = 0; j < activeChildCount; ++j)
                         {
                             //No point in trying to check a normal against its own triangle.
@@ -245,7 +245,7 @@ namespace BepuPhysics.CollisionDetection
                                 {
                                     //This submanifold was blocked. Don't need to test its contacts against any more triangles.
                                     //Note that we defer the clearing the manifold until after the loop completes. That keeps the child as a blocker for other manifolds.
-                                    manifoldIndicesToClear[manifoldsToClearCount++] = i;
+                                    manifoldIndicesToClear[manifoldsToClearCount++] = sourceTriangle.ChildIndex;
                                     break;
                                 }
                             }

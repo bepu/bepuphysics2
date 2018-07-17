@@ -76,67 +76,73 @@ namespace Demos.Demos
                     }
                 }
             }
-            Simulation.Bodies.Add(new BodyDescription
-            {
-                Activity = new BodyActivityDescription(-1),
-                Pose = new RigidPose(new Vector3(1, 9, 0), BepuUtilities.Quaternion.CreateFromYawPitchRoll(0, 0, -0.00001f)),
-                Collidable = new CollidableDescription(sphereIndex, 1),
-                LocalInertia = capsuleInertia
-            });
-            Simulation.Bodies.Add(new BodyDescription
-            {
-                Activity = new BodyActivityDescription(-1),
-                Pose = new RigidPose(new Vector3(1, 6, 0), BepuUtilities.Quaternion.CreateFromYawPitchRoll(0, 0, -0.00001f)),
-                Collidable = new CollidableDescription(capsuleIndex, 1),
-                LocalInertia = capsuleInertia
-            });
+            //Simulation.Bodies.Add(new BodyDescription
+            //{
+            //    Activity = new BodyActivityDescription(-1),
+            //    Pose = new RigidPose(new Vector3(1, 9, 0), BepuUtilities.Quaternion.CreateFromYawPitchRoll(0, 0, -0.00001f)),
+            //    Collidable = new CollidableDescription(sphereIndex, 1),
+            //    LocalInertia = capsuleInertia
+            //});
+            //Simulation.Bodies.Add(new BodyDescription
+            //{
+            //    Activity = new BodyActivityDescription(-1),
+            //    Pose = new RigidPose(new Vector3(1, 6, 0), BepuUtilities.Quaternion.CreateFromYawPitchRoll(0, 0, -0.00001f)),
+            //    Collidable = new CollidableDescription(capsuleIndex, 1),
+            //    LocalInertia = capsuleInertia
+            //});
             Simulation.Bodies.Add(new BodyDescription
             {
                 Activity = new BodyActivityDescription(-1),
                 Pose = new RigidPose(new Vector3(0, 0, 0), BepuUtilities.Quaternion.Identity),
-                Collidable = new CollidableDescription(boxIndex, .1f),
+                Collidable = new CollidableDescription(boxIndex, 10000f),
                 LocalInertia = boxInertia
             });
-            Simulation.Bodies.Add(new BodyDescription
-            {
-                Activity = new BodyActivityDescription(-1),
-                Pose = new RigidPose(new Vector3(1, 3, 0), BepuUtilities.Quaternion.Identity),
-                Collidable = new CollidableDescription(boxIndex, .1f),
-                LocalInertia = new BodyInertia()
-            });
+            //Simulation.Bodies.Add(new BodyDescription
+            //{
+            //    Activity = new BodyActivityDescription(-1),
+            //    Pose = new RigidPose(new Vector3(1, 3, 0), BepuUtilities.Quaternion.Identity),
+            //    Collidable = new CollidableDescription(boxIndex, .1f),
+            //    LocalInertia = new BodyInertia()
+            //});
 
-            var meshContent = content.Load<MeshContent>(@"Content\box.obj");
-            BufferPool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);
+
+            //LoadModel(content, BufferPool, @"Content\box.obj", new Vector3(5, 1, 5), out var boxMesh);
+            //Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), new CollidableDescription(Simulation.Shapes.Add(boxMesh), 0.1f)));
+
+            CreateFan(64, 64, new Vector3(1, 1, 1), BufferPool, out var fanMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(fanMesh), 0.1f)));
+
+
+        }
+
+        static void LoadModel(ContentArchive content, BufferPool pool, string contentName, in Vector3 scaling, out Mesh mesh)
+        {
+            var meshContent = content.Load<MeshContent>(contentName);
+            pool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);
             for (int i = 0; i < meshContent.Triangles.Length; ++i)
             {
                 triangles[i] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
             }
-            var meshShape = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), new Vector3(5, 1, 5), BufferPool);
-            //BufferPool.Take<Triangle>(1, out var triangles);
-            //for (int i = 3; i < 4; ++i)
-            //{
-            //    triangles[i - 3] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
-            //}
-            //var meshShape = new Mesh(triangles.Slice(0, 1), new Vector3(5, 1, 5), BufferPool);
-            var staticShapeIndex = Simulation.Shapes.Add(meshShape);
+            mesh = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), scaling, pool);
+        }
 
-            for (int i = 0; i < 1; ++i)
+        static void CreateFan(int triangleCount, float radius, in Vector3 scaling, BufferPool pool, out Mesh mesh)
+        {
+            var anglePerTriangle = 2 * MathF.PI / triangleCount;
+            pool.Take<Triangle>(triangleCount, out var triangles);
+            triangles = triangles.Slice(0, triangleCount);
+
+            for (int i = 0; i < triangleCount; ++i)
             {
-                var staticDescription = new StaticDescription
-                {
-                    Collidable = new CollidableDescription(staticShapeIndex, 0.1f),
-                    Pose = new RigidPose
-                    {
-                        Position = new Vector3(i * 10, -10, 0),
-                        Orientation = BepuUtilities.Quaternion.Identity
-                        //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1 + i, i * j % 10, -10 + -j)), (i ^ j) * 0.5f * (MathHelper.PiOver4))
-                        //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0, 0, 1)), MathHelper.Pi)
-                    }
-                };
-                Simulation.Statics.Add(staticDescription);
+                var firstAngle = i * anglePerTriangle;
+                var secondAngle = ((i + 1) % triangleCount) * anglePerTriangle;
+
+                ref var triangle = ref triangles[i];
+                triangle.A = new Vector3(radius * MathF.Cos(firstAngle), 0, radius * MathF.Sin(firstAngle));
+                triangle.B = new Vector3(radius * MathF.Cos(secondAngle), 0, radius * MathF.Sin(secondAngle));
+                triangle.C = new Vector3();
             }
-
-
+            mesh = new Mesh(triangles, scaling, pool);
         }
 
         public override void Update(Input input, float dt)
