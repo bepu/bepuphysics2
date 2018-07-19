@@ -90,7 +90,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var bcContained = Vector.GreaterThan(bcDot, Vector<float>.Zero);
             var caContained = Vector.GreaterThan(caDot, Vector<float>.Zero);
             var contained = Vector.BitwiseAnd(abContained, Vector.BitwiseAnd(bcContained, caContained));
-            
+
             ManifoldCandidate candidate;
             Vector3Wide.Subtract(vertex, triangleCenterB, out var offsetOnB);
             Vector3Wide.Dot(offsetOnB, tangentBX, out candidate.X);
@@ -324,11 +324,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             TransformContactToManifold(contact2, worldTriangleCenter, worldTangentBX, worldTangentBY, out manifold.OffsetA2, out manifold.Depth2, out manifold.FeatureId2);
             TransformContactToManifold(contact3, worldTriangleCenter, worldTangentBX, worldTangentBY, out manifold.OffsetA3, out manifold.Depth3, out manifold.FeatureId3);
             //Note that we privilege triangle B. Boundary smoothing is only performed on one of the two meshes.
-            var faceFlag = Vector.ConditionalSelect(Vector.Equals(faceDepthB, depth), new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
+            var faceFlag = Vector.ConditionalSelect(
+                Vector.GreaterThanOrEqual(normalDotB, new Vector<float>(MeshReduction.MinimumDotForFaceCollision)), new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
             manifold.FeatureId0 += faceFlag;
-            manifold.FeatureId1 += faceFlag;
-            manifold.FeatureId2 += faceFlag;
-            manifold.FeatureId3 += faceFlag;
         }
 
 

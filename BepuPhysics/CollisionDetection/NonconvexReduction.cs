@@ -230,11 +230,9 @@ namespace BepuPhysics.CollisionDetection
                     ref var contact = ref Unsafe.Add(ref child.Manifold.Contact0, childIndex.Y);
                     //We give contacts of higher depth greater impulses, so they'll tend to be chosen over low depth contacts.
                     var scaledDepth = contact.Depth * depthScale;
-                    //Depth is not the only thing to consider, though, so limit its influence.
+                    //Don't let speculative contacts wrap around into larger impulses.
                     if (scaledDepth < -1)
                         scaledDepth = -1;
-                    if (scaledDepth > 1)
-                        scaledDepth = 1;
                     Vector3 linear = (-1 - scaledDepth) * child.Manifold.Normal;
                     Vector3x.Cross(contact.Offset, linear, out var angular);
                     for (int i = 0; i < manifold->Count; ++i)
