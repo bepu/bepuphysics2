@@ -21,7 +21,7 @@ StructuredBuffer<float3> Vertices : register(t1);
 PSInput VSMain(uint vertexId : SV_VertexId, uint instanceId : SV_InstanceId)
 {
 	Instance instance = Instances[instanceId];
-	float3 localVertex = instance.Scale * Vertices[vertexId];
+	float3 localVertex = instance.Scale * Vertices[vertexId + instance.VertexStart];
 	PSInput output;
 	//Note that we move the instance location into camera local translation.
 	output.InstancePosition = instance.Position - CameraPosition;

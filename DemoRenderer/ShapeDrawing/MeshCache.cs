@@ -82,7 +82,7 @@ namespace DemoRenderer.ShapeDrawing
             for (int i = 0; i < pendingUploads.Count; ++i)
             {
                 ref var upload = ref pendingUploads[i];
-                TriangleBuffer.Update(context, new Span<Vector3>((Vector3*)vertices.Memory + upload.Start, upload.Count));
+                TriangleBuffer.Update(context, new Span<Vector3>(vertices.Memory, vertices.Length), upload.Count, upload.Start, upload.Start);
             }
             pendingUploads.Count = 0;
 

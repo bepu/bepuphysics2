@@ -252,7 +252,7 @@ namespace BepuPhysics.CollisionDetection
                     var score = linear.LengthSquared() + angular.LengthSquared();
                     //Heavily penalize speculative contacts. They can sometimes be worth it, but active contacts are almost always the priority unless they're redundant.
                     if (contact.Depth < 0)
-                        score *= 0.25f;
+                        score *= 0.2f;
                     if (score > bestScore)
                     {
                         bestScore = score;

@@ -169,6 +169,7 @@ namespace BepuPhysics.CollisionDetection
                         var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
                         const float infringementEpsilon = 5e-3f;
                         if ((onAB && normalDot.Y > infringementEpsilon) || (onBC && normalDot.Z > infringementEpsilon) || (onCA && normalDot.W > infringementEpsilon))
+                        //if ((onAB == normalDot.Y > infringementEpsilon) && (onBC == normalDot.Z > infringementEpsilon) && (onCA == normalDot.W > infringementEpsilon))
                         {
                             return true;
                         }
@@ -247,6 +248,14 @@ namespace BepuPhysics.CollisionDetection
                                 ref var targetTriangle = ref activeTriangles[j];
                                 if (ShouldBlockNormal(targetTriangle, meshSpaceContacts, sourceChild.Manifold.Count, meshSpaceNormal))
                                 {
+                                    //for (int p = 0; p < sourceChild.Manifold.Count; ++p)
+                                    //{
+                                    //    ref var depth = ref Unsafe.Add(ref sourceChild.Manifold.Contact0, p).Depth;
+                                    //    if (depth > 0)
+                                    //        depth = 0;
+                                    //}
+                                    //var triangleNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
+                                    //Matrix3x3.Transform(RequiresFlip ? triangleNormal : -triangleNormal, meshOrientation, out sourceChild.Manifold.Normal);
                                     //This submanifold was blocked. Don't need to test its contacts against any more triangles.
                                     //Note that we defer the clearing the manifold until after the loop completes. That keeps the child as a blocker for other manifolds.
                                     manifoldIndicesToClear[manifoldsToClearCount++] = sourceTriangle.ChildIndex;
