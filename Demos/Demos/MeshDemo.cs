@@ -107,7 +107,7 @@ namespace Demos.Demos
 
 
             LoadModel(content, BufferPool, @"Content\box.obj", new Vector3(5, 1, 5), out var boxMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(boxMesh), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(10, -5, 0), new CollidableDescription(Simulation.Shapes.Add(boxMesh), 0.1f)));
 
             CreateFan(64, 64, new Vector3(1, 1, 1), BufferPool, out var fanMesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), new CollidableDescription(Simulation.Shapes.Add(fanMesh), 0.1f)));
