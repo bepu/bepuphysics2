@@ -87,6 +87,14 @@ namespace BepuPhysics.CollisionDetection
             /// True if the manifold associated with this triangle has been blocked due to its detected infringement on another triangle, false otherwise.
             /// </summary>
             public bool Blocked;
+            /// <summary>
+            /// True if the triangle did not act as a blocker for any other manifold and so can be removed if it is blocked, false otherwise.
+            /// </summary>
+            public bool AllowDeletion;
+            /// <summary>
+            /// Normal of a triangle detected as being infringed by the manifold associated with this triangle in mesh space.
+            /// </summary>
+            public Vector3 CorrectedNormal;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public TestTriangle(in Triangle triangle, int sourceChildIndex)
@@ -116,6 +124,8 @@ namespace BepuPhysics.CollisionDetection
 
                 ChildIndex = sourceChildIndex;
                 Blocked = false;
+                AllowDeletion = true;
+                CorrectedNormal = default;
             }
         }
 
@@ -184,12 +194,6 @@ namespace BepuPhysics.CollisionDetection
             return false;
         }
 
-        struct BlockedManifold
-        {
-            public int ChildIndex;
-            public Vector3 BlockingTriangleNormal;
-        }
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
@@ -236,8 +240,6 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
                 var meshSpaceContacts = stackalloc Vector3[4];
-                //var blockedManifolds = stackalloc BlockedManifold[activeChildCount];
-                //int blockedManifoldCount = 0;
                 for (int i = 0; i < activeChildCount; ++i)
                 {
                     ref var sourceTriangle = ref activeTriangles[i];
@@ -260,72 +262,39 @@ namespace BepuPhysics.CollisionDetection
                                 ref var targetTriangle = ref activeTriangles[j];
                                 if (ShouldBlockNormal(targetTriangle, meshSpaceContacts, sourceChild.Manifold.Count, meshSpaceNormal))
                                 {
-                                    //for (int p = 0; p < sourceChild.Manifold.Count; ++p)
-                                    //{
-                                    //    ref var depth = ref Unsafe.Add(ref sourceChild.Manifold.Contact0, p).Depth;
-                                    //    if (depth > 0)
-                                    //        depth = 0;
-                                    //}
-                                    //var triangleNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
-                                    //Matrix3x3.Transform(RequiresFlip ? triangleNormal : -triangleNormal, meshOrientation, out sourceChild.Manifold.Normal);
-                                    //This submanifold was blocked. Don't need to test its contacts against any more triangles.
-                                    //Note that we defer the clearing the manifold until after the loop completes. That keeps the child as a blocker for other manifolds.
-                                    //ref var blockedManifold = ref blockedManifolds[blockedManifoldCount++];
-                                    //blockedManifold.ChildIndex = sourceTriangle.ChildIndex;
-                                    //blockedManifold.BlockingTriangleNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
-                                    //Without regard for which kind of blockage (deletion or correction) this represents, any future infringements against this manifold should correct
-                                    //rather than delete. They choose based on this flag.
                                     sourceTriangle.Blocked = true;
-                                    if (targetTriangle.Blocked)
-                                    {
-                                        //Blocker candidate was previously blocked.
-
-                                        //The reason for this 'blocked blocker' case  is mutual blocking. Consider a border between two triangles that an object wedges itself into. 
-                                        //Both triangles can validly compute normals that infringe on the other triangle. If we simply blocked both, 
-                                        //it would result in no contacts being generated, and the object would fall through the surface unopposed.
-                                        var triangleNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
-                                        Matrix3x3.Transform(RequiresFlip ? triangleNormal : -triangleNormal, meshOrientation, out sourceChild.Manifold.Normal);
-                                        //Note that we do not modify the depth.
-                                        //The only time this situation should occur is when an object has somehow wedged between adjacent triangles such that the detected
-                                        //depths are *less* than the triangle face depths. So, using those depths is guaranteed not to introduce excessive energy.
-
-
-                                        //Note that this will keep going and potentially have its corrected normal overwritten. That's fine.
-                                        //It has no impact of correctness, and given that it should be a very, very rare case, there's no reason to suffer complexity to 'optimize' it.
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        //This manifold is blocked by an unblocked triangle. Terminate the search.
-                                        sourceChild.Manifold.Count = 0;
-                                        break;
-                                    }
+                                    sourceTriangle.CorrectedNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
+                                    //Even if the target manifold gets blocked, it should not be deleted. We made use of it as a blocker.
+                                    targetTriangle.AllowDeletion = false;
+                                    break;
                                 }
                             }
                         }
                     }
                 }
-                //if (blockedManifoldCount == activeChildCount)
-                //{
-                //    //All manifolds were blocked. This can happen when an object hits a border between multiple triangles and the best detected depth is along a non-triangle face normal
-                //    //in all of them. Since edge/vertex contacts are not immune to blocking, they could all block each other.
-                //    //As a simple heuristic, we detect the case where all manifolds have been blocked and opt to instead correct the normals to avoid a bump.
-                //    //Note that we do not modify the depth. The only time this situation should occur is when an object has somehow wedged between adjacent triangles such that the detected
-                //    //depths are *less* than the triangle face depths. So, using those depths is guaranteed not to introduce excessive energy.
-                //    for (int i = 0; i < blockedManifoldCount; ++i)
-                //    {
-                //        ref var blockedManifold = ref blockedManifolds[i];
-                //        Matrix3x3.Transform(RequiresFlip ? blockedManifold.BlockingTriangleNormal : -blockedManifold.BlockingTriangleNormal, meshOrientation,
-                //            out Inner.Children[blockedManifold.ChildIndex].Manifold.Normal);
-                //    }
-                //}
-                //else
-                //{
-                //    for (int i = 0; i < blockedManifoldCount; ++i)
-                //    {
-                //        Inner.Children[blockedManifolds[i].ChildIndex].Manifold.Count = 0;
-                //    }
-                //}
+                for (int i = 0; i < activeChildCount; ++i)
+                {
+                    ref var triangle = ref activeTriangles[i];
+                    if (triangle.Blocked)
+                    {
+                        if (triangle.AllowDeletion)
+                        {
+                            //The manifold was infringing, and no other manifold infringed upon it. Can safely just ignore the manifold completely.
+                            Inner.Children[triangle.ChildIndex].Manifold.Count = 0;
+                        }
+                        else
+                        {
+                            //The manifold was infringing, but another manifold was infringing upon it. We can't safely delete such a manifold since it's likely a mutually infringing 
+                            //case- consider what happens when an objects wedges itself into an edge between two triangles.                            
+                            Matrix3x3.Transform(RequiresFlip ? triangle.CorrectedNormal : -triangle.CorrectedNormal, meshOrientation, out Inner.Children[triangle.ChildIndex].Manifold.Normal);
+
+                            //Note that we do not modify the depth.
+                            //The only time this situation should occur is when an object has somehow wedged between adjacent triangles such that the detected
+                            //depths are *less* than the triangle face depths. So, using those depths is guaranteed not to introduce excessive energy.
+
+                        }
+                    }
+                }
 
                 //Now that boundary smoothing analysis is done, we no longer need the triangle list.
                 batcher.Pool.Return(ref Triangles);
