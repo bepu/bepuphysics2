@@ -30,7 +30,7 @@ namespace Demos
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void ConfigureMaterial(out PairMaterialProperties pairMaterial)
         {
-            pairMaterial.FrictionCoefficient = .1f;
+            pairMaterial.FrictionCoefficient = 1f;
             pairMaterial.MaximumRecoveryVelocity = 2f;
             pairMaterial.SpringSettings = new SpringSettings(30, 1);
         }

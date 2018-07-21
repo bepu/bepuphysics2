@@ -32,9 +32,9 @@ namespace Demos.Demos
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);
-            const int width = 5;
-            const int height = 5;
-            const int length = 5;
+            const int width = 8;
+            const int height = 24;
+            const int length = 8;
             for (int i = 0; i < width; ++i)
             {
                 for (int j = 0; j < height; ++j)
@@ -44,7 +44,7 @@ namespace Demos.Demos
                         var location = new Vector3(3, 3, 3) * new Vector3(i, j, k);// + new Vector3(-width * 1.5f, 1.5f, -length * 1.5f);
                         var bodyDescription = new BodyDescription
                         {
-                            Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = -0.01f },
+                            Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.01f },
                             Pose = new RigidPose
                             {
                                 Orientation = BepuUtilities.Quaternion.Identity,
@@ -107,13 +107,21 @@ namespace Demos.Demos
 
 
             LoadModel(content, BufferPool, @"Content\box.obj", new Vector3(5, 1, 5), out var boxMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(10, -5, 0), new CollidableDescription(Simulation.Shapes.Add(boxMesh), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(10, 5, -20), new CollidableDescription(Simulation.Shapes.Add(boxMesh), 0.1f)));
 
-            CreateFan(64, 64, new Vector3(1, 1, 1), BufferPool, out var fanMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), new CollidableDescription(Simulation.Shapes.Add(fanMesh), 0.1f)));
+            CreateFan(64, 16, new Vector3(1, 1, 1), BufferPool, out var fanMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-10, 0, -20), new CollidableDescription(Simulation.Shapes.Add(fanMesh), 0.1f)));
 
-
+            const int planeWidth = 256;
+            const int planeHeight = 256;
+            CreateDeformedPlane(planeWidth, planeHeight,
+                (int x, int y) =>
+                {
+                    return new Vector3(x, 4 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y);
+                }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-128, -10, -128), new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
         }
+
 
         static void LoadModel(ContentArchive content, BufferPool pool, string contentName, in Vector3 scaling, out Mesh mesh)
         {
@@ -145,6 +153,45 @@ namespace Demos.Demos
             mesh = new Mesh(triangles, scaling, pool);
         }
 
+        static void CreateDeformedPlane(int width, int height, Func<int, int, Vector3> deformer, Vector3 scaling, BufferPool pool, out Mesh mesh)
+        {
+            pool.Take<Vector3>(width * height, out var vertices);
+            for (int i = 0; i < width; ++i)
+            {
+                for (int j = 0; j < height; ++j)
+                {
+                    vertices[width * j + i] = deformer(i, j);
+                }
+            }
+
+            var quadWidth = width - 1;
+            var quadHeight = height - 1;
+            var triangleCount = quadWidth * quadHeight * 2;
+            pool.Take<Triangle>(triangleCount, out var triangles);
+            triangles = triangles.Slice(0, triangleCount);
+
+            for (int i = 0; i < quadWidth; ++i)
+            {
+                for (int j = 0; j < quadHeight; ++j)
+                {
+                    var triangleIndex = (j * quadWidth + i) * 2;
+                    ref var triangle0 = ref triangles[triangleIndex];
+                    ref var v00 = ref vertices[width * j + i];
+                    ref var v01 = ref vertices[width * j + i + 1];
+                    ref var v10 = ref vertices[width * (j + 1) + i];
+                    ref var v11 = ref vertices[width * (j + 1) + i + 1];
+                    triangle0.A = v00;
+                    triangle0.B = v01;
+                    triangle0.C = v10;
+                    ref var triangle1 = ref triangles[triangleIndex + 1];
+                    triangle1.A = v01;
+                    triangle1.B = v11;
+                    triangle1.C = v10;
+                }
+            }
+            pool.Return(ref vertices);
+            mesh = new Mesh(triangles, scaling, pool);
+        }
         public override void Update(Input input, float dt)
         {
             if (input.IsDown(OpenTK.Input.Key.P))

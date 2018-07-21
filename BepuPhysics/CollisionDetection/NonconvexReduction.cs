@@ -198,7 +198,7 @@ namespace BepuPhysics.CollisionDetection
             //We use the maximum contact distance as a basis of the depth vs. extent threshold.
             //(The sqrt is just for simplicity- this will be used later in the incremental contact add, and dealing with squares there is more complicated.)
             var maximumDistance = (float)Math.Sqrt(maximumDistanceSquared);
-            if (minimumExtentIndex < 0 || deepestManifoldDepth - secondDeepestManifoldDepth > maximumDistance * 1e-3f)
+            if (minimumExtentIndex < 0 || deepestManifoldDepth - secondDeepestManifoldDepth > maximumDistance * 1e-2f)
             {
                 //The depths are reasonably distinct and should be stable enough to use as a starting point, at least for a few frames.
                 //(Or there were no contacts with positive depth, so there is no 'extreme' fallback.)
