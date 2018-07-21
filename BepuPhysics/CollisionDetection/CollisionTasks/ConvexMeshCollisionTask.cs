@@ -133,13 +133,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Add(maxExpansion, max, out max);
                 Vector3Wide.Subtract(min, offsetB, out min);
                 Vector3Wide.Subtract(max, offsetB, out max);
-
+                
                 meshFunctions.FindLocalOverlaps(ref meshes, ref min, ref max, count, batcher.Pool, ref meshTriangleIndices);
-
-
+                
                 for (int j = 0; j < count; ++j)
                 {
-
                     ref var triangleIndices = ref meshTriangleIndices[j];
                     if (triangleIndices.Count > 0)
                     {
@@ -203,6 +201,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                                 continuation.OnChildCompletedEmpty(ref pair.Continuation, ref batcher);
                             }
                         }
+                        triangleIndices.Count = 0;
                     }
                 }
 

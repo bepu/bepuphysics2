@@ -32,9 +32,9 @@ namespace Demos.Demos
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);
-            const int width = 1;
-            const int height = 3;
-            const int length = 1;
+            const int width = 5;
+            const int height = 5;
+            const int length = 5;
             for (int i = 0; i < width; ++i)
             {
                 for (int j = 0; j < height; ++j)
@@ -71,7 +71,7 @@ namespace Demos.Demos
                                 bodyDescription.LocalInertia = sphereInertia;
                                 break;
                         }
-                        //Simulation.Bodies.Add(bodyDescription);
+                        Simulation.Bodies.Add(bodyDescription);
 
                     }
                 }
@@ -81,7 +81,7 @@ namespace Demos.Demos
             //    Activity = new BodyActivityDescription(-1),
             //    Pose = new RigidPose(new Vector3(1, 9, 0), BepuUtilities.Quaternion.CreateFromYawPitchRoll(0, 0, -0.00001f)),
             //    Collidable = new CollidableDescription(sphereIndex, 1),
-            //    LocalInertia = capsuleInertia
+            //    LocalInertia = sphereInertia
             //});
             //Simulation.Bodies.Add(new BodyDescription
             //{
@@ -90,13 +90,13 @@ namespace Demos.Demos
             //    Collidable = new CollidableDescription(capsuleIndex, 1),
             //    LocalInertia = capsuleInertia
             //});
-            Simulation.Bodies.Add(new BodyDescription
-            {
-                Activity = new BodyActivityDescription(-1),
-                Pose = new RigidPose(new Vector3(0, 0, 0), BepuUtilities.Quaternion.Identity),
-                Collidable = new CollidableDescription(boxIndex, 10000f),
-                LocalInertia = boxInertia
-            });
+            //Simulation.Bodies.Add(new BodyDescription
+            //{
+            //    Activity = new BodyActivityDescription(-1),
+            //    Pose = new RigidPose(new Vector3(0, 0, 0), BepuUtilities.Quaternion.Identity),
+            //    Collidable = new CollidableDescription(boxIndex, 10000f),
+            //    LocalInertia = boxInertia
+            //});
             //Simulation.Bodies.Add(new BodyDescription
             //{
             //    Activity = new BodyActivityDescription(-1),

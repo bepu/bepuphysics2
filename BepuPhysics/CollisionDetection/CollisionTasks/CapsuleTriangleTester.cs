@@ -187,7 +187,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(localNormal, faceNormal, out var localNormalDotFaceNormal);
             if (Vector.EqualsAll(Vector.BitwiseOr(
                     Vector.LessThanOrEqual(localNormalDotFaceNormal, Vector<float>.Zero),
-                    Vector.LessThan(depth, -speculativeMargin)), new Vector<int>(-1)))
+                    Vector.LessThan(depth + a.Radius, -speculativeMargin)), new Vector<int>(-1)))
             {
                 //All contact normals are on the back of the triangle or the distance is too large for the margin, so we can immediately quit.
                 manifold.Contact0Exists = Vector<int>.Zero;
@@ -341,7 +341,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //(Zero velocity shouldn't happen because the local normal points toward the capsule axis, so the only way for the capsuleAxisPlane and the normal to be perpendicular
             //is for the normal and capsuleAxis to be parallel, which is explicitly protected against earlier.)
             Debug.Assert(Vector.EqualsAll(Vector.BitwiseOr(
-                Vector.GreaterThan(Vector.Abs(velocity), new Vector<float>(1e-10f)), 
+                Vector.GreaterThan(Vector.Abs(velocity), new Vector<float>(1e-15f)), 
                 Vector.OnesComplement(Vector.Equals(velocity, velocity))), new Vector<int>(-1)), "Velocity should be nonzero except in numerical corner cases.");
             var useFallbackDepth = Vector.LessThan(Vector.Abs(velocity), new Vector<float>(1e-15f));
             manifold.Depth0 = Vector.ConditionalSelect(useFallbackDepth, Vector<float>.Zero, manifold.Depth0);
