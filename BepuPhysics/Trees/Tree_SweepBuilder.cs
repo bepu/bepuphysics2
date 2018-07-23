@@ -5,7 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
-
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Trees
 {
@@ -24,6 +24,19 @@ namespace BepuPhysics.Trees
             public BoundingBox* Merged;
         }
 
+        unsafe struct IndexMapComparer : IComparerRef<int>
+        {
+            public float* Centroids;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(ref int a, ref int b)
+            {
+                var centroidA = Centroids[a];
+                var centroidB = Centroids[b];
+                return centroidA.CompareTo(centroidB);
+            }
+        }
+
 
         unsafe void FindPartitionForAxis(BoundingBox* boundingBoxes, BoundingBox* aMerged, float* centroids, int* indexMap, int count,
             out int splitIndex, out float cost, out BoundingBox a, out BoundingBox b, out int leafCountA, out int leafCountB)
@@ -38,8 +51,8 @@ namespace BepuPhysics.Trees
             //With those changes, we can probably get the sweep builder to be faster than v1's insertion builder- it's almost there already.
             //(You'll also want to bench it against similarly simd accelerated binned approaches for use in incremental refinement. If it's not much slower, the extra quality benefits
             //might make it faster on net by virtue of speeding up self-tests, which are a dominant cost.)
-            var comparer = new PrimitiveComparer<float>();
-            QuickSort.Sort(ref centroids[0], ref indexMap[0], 0, count - 1, ref comparer);
+            var comparer = new IndexMapComparer { Centroids = centroids };
+            QuickSort.Sort(ref indexMap[0], 0, count - 1, ref comparer);
 
             //Search for the best split.
             //Sweep across from low to high, caching the merged size and leaf count at each point.
