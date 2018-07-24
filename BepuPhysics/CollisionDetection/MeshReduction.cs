@@ -195,7 +195,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool TryFlush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
         {
             Debug.Assert(Inner.ChildCount > 0);

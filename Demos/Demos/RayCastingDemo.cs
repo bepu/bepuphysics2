@@ -16,6 +16,7 @@ using DemoRenderer.Constraints;
 using System.Threading;
 using Demos.SpecializedTests;
 using DemoContentLoader;
+using Demos.Demos;
 
 namespace Demos
 {
@@ -161,6 +162,16 @@ namespace Demos
                     }
                 }
             }
+
+            const int planeWidth = 128;
+            const int planeHeight = 128;
+            MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
+                (int x, int y) =>
+                {
+                    return new Vector3(x, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y);
+                }, new Vector3(1, 3, 1), BufferPool, out var planeMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-64, -10, -64), new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
+
             int raySourceCount = 3;
             QuickList<QuickList<TestRay, Buffer<TestRay>>, Buffer<QuickList<TestRay, Buffer<TestRay>>>>.Create(BufferPool.SpecializeFor<QuickList<TestRay, Buffer<TestRay>>>(), raySourceCount, out raySources);
             raySources.Count = raySourceCount;

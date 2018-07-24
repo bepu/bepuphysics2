@@ -50,8 +50,8 @@ namespace BepuPhysics.Collidables
 
         //Compound shapes may require indirections into other shape batches. This isn't wonderfully fast, but this scalar path is designed more for convenience than performance anyway.
         //For performance, a batched and vectorized codepath should be used.
-        bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, Shapes shapeBatches, out float t, out Vector3 normal);
-        void RayTest<TRayHitHandler>(RigidPose pose, Shapes shapeBatches, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, Shapes shapeBatches, out float t, out Vector3 normal);
+        void RayTest<TRayHitHandler>(in RigidPose pose, Shapes shapeBatches, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
     }
 
@@ -61,8 +61,8 @@ namespace BepuPhysics.Collidables
         //And the speed of mesh bounds calculation is pretty irrelevant, since meshes should essentially always be static.
         void ComputeBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max);
 
-        bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal);
-        void RayTest<TRayHitHandler>(RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal);
+        void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
         void FindLocalOverlaps(in Vector3 min, in Vector3 max, BufferPool pool, ref QuickList<int, Buffer<int>> overlappedChildren);
         void FindLocalOverlaps(ref Buffer<IntPtr> meshes, ref Vector3Wide min, ref Vector3Wide max, int count, BufferPool pool, ref Buffer<QuickList<int, Buffer<int>>> overlappedChildren);

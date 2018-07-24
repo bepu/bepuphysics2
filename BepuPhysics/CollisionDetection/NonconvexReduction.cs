@@ -268,7 +268,7 @@ namespace BepuPhysics.CollisionDetection
             remainingChildren.Dispose(pool.SpecializeFor<Int2>());
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Flush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
         {
             Debug.Assert(ChildCount > 0);

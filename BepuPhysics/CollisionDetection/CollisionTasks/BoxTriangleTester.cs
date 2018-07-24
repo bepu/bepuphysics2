@@ -18,7 +18,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var maxB = Vector.Max(a, Vector.Max(b, c));
             depth = Vector.Min(boxExtreme - minB, maxB + boxExtreme);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TestBoxEdgeAgainstTriangleEdge(
             in Vector<float> triangleEdgeOffsetY, in Vector<float> triangleEdgeOffsetZ,
             in Vector<float> triangleCenterY, in Vector<float> triangleCenterZ,
@@ -47,7 +47,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             depth = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-7f)), new Vector<float>(float.MaxValue), depth);
 
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TestBoxEdgesAgainstTriangleEdge(
             in BoxWide a,
             in Vector3Wide triangleEdgeOffset, in Vector3Wide triangleCenter,
@@ -85,7 +85,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             depth = Vector.Min(depth, depthCandidate);
 
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Select(
             ref Vector<float> depth, ref Vector3Wide normal,
             in Vector<float> depthCandidate, in Vector3Wide normalCandidate)
@@ -94,7 +94,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(useCandidate, normalCandidate, normal, out normal);
             depth = Vector.Min(depth, depthCandidate);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Select(
             ref Vector<float> depth, ref Vector3Wide normal,
             in Vector<float> depthCandidate, in Vector<float> nxCandidate, in Vector<float> nyCandidate, in Vector<float> nzCandidate)
@@ -107,7 +107,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Add(in Vector3Wide pointOnTriangle, in Vector3Wide triangleCenter, in Vector3Wide triangleTangentX, in Vector3Wide triangleTangentY, in Vector<int> featureId,
             in Vector<int> exists, ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
         {
@@ -120,6 +120,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists);
         }
 
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ClipTriangleEdgeAgainstPlanes(in Vector3Wide edgeDirection, in Vector3Wide triangleEdgeStartToBoxEdgeAnchor0, in Vector3Wide triangleEdgeStartToBoxEdgeAnchor1,
             in Vector3Wide boxEdgePlaneNormal, out Vector<float> min, out Vector<float> max)
         {
@@ -141,7 +142,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             max = Vector.ConditionalSelect(dontUseFallback, Vector.Max(t0, t1), Vector.ConditionalSelect(edgeStartIsInside, largePositive, largeNegative));
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ClipTriangleEdgeAgainstBoxFace(in Vector3Wide edgeStart, in Vector3Wide edgeDirection, in Vector<int> edgeId,
             in Vector3Wide boxVertex00, in Vector3Wide boxVertex11, in Vector3Wide edgePlaneNormalX, in Vector3Wide edgePlaneNormalY,
             in Vector3Wide triangleCenter, in Vector3Wide triangleTangentX, in Vector3Wide triangleTangentY,
@@ -187,7 +188,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Add(maxLocation, triangleCenter, triangleTangentX, triangleTangentY, edgeId + new Vector<int>(8), maxExists, ref candidates, ref candidateCount);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ClipTriangleEdgesAgainstBoxFace(
             in Vector3Wide a, in Vector3Wide b, in Vector3Wide c, in Vector3Wide triangleCenter, in Vector3Wide triangleTangentX, in Vector3Wide triangleTangentY,
             in Vector3Wide ab, in Vector3Wide bc, in Vector3Wide ca,
@@ -216,7 +217,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ClipTriangleEdgeAgainstBoxFace(c, ca, baseId + new Vector<int>(2), boxVertex00, boxVertex11, edgePlaneNormalX, edgePlaneNormalY, triangleCenter, triangleTangentX, triangleTangentY, allowContacts, ref candidates, ref candidateCount);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void AddBoxVertex(in Vector3Wide a, in Vector3Wide b, in Vector3Wide v, in Vector3Wide triangleNormal, in Vector3Wide contactNormal, in Vector<float> inverseNormalDot,
             in Vector3Wide abEdgePlaneNormal, in Vector3Wide bcEdgePlaneNormal, in Vector3Wide caEdgePlaneNormal,
             in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY, in Vector<int> featureId,
@@ -251,7 +252,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Add(vOnPlane, triangleCenter, triangleX, triangleY, featureId, contained, ref candidates, ref candidateCount);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddBoxVertices(in Vector3Wide a, in Vector3Wide b, in Vector3Wide ab, in Vector3Wide bc, in Vector3Wide ca, in Vector3Wide triangleNormal, in Vector3Wide contactNormal,
             in Vector3Wide v00, in Vector3Wide v01, in Vector3Wide v10, in Vector3Wide v11,
             in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY, in Vector<int> baseFeatureId, in Vector<int> featureIdX, in Vector<int> featureIdY,
@@ -276,7 +277,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 triangleCenter, triangleX, triangleY, baseFeatureId + featureIdX + featureIdY, allowContacts, ref candidates, ref candidateCount);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Test(
             ref BoxWide a, ref TriangleWide b, ref Vector<float> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
@@ -460,7 +461,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void TransformContactToManifold(
             in ManifoldCandidate rawContact, in Vector3Wide faceCenterB, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
             out Vector3Wide manifoldOffsetA, out Vector<float> manifoldDepth, out Vector<int> manifoldFeatureId)

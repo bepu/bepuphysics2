@@ -97,7 +97,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, Shapes shapeBatches, out float t, out Vector3 normal)
+        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, Shapes shapeBatches, out float t, out Vector3 normal)
         {
             t = float.MaxValue;
             normal = new Vector3();
@@ -107,7 +107,7 @@ namespace BepuPhysics.Collidables
                 GetRotatedChildPose(child.LocalPose, pose.Orientation, out var childPose);
                 //TODO: This is an area that has to be updated for high precision poses.
                 childPose.Position += pose.Position;
-                if (shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, childPose, origin, direction, out var childT, out var childNormal) && childT < t)
+                if (shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, childPose, origin, direction, maximumT, out var childT, out var childNormal) && childT < t)
                 {
                     t = childT;
                     normal = childNormal;
@@ -116,7 +116,7 @@ namespace BepuPhysics.Collidables
             return t < float.MaxValue;
         }
 
-        public void RayTest<TRayHitHandler>(RigidPose pose, Shapes shapeBatches, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public void RayTest<TRayHitHandler>(in RigidPose pose, Shapes shapeBatches, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             for (int i = 0; i < Children.Length; ++i)
             {

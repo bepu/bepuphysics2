@@ -74,7 +74,7 @@ namespace BepuPhysics
                 if (HitHandler.AllowTest(reference))
                 {
                     Simulation.GetPoseAndShape(reference, out var pose, out var shape);
-                    if (Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, rayData->Origin, rayData->Direction, out var t, out var normal) && t < *maximumT)
+                    if (Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, rayData->Origin, rayData->Direction, *maximumT, out var t, out var normal) && t < *maximumT)
                     {
                         HitHandler.OnRayHit(*rayData, ref *maximumT, t, normal, reference);
                     }

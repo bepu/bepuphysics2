@@ -25,7 +25,7 @@ namespace Demos.Demos
 
             var box = new Box(1f, 3f, 2f);
             var capsule = new Capsule(1f, 1f);
-            var sphere = new Sphere(.5f);
+            var sphere = new Sphere(1f);
             box.ComputeInertia(1, out var boxInertia);
             capsule.ComputeInertia(1, out var capsuleInertia);
             sphere.ComputeInertia(1, out var sphereInertia);
@@ -59,16 +59,16 @@ namespace Demos.Demos
                         switch ((i + j) % 3)
                         {
                             case 0:
-                                bodyDescription.Collidable.Shape = boxIndex;
-                                bodyDescription.LocalInertia = boxInertia;
+                                bodyDescription.Collidable.Shape = sphereIndex;
+                                bodyDescription.LocalInertia = sphereInertia;
                                 break;
                             case 1:
                                 bodyDescription.Collidable.Shape = capsuleIndex;
                                 bodyDescription.LocalInertia = capsuleInertia;
                                 break;
                             case 2:
-                                bodyDescription.Collidable.Shape = sphereIndex;
-                                bodyDescription.LocalInertia = sphereInertia;
+                                bodyDescription.Collidable.Shape = boxIndex;
+                                bodyDescription.LocalInertia = boxInertia;
                                 break;
                         }
                         Simulation.Bodies.Add(bodyDescription);
@@ -106,11 +106,11 @@ namespace Demos.Demos
             //});
 
 
-            //LoadModel(content, BufferPool, @"Content\box.obj", new Vector3(5, 1, 5), out var boxMesh);
-            //Simulation.Statics.Add(new StaticDescription(new Vector3(10, 5, -20), new CollidableDescription(Simulation.Shapes.Add(boxMesh), 0.1f)));
+            LoadModel(content, BufferPool, @"Content\box.obj", new Vector3(5, 1, 5), out var boxMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(10, 5, -20), new CollidableDescription(Simulation.Shapes.Add(boxMesh), 0.1f)));
 
-            //CreateFan(64, 16, new Vector3(1, 1, 1), BufferPool, out var fanMesh);
-            //Simulation.Statics.Add(new StaticDescription(new Vector3(-10, 0, -20), new CollidableDescription(Simulation.Shapes.Add(fanMesh), 0.1f)));
+            CreateFan(64, 16, new Vector3(1, 1, 1), BufferPool, out var fanMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-10, 0, -20), new CollidableDescription(Simulation.Shapes.Add(fanMesh), 0.1f)));
 
             const int planeWidth = 256;
             const int planeHeight = 256;
@@ -118,7 +118,7 @@ namespace Demos.Demos
                 (int x, int y) =>
                 {
                     return new Vector3(x, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y);
-                }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
+                }, new Vector3(1, 3, 1), BufferPool, out var planeMesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(-64, -10, -64), new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
         }
 
@@ -153,7 +153,7 @@ namespace Demos.Demos
             mesh = new Mesh(triangles, scaling, pool);
         }
 
-        static void CreateDeformedPlane(int width, int height, Func<int, int, Vector3> deformer, Vector3 scaling, BufferPool pool, out Mesh mesh)
+        public static void CreateDeformedPlane(int width, int height, Func<int, int, Vector3> deformer, Vector3 scaling, BufferPool pool, out Mesh mesh)
         {
             pool.Take<Vector3>(width * height, out var vertices);
             for (int i = 0; i < width; ++i)
@@ -194,8 +194,8 @@ namespace Demos.Demos
         }
         public override void Update(Input input, float dt)
         {
-            if (input.IsDown(OpenTK.Input.Key.P))
-                Console.Write("SDF");
+            //if (input.IsDown(OpenTK.Input.Key.P))
+            //    Console.Write("SDF");
             base.Update(input, dt);
         }
 

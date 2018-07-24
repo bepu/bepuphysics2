@@ -18,7 +18,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         public ConvexMeshCollisionTask()
         {
-            BatchSize = 8;
+            BatchSize = 32;
             ShapeTypeIndexA = default(TConvex).TypeId;
             ShapeTypeIndexB = default(TMesh).TypeId;
             SubtaskGenerator = true;

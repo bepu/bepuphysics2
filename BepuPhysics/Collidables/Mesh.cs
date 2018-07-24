@@ -75,15 +75,74 @@ namespace BepuPhysics.Collidables
             return new MeshShapeBatch<Mesh>(pool, initialCapacity);
         }
 
-        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
+        unsafe struct LeafTester : IRayLeafTester
         {
-            t = 0;
+            Triangle* triangles;
+            public float MinimumT;
+            public Vector3 MinimumNormal;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public LeafTester(in Buffer<Triangle> triangles)
+            {
+                this.triangles = (Triangle*)triangles.Memory;
+                MinimumT = float.MaxValue;
+                MinimumNormal = default;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            {
+                ref var triangle = ref triangles[leafIndex];
+                if (Triangle.RayTest(triangle.A, triangle.B, triangle.C, rayData->Origin, rayData->Direction, out var t, out var normal) && t < MinimumT && t <= *maximumT)
+                {
+                    MinimumT = t;
+                    MinimumNormal = normal;
+                }
+            }
+        }
+
+        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal)
+        {
+            BepuUtilities.Quaternion.Conjugate(pose.Orientation, out var conjugate);
+            Matrix3x3.CreateFromQuaternion(conjugate, out var inverseOrientation);
+            Matrix3x3.Transform(origin - pose.Position, inverseOrientation, out var localOrigin);
+            Matrix3x3.Transform(direction, inverseOrientation, out var localDirection);
+            localOrigin *= inverseScale;
+            localDirection *= inverseScale;
+            var leafTester = new LeafTester(Triangles);
+            Tree.RayCast(localOrigin, localDirection, maximumT, ref leafTester);
+            if (leafTester.MinimumT < float.MaxValue)
+            {
+                t = leafTester.MinimumT;
+                normal = leafTester.MinimumNormal;
+                return true;
+            }
+            t = default;
             normal = default;
             return false;
         }
 
-        public void RayTest<TRayHitHandler>(RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
+            //TODO: Note that we dispatch a bunch of scalar tests here. You could be more clever than this- batched tests are possible. 
+            //May be worth creating a different traversal designed for low ray counts- might be able to get some benefit out of a semidynamic packet or something.
+            BepuUtilities.Quaternion.Conjugate(pose.Orientation, out var conjugate);
+            Matrix3x3.CreateFromQuaternion(conjugate, out var inverseOrientation);
+            var leafTester = new LeafTester(Triangles);
+            for (int i = 0; i < rays.RayCount; ++i)
+            {
+                rays.GetRay(i, out var ray, out var maximumT);
+                Matrix3x3.Transform(ray->Origin - pose.Position, inverseOrientation, out var localOrigin);
+                Matrix3x3.Transform(ray->Direction, inverseOrientation, out var localDirection);
+                localOrigin *= inverseScale;
+                localDirection *= inverseScale;
+                leafTester.MinimumT = float.MaxValue;
+                Tree.RayCast(localOrigin, localDirection, *maximumT, ref leafTester);
+                if (leafTester.MinimumT < float.MaxValue)
+                {
+                    hitHandler.OnRayHit(i, leafTester.MinimumT, leafTester.MinimumNormal);
+                }
+            }
         }
         struct Enumerator : IBreakableForEach<int>
         {
