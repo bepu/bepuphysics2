@@ -236,18 +236,25 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ExpandBoundingBox(ref Vector3 min, ref Vector3 max, in Vector3 linearVelocity, in Vector3 angularVelocity, float dt,
-        float maximumRadius, float maximumAngularExpansion, float maximumAllowedExpansion)
+        public static void GetBoundsExpansion(in Vector3 linearVelocity, in Vector3 angularVelocity, float dt,
+            float maximumRadius, float maximumAngularExpansion, float maximumAllowedExpansion, out Vector3 minExpansion, out Vector3 maxExpansion)
         {
             var linearDisplacement = linearVelocity * dt;
             Vector3 zero = default;
-            var minExpansion = Vector3.Min(zero, linearDisplacement);
-            var maxExpansion = Vector3.Max(zero, linearDisplacement);
+            minExpansion = Vector3.Min(zero, linearDisplacement);
+            maxExpansion = Vector3.Max(zero, linearDisplacement);
             GetAngularBoundsExpansion(angularVelocity, dt, maximumRadius, maximumAngularExpansion, out var angularExpansion);
 
             var maximumAllowedExpansionBroadcasted = new Vector3(maximumAllowedExpansion);
             minExpansion = Vector3.Max(-maximumAllowedExpansionBroadcasted, minExpansion - angularExpansion);
             maxExpansion = Vector3.Min(maximumAllowedExpansionBroadcasted, maxExpansion + angularExpansion);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ExpandBoundingBox(ref Vector3 min, ref Vector3 max, in Vector3 linearVelocity, in Vector3 angularVelocity, float dt,
+        float maximumRadius, float maximumAngularExpansion, float maximumAllowedExpansion)
+        {
+            GetBoundsExpansion(linearVelocity, angularVelocity, dt, maximumRadius, maximumAngularExpansion, maximumAllowedExpansion, out var minExpansion, out var maxExpansion);
             min += minExpansion;
             max += maxExpansion;
         }

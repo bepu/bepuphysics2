@@ -41,16 +41,16 @@ namespace Demos.Demos
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);
-            const int width = 8;
-            const int height = 16;
-            const int length = 8;
+            const int width = 12;
+            const int height = 3;
+            const int length = 12;
             for (int i = 0; i < width; ++i)
             {
                 for (int j = 0; j < height; ++j)
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        var location = new Vector3(3, 3, 3) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 1.5f, -length * 1.5f);
+                        var location = new Vector3(5, 5, 5) * new Vector3(i, j, k) + new Vector3(-width * 2.5f, 2.5f, -length * 2.5f);
                         var bodyDescription = new BodyDescription
                         {
                             Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.3f },
@@ -87,19 +87,27 @@ namespace Demos.Demos
             }
 
 
-            var staticShapeIndex = Simulation.Shapes.Add(new Box(100, 1, 100));
-            var staticDescription = new StaticDescription
-            {
-                Collidable = new CollidableDescription
-                {
-                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                    Shape = Simulation.Shapes.Add(new Box(100, 1, 100)),
-                    SpeculativeMargin = 0.1f
-                },
-                Pose = new RigidPose { Position = new Vector3(0, -1, 0), Orientation = Quaternion.Identity }
-            };
-            Simulation.Statics.Add(staticDescription);
+            //var staticShapeIndex = Simulation.Shapes.Add(new Box(100, 1, 100));
+            //var staticDescription = new StaticDescription
+            //{
+            //    Collidable = new CollidableDescription
+            //    {
+            //        Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
+            //        Shape = Simulation.Shapes.Add(new Box(100, 1, 100)),
+            //        SpeculativeMargin = 0.1f
+            //    },
+            //    Pose = new RigidPose { Position = new Vector3(0, -1, 0), Orientation = Quaternion.Identity }
+            //};
+            //Simulation.Statics.Add(staticDescription);
 
+            const int planeWidth = 64;
+            const int planeHeight = 64;
+            MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
+                (int x, int y) =>
+                {
+                    return new Vector3(x, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y);
+                }, new Vector3(2, 3, 2), BufferPool, out var planeMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-64, -10, -64), new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
         }
 
@@ -166,7 +174,7 @@ namespace Demos.Demos
             var intersected = task.Sweep(
                 Unsafe.AsPointer(ref a), a.TypeId, poseA.Orientation, velocityA,
                 Unsafe.AsPointer(ref b), b.TypeId, poseB.Position - poseA.Position, poseB.Orientation, velocityB,
-                maximumT, 1e-2f, 1e-5f, 25, ref filter, Simulation.Shapes, Simulation.NarrowPhase.SweepTaskRegistry,
+                maximumT, 1e-2f, 1e-5f, 25, ref filter, Simulation.Shapes, Simulation.NarrowPhase.SweepTaskRegistry, BufferPool,
                 out var t0, out var t1, out var hitLocation, out var hitNormal);
             hitLocation += poseA.Position;
 
@@ -316,7 +324,7 @@ namespace Demos.Demos
                 var shape = new Box(1, 2, 1.5f);
                 var initialPose = new RigidPose { Position = sweepOrigin, Orientation = Quaternion.Identity };
                 var sweepVelocity = new BodyVelocity { Linear = sweepDirection };
-                Simulation.Sweep(shape, initialPose, sweepVelocity, 10, ref hitHandler);
+                Simulation.Sweep(shape, initialPose, sweepVelocity, 10, BufferPool, ref hitHandler);
                 DrawSweep(shape, ref initialPose, sweepVelocity, 20, hitHandler.T, renderer,
                     hitHandler.T < float.MaxValue ? new Vector3(0.25f, 1, 0.25f) : new Vector3(1, 0.25f, 0.25f));
 

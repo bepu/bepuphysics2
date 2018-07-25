@@ -156,6 +156,18 @@ namespace BepuPhysics.Collidables
             }
         }
 
+        struct SweepLeafTester : ISweepLeafTester
+        {
+            public BufferPool<int> Pool;
+            public QuickList<int, Buffer<int>> Children;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void TestLeaf(int leafIndex, ref float maximumT)
+            {
+                Children.Add(leafIndex, Pool);
+            }
+        }
+
+
         public unsafe void FindLocalOverlaps(in Vector3 min, in Vector3 max, BufferPool pool, ref QuickList<int, Buffer<int>> childIndices)
         {
             Debug.Assert(childIndices.Span.Memory != null, "The given list reference is expected to already be constructed and ready for use.");
@@ -165,6 +177,19 @@ namespace BepuPhysics.Collidables
             enumerator.Pool = pool.SpecializeFor<int>();
             enumerator.Children = childIndices;
             Tree.GetOverlaps(scaledMin, scaledMax, ref enumerator);
+            childIndices = enumerator.Children;
+        }
+
+        public unsafe void FindLocalOverlaps(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, ref QuickList<int, Buffer<int>> childIndices)
+        {
+            Debug.Assert(childIndices.Span.Memory != null, "The given list reference is expected to already be constructed and ready for use.");
+            var scaledMin = min * inverseScale;
+            var scaledMax = max * inverseScale;
+            var scaledSweep = sweep * inverseScale;
+            SweepLeafTester enumerator;
+            enumerator.Pool = pool.SpecializeFor<int>();
+            enumerator.Children = childIndices;
+            Tree.Sweep(scaledMin, scaledMax, scaledSweep, maximumT, ref enumerator);
             childIndices = enumerator.Children;
         }
 

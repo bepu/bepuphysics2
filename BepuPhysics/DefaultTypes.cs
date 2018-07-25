@@ -52,7 +52,7 @@ namespace BepuPhysics
             narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact4Nonconvex, Contact4NonconvexAccumulatedImpulses, ContactImpulses4, ConstraintCache4>());
             narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact3Nonconvex, Contact3NonconvexAccumulatedImpulses, ContactImpulses3, ConstraintCache3>());
             narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact2Nonconvex, Contact2NonconvexAccumulatedImpulses, ContactImpulses2, ConstraintCache2>());
-            
+
             narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact8NonconvexOneBody, Contact8NonconvexAccumulatedImpulses, ContactImpulses8, ConstraintCache8>());
             narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact7NonconvexOneBody, Contact7NonconvexAccumulatedImpulses, ContactImpulses7, ConstraintCache7>());
             narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact6NonconvexOneBody, Contact6NonconvexAccumulatedImpulses, ContactImpulses6, ConstraintCache6>());
@@ -111,15 +111,19 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Sphere, SphereWide, Box, BoxWide, SphereBoxDistanceTester>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Sphere, SphereWide, Triangle, TriangleWide, SphereTriangleDistanceTester>());
             defaultTaskRegistry.Register(new CompoundConvexSweepTask<Sphere, SphereWide>());
+            defaultTaskRegistry.Register(new ConvexMeshSweepTask<Sphere, SphereWide, Mesh>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Capsule, CapsuleWide, Capsule, CapsuleWide, CapsulePairDistanceTester>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Capsule, CapsuleWide, Box, BoxWide, CapsuleBoxDistanceTester>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Capsule, CapsuleWide, Triangle, TriangleWide, CapsuleTriangleDistanceTester>());
             defaultTaskRegistry.Register(new CompoundConvexSweepTask<Capsule, CapsuleWide>());
+            defaultTaskRegistry.Register(new ConvexMeshSweepTask<Capsule, CapsuleWide, Mesh>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Box, BoxWide, Box, BoxWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Box, BoxWide, Triangle, TriangleWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>());
             defaultTaskRegistry.Register(new CompoundConvexSweepTask<Box, BoxWide>());
+            defaultTaskRegistry.Register(new ConvexMeshSweepTask<Box, BoxWide, Mesh>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Triangle, TriangleWide, Triangle, TriangleWide, GJKDistanceTester<Triangle, TriangleWide, TriangleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>());
             defaultTaskRegistry.Register(new CompoundConvexSweepTask<Triangle, TriangleWide>());
+            defaultTaskRegistry.Register(new ConvexMeshSweepTask<Triangle, TriangleWide, Mesh>());
             defaultTaskRegistry.Register(new CompoundPairSweepTask());
             return defaultTaskRegistry;
         }

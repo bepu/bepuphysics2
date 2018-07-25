@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Memory;
 using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
@@ -72,7 +73,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+            ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
             Debug.Assert((shapeTypeA == ShapeTypeIndexA && shapeTypeB == ShapeTypeIndexB) || (shapeTypeA == ShapeTypeIndexA && shapeTypeB == ShapeTypeIndexB),
                 "Types must match expected types.");
