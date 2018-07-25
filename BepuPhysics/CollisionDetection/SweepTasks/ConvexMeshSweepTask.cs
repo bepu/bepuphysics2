@@ -108,14 +108,12 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
                 QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 128, out var childIndices);
                 mesh.FindLocalOverlaps(min, max, localRelativeLinearVelocityA, maximumT, pool, ref childIndices);
-                pool.Take<Triangle>(childIndices.Count, out var triangles);
-                mesh.GetTriangles(ref childIndices, ref triangles);
                 for (int i = 0; i < childIndices.Count; ++i)
                 {
                     var childIndex = childIndices[i];
                     if (filter.AllowTest(flipRequired ? 0 : childIndex, flipRequired ? childIndex : 0))
                     {
-                        ref var triangle = ref triangles[i];
+                        mesh.GetLocalTriangle(childIndex, out var triangle);
                         var triangleCenter = (triangle.A + triangle.B + triangle.C) * (1f / 3f);
                         triangle.A -= triangleCenter;
                         triangle.B -= triangleCenter;
@@ -138,7 +136,6 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                         }
                     }
                 }
-                pool.Return(ref triangles);
                 childIndices.Dispose(pool.SpecializeFor<int>());
             }
             return t1 < float.MaxValue;

@@ -204,7 +204,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GetTriangles(ref QuickList<int, Buffer<int>> childIndices, ref Buffer<Triangle> triangles)
+        public unsafe void GetLocalTriangles(ref QuickList<int, Buffer<int>> childIndices, ref Buffer<Triangle> triangles)
         {
             for (int i = 0; i < childIndices.Count; ++i)
             {
@@ -214,6 +214,16 @@ namespace BepuPhysics.Collidables
                 target.B = scale * source.B;
                 target.C = scale * source.C;
             }
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void GetLocalTriangle(int triangleIndex, out Triangle target)
+        {
+            ref var source = ref Triangles[triangleIndex];
+            target.A = scale * source.A;
+            target.B = scale * source.B;
+            target.C = scale * source.C;
         }
         /// <summary>
         /// Type id of mesh shapes.

@@ -147,25 +147,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         continuation.MeshOrientation = pair.OrientationB;
                         //Pass ownership of the triangles to the continuation. It'll dispose of the buffer.
                         batcher.Pool.Take(triangleIndices.Count, out continuation.Triangles);
-                        Unsafe.AsRef<TMesh>(pair.B).GetTriangles(ref triangleIndices, ref continuation.Triangles);
+                        ref var mesh = ref Unsafe.AsRef<TMesh>(pair.B);
                         //A flip is required in mesh reduction whenever contacts are being generated as if the triangle is in slot B, which is whenever this pair has *not* been flipped.
                         continuation.RequiresFlip = pair.FlipMask == 0;
 
                         int nextContinuationChildIndex = 0;
                         for (int k = 0; k < triangleIndices.Count; ++k)
                         {
+                            var triangleIndex = triangleIndices[k];
                             //Note that we have to take into account whether we flipped the shapes to match the expected memory layout.
                             //The caller expects results according to the submitted pair order, not the batcher's memory layout order.
                             int childA, childB;
                             if (pair.FlipMask < 0)
                             {
-                                childA = triangleIndices[k];
+                                childA = triangleIndex;
                                 childB = 0;
                             }
                             else
                             {
                                 childA = 0;
-                                childB = triangleIndices[k];
+                                childB = triangleIndex;
                             }
                             if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
                             {
@@ -182,7 +183,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                                 //Note that the triangles list persists until the continuation completes, which means the memory will be validly accessible for all of the spawned collision tasks.
                                 //In other words, we can pass a pointer to it to avoid the need for additional batcher shape copying.
-                                ref var triangle = ref continuation.Triangles[k];
+                                ref var triangle = ref continuation.Triangles[continuationChildIndex];
+                                mesh.GetLocalTriangle(triangleIndex, out triangle);
                                 ref var convex = ref Unsafe.AsRef<TConvex>(pair.A);
                                 if (pair.FlipMask < 0)
                                 {

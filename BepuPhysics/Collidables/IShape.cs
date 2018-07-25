@@ -52,7 +52,7 @@ namespace BepuPhysics.Collidables
         //For performance, a batched and vectorized codepath should be used.
         bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, Shapes shapeBatches, out float t, out Vector3 normal);
         void RayTest<TRayHitHandler>(in RigidPose pose, Shapes shapeBatches, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
-
+        ref CompoundChild GetChild(int compoundChildIndex);
     }
 
     public unsafe interface IMeshShape : IShape
@@ -67,7 +67,7 @@ namespace BepuPhysics.Collidables
         void FindLocalOverlaps(in Vector3 min, in Vector3 max, BufferPool pool, ref QuickList<int, Buffer<int>> overlappedChildren);
         void FindLocalOverlaps(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, ref QuickList<int, Buffer<int>> overlappedChildren);
         void FindLocalOverlaps(ref Buffer<IntPtr> meshes, ref Vector3Wide min, ref Vector3Wide max, int count, BufferPool pool, ref Buffer<QuickList<int, Buffer<int>>> overlappedChildren);
-        void GetTriangles(ref QuickList<int, Buffer<int>> childIndices, ref Buffer<Triangle> triangles);
+        void GetLocalTriangle(int triangleIndex, out Triangle triangle);
     }
 
     public interface IShapeWide<TShape> where TShape : IShape

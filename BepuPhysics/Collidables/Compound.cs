@@ -135,6 +135,12 @@ namespace BepuPhysics.Collidables
             return new CompoundShapeBatch<Compound>(pool, initialCapacity, shapes);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref CompoundChild GetChild(int compoundChildIndex)
+        {
+            return ref Children[compoundChildIndex];
+        }
+
 
 
         /// <summary>
