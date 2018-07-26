@@ -18,7 +18,7 @@ namespace BepuPhysics.CollisionDetection
         /// <returns>True if testing should proceed, false otherwise.</returns>
         bool AllowTest(int childA, int childB);
     }
-    
+
     public abstract class SweepTask
     {
         /// <summary>
@@ -30,18 +30,81 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public int ShapeTypeIndexB { get; protected set; }
 
-        public abstract unsafe bool Sweep(
-            void* shapeDataA, int shapeTypeA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+        protected abstract unsafe bool PreorderedTypeSweep(
+            void* shapeDataA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal);
 
-        public abstract unsafe bool Sweep<TSweepFilter>(
-            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+        public unsafe bool Sweep(
+            void* shapeDataA, int shapeTypeA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, int shapeTypeB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+            out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+        {
+            Debug.Assert(
+                (shapeTypeA == ShapeTypeIndexA && shapeTypeB == ShapeTypeIndexB) ||
+                (shapeTypeA == ShapeTypeIndexB && shapeTypeB == ShapeTypeIndexA),
+                "Sweep type requirements not met.");
+            if (shapeTypeA == ShapeTypeIndexA)
+            {
+                return PreorderedTypeSweep(
+                    shapeDataA, localPoseA, orientationA, velocityA,
+                    shapeDataB, localPoseB, offsetB, orientationB, velocityB,
+                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount, out t0, out t1, out hitLocation, out hitNormal);
+            }
+            else
+            {
+                var intersected = PreorderedTypeSweep(
+                    shapeDataB, localPoseB, orientationB, velocityB,
+                    shapeDataA, localPoseA, -offsetB, orientationA, velocityA,
+                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount, out t0, out t1, out hitLocation, out hitNormal);
+                //Normals are calibrated to point from B to A by convention; retain that convention if the parameters were reversed.
+                hitNormal = -hitNormal;
+                hitLocation = hitLocation + offsetB;
+                return intersected;
+            }
+        }
+
+        protected abstract unsafe bool PreorderedTypeSweep<TSweepFilter>(
+            void* shapeDataA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
+            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
+            bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
             where TSweepFilter : ISweepFilter;
+
+        public unsafe bool Sweep<TSweepFilter>(
+            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
+            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
+            ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+            where TSweepFilter : ISweepFilter
+        {
+            Debug.Assert((shapeTypeA == ShapeTypeIndexA && shapeTypeB == ShapeTypeIndexB) || (shapeTypeA == ShapeTypeIndexB && shapeTypeB == ShapeTypeIndexA),
+                "Types must match expected types.");
+            var flipRequired = shapeTypeB == ShapeTypeIndexA;
+            if (flipRequired)
+            {
+                var hit = PreorderedTypeSweep(
+                    shapeDataB, orientationB, velocityB,
+                    shapeDataA, -offsetB, orientationA, velocityA,
+                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+                    flipRequired, ref filter, shapes, sweepTasks, pool,
+                    out t0, out t1, out hitLocation, out hitNormal);
+                hitNormal = -hitNormal;
+                hitLocation = hitLocation + offsetB;
+                return hit;
+            }
+            else
+            {
+                return PreorderedTypeSweep(
+                    shapeDataA, orientationA, velocityA,
+                    shapeDataB, offsetB, orientationB, velocityB,
+                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+                    flipRequired, ref filter, shapes, sweepTasks, pool,
+                    out t0, out t1, out hitLocation, out hitNormal);
+            }
+        }
     }
 
     public class SweepTaskRegistry

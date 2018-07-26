@@ -22,16 +22,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             ShapeTypeIndexA = default(TConvex).TypeId;
             ShapeTypeIndexB = default(TMesh).TypeId;
         }
-
-        public override unsafe bool Sweep(
-            void* shapeDataA, int shapeTypeA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
-            float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
-        {
-            throw new NotImplementedException("Meshes cannot be nested; this should never be called.");
-        }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe static void Expand(in Vector3 expansion, ref Vector3 min, ref Vector3 max)
         {
@@ -41,20 +32,18 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             max += maxExpansion;
         }
 
-        unsafe bool PreorderedTypeSweep<TSweepFilter>(
-            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+        protected override unsafe bool PreorderedTypeSweep<TSweepFilter>(
+            void* shapeDataA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            bool flipRequired, ref TSweepFilter filter, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
-            where TSweepFilter : ISweepFilter
+            bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
-            Debug.Assert(shapeTypeA == ShapeTypeIndexA && shapeTypeB == ShapeTypeIndexB);
             ref var mesh = ref Unsafe.AsRef<TMesh>(shapeDataB);
             t0 = float.MaxValue;
             t1 = float.MaxValue;
             hitLocation = new Vector3();
             hitNormal = new Vector3();
-            var task = sweepTasks.GetTask(shapeTypeA, Triangle.Id);
+            var task = sweepTasks.GetTask(ShapeTypeIndexA, Triangle.Id);
             if (task != null)
             {
                 Quaternion.Conjugate(orientationB, out var inverseOrientationB);
@@ -119,7 +108,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                         triangle.B -= triangleCenter;
                         triangle.C -= triangleCenter;
                         if (task.Sweep(
-                            shapeDataA, shapeTypeA, new RigidPose(Vector3.Zero, Quaternion.Identity), orientationA, velocityA,
+                            shapeDataA, ShapeTypeIndexA, new RigidPose(Vector3.Zero, Quaternion.Identity), orientationA, velocityA,
                             Unsafe.AsPointer(ref triangle), Triangle.Id, new RigidPose(triangleCenter, Quaternion.Identity), offsetB, orientationB, velocityB,
                             maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                             out var t0Candidate, out var t1Candidate, out var hitLocationCandidate, out var hitNormalCandidate))
@@ -140,36 +129,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             }
             return t1 < float.MaxValue;
         }
-        public override unsafe bool Sweep<TSweepFilter>(
-            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
-            float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+
+        protected override unsafe bool PreorderedTypeSweep(void* shapeDataA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA, void* shapeDataB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
-            Debug.Assert((shapeTypeA == ShapeTypeIndexA && shapeTypeB == ShapeTypeIndexB) || (shapeTypeA == ShapeTypeIndexA && shapeTypeB == ShapeTypeIndexB),
-                "Types must match expected types.");
-            var flipRequired = shapeTypeB == ShapeTypeIndexA;
-            if (flipRequired)
-            {
-                var hit = PreorderedTypeSweep(
-                    shapeDataB, shapeTypeB, orientationB, velocityB,
-                    shapeDataA, shapeTypeA, -offsetB, orientationA, velocityA,
-                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
-                    flipRequired, ref filter, sweepTasks, pool,
-                    out t0, out t1, out hitLocation, out hitNormal);
-                hitNormal = -hitNormal;
-                hitLocation = hitLocation + offsetB;
-                return hit;
-            }
-            else
-            {
-                return PreorderedTypeSweep(
-                    shapeDataA, shapeTypeA, orientationA, velocityA,
-                    shapeDataB, shapeTypeB, offsetB, orientationB, velocityB,
-                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
-                    flipRequired, ref filter, sweepTasks, pool,
-                    out t0, out t1, out hitLocation, out hitNormal);
-            }
+            throw new NotImplementedException("Meshes can never be nested; this should never be called.");
         }
     }
 }

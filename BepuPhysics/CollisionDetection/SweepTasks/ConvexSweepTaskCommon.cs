@@ -27,34 +27,36 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             ShapeTypeIndexA = default(TShapeA).TypeId;
             ShapeTypeIndexB = default(TShapeB).TypeId;
         }
-        public override unsafe bool Sweep(
-            void* shapeDataA, int shapeTypeA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+        protected override unsafe bool PreorderedTypeSweep(
+            void* shapeDataA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
-            return ConvexSweepTaskCommon.Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
-                shapeDataA, shapeTypeA, localPoseA, orientationA, velocityA,
-                shapeDataB, shapeTypeB, localPoseB, offsetB, orientationB, velocityB,
-                maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+            OffsetSweep sweepModifier = default;
+            sweepModifier.LocalPoseA = localPoseA;
+            sweepModifier.LocalPoseB = localPoseB;
+            return Sweep(
+                shapeDataA, orientationA, velocityA,
+                shapeDataB, offsetB, orientationB, velocityB,
+                maximumT, minimumProgression, convergenceThreshold, maximumIterationCount, ref sweepModifier,
                 out t0, out t1, out hitLocation, out hitNormal);
         }
-        public override unsafe bool Sweep<TSweepFilter>(
-            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
-            float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
-        {
-            return ConvexSweepTaskCommon.Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
-                shapeDataA, shapeTypeA, orientationA, velocityA,
-                shapeDataB, shapeTypeB, offsetB, orientationB, velocityB,
-                maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
-                out t0, out t1, out hitLocation, out hitNormal);
-        }
-    }
 
-    class ConvexSweepTaskCommon
-    {
+        protected override unsafe bool PreorderedTypeSweep<TSweepFilter>(
+            void* shapeDataA, in Quaternion orientationA, in BodyVelocity velocityA,
+            void* shapeDataB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            float minimumProgression, float convergenceThreshold, int maximumIterationCount,
+            bool requiresFlip, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+        {
+            UnoffsetSweep sweepModifier = default;
+            return Sweep(
+                shapeDataA, orientationA, velocityA,
+                shapeDataB, offsetB, orientationB, velocityB,
+                maximumT, minimumProgression, convergenceThreshold, maximumIterationCount, ref sweepModifier,
+                out t0, out t1, out hitLocation, out hitNormal);
+        }
+
         static bool GetSphereCastInterval(in Vector3 origin, in Vector3 direction, float radius, out float t0, out float t1)
         {
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
@@ -128,88 +130,6 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe bool Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
-            void* shapeDataA, int shapeTypeA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
-            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
-            where TShapeA : struct, IConvexShape
-            where TShapeB : struct, IConvexShape
-            where TShapeWideA : struct, IShapeWide<TShapeA>
-            where TShapeWideB : struct, IShapeWide<TShapeB>
-            where TPairDistanceTester : struct, IPairDistanceTester<TShapeWideA, TShapeWideB>
-        {
-            Debug.Assert(
-                (shapeTypeA == default(TShapeA).TypeId && shapeTypeB == default(TShapeB).TypeId) ||
-                (shapeTypeA == default(TShapeB).TypeId && shapeTypeB == default(TShapeA).TypeId),
-                "Sweep type requirements not met.");
-            var sweepModifier = new UnoffsetSweep();
-            if (shapeTypeA == default(TShapeA).TypeId)
-            {
-                return Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester, UnoffsetSweep>(
-                    shapeDataA, orientationA, velocityA,
-                    shapeDataB, offsetB, orientationB, velocityB,
-                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount, ref sweepModifier,
-                    out t0, out t1, out hitLocation, out hitNormal);
-            }
-            else
-            {
-                var intersected = Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester, UnoffsetSweep>(
-                    shapeDataB, orientationB, velocityB,
-                    shapeDataA, -offsetB, orientationA, velocityA,
-                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount, ref sweepModifier,
-                    out t0, out t1, out hitLocation, out hitNormal);
-                //Normals are calibrated to point from B to A by convention; retain that convention if the parameters were reversed.
-                hitNormal = -hitNormal;
-                hitLocation = hitLocation + offsetB;
-                return intersected;
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe bool Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>(
-            void* shapeDataA, int shapeTypeA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
-            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
-            where TShapeA : struct, IConvexShape
-            where TShapeB : struct, IConvexShape
-            where TShapeWideA : struct, IShapeWide<TShapeA>
-            where TShapeWideB : struct, IShapeWide<TShapeB>
-            where TPairDistanceTester : struct, IPairDistanceTester<TShapeWideA, TShapeWideB>
-        {
-            Debug.Assert(
-                (shapeTypeA == default(TShapeA).TypeId && shapeTypeB == default(TShapeB).TypeId) ||
-                (shapeTypeA == default(TShapeB).TypeId && shapeTypeB == default(TShapeA).TypeId),
-                "Sweep type requirements not met.");
-            OffsetSweep sweepModifier = default;
-            if (shapeTypeA == default(TShapeA).TypeId)
-            {
-                sweepModifier.LocalPoseA = localPoseA;
-                sweepModifier.LocalPoseB = localPoseB;
-                return Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester, OffsetSweep>(
-                    shapeDataA, orientationA, velocityA,
-                    shapeDataB, offsetB, orientationB, velocityB,
-                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount, ref sweepModifier,
-                    out t0, out t1, out hitLocation, out hitNormal);
-            }
-            else
-            {
-                sweepModifier.LocalPoseB = localPoseA;
-                sweepModifier.LocalPoseA = localPoseB;
-                var intersected = Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester, OffsetSweep>(
-                    shapeDataB, orientationB, velocityB,
-                    shapeDataA, -offsetB, orientationA, velocityA,
-                    maximumT, minimumProgression, convergenceThreshold, maximumIterationCount, ref sweepModifier,
-                    out t0, out t1, out hitLocation, out hitNormal);
-                //Normals are calibrated to point from B to A by convention; retain that convention if the parameters were reversed.
-                hitNormal = -hitNormal;
-                hitLocation = hitLocation + offsetB;
-                return intersected;
-            }
-        }
-
         interface ISweepModifier
         {
             bool GetSphereCastInterval(
@@ -255,7 +175,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 in Quaternion orientationA, in Vector3 angularVelocityA, float angularSpeedA,
                 in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1)
             {
-                return ConvexSweepTaskCommon.GetSphereCastInterval(offsetB, linearVelocityB, maximumRadiusA + maximumRadiusB, out t0, out t1);
+                return ConvexPairSweepTask<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>.GetSphereCastInterval(offsetB, linearVelocityB, maximumRadiusA + maximumRadiusB, out t0, out t1);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -334,7 +254,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 //If the sweep covers a short enough duration that the maximum is not hit, we'll use a (loose) estimate based on extrapolating the tangent speed.
                 var nonlinearExpansion = Math.Min(maximumT * (TangentSpeedA + TangentSpeedB), TwiceRadiusA + TwiceRadiusB);
                 var offsetBIncludingChildPoses = offsetB + rB - rA;
-                return ConvexSweepTaskCommon.GetSphereCastInterval(offsetBIncludingChildPoses, linearVelocityB, maximumRadiusA + maximumRadiusB + nonlinearExpansion, out t0, out t1);
+                return ConvexPairSweepTask<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>.GetSphereCastInterval(offsetBIncludingChildPoses, linearVelocityB, maximumRadiusA + maximumRadiusB + nonlinearExpansion, out t0, out t1);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -361,17 +281,12 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             }
         }
 
-        static unsafe bool Sweep<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester, TSweepModifier>(
+        static unsafe bool Sweep<TSweepModifier>(
             void* shapeDataA, in Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             ref TSweepModifier sweepModifier,
             out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
-            where TShapeA : struct, IConvexShape
-            where TShapeB : struct, IConvexShape
-            where TShapeWideA : struct, IShapeWide<TShapeA>
-            where TShapeWideB : struct, IShapeWide<TShapeB>
-            where TPairDistanceTester : struct, IPairDistanceTester<TShapeWideA, TShapeWideB>
             where TSweepModifier : ISweepModifier
         {
             ref var shapeA = ref Unsafe.AsRef<TShapeA>(shapeDataA);
@@ -395,8 +310,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var angularSpeedA = velocityA.Angular.Length();
             var angularSpeedB = velocityB.Angular.Length();
             if (!sweepModifier.GetSphereCastInterval(
-                offsetB, linearVelocityB, maximumT, maximumRadiusA, maximumRadiusB, 
-                orientationA, velocityA.Angular, angularSpeedA, 
+                offsetB, linearVelocityB, maximumT, maximumRadiusA, maximumRadiusB,
+                orientationA, velocityA.Angular, angularSpeedA,
                 orientationB, velocityB.Angular, angularSpeedB, out t0, out t1) || t0 > maximumT || t1 < 0)
             {
                 //The bounding spheres do not intersect, or the intersection interval is outside of the requested search interval.
