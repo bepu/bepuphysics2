@@ -199,7 +199,7 @@ namespace BepuPhysics
             //Build a bounding box.
             shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
             shape.ComputeBounds(pose.Orientation, out var min, out var max);
-            BoundingBoxBatcher.GetAngularBoundsExpansion(velocity.Angular, maximumT, maximumRadius, maximumAngularExpansion, out var angularExpansion);
+            BoundingBoxHelpers.GetAngularBoundsExpansion(velocity.Angular, maximumT, maximumRadius, maximumAngularExpansion, out var angularExpansion);
             min = min - angularExpansion + pose.Position;
             max = max + angularExpansion + pose.Position;
             var direction = velocity.Linear;
