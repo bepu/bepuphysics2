@@ -216,6 +216,11 @@ namespace BepuPhysics.Collidables
             }
         }
 
+        public void Dispose(BufferPool bufferPool)
+        {
+            bufferPool.Return(ref Triangles);
+            Tree.Dispose(bufferPool);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GetLocalTriangle(int triangleIndex, out Triangle target)
@@ -230,5 +235,6 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public const int Id = 6;
         public int TypeId => Id;
+
     }
 }

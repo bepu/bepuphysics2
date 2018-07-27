@@ -8,10 +8,11 @@ using System.Threading;
 using BepuUtilities;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Trees;
+using System.Runtime.CompilerServices;
 
 namespace DemoRenderer.Constraints
 {
-    internal class BoundingBoxLineExtractor
+    public class BoundingBoxLineExtractor
     {
         const int jobsPerThread = 4;
         QuickList<ThreadJob, Array<ThreadJob>> jobs;
@@ -32,7 +33,33 @@ namespace DemoRenderer.Constraints
             QuickList<ThreadJob, Array<ThreadJob>>.Create(new PassthroughArrayPool<ThreadJob>(), Environment.ProcessorCount * jobsPerThread, out jobs);
             workDelegate = Work;
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteBoundsLines(in Vector3 min, in Vector3 max, uint packedColor, uint packedBackgroundColor, ref LineInstance targetLines)
+        {
+            var v001 = new Vector3(min.X, min.Y, max.Z);
+            var v010 = new Vector3(min.X, max.Y, min.Z);
+            var v011 = new Vector3(min.X, max.Y, max.Z);
+            var v100 = new Vector3(max.X, min.Y, min.Z);
+            var v101 = new Vector3(max.X, min.Y, max.Z);
+            var v110 = new Vector3(max.X, max.Y, min.Z);
+            Unsafe.Add(ref targetLines, 0) = new LineInstance(min, v001, packedColor, packedBackgroundColor);
+            Unsafe.Add(ref targetLines, 1) = new LineInstance(min, v010, packedColor, packedBackgroundColor);
+            Unsafe.Add(ref targetLines, 2) = new LineInstance(min, v100, packedColor, packedBackgroundColor);
+            Unsafe.Add(ref targetLines, 3) = new LineInstance(v001, v011, packedColor, packedBackgroundColor);
+            Unsafe.Add(ref targetLines, 4) = new LineInstance(v001, v101, packedColor, packedBackgroundColor);
+            Unsafe.Add(ref targetLines, 5) = new LineInstance(v010, v011, packedColor, packedBackgroundColor);
+            Unsafe.Add(ref targetLines, 6) = new LineInstance(v010, v110, packedColor, packedBackgroundColor);
+            Unsafe.Add(ref targetLines, 7) = new LineInstance(v011, max, packedColor, packedBackgroundColor);
+            Unsafe.Add(ref targetLines, 8) = new LineInstance(v100, v101, packedColor, packedBackgroundColor);
+            Unsafe.Add(ref targetLines, 9) = new LineInstance(v100, v110, packedColor, packedBackgroundColor);
+            Unsafe.Add(ref targetLines, 10) = new LineInstance(v101, max, packedColor, packedBackgroundColor);
+            Unsafe.Add(ref targetLines, 11) = new LineInstance(v110, max, packedColor, packedBackgroundColor);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteBoundsLines(in Vector3 min, in Vector3 max, in Vector3 color, in Vector3 backgroundColor, ref LineInstance targetLines)
+        {
+            WriteBoundsLines(min, max, Helpers.PackColor(color), Helpers.PackColor(backgroundColor), ref targetLines);
+        }
         private unsafe void Work(int jobIndex)
         {
             ref var job = ref jobs[jobIndex];
@@ -58,25 +85,8 @@ namespace DemoRenderer.Constraints
                     broadPhase.GetActiveBoundsPointers(broadPhaseIndex, out min, out max);
                 else
                     broadPhase.GetStaticBoundsPointers(broadPhaseIndex, out min, out max);
-                var v001 = new Vector3(min->X, min->Y, max->Z);
-                var v010 = new Vector3(min->X, max->Y, min->Z);
-                var v011 = new Vector3(min->X, max->Y, max->Z);
-                var v100 = new Vector3(max->X, min->Y, min->Z);
-                var v101 = new Vector3(max->X, min->Y, max->Z);
-                var v110 = new Vector3(max->X, max->Y, min->Z);
                 var outputStartIndex = masterStart + i * 12;
-                masterLinesSpan[outputStartIndex + 0] = new LineInstance(*min, v001, packedColor, packedBackgroundColor);
-                masterLinesSpan[outputStartIndex + 1] = new LineInstance(*min, v010, packedColor, packedBackgroundColor);
-                masterLinesSpan[outputStartIndex + 2] = new LineInstance(*min, v100, packedColor, packedBackgroundColor);
-                masterLinesSpan[outputStartIndex + 3] = new LineInstance(v001, v011, packedColor, packedBackgroundColor);
-                masterLinesSpan[outputStartIndex + 4] = new LineInstance(v001, v101, packedColor, packedBackgroundColor);
-                masterLinesSpan[outputStartIndex + 5] = new LineInstance(v010, v011, packedColor, packedBackgroundColor);
-                masterLinesSpan[outputStartIndex + 6] = new LineInstance(v010, v110, packedColor, packedBackgroundColor);
-                masterLinesSpan[outputStartIndex + 7] = new LineInstance(v011, *max, packedColor, packedBackgroundColor);
-                masterLinesSpan[outputStartIndex + 8] = new LineInstance(v100, v101, packedColor, packedBackgroundColor);
-                masterLinesSpan[outputStartIndex + 9] = new LineInstance(v100, v110, packedColor, packedBackgroundColor);
-                masterLinesSpan[outputStartIndex + 10] = new LineInstance(v101, *max, packedColor, packedBackgroundColor);
-                masterLinesSpan[outputStartIndex + 11] = new LineInstance(v110, *max, packedColor, packedBackgroundColor);
+                WriteBoundsLines(*min, *max, packedColor, packedBackgroundColor, ref masterLinesSpan[outputStartIndex]);
             }
         }
 

@@ -40,6 +40,14 @@ namespace BepuPhysics.Collidables
 
         public abstract void ComputeBounds(ref BoundingBoxBatcher batcher);
         public abstract void ComputeBounds(int shapeIndex, in RigidPose pose, out Vector3 min, out Vector3 max);
+        internal virtual void ComputeBounds(int shapeIndex, in BepuUtilities.Quaternion orientation, out float maximumRadius, out float maximumAngularExpansion, out Vector3 min, out Vector3 max)
+        {
+            maximumRadius = 0;
+            maximumAngularExpansion = 0;
+            min = default;
+            max = default;
+            throw new InvalidOperationException("Nonconvex shapes are not required to have a maximum ardius or angular expansion implementation. This should only ever be called on convexes.");
+        }
         public abstract bool RayTest(int shapeIndex, in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal);
         public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose rigidPose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
@@ -206,6 +214,13 @@ namespace BepuPhysics.Collidables
             shapes[shapeIndex].ComputeBounds(pose.Orientation, out min, out max);
             min += pose.Position;
             max += pose.Position;
+        }
+
+        internal override void ComputeBounds(int shapeIndex, in BepuUtilities.Quaternion orientation, out float maximumRadius, out float angularExpansion, out Vector3 min, out Vector3 max)
+        {
+            ref var shape = ref shapes[shapeIndex];
+            shape.ComputeBounds(orientation, out min, out max);
+            shape.ComputeAngularExpansionData(out maximumRadius, out angularExpansion);
         }
 
         public override bool RayTest(int shapeIndex, in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal)

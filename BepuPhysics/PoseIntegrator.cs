@@ -87,6 +87,27 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Integrate(in QuaternionWide start, in Vector3Wide angularVelocity, in Vector<float> halfDt, out QuaternionWide integrated)
+        {
+            Vector3Wide.Length(angularVelocity, out var speed);
+            var halfAngle = speed * halfDt;
+            QuaternionWide q;
+            MathHelper.Sin(halfAngle, out var s);
+            var scale = s / speed;
+            q.X = angularVelocity.X * scale;
+            q.Y = angularVelocity.Y * scale;
+            q.Z = angularVelocity.Z * scale;
+            MathHelper.Cos(halfAngle, out q.W);
+            QuaternionWide.ConcatenateWithoutOverlap(start, q, out var concatenated);
+            QuaternionWide.Normalize(concatenated, out integrated);
+            var speedValid = Vector.GreaterThan(speed, new Vector<float>(1e-15f));
+            integrated.X = Vector.ConditionalSelect(speedValid, integrated.X, start.X);
+            integrated.Y = Vector.ConditionalSelect(speedValid, integrated.Y, start.Y);
+            integrated.Z = Vector.ConditionalSelect(speedValid, integrated.Z, start.Z);
+            integrated.W = Vector.ConditionalSelect(speedValid, integrated.W, start.W);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose)
         {
             Integrate(pose.Position, velocity.Linear, dt, out integratedPose.Position);

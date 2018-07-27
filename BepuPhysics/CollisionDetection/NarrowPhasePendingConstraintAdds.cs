@@ -150,7 +150,7 @@ namespace BepuPhysics.CollisionDetection
                 if (list.Buffer.Allocated)
                 {
                     ref var start = ref Unsafe.As<byte, PendingConstraint<TBodyHandles, TDescription, TContactImpulses>>(ref *list.Buffer.Memory);
-                    Debug.Assert(list.Buffer.Length > Unsafe.SizeOf<PendingConstraint<TBodyHandles, TDescription, TContactImpulses>>() * list.Count);
+                    Debug.Assert(list.Buffer.Length >= Unsafe.SizeOf<PendingConstraint<TBodyHandles, TDescription, TContactImpulses>>() * list.Count);
                     Debug.Assert(list.ByteCount == Unsafe.SizeOf<PendingConstraint<TBodyHandles, TDescription, TContactImpulses>>() * list.Count);
                     ref var speculativeBatchIndicesForType = ref speculativeBatchIndices[narrowPhaseConstraintTypeId];
                     for (int i = 0; i < list.Count; ++i)

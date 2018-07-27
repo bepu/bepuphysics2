@@ -15,7 +15,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     public interface ICompoundMeshSweepOverlapFinder<TCompound, TMesh> where TCompound : ICompoundShape where TMesh : IMeshShape
     {
         void FindOverlaps(ref TCompound compound, in Quaternion compoundOrientation, in BodyVelocity compoundVelocity,
-            ref TMesh mesh, in Vector3 meshOffset, in Quaternion meshOrientation, in BodyVelocity meshVelocity, BufferPool pool, ref QuickList<(int, int), Buffer<(int, int)>> childOverlaps);
+            ref TMesh mesh, in Vector3 meshOffset, in Quaternion meshOrientation, in BodyVelocity meshVelocity, float dt,
+            Shapes shapes, BufferPool pool, ref QuickList<(int, int), Buffer<(int, int)>> childOverlaps);
     }
     public class CompoundMeshSweepTask<TCompound, TMesh, TOverlapFinder> : SweepTask
         where TCompound : struct, ICompoundShape
@@ -42,7 +43,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             hitNormal = new Vector3();
             ref var compound = ref Unsafe.AsRef<TCompound>(shapeDataA);
             QuickList<(int CompoundChildIndex, int MeshTriangleIndex), Buffer<(int, int)>>.Create(pool.SpecializeFor<(int, int)>(), 128, out var childOverlaps);
-            overlapFinder.FindOverlaps(ref compound, orientationA, velocityA, ref mesh, offsetB, orientationB, velocityB, pool, ref childOverlaps);
+            overlapFinder.FindOverlaps(ref compound, orientationA, velocityA, ref mesh, offsetB, orientationB, velocityB, maximumT, shapes, pool, ref childOverlaps);
             for (int i = 0; i < childOverlaps.Count; ++i)
             {
                 ref var overlap = ref childOverlaps[i];

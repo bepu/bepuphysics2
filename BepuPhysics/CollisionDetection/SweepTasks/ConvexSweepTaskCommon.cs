@@ -99,26 +99,6 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             return true;
         }
 
-        static void Integrate(ref QuaternionWide start, ref Vector3Wide angularVelocity, ref Vector<float> halfDt, out QuaternionWide integrated)
-        {
-            Vector3Wide.Length(angularVelocity, out var speed);
-            var halfAngle = speed * halfDt;
-            QuaternionWide q;
-            MathHelper.Sin(halfAngle, out var s);
-            var scale = s / speed;
-            q.X = angularVelocity.X * scale;
-            q.Y = angularVelocity.Y * scale;
-            q.Z = angularVelocity.Z * scale;
-            MathHelper.Cos(halfAngle, out q.W);
-            QuaternionWide.ConcatenateWithoutOverlap(start, q, out var concatenated);
-            QuaternionWide.Normalize(concatenated, out integrated);
-            var speedValid = Vector.GreaterThan(speed, new Vector<float>(1e-15f));
-            integrated.X = Vector.ConditionalSelect(speedValid, integrated.X, start.X);
-            integrated.Y = Vector.ConditionalSelect(speedValid, integrated.Y, start.Y);
-            integrated.Z = Vector.ConditionalSelect(speedValid, integrated.Z, start.Z);
-            integrated.W = Vector.ConditionalSelect(speedValid, integrated.W, start.W);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void GetSampleTimes(float t0, float t1, ref Vector<float> samples)
         {
@@ -165,8 +145,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
                 //Integrate orientations to sample locations.
                 var halfSamples = samples * 0.5f;
-                Integrate(ref initialOrientationA, ref angularA, ref halfSamples, out sampleOrientationA);
-                Integrate(ref initialOrientationB, ref angularB, ref halfSamples, out sampleOrientationB);
+                PoseIntegrator.Integrate(initialOrientationA, angularA, halfSamples, out sampleOrientationA);
+                PoseIntegrator.Integrate(initialOrientationB, angularB, halfSamples, out sampleOrientationB);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -222,11 +202,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 //The orientation of the child itself is the product of localOrientation * bodyOrientation.
                 var halfSamples = samples * 0.5f;
                 RigidPoses.Broadcast(LocalPoseA, out var localPosesA);
-                Integrate(ref initialOrientationA, ref angularA, ref halfSamples, out var integratedOrientationA);
+                PoseIntegrator.Integrate(initialOrientationA, angularA, halfSamples, out var integratedOrientationA);
                 Compound.GetRotatedChildPose(localPosesA, integratedOrientationA, out var childPositionA, out sampleOrientationA);
 
                 RigidPoses.Broadcast(LocalPoseB, out var localPosesB);
-                Integrate(ref initialOrientationB, ref angularB, ref halfSamples, out var integratedOrientationB);
+                PoseIntegrator.Integrate(initialOrientationB, angularB, halfSamples, out var integratedOrientationB);
                 Compound.GetRotatedChildPose(localPosesB, integratedOrientationB, out var childPositionB, out sampleOrientationB);
 
                 Vector3Wide.Subtract(childPositionB, childPositionA, out var netOffsetB);

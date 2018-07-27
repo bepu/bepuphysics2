@@ -24,19 +24,25 @@ namespace BepuPhysics
             Position = position;
             Orientation = orientation;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public RigidPose(in Vector3 position)
+        {
+            Position = position;
+            Orientation = Quaternion.Identity;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Transform(in Vector3 v, in RigidPose pose, out Vector3 result)
         {
-            BepuUtilities.Quaternion.TransformWithoutOverlap(v, pose.Orientation, out var rotated);
+            Quaternion.TransformWithoutOverlap(v, pose.Orientation, out var rotated);
             result = rotated + pose.Position;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void TransformByInverse(in Vector3 v, in RigidPose pose, out Vector3 result)
         {
             var translated = v - pose.Position;
-            BepuUtilities.Quaternion.Conjugate(pose.Orientation, out var conjugate);
-            BepuUtilities.Quaternion.TransformWithoutOverlap(translated, conjugate, out result);
+            Quaternion.Conjugate(pose.Orientation, out var conjugate);
+            Quaternion.TransformWithoutOverlap(translated, conjugate, out result);
         }
     }
 
@@ -44,6 +50,13 @@ namespace BepuPhysics
     {
         public Vector3 Linear;
         public Vector3 Angular;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public BodyVelocity(in Vector3 linear, in Vector3 angular)
+        {
+            Linear = linear;
+            Angular = angular;
+        }
     }
 
     public struct BodyInertia

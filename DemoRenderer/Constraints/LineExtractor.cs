@@ -35,6 +35,11 @@ namespace DemoRenderer.Constraints
             return ref lines.Allocate(new PassthroughArrayPool<LineInstance>());
         }
 
+        public ref LineInstance Allocate(int count)
+        {
+            return ref lines.Allocate(count, new PassthroughArrayPool<LineInstance>());
+        }
+
         public void ClearInstances()
         {
             lines.Count = 0;

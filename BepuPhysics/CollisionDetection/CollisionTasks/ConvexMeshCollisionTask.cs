@@ -72,7 +72,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.WriteFirst(pair.AngularVelocityB, ref GatherScatter.GetOffsetInstance(ref angularVelocityB, j));
                     Unsafe.Add(ref Unsafe.As<Vector<float>, float>(ref maximumAllowedExpansion), j) = pair.MaximumExpansion;
                 }
-                BoundingBoxHelpers.GetBoundingBox<TConvex, TConvexWide>(ref convexWide, orientationA, angularVelocityA,
+                BoundingBoxHelpers.GetLocalBoundingBox<TConvex, TConvexWide>(ref convexWide, orientationA, angularVelocityA,
                     offsetB, orientationB, relativeLinearVelocityA, angularVelocityB, batcher.Dt, maximumAllowedExpansion, 
                     out var min, out var max);
 

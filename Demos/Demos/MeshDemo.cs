@@ -16,6 +16,11 @@ namespace Demos.Demos
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
+            var testBox = new Box(1, 1, 1);
+            BoundingBoxHelpers.GetLocalBoundingBoxForSweep(
+                ref testBox, new RigidPose(new Vector3(10, 0, 0)), BepuUtilities.Quaternion.Identity, new BodyVelocity(new Vector3(-2, 5, -4), new Vector3(51, -2, 1)),
+                new Vector3(0, -10, 0), BepuUtilities.Quaternion.Identity, new BodyVelocity(new Vector3(5, -1, 2), new Vector3(-1, -51, 1)), 1,
+                out var sweepTest, out var minTest, out var maxTest);
             camera.Position = new Vector3(-10, 0, -10);
             //camera.Yaw = MathHelper.Pi ; 
             camera.Yaw = MathHelper.Pi * 3f / 4;

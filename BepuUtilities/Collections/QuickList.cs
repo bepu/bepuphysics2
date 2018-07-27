@@ -215,6 +215,23 @@ namespace BepuUtilities.Collections
             return ref Span[Count++];
         }
 
+
+        /// <summary>
+        /// Appends space on the end of the list without checking capacity and returns a reference to the beginning of it.
+        /// </summary>
+        /// <param name="count">Number of elements to allocate space for.</param>
+        /// <returns>Reference to the beginning of the allocated space.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T AllocateUnsafely(int count)
+        {
+            var newCount = Count + count;
+            Debug.Assert(newCount <= Span.Length, "Capacity must be large enough to hold the requested space.");
+            ref var start = ref Span[Count];
+            Count = newCount;
+            return ref start;
+        }
+
+
         /// <summary>
         /// Appends space on the end of the list and returns a reference to it.
         /// </summary>
@@ -227,6 +244,24 @@ namespace BepuUtilities.Collections
             if (Count == Span.Length)
                 Resize(Count * 2, pool);
             return ref AllocateUnsafely();
+        }
+
+        /// <summary>
+        /// Appends space on the end of the list and returns a reference to the beginning of it.
+        /// </summary>
+        /// <returns>Reference to the beginning of the allocated space.</returns>
+        /// <typeparam name="TPool">Type of the pool to pull from.</typeparam>
+        /// <param name="count">Number of elements to allocate space for.</param>
+        /// <param name="pool">Pool used to obtain a new span if needed.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T Allocate<TPool>(int count, TPool pool) where TPool : IMemoryPool<T, TSpan>
+        {
+            var newCount = Count + count;
+            if (newCount > Span.Length)
+                Resize(Math.Max(Count * 2, newCount), pool);
+            ref var start = ref Span[Count];
+            Count = newCount;
+            return ref start;
         }
 
         /// <summary>

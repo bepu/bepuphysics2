@@ -156,69 +156,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void Expand(in Vector3 expansion, ref Vector3 min, ref Vector3 max)
-        {
-            var minExpansion = Vector3.Min(default, expansion);
-            var maxExpansion = Vector3.Max(default, expansion);
-            min += minExpansion;
-            max += maxExpansion;
-        }
-
-        public static unsafe void GetBoundingBoxForSweep<TConvex>(ref TConvex shapeA, in Quaternion orientationA, in BodyVelocity velocityA,
-               in Vector3 offsetB, Quaternion orientationB, BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max)
-               where TConvex : IConvexShape
-        {
-            Quaternion.Conjugate(orientationB, out var inverseOrientationB);
-            Quaternion.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
-            Quaternion.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
-            Quaternion.TransformWithoutOverlap(velocityA.Linear - velocityB.Linear, inverseOrientationB, out sweep);
-
-            shapeA.ComputeBounds(localOrientationA, out min, out max);
-            shapeA.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
-            //Note that this angular velocity is not in the local space of the mesh. This is simply used to figure out how much local angular expansion to apply to the convex.
-            //Consider what happens when two bodies have the same angular velocity- their relative rotation does not change, so there is no need for local angular expansion.
-            //The primary bounds expansion only makes use of the magnitude, so the fact that it's not truly in local space is irrelevant.
-            var netAngularVelocity = velocityA.Angular - velocityB.Angular;
-            GetAngularBoundsExpansion(netAngularVelocity, dt, maximumRadius, maximumAngularExpansion, out var angularExpansion);
-            min += angularExpansion;
-            max += angularExpansion;
-
-            //If any mesh/compound in the batch has angular velocity, we need to compute the bounding box expansion caused by the resulting nonlinear path.
-            //(This is equivalent to expanding the bounding boxes of the mesh/compound shapes to account for their motion. It's just much simpler to expand only the incoming convex.
-            //Conceptually, you can think of this as if we're fixing our frame of reference on the mesh/compound, and watching how the convex moves. 
-            //In the presence of mesh/compound angular velocity, a stationary convex will trace a circular arc.)
-            var angularSpeedBSquared = Vector3.Dot(velocityB.Angular, velocityB.Angular);
-            if (angularSpeedBSquared > 0)
-            {
-                //We need to expand the bounding box by the extent of the circular arc which the convex traces due to the mesh/compound's angular motion.
-                //We'll create two axes and measure the extent of the arc along them.
-                //Note that arcX and arcY are invalid if radius or angular velocity magnitude is zero. We'll handle that with a mask.
-                var radius = offsetB.Length();
-                var arcX = offsetB / radius;
-                Vector3x.Cross(velocityB.Angular, arcX, out var arcY);
-                arcY /= arcY.Length();
-                var angularSpeedB = (float)Math.Sqrt(angularSpeedBSquared);
-                var angularDisplacement = angularSpeedB * dt;
-                //minX is just 0 because of the chosen frame of reference.
-                var maxX = MathHelper.Cos(MathHelper.Min(MathHelper.Pi, angularDisplacement));
-                var sinTheta = MathHelper.Sin(angularDisplacement);
-                var minY = MathHelper.Min(sinTheta, 0);
-                var maxY = MathHelper.Sin(MathHelper.Min(angularDisplacement, MathHelper.PiOver2));
-
-                var expansionMaxX = arcX * maxX;
-                var expansionMinY = arcY * minY;
-                var expansionMaxY = arcY * maxY;
-                Expand(expansionMaxX, ref min, ref max);
-                Expand(expansionMinY, ref min, ref max);
-                Expand(expansionMaxY, ref min, ref max);
-                //TODO: Convexes that belong to a compound will also need to include expansion caused by the child motion.
-            }
-            min -= offsetB;
-            max -= offsetB;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void Expand(in Vector3Wide expansion, ref Vector3Wide min, ref Vector3Wide max)
+        public unsafe static void ExpandBoundingBox(in Vector3Wide expansion, ref Vector3Wide min, ref Vector3Wide max)
         {
             Vector3Wide.Min(Vector<float>.Zero, expansion, out var minExpansion);
             Vector3Wide.Max(Vector<float>.Zero, expansion, out var maxExpansion);
@@ -226,7 +164,10 @@ namespace BepuPhysics
             Vector3Wide.Add(max, maxExpansion, out max);
         }
 
-        public static unsafe void GetBoundingBox<TConvex, TConvexWide>(
+        /// <summary>
+        /// Computes the bounding box of shape A in the local space of some other collidable B.
+        /// </summary>
+        public static unsafe void GetLocalBoundingBox<TConvex, TConvexWide>(
             ref TConvexWide convexWide, in QuaternionWide orientationA, in Vector3Wide angularVelocityA,
             in Vector3Wide offsetB, in QuaternionWide orientationB, in Vector3Wide relativeLinearVelocityA, in Vector3Wide angularVelocityB,
             float dt, in Vector<float> maximumAllowedExpansion, out Vector3Wide min, out Vector3Wide max)
@@ -271,9 +212,9 @@ namespace BepuPhysics
                 Vector3Wide.Scale(arcX, maxX, out var expansionMaxX);
                 Vector3Wide.Scale(arcY, minY, out var expansionMinY);
                 Vector3Wide.Scale(arcY, maxY, out var expansionMaxY);
-                Expand(expansionMaxX, ref minExpansion, ref maxExpansion);
-                Expand(expansionMinY, ref minExpansion, ref maxExpansion);
-                Expand(expansionMaxY, ref minExpansion, ref maxExpansion);
+                ExpandBoundingBox(expansionMaxX, ref minExpansion, ref maxExpansion);
+                ExpandBoundingBox(expansionMinY, ref minExpansion, ref maxExpansion);
+                ExpandBoundingBox(expansionMaxY, ref minExpansion, ref maxExpansion);
                 //TODO: Convexes that belong to a compound will also need to include expansion caused by the child motion.
             }
 
@@ -286,5 +227,197 @@ namespace BepuPhysics
             Vector3Wide.Subtract(min, offsetB, out min);
             Vector3Wide.Subtract(max, offsetB, out max);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static void ExpandBoundingBox(in Vector3 expansion, ref Vector3 min, ref Vector3 max)
+        {
+            var minExpansion = Vector3.Min(default, expansion);
+            var maxExpansion = Vector3.Max(default, expansion);
+            min += minExpansion;
+            max += maxExpansion;
+        }
+
+        /// <summary>
+        /// Computes the bounding box of shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
+        /// </summary>
+        public static unsafe void GetBoundingBoxForSweep<TConvex>(ref TConvex shapeA, in Quaternion orientationA, in BodyVelocity velocityA,
+            in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max)
+            where TConvex : IConvexShape
+        {
+            Quaternion.Conjugate(orientationB, out var inverseOrientationB);
+            Quaternion.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
+            Quaternion.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
+            Quaternion.TransformWithoutOverlap(velocityA.Linear - velocityB.Linear, inverseOrientationB, out sweep);
+
+            shapeA.ComputeBounds(localOrientationA, out min, out max);
+            shapeA.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
+            //Note that this angular velocity is not in the local space of the mesh. This is simply used to figure out how much local angular expansion to apply to the convex.
+            //Consider what happens when two bodies have the same angular velocity- their relative rotation does not change, so there is no need for local angular expansion.
+            //The primary bounds expansion only makes use of the magnitude, so the fact that it's not truly in local space is irrelevant.
+            var netAngularVelocity = velocityA.Angular - velocityB.Angular;
+            GetAngularBoundsExpansion(netAngularVelocity, dt, maximumRadius, maximumAngularExpansion, out var angularExpansion);
+            min += angularExpansion;
+            max += angularExpansion;
+
+            //If any mesh/compound in the batch has angular velocity, we need to compute the bounding box expansion caused by the resulting nonlinear path.
+            //(This is equivalent to expanding the bounding boxes of the mesh/compound shapes to account for their motion. It's just much simpler to expand only the incoming convex.
+            //Conceptually, you can think of this as if we're fixing our frame of reference on the mesh/compound, and watching how the convex moves. 
+            //In the presence of mesh/compound angular velocity, a stationary convex will trace a circular arc.)
+            var angularSpeedBSquared = Vector3.Dot(velocityB.Angular, velocityB.Angular);
+            if (angularSpeedBSquared > 0)
+            {
+                //We need to expand the bounding box by the extent of the circular arc which the convex traces due to the mesh/compound's angular motion.
+                //We'll create two axes and measure the extent of the arc along them.
+                //Note that arcX and arcY are invalid if radius or angular velocity magnitude is zero. We'll handle that with a mask.
+                var radius = localOffsetB.Length();
+                var arcX = localOffsetB / radius;
+                Vector3x.Cross(velocityB.Angular, arcX, out var arcY);
+                arcY /= arcY.Length();
+                var angularSpeedB = (float)Math.Sqrt(angularSpeedBSquared);
+                var angularDisplacement = angularSpeedB * dt;
+                //minX is just 0 because of the chosen frame of reference.
+                var maxX = MathHelper.Cos(MathHelper.Min(MathHelper.Pi, angularDisplacement));
+                var sinTheta = MathHelper.Sin(angularDisplacement);
+                var minY = MathHelper.Min(sinTheta, 0);
+                var maxY = MathHelper.Sin(MathHelper.Min(angularDisplacement, MathHelper.PiOver2));
+
+                var expansionMaxX = arcX * maxX;
+                var expansionMinY = arcY * minY;
+                var expansionMaxY = arcY * maxY;
+                ExpandBoundingBox(expansionMaxX, ref min, ref max);
+                ExpandBoundingBox(expansionMinY, ref min, ref max);
+                ExpandBoundingBox(expansionMaxY, ref min, ref max);
+                //TODO: Convexes that belong to a compound will also need to include expansion caused by the child motion.
+            }
+            min -= localOffsetB;
+            max -= localOffsetB;
+        }
+
+        public unsafe static void ComputePathBounds(in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+            in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
+            float dt, out Vector3 sweep, out Vector3 minExpansion, out Vector3 maxExpansion)
+        {
+            //Numerically integrate across the path.
+            //TODO: This is way too expensive and isn't conservative; we need a better approximation.
+            int steps = (int)(dt * (velocityA.Angular.Length() + velocityB.Angular.Length()) / MathHelper.Pi);
+            if (steps > 16)
+                steps = 16;
+            var masked = steps & BundleIndexing.VectorMask;
+            if (masked > 0)
+                steps = steps - masked + Vector<int>.Count;
+
+            Vector3Wide.Broadcast(localPoseA.Position, out var localOffsetA);
+            Vector3Wide.Broadcast(offsetB, out var offsetBWide);
+            QuaternionWide.Broadcast(orientationA, out var orientationStartA);
+            QuaternionWide.Broadcast(orientationB, out var orientationStartB);
+            Vector3Wide.Broadcast(velocityA.Linear - velocityB.Linear, out var netLinearVelocityA);
+            Vector3Wide.Broadcast(velocityA.Angular, out var angularVelocityA);
+            Vector3Wide.Broadcast(velocityB.Angular, out var angularVelocityB);
+            var tSamples = stackalloc float[Vector<float>.Count];
+
+            var stepMultiplier = dt / (steps - 1);
+            Vector3 start = default;
+            Vector3 end = default;
+            Vector3Wide.Broadcast(new Vector3(float.MaxValue), out var minWide);
+            Vector3Wide.Broadcast(new Vector3(float.MinValue), out var maxWide);
+            for (int i = 0; i < steps; i += Vector<int>.Count)
+            {
+                for (int j = 0; j < Vector<int>.Count; ++j)
+                {
+                    tSamples[j] = (i + j) * stepMultiplier;
+                }
+                ref var t = ref Unsafe.AsRef<Vector<float>>(tSamples);
+                var halfT = t * 0.5f;
+                PoseIntegrator.Integrate(orientationStartA, angularVelocityA, halfT, out var integratedOrientationA);
+                PoseIntegrator.Integrate(orientationStartB, angularVelocityB, halfT, out var integratedOrientationB);
+
+                Vector3Wide.Scale(netLinearVelocityA, t, out var linearContribution);
+                QuaternionWide.TransformWithoutOverlap(localOffsetA, integratedOrientationA, out var offsetA);
+                Vector3Wide.Subtract(offsetA, offsetBWide, out var centerBToShapeA);
+                Vector3Wide.Add(linearContribution, centerBToShapeA, out var integratedWorldA);
+                QuaternionWide.Conjugate(integratedOrientationB, out var toLocalB);
+                QuaternionWide.TransformWithoutOverlap(integratedWorldA, toLocalB, out var localB);
+
+                Vector3Wide.Min(localB, minWide, out minWide);
+                Vector3Wide.Max(localB, maxWide, out maxWide);
+                if (i == 0)
+                {
+                    start = new Vector3(localB.X[0], localB.Y[0], localB.Z[0]);
+                }
+                if (i == steps - Vector<int>.Count)
+                {
+                    end = new Vector3(localB.X[Vector<float>.Count - 1], localB.Y[Vector<float>.Count - 1], localB.Z[Vector<float>.Count - 1]);
+                }
+            }
+            sweep = end - start;
+            Vector3Wide.ReadSlot(ref minWide, 0, out var min);
+            Vector3Wide.ReadSlot(ref maxWide, 0, out var max);
+            for (int i = 1; i < Vector<float>.Count; ++i)
+            {
+                Vector3Wide.ReadSlot(ref minWide, i, out var minSlot);
+                Vector3Wide.ReadSlot(ref maxWide, i, out var maxSlot);
+                min = Vector3.Min(minSlot, min);
+                max = Vector3.Max(maxSlot, max);
+            }
+            var sweepMin = Vector3.Min(start, end);
+            var sweepMax = Vector3.Max(start, end);
+            minExpansion = min - sweepMin;
+            maxExpansion = max - sweepMax;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe void ExpandBoundsForAngularMotion(
+            in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+            in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB,
+            float dt, float maximumRadius, float maximumAngularExpansion,
+            out Vector3 sweep, ref Vector3 min, ref Vector3 max)
+        {
+            //Note that this angular velocity is not in the local space of the mesh. This is simply used to figure out how much local angular expansion to apply to the convex.
+            //Consider what happens when two bodies have the same angular velocity- their relative rotation does not change, so there is no need for local angular expansion.
+            //The primary bounds expansion only makes use of the magnitude, so the fact that it's not truly in local space is irrelevant.
+            var netAngularVelocity = velocityA.Angular - velocityB.Angular;
+            GetAngularBoundsExpansion(netAngularVelocity, dt, maximumRadius, maximumAngularExpansion, out var angularExpansion);
+            min += angularExpansion;
+            max += angularExpansion;
+
+            ComputePathBounds(localPoseA, orientationA, velocityA, offsetB, orientationB, velocityB, dt, out sweep, out var minExpansion, out var maxExpansion);
+            min = min + minExpansion - offsetB;
+            max = max + maxExpansion - offsetB;
+        }
+        /// <summary>
+        /// Computes the bounding box of shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
+        /// </summary>
+        public static unsafe void GetLocalBoundingBoxForSweep(TypedIndex shapeIndex, Shapes shapes, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+            in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max)
+        {
+            Quaternion.Conjugate(orientationB, out var inverseOrientationB);
+            Quaternion.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
+            Quaternion.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
+
+            shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, localOrientationA, out var maximumRadius, out var maximumAngularExpansion, out min, out max);
+
+            ExpandBoundsForAngularMotion(localPoseA, orientationA, velocityA,
+                offsetB, orientationB, velocityB,
+                dt, maximumRadius, maximumAngularExpansion, out sweep, ref min, ref max);
+        }
+        /// <summary>
+        /// Computes the bounding box of shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
+        /// </summary>
+        public static unsafe void GetLocalBoundingBoxForSweep<TConvex>(ref TConvex shapeA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+            in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max)
+            where TConvex : IConvexShape
+        {
+            Quaternion.Conjugate(orientationB, out var inverseOrientationB);
+            Quaternion.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
+            Quaternion.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
+
+            shapeA.ComputeBounds(localOrientationA, out min, out max);
+            shapeA.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
+
+            ExpandBoundsForAngularMotion(localPoseA, orientationA, velocityA,
+                offsetB, orientationB, velocityB,
+                dt, maximumRadius, maximumAngularExpansion, out sweep, ref min, ref max);
+        }
+
     }
 }

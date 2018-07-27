@@ -299,8 +299,22 @@ namespace Demos.Demos
             StandardTestSweep(compound, new Capsule(.5f, 1.5f), ref position, worldA, worldB, renderer);
             StandardTestSweep(compound, new Box(1, 1.5f, 2f), ref position, worldA, worldB, renderer);
             StandardTestSweep(compound, triangle, ref position, worldA, worldB, renderer);
-
             StandardTestSweep(compound, compound, ref position, worldA, worldB, renderer);
+
+            const int planeWidth = 3;
+            const int planeHeight = 3;
+            MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
+                (int x, int y) =>
+                {
+                    return new Vector3(x - 1.5f, 0.1f * MathF.Cos(x) * MathF.Sin(y), y - 1.5f);
+                }, new Vector3(1, 2, 1), BufferPool, out var mesh);
+
+            StandardTestSweep(mesh, new Sphere(0.5f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(mesh, new Capsule(.5f, 1.5f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(mesh, new Box(1, 1.5f, 2f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(mesh, triangle, ref position, worldA, worldB, renderer);
+            StandardTestSweep(mesh, compound, ref position, worldA, worldB, renderer);
+
 
 
             //Get rid of the compound children registries so that we don't spam allocations.
@@ -308,31 +322,33 @@ namespace Demos.Demos
             {
                 Simulation.Shapes.Remove(compound.Children[i].ShapeIndex);
             }
+            BufferPool.Return(ref compoundChildren);
+            mesh.Dispose(BufferPool);
 
-            //Perform simulation-wide queries against the other collidables in the scene.
-            var localOrigin = new Vector3(-25, 15, 0);
-            var localDirection = new Vector3(7, -10, 0);
-            var sweepCount = 16;
-            for (int i = 0; i < sweepCount; ++i)
-            {
-                Matrix3x3.CreateFromAxisAngle(new Vector3(0, 1, 0), i * MathHelper.TwoPi / sweepCount, out var rotation);
-                Matrix3x3.Transform(localOrigin, rotation, out var sweepOrigin);
-                Matrix3x3.Transform(localDirection, rotation, out var sweepDirection);
+            ////Perform simulation-wide queries against the other collidables in the scene.
+            //var localOrigin = new Vector3(-25, 15, 0);
+            //var localDirection = new Vector3(7, -10, 0);
+            //var sweepCount = 16;
+            //for (int i = 0; i < sweepCount; ++i)
+            //{
+            //    Matrix3x3.CreateFromAxisAngle(new Vector3(0, 1, 0), i * MathHelper.TwoPi / sweepCount, out var rotation);
+            //    Matrix3x3.Transform(localOrigin, rotation, out var sweepOrigin);
+            //    Matrix3x3.Transform(localDirection, rotation, out var sweepDirection);
 
-                SceneSweepHitHandler hitHandler = default;
-                hitHandler.T = float.MaxValue;
-                var shape = new Box(1, 2, 1.5f);
-                var initialPose = new RigidPose { Position = sweepOrigin, Orientation = Quaternion.Identity };
-                var sweepVelocity = new BodyVelocity { Linear = sweepDirection };
-                Simulation.Sweep(shape, initialPose, sweepVelocity, 10, BufferPool, ref hitHandler);
-                DrawSweep(shape, ref initialPose, sweepVelocity, 20, hitHandler.T, renderer,
-                    hitHandler.T < float.MaxValue ? new Vector3(0.25f, 1, 0.25f) : new Vector3(1, 0.25f, 0.25f));
+            //    SceneSweepHitHandler hitHandler = default;
+            //    hitHandler.T = float.MaxValue;
+            //    var shape = new Box(1, 2, 1.5f);
+            //    var initialPose = new RigidPose { Position = sweepOrigin, Orientation = Quaternion.Identity };
+            //    var sweepVelocity = new BodyVelocity { Linear = sweepDirection };
+            //    Simulation.Sweep(shape, initialPose, sweepVelocity, 10, BufferPool, ref hitHandler);
+            //    DrawSweep(shape, ref initialPose, sweepVelocity, 20, hitHandler.T, renderer,
+            //        hitHandler.T < float.MaxValue ? new Vector3(0.25f, 1, 0.25f) : new Vector3(1, 0.25f, 0.25f));
 
-                if (hitHandler.T < float.MaxValue && hitHandler.T > 0)
-                {
-                    DrawImpact(renderer, ref hitHandler.HitLocation, ref hitHandler.HitNormal);
-                }
-            }
+            //    if (hitHandler.T < float.MaxValue && hitHandler.T > 0)
+            //    {
+            //        DrawImpact(renderer, ref hitHandler.HitLocation, ref hitHandler.HitNormal);
+            //    }
+            //}
         }
 
 
