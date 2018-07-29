@@ -49,17 +49,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref var pair = ref pairs[i];
                     ref var compound = ref Unsafe.AsRef<TCompound>(pair.A);
                     ref var mesh = ref Unsafe.AsRef<TMesh>(pair.B);
-                    ref var continuation = ref batcher.MeshReductions.CreateContinuation(pairOverlaps.OverlapCount, batcher.Pool, out var continuationIndex);
-                    //Pass ownership of the triangles to the continuation. It'll dispose of the buffer.
+                    ref var continuation = ref batcher.CompoundMeshReductions.CreateContinuation(pairOverlaps.OverlapCount, batcher.Pool, out var continuationIndex);
+                    //Pass ownership of the triangle and region buffers to the continuation. It'll dispose of the buffer.
                     batcher.Pool.Take(pairOverlaps.OverlapCount, out continuation.Triangles);
+                    batcher.Pool.Take(pairOverlaps.ChildCount, out continuation.ChildManifoldRegions);
+                    continuation.RegionCount = pairOverlaps.ChildCount;
                     continuation.MeshOrientation = pair.OrientationB;
                     //A flip is required in mesh reduction whenever contacts are being generated as if the triangle is in slot B, which is whenever this pair has *not* been flipped.
                     continuation.RequiresFlip = pair.FlipMask == 0;
 
                     int nextContinuationChildIndex = 0;
                     int traversalIndex = 0;
+                    int regionIndex = 0;
                     while (pairOverlaps.VisitNextChild(ref traversalIndex, out var compoundChildIndex, out var triangleCount))
                     {
+                        int continuationRegionStart = nextContinuationChildIndex;
                         ref var compoundChild = ref compound.GetChild(compoundChildIndex);
                         var compoundChildType = compoundChild.ShapeIndex.Type;
                         batcher.Shapes[compoundChildType].GetShapeData(compoundChild.ShapeIndex.Index, out var compoundChildShapeData, out _);
@@ -83,7 +87,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             {
                                 var continuationChildIndex = nextContinuationChildIndex++;
                                 var continuationInfo = new PairContinuation(pair.Continuation.PairId, childA, childB,
-                                    CollisionContinuationType.MeshReduction, continuationIndex, continuationChildIndex);
+                                    CollisionContinuationType.CompoundMeshReduction, continuationIndex, continuationChildIndex);
                                 ref var continuationChild = ref continuation.Inner.Children[continuationChildIndex];
                                 continuationChild.ChildIndexA = childA;
                                 continuationChild.ChildIndexB = childB;
@@ -114,6 +118,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                                 continuation.OnChildCompletedEmpty(ref pair.Continuation, ref batcher);
                             }
                         }
+                        //Note that we defer the region assignment until after the loop rather than using the triangleCount as the region count.
+                        //That's because the user callback could cull some of the subpairs.
+                        continuation.ChildManifoldRegions[regionIndex++] = (continuationRegionStart, nextContinuationChildIndex - continuationRegionStart);
                     }
                 }
 

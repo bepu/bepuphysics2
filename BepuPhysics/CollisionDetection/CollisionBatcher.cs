@@ -53,6 +53,7 @@ namespace BepuPhysics.CollisionDetection
         //efficiency in constraint solving.
         public BatcherContinuations<NonconvexReduction> NonconvexReductions;
         public BatcherContinuations<MeshReduction> MeshReductions;
+        public BatcherContinuations<CompoundMeshReduction> CompoundMeshReductions;
 
         public unsafe CollisionBatcher(BufferPool pool, Shapes shapes, CollisionTaskRegistry collisionTypeMatrix, float dt, TCallbacks callbacks)
         {
@@ -66,6 +67,7 @@ namespace BepuPhysics.CollisionDetection
             batches.Clear(0, collisionTypeMatrix.tasks.Length);
             NonconvexReductions = new BatcherContinuations<NonconvexReduction>();
             MeshReductions = new BatcherContinuations<MeshReduction>();
+            CompoundMeshReductions = new BatcherContinuations<CompoundMeshReduction>();
             minimumBatchIndex = collisionTypeMatrix.tasks.Length;
             maximumBatchIndex = -1;
         }
@@ -292,6 +294,8 @@ namespace BepuPhysics.CollisionDetection
             }
             Pool.Return(ref batches);
             NonconvexReductions.Dispose(Pool);
+            MeshReductions.Dispose(Pool);
+            CompoundMeshReductions.Dispose(Pool);
         }
 
         public unsafe void ProcessConvexResult(ConvexContactManifold* manifold, ref PairContinuation continuation)
@@ -316,6 +320,11 @@ namespace BepuPhysics.CollisionDetection
                     case CollisionContinuationType.MeshReduction:
                         {
                             MeshReductions.ContributeChildToContinuation(ref continuation, manifold, ref this);
+                        }
+                        break;
+                    case CollisionContinuationType.CompoundMeshReduction:
+                        {
+                            CompoundMeshReductions.ContributeChildToContinuation(ref continuation, manifold, ref this);
                         }
                         break;
                 }

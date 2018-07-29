@@ -17,6 +17,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         Buffer<int> overlaps;
         int count;
         public int OverlapCount;
+        public int ChildCount;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref int AllocateChild(int childIndex, BufferPool pool, int minimumChildCapacity, out int* childOverlapCount)
@@ -33,6 +34,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             childOverlapCount = pointer + count + 1;
             *childOverlapCount = 0;
             count = newCount;
+            ++ChildCount;
             return ref pointer[count];
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
