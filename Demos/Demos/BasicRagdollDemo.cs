@@ -426,9 +426,9 @@ namespace Demos.Demos
 
             int ragdollIndex = 0;
             var spacing = new Vector3(2, 5, 2);
-            int width = 10;
-            int height = 10;
-            int length = 10;
+            int width = 4;
+            int height = 32;
+            int length = 4;
             var origin = -0.5f * spacing * new Vector3(width, 0, length) + new Vector3(0, 10, 0);
             for (int i = 0; i < width; ++i)
             {

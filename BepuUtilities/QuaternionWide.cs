@@ -348,11 +348,13 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ReadFirst(in QuaternionWide source, out Quaternion target)
         {
+            //TODO: Check in parameter codegen on indexer.
             target.X = source.X[0];
             target.Y = source.Y[0];
             target.Z = source.Z[0];
             target.W = source.W[0];
         }
+
         /// <summary>
         /// Gathers values from a quaternion and places them into the first indices of the target wide quaternion.
         /// </summary>

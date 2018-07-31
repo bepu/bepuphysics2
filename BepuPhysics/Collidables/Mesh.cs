@@ -1,4 +1,5 @@
-﻿using BepuPhysics.Trees;
+﻿using BepuPhysics.CollisionDetection.CollisionTasks;
+using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
@@ -144,14 +145,16 @@ namespace BepuPhysics.Collidables
                 }
             }
         }
-        struct Enumerator : IBreakableForEach<int>
+
+
+        unsafe struct Enumerator : IBreakableForEach<int>
         {
-            public BufferPool<int> Pool;
-            public QuickList<int, Buffer<int>> Children;
+            public BufferPool Pool;
+            public void* Children;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool LoopBody(int i)
             {
-                Children.Add(i, Pool);
+                Unsafe.AsRef<ChildOverlapsCollection>(Children).Allocate(Pool) = i;
                 return true;
             }
         }
@@ -165,19 +168,24 @@ namespace BepuPhysics.Collidables
             {
                 Children.Add(leafIndex, Pool);
             }
-        }
+        }               
 
-
-        public unsafe void FindLocalOverlaps(in Vector3 min, in Vector3 max, BufferPool pool, ref QuickList<int, Buffer<int>> childIndices)
+        public unsafe void FindLocalOverlaps(PairsToTestForOverlap* pairs, int count, BufferPool pool, ref TaskOverlapsCollection overlaps)
         {
-            Debug.Assert(childIndices.Span.Memory != null, "The given list reference is expected to already be constructed and ready for use.");
-            var scaledMin = min * inverseScale;
-            var scaledMax = max * inverseScale;
+            //For now, we don't use anything tricky. Just traverse every child against the tree sequentially.
+            //TODO: This sequentializes a whole lot of cache misses. You could probably get some benefit out of traversing all pairs 'simultaneously'- that is, 
+            //using the fact that we have lots of independent queries to ensure the CPU always has something to do.
             Enumerator enumerator;
-            enumerator.Pool = pool.SpecializeFor<int>();
-            enumerator.Children = childIndices;
-            Tree.GetOverlaps(scaledMin, scaledMax, ref enumerator);
-            childIndices = enumerator.Children;
+            enumerator.Pool = pool;
+            for (int i = 0; i < count; ++i)
+            {
+                ref var pair = ref pairs[i];
+                ref var mesh = ref Unsafe.AsRef<Mesh>(pair.Container);
+                var scaledMin = mesh.inverseScale * pair.Min;
+                var scaledMax = mesh.inverseScale * pair.Max;
+                enumerator.Children = Unsafe.AsPointer(ref overlaps[i]);
+                Tree.GetOverlaps(scaledMin, scaledMax, ref enumerator);
+            }
         }
 
         public unsafe void FindLocalOverlaps(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, ref QuickList<int, Buffer<int>> childIndices)
@@ -191,29 +199,6 @@ namespace BepuPhysics.Collidables
             enumerator.Children = childIndices;
             Tree.Sweep(scaledMin, scaledMax, scaledSweep, maximumT, ref enumerator);
             childIndices = enumerator.Children;
-        }
-
-        public unsafe void FindLocalOverlaps(ref Buffer<IntPtr> meshes, ref Vector3Wide min, ref Vector3Wide max, int count, BufferPool pool, ref Buffer<QuickList<int, Buffer<int>>> childIndices)
-        {
-            for (int i = 0; i < count; ++i)
-            {
-                Vector3Wide.ReadSlot(ref min, i, out var narrowMin);
-                Vector3Wide.ReadSlot(ref max, i, out var narrowMax);
-                Unsafe.AsRef<Mesh>(meshes[i].ToPointer()).FindLocalOverlaps(narrowMin, narrowMax, pool, ref childIndices[i]);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GetLocalTriangles(ref QuickList<int, Buffer<int>> childIndices, ref Buffer<Triangle> triangles)
-        {
-            for (int i = 0; i < childIndices.Count; ++i)
-            {
-                ref var source = ref Triangles[childIndices[i]];
-                ref var target = ref triangles[i];
-                target.A = scale * source.A;
-                target.B = scale * source.B;
-                target.C = scale * source.C;
-            }
         }
 
         public void Dispose(BufferPool bufferPool)

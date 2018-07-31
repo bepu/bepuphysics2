@@ -14,7 +14,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TCompound : struct, ICompoundShape
         where TMesh : struct, IMeshShape
     {
-        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, BufferPool pool, ref TaskOverlapsCollection overlaps);
+        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, BufferPool pool, Shapes shapes, ref TaskOverlapsCollection overlaps);
     }
 
 
@@ -40,7 +40,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //We perform all necessary bounding box computations and lookups up front. This helps avoid some instruction pipeline pressure at the cost of some extra data cache requirements.
             //Because of this, you need to be careful with the batch size on this collision task.
             var overlaps = new TaskOverlapsCollection(batcher.Pool, batch.Count);
-            overlapFinder.FindLocalOverlaps(ref pairs, batcher.Pool, ref overlaps);
+            overlapFinder.FindLocalOverlaps(ref pairs, batcher.Pool, batcher.Shapes, ref overlaps);
             for (int i = 0; i < batch.Count; ++i)
             {
                 ref var pairOverlaps = ref overlaps.GetPairOverlaps(i);

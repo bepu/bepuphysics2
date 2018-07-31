@@ -12,8 +12,8 @@ namespace BepuPhysics
     public static class BoundingBoxHelpers
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetBoundsExpansion(ref Vector3Wide linearVelocity, ref Vector3Wide angularVelocity, float dt,
-            ref Vector<float> maximumRadius, ref Vector<float> maximumAngularExpansion, out Vector3Wide minExpansion, out Vector3Wide maxExpansion)
+        public static void GetBoundsExpansion(in Vector3Wide linearVelocity, in Vector3Wide angularVelocity, float dt,
+            in Vector<float> maximumRadius, in Vector<float> maximumAngularExpansion, out Vector3Wide minExpansion, out Vector3Wide maxExpansion)
         {
             /*
             If an object sitting on a plane had a raw (unexpanded) AABB that is just barely above the plane, no contacts would be generated. 
@@ -104,7 +104,7 @@ namespace BepuPhysics
         public static void ExpandBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max, ref BodyVelocities velocities, float dt,
             ref Vector<float> maximumRadius, ref Vector<float> maximumAngularExpansion, ref Vector<float> maximumExpansion)
         {
-            GetBoundsExpansion(ref velocities.Linear, ref velocities.Angular, dt, ref maximumRadius, ref maximumAngularExpansion, out var minDisplacement, out var maxDisplacement);
+            GetBoundsExpansion(velocities.Linear, velocities.Angular, dt, maximumRadius, maximumAngularExpansion, out var minDisplacement, out var maxDisplacement);
             //The maximum expansion passed into this function is the speculative margin for discrete mode collidables, and ~infinity for passive or continuous ones.
             Vector3Wide.Max(-maximumExpansion, minDisplacement, out minDisplacement);
             Vector3Wide.Min(maximumExpansion, maxDisplacement, out maxDisplacement);
@@ -165,6 +165,65 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Expands a bounding box.
+        /// </summary>
+        public static unsafe void ExpandBoundingBoxes(
+            ref Vector3Wide min, ref Vector3Wide max,
+            in Vector3Wide localPositionA, in QuaternionWide localOrientationA, in QuaternionWide inverseOrientationB, 
+            in Vector3Wide relativeLinearVelocityA, in Vector3Wide angularVelocityA, in Vector3Wide angularVelocityB,
+            float dt, in Vector<float> maximumRadius, in Vector<float> maximumAngularExpansion, in Vector<float> maximumAllowedExpansion)
+        {
+            QuaternionWide.TransformWithoutOverlap(relativeLinearVelocityA, inverseOrientationB, out var localRelativeLinearVelocityA);
+
+            //Note that this angular velocity is not in the local space of the mesh. This is simply used to figure out how much local angular expansion to apply to the convex.
+            //Consider what happens when two bodies have the same angular velocity- their relative rotation does not change, so there is no need for local angular expansion.
+            //The primary bounds expansion only makes use of the magnitude, so the fact that it's not truly in local space is irrelevant.
+            Vector3Wide.Subtract(angularVelocityA, angularVelocityB, out var netAngularVelocity);
+            GetBoundsExpansion(localRelativeLinearVelocityA, netAngularVelocity, dt,
+                maximumRadius, maximumAngularExpansion, out var minExpansion, out var maxExpansion);
+
+            //If any mesh/compound in the batch has angular velocity, we need to compute the bounding box expansion caused by the resulting nonlinear path.
+            //(This is equivalent to expanding the bounding boxes of the mesh/compound shapes to account for their motion. It's just much simpler to expand only the incoming convex.
+            //Conceptually, you can think of this as if we're fixing our frame of reference on the mesh/compound, and watching how the convex moves. 
+            //In the presence of mesh/compound angular velocity, a stationary convex will trace a circular arc.)
+            Vector3Wide.LengthSquared(angularVelocityB, out var angularSpeedBSquared);
+            if (Vector.GreaterThanAny(angularSpeedBSquared, Vector<float>.Zero))
+            {
+                //We need to expand the bounding box by the extent of the circular arc which the convex traces due to the mesh/compound's angular motion.
+                //We'll create two axes and measure the extent of the arc along them.
+                //Note that arcX and arcY are invalid if radius or angular velocity magnitude is zero. We'll handle that with a mask.
+                Vector3Wide.Length(localPositionA, out var radius);
+                Vector3Wide.Scale(localPositionA, Vector<float>.One / radius, out var arcX);
+                Vector3Wide.CrossWithoutOverlap(angularVelocityB, arcX, out var arcY);
+                Vector3Wide.Normalize(arcY, out arcY);
+                var angularSpeedB = Vector.SquareRoot(angularSpeedBSquared);
+                var angularDisplacement = angularSpeedB * dt;
+                //minX is just 0 because of the chosen frame of reference.
+                MathHelper.Cos(Vector.Min(new Vector<float>(MathHelper.Pi), angularDisplacement), out var maxX);
+                MathHelper.Sin(angularDisplacement, out var sinTheta);
+                var minY = Vector.Min(Vector<float>.Zero, sinTheta);
+                MathHelper.Sin(Vector.Min(angularDisplacement, new Vector<float>(MathHelper.PiOver2)), out var maxY);
+
+                Vector3Wide.Scale(arcX, maxX, out var expansionMaxX);
+                Vector3Wide.Scale(arcY, minY, out var expansionMinY);
+                Vector3Wide.Scale(arcY, maxY, out var expansionMaxY);
+                ExpandBoundingBox(expansionMaxX, ref minExpansion, ref maxExpansion);
+                ExpandBoundingBox(expansionMinY, ref minExpansion, ref maxExpansion);
+                ExpandBoundingBox(expansionMaxY, ref minExpansion, ref maxExpansion);
+                //TODO: Convexes that belong to a compound will also need to include expansion caused by the child motion.
+            }
+
+            //Clamp the expansion to the pair imposed limit. Discrete pairs don't need to look beyond their speculative margin.
+            Vector3Wide.Min(maximumAllowedExpansion, maxExpansion, out maxExpansion);
+            Vector3Wide.Max(-maximumAllowedExpansion, minExpansion, out minExpansion);
+
+            Vector3Wide.Add(minExpansion, min, out min);
+            Vector3Wide.Add(maxExpansion, max, out max);
+            Vector3Wide.Add(min, localPositionA, out min);
+            Vector3Wide.Add(max, localPositionA, out max);
+        }
+
+        /// <summary>
         /// Computes the bounding box of shape A in the local space of some other collidable B.
         /// </summary>
         public static unsafe void GetLocalBoundingBox<TConvex, TConvexWide>(
@@ -197,8 +256,8 @@ namespace BepuPhysics
                 //We need to expand the bounding box by the extent of the circular arc which the convex traces due to the mesh/compound's angular motion.
                 //We'll create two axes and measure the extent of the arc along them.
                 //Note that arcX and arcY are invalid if radius or angular velocity magnitude is zero. We'll handle that with a mask.
-                Vector3Wide.Length(offsetB, out var radius);
-                Vector3Wide.Scale(offsetB, Vector<float>.One / radius, out var arcX);
+                Vector3Wide.Length(localOffsetB, out var radius);
+                Vector3Wide.Scale(localOffsetB, Vector<float>.One / radius, out var arcX);
                 Vector3Wide.CrossWithoutOverlap(angularVelocityB, arcX, out var arcY);
                 Vector3Wide.Normalize(arcY, out arcY);
                 var angularSpeedB = Vector.SquareRoot(angularSpeedBSquared);
@@ -224,8 +283,8 @@ namespace BepuPhysics
 
             Vector3Wide.Add(minExpansion, min, out min);
             Vector3Wide.Add(maxExpansion, max, out max);
-            Vector3Wide.Subtract(min, offsetB, out min);
-            Vector3Wide.Subtract(max, offsetB, out max);
+            Vector3Wide.Subtract(min, localOffsetB, out min);
+            Vector3Wide.Subtract(max, localOffsetB, out max);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
