@@ -183,7 +183,7 @@ namespace BepuPhysics.Collidables
                 ref var mesh = ref Unsafe.AsRef<Mesh>(pair.Container);
                 var scaledMin = mesh.inverseScale * pair.Min;
                 var scaledMax = mesh.inverseScale * pair.Max;
-                enumerator.Children = Unsafe.AsPointer(ref overlaps[i]);
+                enumerator.Children = Unsafe.AsPointer(ref overlaps.GetChildOverlaps(i));
                 Tree.GetOverlaps(scaledMin, scaledMax, ref enumerator);
             }
         }

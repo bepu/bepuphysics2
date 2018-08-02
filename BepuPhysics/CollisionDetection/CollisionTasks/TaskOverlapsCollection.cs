@@ -19,83 +19,70 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
     public unsafe struct ChildOverlapsCollection
     {
-        Buffer<int> overlaps;
-        int count;
-
+        public Buffer<int> Overlaps;
+        public int Count;
+        public int ChildIndex;
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe ref int Allocate(BufferPool pool)
         {
-            if (overlaps.Length == count)
+            if (Overlaps.Length == Count)
             {
-                pool.Resize(ref overlaps, MathHelper.Max(64, count * 2), count);
+                pool.Resize(ref Overlaps, MathHelper.Max(64, Count * 2), Count);
             }
-            return ref overlaps[count++];
+            return ref Overlaps[Count++];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose(BufferPool pool)
         {
-            if (overlaps.Allocated)
-                pool.Return(ref overlaps);
-        }
-    }
-    /// <summary>
-    /// Stores the child detected within a pair instance as a series of lists. Each childA is given its own list.
-    /// </summary>
-    public unsafe struct PairOverlapsCollection
-    {
-        internal Buffer<ChildOverlapsCollection> childOverlaps;
-        internal int childCount;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PairOverlapsCollection(int childCount, BufferPool pool)
-        {
-            pool.Take(childCount, out childOverlaps);
-            //We test the overlap length, so just zero init the memory.
-            childOverlaps.Clear(0, childCount);
-            this.childCount = childCount;
-        }
-
-        public ref ChildOverlapsCollection GetChildOverlaps(int childIndex)
-        {
-            return ref childOverlaps[childIndex];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose(BufferPool pool)
-        {
-            for (int i = 0; i < childCount; ++i)
-            {
-                childOverlaps[i].Dispose(pool);
-            }
-            pool.Return(ref childOverlaps);
+            if (Overlaps.Allocated)
+                pool.Return(ref Overlaps);
         }
     }
 
     public struct TaskOverlapsCollection
     {
-        Buffer<PairOverlapsCollection> pairOverlaps;
+        Buffer<ChildOverlapsCollection> childOverlaps;
+        Buffer<(int start, int count)> pairRegions;
         int pairCount;
-        public TaskOverlapsCollection(BufferPool pool, int pairCount)
+        int subpairCount;
+        public TaskOverlapsCollection(BufferPool pool, int pairCapacity, int subpairCapacity)
         {
-            this.pairCount = pairCount;
-            pool.Take(pairCount, out pairOverlaps);
+            this.pairCount = 0;
+            this.subpairCount = 0;
+            pool.Take(subpairCapacity, out childOverlaps);
+            pool.Take(pairCapacity, out pairRegions);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref PairOverlapsCollection GetPairOverlaps(int pairIndex)
+        public void CreatePairOverlaps(int childrenInPair, BufferPool pool)
         {
-            Debug.Assert(pairIndex < pairCount);
-            return ref pairOverlaps[pairIndex];
+            pairRegions[pairCount++] = (subpairCount, subpairCount += childrenInPair);
+            Debug.Assert(pairCount <= pairRegions.Length);
+            Debug.Assert(subpairCount <= childOverlaps.Length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ChildOverlapsCollection GetChildOverlaps(int subpairIndex)
+        {
+            return ref childOverlaps[subpairIndex];
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetPairOverlaps(int pairIndex, out Buffer<ChildOverlapsCollection> pairOverlaps)
+        {
+            ref var region = ref pairRegions[pairIndex];
+            childOverlaps.Slice(region.start, region.count, out pairOverlaps);
         }
 
         public void Dispose(BufferPool pool)
         {
-            for (int i = 0; i < pairCount; ++i)
+            for (int i = 0; i < subpairCount; ++i)
             {
-                pairOverlaps[i].Dispose(pool);
+                childOverlaps[i].Dispose(pool);
             }
-            pool.Return(ref pairOverlaps);
+            pool.Return(ref childOverlaps);
         }
+
     }
 }

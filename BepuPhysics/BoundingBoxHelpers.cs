@@ -167,7 +167,7 @@ namespace BepuPhysics
         /// <summary>
         /// Expands a bounding box.
         /// </summary>
-        public static unsafe void ExpandBoundingBoxes(
+        public static unsafe void ExpandLocalBoundingBoxes(
             ref Vector3Wide min, ref Vector3Wide max,
             in Vector3Wide localPositionA, in QuaternionWide localOrientationA, in QuaternionWide inverseOrientationB, 
             in Vector3Wide relativeLinearVelocityA, in Vector3Wide angularVelocityA, in Vector3Wide angularVelocityB,
@@ -243,8 +243,8 @@ namespace BepuPhysics
             //Consider what happens when two bodies have the same angular velocity- their relative rotation does not change, so there is no need for local angular expansion.
             //The primary bounds expansion only makes use of the magnitude, so the fact that it's not truly in local space is irrelevant.
             Vector3Wide.Subtract(angularVelocityA, angularVelocityB, out var netAngularVelocity);
-            GetBoundsExpansion(ref localRelativeLinearVelocityA, ref netAngularVelocity, dt,
-                ref maximumRadius, ref maximumAngularExpansion, out var minExpansion, out var maxExpansion);
+            GetBoundsExpansion(localRelativeLinearVelocityA, netAngularVelocity, dt,
+                maximumRadius, maximumAngularExpansion, out var minExpansion, out var maxExpansion);
 
             //If any mesh/compound in the batch has angular velocity, we need to compute the bounding box expansion caused by the resulting nonlinear path.
             //(This is equivalent to expanding the bounding boxes of the mesh/compound shapes to account for their motion. It's just much simpler to expand only the incoming convex.

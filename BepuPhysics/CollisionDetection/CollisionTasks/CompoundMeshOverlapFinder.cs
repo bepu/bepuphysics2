@@ -18,14 +18,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             public BoundsTestedPair* Pair;
             public CompoundChild* Child;
         }
-        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, out TaskOverlapsCollection overlaps)
+        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out TaskOverlapsCollection overlaps)
         {
             var totalCompoundChildCount = 0;
             for (int i = 0; i < pairCount; ++i)
             {
                 totalCompoundChildCount += Unsafe.AsRef<Compound>(pairs[i].A).Children.Length;
             }
-            overlaps = new TaskOverlapsCollection(pool, totalCompoundChildCount);
+            overlaps = new TaskOverlapsCollection(pool, pairCount, totalCompoundChildCount);
             var pairsToTest = stackalloc PairsToTestForOverlap[totalCompoundChildCount];
             var subpairData = stackalloc SubpairData[totalCompoundChildCount];
             int nextSubpairIndex = 0;
@@ -38,6 +38,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 for (int j = 0; j < compound.Children.Length; ++j)
                 {
                     var subpairIndex = nextSubpairIndex++;
+                    overlaps.GetChildOverlaps(subpairIndex).ChildIndex = j;
                     pairsToTest[subpairIndex].Container = pair.B;
                     ref var subpair = ref subpairData[subpairIndex];
                     subpair.Pair = (BoundsTestedPair*)Unsafe.AsPointer(ref pair);
@@ -100,8 +101,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 }
 
-                BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref mins, ref maxes, orientationA, angularVelocityA,
-                    offsetB, orientationB, relativeLinearVelocityA, angularVelocityB, batcher.Dt, maximumAllowedExpansion);
+                BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref mins, ref maxes, localPositionsA, localOrientationsA, toLocalB, relativeLinearVelocityA, angularVelocityA,
+                    angularVelocityB, dt, maximumRadius, maximumAngularExpansion, maximumAllowedExpansion);
             }
 
             //Doesn't matter what mesh instance is used for the function; just using it as a source of the function.

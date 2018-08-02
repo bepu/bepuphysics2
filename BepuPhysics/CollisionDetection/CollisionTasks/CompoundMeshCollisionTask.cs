@@ -10,18 +10,15 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public interface ICompoundMeshOverlapFinder<TCompound, TMesh>
-        where TCompound : struct, ICompoundShape
-        where TMesh : struct, IMeshShape
+    public interface ICompoundMeshOverlapFinder
     {
-        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, BufferPool pool, Shapes shapes, ref TaskOverlapsCollection overlaps);
+        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out TaskOverlapsCollection overlaps);
     }
-
-
+    
     public class CompoundMeshCollisionTask<TCompound, TMesh, TOverlapFinder> : CollisionTask
         where TCompound : struct, ICompoundShape
         where TMesh : struct, IMeshShape
-        where TOverlapFinder : struct, ICompoundMeshOverlapFinder<TCompound, TMesh>
+        where TOverlapFinder : struct, ICompoundMeshOverlapFinder
     {
         public CompoundMeshCollisionTask()
         {
@@ -39,48 +36,53 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //We perform all necessary bounding box computations and lookups up front. This helps avoid some instruction pipeline pressure at the cost of some extra data cache requirements.
             //Because of this, you need to be careful with the batch size on this collision task.
-            var overlaps = new TaskOverlapsCollection(batcher.Pool, batch.Count);
-            overlapFinder.FindLocalOverlaps(ref pairs, batcher.Pool, batcher.Shapes, ref overlaps);
+            overlapFinder.FindLocalOverlaps(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out var overlaps);
             for (int i = 0; i < batch.Count; ++i)
             {
-                ref var pairOverlaps = ref overlaps.GetPairOverlaps(i);
-                if (pairOverlaps.OverlapCount > 0)
+                overlaps.GetPairOverlaps(i, out var pairOverlaps);
+                var totalOverlapCountForPair = pairOverlaps[0].Count;
+                for (int j = 1; j < pairOverlaps.Length; ++j)
+                {
+                    totalOverlapCountForPair += pairOverlaps[i].Count;
+                }
+                if (totalOverlapCountForPair > 0)
                 {
                     ref var pair = ref pairs[i];
                     ref var compound = ref Unsafe.AsRef<TCompound>(pair.A);
                     ref var mesh = ref Unsafe.AsRef<TMesh>(pair.B);
-                    ref var continuation = ref batcher.CompoundMeshReductions.CreateContinuation(pairOverlaps.OverlapCount, batcher.Pool, out var continuationIndex);
+                    ref var continuation = ref batcher.CompoundMeshReductions.CreateContinuation(totalOverlapCountForPair, batcher.Pool, out var continuationIndex);
                     //Pass ownership of the triangle and region buffers to the continuation. It'll dispose of the buffer.
-                    batcher.Pool.Take(pairOverlaps.OverlapCount, out continuation.Triangles);
-                    batcher.Pool.Take(pairOverlaps.ChildCount, out continuation.ChildManifoldRegions);
-                    continuation.RegionCount = pairOverlaps.ChildCount;
+                    batcher.Pool.Take(totalOverlapCountForPair, out continuation.Triangles);
+                    batcher.Pool.Take(pairOverlaps.Length, out continuation.ChildManifoldRegions);
+                    continuation.RegionCount = pairOverlaps.Length;
                     continuation.MeshOrientation = pair.OrientationB;
                     //A flip is required in mesh reduction whenever contacts are being generated as if the triangle is in slot B, which is whenever this pair has *not* been flipped.
                     continuation.RequiresFlip = pair.FlipMask == 0;
 
                     int nextContinuationChildIndex = 0;
-                    int traversalIndex = 0;
                     int regionIndex = 0;
-                    while (pairOverlaps.VisitNextChild(ref traversalIndex, out var compoundChildIndex, out var triangleCount))
+                    for (int j = 0; j < pairOverlaps.Length; ++j)
                     {
+                        ref var childOverlaps = ref pairOverlaps[j];
                         int continuationRegionStart = nextContinuationChildIndex;
-                        ref var compoundChild = ref compound.GetChild(compoundChildIndex);
+                        //compound.GetChildData(ref compound, childOverlaps.ChildIndex, batcher.Shapes, out var continuationOffset, out var shapeData);
+                        ref var compoundChild = ref compound.GetChild(childOverlaps.ChildIndex);
                         var compoundChildType = compoundChild.ShapeIndex.Type;
                         batcher.Shapes[compoundChildType].GetShapeData(compoundChild.ShapeIndex.Index, out var compoundChildShapeData, out _);
-                        for (int j = 0; j < triangleCount; ++j)
+                        for (int k = 0; k < childOverlaps.Count; ++k)
                         {
-                            var triangleIndex = pairOverlaps.GetOverlap(ref traversalIndex);
+                            var triangleIndex = childOverlaps.Overlaps[k];
                             //Note that we have to take into account whether we flipped the shapes to match the expected memory layout.
                             //The caller expects results according to the submitted pair order, not the batcher's memory layout order.
                             int childA, childB;
                             if (pair.FlipMask < 0)
                             {
                                 childA = triangleIndex;
-                                childB = compoundChildIndex;
+                                childB = childOverlaps.ChildIndex;
                             }
                             else
                             {
-                                childA = compoundChildIndex;
+                                childA = childOverlaps.ChildIndex;
                                 childB = triangleIndex;
                             }
                             if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
@@ -126,7 +128,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
 
             }
-            overlaps.Dispose();
+            overlaps.Dispose(batcher.Pool);
             //Note that the triangle lists are not disposed here. Those are handed off to the continuations for further analysis.
         }
     }

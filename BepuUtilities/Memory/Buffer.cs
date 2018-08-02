@@ -74,7 +74,14 @@ namespace BepuUtilities.Memory
             ValidateRegion(start, count);
             return new Buffer<T>(Memory + Unsafe.SizeOf<T>() * start, count, Id);
         }
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Slice(int start, int count, out Buffer<T> sliced)
+        {
+            ValidateRegion(start, count);
+            sliced = new Buffer<T>(Memory + Unsafe.SizeOf<T>() * start, count, Id);
+        }
+
         public int Length
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
