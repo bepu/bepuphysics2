@@ -83,11 +83,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 }
 
                 QuaternionWide.ConcatenateWithoutOverlap(localPosesA.Orientation, orientationA, out var childOrientationA);
-                QuaternionWide.TransformWithoutOverlap(localPosesA.Position, orientationA, out var childPositionA);
-                Vector3Wide.Subtract(childPositionA, offsetB, out childPositionA);
                 QuaternionWide.Conjugate(orientationB, out var toLocalB);
-                QuaternionWide.TransformWithoutOverlap(childPositionA, toLocalB, out var localPositionsA);
                 QuaternionWide.ConcatenateWithoutOverlap(childOrientationA, toLocalB, out var localOrientationsA);
+                QuaternionWide.TransformWithoutOverlap(localPosesA.Position, localOrientationsA, out var localOffsetA);
+                QuaternionWide.TransformWithoutOverlap(offsetB, toLocalB, out var localOffsetB);
+                Vector3Wide.Subtract(localOffsetA, localOffsetB, out var localPositionsA);
 
                 for (int j = 0; j < count; ++j)
                 {
@@ -102,8 +102,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 }
 
-                BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref mins, ref maxes, localPositionsA, localOrientationsA, toLocalB, relativeLinearVelocityA, angularVelocityA,
-                    angularVelocityB, dt, maximumRadius, maximumAngularExpansion, maximumAllowedExpansion);
+                QuaternionWide.TransformWithoutOverlap(relativeLinearVelocityA, toLocalB, out var localRelativeLinearVelocityA);
+                Vector3Wide.Length(localOffsetA, out var radiusA);
+                BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref mins, ref maxes, radiusA, localPositionsA, localRelativeLinearVelocityA, angularVelocityA, angularVelocityB, dt,
+                    maximumRadius, maximumAngularExpansion, maximumAllowedExpansion);
 
                 for (int j = 0; j < count; ++j)
                 {

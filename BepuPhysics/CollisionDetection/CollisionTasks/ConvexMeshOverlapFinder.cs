@@ -56,9 +56,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     GatherScatter.GetOffsetInstance(ref convexWide, j).WriteFirst(ref Unsafe.AsRef<TConvex>(pair.A));
                 }
 
-                BoundingBoxHelpers.GetLocalBoundingBox<TConvex, TConvexWide>(ref convexWide, orientationA, angularVelocityA,
-                    offsetB, orientationB, relativeLinearVelocityA, angularVelocityB, dt, maximumAllowedExpansion,
-                    out var min, out var max);
+                QuaternionWide.Conjugate(orientationB, out var inverseOrientationB);
+                QuaternionWide.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
+                QuaternionWide.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
+                QuaternionWide.TransformWithoutOverlap(relativeLinearVelocityA, inverseOrientationB, out var localRelativeLinearVelocityA);
+
+                convexWide.GetBounds(ref localOrientationA, out var maximumRadius, out var maximumAngularExpansion, out var min, out var max);
+
+                Vector3Wide.Negate(localOffsetB, out var localPositionA);
+                BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref min, ref max, Vector<float>.Zero, localPositionA, localRelativeLinearVelocityA, angularVelocityA, angularVelocityB, dt,
+                    maximumRadius, maximumAngularExpansion, maximumAllowedExpansion);
 
                 for (int j = 0; j < count; ++j)
                 {

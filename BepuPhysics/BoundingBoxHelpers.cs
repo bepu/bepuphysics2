@@ -12,6 +12,42 @@ namespace BepuPhysics
     public static class BoundingBoxHelpers
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GetAngularBoundsExpansion(in Vector<float> angularSpeed, in Vector<float> vectorDt, in Vector<float> maximumRadius,
+            in Vector<float> maximumAngularExpansion, out Vector<float> angularExpansion)
+        {
+            /*
+            Angular requires a bit more care. Since the goal is to create a tight bound, simply using a v = w * r approximation isn't ideal. A slightly tighter can be found:
+            1) The maximum displacement along ANY axis during an intermediate time is equal to the distance from a starting position at MaximumRadius 
+            to the position of that point at the intermediate time.
+            2) The expansion cannot exceed the maximum radius, so angular deltas greater than pi/3 do not need to be considered. 
+            (An expansion equal to the maximum radius would result in an equilateral triangle, which has an angle of 60 degrees in each corner.) 
+            Larger values can simply be clamped.
+            3) The largest displacement along any axis, at any time, is the distance from the starting position to the position at dt. Note that this only holds because of the clamp: 
+            if the angle was allowed to wrap around, it the distance would start to go down again.
+            4) position(time) = {radius * sin(angular speed * time), radius * cos(angular speed * time)}
+            5) largest expansion required = ||position(dt) - position(0)|| = sqrt(2 * radius^2 * (1 - cos(dt * w)))
+            6) Don't have any true SIMD sin function, but we can approximate it using a taylor series, like: cos(x) = 1 - x^2 / 2! + x^4 / 4! - x^6 / 6!
+            7) Note that the cosine approximation should stop at a degree where it is smaller than the true value of cosine for the interval 0 to pi/3: this guarantees that the distance,
+            which is larger when the cosine is smaller, is conservative and fully bounds the angular motion.
+
+            Why do this extra work?
+            1) The bounding box calculation phase, as a part of the pose integration phase, tends to be severely memory bound. 
+            Spending a little of ALU time to get a smaller bounding box isn't a big concern, even though it includes a couple of sqrts.
+            An extra few dozen ALU cycles is unlikely to meaningfully change the execution time.
+            2) Shrinking the bounding box reduces the number of collision pairs. Collision pairs are expensive- many times more expensive than the cost of shrinking the bounding box.
+            */
+            var a = Vector.Min(angularSpeed * vectorDt, new Vector<float>(MathHelper.Pi / 3f));
+            var a2 = a * a;
+            var a4 = a2 * a2;
+            var a6 = a4 * a2;
+            var cosAngleMinusOne = a2 * new Vector<float>(-1f / 2f) + a4 * new Vector<float>(1f / 24f) - a6 * new Vector<float>(1f / 720f);
+            //Note that it's impossible for angular motion to cause an increase in bounding box size beyond (maximumRadius-minimumRadius) on any given axis.
+            //That value, or a conservative approximation, is stored as the maximum angular expansion.
+            angularExpansion = Vector.Min(maximumAngularExpansion,
+                Vector.SquareRoot(new Vector<float>(-2f) * maximumRadius * maximumRadius * cosAngleMinusOne));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetBoundsExpansion(in Vector3Wide linearVelocity, in Vector3Wide angularVelocity, float dt,
             in Vector<float> maximumRadius, in Vector<float> maximumAngularExpansion, out Vector3Wide minExpansion, out Vector3Wide maxExpansion)
         {
@@ -64,38 +100,8 @@ namespace BepuPhysics
             var zero = Vector<float>.Zero;
             Vector3Wide.Min(zero, linearDisplacement, out minExpansion);
             Vector3Wide.Max(zero, linearDisplacement, out maxExpansion);
-
-            /*
-            Angular requires a bit more care. Since the goal is to create a tight bound, simply using a v = w * r approximation isn't ideal. A slightly tighter can be found:
-            1) The maximum displacement along ANY axis during an intermediate time is equal to the distance from a starting position at MaximumRadius 
-            to the position of that point at the intermediate time.
-            2) The expansion cannot exceed the maximum radius, so angular deltas greater than pi/3 do not need to be considered. 
-            (An expansion equal to the maximum radius would result in an equilateral triangle, which has an angle of 60 degrees in each corner.) 
-            Larger values can simply be clamped.
-            3) The largest displacement along any axis, at any time, is the distance from the starting position to the position at dt. Note that this only holds because of the clamp: 
-            if the angle was allowed to wrap around, it the distance would start to go down again.
-            4) position(time) = {radius * sin(angular speed * time), radius * cos(angular speed * time)}
-            5) largest expansion required = ||position(dt) - position(0)|| = sqrt(2 * radius^2 * (1 - cos(dt * w)))
-            6) Don't have any true SIMD sin function, but we can approximate it using a taylor series, like: cos(x) = 1 - x^2 / 2! + x^4 / 4! - x^6 / 6!
-            7) Note that the cosine approximation should stop at a degree where it is smaller than the true value of cosine for the interval 0 to pi/3: this guarantees that the distance,
-            which is larger when the cosine is smaller, is conservative and fully bounds the angular motion.
-
-            Why do this extra work?
-            1) The bounding box calculation phase, as a part of the pose integration phase, tends to be severely memory bound. 
-            Spending a little of ALU time to get a smaller bounding box isn't a big concern, even though it includes a couple of sqrts.
-            An extra few dozen ALU cycles is unlikely to meaningfully change the execution time.
-            2) Shrinking the bounding box reduces the number of collision pairs. Collision pairs are expensive- many times more expensive than the cost of shrinking the bounding box.
-            */
-            Vector3Wide.Length(angularVelocity, out var angularVelocityMagnitude);
-            var a = Vector.Min(angularVelocityMagnitude * vectorDt, new Vector<float>(MathHelper.Pi / 3f));
-            var a2 = a * a;
-            var a4 = a2 * a2;
-            var a6 = a4 * a2;
-            var cosAngleMinusOne = a2 * new Vector<float>(-1f / 2f) + a4 * new Vector<float>(1f / 24f) - a6 * new Vector<float>(1f / 720f);
-            //Note that it's impossible for angular motion to cause an increase in bounding box size beyond (maximumRadius-minimumRadius) on any given axis.
-            //That value, or a conservative approximation, is stored as the maximum angular expansion.
-            var angularExpansion = Vector.Min(maximumAngularExpansion,
-                Vector.SquareRoot(new Vector<float>(-2f) * maximumRadius * maximumRadius * cosAngleMinusOne));
+            Vector3Wide.Length(angularVelocity, out var angularSpeed);
+            GetAngularBoundsExpansion(angularSpeed, vectorDt, maximumRadius, maximumAngularExpansion, out var angularExpansion);
             Vector3Wide.Subtract(minExpansion, angularExpansion, out minExpansion);
             Vector3Wide.Add(maxExpansion, angularExpansion, out maxExpansion);
         }
@@ -165,52 +171,22 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Expands a bounding box.
+        /// Expands the bounding box surrounding a shape A in the local space of some other collidable B.
         /// </summary>
-        public static unsafe void ExpandLocalBoundingBoxes(
-            ref Vector3Wide min, ref Vector3Wide max,
-            in Vector3Wide localPositionA, in QuaternionWide localOrientationA, in QuaternionWide inverseOrientationB, 
-            in Vector3Wide relativeLinearVelocityA, in Vector3Wide angularVelocityA, in Vector3Wide angularVelocityB,
-            float dt, in Vector<float> maximumRadius, in Vector<float> maximumAngularExpansion, in Vector<float> maximumAllowedExpansion)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe void ExpandLocalBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max,
+            in Vector<float> radiusA, in Vector3Wide localPositionA, in Vector3Wide localRelativeLinearVelocityA, in Vector3Wide angularVelocityA, in Vector3Wide angularVelocityB, float dt,
+            in Vector<float> maximumRadius, in Vector<float> maximumAngularExpansion, in Vector<float> maximumAllowedExpansion)
         {
-            QuaternionWide.TransformWithoutOverlap(relativeLinearVelocityA, inverseOrientationB, out var localRelativeLinearVelocityA);
-
-            //Note that this angular velocity is not in the local space of the mesh. This is simply used to figure out how much local angular expansion to apply to the convex.
-            //Consider what happens when two bodies have the same angular velocity- their relative rotation does not change, so there is no need for local angular expansion.
-            //The primary bounds expansion only makes use of the magnitude, so the fact that it's not truly in local space is irrelevant.
-            Vector3Wide.Subtract(angularVelocityA, angularVelocityB, out var netAngularVelocity);
-            GetBoundsExpansion(localRelativeLinearVelocityA, netAngularVelocity, dt,
-                maximumRadius, maximumAngularExpansion, out var minExpansion, out var maxExpansion);
-
-            //If any mesh/compound in the batch has angular velocity, we need to compute the bounding box expansion caused by the resulting nonlinear path.
-            //(This is equivalent to expanding the bounding boxes of the mesh/compound shapes to account for their motion. It's just much simpler to expand only the incoming convex.
-            //Conceptually, you can think of this as if we're fixing our frame of reference on the mesh/compound, and watching how the convex moves. 
-            //In the presence of mesh/compound angular velocity, a stationary convex will trace a circular arc.)
+            GetBoundsExpansion(localRelativeLinearVelocityA, angularVelocityA, dt,
+                maximumRadius + radiusA, maximumAngularExpansion + radiusA, out var minExpansion, out var maxExpansion);
+            Vector3Wide.Length(localPositionA, out var radiusB);
             Vector3Wide.LengthSquared(angularVelocityB, out var angularSpeedBSquared);
             if (Vector.GreaterThanAny(angularSpeedBSquared, Vector<float>.Zero))
             {
-                //We need to expand the bounding box by the extent of the circular arc which the convex traces due to the mesh/compound's angular motion.
-                //We'll create two axes and measure the extent of the arc along them.
-                //Note that arcX and arcY are invalid if radius or angular velocity magnitude is zero. We'll handle that with a mask.
-                Vector3Wide.Length(localPositionA, out var radius);
-                Vector3Wide.Scale(localPositionA, Vector<float>.One / radius, out var arcX);
-                Vector3Wide.CrossWithoutOverlap(angularVelocityB, arcX, out var arcY);
-                Vector3Wide.Normalize(arcY, out arcY);
-                var angularSpeedB = Vector.SquareRoot(angularSpeedBSquared);
-                var angularDisplacement = angularSpeedB * dt;
-                //minX is just 0 because of the chosen frame of reference.
-                MathHelper.Cos(Vector.Min(new Vector<float>(MathHelper.Pi), angularDisplacement), out var maxX);
-                MathHelper.Sin(angularDisplacement, out var sinTheta);
-                var minY = Vector.Min(Vector<float>.Zero, sinTheta);
-                MathHelper.Sin(Vector.Min(angularDisplacement, new Vector<float>(MathHelper.PiOver2)), out var maxY);
-
-                Vector3Wide.Scale(arcX, maxX, out var expansionMaxX);
-                Vector3Wide.Scale(arcY, minY, out var expansionMinY);
-                Vector3Wide.Scale(arcY, maxY, out var expansionMaxY);
-                ExpandBoundingBox(expansionMaxX, ref minExpansion, ref maxExpansion);
-                ExpandBoundingBox(expansionMinY, ref minExpansion, ref maxExpansion);
-                ExpandBoundingBox(expansionMaxY, ref minExpansion, ref maxExpansion);
-                //TODO: Convexes that belong to a compound will also need to include expansion caused by the child motion.
+                GetAngularBoundsExpansion(Vector.SquareRoot(angularSpeedBSquared), maximumRadius + radiusB, maximumAngularExpansion + radiusB, new Vector<float>(dt), out var angularExpansionB);
+                Vector3Wide.Subtract(minExpansion, angularExpansionB, out minExpansion);
+                Vector3Wide.Add(maxExpansion, angularExpansionB, out maxExpansion);
             }
 
             //Clamp the expansion to the pair imposed limit. Discrete pairs don't need to look beyond their speculative margin.
@@ -222,71 +198,7 @@ namespace BepuPhysics
             Vector3Wide.Add(min, localPositionA, out min);
             Vector3Wide.Add(max, localPositionA, out max);
         }
-
-        /// <summary>
-        /// Computes the bounding box of shape A in the local space of some other collidable B.
-        /// </summary>
-        public static unsafe void GetLocalBoundingBox<TConvex, TConvexWide>(
-            ref TConvexWide convexWide, in QuaternionWide orientationA, in Vector3Wide angularVelocityA,
-            in Vector3Wide offsetB, in QuaternionWide orientationB, in Vector3Wide relativeLinearVelocityA, in Vector3Wide angularVelocityB,
-            float dt, in Vector<float> maximumAllowedExpansion, out Vector3Wide min, out Vector3Wide max)
-            where TConvex : IConvexShape
-            where TConvexWide : IShapeWide<TConvex>
-        {
-            QuaternionWide.Conjugate(orientationB, out var inverseOrientationB);
-            QuaternionWide.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
-            QuaternionWide.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
-            QuaternionWide.TransformWithoutOverlap(relativeLinearVelocityA, inverseOrientationB, out var localRelativeLinearVelocityA);
-
-            convexWide.GetBounds(ref localOrientationA, out var maximumRadius, out var maximumAngularExpansion, out min, out max);
-            //Note that this angular velocity is not in the local space of the mesh. This is simply used to figure out how much local angular expansion to apply to the convex.
-            //Consider what happens when two bodies have the same angular velocity- their relative rotation does not change, so there is no need for local angular expansion.
-            //The primary bounds expansion only makes use of the magnitude, so the fact that it's not truly in local space is irrelevant.
-            Vector3Wide.Subtract(angularVelocityA, angularVelocityB, out var netAngularVelocity);
-            GetBoundsExpansion(localRelativeLinearVelocityA, netAngularVelocity, dt,
-                maximumRadius, maximumAngularExpansion, out var minExpansion, out var maxExpansion);
-
-            //If any mesh/compound in the batch has angular velocity, we need to compute the bounding box expansion caused by the resulting nonlinear path.
-            //(This is equivalent to expanding the bounding boxes of the mesh/compound shapes to account for their motion. It's just much simpler to expand only the incoming convex.
-            //Conceptually, you can think of this as if we're fixing our frame of reference on the mesh/compound, and watching how the convex moves. 
-            //In the presence of mesh/compound angular velocity, a stationary convex will trace a circular arc.)
-            Vector3Wide.LengthSquared(angularVelocityB, out var angularSpeedBSquared);
-            if (Vector.GreaterThanAny(angularSpeedBSquared, Vector<float>.Zero))
-            {
-                //We need to expand the bounding box by the extent of the circular arc which the convex traces due to the mesh/compound's angular motion.
-                //We'll create two axes and measure the extent of the arc along them.
-                //Note that arcX and arcY are invalid if radius or angular velocity magnitude is zero. We'll handle that with a mask.
-                Vector3Wide.Length(localOffsetB, out var radius);
-                Vector3Wide.Scale(localOffsetB, Vector<float>.One / radius, out var arcX);
-                Vector3Wide.CrossWithoutOverlap(angularVelocityB, arcX, out var arcY);
-                Vector3Wide.Normalize(arcY, out arcY);
-                var angularSpeedB = Vector.SquareRoot(angularSpeedBSquared);
-                var angularDisplacement = angularSpeedB * dt;
-                //minX is just 0 because of the chosen frame of reference.
-                MathHelper.Cos(Vector.Min(new Vector<float>(MathHelper.Pi), angularDisplacement), out var maxX);
-                MathHelper.Sin(angularDisplacement, out var sinTheta);
-                var minY = Vector.Min(Vector<float>.Zero, sinTheta);
-                MathHelper.Sin(Vector.Min(angularDisplacement, new Vector<float>(MathHelper.PiOver2)), out var maxY);
-
-                Vector3Wide.Scale(arcX, maxX, out var expansionMaxX);
-                Vector3Wide.Scale(arcY, minY, out var expansionMinY);
-                Vector3Wide.Scale(arcY, maxY, out var expansionMaxY);
-                ExpandBoundingBox(expansionMaxX, ref minExpansion, ref maxExpansion);
-                ExpandBoundingBox(expansionMinY, ref minExpansion, ref maxExpansion);
-                ExpandBoundingBox(expansionMaxY, ref minExpansion, ref maxExpansion);
-                //TODO: Convexes that belong to a compound will also need to include expansion caused by the child motion.
-            }
-
-            //Clamp the expansion to the pair imposed limit. Discrete pairs don't need to look beyond their speculative margin.
-            Vector3Wide.Min(maximumAllowedExpansion, maxExpansion, out maxExpansion);
-            Vector3Wide.Max(-maximumAllowedExpansion, minExpansion, out minExpansion);
-
-            Vector3Wide.Add(minExpansion, min, out min);
-            Vector3Wide.Add(maxExpansion, max, out max);
-            Vector3Wide.Subtract(min, localOffsetB, out min);
-            Vector3Wide.Subtract(max, localOffsetB, out max);
-        }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void ExpandBoundingBox(in Vector3 expansion, ref Vector3 min, ref Vector3 max)
         {
