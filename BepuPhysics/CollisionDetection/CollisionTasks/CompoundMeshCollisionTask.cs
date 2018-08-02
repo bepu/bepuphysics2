@@ -10,15 +10,15 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public interface ICompoundMeshOverlapFinder
+    public interface ICompoundPairOverlapFinder
     {
-        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out TaskOverlapsCollection overlaps);
+        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps);
     }
     
     public class CompoundMeshCollisionTask<TCompound, TMesh, TOverlapFinder> : CollisionTask
         where TCompound : struct, ICompoundShape
         where TMesh : struct, IMeshShape
-        where TOverlapFinder : struct, ICompoundMeshOverlapFinder
+        where TOverlapFinder : struct, ICompoundPairOverlapFinder
     {
         public CompoundMeshCollisionTask()
         {
@@ -65,7 +65,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     {
                         ref var childOverlaps = ref pairOverlaps[j];
                         int continuationRegionStart = nextContinuationChildIndex;
-                        //compound.GetChildData(ref compound, childOverlaps.ChildIndex, batcher.Shapes, out var continuationOffset, out var shapeData);
                         ref var compoundChild = ref compound.GetChild(childOverlaps.ChildIndex);
                         var compoundChildType = compoundChild.ShapeIndex.Type;
                         batcher.Shapes[compoundChildType].GetShapeData(compoundChild.ShapeIndex.Index, out var compoundChildShapeData, out _);

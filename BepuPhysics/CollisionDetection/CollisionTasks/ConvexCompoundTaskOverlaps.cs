@@ -1,0 +1,57 @@
+﻿using BepuUtilities;
+using BepuUtilities.Memory;
+using System.Runtime.CompilerServices;
+
+namespace BepuPhysics.CollisionDetection.CollisionTasks
+{
+    public unsafe struct ConvexCompoundOverlaps : ICollisionTaskSubpairOverlaps
+    {
+        public Buffer<int> Overlaps;
+        public int Count;
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe ref int Allocate(BufferPool pool)
+        {
+            if (Overlaps.Length == Count)
+            {
+                pool.Resize(ref Overlaps, MathHelper.Max(64, Count * 2), Count);
+            }
+            return ref Overlaps[Count++];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose(BufferPool pool)
+        {
+            if (Overlaps.Allocated)
+                pool.Return(ref Overlaps);
+        }
+    }
+
+    public struct ConvexCompoundTaskOverlaps : ICollisionTaskOverlaps<ConvexCompoundOverlaps>
+    {
+        Buffer<ConvexCompoundOverlaps> overlaps;
+        public ConvexCompoundTaskOverlaps(BufferPool pool, int pairCount)
+        {
+            pool.Take(pairCount, out overlaps);
+            overlaps.Slice(0, pairCount, out overlaps);
+            //We rely on the length being zero to begin with for lazy initialization.
+            overlaps.Clear(0, pairCount);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ConvexCompoundOverlaps GetOverlapsForSubpair(int pairIndex)
+        {
+            return ref overlaps[pairIndex];
+        }
+
+        public void Dispose(BufferPool pool)
+        {
+            for (int i = 0; i < overlaps.Length; ++i)
+            {
+                overlaps[i].Dispose(pool);
+            }
+            pool.Return(ref overlaps);
+        }
+
+    }
+}

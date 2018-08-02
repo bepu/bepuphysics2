@@ -11,21 +11,22 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public struct CompoundMeshOverlapFinder : ICompoundMeshOverlapFinder<Compound, Mesh>
+    public struct CompoundMeshOverlapFinder : ICompoundPairOverlapFinder
     {
         unsafe struct SubpairData
         {
             public BoundsTestedPair* Pair;
             public CompoundChild* Child;
         }
-        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out TaskOverlapsCollection overlaps)
+
+        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps)
         {
             var totalCompoundChildCount = 0;
             for (int i = 0; i < pairCount; ++i)
             {
                 totalCompoundChildCount += Unsafe.AsRef<Compound>(pairs[i].A).Children.Length;
             }
-            overlaps = new TaskOverlapsCollection(pool, pairCount, totalCompoundChildCount);
+            overlaps = new CompoundPairOverlaps(pool, pairCount, totalCompoundChildCount);
             var pairsToTest = stackalloc PairsToTestForOverlap[totalCompoundChildCount];
             var subpairData = stackalloc SubpairData[totalCompoundChildCount];
             int nextSubpairIndex = 0;
@@ -38,7 +39,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 for (int j = 0; j < compound.Children.Length; ++j)
                 {
                     var subpairIndex = nextSubpairIndex++;
-                    overlaps.GetChildOverlaps(subpairIndex).ChildIndex = j;
+                    overlaps.GetOverlapsForSubpair(subpairIndex).ChildIndex = j;
                     pairsToTest[subpairIndex].Container = pair.B;
                     ref var subpair = ref subpairData[subpairIndex];
                     subpair.Pair = (BoundsTestedPair*)Unsafe.AsPointer(ref pair);
@@ -103,12 +104,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref mins, ref maxes, localPositionsA, localOrientationsA, toLocalB, relativeLinearVelocityA, angularVelocityA,
                     angularVelocityB, dt, maximumRadius, maximumAngularExpansion, maximumAllowedExpansion);
+
+                for (int j = 0; j < count; ++j)
+                {
+                    ref var pairToTest = ref pairsToTest[i + j];
+                    Vector3Wide.ReadSlot(ref mins, j, out pairToTest.Min);
+                    Vector3Wide.ReadSlot(ref maxes, j, out pairToTest.Max);
+                }
             }
 
             //Doesn't matter what mesh instance is used for the function; just using it as a source of the function.
             Debug.Assert(totalCompoundChildCount > 0);
-            Unsafe.AsRef<Mesh>(pairsToTest->Container).FindLocalOverlaps(pairsToTest, totalCompoundChildCount, pool, ref overlaps);
+            Unsafe.AsRef<Mesh>(pairsToTest->Container).FindLocalOverlaps<CompoundPairOverlaps, ChildOverlapsCollection>(pairsToTest, totalCompoundChildCount, pool, ref overlaps);
 
         }
+
     }
 }

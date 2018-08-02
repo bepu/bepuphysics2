@@ -15,7 +15,6 @@ namespace BepuPhysics.Collidables
     public interface IShape
     {
         int TypeId { get; }
-
         ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches);
     }
 
@@ -56,7 +55,7 @@ namespace BepuPhysics.Collidables
         ref CompoundChild GetChild(int compoundChildIndex);
     }
 
-    public unsafe interface IMeshShape : IShape
+    public interface IMeshShape : IShape
     {
         //Meshes have homogenous child types, so internal vectorization is in principle possible. And it's hard to vectorize over multiple meshes.
         //And the speed of mesh bounds calculation is pretty irrelevant, since meshes should essentially always be static.
@@ -65,7 +64,9 @@ namespace BepuPhysics.Collidables
         bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal);
         void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
-        void FindLocalOverlaps(PairsToTestForOverlap* pairs, int count, BufferPool pool, ref TaskOverlapsCollection overlaps);
+        unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, ref TOverlaps overlaps)
+            where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
+            where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps;
         void FindLocalOverlaps(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, ref QuickList<int, Buffer<int>> overlappedChildren);
         void GetLocalTriangle(int triangleIndex, out Triangle triangle);
     }

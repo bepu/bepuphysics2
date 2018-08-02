@@ -10,14 +10,17 @@ using System.Text;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public unsafe struct PairsToTestForOverlap
+    public interface ICollisionTaskSubpairOverlaps
     {
-        public void* Container;
-        public Vector3 Min;
-        public Vector3 Max;
+        ref int Allocate(BufferPool pool);
     }
 
-    public unsafe struct ChildOverlapsCollection
+    public interface ICollisionTaskOverlaps<TSubpairOverlaps> where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
+    {
+        ref TSubpairOverlaps GetOverlapsForSubpair(int subpairIndex);
+    }
+
+    public unsafe struct ChildOverlapsCollection : ICollisionTaskSubpairOverlaps
     {
         public Buffer<int> Overlaps;
         public int Count;
@@ -41,17 +44,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
     }
 
-    public struct TaskOverlapsCollection
+    public struct CompoundPairOverlaps : ICollisionTaskOverlaps<ChildOverlapsCollection>
     {
         Buffer<ChildOverlapsCollection> childOverlaps;
         Buffer<(int start, int count)> pairRegions;
         int pairCount;
         int subpairCount;
-        public TaskOverlapsCollection(BufferPool pool, int pairCapacity, int subpairCapacity)
+        public CompoundPairOverlaps(BufferPool pool, int pairCapacity, int subpairCapacity)
         {
             this.pairCount = 0;
             this.subpairCount = 0;
             pool.Take(subpairCapacity, out childOverlaps);
+            //We rely on the length being zero to begin with for lazy initialization.
+            childOverlaps.Clear(0, subpairCapacity);
             pool.Take(pairCapacity, out pairRegions);
         }
 
@@ -64,7 +69,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref ChildOverlapsCollection GetChildOverlaps(int subpairIndex)
+        public ref ChildOverlapsCollection GetOverlapsForSubpair(int subpairIndex)
         {
             return ref childOverlaps[subpairIndex];
         }
@@ -83,6 +88,5 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             pool.Return(ref childOverlaps);
         }
-
     }
 }

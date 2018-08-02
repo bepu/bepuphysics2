@@ -147,14 +147,14 @@ namespace BepuPhysics.Collidables
         }
 
 
-        unsafe struct Enumerator : IBreakableForEach<int>
+        unsafe struct Enumerator<TSubpairOverlaps> : IBreakableForEach<int> where TSubpairOverlaps : ICollisionTaskSubpairOverlaps
         {
             public BufferPool Pool;
-            public void* Children;
+            public void* Overlaps;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool LoopBody(int i)
             {
-                Unsafe.AsRef<ChildOverlapsCollection>(Children).Allocate(Pool) = i;
+                Unsafe.AsRef<TSubpairOverlaps>(Overlaps).Allocate(Pool) = i;
                 return true;
             }
         }
@@ -168,14 +168,16 @@ namespace BepuPhysics.Collidables
             {
                 Children.Add(leafIndex, Pool);
             }
-        }               
+        }
 
-        public unsafe void FindLocalOverlaps(PairsToTestForOverlap* pairs, int count, BufferPool pool, ref TaskOverlapsCollection overlaps)
+        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, ref TOverlaps overlaps)
+            where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
+            where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
         {
             //For now, we don't use anything tricky. Just traverse every child against the tree sequentially.
             //TODO: This sequentializes a whole lot of cache misses. You could probably get some benefit out of traversing all pairs 'simultaneously'- that is, 
             //using the fact that we have lots of independent queries to ensure the CPU always has something to do.
-            Enumerator enumerator;
+            Enumerator<TSubpairOverlaps> enumerator;
             enumerator.Pool = pool;
             for (int i = 0; i < count; ++i)
             {
@@ -183,7 +185,7 @@ namespace BepuPhysics.Collidables
                 ref var mesh = ref Unsafe.AsRef<Mesh>(pair.Container);
                 var scaledMin = mesh.inverseScale * pair.Min;
                 var scaledMax = mesh.inverseScale * pair.Max;
-                enumerator.Children = Unsafe.AsPointer(ref overlaps.GetChildOverlaps(i));
+                enumerator.Overlaps = Unsafe.AsPointer(ref overlaps.GetOverlapsForSubpair(i));
                 Tree.GetOverlaps(scaledMin, scaledMax, ref enumerator);
             }
         }
