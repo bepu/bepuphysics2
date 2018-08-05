@@ -37,9 +37,9 @@ namespace Demos.Demos
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);
-            const int width = 48;
-            const int height = 2;
-            const int length = 48;
+            const int width = 1;
+            const int height = 1;
+            const int length = 1;
             for (int i = 0; i < width; ++i)
             {
                 for (int j = 0; j < height; ++j)

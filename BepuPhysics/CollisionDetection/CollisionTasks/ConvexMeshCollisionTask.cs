@@ -68,11 +68,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             childA = 0;
                             childB = triangleIndex;
                         }
+                        var continuationChildIndex = nextContinuationChildIndex++;
+                        var subpairContinuation = new PairContinuation(pair.Continuation.PairId, childA, childB,
+                            CollisionContinuationType.MeshReduction, continuationIndex, continuationChildIndex);
                         if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
                         {
-                            var continuationChildIndex = nextContinuationChildIndex++;
-                            var continuationInfo = new PairContinuation(pair.Continuation.PairId, childA, childB,
-                                CollisionContinuationType.MeshReduction, continuationIndex, continuationChildIndex);
                             ref var continuationChild = ref continuation.Inner.Children[continuationChildIndex];
                             continuationChild.OffsetA = default;
                             continuationChild.ChildIndexA = childA;
@@ -87,17 +87,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             {
                                 //By reversing the order of the parameters, the manifold orientation is flipped. This compensates for the flip induced by order requirements on this task.                          
                                 batcher.AddDirectly(triangle.TypeId, ShapeTypeIndexA, Unsafe.AsPointer(ref triangle), pair.A,
-                                    -pair.OffsetB, pair.OrientationB, pair.OrientationA, pair.SpeculativeMargin, continuationInfo);
+                                    -pair.OffsetB, pair.OrientationB, pair.OrientationA, pair.SpeculativeMargin, subpairContinuation);
                             }
                             else
                             {
                                 batcher.AddDirectly(ShapeTypeIndexA, triangle.TypeId, pair.A, Unsafe.AsPointer(ref triangle),
-                                    pair.OffsetB, pair.OrientationA, pair.OrientationB, pair.SpeculativeMargin, continuationInfo);
+                                    pair.OffsetB, pair.OrientationA, pair.OrientationB, pair.SpeculativeMargin, subpairContinuation);
                             }
                         }
                         else
                         {
-                            continuation.OnChildCompletedEmpty(ref pair.Continuation, ref batcher);
+                            continuation.OnChildCompletedEmpty(ref subpairContinuation, ref batcher);
                         }
 
                     }

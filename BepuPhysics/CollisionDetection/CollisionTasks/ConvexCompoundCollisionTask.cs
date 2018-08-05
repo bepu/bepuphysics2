@@ -44,6 +44,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         childA = 0;
                         childB = j;
                     }
+                    var continuationChildIndex = nextContinuationChildIndex++;
+                    var subpairContinuation = new PairContinuation(pair.Continuation.PairId, childA, childB,
+                        CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
                     if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
                     {
                         ref var child = ref b.Children[j];
@@ -52,9 +55,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         var childShapeType = child.ShapeIndex.Type;
                         batcher.Shapes[childShapeType].GetShapeData(child.ShapeIndex.Index, out var childShapePointer, out var childShapeSize);
                         
-                        var continuationChildIndex = nextContinuationChildIndex++;
-                        var subpairContinuation = new PairContinuation(pair.Continuation.PairId, childA, childB,
-                            CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
                         ref var continuationChild = ref batcher.NonconvexReductions.Continuations[continuationIndex].Children[continuationChildIndex];
 
                         ref var a = ref Unsafe.AsRef<TConvex>(pair.A);
@@ -79,7 +79,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     }
                     else
                     {
-                        continuation.OnChildCompletedEmpty(ref pair.Continuation, ref batcher);
+                        continuation.OnChildCompletedEmpty(ref subpairContinuation, ref batcher);
                     }
                 }
 

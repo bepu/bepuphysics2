@@ -36,6 +36,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Compound.GetRotatedChildPose(childA.LocalPose, pair.OrientationA, out var childAPose);
                     for (int childBIndex = 0; childBIndex < b.Children.Length; ++childBIndex)
                     {
+                        var continuationChildIndex = nextContinuationChildIndex++;
+                        var subpairContinuation = new PairContinuation(pair.Continuation.PairId, childAIndex, childBIndex,
+                            CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
                         if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childAIndex, childBIndex))
                         {
                             ref var childB = ref b.Children[childBIndex];
@@ -45,9 +48,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             var childShapeType = childB.ShapeIndex.Type;
                             batcher.Shapes[childShapeType].GetShapeData(childB.ShapeIndex.Index, out var childShapePointer, out var childShapeSize);
 
-                            var continuationChildIndex = nextContinuationChildIndex++;
-                            var subpairContinuation = new PairContinuation(pair.Continuation.PairId, childAIndex, childBIndex,
-                                CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
                             ref var continuationChild = ref batcher.NonconvexReductions.Continuations[continuationIndex].Children[continuationChildIndex];
 
                             continuationChild.OffsetA = childAPose.Position;
@@ -61,7 +61,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         }
                         else
                         {
-                            continuation.OnChildCompletedEmpty(ref pair.Continuation, ref batcher);
+                            continuation.OnChildCompletedEmpty(ref subpairContinuation, ref batcher);
                         }
                     }
                 }

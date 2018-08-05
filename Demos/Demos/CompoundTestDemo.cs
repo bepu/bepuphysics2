@@ -205,7 +205,7 @@ namespace Demos.Demos
 
             //Prevent stuff from falling into the infinite void.
             {
-                var boxShape = new Box(100, 1, 100);
+                var boxShape = new Box(256, 1, 256);
                 var groundShapeIndex = Simulation.Shapes.Add(boxShape);
                 var groundDescription = new StaticDescription
                 {
@@ -218,6 +218,15 @@ namespace Demos.Demos
                 };
                 Simulation.Statics.Add(groundDescription);
             }
+            const int planeWidth = 48;
+            const int planeHeight = 48;
+            MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
+                (int x, int y) =>
+                {
+                    Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
+                    return new Vector3(x, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.01f * offsetFromCenter.LengthSquared(), y);
+                }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(25, 4, 0), new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
         }
 
     }

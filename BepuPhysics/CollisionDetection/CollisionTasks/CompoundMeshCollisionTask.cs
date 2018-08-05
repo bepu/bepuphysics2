@@ -84,11 +84,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                                 childA = childOverlaps.ChildIndex;
                                 childB = triangleIndex;
                             }
+                            var continuationChildIndex = nextContinuationChildIndex++;
+                            var subpairContinuation = new PairContinuation(pair.Continuation.PairId, childA, childB,
+                                CollisionContinuationType.CompoundMeshReduction, continuationIndex, continuationChildIndex);
                             if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
                             {
-                                var continuationChildIndex = nextContinuationChildIndex++;
-                                var continuationInfo = new PairContinuation(pair.Continuation.PairId, childA, childB,
-                                    CollisionContinuationType.CompoundMeshReduction, continuationIndex, continuationChildIndex);
                                 ref var continuationChild = ref continuation.Inner.Children[continuationChildIndex];
                                 continuationChild.ChildIndexA = childA;
                                 continuationChild.ChildIndexB = childB;
@@ -104,19 +104,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                                     continuationChild.OffsetB = compoundChild.LocalPose.Position;
                                     //By reversing the order of the parameters, the manifold orientation is flipped. This compensates for the flip induced by order requirements on this task.                          
                                     batcher.AddDirectly(triangle.TypeId, compoundChildType, Unsafe.AsPointer(ref triangle), compoundChildShapeData,
-                                        -pair.OffsetB, pair.OrientationB, pair.OrientationA, pair.SpeculativeMargin, continuationInfo);
+                                        -pair.OffsetB, pair.OrientationB, pair.OrientationA, pair.SpeculativeMargin, subpairContinuation);
                                 }
                                 else
                                 {
                                     continuationChild.OffsetA = compoundChild.LocalPose.Position;
                                     continuationChild.OffsetB = default;
                                     batcher.AddDirectly(compoundChildType, triangle.TypeId, compoundChildShapeData, Unsafe.AsPointer(ref triangle),
-                                        pair.OffsetB, pair.OrientationA, pair.OrientationB, pair.SpeculativeMargin, continuationInfo);
+                                        pair.OffsetB, pair.OrientationA, pair.OrientationB, pair.SpeculativeMargin, subpairContinuation);
                                 }
                             }
                             else
                             {
-                                continuation.OnChildCompletedEmpty(ref pair.Continuation, ref batcher);
+                                continuation.OnChildCompletedEmpty(ref subpairContinuation, ref batcher);
                             }
                         }
                         //Note that we defer the region assignment until after the loop rather than using the triangleCount as the region count.
