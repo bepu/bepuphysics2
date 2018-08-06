@@ -14,7 +14,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps);
     }
-    
+
     public class CompoundMeshCollisionTask<TCompound, TMesh, TOverlapFinder> : CollisionTask
         where TCompound : struct, ICompoundShape
         where TMesh : struct, IMeshShape
@@ -37,17 +37,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //We perform all necessary bounding box computations and lookups up front. This helps avoid some instruction pipeline pressure at the cost of some extra data cache requirements.
             //Because of this, you need to be careful with the batch size on this collision task.
             overlapFinder.FindLocalOverlaps(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out var overlaps);
-            for (int i = 0; i < batch.Count; ++i)
+            for (int pairIndex = 0; pairIndex < batch.Count; ++pairIndex)
             {
-                overlaps.GetPairOverlaps(i, out var pairOverlaps);
+                overlaps.GetPairOverlaps(pairIndex, out var pairOverlaps);
                 var totalOverlapCountForPair = pairOverlaps[0].Count;
                 for (int j = 1; j < pairOverlaps.Length; ++j)
                 {
-                    totalOverlapCountForPair += pairOverlaps[i].Count;
+                    totalOverlapCountForPair += pairOverlaps[j].Count;
                 }
                 if (totalOverlapCountForPair > 0)
                 {
-                    ref var pair = ref pairs[i];
+                    ref var pair = ref pairs[pairIndex];
                     ref var compound = ref Unsafe.AsRef<TCompound>(pair.A);
                     ref var mesh = ref Unsafe.AsRef<TMesh>(pair.B);
                     ref var continuation = ref batcher.CompoundMeshReductions.CreateContinuation(totalOverlapCountForPair, batcher.Pool, out var continuationIndex);
@@ -59,15 +59,31 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //A flip is required in mesh reduction whenever contacts are being generated as if the triangle is in slot B, which is whenever this pair has *not* been flipped.
                     continuation.RequiresFlip = pair.FlipMask == 0;
 
+                    //All regions must be assigned ahead of time. Some trailing regions may be empty, so the dispatch may occur before all children are visited in the later loop.
+                    //That would result in potentially uninitialized values in region counts.
                     int nextContinuationChildIndex = 0;
-                    int regionIndex = 0;
                     for (int j = 0; j < pairOverlaps.Length; ++j)
                     {
                         ref var childOverlaps = ref pairOverlaps[j];
-                        int continuationRegionStart = nextContinuationChildIndex;
+                        continuation.ChildManifoldRegions[j] = (nextContinuationChildIndex, childOverlaps.Count);
+                        nextContinuationChildIndex += childOverlaps.Count;
+                    }
+
+                    nextContinuationChildIndex = 0;
+                    for (int j = 0; j < pairOverlaps.Length; ++j)
+                    {
+                        ref var childOverlaps = ref pairOverlaps[j];
+                        if (childOverlaps.Count == 0)
+                            continue;
                         ref var compoundChild = ref compound.GetChild(childOverlaps.ChildIndex);
+                        Quaternion.Conjugate(pair.OrientationB, out var inverseMeshOrientation);
+                        Quaternion.Concatenate(pair.OrientationA, inverseMeshOrientation, out var meshLocalOrientationA);
+                        Compound.GetRotatedChildPose(compoundChild.LocalPose, meshLocalOrientationA, out var rotatedChildPose);
+                        var childToMesh = pair.OffsetB - rotatedChildPose.Position;
                         var compoundChildType = compoundChild.ShapeIndex.Type;
                         batcher.Shapes[compoundChildType].GetShapeData(compoundChild.ShapeIndex.Index, out var compoundChildShapeData, out _);
+                        //Note that we defer the region assignment until after the loop rather than using the triangleCount as the region count.
+                        //That's because the user callback could cull some of the subpairs.
                         for (int k = 0; k < childOverlaps.Count; ++k)
                         {
                             var triangleIndex = childOverlaps.Overlaps[k];
@@ -101,17 +117,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                                 {
                                     //In meshes, the triangle's vertices already contain the offset, so there is no additional offset.
                                     continuationChild.OffsetA = default;
-                                    continuationChild.OffsetB = compoundChild.LocalPose.Position;
+                                    continuationChild.OffsetB = rotatedChildPose.Position;
                                     //By reversing the order of the parameters, the manifold orientation is flipped. This compensates for the flip induced by order requirements on this task.                          
                                     batcher.AddDirectly(triangle.TypeId, compoundChildType, Unsafe.AsPointer(ref triangle), compoundChildShapeData,
-                                        -pair.OffsetB, pair.OrientationB, pair.OrientationA, pair.SpeculativeMargin, subpairContinuation);
+                                        -childToMesh, pair.OrientationB, rotatedChildPose.Orientation, pair.SpeculativeMargin, subpairContinuation);
                                 }
                                 else
                                 {
-                                    continuationChild.OffsetA = compoundChild.LocalPose.Position;
+                                    continuationChild.OffsetA = rotatedChildPose.Position;
                                     continuationChild.OffsetB = default;
                                     batcher.AddDirectly(compoundChildType, triangle.TypeId, compoundChildShapeData, Unsafe.AsPointer(ref triangle),
-                                        pair.OffsetB, pair.OrientationA, pair.OrientationB, pair.SpeculativeMargin, subpairContinuation);
+                                        childToMesh, rotatedChildPose.Orientation, pair.OrientationB, pair.SpeculativeMargin, subpairContinuation);
                                 }
                             }
                             else
@@ -119,9 +135,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                                 continuation.OnChildCompletedEmpty(ref subpairContinuation, ref batcher);
                             }
                         }
-                        //Note that we defer the region assignment until after the loop rather than using the triangleCount as the region count.
-                        //That's because the user callback could cull some of the subpairs.
-                        continuation.ChildManifoldRegions[regionIndex++] = (continuationRegionStart, nextContinuationChildIndex - continuationRegionStart);
                     }
                 }
 

@@ -39,7 +39,6 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<CompoundBoundTests>();
             AddOption<MeshDemo>();
             AddOption<PyramidDemo>();
             AddOption<BlockChainDemo>();

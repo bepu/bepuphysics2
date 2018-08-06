@@ -63,7 +63,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void CreatePairOverlaps(int childrenInPair, BufferPool pool)
         {
-            pairRegions[pairCount++] = (subpairCount, subpairCount += childrenInPair);
+            pairRegions[pairCount++] = (subpairCount, childrenInPair);
+            subpairCount += childrenInPair;
             Debug.Assert(pairCount <= pairRegions.Length);
             Debug.Assert(subpairCount <= childOverlaps.Length);
         }

@@ -142,6 +142,13 @@ namespace Demos.Demos
                             Simulation.Bodies.Add(tableDescription);
                         }
                     }
+                    {
+                        for (int j = 0; j < 5; ++j)
+                        {
+                            tableDescription.Pose.Position = new Vector3(64 + j * 3, 6 + j * 1.4f, 32);
+                            Simulation.Bodies.Add(tableDescription);
+                        }
+                    }
 
                     //Put a table on top of a sphere to stress out nonconvex reduction for divergent normals.
                     {
