@@ -156,7 +156,7 @@ namespace BepuPhysics.Collidables
             {
                 ref var pair = ref pairs[pairIndex];
                 ref var compound = ref Unsafe.AsRef<Compound>(pair.Container);
-                ref var overlapsForPair = ref overlaps.GetOverlapsForSubpair(pairIndex);
+                ref var overlapsForPair = ref overlaps.GetOverlapsForPair(pairIndex);
                 for (int i = 0; i < compound.Children.Length; ++i)
                 {
                     ref var child = ref compound.Children[i];
@@ -171,8 +171,26 @@ namespace BepuPhysics.Collidables
                 }
             }
         }
+        
+        public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlapsPointer)
+            where TOverlaps : ICollisionTaskSubpairOverlaps
+        {
+            Tree.ConvertBoxToCentroidWithExtent(min, max, out var sweepOrigin, out var expansion);
+            TreeRay.CreateFrom(sweepOrigin, sweep, maximumT, out var ray);
+            ref var overlaps = ref Unsafe.AsRef<TOverlaps>(overlapsPointer);
+            for (int i = 0; i < Children.Length; ++i)
+            {
+                ref var child = ref Children[i];
+                shapes[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, child.LocalPose.Orientation, out _, out _, out var childMin, out var childMax);
+                childMin = childMin + child.LocalPose.Position - expansion;
+                childMax = childMax + child.LocalPose.Position + expansion;    
+                if (Tree.Intersects(childMin, childMax, &ray, out _))
+                {
+                    overlaps.Allocate(pool) = i;
+                }
+            }
 
-
+        }
 
         /// <summary>
         /// Type id of compound shapes.

@@ -65,7 +65,6 @@ namespace BepuPhysics.Collidables
         bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal);
         void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
-        void FindLocalOverlaps(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, ref QuickList<int, Buffer<int>> overlappedChildren);
         void GetLocalTriangle(int triangleIndex, out Triangle triangle);
     }
 

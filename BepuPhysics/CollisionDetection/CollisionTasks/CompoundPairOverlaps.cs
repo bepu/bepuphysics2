@@ -17,7 +17,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
     public interface ICollisionTaskOverlaps<TSubpairOverlaps> where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
     {
-        ref TSubpairOverlaps GetOverlapsForSubpair(int subpairIndex);
+        ref TSubpairOverlaps GetOverlapsForPair(int subpairIndex);
     }
 
     public unsafe struct ChildOverlapsCollection : ICollisionTaskSubpairOverlaps
@@ -70,7 +70,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref ChildOverlapsCollection GetOverlapsForSubpair(int subpairIndex)
+        public ref ChildOverlapsCollection GetOverlapsForPair(int subpairIndex)
         {
             return ref childOverlaps[subpairIndex];
         }

@@ -34,7 +34,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             overlapFinder.FindLocalOverlaps(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out var overlaps);
             for (int i = 0; i < batch.Count; ++i)
             {
-                ref var pairOverlaps = ref overlaps.GetOverlapsForSubpair(i);
+                ref var pairOverlaps = ref overlaps.GetOverlapsForPair(i);
                 if (pairOverlaps.Count > 0)
                 {
                     ref var pair = ref pairs[i];

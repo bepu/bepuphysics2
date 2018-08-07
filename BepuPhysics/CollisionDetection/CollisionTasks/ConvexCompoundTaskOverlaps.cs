@@ -39,7 +39,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref ConvexCompoundOverlaps GetOverlapsForSubpair(int pairIndex)
+        public ref ConvexCompoundOverlaps GetOverlapsForPair(int pairIndex)
         {
             return ref overlaps[pairIndex];
         }

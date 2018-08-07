@@ -40,7 +40,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 for (int j = 0; j < compoundA.ChildCount; ++j)
                 {
                     var subpairIndex = nextSubpairIndex++;
-                    overlaps.GetOverlapsForSubpair(subpairIndex).ChildIndex = j;
+                    overlaps.GetOverlapsForPair(subpairIndex).ChildIndex = j;
                     pairsToTest[subpairIndex].Container = pair.B;
                     ref var subpair = ref subpairData[subpairIndex];
                     subpair.Pair = (BoundsTestedPair*)Unsafe.AsPointer(ref pair);

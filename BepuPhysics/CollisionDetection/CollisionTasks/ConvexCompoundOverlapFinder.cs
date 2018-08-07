@@ -23,11 +23,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps;
+
+        unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
+            where TOverlaps : ICollisionTaskSubpairOverlaps;
+
     }
 
 
-    public struct ConvexCompoundOverlapFinder<TConvex, TConvexWide, TCompound> : IConvexCompoundOverlapFinder 
-        where TConvex : struct, IConvexShape 
+    public struct ConvexCompoundOverlapFinder<TConvex, TConvexWide, TCompound> : IConvexCompoundOverlapFinder
+        where TConvex : struct, IConvexShape
         where TConvexWide : struct, IShapeWide<TConvex>
         where TCompound : struct, IBoundsQueryableCompound
     {
@@ -86,7 +90,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.ReadSlot(ref max, j, out pairToTest.Max);
                 }
             }
-            
+
             //The choice of instance here is irrelevant.
             Unsafe.AsRef<TCompound>(pairsToTest->Container).FindLocalOverlaps<ConvexCompoundTaskOverlaps, ConvexCompoundOverlaps>(pairsToTest, pairCount, pool, shapes, ref overlaps);
 

@@ -10,7 +10,7 @@ namespace BepuPhysics.Trees
     partial struct Tree
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe static bool Intersects(in Vector3 min, in Vector3 max, TreeRay* ray, out float t)
+        public unsafe static bool Intersects(in Vector3 min, in Vector3 max, TreeRay* ray, out float t)
         {
             var t0 = min * ray->InverseDirection - ray->OriginOverDirection;
             var t1 = max * ray->InverseDirection - ray->OriginOverDirection;

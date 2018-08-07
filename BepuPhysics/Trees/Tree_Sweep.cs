@@ -104,7 +104,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void ConvertBoxToCentroidWithExtent(in Vector3 min, in Vector3 max, out Vector3 origin, out Vector3 expansion)
+        public static void ConvertBoxToCentroidWithExtent(in Vector3 min, in Vector3 max, out Vector3 origin, out Vector3 expansion)
         {
             var halfMin = 0.5f * min;
             var halfMax = 0.5f * max;

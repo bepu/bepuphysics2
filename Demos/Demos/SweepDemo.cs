@@ -325,30 +325,30 @@ namespace Demos.Demos
             BufferPool.Return(ref compoundChildren);
             mesh.Dispose(BufferPool);
 
-            ////Perform simulation-wide queries against the other collidables in the scene.
-            //var localOrigin = new Vector3(-25, 15, 0);
-            //var localDirection = new Vector3(7, -10, 0);
-            //var sweepCount = 16;
-            //for (int i = 0; i < sweepCount; ++i)
-            //{
-            //    Matrix3x3.CreateFromAxisAngle(new Vector3(0, 1, 0), i * MathHelper.TwoPi / sweepCount, out var rotation);
-            //    Matrix3x3.Transform(localOrigin, rotation, out var sweepOrigin);
-            //    Matrix3x3.Transform(localDirection, rotation, out var sweepDirection);
+            //Perform simulation-wide queries against the other collidables in the scene.
+            var localOrigin = new Vector3(-25, 15, 0);
+            var localDirection = new Vector3(7, -10, 0);
+            var sweepCount = 16;
+            for (int i = 0; i < sweepCount; ++i)
+            {
+                Matrix3x3.CreateFromAxisAngle(new Vector3(0, 1, 0), i * MathHelper.TwoPi / sweepCount, out var rotation);
+                Matrix3x3.Transform(localOrigin, rotation, out var sweepOrigin);
+                Matrix3x3.Transform(localDirection, rotation, out var sweepDirection);
 
-            //    SceneSweepHitHandler hitHandler = default;
-            //    hitHandler.T = float.MaxValue;
-            //    var shape = new Box(1, 2, 1.5f);
-            //    var initialPose = new RigidPose { Position = sweepOrigin, Orientation = Quaternion.Identity };
-            //    var sweepVelocity = new BodyVelocity { Linear = sweepDirection };
-            //    Simulation.Sweep(shape, initialPose, sweepVelocity, 10, BufferPool, ref hitHandler);
-            //    DrawSweep(shape, ref initialPose, sweepVelocity, 20, hitHandler.T, renderer,
-            //        hitHandler.T < float.MaxValue ? new Vector3(0.25f, 1, 0.25f) : new Vector3(1, 0.25f, 0.25f));
+                SceneSweepHitHandler hitHandler = default;
+                hitHandler.T = float.MaxValue;
+                var shape = new Box(1, 2, 1.5f);
+                var initialPose = new RigidPose { Position = sweepOrigin, Orientation = Quaternion.Identity };
+                var sweepVelocity = new BodyVelocity { Linear = sweepDirection };
+                Simulation.Sweep(shape, initialPose, sweepVelocity, 10, BufferPool, ref hitHandler);
+                DrawSweep(shape, ref initialPose, sweepVelocity, 20, hitHandler.T, renderer,
+                    hitHandler.T < float.MaxValue ? new Vector3(0.25f, 1, 0.25f) : new Vector3(1, 0.25f, 0.25f));
 
-            //    if (hitHandler.T < float.MaxValue && hitHandler.T > 0)
-            //    {
-            //        DrawImpact(renderer, ref hitHandler.HitLocation, ref hitHandler.HitNormal);
-            //    }
-            //}
+                if (hitHandler.T < float.MaxValue && hitHandler.T > 0)
+                {
+                    DrawImpact(renderer, ref hitHandler.HitLocation, ref hitHandler.HitNormal);
+                }
+            }
         }
 
 

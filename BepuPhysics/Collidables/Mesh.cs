@@ -159,14 +159,14 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        struct SweepLeafTester : ISweepLeafTester
+        unsafe struct SweepLeafTester<TOverlaps> : ISweepLeafTester where TOverlaps : ICollisionTaskSubpairOverlaps
         {
-            public BufferPool<int> Pool;
-            public QuickList<int, Buffer<int>> Children;
+            public BufferPool Pool;
+            public void* Overlaps;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void TestLeaf(int leafIndex, ref float maximumT)
             {
-                Children.Add(leafIndex, Pool);
+                Unsafe.AsRef<TOverlaps>(Overlaps).Allocate(Pool) = leafIndex;
             }
         }
 
@@ -185,22 +185,21 @@ namespace BepuPhysics.Collidables
                 ref var mesh = ref Unsafe.AsRef<Mesh>(pair.Container);
                 var scaledMin = mesh.inverseScale * pair.Min;
                 var scaledMax = mesh.inverseScale * pair.Max;
-                enumerator.Overlaps = Unsafe.AsPointer(ref overlaps.GetOverlapsForSubpair(i));
+                enumerator.Overlaps = Unsafe.AsPointer(ref overlaps.GetOverlapsForPair(i));
                 Tree.GetOverlaps(scaledMin, scaledMax, ref enumerator);
             }
         }
 
-        public unsafe void FindLocalOverlaps(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, ref QuickList<int, Buffer<int>> childIndices)
+        public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps) 
+            where TOverlaps : ICollisionTaskSubpairOverlaps
         {
-            Debug.Assert(childIndices.Span.Memory != null, "The given list reference is expected to already be constructed and ready for use.");
             var scaledMin = min * inverseScale;
             var scaledMax = max * inverseScale;
             var scaledSweep = sweep * inverseScale;
-            SweepLeafTester enumerator;
-            enumerator.Pool = pool.SpecializeFor<int>();
-            enumerator.Children = childIndices;
+            SweepLeafTester<TOverlaps> enumerator;
+            enumerator.Pool = pool;
+            enumerator.Overlaps = overlaps;
             Tree.Sweep(scaledMin, scaledMax, scaledSweep, maximumT, ref enumerator);
-            childIndices = enumerator.Children;
         }
 
         public void Dispose(BufferPool bufferPool)

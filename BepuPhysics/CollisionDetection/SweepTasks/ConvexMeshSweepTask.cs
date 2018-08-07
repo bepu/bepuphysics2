@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using BepuPhysics.Collidables;
+using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
@@ -40,12 +41,12 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             {
                 BoundingBoxHelpers.GetBoundingBoxForSweep(ref Unsafe.AsRef<TConvex>(shapeDataA), orientationA, velocityA, offsetB, orientationB, velocityB, maximumT,
                     out var sweep, out var min, out var max);
-
-                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 128, out var childIndices);
-                mesh.FindLocalOverlaps(min, max, sweep, maximumT, pool, ref childIndices);
-                for (int i = 0; i < childIndices.Count; ++i)
+                
+                ChildOverlapsCollection overlaps = default;
+                mesh.FindLocalOverlaps<ChildOverlapsCollection>(min, max, sweep, maximumT, pool, shapes, Unsafe.AsPointer(ref overlaps));
+                for (int i = 0; i < overlaps.Count; ++i)
                 {
-                    var childIndex = childIndices[i];
+                    var childIndex = overlaps.Overlaps[i];
                     if (filter.AllowTest(flipRequired ? 0 : childIndex, flipRequired ? childIndex : 0))
                     {
                         mesh.GetLocalTriangle(childIndex, out var triangle);
@@ -71,7 +72,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                         }
                     }
                 }
-                childIndices.Dispose(pool.SpecializeFor<int>());
+                overlaps.Dispose(pool);
             }
             return t1 < float.MaxValue;
         }
