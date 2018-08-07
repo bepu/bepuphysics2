@@ -82,22 +82,22 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, Capsule, CapsuleWide, SphereIncludingPair, SphereIncludingPairWide<Capsule, CapsuleWide>, Convex1ContactManifoldWide, SphereCapsuleTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, Box, BoxWide, SphereIncludingPair, SphereIncludingPairWide<Box, BoxWide>, Convex1ContactManifoldWide, SphereBoxTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Sphere, SphereWide, Triangle, TriangleWide, SphereIncludingPair, SphereIncludingPairWide<Triangle, TriangleWide>, Convex1ContactManifoldWide, SphereTriangleTester>());
-            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere>());
-            defaultTaskRegistry.Register(new ConvexMeshCollisionTask<Sphere, Mesh, ConvexMeshOverlapFinder<Sphere, SphereWide>>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere, Compound, ConvexCompoundOverlapFinder<Sphere, SphereWide, Compound>>());
+            defaultTaskRegistry.Register(new ConvexMeshCollisionTask<Sphere, Mesh, ConvexCompoundOverlapFinder<Sphere, SphereWide, Mesh>>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, Capsule, CapsuleWide, FliplessPair, FliplessPairWide<Capsule, CapsuleWide>, Convex2ContactManifoldWide, CapsulePairTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, Box, BoxWide, CollisionPair, ConvexPairWide<Capsule, CapsuleWide, Box, BoxWide>, Convex2ContactManifoldWide, CapsuleBoxTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Capsule, CapsuleWide, Triangle, TriangleWide, CollisionPair, ConvexPairWide<Capsule, CapsuleWide, Triangle, TriangleWide>, Convex2ContactManifoldWide, CapsuleTriangleTester>());
-            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule>());
-            defaultTaskRegistry.Register(new ConvexMeshCollisionTask<Capsule, Mesh, ConvexMeshOverlapFinder<Capsule, CapsuleWide>>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, Compound, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, Compound>>());
+            defaultTaskRegistry.Register(new ConvexMeshCollisionTask<Capsule, Mesh, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, Mesh>>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Box, BoxWide, FliplessPair, FliplessPairWide<Box, BoxWide>, Convex4ContactManifoldWide, BoxPairTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Triangle, TriangleWide, CollisionPair, ConvexPairWide<Box, BoxWide, Triangle, TriangleWide>, Convex4ContactManifoldWide, BoxTriangleTester>());
-            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Box>());
-            defaultTaskRegistry.Register(new ConvexMeshCollisionTask<Box, Mesh, ConvexMeshOverlapFinder<Box, BoxWide>>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Box, Compound, ConvexCompoundOverlapFinder<Box, BoxWide, Compound>>());
+            defaultTaskRegistry.Register(new ConvexMeshCollisionTask<Box, Mesh, ConvexCompoundOverlapFinder<Box, BoxWide, Mesh>>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Triangle, TriangleWide, Triangle, TriangleWide, FliplessPair, FliplessPairWide<Triangle, TriangleWide>, Convex4ContactManifoldWide, TrianglePairTester>());
-            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle>());
-            defaultTaskRegistry.Register(new ConvexMeshCollisionTask<Triangle, Mesh, ConvexMeshOverlapFinder<Triangle, TriangleWide>>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, Compound, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Compound>>());
+            defaultTaskRegistry.Register(new ConvexMeshCollisionTask<Triangle, Mesh, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Mesh>>());
             defaultTaskRegistry.Register(new CompoundPairCollisionTask());
-            defaultTaskRegistry.Register(new CompoundMeshCollisionTask<Compound, Mesh, CompoundMeshOverlapFinder>());
+            defaultTaskRegistry.Register(new CompoundMeshCollisionTask<Compound, Mesh, CompoundPairOverlapFinder<Compound, Mesh>>());
             return defaultTaskRegistry;
         }
 

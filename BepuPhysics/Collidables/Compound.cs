@@ -7,6 +7,7 @@ using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuPhysics.Trees;
+using BepuPhysics.CollisionDetection.CollisionTasks;
 
 namespace BepuPhysics.Collidables
 {
@@ -135,10 +136,40 @@ namespace BepuPhysics.Collidables
             return new CompoundShapeBatch<Compound>(pool, initialCapacity, shapes);
         }
 
+        public int ChildCount
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return Children.Length; }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref CompoundChild GetChild(int compoundChildIndex)
         {
             return ref Children[compoundChildIndex];
+        }
+
+        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+            where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
+            where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
+        {
+            for (int pairIndex = 0; pairIndex < count; ++pairIndex)
+            {
+                ref var pair = ref pairs[pairIndex];
+                ref var compound = ref Unsafe.AsRef<Compound>(pair.Container);
+                ref var overlapsForPair = ref overlaps.GetOverlapsForSubpair(pairIndex);
+                for (int i = 0; i < compound.Children.Length; ++i)
+                {
+                    ref var child = ref compound.Children[i];
+                    //TODO: This does quite a bit of work. May want to try a simple bounding sphere instead (based on a dedicated maximum radius request).
+                    shapes[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, child.LocalPose.Orientation, out _, out _, out var min, out var max);
+                    min += child.LocalPose.Position;
+                    max += child.LocalPose.Position;
+                    if (BoundingBox.Intersects(min, max, pair.Min, pair.Max))
+                    {
+                        overlapsForPair.Allocate(pool) = i;
+                    }
+                }
+            }
         }
 
 

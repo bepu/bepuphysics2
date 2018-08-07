@@ -17,7 +17,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public Vector3 Min;
         public Vector3 Max;
     }
-    public struct ConvexMeshOverlapFinder<TConvex, TConvexWide> : IConvexCompoundOverlapFinder where TConvex : struct, IConvexShape where TConvexWide : struct, IShapeWide<TConvex>
+
+    public unsafe interface IBoundsQueryableCompound
+    {
+        unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+            where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
+            where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps;
+    }
+
+
+    public struct ConvexCompoundOverlapFinder<TConvex, TConvexWide, TCompound> : IConvexCompoundOverlapFinder 
+        where TConvex : struct, IConvexShape 
+        where TConvexWide : struct, IShapeWide<TConvex>
+        where TCompound : struct, IBoundsQueryableCompound
     {
         public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps)
         {
@@ -74,9 +86,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.ReadSlot(ref max, j, out pairToTest.Max);
                 }
             }
-
-            //Doesn't matter what mesh instance is used for the function; just using it as a source of the function.
-            Unsafe.AsRef<Mesh>(pairsToTest->Container).FindLocalOverlaps<ConvexCompoundTaskOverlaps, ConvexCompoundOverlaps>(pairsToTest, pairCount, pool, ref overlaps);
+            
+            //The choice of instance here is irrelevant.
+            Unsafe.AsRef<TCompound>(pairsToTest->Container).FindLocalOverlaps<ConvexCompoundTaskOverlaps, ConvexCompoundOverlaps>(pairsToTest, pairCount, pool, shapes, ref overlaps);
 
         }
 

@@ -41,7 +41,7 @@ namespace BepuPhysics.Collidables
         bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal);
     }
 
-    public interface ICompoundShape : IShape
+    public interface ICompoundShape : IShape, IBoundsQueryableCompound
     {
         //Note that compound shapes have no wide GetBounds function. Compounds, by virtue of containing shapes of different types, cannot be usefully vectorized over.
         //Instead, their children are added to other computation batches.
@@ -52,10 +52,11 @@ namespace BepuPhysics.Collidables
         //For performance, a batched and vectorized codepath should be used.
         bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, Shapes shapeBatches, out float t, out Vector3 normal);
         void RayTest<TRayHitHandler>(in RigidPose pose, Shapes shapeBatches, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        int ChildCount { get; }
         ref CompoundChild GetChild(int compoundChildIndex);
     }
 
-    public interface IMeshShape : IShape
+    public interface IMeshShape : IShape, IBoundsQueryableCompound
     {
         //Meshes have homogenous child types, so internal vectorization is in principle possible. And it's hard to vectorize over multiple meshes.
         //And the speed of mesh bounds calculation is pretty irrelevant, since meshes should essentially always be static.
@@ -64,9 +65,6 @@ namespace BepuPhysics.Collidables
         bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal);
         void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
-        unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, ref TOverlaps overlaps)
-            where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
-            where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps;
         void FindLocalOverlaps(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, ref QuickList<int, Buffer<int>> overlappedChildren);
         void GetLocalTriangle(int triangleIndex, out Triangle triangle);
     }
