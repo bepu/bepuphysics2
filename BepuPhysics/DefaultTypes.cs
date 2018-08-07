@@ -96,7 +96,7 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexCollisionTask<Triangle, TriangleWide, Triangle, TriangleWide, FliplessPair, FliplessPairWide<Triangle, TriangleWide>, Convex4ContactManifoldWide, TrianglePairTester>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, Compound, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Compound>>());
             defaultTaskRegistry.Register(new ConvexMeshCollisionTask<Triangle, Mesh, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Mesh>>());
-            defaultTaskRegistry.Register(new CompoundPairCollisionTask());
+            defaultTaskRegistry.Register(new CompoundPairCollisionTask<Compound, Compound, CompoundPairOverlapFinder<Compound, Compound>>());
             defaultTaskRegistry.Register(new CompoundMeshCollisionTask<Compound, Mesh, CompoundPairOverlapFinder<Compound, Mesh>>());
             return defaultTaskRegistry;
         }

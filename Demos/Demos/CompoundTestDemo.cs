@@ -143,11 +143,22 @@ namespace Demos.Demos
                         }
                     }
                     {
-                        for (int j = 0; j < 5; ++j)
+                        for (int k = 0; k < 5; ++k)
                         {
-                            tableDescription.Pose.Position = new Vector3(64 + j * 3, 6 + j * 1.4f, 32);
+                            tableDescription.Pose.Position = new Vector3(64 + k * 3, 6 + k * 1.4f, 32);
                             Simulation.Bodies.Add(tableDescription);
                         }
+                        //for (int i = 0; i < 10; ++i)
+                        //{
+                        //    for (int j = 0; j < 20; ++j)
+                        //    {
+                        //        for (int k = 0; k < 10; ++k)
+                        //        {
+                        //            tableDescription.Pose.Position = new Vector3(32 + i * 6, 6 + j * 1.4f, 16 + k * 6);
+                        //            Simulation.Bodies.Add(tableDescription);
+                        //        }
+                        //    }
+                        //}
                     }
 
                     //Put a table on top of a sphere to stress out nonconvex reduction for divergent normals.
