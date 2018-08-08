@@ -115,7 +115,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             bool GetSphereCastInterval(
                 in Vector3 offsetB, in Vector3 linearVelocityB, float maximumT, float maximumRadiusA, float maximumRadiusB,
                 in Quaternion orientationA, in Vector3 angularVelocityA, float angularSpeedA,
-                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1);
+                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1, out Vector3 hitNormal, out Vector3 hitLocation);
             void ConstructSamples(float t0, float t1, ref Vector3Wide linearB, ref Vector3Wide angularA, ref Vector3Wide angularB,
                 ref Vector3Wide initialOffsetB, ref QuaternionWide initialOrientationA, ref QuaternionWide initialOrientationB,
                 ref Vector<float> samples, ref Vector3Wide sampleOffsetB, ref QuaternionWide sampleOrientationA, ref QuaternionWide sampleOrientationB);
@@ -153,9 +153,13 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             public bool GetSphereCastInterval(
                 in Vector3 offsetB, in Vector3 linearVelocityB, float maximumT, float maximumRadiusA, float maximumRadiusB,
                 in Quaternion orientationA, in Vector3 angularVelocityA, float angularSpeedA,
-                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1)
+                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1, out Vector3 hitNormal, out Vector3 hitLocation)
             {
-                return ConvexPairSweepTask<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>.GetSphereCastInterval(offsetB, linearVelocityB, maximumRadiusA + maximumRadiusB, out t0, out t1);
+                var hit = ConvexPairSweepTask<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>.GetSphereCastInterval(offsetB, linearVelocityB, maximumRadiusA + maximumRadiusB, out t0, out t1);
+                hitLocation = offsetB + linearVelocityB * t0;
+                hitNormal = Vector3.Normalize(-hitLocation); //Normals are calibrated to point from B to A.
+                hitLocation += hitNormal * maximumRadiusB;
+                return hit;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -217,7 +221,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             public bool GetSphereCastInterval(
                 in Vector3 offsetB, in Vector3 linearVelocityB, float maximumT, float maximumRadiusA, float maximumRadiusB,
                 in Quaternion orientationA, in Vector3 angularVelocityA, float angularSpeedA,
-                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1)
+                in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1, out Vector3 hitNormal, out Vector3 hitLocation)
             {
                 //The tangent velocity magnitude doesn't change over the course of the sweep. Compute and cache it as an upper bound on the contribution from the offset.
                 Quaternion.TransformWithoutOverlap(LocalPoseA.Position, orientationA, out var rA);
@@ -234,7 +238,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 //If the sweep covers a short enough duration that the maximum is not hit, we'll use a (loose) estimate based on extrapolating the tangent speed.
                 var nonlinearExpansion = Math.Min(maximumT * (TangentSpeedA + TangentSpeedB), TwiceRadiusA + TwiceRadiusB);
                 var offsetBIncludingChildPoses = offsetB + rB - rA;
-                return ConvexPairSweepTask<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>.GetSphereCastInterval(offsetBIncludingChildPoses, linearVelocityB, maximumRadiusA + maximumRadiusB + nonlinearExpansion, out t0, out t1);
+                var hit = ConvexPairSweepTask<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPairDistanceTester>.GetSphereCastInterval(offsetBIncludingChildPoses, linearVelocityB, maximumRadiusA + maximumRadiusB + nonlinearExpansion, out t0, out t1);
+                hitLocation = offsetBIncludingChildPoses + linearVelocityB * t0;
+                hitNormal = Vector3.Normalize(-hitLocation); //Normals are calibrated to point from B to A.
+                hitLocation += hitNormal * (maximumRadiusB + nonlinearExpansion);
+                return hit;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -292,7 +300,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             if (!sweepModifier.GetSphereCastInterval(
                 offsetB, linearVelocityB, maximumT, maximumRadiusA, maximumRadiusB,
                 orientationA, velocityA.Angular, angularSpeedA,
-                orientationB, velocityB.Angular, angularSpeedB, out t0, out t1) || t0 > maximumT || t1 < 0)
+                orientationB, velocityB.Angular, angularSpeedB, out t0, out t1, out hitNormal, out hitLocation) || t0 > maximumT || t1 < 0)
             {
                 //The bounding spheres do not intersect, or the intersection interval is outside of the requested search interval.
                 hitLocation = default;
@@ -305,12 +313,6 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 t0 = 0;
             if (t1 > maximumT)
                 t1 = maximumT;
-            //Initialize the hit location and normal. If the t0 bracket we chose ends up to be intersecting (as it would be with spheres, for example),
-            //these values will be used.
-            hitLocation = offsetB + t0 * linearVelocityB;
-            //The normal points from B to A by convention.
-            hitNormal = Vector3.Normalize(-hitLocation);
-            hitLocation += hitNormal * maximumRadiusB;
 
             //We now have a relatively tight bracket (not much larger than the involved shapes, at least).
             //At a high level, the following sweep uses two parts:

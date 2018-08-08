@@ -11,14 +11,16 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
-    public class CompoundConvexSweepTask<TShapeB, TShapeWideB> : SweepTask
-              where TShapeB : struct, IConvexShape
-              where TShapeWideB : struct, IShapeWide<TShapeB>
+    public class ConvexCompoundSweepTask<TShapeA, TShapeWideA, TCompound, TOverlapFinder> : SweepTask
+        where TShapeA : struct, IConvexShape
+        where TShapeWideA : struct, IShapeWide<TShapeA>
+        where TCompound : struct, ICompoundShape
+        where TOverlapFinder : struct, IConvexCompoundSweepOverlapFinder<TShapeA, TCompound>
     {
-        public CompoundConvexSweepTask()
+        public ConvexCompoundSweepTask()
         {
-            ShapeTypeIndexA = default(Compound).TypeId;
-            ShapeTypeIndexB = default(TShapeB).TypeId;
+            ShapeTypeIndexA = default(TShapeA).TypeId;
+            ShapeTypeIndexB = default(TCompound).TypeId;
         }
 
         protected override unsafe bool PreorderedTypeSweep<TSweepFilter>(
@@ -27,22 +29,25 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
-            ref var compound = ref Unsafe.AsRef<Compound>(shapeDataA);
+            ref var convex = ref Unsafe.AsRef<TShapeA>(shapeDataA);
+            ref var compound = ref Unsafe.AsRef<TCompound>(shapeDataB);
             t0 = float.MaxValue;
             t1 = float.MaxValue;
             hitLocation = new Vector3();
             hitNormal = new Vector3();
-            for (int i = 0; i < compound.Children.Length; ++i)
+            default(TOverlapFinder).FindOverlaps(ref convex, orientationA, velocityA, ref compound, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
+            for (int i = 0; i < overlaps.Count; ++i)
             {
-                if (filter.AllowTest(flipRequired ? 0 : i, flipRequired ? i : 0))
+                var compoundChildIndex = overlaps.Overlaps[i];
+                if (filter.AllowTest(flipRequired ? compoundChildIndex : 0, flipRequired ? 0 : compoundChildIndex))
                 {
-                    ref var child = ref compound.Children[i];
+                    ref var child = ref compound.GetChild(compoundChildIndex);
                     var childType = child.ShapeIndex.Type;
                     shapes[childType].GetShapeData(child.ShapeIndex.Index, out var childShapeData, out _);
-                    var task = sweepTasks.GetTask(childType, ShapeTypeIndexB);
+                    var task = sweepTasks.GetTask(convex.TypeId, childType);
                     if (task != null && task.Sweep(
-                        childShapeData, childType, child.LocalPose, orientationA, velocityA,
-                        shapeDataB, ShapeTypeIndexB, new RigidPose() { Orientation = Quaternion.Identity }, offsetB, orientationB, velocityB,
+                        shapeDataA, convex.TypeId, new RigidPose() { Orientation = Quaternion.Identity }, orientationA, velocityA,
+                        childShapeData, childType, child.LocalPose, offsetB, orientationB, velocityB,
                         maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                         out var t0Candidate, out var t1Candidate, out var hitLocationCandidate, out var hitNormalCandidate))
                     {
@@ -58,6 +63,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     }
                 }
             }
+            overlaps.Dispose(pool);
             return t1 < float.MaxValue;
         }
 

@@ -376,21 +376,23 @@ namespace BepuPhysics
         /// <summary>
         /// Computes the bounding box of shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
         /// </summary>
-        public static unsafe void GetLocalBoundingBoxForSweep<TConvex>(ref TConvex shapeA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
-            in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max)
-            where TConvex : IConvexShape
+        public static unsafe void GetLocalBoundingBoxForSweep<TConvex>(ref TConvex shape, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA,
+            in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max) where TConvex : struct, IConvexShape
         {
             Quaternion.Conjugate(orientationB, out var inverseOrientationB);
             Quaternion.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
             Quaternion.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
+            Compound.GetRotatedChildPose(localPoseA, localOrientationA, out var rotatedPoseA);
 
-            shapeA.ComputeBounds(localOrientationA, out min, out max);
-            shapeA.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
+            shape.ComputeBounds(localOrientationA, out min, out max);
+            shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
+            var localOffsetFromBToConvex = rotatedPoseA.Position - localOffsetB;
+            min = min + localOffsetFromBToConvex;
+            max = max + localOffsetFromBToConvex;
 
             ExpandBoundsForAngularMotion(localPoseA, orientationA, velocityA,
                 offsetB, orientationB, velocityB,
                 dt, maximumRadius, maximumAngularExpansion, out sweep, ref min, ref max);
         }
-
     }
 }
