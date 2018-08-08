@@ -51,7 +51,6 @@ namespace BepuPhysics.Collidables
         /// Otherwise, it is used for recentering.</param>
         public void Add<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : struct, IConvexShape
         {
-            var shapeIndex = Shapes.Add(shape);
             ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
             child.LocalPose = localPose;
             child.ShapeIndex = Shapes.Add(shape);
@@ -69,7 +68,6 @@ namespace BepuPhysics.Collidables
         /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass. Otherwise, it is used for recentering.</param>
         public void AddForKinematic<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : struct, IConvexShape
         {
-            var shapeIndex = Shapes.Add(shape);
             ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
             child.LocalPose = localPose;
             child.ShapeIndex = Shapes.Add(shape);

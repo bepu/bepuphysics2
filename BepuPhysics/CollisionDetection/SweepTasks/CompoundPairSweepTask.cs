@@ -11,12 +11,15 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
-    public class CompoundPairSweepTask : SweepTask
+    public class CompoundPairSweepTask<TCompoundA, TCompoundB, TOverlapFinder> : SweepTask
+        where TCompoundA : struct, ICompoundShape
+        where TCompoundB : struct, ICompoundShape
+        where TOverlapFinder : struct, ICompoundPairSweepOverlapFinder<TCompoundA, TCompoundB>
     {
         public CompoundPairSweepTask()
         {
-            ShapeTypeIndexA = default(Compound).TypeId;
-            ShapeTypeIndexB = default(Compound).TypeId;
+            ShapeTypeIndexA = default(TCompoundA).TypeId;
+            ShapeTypeIndexB = default(TCompoundB).TypeId;
         }
 
         protected override unsafe bool PreorderedTypeSweep<TSweepFilter>(
@@ -25,44 +28,48 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
-            ref var a = ref Unsafe.AsRef<Compound>(shapeDataA);
-            ref var b = ref Unsafe.AsRef<Compound>(shapeDataB);
+            ref var a = ref Unsafe.AsRef<TCompoundA>(shapeDataA);
+            ref var b = ref Unsafe.AsRef<TCompoundB>(shapeDataB);
             t0 = float.MaxValue;
             t1 = float.MaxValue;
             hitLocation = new Vector3();
             hitNormal = new Vector3();
-            for (int i = 0; i < a.Children.Length; ++i)
+            default(TOverlapFinder).FindOverlaps(
+                ref a, orientationA, velocityA,
+                ref b, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
+            for (int i = 0; i < overlaps.ChildCount; ++i)
             {
-                ref var childA = ref a.Children[i];
+                ref var childOverlaps = ref overlaps.GetOverlapsForChild(i);
+                ref var childA = ref a.GetChild(childOverlaps.ChildIndex);
                 var childTypeA = childA.ShapeIndex.Type;
                 shapes[childTypeA].GetShapeData(childA.ShapeIndex.Index, out var childShapeDataA, out _);
-                for (int j = 0; j < b.Children.Length; ++j)
+                for (int j = 0; j < childOverlaps.Count; ++j)
                 {
-                    if (filter.AllowTest(i, j))
-                    {
-                        ref var childB = ref b.Children[i];
-                        var childTypeB = childA.ShapeIndex.Type;
-                        shapes[childTypeB].GetShapeData(childB.ShapeIndex.Index, out var childShapeDataB, out _);
-                        var task = sweepTasks.GetTask(childTypeA, childTypeB);
-                        if (task != null && task.Sweep(
+                    var childIndexB = childOverlaps.Overlaps[j];
+                    ref var childB = ref b.GetChild(childIndexB);
+                    var childTypeB = childB.ShapeIndex.Type;
+                    shapes[childTypeB].GetShapeData(childB.ShapeIndex.Index, out var childShapeDataB, out _);
+                    var task = sweepTasks.GetTask(childTypeA, childTypeB);
+
+                    if (task != null && task.Sweep(
                             childShapeDataA, childTypeA, childA.LocalPose, orientationA, velocityA,
                             childShapeDataB, childTypeB, childB.LocalPose, offsetB, orientationB, velocityB,
                             maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                             out var t0Candidate, out var t1Candidate, out var hitLocationCandidate, out var hitNormalCandidate))
+                    {
+                        //Note that we use t1 to determine whether to accept the new location. In other words, we're choosing to keep sweeps that have the earliest time of intersection.
+                        //(t0 is *not* intersecting for any initially separated pair.)
+                        if (t1Candidate < t1)
                         {
-                            //Note that we use t1 to determine whether to accept the new location. In other words, we're choosing to keep sweeps that have the earliest time of intersection.
-                            //(t0 is *not* intersecting for any initially separated pair.)
-                            if (t1Candidate < t1)
-                            {
-                                t0 = t0Candidate;
-                                t1 = t1Candidate;
-                                hitLocation = hitLocationCandidate;
-                                hitNormal = hitNormalCandidate;
-                            }
+                            t0 = t0Candidate;
+                            t1 = t1Candidate;
+                            hitLocation = hitLocationCandidate;
+                            hitNormal = hitNormalCandidate;
                         }
                     }
                 }
             }
+            overlaps.Dispose(pool);
             return t1 < float.MaxValue;
         }
 

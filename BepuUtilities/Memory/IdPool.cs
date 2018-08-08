@@ -130,5 +130,5 @@ namespace BepuUtilities.Memory
             nextIndex = 0;
             AvailableIds = new QuickList<int, TSpan>();
         }
-            }  
+    }
 }

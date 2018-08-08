@@ -75,7 +75,6 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 }
             }
             overlaps.Dispose(pool);
-
             return t1 < float.MaxValue;
         }
 

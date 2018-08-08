@@ -125,7 +125,7 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Triangle, TriangleWide, Triangle, TriangleWide, GJKDistanceTester<Triangle, TriangleWide, TriangleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>());
             defaultTaskRegistry.Register(new CompoundConvexSweepTask<Triangle, TriangleWide>());
             defaultTaskRegistry.Register(new ConvexMeshSweepTask<Triangle, TriangleWide, Mesh>());
-            defaultTaskRegistry.Register(new CompoundPairSweepTask());
+            defaultTaskRegistry.Register(new CompoundPairSweepTask<Compound, Compound, CompoundPairSweepOverlapFinder<Compound, Compound>>());
             defaultTaskRegistry.Register(new CompoundMeshSweepTask<Compound, Mesh, CompoundPairSweepOverlapFinder<Compound, Mesh>>());
             return defaultTaskRegistry;
         }

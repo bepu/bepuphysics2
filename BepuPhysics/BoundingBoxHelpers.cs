@@ -198,7 +198,7 @@ namespace BepuPhysics
             Vector3Wide.Add(min, localPositionA, out min);
             Vector3Wide.Add(max, localPositionA, out max);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void ExpandBoundingBox(in Vector3 expansion, ref Vector3 min, ref Vector3 max)
         {
@@ -315,14 +315,14 @@ namespace BepuPhysics
                 {
                     start = new Vector3(localB.X[0], localB.Y[0], localB.Z[0]);
                 }
-                if (i == steps - Vector<int>.Count)
+                if (i + Vector<int>.Count >= steps)
                 {
                     end = new Vector3(localB.X[Vector<float>.Count - 1], localB.Y[Vector<float>.Count - 1], localB.Z[Vector<float>.Count - 1]);
                 }
             }
             sweep = end - start;
-            Vector3Wide.ReadSlot(ref minWide, 0, out var min);
-            Vector3Wide.ReadSlot(ref maxWide, 0, out var max);
+            Vector3Wide.ReadFirst(minWide, out var min);
+            Vector3Wide.ReadFirst(maxWide, out var max);
             for (int i = 1; i < Vector<float>.Count; ++i)
             {
                 Vector3Wide.ReadSlot(ref minWide, i, out var minSlot);
@@ -348,12 +348,10 @@ namespace BepuPhysics
             //The primary bounds expansion only makes use of the magnitude, so the fact that it's not truly in local space is irrelevant.
             var netAngularVelocity = velocityA.Angular - velocityB.Angular;
             GetAngularBoundsExpansion(netAngularVelocity, dt, maximumRadius, maximumAngularExpansion, out var angularExpansion);
-            min += angularExpansion;
-            max += angularExpansion;
 
             ComputePathBounds(localPoseA, orientationA, velocityA, offsetB, orientationB, velocityB, dt, out sweep, out var minExpansion, out var maxExpansion);
-            min = min + minExpansion - offsetB;
-            max = max + maxExpansion - offsetB;
+            min = min - angularExpansion + minExpansion;
+            max = max + angularExpansion + maxExpansion;
         }
         /// <summary>
         /// Computes the bounding box of shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
@@ -364,8 +362,12 @@ namespace BepuPhysics
             Quaternion.Conjugate(orientationB, out var inverseOrientationB);
             Quaternion.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
             Quaternion.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
+            Compound.GetRotatedChildPose(localPoseA, localOrientationA, out var rotatedPoseA);
 
             shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, localOrientationA, out var maximumRadius, out var maximumAngularExpansion, out min, out max);
+            var localOffsetFromBToChild = rotatedPoseA.Position - localOffsetB;
+            min = min + localOffsetFromBToChild;
+            max = max + localOffsetFromBToChild;
 
             ExpandBoundsForAngularMotion(localPoseA, orientationA, velocityA,
                 offsetB, orientationB, velocityB,
