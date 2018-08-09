@@ -26,23 +26,12 @@ namespace BepuPhysics.Collidables
         /// Buffer of children within this compound.
         /// </summary>
         public Buffer<CompoundChild> Children;
-        /// <summary>
-        /// Precalculated maximum radius of any child, including child offset.
-        /// </summary>
-        /// <remarks>This should be recomputed if the compound children are changed.</remarks>
-        public float MaximumRadius;
-        /// <summary>
-        /// Precalculated maximum angular expansion allowed for bounding boxes.
-        /// </summary>
-        /// <remarks>This should be recomputed if the compound children are changed.</remarks>
-        public float MaximumAngularExpansion;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Compound(Buffer<CompoundChild> children, Shapes shapes)
+        public Compound(Buffer<CompoundChild> children)
         {
             Debug.Assert(children.Length > 0, "Compounds must have a nonzero number of children.");
             Children = children;
-            ComputeAngularExpansionData(ref Children, shapes, out MaximumRadius, out MaximumAngularExpansion);
         }
 
         [Conditional("DEBUG")]
@@ -96,33 +85,6 @@ namespace BepuPhysics.Collidables
                 ComputeChildBounds(Children[i], orientation, shapeBatches, out var childMin, out var childMax);
                 BoundingBox.CreateMerged(ref min, ref max, ref childMin, ref childMax, out min, out max);
             }
-        }
-        public static void ComputeAngularExpansionData(ref Buffer<CompoundChild> children, Shapes shapes, out float maximumRadius, out float maximumAngularExpansion)
-        {
-            maximumRadius = 0;
-            var minimumRadius = float.MaxValue;
-            for (int i = 0; i < children.Length; ++i)
-            {
-                ref var child = ref children[i];
-                shapes[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, child.LocalPose.Orientation, out var childShapeMaximumRadius, out var childShapeMaximumAngularExpansion, 
-                    out _, out _);
-                var childOffsetLength = child.LocalPose.Position.Length();
-                var childMaximumRadius = childShapeMaximumRadius + childOffsetLength;
-                var childMinimumRadius = childShapeMaximumRadius - childShapeMaximumAngularExpansion + childOffsetLength;
-                if (childMaximumRadius > maximumRadius)
-                    maximumRadius = childMaximumRadius;
-                if (childMinimumRadius < minimumRadius)
-                    minimumRadius = childMinimumRadius;
-            }
-            maximumAngularExpansion = maximumRadius - minimumRadius;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
-        {
-            //This is too expensive to compute on the fly, so just use precomputed values.
-            maximumRadius = MaximumRadius;
-            maximumAngularExpansion = MaximumAngularExpansion;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

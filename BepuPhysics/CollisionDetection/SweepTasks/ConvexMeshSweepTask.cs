@@ -13,10 +13,12 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
-    public class ConvexMeshSweepTask<TConvex, TConvexWide, TMesh> : SweepTask
+    public class ConvexMeshSweepTask<TConvex, TConvexWide, TMesh, TOverlapFinder> : SweepTask
         where TConvex : struct, IConvexShape
         where TConvexWide : struct, IShapeWide<TConvex>
-        where TMesh : IMeshShape
+        where TMesh : struct, IMeshShape
+        where TOverlapFinder : struct, IConvexCompoundSweepOverlapFinder<TConvex, TMesh>
+
     {
         public ConvexMeshSweepTask()
         {
@@ -39,11 +41,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var task = sweepTasks.GetTask(ShapeTypeIndexA, Triangle.Id);
             if (task != null)
             {
-                BoundingBoxHelpers.GetBoundingBoxForSweep(ref Unsafe.AsRef<TConvex>(shapeDataA), orientationA, velocityA, offsetB, orientationB, velocityB, maximumT,
-                    out var sweep, out var min, out var max);
-                
-                ChildOverlapsCollection overlaps = default;
-                mesh.FindLocalOverlaps<ChildOverlapsCollection>(min, max, sweep, maximumT, pool, shapes, Unsafe.AsPointer(ref overlaps));
+                default(TOverlapFinder).FindOverlaps(ref Unsafe.AsRef<TConvex>(shapeDataA), orientationA, velocityA, ref mesh, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
                 for (int i = 0; i < overlaps.Count; ++i)
                 {
                     var childIndex = overlaps.Overlaps[i];

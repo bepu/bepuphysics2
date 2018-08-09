@@ -196,32 +196,6 @@ namespace Demos.Demos
             BoundingBoxLineExtractor.WriteBoundsLines(expansionOffset + new Vector3(-0.01f), expansionOffset + new Vector3(0.01f), new Vector3(0, 0, 0), new Vector3(), ref renderer.Lines.Allocate(12));
             BoundingBoxLineExtractor.WriteBoundsLines(expansionOffset + referenceMinExpansion, expansionOffset + referenceMaxExpansion, new Vector3(1, 0, 1), new Vector3(), ref renderer.Lines.Allocate(12));
 
-            //GetEstimatedExpansion(localPoseA.Position, velocityA.Angular, offsetB, velocityB.Angular, dt, out var estimatedMinExpansion, out var estimatedMaxExpansion);
-            //BoundingBoxLineExtractor.WriteBoundsLines(expansionOffset + estimatedMinExpansion, expansionOffset + estimatedMaxExpansion, new Vector3(1, 1, 0), new Vector3(), ref renderer.Lines.Allocate(12));
-
-            BoundingBoxHelpers.ComputePathBounds(localPoseA, orientationA, velocityA, offsetB, orientationB, velocityB, dt, out var sweepEstimate, out var minExpansionEstimate, out var maxExpansionEstimate);
-            BoundingBoxLineExtractor.WriteBoundsLines(expansionOffset + minExpansionEstimate, expansionOffset + maxExpansionEstimate, new Vector3(1, 1, 0), new Vector3(), ref renderer.Lines.Allocate(12));
-
-
-
-            {
-                QuaternionWide.Broadcast(Quaternion.Identity, out var wideOrientation);
-                Vector3Wide.Broadcast(new Vector3(1, 1, 1), out var wideVelocity);
-                var halfDt = new Vector<float>(0.5f);
-                const int testCount = 1024;
-                var resultsSweep = stackalloc Vector3[testCount];
-                var resultsMin = stackalloc Vector3[testCount];
-                var resultsMax = stackalloc Vector3[testCount];
-                var start = Stopwatch.GetTimestamp();
-                for (int i = 0; i < testCount; ++i)
-                {
-                    BoundingBoxHelpers.ComputePathBounds(localPoseA, orientationA, velocityA, offsetB, orientationB, velocityB, dt, out resultsSweep[i], out resultsMin[i], out resultsMax[i]);
-
-
-                }
-                var end = Stopwatch.GetTimestamp();
-                Console.WriteLine($"Time per estimate (ns): {(end - start) * (1e9 / (testCount * Stopwatch.Frequency))}");
-            }
             {
                 QuaternionWide.Broadcast(Quaternion.Identity, out var wideOrientation);
                 Vector3Wide.Broadcast(new Vector3(1, 1, 1), out var wideVelocity);

@@ -25,22 +25,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             ref TCompoundB compoundB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
             Shapes shapes, BufferPool pool, out ChildOverlapsCollection overlaps)
         {
-            Quaternion.Conjugate(orientationB, out var inverseOrientationB);
-            Quaternion.TransformWithoutOverlap(velocityA.Linear - velocityB.Linear * maximumT, inverseOrientationB, out var sweep);
-            Quaternion.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
-            Quaternion.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
-
-            shapeA.ComputeAngularExpansionData(out var maximumRadiusA, out var maximumAngularExpansionA);
-            BoundingBoxHelpers.GetAngularBoundsExpansion(velocityA.Angular, maximumT, maximumRadiusA, maximumAngularExpansionA, out var angularExpansionA);
-            //We assume a worst case scenario for angular expansion based on the size of the compound. Note that the resulting expansion is applied to the convex;
-            //for the purposes of testing, that's equivalent to expanding every compound child.
-            compoundB.ComputeAngularExpansionData(out var maximumRadiusB, out var maximumAngularExpansionB);
-            BoundingBoxHelpers.GetAngularBoundsExpansion(velocityB.Angular, maximumT, maximumRadiusB, maximumAngularExpansionB, out var angularExpansionB);
-            var combinedAngularExpansion = angularExpansionA + angularExpansionB;
-
-            shapeA.ComputeBounds(localOrientationA, out var min, out var max);
-            min = min - localOffsetB - combinedAngularExpansion;
-            max = max - localOffsetB + combinedAngularExpansion;
+            BoundingBoxHelpers.GetLocalBoundingBoxForSweep(ref shapeA, default, orientationA, velocityA, offsetB, orientationB, velocityB, maximumT, out var sweep, out var min, out var max);
             
             overlaps = default;
             compoundB.FindLocalOverlaps<ChildOverlapsCollection>(min, max, sweep, maximumT, pool, shapes, Unsafe.AsPointer(ref overlaps));
