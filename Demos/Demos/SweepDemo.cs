@@ -252,7 +252,7 @@ namespace Demos.Demos
         {
             TestSweep(
                 a,
-                new RigidPose { Position = new Vector3(-10, 0, 0) + position, Orientation = initialOrientationA },
+                new RigidPose { Position = new Vector3(-10, 0, 0) + position, Orientation = initialOrientationA }, //new Quaternion(-0.1193455f, 0.4646222f, 0.4780905f, 0.7357392f) },
                 new BodyVelocity { Linear = new Vector3(1, -1, 0), Angular = new Vector3(1, 0, 1) },
                 b,
                 new RigidPose { Position = new Vector3(10, 0, 0) + position, Orientation = initialOrientationB },
@@ -292,7 +292,7 @@ namespace Demos.Demos
             compoundBuilder.Add(new Box(1f, 0.5f, 0.75f), new RigidPose { Orientation = Quaternion.Identity, Position = new Vector3(-0.5f, 0, 0) }, 1);
             compoundBuilder.Add(new Sphere(0.5f), new RigidPose { Orientation = Quaternion.Identity, Position = new Vector3(0.5f, 0, 0) }, 1);
             compoundBuilder.BuildKinematicCompound(out var compoundChildren);
-            var compound = new Compound(compoundChildren);
+            var compound = new Compound(compoundChildren, Simulation.Shapes);
             compoundBuilder.Dispose();
 
             StandardTestSweep(compound, new Sphere(0.5f), ref position, worldA, worldB, renderer);

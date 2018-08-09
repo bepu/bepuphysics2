@@ -29,6 +29,16 @@ namespace BepuPhysics.Collidables
                 inverseScale = Vector3.One / value;
             }
         }
+        /// <summary>
+        /// Precalculated maximum radius of any triangle in the shape measured from the shape origin.
+        /// </summary>
+        /// <remarks>This should be recomputed if the triangle data is changed.</remarks>
+        public float MaximumRadius;
+        /// <summary>
+        /// Precalculated maximum angular expansion allowed for bounding boxes.
+        /// </summary>
+        /// <remarks>This should be recomputed if the compound children are changed.</remarks>
+        public float MaximumAngularExpansion;
 
         public Mesh(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool) : this()
         {
@@ -44,6 +54,16 @@ namespace BepuPhysics.Collidables
             }
             Tree.SweepBuild(pool, boundingBoxes.Slice(0, triangles.Length));
             Scale = scale;
+            ComputeAngularExpansionData(ref Triangles, out MaximumRadius, out MaximumAngularExpansion);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void GetLocalTriangle(int triangleIndex, out Triangle target)
+        {
+            ref var source = ref Triangles[triangleIndex];
+            target.A = scale * source.A;
+            target.B = scale * source.B;
+            target.C = scale * source.C;
         }
 
         public void ComputeBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max)
@@ -69,6 +89,44 @@ namespace BepuPhysics.Collidables
                 min = Vector3.Min(min0, min1);
                 max = Vector3.Max(max0, max1);
             }
+        }
+
+        static void ComputeAngularExpansionData(ref Buffer<Triangle> triangles, out float maximumRadius, out float maximumAngularExpansion)
+        {
+            var minSquared = float.MaxValue;
+            var maxSquared = float.MinValue;
+            for (int i = 0; i < triangles.Length; ++i)
+            {
+                ref var triangle = ref triangles[i];
+                var a = triangle.A.LengthSquared();
+                var b = triangle.B.LengthSquared();
+                var c = triangle.C.LengthSquared();
+                if (minSquared > a)
+                    minSquared = a;
+                if (minSquared > b)
+                    minSquared = b;
+                if (minSquared > c)
+                    minSquared = c;
+
+                if (maxSquared < a)
+                    maxSquared = a;
+                if (maxSquared < b)
+                    maxSquared = b;
+                if (maxSquared < c)
+                    maxSquared = c;
+            }
+
+            maximumRadius = (float)Math.Sqrt(maxSquared);
+            //The minimum radius value is actually a lower bound, but that works fine as a maximumAngularExpansion.
+            maximumAngularExpansion = maximumRadius - (float)Math.Sqrt(minSquared);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
+        {
+            //This is too expensive to compute on the fly, so just use precomputed values.
+            maximumRadius = MaximumRadius;
+            maximumAngularExpansion = MaximumAngularExpansion;
         }
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
@@ -190,7 +248,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps) 
+        public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             var scaledMin = min * inverseScale;
@@ -202,20 +260,14 @@ namespace BepuPhysics.Collidables
             Tree.Sweep(scaledMin, scaledMax, scaledSweep, maximumT, ref enumerator);
         }
 
+
         public void Dispose(BufferPool bufferPool)
         {
             bufferPool.Return(ref Triangles);
             Tree.Dispose(bufferPool);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GetLocalTriangle(int triangleIndex, out Triangle target)
-        {
-            ref var source = ref Triangles[triangleIndex];
-            target.A = scale * source.A;
-            target.B = scale * source.B;
-            target.C = scale * source.C;
-        }
+
         /// <summary>
         /// Type id of mesh shapes.
         /// </summary>

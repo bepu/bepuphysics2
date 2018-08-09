@@ -364,7 +364,7 @@ namespace BepuPhysics
             Quaternion.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
             Compound.GetRotatedChildPose(localPoseA, localOrientationA, out var rotatedPoseA);
 
-            shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, localOrientationA, out var maximumRadius, out var maximumAngularExpansion, out min, out max);
+            shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, rotatedPoseA.Orientation, out var maximumRadius, out var maximumAngularExpansion, out min, out max);
             var localOffsetFromBToChild = rotatedPoseA.Position - localOffsetB;
             min = min + localOffsetFromBToChild;
             max = max + localOffsetFromBToChild;
@@ -384,7 +384,7 @@ namespace BepuPhysics
             Quaternion.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
             Compound.GetRotatedChildPose(localPoseA, localOrientationA, out var rotatedPoseA);
 
-            shape.ComputeBounds(localOrientationA, out min, out max);
+            shape.ComputeBounds(rotatedPoseA.Orientation, out min, out max);
             shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
             var localOffsetFromBToConvex = rotatedPoseA.Position - localOffsetB;
             min = min + localOffsetFromBToConvex;

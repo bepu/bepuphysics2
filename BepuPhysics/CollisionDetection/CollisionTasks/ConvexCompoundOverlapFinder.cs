@@ -26,6 +26,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps;
+        void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion);
 
     }
 

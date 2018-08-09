@@ -317,10 +317,6 @@ namespace BepuUtilities.Collections
             AddUnsafely(ref element);
         }
 
-
-
-
-
         /// <summary>
         /// Gets the index of the element in the list using the default comparer, if present.
         /// </summary>
