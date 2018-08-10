@@ -195,7 +195,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
 
-        public unsafe static void ReduceManifolds(ref Buffer<Triangle> triangles, ref Buffer<NonconvexReductionChild> children, int start, int count,
+        public unsafe static void ReduceManifolds(ref Buffer<Triangle> continuationTriangles, ref Buffer<NonconvexReductionChild> continuationChildren, int start, int count,
             bool requiresFlip, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation)
         {
             //Before handing responsibility off to the nonconvex reduction, make sure that no contacts create nasty 'bumps' at the border of triangles.
@@ -222,7 +222,9 @@ namespace BepuPhysics.CollisionDetection
             //You could sacrifice a little bit of reduction quality for faster contact correction (since reduction outputs a low fixed number of contacts), but
             //we should only pursue that if contact correction is a meaningful cost.
 
-
+            //Narrow the region of interest.
+            continuationTriangles.Slice(start, count, out var triangles);
+            continuationChildren.Slice(start, count, out var children);
             //Allocate enough space for all potential triangles, even though we're only going to be enumerating over the subset which actually have contacts.
             int activeChildCount = 0;
             var activeTriangles = stackalloc TestTriangle[count];

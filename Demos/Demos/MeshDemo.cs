@@ -32,9 +32,9 @@ namespace Demos.Demos
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);
-            const int width = 1;
-            const int height = 1;
-            const int length = 1;
+            const int width = 32;
+            const int height = 2;
+            const int length = 32;
             for (int i = 0; i < width; ++i)
             {
                 for (int j = 0; j < height; ++j)
@@ -112,14 +112,15 @@ namespace Demos.Demos
             CreateFan(64, 16, new Vector3(1, 1, 1), BufferPool, out var fanMesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(-10, 0, -20), new CollidableDescription(Simulation.Shapes.Add(fanMesh), 0.1f)));
 
-            const int planeWidth = 256;
-            const int planeHeight = 256;
+            const int planeWidth = 128;
+            const int planeHeight = 128;
             CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
-                    return new Vector3(x, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y);
-                }, new Vector3(1, 3, 1), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-64, -10, -64), new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
+                    return new Vector3(x - planeWidth / 2, 1 * MathF.Cos(x / 2f) * MathF.Sin(y / 2f), y - planeHeight / 2);
+                }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(64, -10, 64), BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
+                new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
         }
 
 

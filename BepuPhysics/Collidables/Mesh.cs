@@ -24,9 +24,11 @@ namespace BepuPhysics.Collidables
             }
             set
             {
-                Debug.Assert(value.X != 0 && value.Y != 0 && value.Z != 0, "All components of scale must be nonzero.");
                 scale = value;
-                inverseScale = Vector3.One / value;
+                inverseScale = new Vector3(
+                    value.X != 0 ? 1f / value.X : float.MaxValue,
+                    value.Y != 0 ? 1f / value.Y : float.MaxValue,
+                    value.Z != 0 ? 1f / value.Z : float.MaxValue);
             }
         }
 
