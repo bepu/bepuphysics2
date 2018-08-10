@@ -70,7 +70,7 @@ namespace BepuUtilities
         /// <param name="scale">Amount to multiply each component of the quaternion by.</param>
         /// <param name="result">Scaled quaternion.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(ref Quaternion q, float scale, out Quaternion result)
+        public static void Scale(in Quaternion q, float scale, out Quaternion result)
         {
             result.X = q.X * scale;
             result.Y = q.Y * scale;
@@ -184,7 +184,7 @@ namespace BepuUtilities
                     q.W = t;
                 }
             }
-            Scale(ref q, 0.5f / (float)Math.Sqrt(t), out q);
+            Scale(q, 0.5f / (float)Math.Sqrt(t), out q);
         }
 
         /// <summary>

@@ -292,7 +292,7 @@ namespace Demos.Demos
             compoundBuilder.Add(new Box(1f, 0.5f, 0.75f), new RigidPose { Orientation = Quaternion.Identity, Position = new Vector3(-0.5f, 0, 0) }, 1);
             compoundBuilder.Add(new Sphere(0.5f), new RigidPose { Orientation = Quaternion.Identity, Position = new Vector3(0.5f, 0, 0) }, 1);
             compoundBuilder.BuildKinematicCompound(out var compoundChildren);
-            var compound = new Compound(compoundChildren);
+            var compound = new ListCompound(compoundChildren);
             compoundBuilder.Dispose();
 
             StandardTestSweep(compound, new Sphere(0.5f), ref position, worldA, worldB, renderer);

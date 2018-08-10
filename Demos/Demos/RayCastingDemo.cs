@@ -76,7 +76,7 @@ namespace Demos
             Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks());
             //Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
-            var box = new Box(0.5f, 1.5f,1f);
+            var box = new Box(0.5f, 1.5f, 1f);
             var capsule = new Capsule(0, 0.5f);
             var sphere = new Sphere(0.5f);
             var boxIndex = Simulation.Shapes.Add(box);
@@ -168,9 +168,11 @@ namespace Demos
             MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
-                    return new Vector3(x, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y);
+                    return new Vector3(x - planeWidth / 2, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y - planeHeight / 2);
                 }, new Vector3(1, 3, 1), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-64, -10, -64), new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(
+                new Vector3(0, -10, 0), BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 4),
+                new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
             int raySourceCount = 3;
             QuickList<QuickList<TestRay, Buffer<TestRay>>, Buffer<QuickList<TestRay, Buffer<TestRay>>>>.Create(BufferPool.SpecializeFor<QuickList<TestRay, Buffer<TestRay>>>(), raySourceCount, out raySources);
@@ -375,7 +377,7 @@ namespace Demos
         }
         Buffer<RayJob> jobs;
 
-        
+
         unsafe struct HitHandler : IRayHitHandler
         {
             public Buffer<RayHit> Hits;
@@ -517,7 +519,7 @@ namespace Demos
                 {
                     var end = ray.Origin + ray.Direction * result.T;
                     var diffuseLight = Vector3.Dot(result.Normal, new Vector3(0.57735f));
-                    if(diffuseLight < 0)
+                    if (diffuseLight < 0)
                     {
                         diffuseLight = -0.5f * diffuseLight;
                     }

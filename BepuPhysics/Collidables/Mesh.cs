@@ -43,6 +43,7 @@ namespace BepuPhysics.Collidables
                 bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
             }
             Tree.SweepBuild(pool, boundingBoxes.Slice(0, triangles.Length));
+            pool.Return(ref boundingBoxes);
             Scale = scale;
         }
 
@@ -113,10 +114,9 @@ namespace BepuPhysics.Collidables
 
         public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal)
         {
-            BepuUtilities.Quaternion.Conjugate(pose.Orientation, out var conjugate);
-            Matrix3x3.CreateFromQuaternion(conjugate, out var inverseOrientation);
-            Matrix3x3.Transform(origin - pose.Position, inverseOrientation, out var localOrigin);
-            Matrix3x3.Transform(direction, inverseOrientation, out var localDirection);
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
+            Matrix3x3.TransformTranspose(origin - pose.Position, orientation, out var localOrigin);
+            Matrix3x3.TransformTranspose(direction, orientation, out var localDirection);
             localOrigin *= inverseScale;
             localDirection *= inverseScale;
             var leafTester = new LeafTester(Triangles);
@@ -124,7 +124,8 @@ namespace BepuPhysics.Collidables
             if (leafTester.MinimumT < float.MaxValue)
             {
                 t = leafTester.MinimumT;
-                normal = leafTester.MinimumNormal;
+                Matrix3x3.Transform(leafTester.MinimumNormal * inverseScale, orientation, out normal);
+                normal = Vector3.Normalize(normal);
                 return true;
             }
             t = default;
@@ -136,8 +137,8 @@ namespace BepuPhysics.Collidables
         {
             //TODO: Note that we dispatch a bunch of scalar tests here. You could be more clever than this- batched tests are possible. 
             //May be worth creating a different traversal designed for low ray counts- might be able to get some benefit out of a semidynamic packet or something.
-            BepuUtilities.Quaternion.Conjugate(pose.Orientation, out var conjugate);
-            Matrix3x3.CreateFromQuaternion(conjugate, out var inverseOrientation);
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
+            Matrix3x3.Transpose(orientation, out var inverseOrientation);
             var leafTester = new LeafTester(Triangles);
             for (int i = 0; i < rays.RayCount; ++i)
             {
@@ -150,7 +151,9 @@ namespace BepuPhysics.Collidables
                 Tree.RayCast(localOrigin, localDirection, *maximumT, ref leafTester);
                 if (leafTester.MinimumT < float.MaxValue)
                 {
-                    hitHandler.OnRayHit(i, leafTester.MinimumT, leafTester.MinimumNormal);
+                    Matrix3x3.Transform(leafTester.MinimumNormal * inverseScale, orientation, out var normal);
+                    normal = Vector3.Normalize(normal);
+                    hitHandler.OnRayHit(i, leafTester.MinimumT, normal);
                 }
             }
         }
@@ -167,18 +170,7 @@ namespace BepuPhysics.Collidables
                 return true;
             }
         }
-
-        unsafe struct SweepLeafTester<TOverlaps> : ISweepLeafTester where TOverlaps : ICollisionTaskSubpairOverlaps
-        {
-            public BufferPool Pool;
-            public void* Overlaps;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void TestLeaf(int leafIndex, ref float maximumT)
-            {
-                Unsafe.AsRef<TOverlaps>(Overlaps).Allocate(Pool) = leafIndex;
-            }
-        }
-
+        
         public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
@@ -199,6 +191,16 @@ namespace BepuPhysics.Collidables
             }
         }
 
+        unsafe struct SweepLeafTester<TOverlaps> : ISweepLeafTester where TOverlaps : ICollisionTaskSubpairOverlaps
+        {
+            public BufferPool Pool;
+            public void* Overlaps;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void TestLeaf(int leafIndex, ref float maximumT)
+            {
+                Unsafe.AsRef<TOverlaps>(Overlaps).Allocate(Pool) = leafIndex;
+            }
+        }
         public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
@@ -222,7 +224,7 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Type id of mesh shapes.
         /// </summary>
-        public const int Id = 6;
+        public const int Id = 8;
         public int TypeId => Id;
 
     }

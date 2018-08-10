@@ -76,9 +76,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         if (childOverlaps.Count == 0)
                             continue;
                         ref var compoundChild = ref compound.GetChild(childOverlaps.ChildIndex);
-                        Quaternion.Conjugate(pair.OrientationB, out var inverseMeshOrientation);
-                        Quaternion.Concatenate(pair.OrientationA, inverseMeshOrientation, out var meshLocalOrientationA);
-                        Compound.GetRotatedChildPose(compoundChild.LocalPose, meshLocalOrientationA, out var rotatedChildPose);
+                        Compound.GetRotatedChildPose(compoundChild.LocalPose, pair.OrientationA, out var rotatedChildPose);
                         var childToMesh = pair.OffsetB - rotatedChildPose.Position;
                         var compoundChildType = compoundChild.ShapeIndex.Type;
                         batcher.Shapes[compoundChildType].GetShapeData(compoundChild.ShapeIndex.Index, out var compoundChildShapeData, out _);

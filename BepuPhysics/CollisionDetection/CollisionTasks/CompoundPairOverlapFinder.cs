@@ -83,9 +83,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     RigidPoses.WriteFirst(subpair.Child->LocalPose, ref GatherScatter.GetOffsetInstance(ref localPosesA, j));
                 }
 
-                QuaternionWide.ConcatenateWithoutOverlap(localPosesA.Orientation, orientationA, out var childOrientationA);
                 QuaternionWide.Conjugate(orientationB, out var toLocalB);
-                QuaternionWide.ConcatenateWithoutOverlap(childOrientationA, toLocalB, out var localOrientationsA);
+                QuaternionWide.ConcatenateWithoutOverlap(orientationA, toLocalB, out var localOrientationsA);
+                QuaternionWide.ConcatenateWithoutOverlap(localPosesA.Orientation, localOrientationsA, out var localChildOrientationsA);
                 QuaternionWide.TransformWithoutOverlap(localPosesA.Position, localOrientationsA, out var localOffsetA);
                 QuaternionWide.TransformWithoutOverlap(offsetB, toLocalB, out var localOffsetB);
                 Vector3Wide.Subtract(localOffsetA, localOffsetB, out var localPositionsA);
@@ -93,9 +93,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 for (int j = 0; j < count; ++j)
                 {
                     var shapeIndex = subpairData[i + j].Child->ShapeIndex;
-                    Vector3Wide.ReadSlot(ref localPositionsA, j, out var localPositionA);
-                    QuaternionWide.ReadFirst(GatherScatter.GetOffsetInstance(ref localOrientationsA, j), out var localOrientationA);
-                    shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, localOrientationA,
+                    QuaternionWide.ReadFirst(GatherScatter.GetOffsetInstance(ref localChildOrientationsA, j), out var localChildOrientationA);
+                    shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, localChildOrientationA,
                         out GatherScatter.Get(ref maximumRadius, j),
                         out GatherScatter.Get(ref maximumAngularExpansion, j), out var min, out var max);
                     Vector3Wide.WriteFirst(min, ref GatherScatter.GetOffsetInstance(ref mins, j));

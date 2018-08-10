@@ -10,6 +10,7 @@ using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using System.Runtime.CompilerServices;
 using DemoContentLoader;
+using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos
 {
@@ -40,7 +41,7 @@ namespace Demos.Demos
                     compoundBuilder.Add(boxChildShape, boxLocalPose, 1);
                     compoundBuilder.BuildDynamicCompound(out var compoundChildren, out var compoundInertia, out var compoundCenter);
                     compoundBuilder.Reset();
-                    var compound = new Compound(compoundChildren);
+                    var compound = new ListCompound(compoundChildren);
                     var compoundDescription = new BodyDescription
                     {
                         Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
@@ -70,7 +71,7 @@ namespace Demos.Demos
                         {
                             var localPose = new RigidPose
                             {
-                                Orientation = BepuUtilities.Quaternion.Identity,
+                                Orientation = Quaternion.Identity,
                                 Position = new Vector3(localPoseOffset, 0, localPoseOffset) + new Vector3(gridSpacing) * new Vector3(i, 0, j)
                             };
                             compoundBuilder.Add(gridShapeIndex, localPose, gridBoxInertia.InverseInertiaTensor, 1);
@@ -78,7 +79,7 @@ namespace Demos.Demos
                     }
                     compoundBuilder.BuildDynamicCompound(out var gridChildren, out var gridInertia, out var center);
                     compoundBuilder.Reset();
-                    var gridCompound = new Compound(gridChildren);
+                    var gridCompound = new ListCompound(gridChildren);
                     var bodyDescription = new BodyDescription
                     {
                         Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
@@ -121,7 +122,7 @@ namespace Demos.Demos
 
                     compoundBuilder.BuildDynamicCompound(out var tableChildren, out var tableInertia, out var tableCenter);
                     compoundBuilder.Reset();
-                    var table = new Compound(tableChildren);
+                    var table = new ListCompound(tableChildren);
                     var tableDescription = new BodyDescription
                     {
                         Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
@@ -203,7 +204,7 @@ namespace Demos.Demos
 
                         compoundBuilder.BuildDynamicCompound(out var clampChildren, out var clampInertia, out var clampCenter);
                         compoundBuilder.Reset();
-                        var clamp = new Compound(clampChildren);
+                        var clamp = new ListCompound(clampChildren);
                         var clampDescription = new BodyDescription
                         {
                             Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
@@ -217,6 +218,42 @@ namespace Demos.Demos
                         };
                         Simulation.Bodies.Add(clampDescription);
                     }
+
+                }
+
+                //Create a tree-accelerated big compound.
+                {
+                    var random = new Random(5);
+                    var treeCompoundBoxShape = new Box(0.5f, 1.5f, 1f);
+                    var treeCompoundBoxShapeIndex = Simulation.Shapes.Add(treeCompoundBoxShape);
+                    treeCompoundBoxShape.ComputeInertia(1, out var childInertia);
+                    for (int i = 0; i < 128; ++i)
+                    {
+                        RigidPose localPose;
+                        localPose.Position = new Vector3(12, 6, 12) * (0.5f * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) - Vector3.One);
+                        float orientationLengthSquared;
+                        do
+                        {
+                            localPose.Orientation = new Quaternion((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                        }
+                        while ((orientationLengthSquared = localPose.Orientation.LengthSquared()) < 1e-9f);
+                        Quaternion.Scale(localPose.Orientation, 1f / MathF.Sqrt(orientationLengthSquared), out localPose.Orientation);
+                        //Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI, out localPose.Orientation);
+
+                        compoundBuilder.Add(treeCompoundBoxShapeIndex, localPose, childInertia.InverseInertiaTensor, 1);
+                    }
+                    compoundBuilder.BuildDynamicCompound(out var children, out var inertia, out var center);
+                    compoundBuilder.Reset();
+
+                    var compound = new Compound(children, Simulation.Shapes, BufferPool);
+                    //var compound = new ListCompound(children);
+                    var compoundIndex = Simulation.Shapes.Add(compound);
+                    for (int i = 0; i < 8; ++i)
+                    {
+                        Simulation.Bodies.Add(new BodyDescription(new Vector3(0, 4 + 5 * i, 32), inertia, compoundIndex, 0.1f, new BodyActivityDescription(0.1f)));
+
+                    }
+
 
                 }
             }
@@ -242,9 +279,10 @@ namespace Demos.Demos
                 (int x, int y) =>
                 {
                     Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
-                    return new Vector3(x, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.01f * offsetFromCenter.LengthSquared(), y);
+                    return new Vector3(offsetFromCenter.X, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.01f * offsetFromCenter.LengthSquared(), offsetFromCenter.Y);
                 }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(25, 4, 0), new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(64, 4, 32), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
+                new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
         }
 
     }

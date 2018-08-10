@@ -42,6 +42,16 @@ namespace DemoRenderer.ShapeDrawing
             meshes.Count = 0;
         }
 
+        private unsafe void AddCompoundChildren(ref Buffer<CompoundChild> children, Shapes shapes, in RigidPose pose, in Vector3 color)
+        {
+            for (int i = 0; i < children.Length; ++i)
+            {
+                ref var child = ref children[i];
+                Compound.GetWorldPose(child.LocalPose, pose, out var childPose);
+                AddShape(shapes, child.ShapeIndex, ref childPose, color);
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void AddShape(void* shapeData, int shapeType, Shapes shapes, ref RigidPose pose, in Vector3 color)
         {
@@ -99,15 +109,14 @@ namespace DemoRenderer.ShapeDrawing
                         triangles.Add(ref instance, new PassthroughArrayPool<TriangleInstance>());
                     }
                     break;
+                case ListCompound.Id:
+                    {
+                        AddCompoundChildren(ref Unsafe.AsRef<ListCompound>(shapeData).Children, shapes, pose, color);
+                    }
+                    break;
                 case Compound.Id:
                     {
-                        ref var compound = ref Unsafe.AsRef<Compound>(shapeData);
-                        for (int i = 0; i < compound.Children.Length; ++i)
-                        {
-                            ref var child = ref compound.Children[i];
-                            Compound.GetWorldPose(child.LocalPose, pose, out var childPose);
-                            AddShape(shapes, child.ShapeIndex, ref childPose, color);
-                        }
+                        AddCompoundChildren(ref Unsafe.AsRef<Compound>(shapeData).Children, shapes, pose, color);
                     }
                     break;
                 case Mesh.Id:
@@ -138,6 +147,7 @@ namespace DemoRenderer.ShapeDrawing
                     break;
             }
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void AddShape(Shapes shapes, TypedIndex shapeIndex, ref RigidPose pose, in Vector3 color)

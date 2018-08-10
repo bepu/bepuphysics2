@@ -63,13 +63,13 @@ namespace BepuPhysics.CollisionDetection
             PairId = pairId;
             ChildA = childA;
             ChildB = childB;
-            //continuationChildIndex: [0, 13]
-            //continuationIndex: [14, 27]
+            //continuationChildIndex: [0, 17]
+            //continuationIndex: [18, 27]
             //continuationType:  [28, 31]
-            Debug.Assert(continuationIndex < (1 << 14));
-            Debug.Assert(continuationChildIndex < (1 << 14));
+            Debug.Assert(continuationIndex < (1 << 10));
+            Debug.Assert(continuationChildIndex < (1 << 18));
             Debug.Assert((int)continuationType < (1 << 4));
-            Packed = (uint)(((int)continuationType << 28) | (continuationIndex << 14) | continuationChildIndex);
+            Packed = (uint)(((int)continuationType << 28) | (continuationIndex << 18) | continuationChildIndex);
         }
         public PairContinuation(int pairId)
         {
@@ -80,8 +80,8 @@ namespace BepuPhysics.CollisionDetection
         }
 
         public CollisionContinuationType Type { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (CollisionContinuationType)(Packed >> 28); } }
-        public int Index { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)((Packed >> 14) & 0x00003FFF); } }
-        public int ChildIndex { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)(Packed & 0x00003FFF); } }
+        public int Index { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)((Packed >> 18) & ((1 << 10) - 1)); } }
+        public int ChildIndex { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)(Packed & ((1 << 18) - 1)); } }
     }
 
     public struct BatcherContinuations<T> where T : ICollisionTestContinuation

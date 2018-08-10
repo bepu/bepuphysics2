@@ -139,7 +139,7 @@ namespace Demos.SpecializedTests
                     if (orientationLengthSquared > 1e-7f)
                         break;
                 }
-                BepuUtilities.Quaternion.Scale(ref pose.Orientation, 1f / (float)Math.Sqrt(orientationLengthSquared), out pose.Orientation);
+                BepuUtilities.Quaternion.Scale(pose.Orientation, 1f / (float)Math.Sqrt(orientationLengthSquared), out pose.Orientation);
                 pose.Position = BepuUtilities.Quaternion.Transform(localTriangleCenter, pose.Orientation);
 
                 var normal = Vector3.Cross(triangle.C - triangle.A, triangle.B - triangle.A);
