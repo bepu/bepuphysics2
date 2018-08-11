@@ -53,7 +53,7 @@ namespace Demos.Demos
                         var location = new Vector3(5, 5, 5) * new Vector3(i, j, k) + new Vector3(-width * 2.5f, 2.5f, -length * 2.5f);
                         var bodyDescription = new BodyDescription
                         {
-                            Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.3f },
+                            Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.1f },
                             Pose = new RigidPose
                             {
                                 Orientation = Quaternion.Identity,
@@ -292,7 +292,7 @@ namespace Demos.Demos
             compoundBuilder.Add(new Box(1f, 0.5f, 0.75f), new RigidPose { Orientation = Quaternion.Identity, Position = new Vector3(-0.5f, 0, 0) }, 1);
             compoundBuilder.Add(new Sphere(0.5f), new RigidPose { Orientation = Quaternion.Identity, Position = new Vector3(0.5f, 0, 0) }, 1);
             compoundBuilder.BuildKinematicCompound(out var compoundChildren);
-            var compound = new ListCompound(compoundChildren);
+            var compound = new Compound(compoundChildren);
             compoundBuilder.Dispose();
 
             StandardTestSweep(compound, new Sphere(0.5f), ref position, worldA, worldB, renderer);

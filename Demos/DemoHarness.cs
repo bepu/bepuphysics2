@@ -43,6 +43,8 @@ namespace Demos
             if (demoIndex >= 0 && demoIndex < demoSet.Count)
             {
                 demo.Dispose();
+                //Forcing a full blocking collection makes it a little easier to distinguish some memory issues.
+                GC.Collect(3, GCCollectionMode.Forced, true);
                 demo = demoSet.Build(demoIndex, content, camera);
             }
         }

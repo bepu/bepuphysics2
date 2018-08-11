@@ -41,7 +41,7 @@ namespace Demos.Demos
                     compoundBuilder.Add(boxChildShape, boxLocalPose, 1);
                     compoundBuilder.BuildDynamicCompound(out var compoundChildren, out var compoundInertia, out var compoundCenter);
                     compoundBuilder.Reset();
-                    var compound = new ListCompound(compoundChildren);
+                    var compound = new Compound(compoundChildren);
                     var compoundDescription = new BodyDescription
                     {
                         Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
@@ -79,7 +79,7 @@ namespace Demos.Demos
                     }
                     compoundBuilder.BuildDynamicCompound(out var gridChildren, out var gridInertia, out var center);
                     compoundBuilder.Reset();
-                    var gridCompound = new ListCompound(gridChildren);
+                    var gridCompound = new Compound(gridChildren);
                     var bodyDescription = new BodyDescription
                     {
                         Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
@@ -122,7 +122,7 @@ namespace Demos.Demos
 
                     compoundBuilder.BuildDynamicCompound(out var tableChildren, out var tableInertia, out var tableCenter);
                     compoundBuilder.Reset();
-                    var table = new ListCompound(tableChildren);
+                    var table = new Compound(tableChildren);
                     var tableDescription = new BodyDescription
                     {
                         Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
@@ -204,7 +204,7 @@ namespace Demos.Demos
 
                         compoundBuilder.BuildDynamicCompound(out var clampChildren, out var clampInertia, out var clampCenter);
                         compoundBuilder.Reset();
-                        var clamp = new ListCompound(clampChildren);
+                        var clamp = new Compound(clampChildren);
                         var clampDescription = new BodyDescription
                         {
                             Activity = new BodyActivityDescription { SleepThreshold = 0.01f, MinimumTimestepCountUnderThreshold = 32 },
@@ -245,8 +245,8 @@ namespace Demos.Demos
                     compoundBuilder.BuildDynamicCompound(out var children, out var inertia, out var center);
                     compoundBuilder.Reset();
 
-                    var compound = new Compound(children, Simulation.Shapes, BufferPool);
-                    //var compound = new ListCompound(children);
+                    var compound = new BigCompound(children, Simulation.Shapes, BufferPool);
+                    //var compound = new Compound(children);
                     var compoundIndex = Simulation.Shapes.Add(compound);
                     for (int i = 0; i < 8; ++i)
                     {

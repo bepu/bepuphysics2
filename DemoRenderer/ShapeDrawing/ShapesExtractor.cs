@@ -109,14 +109,14 @@ namespace DemoRenderer.ShapeDrawing
                         triangles.Add(ref instance, new PassthroughArrayPool<TriangleInstance>());
                     }
                     break;
-                case ListCompound.Id:
-                    {
-                        AddCompoundChildren(ref Unsafe.AsRef<ListCompound>(shapeData).Children, shapes, pose, color);
-                    }
-                    break;
                 case Compound.Id:
                     {
                         AddCompoundChildren(ref Unsafe.AsRef<Compound>(shapeData).Children, shapes, pose, color);
+                    }
+                    break;
+                case BigCompound.Id:
+                    {
+                        AddCompoundChildren(ref Unsafe.AsRef<BigCompound>(shapeData).Children, shapes, pose, color);
                     }
                     break;
                 case Mesh.Id:
