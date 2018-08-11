@@ -173,7 +173,7 @@ namespace BepuPhysics.Collidables
             {
                 ref var pair = ref pairs[i];
                 enumerator.Overlaps = Unsafe.AsPointer(ref overlaps.GetOverlapsForPair(i));
-                Tree.GetOverlaps(pair.Min, pair.Max, ref enumerator);
+                Unsafe.AsRef<BigCompound>(pair.Container).Tree.GetOverlaps(pair.Min, pair.Max, ref enumerator);
             }
         }
 

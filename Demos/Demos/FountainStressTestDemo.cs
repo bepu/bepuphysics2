@@ -124,7 +124,7 @@ namespace Demos.Demos
         {
             using (var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 6))
             {
-                var childCount = random.Next(1, 6);
+                var childCount = random.Next(2, 6);
                 for (int i = 0; i < childCount; ++i)
                 {
                     TypedIndex shapeIndex;

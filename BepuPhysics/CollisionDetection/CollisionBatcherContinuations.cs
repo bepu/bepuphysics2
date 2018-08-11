@@ -102,7 +102,7 @@ namespace BepuPhysics.CollisionDetection
             index = IdPool.Take();
             if (index >= Continuations.Length)
             {
-                pool.Resize(ref Continuations, index, index - 1);
+                pool.Resize(ref Continuations, index + 1, index);
             }
             ref var continuation = ref Continuations[index];
             continuation.Create(slotsInContinuation, pool);
