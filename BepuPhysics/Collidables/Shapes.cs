@@ -28,28 +28,24 @@ namespace BepuPhysics.Collidables
         /// Gets whether this shape batch's contained type potentially contains children of different types.
         /// </summary>
         public bool Compound { get; protected set; }
-
-        [Conditional("DEBUG")]
-        protected abstract void ValidateRemoval(int index);
-
-        protected abstract void DisposeShape(int index, BufferPool pool);
-        protected abstract void OnRecursivelyRemoveAndDispose(int index, Shapes shapes, BufferPool pool);
+        
+        protected abstract void Dispose(int index, BufferPool pool);
+        protected abstract void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool);
 
         public void Remove(int index)
         {
-            ValidateRemoval(index);
             idPool.Return(index, pool.SpecializeFor<int>());
         }
 
         public void RemoveAndDispose(int index, BufferPool pool)
         {
-            DisposeShape(index, pool);
+            Dispose(index, pool);
             Remove(index);
         }
 
         public void RecursivelyRemoveAndDispose(int index, Shapes shapes, BufferPool pool)
         {
-            OnRecursivelyRemoveAndDispose(index, shapes, pool);
+            RemoveAndDisposeChildren(index, shapes, pool);
             RemoveAndDispose(index, pool);
         }
 
@@ -129,16 +125,7 @@ namespace BepuPhysics.Collidables
             InternalResize(initialShapeCount, 0);
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialShapeCount, out idPool);
         }
-
-        protected override void ValidateRemoval(int index)
-        {
-            Debug.Assert(!SpanHelper.IsZeroed(ref shapes[index]),
-                "Either a shape was default constructed (which is almost certainly invalid), or this is attempting to remove a shape that was already removed.");
-            //Don't have to actually clear out the shape set since everything is blittable. For debug purposes, we do, just to catch invalid usages.
-            shapes[index] = default;
-        }
-
-
+        
         //Note that shapes cannot be moved; there is no reference to the collidables using them, so we can't correct their indices.
         //But that's fine- we never directly iterate over the shapes set anyway.
         //(This doesn't mean that it's impossible to compact the shape set- it just requires doing so by iterating over collidables.)
@@ -149,7 +136,6 @@ namespace BepuPhysics.Collidables
             {
                 InternalResize(shapeIndex + 1, shapes.Length);
             }
-            Debug.Assert(SpanHelper.IsZeroed(ref shapes[shapeIndex]), "In debug mode, the slot a shape is stuck into should be cleared. If it's not, it is already in use.");
             shapes[shapeIndex] = shape;
             return shapeIndex;
         }
@@ -219,12 +205,12 @@ namespace BepuPhysics.Collidables
         {
         }
 
-        protected override void DisposeShape(int index, BufferPool pool)
+        protected override void Dispose(int index, BufferPool pool)
         {
             //Any convex shape with an associated Wide type doesn't have any internal resources to dispose.
         }
 
-        protected override void OnRecursivelyRemoveAndDispose(int index, Shapes shapes, BufferPool pool)
+        protected override void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool)
         {
             //And they don't have any children.
         }
@@ -273,15 +259,14 @@ namespace BepuPhysics.Collidables
         {
         }
 
-        protected override void DisposeShape(int index, BufferPool pool)
+        protected override void Dispose(int index, BufferPool pool)
         {
             shapes[index].Dispose(pool);
         }
 
-        protected override void OnRecursivelyRemoveAndDispose(int index, Shapes shapes, BufferPool pool)
+        protected override void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool)
         {
             //Meshes don't have any shape-registered children.
-            DisposeShape(index, pool);
         }
 
         public override void ComputeBounds(ref BoundingBoxBatcher batcher)
@@ -316,12 +301,12 @@ namespace BepuPhysics.Collidables
             Compound = true;
         }
 
-        protected override void DisposeShape(int index, BufferPool pool)
+        protected override void Dispose(int index, BufferPool pool)
         {
             shapes[index].Dispose(pool);
         }
 
-        protected override void OnRecursivelyRemoveAndDispose(int index, Shapes shapes, BufferPool pool)
+        protected override void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool)
         {
             ref var shape = ref this.shapes[index];
             for (int i = 0; i < shape.ChildCount; ++i)
@@ -329,7 +314,6 @@ namespace BepuPhysics.Collidables
                 ref var child = ref shape.GetChild(i);
                 shapes.RecursivelyRemoveAndDispose(child.ShapeIndex, pool);
             }
-            DisposeShape(index, pool);
         }
 
         public override void ComputeBounds(ref BoundingBoxBatcher batcher)

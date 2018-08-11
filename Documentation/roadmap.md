@@ -15,7 +15,7 @@ Note that this release will lack many of v1's built in features, like:
 
 The initial version will be split into incremental stages: alpha, beta, and release. The alpha was released on March 31, 2018.
 
-### Beta (July 41, 2018)
+### Beta (July 47, 2018)
 The beta will still be missing some important pieces, but should be able to support most games.
 - Triangulated mesh colliders with boundary smoothing.
 - Tree-accelerated compound for larger collections of shapes.
