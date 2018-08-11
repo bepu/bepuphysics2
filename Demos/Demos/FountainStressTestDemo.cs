@@ -22,6 +22,7 @@ namespace Demos.Demos
             camera.Position = new Vector3(-15f, 20, -15f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
+            //Using minimum sized allocations forces as many resizes as possible.
             Simulation = Simulation.Create(BufferPool, new TestCallbacks(),
             new SimulationAllocationSizes
             {
@@ -37,8 +38,14 @@ namespace Demos.Demos
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
             Simulation.Deterministic = false;
 
-
-            var staticShape = new Sphere(6);
+            const int planeWidth = 8;
+            const int planeHeight = 8;
+            MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
+                (int x, int y) =>
+                {
+                    Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
+                    return new Vector3(offsetFromCenter.X, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.2f * offsetFromCenter.LengthSquared(), offsetFromCenter.Y);
+                }, new Vector3(2, 1, 2), BufferPool, out var staticShape);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
             const int staticGridWidthInSpheres = 128;
             const float staticSpacing = 8;
@@ -69,7 +76,7 @@ namespace Demos.Demos
 
             //A bunch of kinematic balls do acrobatics as an extra stressor.
             var kinematicShape = new Sphere(8);
-            var kinematicShapeIndex = Simulation.Shapes.Add(staticShape);
+            var kinematicShapeIndex = Simulation.Shapes.Add(kinematicShape);
             var kinematicCount = 64;
             var anglePerKinematic = MathHelper.TwoPi / kinematicCount;
             var startingRadius = 256;
@@ -106,6 +113,53 @@ namespace Demos.Demos
         double time;
         double t;
         int[] kinematicHandles;
+
+        void AddConvexShape<TConvex>(in TConvex convex, out TypedIndex shapeIndex, out BodyInertia inertia) where TConvex : struct, IConvexShape
+        {
+            shapeIndex = Simulation.Shapes.Add(convex);
+            convex.ComputeInertia(1, out inertia);
+        }
+
+        void CreateRandomCompound(out Buffer<CompoundChild> children, out BodyInertia inertia)
+        {
+            using (var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 6))
+            {
+                var childCount = random.Next(1, 6);
+                for (int i = 0; i < childCount; ++i)
+                {
+                    TypedIndex shapeIndex;
+                    BodyInertia childInertia;
+                    switch (random.Next(0, 3))
+                    {
+                        default:
+                            AddConvexShape(new Sphere(0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out childInertia);
+                            break;
+                        case 1:
+                            AddConvexShape(new Capsule(
+                                0.35f + 0.35f * (float)random.NextDouble(),
+                                0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out childInertia);
+                            break;
+                        case 2:
+                            AddConvexShape(new Box(
+                                0.35f + 0.35f * (float)random.NextDouble(),
+                                0.35f + 0.35f * (float)random.NextDouble(),
+                                0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out childInertia);
+                            break;
+                    }
+                    RigidPose localPose;
+                    localPose.Position = new Vector3(2, 2, 2) * (0.5f * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) - Vector3.One);
+                    float orientationLengthSquared;
+                    do
+                    {
+                        localPose.Orientation = new BepuUtilities.Quaternion((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                    }
+                    while ((orientationLengthSquared = localPose.Orientation.LengthSquared()) < 1e-9f);
+                    BepuUtilities.Quaternion.Scale(localPose.Orientation, 1f / MathF.Sqrt(orientationLengthSquared), out localPose.Orientation);
+                    compoundBuilder.Add(shapeIndex, localPose, childInertia.InverseInertiaTensor, 1);
+                }
+                compoundBuilder.BuildDynamicCompound(out children, out inertia, out var center);
+            }
+        }
 
         public override void Update(Input input, float dt)
         {
@@ -183,48 +237,65 @@ namespace Demos.Demos
             }
 
 
-            //Spray some balls!
-            int newBallCount = 8;
+            //Spray some shapes!
+            int newShapeCount = 8;
             var spawnLocation = new Vector3(0, 10, 0);
-            for (int i = 0; i < newBallCount; ++i)
+            for (int i = 0; i < newShapeCount; ++i)
             {
                 //For the sake of the stress test, every single body has its own shape that gets removed when the body is removed.
-                var shape = new Sphere(0.35f + 0.35f * (float)random.NextDouble());
-                var shapeIndex = Simulation.Shapes.Add(shape);
+                TypedIndex shapeIndex;
+                BodyInertia inertia;
+                switch (random.Next(0, 5))
+                {
+                    default:
+                        {
+                            AddConvexShape(new Sphere(0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                        }
+                        break;
+                    case 1:
+                        {
+                            AddConvexShape(new Capsule(
+                                0.35f + 0.35f * (float)random.NextDouble(),
+                                0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                        }
+                        break;
+                    case 2:
+                        {
+                            AddConvexShape(new Box(
+                                0.35f + 0.6f * (float)random.NextDouble(),
+                                0.35f + 0.6f * (float)random.NextDouble(),
+                                0.35f + 0.6f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                        }
+                        break;
+                    case 3:
+                        {
+                            CreateRandomCompound(out var children, out inertia);
+                            shapeIndex = Simulation.Shapes.Add(new Compound(children));
+                        }
+                        break;
+                    case 4:
+                        {
+                            CreateRandomCompound(out var children, out inertia);
+                            shapeIndex = Simulation.Shapes.Add(new BigCompound(children, Simulation.Shapes, BufferPool));
+                        }
+                        break;
+                }
+
                 var description = new BodyDescription
                 {
-                    Pose = new RigidPose
-                    {
-                        Position = spawnLocation,
-                        Orientation = BepuUtilities.Quaternion.Identity
-                    },
-                    LocalInertia = new BodyInertia { InverseMass = 1 },
-                    Collidable = new CollidableDescription
-                    {
-                        Continuity = new ContinuousDetectionSettings(),
-                        SpeculativeMargin = 0.1f,
-                        Shape = shapeIndex
-                    },
-                    Activity = new BodyActivityDescription
-                    {
-                        SleepThreshold = .1f,
-                        MinimumTimestepCountUnderThreshold = 32
-                    }
+                    Pose = new RigidPose(spawnLocation),
+                    LocalInertia = inertia,
+                    Collidable = new CollidableDescription(shapeIndex, 5),
+                    Activity = new BodyActivityDescription(0.1f),
+                    Velocity = new BodyVelocity(new Vector3(-20 + 40 * (float)random.NextDouble(), 75, -20 + 40 * (float)random.NextDouble()), default)
                 };
 
-                var inverseInertia = description.LocalInertia.InverseMass * (1f / (shape.Radius * shape.Radius * 2 / 3));
-                description.LocalInertia.InverseInertiaTensor.XX = inverseInertia;
-                description.LocalInertia.InverseInertiaTensor.YY = inverseInertia;
-                description.LocalInertia.InverseInertiaTensor.ZZ = inverseInertia;
-
-
-                description.Velocity.Linear = new Vector3(-20 + 40 * (float)random.NextDouble(), 75, -20 + 40 * (float)random.NextDouble());
 
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(description), BufferPool.SpecializeFor<int>());
 
             }
             int targetAsymptote = 65536;
-            var removalCount = (int)(dynamicHandles.Count * (newBallCount / (float)targetAsymptote));
+            var removalCount = (int)(dynamicHandles.Count * (newShapeCount / (float)targetAsymptote));
             for (int i = 0; i < removalCount; ++i)
             {
                 if (dynamicHandles.TryDequeue(out var handle))
@@ -233,7 +304,7 @@ namespace Demos.Demos
                     //Every body has a unique shape, so we need to remove shapes with bodies.
                     var shapeIndex = Simulation.Bodies.Sets[bodyLocation.SetIndex].Collidables[bodyLocation.Index].Shape;
                     Simulation.Bodies.Remove(handle);
-                    Simulation.Shapes.Remove(shapeIndex);
+                    Simulation.Shapes.RecursivelyRemoveAndDispose(shapeIndex, BufferPool);
                 }
                 else
                 {

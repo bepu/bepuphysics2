@@ -335,7 +335,8 @@ namespace Demos.Demos
             {
                 Simulation.Shapes.Remove(compound.Children[i].ShapeIndex);
             }
-            BufferPool.Return(ref compoundChildren);
+            //The resources of compound are a subset of those used by the bigCompoound, so we just dispose the bigCompound.
+            bigCompound.Dispose(BufferPool);
             mesh.Dispose(BufferPool);
 
             //Perform simulation-wide queries against the other collidables in the scene.

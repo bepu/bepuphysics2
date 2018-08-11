@@ -283,6 +283,5 @@ namespace Demos.Demos
             Simulation.Statics.Add(new StaticDescription(new Vector3(64, 4, 32), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
         }
-
     }
 }

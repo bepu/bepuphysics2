@@ -32,10 +32,25 @@ namespace BepuPhysics.Collidables
         [Conditional("DEBUG")]
         protected abstract void ValidateRemoval(int index);
 
-        public void RemoveAt(int index)
+        protected abstract void DisposeShape(int index, BufferPool pool);
+        protected abstract void OnRecursivelyRemoveAndDispose(int index, Shapes shapes, BufferPool pool);
+
+        public void Remove(int index)
         {
             ValidateRemoval(index);
             idPool.Return(index, pool.SpecializeFor<int>());
+        }
+
+        public void RemoveAndDispose(int index, BufferPool pool)
+        {
+            DisposeShape(index, pool);
+            Remove(index);
+        }
+
+        public void RecursivelyRemoveAndDispose(int index, Shapes shapes, BufferPool pool)
+        {
+            OnRecursivelyRemoveAndDispose(index, shapes, pool);
+            RemoveAndDispose(index, pool);
         }
 
         public abstract void ComputeBounds(ref BoundingBoxBatcher batcher);
@@ -204,6 +219,16 @@ namespace BepuPhysics.Collidables
         {
         }
 
+        protected override void DisposeShape(int index, BufferPool pool)
+        {
+            //Any convex shape with an associated Wide type doesn't have any internal resources to dispose.
+        }
+
+        protected override void OnRecursivelyRemoveAndDispose(int index, Shapes shapes, BufferPool pool)
+        {
+            //And they don't have any children.
+        }
+
         public override void ComputeBounds(ref BoundingBoxBatcher batcher)
         {
             batcher.ExecuteConvexBatch(this);
@@ -226,7 +251,7 @@ namespace BepuPhysics.Collidables
         public override bool RayTest(int shapeIndex, in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal)
         {
             return shapes[shapeIndex].RayTest(pose, origin, direction, out t, out normal) && t <= maximumT;
-        }        
+        }
 
         public override void RayTest<TRayHitHandler>(int index, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler)
         {
@@ -246,6 +271,17 @@ namespace BepuPhysics.Collidables
     {
         public MeshShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
         {
+        }
+
+        protected override void DisposeShape(int index, BufferPool pool)
+        {
+            shapes[index].Dispose(pool);
+        }
+
+        protected override void OnRecursivelyRemoveAndDispose(int index, Shapes shapes, BufferPool pool)
+        {
+            //Meshes don't have any shape-registered children.
+            DisposeShape(index, pool);
         }
 
         public override void ComputeBounds(ref BoundingBoxBatcher batcher)
@@ -278,6 +314,22 @@ namespace BepuPhysics.Collidables
         {
             this.shapeBatches = shapeBatches;
             Compound = true;
+        }
+
+        protected override void DisposeShape(int index, BufferPool pool)
+        {
+            shapes[index].Dispose(pool);
+        }
+
+        protected override void OnRecursivelyRemoveAndDispose(int index, Shapes shapes, BufferPool pool)
+        {
+            ref var shape = ref this.shapes[index];
+            for (int i = 0; i < shape.ChildCount; ++i)
+            {
+                ref var child = ref shape.GetChild(i);
+                shapes.RecursivelyRemoveAndDispose(child.ShapeIndex, pool);
+            }
+            DisposeShape(index, pool);
         }
 
         public override void ComputeBounds(ref BoundingBoxBatcher batcher)
@@ -372,10 +424,36 @@ namespace BepuPhysics.Collidables
 
 
 
+        /// <summary>
+        /// Removes a shape and any existing children from the shapes collection and returns their resources to the given pool.
+        /// </summary>
+        /// <param name="shapeIndex">Index of the shape to remove.</param>
+        /// <param name="pool">Pool to return all shape resources to.</param>
+        public void RecursivelyRemoveAndDispose(TypedIndex shapeIndex, BufferPool pool)
+        {
+            Debug.Assert(RegisteredTypeSpan > shapeIndex.Type && batches[shapeIndex.Type] != null);
+            batches[shapeIndex.Type].RecursivelyRemoveAndDispose(shapeIndex.Index, this, pool);
+        }
+
+        /// <summary>
+        /// Removes a shape from the shapes collection and returns its resources to the given pool. Does not remove or dispose any children.
+        /// </summary>
+        /// <param name="shapeIndex">Index of the shape to remove.</param>
+        /// <param name="pool">Pool to return all shape resources to.</param>
+        public void RemoveAndDispose(TypedIndex shapeIndex, BufferPool pool)
+        {
+            Debug.Assert(RegisteredTypeSpan > shapeIndex.Type && batches[shapeIndex.Type] != null);
+            batches[shapeIndex.Type].RemoveAndDispose(shapeIndex.Index, pool);
+        }
+
+        /// <summary>
+        /// Removes a shape without removing its children or disposing any resources.
+        /// </summary>
+        /// <param name="shapeIndex">Index of the shape to remove.</param>
         public void Remove(TypedIndex shapeIndex)
         {
             Debug.Assert(RegisteredTypeSpan > shapeIndex.Type && batches[shapeIndex.Type] != null);
-            batches[shapeIndex.Type].RemoveAt(shapeIndex.Index);
+            batches[shapeIndex.Type].Remove(shapeIndex.Index);
         }
 
         /// <summary>

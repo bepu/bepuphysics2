@@ -54,6 +54,7 @@ namespace BepuPhysics.Collidables
         void RayTest<TRayHitHandler>(in RigidPose pose, Shapes shapeBatches, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
         int ChildCount { get; }
         ref CompoundChild GetChild(int compoundChildIndex);
+        void Dispose(BufferPool pool);
     }
 
     public interface IMeshShape : IShape, IBoundsQueryableCompound
@@ -66,6 +67,7 @@ namespace BepuPhysics.Collidables
         void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
         void GetLocalTriangle(int triangleIndex, out Triangle triangle);
+        void Dispose(BufferPool pool);
     }
 
     public interface IShapeWide<TShape> where TShape : IShape
