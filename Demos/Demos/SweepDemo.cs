@@ -267,39 +267,14 @@ namespace Demos.Demos
             var worldA = Quaternion.Concatenate(xRotation, Quaternion.Concatenate(yRotation, zRotation));
             var worldB = Quaternion.Concatenate(yRotation, Quaternion.Concatenate(zRotation, xRotation));
             base.Render(renderer, text, font);
-            var position = new Vector3(0, 60, -75);
-
-            var triangle = new Triangle(new Vector3(0, 0, 0), new Vector3(2, 0, -1), new Vector3(-1, 0, 1.5f));
-            var triangleCenter = (triangle.A + triangle.B + triangle.C) / 3f;
-            triangle.A -= triangleCenter;
-            triangle.B -= triangleCenter;
-            triangle.C -= triangleCenter;
-            StandardTestSweep(new Sphere(0.5f), new Sphere(.25f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Sphere(0.5f), new Capsule(.25f, 1f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Sphere(0.5f), new Box(.5f, 1f, 1.5f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Sphere(0.5f), triangle, ref position, worldA, worldB, renderer);
-
-            StandardTestSweep(new Capsule(0.5f, 0.5f), new Capsule(.25f, 1.5f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Capsule(0.5f, 1), new Box(.5f, 1f, 1.5f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Capsule(0.5f, 1), triangle, ref position, worldA, worldB, renderer);
-
-            StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), new Box(.5f, 1f, 1.5f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), triangle, ref position, worldA, worldB, renderer);
-
-            StandardTestSweep(triangle, triangle, ref position, worldA, worldB, renderer);
 
             var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 8);
             compoundBuilder.Add(new Box(1f, 0.5f, 0.75f), new RigidPose { Orientation = Quaternion.Identity, Position = new Vector3(-0.5f, 0, 0) }, 1);
             compoundBuilder.Add(new Sphere(0.5f), new RigidPose { Orientation = Quaternion.Identity, Position = new Vector3(0.5f, 0, 0) }, 1);
             compoundBuilder.BuildKinematicCompound(out var compoundChildren);
             var compound = new Compound(compoundChildren);
+            var bigCompound = new BigCompound(compoundChildren, Simulation.Shapes, BufferPool);
             compoundBuilder.Dispose();
-
-            StandardTestSweep(compound, new Sphere(0.5f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(compound, new Capsule(.5f, 1.5f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(compound, new Box(1, 1.5f, 2f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(compound, triangle, ref position, worldA, worldB, renderer);
-            StandardTestSweep(compound, compound, ref position, worldA, worldB, renderer);
 
             const int planeWidth = 3;
             const int planeHeight = 3;
@@ -309,13 +284,51 @@ namespace Demos.Demos
                     return new Vector3(x - 1.5f, 0.1f * MathF.Cos(x) * MathF.Sin(y), y - 1.5f);
                 }, new Vector3(1, 2, 1), BufferPool, out var mesh);
 
-            StandardTestSweep(mesh, new Sphere(0.5f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(mesh, new Capsule(.5f, 1.5f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(mesh, new Box(1, 1.5f, 2f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(mesh, triangle, ref position, worldA, worldB, renderer);
-            StandardTestSweep(mesh, compound, ref position, worldA, worldB, renderer);
 
+            var triangle = new Triangle(new Vector3(0, 0, 0), new Vector3(2, 0, -1), new Vector3(-1, 0, 1.5f));
+            var triangleCenter = (triangle.A + triangle.B + triangle.C) / 3f;
+            triangle.A -= triangleCenter;
+            triangle.B -= triangleCenter;
+            triangle.C -= triangleCenter;
+            var position = new Vector3(-75, 60, -75);
+            StandardTestSweep(new Sphere(0.5f), new Sphere(.25f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Sphere(0.5f), new Capsule(.25f, 1f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Sphere(0.5f), new Box(.5f, 1f, 1.5f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Sphere(0.5f), triangle, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Sphere(0.5f), compound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Sphere(0.5f), bigCompound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Sphere(0.5f), mesh, ref position, worldA, worldB, renderer);
 
+            position = new Vector3(-45, 60, -75);
+            StandardTestSweep(new Capsule(0.5f, 0.5f), new Capsule(.25f, 1.5f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Capsule(0.5f, 1), new Box(.5f, 1f, 1.5f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Capsule(0.5f, 1), triangle, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Capsule(0.5f, 1), compound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Capsule(0.5f, 1), bigCompound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Capsule(0.5f, 1), mesh, ref position, worldA, worldB, renderer);
+
+            position = new Vector3(-15, 60, -75);
+            StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), new Box(.5f, 1f, 1.5f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), triangle, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), compound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), bigCompound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), mesh, ref position, worldA, worldB, renderer);
+
+            position = new Vector3(15, 60, -75);
+            StandardTestSweep(triangle, triangle, ref position, worldA, worldB, renderer);
+            StandardTestSweep(triangle, compound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(triangle, bigCompound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(triangle, mesh, ref position, worldA, worldB, renderer);
+
+            position = new Vector3(45, 60, -75);
+            StandardTestSweep(compound, compound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(compound, bigCompound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(compound, mesh, ref position, worldA, worldB, renderer);
+
+            position = new Vector3(75, 60, -75);
+            StandardTestSweep(bigCompound, bigCompound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(bigCompound, mesh, ref position, worldA, worldB, renderer);
+            
 
             //Get rid of the compound children registries so that we don't spam allocations.
             for (int i = 0; i < compound.Children.Length; ++i)
