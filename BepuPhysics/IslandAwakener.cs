@@ -563,7 +563,9 @@ namespace BepuPhysics
                         }
                     }
                 }
+                constraintCountPerType.Dispose(pool);
             }
+            pool.Return(ref constraintCountPerTypePerBatch);
             //and narrow phase pair caches.
             ref var targetPairCache = ref pairCache.GetCacheForAwakening();
             void EnsurePairCacheTypeCapacities(ref TypeAllocationSizes<PairCacheCount> cacheSizes, ref Buffer<UntypedList> targetCaches, BufferPool cachePool)

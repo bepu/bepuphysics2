@@ -403,24 +403,34 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Resize(ref RawBuffer buffer, int targetSize, int copyCount)
         {
+            Debug.Assert(copyCount <= buffer.Length, "Can't copy more than the capacity of the buffer.");
+            Debug.Assert(copyCount <= targetSize, "Can't copy more than the target size.");
             //Only do anything if the new size is actually different from the current size.
             targetSize = 1 << (SpanHelper.GetContainingPowerOf2(targetSize));
-            if (buffer.Length != targetSize) //Note that we don't check for allocated status- for buffers, a length of 0 is the same as being unallocated.
+            if (buffer.Allocated)
             {
-                Take(targetSize, out var newBuffer);
-                if (buffer.Length > 0)
+                DecomposeId(buffer.Id, out var powerIndex, out var slotIndex);
+                var currentSize = 1 << powerIndex;
+                if (currentSize != targetSize)
                 {
-                    //Don't bother copying from or re-pooling empty buffers. They're uninitialized.
-                    Debug.Assert(copyCount <= targetSize);
+                    Take(targetSize, out var newBuffer);
                     Unsafe.CopyBlockUnaligned(newBuffer.Memory, buffer.Memory, (uint)copyCount);
-                    ReturnUnsafely(buffer.Id);
+                    pools[powerIndex].Return(slotIndex);
+                    buffer = newBuffer;
                 }
                 else
                 {
-                    Debug.Assert(copyCount == 0, "Should not be trying to copy elements from an empty span.");
+                    //While the allocation size is equal to the target size, the buffer might not be.
+                    //Fortunately, if the allocation stays the same size, there's no work to be done.
+                    buffer.Length = targetSize;
                 }
-                buffer = newBuffer;
             }
+            else
+            {
+                //Nothing to return or copy.
+                Take(targetSize, out buffer);
+            }
+
         }
 
         /// <summary>
