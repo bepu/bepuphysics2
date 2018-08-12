@@ -287,7 +287,7 @@ namespace Demos.Demos
                     LocalInertia = inertia,
                     Collidable = new CollidableDescription(shapeIndex, 5),
                     Activity = new BodyActivityDescription(0.1f),
-                    Velocity = new BodyVelocity(new Vector3(-20 + 40 * (float)random.NextDouble(), 75, -20 + 40 * (float)random.NextDouble()), default)
+                    Velocity = new BodyVelocity(new Vector3(-30 + 60 * (float)random.NextDouble(), 75, -30 + 60 * (float)random.NextDouble()), default)
                 };
 
 
@@ -312,6 +312,9 @@ namespace Demos.Demos
                 }
             }
             base.Update(input, dt);
+
+            if (input.WasPushed(OpenTK.Input.Key.P))
+                GC.Collect(int.MaxValue, GCCollectionMode.Forced, true, true);
 
         }
 

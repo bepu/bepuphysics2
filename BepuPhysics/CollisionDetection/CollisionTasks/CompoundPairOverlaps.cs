@@ -88,6 +88,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 childOverlaps[i].Dispose(pool);
             }
             pool.Return(ref childOverlaps);
+            pool.Return(ref pairRegions);
         }
     }
 }

@@ -430,7 +430,7 @@ namespace BepuPhysics
             public int HighestOccupiedTypeIndex;
             public TypeAllocationSizes(BufferPool pool, int maximumTypeCount)
             {
-                pool.SpecializeFor<T>().Take(maximumTypeCount, out TypeCounts);
+                pool.Take(maximumTypeCount, out TypeCounts);
                 TypeCounts.Clear(0, maximumTypeCount);
                 HighestOccupiedTypeIndex = 0;
             }
@@ -443,7 +443,7 @@ namespace BepuPhysics
             }
             public void Dispose(BufferPool pool)
             {
-                pool.SpecializeFor<T>().Return(ref TypeCounts);
+                pool.Return(ref TypeCounts);
             }
         }
 
@@ -488,7 +488,7 @@ namespace BepuPhysics
             }
             //We accumulated indices above; add one to get the capacity requirement.
             ++highestRequiredTypeCapacity;
-            pool.SpecializeFor<TypeAllocationSizes<ConstraintCount>>().Take(highestNewBatchCount, out var constraintCountPerTypePerBatch);
+            pool.Take<TypeAllocationSizes<ConstraintCount>>(highestNewBatchCount, out var constraintCountPerTypePerBatch);
             for (int batchIndex = 0; batchIndex < highestNewBatchCount; ++batchIndex)
             {
                 constraintCountPerTypePerBatch[batchIndex] = new TypeAllocationSizes<ConstraintCount>(pool, highestRequiredTypeCapacity);
@@ -533,7 +533,7 @@ namespace BepuPhysics
             //Ensure capacities on all systems:
             //bodies,
             bodies.EnsureCapacity(bodies.ActiveSet.Count + newBodyCount);
-            //broad bphase, (technically overestimating, not every body has a collidable, but vast majority do and shrug)
+            //broad phase, (technically overestimating, not every body has a collidable, but vast majority do and shrug)
             broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount + newBodyCount, broadPhase.StaticTree.LeafCount);
             //constraints,
             solver.ActiveSet.Batches.EnsureCapacity(highestNewBatchCount, pool.SpecializeFor<ConstraintBatch>());
@@ -580,6 +580,8 @@ namespace BepuPhysics
             }
             EnsurePairCacheTypeCapacities(ref narrowPhaseConstraintCaches, ref targetPairCache.constraintCaches, targetPairCache.pool);
             EnsurePairCacheTypeCapacities(ref narrowPhaseCollisionCaches, ref targetPairCache.collisionCaches, targetPairCache.pool);
+            narrowPhaseConstraintCaches.Dispose(pool);
+            narrowPhaseCollisionCaches.Dispose(pool);
             pairCache.Mapping.EnsureCapacity(pairCache.Mapping.Count + newPairCount,
                 pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
 

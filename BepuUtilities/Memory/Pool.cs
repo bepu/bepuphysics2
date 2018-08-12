@@ -12,17 +12,6 @@ namespace BepuUtilities.Memory
     public class Pool<T>
     {
         Stack<T> stack = new Stack<T>();
-        SpinLock spinLock = new SpinLock();
-        /// <summary>
-        /// Gets the locker used by LockingTake and LockingReturn.
-        /// </summary>
-        public ref SpinLock Locker
-        {
-            get
-            {
-                return ref spinLock;
-            }
-        }
 
         /// <summary>
         /// Gets the number of existing elements in the pool. This number of elements can be requested without creating any new ones.
@@ -126,35 +115,6 @@ namespace BepuUtilities.Memory
             Cleaner?.Invoke(item);
 
             stack.Push(item);
-        }
-
-        /// <summary>
-        /// Takes an element from the pool. If the pool is empty, a new resource is created and returned.
-        /// No other LockingTakes or LockingReturns will interfere during the execution of this function.
-        /// </summary>
-        /// <returns>Element from the pool.</returns>
-        [Obsolete] //We should try to avoid using any locking pools whenever possible. It usually implies some poor design, but not always- might have to undo this obsolete.
-        public T LockingTake()
-        {
-            bool taken = false;
-            spinLock.Enter(ref taken);
-            var item = Take();
-            spinLock.Exit(false);
-            return item;
-        }
-
-        /// <summary>
-        /// Returns the specified item to the pool. If a cleaner delegate is set, the item is cleaned.
-        /// No other LockingTakes or LockingReturns will interfere during the execution of this function.
-        /// </summary>
-        /// <param name="item">Item to give back to the pool.</param>
-        [Obsolete] //We should try to avoid using any locking pools whenever possible. It usually implies some poor design, but not always- might have to undo this obsolete.
-        public void LockingReturn(T item)
-        {
-            bool taken = false;
-            spinLock.Enter(ref taken);
-            Return(item);
-            spinLock.Exit(false);
         }
     }
 }
