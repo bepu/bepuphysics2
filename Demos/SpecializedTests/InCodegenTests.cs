@@ -130,7 +130,7 @@ namespace Demos.SpecializedTests
 
             var simulation = Simulation.Create(new BepuUtilities.Memory.BufferPool(), new TestCallbacks());
             var bodyHandle = simulation.Bodies.Add(new BodyDescription());
-            var grabber = new GrabMotor();
+            var grabber = new GrabServo();
             simulation.Solver.Add(0, ref grabber);
 
             Console.WriteLine($"Op {opTest}, In {inTest}, Ref {refTest}");

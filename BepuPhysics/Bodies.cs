@@ -553,6 +553,38 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Gathers inertia and pose information for two body bundles into AOSOA bundles.
+        /// </summary>
+        /// <param name="references">Active body indices being gathered.</param>
+        /// <param name="count">Number of body pairs in the bundle.</param>
+        /// <param name="orientationA">Gathered orientation of body A.</param>
+        /// <param name="orientationB">Gathered orientation of body B.</param>
+        /// <param name="inertiaA">Gathered inertia of body A.</param>
+        /// <param name="inertiaB">Gathered inertia of body B.</param>
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GatherInertiaAndPose(ref TwoBodyReferences references, int count,
+            out QuaternionWide orientationA, out QuaternionWide orientationB,
+            out BodyInertias inertiaA, out BodyInertias inertiaB)
+        {
+            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
+            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+
+            ref var poses = ref ActiveSet.Poses;
+            for (int i = 0; i < count; ++i)
+            {
+                ref var indexA = ref Unsafe.Add(ref baseIndexA, i);
+                QuaternionWide.WriteFirst(poses[indexA].Orientation, ref GatherScatter.GetOffsetInstance(ref orientationA, i));
+                GatherInertiaForBody(ref Inertias[indexA], ref GatherScatter.GetOffsetInstance(ref inertiaA, i));
+
+                ref var indexB = ref Unsafe.Add(ref baseIndexB, i);
+                QuaternionWide.WriteFirst(poses[indexB].Orientation, ref GatherScatter.GetOffsetInstance(ref orientationB, i));
+                GatherInertiaForBody(ref Inertias[indexB], ref GatherScatter.GetOffsetInstance(ref inertiaB, i));
+            }
+        }
+
+        /// <summary>
         /// Gathers inertia and pose information for a body bundle into AOSOA bundles.
         /// </summary>
         /// <param name="references">Active body indices being gathered.</param>

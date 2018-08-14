@@ -78,7 +78,7 @@ namespace BepuPhysics.Constraints
             out AngularSwivelHingeProjection projection)
         {
             bodies.GatherInertiaAndPose(ref bodyReferences, count,
-                out var localPositionB, out var orientationA, out var orientationB,
+                out var orientationA, out var orientationB,
                 out var inertiaA, out var inertiaB);
 
             //The swivel hinge attempts to keep an axis on body A separated 90 degrees from an axis on body B. In other words, this is the same as a hinge joint, but with one fewer DOF.

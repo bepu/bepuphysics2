@@ -8,48 +8,46 @@ using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
-
-
-    public struct GrabMotor : IConstraintDescription<GrabMotor>
+    public struct GrabServo : IConstraintDescription<GrabServo>
     {
         public Vector3 LocalOffset;
         public Vector3 Target;
         public SpringSettings SpringSettings;
-        public MotorSettings MotorSettings;
+        public ServoSettings ServoSettings;
 
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return GrabMotorTypeProcessor.BatchTypeId;
+                return GrabServoTypeProcessor.BatchTypeId;
             }
         }
 
-        public Type BatchType => typeof(GrabMotorTypeProcessor);
+        public Type BatchType => typeof(GrabServoTypeProcessor);
         
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var target = ref GetOffsetInstance(ref Buffer<GrabMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var target = ref GetOffsetInstance(ref Buffer<GrabServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(LocalOffset, ref target.LocalOffset);
             Vector3Wide.WriteFirst(Target, ref target.Target);
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
-            MotorSettingsWide.WriteFirst(MotorSettings, ref target.MotorSettings);
+            ServoSettingsWide.WriteFirst(ServoSettings, ref target.ServoSettings);
         }
         
-        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out GrabMotor description)
+        public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out GrabServo description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var source = ref GetOffsetInstance(ref Buffer<GrabMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var source = ref GetOffsetInstance(ref Buffer<GrabServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.LocalOffset, out description.LocalOffset);
             Vector3Wide.ReadFirst(source.Target, out description.Target);
             SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
-            MotorSettingsWide.ReadFirst(source.MotorSettings, out description.MotorSettings);
+            ServoSettingsWide.ReadFirst(source.ServoSettings, out description.ServoSettings);
         }
     }
 
-    public struct GrabMotorPrestepData
+    public struct GrabServoPrestepData
     {
         public Vector3Wide LocalOffset;
         //TODO: This depends upon position being represented as a 32 bit floating point number.
@@ -57,10 +55,10 @@ namespace BepuPhysics.Constraints
         //you would have to update the target location every single time step, or else it would just continually accelerate.
         public Vector3Wide Target;
         public SpringSettingsWide SpringSettings;
-        public MotorSettingsWide MotorSettings;
+        public ServoSettingsWide ServoSettings;
     }
 
-    public struct GrabMotorProjection
+    public struct GrabServoProjection
     {
         public Vector3Wide Offset;
         public Vector3Wide BiasVelocity;
@@ -70,11 +68,11 @@ namespace BepuPhysics.Constraints
         public BodyInertias Inertia;
     }
 
-    public struct GrabMotorFunctions : IOneBodyConstraintFunctions<GrabMotorPrestepData, GrabMotorProjection, Vector3Wide>
+    public struct GrabServoFunctions : IOneBodyConstraintFunctions<GrabServoPrestepData, GrabServoProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count, float dt, float inverseDt, ref GrabMotorPrestepData prestep,
-            out GrabMotorProjection projection)
+        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count, float dt, float inverseDt, ref GrabServoPrestepData prestep,
+            out GrabServoProjection projection)
         {
             //TODO: Note that this grabs a world position. That poses a problem for different position representations.
             bodies.GatherInertiaAndPose(ref bodyReferences, count, out var position, out var orientation, out projection.Inertia);
@@ -97,16 +95,16 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Subtract(prestep.Target, worldGrabPoint, out var error);
             Vector3Wide.Scale(error, positionErrorToVelocity, out projection.BiasVelocity);
             Vector3Wide.Length(projection.BiasVelocity, out var speed);
-            var newSpeed = Vector.Min(prestep.MotorSettings.MaximumSpeed, Vector.Max(prestep.MotorSettings.BaseSpeed, speed));
+            var newSpeed = Vector.Min(prestep.ServoSettings.MaximumSpeed, Vector.Max(prestep.ServoSettings.BaseSpeed, speed));
             var scale = newSpeed / speed;
             Vector3Wide.Scale(projection.BiasVelocity, scale, out var scaledVelocity);
             Vector3Wide.ConditionalSelect(Vector.GreaterThan(speed, Vector<float>.Zero), scaledVelocity, projection.BiasVelocity, out projection.BiasVelocity);
 
-            projection.MaximumImpulse = prestep.MotorSettings.MaximumForce * dt;
+            projection.MaximumImpulse = prestep.ServoSettings.MaximumForce * dt;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ApplyImpulse(ref BodyVelocities velocityA, ref GrabMotorProjection projection, ref Vector3Wide csi)
+        private static void ApplyImpulse(ref BodyVelocities velocityA, ref GrabServoProjection projection, ref Vector3Wide csi)
         {
             Vector3Wide.CrossWithoutOverlap(projection.Offset, csi, out var wsi);
             Symmetric3x3Wide.TransformWithoutOverlap(wsi, projection.Inertia.InverseInertiaTensor, out var change);
@@ -117,13 +115,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities velocityA, ref GrabMotorProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void WarmStart(ref BodyVelocities velocityA, ref GrabServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA, ref projection, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref GrabMotorProjection projection, ref Vector3Wide accumulatedImpulse)
+        public void Solve(ref BodyVelocities velocityA, ref GrabServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular);
             Vector3Wide.CrossWithoutOverlap(velocityA.Angular, projection.Offset, out var angularCSV);
@@ -154,7 +152,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket constraints.
     /// </summary>
-    public class GrabMotorTypeProcessor : OneBodyTypeProcessor<GrabMotorPrestepData, GrabMotorProjection, Vector3Wide, GrabMotorFunctions>
+    public class GrabServoTypeProcessor : OneBodyTypeProcessor<GrabServoPrestepData, GrabServoProjection, Vector3Wide, GrabServoFunctions>
     {
         public const int BatchTypeId = 26;
     }

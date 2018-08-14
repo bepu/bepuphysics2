@@ -64,13 +64,13 @@ namespace Demos
             return rayDirection;
         }
 
-        void CreateMotorDescription(in Vector3 target, float inverseMass, out GrabMotor description)
+        void CreateMotorDescription(in Vector3 target, float inverseMass, out GrabServo description)
         {
-            description = new GrabMotor
+            description = new GrabServo
             {
                 LocalOffset = localGrabPoint,
                 Target = target,
-                MotorSettings = new MotorSettings
+                ServoSettings = new ServoSettings
                 {
                     MaximumSpeed = float.MaxValue,
                     MaximumForce = 240f / inverseMass

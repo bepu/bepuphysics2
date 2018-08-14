@@ -75,21 +75,11 @@ namespace BepuPhysics.Constraints
     public struct AngularHingeFunctions : IConstraintFunctions<AngularHingePrestepData, AngularHingeProjection, Vector2Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ApproximateAcos(ref Vector<float> x, out Vector<float> acos)
-        {
-            //acos(x) ~= (pi / (2 * sqrt(2))) * sqrt(2 - 2 * x), for 0<=x<=1
-            //acos(x) ~= pi - (pi / (2 * sqrt(2))) * sqrt(2 + 2 * x), for -1<=x<=0
-            var two = new Vector<float>(2f);
-            acos = new Vector<float>(1.11072073454f) * Vector.SquareRoot(Vector.Max(Vector<float>.Zero, two - two * Vector.Abs(x)));
-            acos = Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), new Vector<float>(MathHelper.Pi) - acos, acos);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref AngularHingePrestepData prestep,
             out AngularHingeProjection projection)
         {
             bodies.GatherInertiaAndPose(ref bodyReferences, count,
-                out var localPositionB, out var orientationA, out var orientationB,
+                out var orientationA, out var orientationB,
                 out var inertiaA, out var inertiaB);
 
             //Note that we build the tangents in local space first to avoid inconsistencies.
@@ -186,8 +176,8 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Dot(hingeAxisBOnPlaneY, hingeAxisA, out var hbyha);
             Vector2Wide errorAngle;
             //We could probably get away with an acos approximation of something like (1 - x) * pi/2, but we'll do just a little more work:
-            ApproximateAcos(ref hbxha, out errorAngle.X);
-            ApproximateAcos(ref hbyha, out errorAngle.Y);
+            MathHelper.ApproximateAcos(hbxha, out errorAngle.X);
+            MathHelper.ApproximateAcos(hbyha, out errorAngle.Y);
             Vector3Wide.Dot(hingeAxisBOnPlaneX, jacobianA.Y, out var hbxay);
             Vector3Wide.Dot(hingeAxisBOnPlaneY, jacobianA.X, out var hbyax);
             errorAngle.X = Vector.ConditionalSelect(Vector.LessThan(hbxay, Vector<float>.Zero), errorAngle.X, -errorAngle.X);

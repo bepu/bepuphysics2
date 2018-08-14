@@ -30,28 +30,6 @@ namespace BepuUtilities
         public const float PiOver4 = 0.785398163397448310f;
 
         /// <summary>
-        /// Reduces the angle into a range from -Pi to Pi.
-        /// </summary>
-        /// <param name="angle">Angle to wrap.</param>
-        /// <returns>Wrapped angle.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float WrapAngle(float angle)
-        {
-            angle = (float)System.Math.IEEERemainder(angle, TwoPi);
-            if (angle < -Pi)
-            {
-                angle += TwoPi;
-                return angle;
-            }
-            if (angle >= Pi)
-            {
-                angle -= TwoPi;
-            }
-            return angle;
-
-        }
-        
-        /// <summary>
         /// Clamps a value between a minimum and maximum value.
         /// </summary>
         /// <param name="value">Value to clamp.</param>
@@ -329,5 +307,39 @@ namespace BepuUtilities
             Cos(x - new Vector<float>(PiOver2), out result);
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApproximateAcos(in Vector<float> x, out Vector<float> acos)
+        {
+            //TODO: Could probably do better than this. Definitely don't need to use a square root.
+            //acos(x) ~= (pi / (2 * sqrt(2))) * sqrt(2 - 2 * x), for 0<=x<=1
+            //acos(x) ~= pi - (pi / (2 * sqrt(2))) * sqrt(2 + 2 * x), for -1<=x<=0
+            var two = new Vector<float>(2f);
+            acos = new Vector<float>(1.11072073454f) * Vector.SquareRoot(Vector.Max(Vector<float>.Zero, two - two * Vector.Abs(x)));
+            acos = Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), new Vector<float>(Pi) - acos, acos);
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Floor(in Vector<float> x, out Vector<float> result)
+        {
+            //This is far from ideal. You could probably do better- especially with platform intrinsics.
+            var intX = Vector.ConvertToInt32(x);
+            result = Vector.ConvertToSingle(Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), intX - Vector<int>.One, intX));
+        }
+
+        /// <summary>
+        /// Gets the change in angle from a to b as a signed value from -pi to pi.
+        /// </summary>
+        /// <param name="a">Source angle.</param>
+        /// <param name="b">Target angle.</param>
+        /// <param name="difference">Difference between a and b, expressed as a value from -pi to pi.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GetSignedAngleDifference(in Vector<float> a, in Vector<float> b, out Vector<float> difference)
+        {
+            var x = (b - a) * new Vector<float>(1f / TwoPi) + new Vector<float>(0.5f);
+            Floor(x, out var flooredX);
+            difference = x - flooredX - new Vector<float>(Pi);
+        }
     }
 }

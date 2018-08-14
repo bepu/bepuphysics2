@@ -268,7 +268,7 @@ namespace BepuUtilities
         /// <summary>
         /// Transforms the unit X and unit Y direction using a quaternion.
         /// </summary>
-        /// <param name="rotation">Rotation to apply to the vector.</param>
+        /// <param name="rotation">Rotation to apply to the vectors.</param>
         /// <param name="x">Transformed unit X vector.</param>
         /// <param name="y">Transformed unit Y vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -292,6 +292,37 @@ namespace BepuUtilities
             y.X = xy2 - wz2;
             y.Y = Vector<float>.One - xx2 - zz2;
             y.Z = yz2 + wx2;
+        }
+
+        /// <summary>
+        /// Transforms the unit X and unit Z direction using a quaternion.
+        /// </summary>
+        /// <param name="rotation">Rotation to apply to the vectors.</param>
+        /// <param name="x">Transformed unit X vector.</param>
+        /// <param name="z">Transformed unit Z vector.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void TransformUnitXZ(in QuaternionWide rotation, out Vector3Wide x, out Vector3Wide z)
+        {
+            var qX2 = rotation.X + rotation.X;
+            var qY2 = rotation.Y + rotation.Y;
+            var qZ2 = rotation.Z + rotation.Z;
+
+            var YY = qY2 * rotation.Y;
+            var ZZ = qZ2 * rotation.Z;
+            x.X = Vector<float>.One - YY - ZZ;
+            var XY = qX2 * rotation.Y;
+            var ZW = qZ2 * rotation.W;
+            x.Y = XY + ZW;
+            var XZ = qX2 * rotation.Z;
+            var YW = qY2 * rotation.W;
+            x.Z = XZ - YW;
+
+            var XX = qX2 * rotation.X;
+            var XW = qX2 * rotation.W;
+            var YZ = qY2 * rotation.Z;
+            z.X = XZ + YW;
+            z.Y = YZ - XW;
+            z.Z = Vector<float>.One - XX - YY;
         }
 
 
