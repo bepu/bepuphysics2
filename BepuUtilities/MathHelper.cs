@@ -337,9 +337,11 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetSignedAngleDifference(in Vector<float> a, in Vector<float> b, out Vector<float> difference)
         {
-            var x = (b - a) * new Vector<float>(1f / TwoPi) + new Vector<float>(0.5f);
+            var pi = new Vector<float>(Pi);
+            var half = new Vector<float>(0.5f);
+            var x = (b - a) * new Vector<float>(1f / TwoPi) + half;
             Floor(x, out var flooredX);
-            difference = x - flooredX - new Vector<float>(Pi);
+            difference = (x - flooredX - half) * TwoPi;
         }
     }
 }

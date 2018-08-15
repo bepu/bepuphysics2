@@ -154,6 +154,6 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public class GrabServoTypeProcessor : OneBodyTypeProcessor<GrabServoPrestepData, GrabServoProjection, Vector3Wide, GrabServoFunctions>
     {
-        public const int BatchTypeId = 26;
+        public const int BatchTypeId = 27;
     }
 }

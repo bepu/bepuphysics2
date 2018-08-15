@@ -20,6 +20,7 @@ namespace BepuPhysics
             solver.Register<BallSocket>();
             solver.Register<AngularHinge>();
             solver.Register<AngularSwivelHinge>();
+            solver.Register<TwistServo>();
             solver.Register<SwingLimit>();
             solver.Register<GrabServo>();
             solver.Register<Contact1OneBody>();

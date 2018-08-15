@@ -39,6 +39,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<ConstraintTestDemo>();
             AddOption<CompoundTestDemo>();
             AddOption<MeshDemo>();
             AddOption<PyramidDemo>();

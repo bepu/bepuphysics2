@@ -26,7 +26,7 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public Quaternion LocalBasisB;
         /// <summary>
-        /// Target angle between B's axis to measure (X) and A's measurement axis (X). Psoit 
+        /// Target angle between B's axis to measure (X) and A's measurement axis (X). 
         /// </summary>
         public float TargetAngle;
 
@@ -53,8 +53,6 @@ namespace BepuPhysics.Constraints
             GetFirst(ref target.TargetAngle) = TargetAngle;
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
             ServoSettingsWide.WriteFirst(ServoSettings, ref target.ServoSettings);
-            GetFirst(ref target.SpringSettings.AngularFrequency) = SpringSettings.AngularFrequency;
-            GetFirst(ref target.SpringSettings.TwiceDampingRatio) = SpringSettings.TwiceDampingRatio;
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out TwistServo description)
@@ -81,9 +79,9 @@ namespace BepuPhysics.Constraints
     public struct TwistServoProjection
     {
         public Vector3Wide VelocityToImpulseA;
-        public Vector3Wide NegatedVelocityToImpulseB;
         public Vector<float> BiasImpulse;
         public Vector<float> SoftnessImpulseScale;
+        public Vector<float> MaximumImpulse;
         public Vector3Wide ImpulseToVelocityA;
         public Vector3Wide NegatedImpulseToVelocityB;
     }
@@ -106,49 +104,51 @@ namespace BepuPhysics.Constraints
             //C = atan(dot(alignedBasisB.X, basisA.X), dot(alignedBasisB.X, basisA.Y))
             //where alignedBasisB = basisB * ShortestRotationBetweenUnitVectors(basisB.Z, basisA.Z)
             //The full derivation is omitted; check the AngularHinge for a similar derivation.
-            //After a lot of manipulation, everything drops down to angular jacobians equal to the twist axes (basisA.Z and -basisB.Z).
-
-            //One key note is that we treat the aligning transform ShortestRotationBetweenUnitVectors(basisB.Z, basisA.Z) as constant.
-            //It technically isn't, and that can cause some missed velocity when the objects are moving around non-twist axes. 
-            //But v1 used this formulation for years and no one seemed to complain. Position correction will still work as expected, so the errors will be corrected reasonably quickly.
-            //As a bonus, it's very cheap.
+            //After a lot of manipulation, everything drops down to angular jacobians equal to the twist axes (basisA.Z + basisB.Z).
+            //TODO: Would be nice to actually have the derivation here. Secretly, I just handwaved this and referred to the v1 implementation without working it all the way through again.
 
             //Note that we build the tangents in local space first to avoid inconsistencies.
 
             QuaternionWide.ConcatenateWithoutOverlap(prestep.LocalBasisA, orientationA, out var basisQuaternionA);
             QuaternionWide.ConcatenateWithoutOverlap(prestep.LocalBasisB, orientationB, out var basisQuaternionB);
 
-            QuaternionWide.TransformUnitXZ(basisQuaternionB, out var basisBX, out var negatedAngularJacobianB);
+            QuaternionWide.TransformUnitXZ(basisQuaternionB, out var basisBX, out var basisBZ);
             Matrix3x3Wide.CreateFromQuaternion(basisQuaternionA, out var basisA);
-            
-            //Note that JB = -basisB.Z, but for the purposes of calculating the effective mass the sign is irrelevant.
+            //Protect against singularity when the axes point at each other.
+            Vector3Wide.Add(basisA.Z, basisBZ, out var jacobianA);
+            Vector3Wide.Length(jacobianA, out var length);
+            Vector3Wide.Scale(jacobianA, Vector<float>.One / length, out jacobianA);
+            Vector3Wide.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-10f)), basisA.Z, jacobianA, out jacobianA);
+
+            //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
             //This computes the effective mass using the usual (J * M^-1 * JT)^-1 formulation, but we actually make use of the intermediate result J * M^-1 so we compute it directly.
-            Symmetric3x3Wide.TransformWithoutOverlap(basisA.Z, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
-            Symmetric3x3Wide.TransformWithoutOverlap(negatedAngularJacobianB, inertiaB.InverseInertiaTensor, out projection.NegatedImpulseToVelocityB);
-            Vector3Wide.Dot(projection.ImpulseToVelocityA, basisA.Z, out var angularA);
-            Vector3Wide.Dot(projection.NegatedImpulseToVelocityB, negatedAngularJacobianB, out var angularB);
+            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
+            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaB.InverseInertiaTensor, out projection.NegatedImpulseToVelocityB);
+            Vector3Wide.Dot(projection.ImpulseToVelocityA, jacobianA, out var angularA);
+            Vector3Wide.Dot(projection.NegatedImpulseToVelocityB, jacobianA, out var angularB);
 
             SpringSettingsWide.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             var effectiveMass = effectiveMassCFMScale / (angularA + angularB);
-            Vector3Wide.Scale(basisA.Z, effectiveMass, out projection.VelocityToImpulseA);
-            Vector3Wide.Scale(negatedAngularJacobianB, effectiveMass, out projection.NegatedVelocityToImpulseB);
+            Vector3Wide.Scale(jacobianA, effectiveMass, out projection.VelocityToImpulseA);
 
             //Compute the position error and bias velocities.
             //Now we just have the slight annoyance that our error function contains inverse trigonometry.
             //We'll just use:
             //atan(dot(alignedBasisBX, basisAX), dot(alignedBasisBX, basisAY)) = 
             //sign(dot(alignedBasisBX, basisAY)) * acos(dot(alignedBasisBX, basisAX))
-            QuaternionWide.GetQuaternionBetweenNormalizedVectors(basisA.Z, negatedAngularJacobianB, out var aligningRotation);
+            QuaternionWide.GetQuaternionBetweenNormalizedVectors(basisBZ, basisA.Z, out var aligningRotation);
+            QuaternionWide.TransformWithoutOverlap(basisBZ, aligningRotation, out var shouldBeBasisAZ);
             QuaternionWide.TransformWithoutOverlap(basisBX, aligningRotation, out var alignedBasisBX);
             Vector3Wide.Dot(alignedBasisBX, basisA.X, out var x);
             Vector3Wide.Dot(alignedBasisBX, basisA.Y, out var y);
             MathHelper.ApproximateAcos(x, out var absAngle);
             var angle = Vector.ConditionalSelect(Vector.LessThan(y, Vector<float>.Zero), -absAngle, absAngle);
 
-            MathHelper.GetSignedAngleDifference(angle, prestep.TargetAngle, out var error); 
+            MathHelper.GetSignedAngleDifference(prestep.TargetAngle, angle, out var error);
             
-            projection.BiasImpulse = error* positionErrorToVelocity * effectiveMass;
-
+            ServoSettingsWide.ClampBiasVelocity(error * positionErrorToVelocity, error, prestep.ServoSettings, inverseDt, out var clampedBiasVelocity);
+            projection.BiasImpulse = clampedBiasVelocity * effectiveMass;
+            projection.MaximumImpulse = prestep.ServoSettings.MaximumForce * dt;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -169,11 +169,14 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref TwistServoProjection projection, ref Vector<float> accumulatedImpulse)
         {
-            Vector3Wide.Dot(velocityA.Angular, projection.VelocityToImpulseA, out var csiA);
-            Vector3Wide.Dot(velocityB.Angular, projection.NegatedVelocityToImpulseB, out var negatedCSIB);
+            Vector3Wide.Subtract(velocityA.Angular, velocityB.Angular, out var netVelocity);
+            Vector3Wide.Dot(netVelocity, projection.VelocityToImpulseA, out var csiVelocityComponent);
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
-            var csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - csiA + negatedCSIB;
-            accumulatedImpulse += csi;
+            var csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - csiVelocityComponent;
+            var previousAccumulatedImpulse = accumulatedImpulse;
+            accumulatedImpulse = Vector.Min(Vector.Max(accumulatedImpulse + csi, -projection.MaximumImpulse), projection.MaximumImpulse);
+            csi = accumulatedImpulse - previousAccumulatedImpulse;
+
             ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, ref projection, ref csi);
         }
 
@@ -181,7 +184,7 @@ namespace BepuPhysics.Constraints
 
     public class TwistServoTypeProcessor : TwoBodyTypeProcessor<TwistServoPrestepData, TwistServoProjection, Vector<float>, TwistServoFunctions>
     {
-        public const int BatchTypeId = 25;
+        public const int BatchTypeId = 26;
     }
 }
 

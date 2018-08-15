@@ -162,8 +162,8 @@ namespace BepuPhysics.Trees
         void GetRefineTuning(int frameIndex, int refinementCandidatesCount, float refineAggressivenessScale, float costChange,
             out int targetRefinementCount, out int refinementPeriod, out int refinementOffset)
         {
-                Debug.Assert(!float.IsNaN(costChange) && !float.IsInfinity(costChange), 
-                "If the change in heuristic cost hits invalid values, it's likely that there are invalid poses or velocities. A bugged velocity input or constraint triggering an explosion is likely.");
+            Debug.Assert(!float.IsNaN(costChange) && !float.IsInfinity(costChange),
+            "If the change in heuristic cost hits invalid values, it's likely that there are invalid poses or velocities. A bugged velocity input or constraint triggering an explosion is likely.");
             var refineAggressiveness = Math.Max(0, costChange * refineAggressivenessScale);
             float refinePortion = Math.Min(1, refineAggressiveness * 0.25f);
 
@@ -223,7 +223,7 @@ namespace BepuPhysics.Trees
                 refinementTargets.AddUnsafely(0);
                 metanodes->RefineFlag = 1;
             }
-            
+
             //Refine all marked targets.
 
             QuickList<int, Buffer<int>>.Create(intPool, maximumSubtrees, out var subtreeReferences);
@@ -243,7 +243,7 @@ namespace BepuPhysics.Trees
                 metanodes[refinementTargets[i]].RefineFlag = 0;
 
             }
-            
+
             pool.Return(ref buffer);
             subtreeReferences.Dispose(intPool);
             treeletInternalNodes.Dispose(intPool);
