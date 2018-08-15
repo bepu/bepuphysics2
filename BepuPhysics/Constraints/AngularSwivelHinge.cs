@@ -113,7 +113,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Dot(projection.ImpulseToVelocityA, jacobianA, out var angularA);
             Vector3Wide.Dot(projection.NegatedImpulseToVelocityB, jacobianA, out var angularB);
 
-            SpringSettingsWide.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             var effectiveMass = effectiveMassCFMScale / (angularA + angularB);
             Vector3Wide.Scale(jacobianA, effectiveMass, out projection.VelocityToImpulseA);
             

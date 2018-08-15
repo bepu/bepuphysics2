@@ -142,7 +142,7 @@ namespace BepuPhysics.Constraints
             Symmetric2x2Wide.Add(angularA, angularB, out var inverseEffectiveMass);
             Symmetric2x2Wide.InvertWithoutOverlap(inverseEffectiveMass, out var effectiveMass);
 
-            SpringSettingsWide.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Symmetric2x2Wide.Scale(effectiveMass, effectiveMassCFMScale, out effectiveMass);
             Symmetric2x2Wide.MultiplyTransposed(jacobianA, effectiveMass, out projection.VelocityToImpulseA);
 

@@ -87,7 +87,7 @@ namespace BepuPhysics.Constraints
             inverseEffectiveMass.YY += projection.Inertia.InverseMass;
             inverseEffectiveMass.ZZ += projection.Inertia.InverseMass;
             Symmetric3x3Wide.Invert(inverseEffectiveMass, out projection.EffectiveMass);
-            SpringSettingsWide.ComputeSpringiness(ref prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Symmetric3x3Wide.Scale(projection.EffectiveMass, effectiveMassCFMScale, out projection.EffectiveMass);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
@@ -154,6 +154,6 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public class GrabServoTypeProcessor : OneBodyTypeProcessor<GrabServoPrestepData, GrabServoProjection, Vector3Wide, GrabServoFunctions>
     {
-        public const int BatchTypeId = 27;
+        public const int BatchTypeId = 28;
     }
 }

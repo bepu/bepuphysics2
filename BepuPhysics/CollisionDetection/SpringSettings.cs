@@ -33,7 +33,7 @@ namespace BepuPhysics
         /// <param name="effectiveMassCFMScale">Scaling factor to apply to the effective mass to get the softened effective mass.</param>
         /// <param name="softnessImpulseScale">Scaling factor to apply to the accumulated impulse during the solve to soften the target velocity.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeSpringiness(ref SpringSettingsWide settings, float dt,
+        public static void ComputeSpringiness(in SpringSettingsWide settings, float dt,
             out Vector<float> positionErrorToVelocity, out Vector<float> effectiveMassCFMScale, out Vector<float> softnessImpulseScale)
         {
             //For more information behind these values, check the Inequality1DOF constraint comments.
