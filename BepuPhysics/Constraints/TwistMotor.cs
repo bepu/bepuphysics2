@@ -23,6 +23,10 @@ namespace BepuPhysics.Constraints
         /// Local twist axis attached to body B.
         /// </summary>
         public Vector3 LocalAxisB;
+        /// <summary>
+        /// Goal relative twist velocity around the body axes.
+        /// </summary>
+        public float TargetVelocity;
         public MotorSettings Settings;
 
         public int ConstraintTypeId
@@ -42,6 +46,7 @@ namespace BepuPhysics.Constraints
             ref var target = ref GetOffsetInstance(ref Buffer<TwistMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(LocalAxisA, ref target.LocalAxisA);
             Vector3Wide.WriteFirst(LocalAxisB, ref target.LocalAxisB);
+            GetFirst(ref target.TargetVelocity) = TargetVelocity;
             MotorSettingsWide.WriteFirst(Settings, ref target.Settings);
         }
 
@@ -51,6 +56,7 @@ namespace BepuPhysics.Constraints
             ref var source = ref GetOffsetInstance(ref Buffer<TwistMotorPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.LocalAxisA, out description.LocalAxisA);
             Vector3Wide.ReadFirst(source.LocalAxisB, out description.LocalAxisB);
+            description.TargetVelocity = GetFirst(ref source.TargetVelocity);
             MotorSettingsWide.ReadFirst(source.Settings, out description.Settings);
         }
     }
@@ -59,6 +65,7 @@ namespace BepuPhysics.Constraints
     {
         public Vector3Wide LocalAxisA;
         public Vector3Wide LocalAxisB;
+        public Vector<float> TargetVelocity;
         public MotorSettingsWide Settings;
     }
 
@@ -70,7 +77,6 @@ namespace BepuPhysics.Constraints
         public Vector<float> MaximumImpulse;
         public Vector3Wide ImpulseToVelocityA;
         public Vector3Wide NegatedImpulseToVelocityB;
-
     }
 
 
@@ -94,11 +100,11 @@ namespace BepuPhysics.Constraints
             TwistServoFunctions.ComputeEffectiveMassContributions(inertiaA, inertiaB, jacobianA,
                 ref projection.ImpulseToVelocityA, ref projection.NegatedImpulseToVelocityB, out var unsoftenedInverseEffectiveMass);
 
-            var effectiveMass = Vector<float>.One / unsoftenedInverseEffectiveMass;
+            MotorSettingsWide.ComputeSoftness(prestep.Settings.Damping, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            var effectiveMass = effectiveMassCFMScale / unsoftenedInverseEffectiveMass;
             Vector3Wide.Scale(jacobianA, effectiveMass, out projection.VelocityToImpulseA);
-
-            projection.SoftnessImpulseScale = prestep.Settings.Softness * inverseDt * effectiveMass;
-            projection.BiasImpulse = prestep.Settings.TargetSpeed * effectiveMass;
+            
+            projection.BiasImpulse = prestep.TargetVelocity * effectiveMass;
             projection.MaximumImpulse = prestep.Settings.MaximumForce * dt;
         }
 

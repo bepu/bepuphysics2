@@ -77,7 +77,13 @@ namespace Demos.Demos
                 var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(5, 5, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
                 var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(5, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, -1, 0), LocalOffsetB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
-                Simulation.Solver.Add(a, b, new TwistMotor { LocalAxisA = new Vector3(0, 1, 0), LocalAxisB = new Vector3(0, 1, 0), Settings = new MotorSettings(MathHelper.Pi * 20, 0.5f, 0) });
+                Simulation.Solver.Add(a, b, new TwistMotor
+                {
+                    LocalAxisA = new Vector3(0, 1, 0),
+                    LocalAxisB = new Vector3(0, 1, 0),
+                    TargetVelocity = -MathHelper.Pi * 2,
+                    Settings = new MotorSettings(float.MaxValue, 0.1f)
+                });
                 Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
 
