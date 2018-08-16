@@ -705,9 +705,6 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetAxisAngleFromQuaternion(in Quaternion q, out Vector3 axis, out float angle)
         {
-#if !WINDOWS
-            axis = new Vector3();
-#endif
             float qw = q.W;
             if (qw > 0)
             {

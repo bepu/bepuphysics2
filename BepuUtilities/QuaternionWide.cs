@@ -155,6 +155,30 @@ namespace BepuUtilities
             Normalize(q, out q);
         }
 
+        /// <summary>
+        /// Gets an axis and angle representation of the rotation stored in a quaternion. Angle is approximated.
+        /// </summary>
+        /// <param name="q">Quaternion to extract an axis-angle representation from.</param>
+        /// <param name="axis">Axis of rotation extracted from the quaternion.</param>
+        /// <param name="angle">Approximated angle of rotation extracted from the quaternion.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GetApproximateAxisAngleFromQuaternion(in QuaternionWide q, out Vector3Wide axis, out Vector<float> angle)
+        {
+            var shouldNegate = Vector.LessThan(q.W, Vector<float>.Zero);
+            axis.X = Vector.ConditionalSelect(shouldNegate, -q.X, q.X);
+            axis.Y = Vector.ConditionalSelect(shouldNegate, -q.Y, q.Y);
+            axis.Z = Vector.ConditionalSelect(shouldNegate, -q.Z, q.Z);
+            var qw = Vector.ConditionalSelect(shouldNegate, -q.W, q.W);
+
+            Vector3Wide.Length(axis, out var axisLength);
+            Vector3Wide.Scale(axis, Vector<float>.One / axisLength, out axis);
+            var useFallback = Vector.LessThan(axisLength, new Vector<float>(1e-14f));
+            axis.X = Vector.ConditionalSelect(useFallback, Vector<float>.One, axis.X);
+            axis.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, axis.Y);
+            axis.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, axis.Z);
+            MathHelper.ApproximateAcos(qw, out var halfAngle);
+            angle = 2 * halfAngle;
+        }
 
         /// <summary>
         /// Transforms the vector using a quaternion. Assumes that the memory backing the input and output do not overlap.
@@ -350,11 +374,10 @@ namespace BepuUtilities
         /// <param name="b">Second quaternion to concatenate.</param>
         /// <param name="result">Product of the concatenation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Concatenate(in QuaternionWide oa, in QuaternionWide ob, out QuaternionWide result)
+        public static void Concatenate(in QuaternionWide a, in QuaternionWide b, out QuaternionWide result)
         {
-            var tempA = oa;
-            var tempB = ob;
-            ConcatenateWithoutOverlap(tempA, tempB, out result);
+            ConcatenateWithoutOverlap(a, b, out var tempResult);
+            result = tempResult;
         }
 
         /// <summary>

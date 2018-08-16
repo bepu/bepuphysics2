@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using BepuPhysics;
 
 namespace BepuUtilities
 {
@@ -223,7 +224,15 @@ namespace BepuUtilities
             result.Z = v.X * m.ZX + v.Y * m.ZY + v.Z * m.ZZ;
         }
 
-
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteFirst(in Symmetric3x3 scalar, ref Symmetric3x3Wide wide)
+        {
+            GatherScatter.GetFirst(ref wide.XX) = scalar.XX;
+            GatherScatter.GetFirst(ref wide.YX) = scalar.YX;
+            GatherScatter.GetFirst(ref wide.YY) = scalar.YY;
+            GatherScatter.GetFirst(ref wide.ZX) = scalar.ZX;
+            GatherScatter.GetFirst(ref wide.ZY) = scalar.ZY;
+            GatherScatter.GetFirst(ref wide.ZZ) = scalar.ZZ;
+        }
     }
 }

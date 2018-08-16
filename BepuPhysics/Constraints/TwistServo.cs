@@ -92,7 +92,7 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeJacobian(
             Bodies bodies, TwoBodyReferences bodyReferences, int count, in QuaternionWide localBasisA, in QuaternionWide localBasisB,
-            out BodyInertias inertiaA, out BodyInertias inertiaB, out Vector3Wide basisBX, out Vector3Wide basisBZ, out Matrix3x3Wide basisA, out Vector3Wide jacobianA)
+            out Symmetric3x3Wide inertiaA, out Symmetric3x3Wide inertiaB, out Vector3Wide basisBX, out Vector3Wide basisBZ, out Matrix3x3Wide basisA, out Vector3Wide jacobianA)
         {
             bodies.GatherInertiaAndPose(ref bodyReferences, count,
                 out var orientationA, out var orientationB,
@@ -141,13 +141,13 @@ namespace BepuPhysics.Constraints
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeEffectiveMassContributions(
-           in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide jacobianA,
+           in Symmetric3x3Wide inverseInertiaA, in Symmetric3x3Wide inverseInertiaB, in Vector3Wide jacobianA,
            ref Vector3Wide impulseToVelocityA, ref Vector3Wide negatedImpulseToVelocityB, out Vector<float> unsoftenedInverseEffectiveMass)
         {
             //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
             //This computes the effective mass using the usual (J * M^-1 * JT)^-1 formulation, but we actually make use of the intermediate result J * M^-1 so we compute it directly.
-            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out impulseToVelocityA);
-            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaB.InverseInertiaTensor, out negatedImpulseToVelocityB);
+            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inverseInertiaA, out impulseToVelocityA);
+            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inverseInertiaB, out negatedImpulseToVelocityB);
             Vector3Wide.Dot(impulseToVelocityA, jacobianA, out var angularA);
             Vector3Wide.Dot(negatedImpulseToVelocityB, jacobianA, out var angularB);
             unsoftenedInverseEffectiveMass = angularA + angularB;
@@ -155,11 +155,11 @@ namespace BepuPhysics.Constraints
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeEffectiveMass(float dt, in SpringSettingsWide springSettings,
-            in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide jacobianA,
+            in Symmetric3x3Wide inverseInertiaA, in Symmetric3x3Wide inverseInertiaB, in Vector3Wide jacobianA,
             ref Vector3Wide impulseToVelocityA, ref Vector3Wide negatedImpulseToVelocityB, out Vector<float> positionErrorToVelocity, out Vector<float> softnessImpulseScale,
             out Vector<float> effectiveMass, out Vector3Wide velocityToImpulseA)
         {
-            ComputeEffectiveMassContributions(inertiaA, inertiaB, jacobianA, ref impulseToVelocityA, ref negatedImpulseToVelocityB, out var unsoftenedInverseEffectiveMass);
+            ComputeEffectiveMassContributions(inverseInertiaA, inverseInertiaB, jacobianA, ref impulseToVelocityA, ref negatedImpulseToVelocityB, out var unsoftenedInverseEffectiveMass);
 
             SpringSettingsWide.ComputeSpringiness(springSettings, dt, out positionErrorToVelocity, out var effectiveMassCFMScale, out softnessImpulseScale);
             effectiveMass = effectiveMassCFMScale / unsoftenedInverseEffectiveMass;
@@ -171,9 +171,9 @@ namespace BepuPhysics.Constraints
             out TwistServoProjection projection)
         {
             ComputeJacobian(bodies, bodyReferences, count, prestep.LocalBasisA, prestep.LocalBasisB,
-                out var inertiaA, out var inertiaB, out var basisBX, out var basisBZ, out var basisA, out var jacobianA);
+                out var inverseInertiaA, out var inverseInertiaB, out var basisBX, out var basisBZ, out var basisA, out var jacobianA);
 
-            ComputeEffectiveMass(dt, prestep.SpringSettings, inertiaA, inertiaB, jacobianA,
+            ComputeEffectiveMass(dt, prestep.SpringSettings, inverseInertiaA, inverseInertiaB, jacobianA,
                 ref projection.ImpulseToVelocityA, ref projection.NegatedImpulseToVelocityB,
                 out var positionErrorToVelocity, out projection.SoftnessImpulseScale, out var effectiveMass, out projection.VelocityToImpulseA);
 

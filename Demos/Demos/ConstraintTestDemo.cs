@@ -86,6 +86,17 @@ namespace Demos.Demos
                 });
                 Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
+            {
+                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(8, 5, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(8, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, -1, 0), LocalOffsetB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new AngularServo
+                {
+                    TargetRelativeRotationLocalA = Quaternion.CreateFromAxisAngle(new Vector3(1,0,0), MathHelper.PiOver2),
+                    ServoSettings = new ServoSettings(float.MaxValue, 0, 12f),
+                    SpringSettings = new SpringSettings(30, 1)
+                });
+            }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
 

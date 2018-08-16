@@ -79,7 +79,7 @@ namespace BepuPhysics.Constraints
         {
             bodies.GatherInertiaAndPose(ref bodyReferences, count,
                 out var orientationA, out var orientationB,
-                out var inertiaA, out var inertiaB);
+                out var inverseInertiaA, out var inverseInertiaB);
 
             //The swivel hinge attempts to keep an axis on body A separated 90 degrees from an axis on body B. In other words, this is the same as a hinge joint, but with one fewer DOF.
             //C = dot(swivelA, hingeB) = 0
@@ -107,9 +107,9 @@ namespace BepuPhysics.Constraints
             //Note that JA = -JB, but for the purposes of calculating the effective mass the sign is irrelevant.
 
             //This computes the effective mass using the usual (J * M^-1 * JT)^-1 formulation, but we actually make use of the intermediate result J * M^-1 so we compute it directly.
-            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
+            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inverseInertiaA, out projection.ImpulseToVelocityA);
             //Note that we don't use -jacobianA here, so we're actually storing out the negated version of the transform. That's fine; we'll simply subtract in the iteration.
-            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaB.InverseInertiaTensor, out projection.NegatedImpulseToVelocityB);
+            Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inverseInertiaB, out projection.NegatedImpulseToVelocityB);
             Vector3Wide.Dot(projection.ImpulseToVelocityA, jacobianA, out var angularA);
             Vector3Wide.Dot(projection.NegatedImpulseToVelocityB, jacobianA, out var angularB);
 

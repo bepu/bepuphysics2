@@ -38,6 +38,17 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ComputeClampedBiasVelocity(in Vector3Wide errorAxis, in Vector<float> errorLength, in Vector<float> positionErrorToBiasVelocity, in ServoSettingsWide servoSettings, 
+            float inverseDt, out Vector3Wide clampedBiasVelocity)
+        {
+            //Can't request speed that would cause an overshoot.
+            var baseSpeed = Vector.Min(servoSettings.BaseSpeed, errorLength * inverseDt);
+            var unclampedBiasSpeed = errorLength * positionErrorToBiasVelocity;
+            var scale = Vector.Min(Vector<float>.One, servoSettings.MaximumSpeed / Vector.Max(baseSpeed, unclampedBiasSpeed));
+            Vector3Wide.Scale(errorAxis, scale * unclampedBiasSpeed, out clampedBiasVelocity);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteFirst(in ServoSettings source, ref ServoSettingsWide target)
         {
             GatherScatter.GetFirst(ref target.MaximumSpeed) = source.MaximumSpeed;

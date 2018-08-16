@@ -564,7 +564,7 @@ namespace BepuPhysics
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherInertiaAndPose(ref TwoBodyReferences references, int count,
             out QuaternionWide orientationA, out QuaternionWide orientationB,
-            out BodyInertias inertiaA, out BodyInertias inertiaB)
+            out Symmetric3x3Wide inverseInertiaA, out Symmetric3x3Wide inverseInertiaB)
         {
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
@@ -576,11 +576,11 @@ namespace BepuPhysics
             {
                 ref var indexA = ref Unsafe.Add(ref baseIndexA, i);
                 QuaternionWide.WriteFirst(poses[indexA].Orientation, ref GatherScatter.GetOffsetInstance(ref orientationA, i));
-                GatherInertiaForBody(ref Inertias[indexA], ref GatherScatter.GetOffsetInstance(ref inertiaA, i));
+                Symmetric3x3Wide.WriteFirst(Inertias[indexA].InverseInertiaTensor, ref GatherScatter.GetOffsetInstance(ref inverseInertiaA, i));
 
                 ref var indexB = ref Unsafe.Add(ref baseIndexB, i);
                 QuaternionWide.WriteFirst(poses[indexB].Orientation, ref GatherScatter.GetOffsetInstance(ref orientationB, i));
-                GatherInertiaForBody(ref Inertias[indexB], ref GatherScatter.GetOffsetInstance(ref inertiaB, i));
+                Symmetric3x3Wide.WriteFirst(Inertias[indexB].InverseInertiaTensor, ref GatherScatter.GetOffsetInstance(ref inverseInertiaB, i));
             }
         }
 
