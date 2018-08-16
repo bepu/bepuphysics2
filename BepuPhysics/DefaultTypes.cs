@@ -25,7 +25,9 @@ namespace BepuPhysics
             solver.Register<TwistLimit>();
             solver.Register<TwistMotor>();
             solver.Register<AngularServo>();
+            solver.Register<AngularMotor>();
             solver.Register<GrabServo>();
+
             solver.Register<Contact1OneBody>();
             solver.Register<Contact2OneBody>();
             solver.Register<Contact3OneBody>();

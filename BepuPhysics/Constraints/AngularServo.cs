@@ -112,24 +112,33 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref AngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
+        public static void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, 
+            in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, in Vector3Wide biasImpulse, in Vector<float> maximumImpulse, 
+            in Symmetric3x3Wide impulseToVelocityA, in Symmetric3x3Wide negatedImpulseToVelocityB, ref Vector3Wide accumulatedImpulse)
         {
             //Jacobians are just I and -I.
             Vector3Wide.Subtract(velocityA.Angular, velocityB.Angular, out var csv);
-            Symmetric3x3Wide.TransformWithoutOverlap(csv, projection.EffectiveMass, out var csiVelocityComponent);
+            Symmetric3x3Wide.TransformWithoutOverlap(csv, effectiveMass, out var csiVelocityComponent);
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
-            Vector3Wide.Scale(accumulatedImpulse, projection.SoftnessImpulseScale, out var softnessComponent);
-            Vector3Wide.Subtract(projection.BiasImpulse, softnessComponent, out var csi);
+            Vector3Wide.Scale(accumulatedImpulse, softnessImpulseScale, out var softnessComponent);
+            Vector3Wide.Subtract(biasImpulse, softnessComponent, out var csi);
             Vector3Wide.Subtract(csi, csiVelocityComponent, out csi);
 
             var previousAccumulatedImpulse = accumulatedImpulse;
             Vector3Wide.Add(accumulatedImpulse, csi, out accumulatedImpulse);
             Vector3Wide.Length(accumulatedImpulse, out var newMagnitude);
-            var impulseScale = Vector.Min(projection.MaximumImpulse / newMagnitude, Vector<float>.One);
+            var impulseScale = Vector.Min(maximumImpulse / newMagnitude, Vector<float>.One);
             Vector3Wide.Scale(accumulatedImpulse, impulseScale, out accumulatedImpulse);
             Vector3Wide.Subtract(accumulatedImpulse, previousAccumulatedImpulse, out csi);
 
-            ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, projection.ImpulseToVelocityA, projection.NegatedImpulseToVelocityB, csi);
+            ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, impulseToVelocityA, negatedImpulseToVelocityB, csi);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref AngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
+        {
+            Solve(ref velocityA, ref velocityB, projection.EffectiveMass, projection.SoftnessImpulseScale, projection.BiasImpulse, 
+                projection.MaximumImpulse, projection.ImpulseToVelocityA, projection.NegatedImpulseToVelocityB, ref accumulatedImpulse);
         }
 
     }
