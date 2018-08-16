@@ -35,19 +35,20 @@ namespace Demos.Demos
             }
             {
                 var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-7, 5, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-7, 3, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-7, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, -1, 0), LocalOffsetB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
                 var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-4, 5, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-4, 3, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-4, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, -1, 0), LocalOffsetB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularSwivelHinge { SwivelAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(1, 0, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new SwingLimit { AxisLocalA = new Vector3(0, 1, 0), AxisLocalB = new Vector3(0, 1, 0), MaximumSwingAngle = MathHelper.PiOver2, SpringSettings = new SpringSettings(30, 1) });
             }
             {
                 var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-1, 5, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-1, 3, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-1, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, -1, 0), LocalOffsetB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new TwistServo
                 {
@@ -70,6 +71,13 @@ namespace Demos.Demos
                     MaximumAngle = MathHelper.PiOver2,
                     SpringSettings = new SpringSettings(30, 1),
                 });
+                Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
+            }
+            {
+                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(5, 5, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(5, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, -1, 0), LocalOffsetB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new TwistMotor { LocalAxisA = new Vector3(0, 1, 0), LocalAxisB = new Vector3(0, 1, 0), Settings = new MotorSettings(MathHelper.Pi * 20, 0.5f, 0) });
                 Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
 

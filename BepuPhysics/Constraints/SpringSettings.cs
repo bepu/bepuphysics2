@@ -2,7 +2,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace BepuPhysics
+namespace BepuPhysics.Constraints
 {
     public struct SpringSettingsWide
     {

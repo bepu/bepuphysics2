@@ -1,5 +1,6 @@
 ﻿using BepuPhysics;
 using BepuPhysics.CollisionDetection;
+using BepuPhysics.Constraints;
 using BepuPhysics.Constraints.Contact;
 using System;
 using System.Numerics;
