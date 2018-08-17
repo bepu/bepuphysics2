@@ -143,7 +143,7 @@ namespace BepuUtilities
         /// <param name="r">Rotation matrix to create the quaternion from.</param>
         /// <param name="q">Quaternion based on the rotation matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFromRotationMatrix(ref Matrix3x3 r, out Quaternion q)
+        public static void CreateFromRotationMatrix(in Matrix3x3 r, out Quaternion q)
         {
             float t;
             if (r.Z.Z < 0)
@@ -193,9 +193,9 @@ namespace BepuUtilities
         /// <param name="r">Rotation matrix used to create a new quaternion.</param>
         /// <returns>Quaternion representing the same rotation as the matrix.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion CreateFromRotationMatrix(Matrix3x3 r)
+        public static Quaternion CreateFromRotationMatrix(in Matrix3x3 r)
         {
-            CreateFromRotationMatrix(ref r, out var toReturn);
+            CreateFromRotationMatrix(r, out var toReturn);
             return toReturn;
         }
 
@@ -209,7 +209,7 @@ namespace BepuUtilities
         public static void CreateFromRotationMatrix(in Matrix r, out Quaternion q)
         {
             Matrix3x3.CreateFromMatrix(r, out var rotation3x3);
-            CreateFromRotationMatrix(ref rotation3x3, out q);
+            CreateFromRotationMatrix(rotation3x3, out q);
         }
 
         /// <summary>
@@ -220,7 +220,7 @@ namespace BepuUtilities
         public static Quaternion CreateFromRotationMatrix(in Matrix r)
         {
             Matrix3x3.CreateFromMatrix(r, out var rotation3x3);
-            CreateFromRotationMatrix(ref rotation3x3, out var q);
+            CreateFromRotationMatrix(rotation3x3, out var q);
             return q;
         }
 

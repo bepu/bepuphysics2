@@ -47,7 +47,7 @@ namespace Demos.SpecializedTests
                 for (int i = 0; i < innerIterations; ++i)
                 {
                     Matrix3x3.CreateFromQuaternion(q, out var r);
-                    Quaternion.CreateFromRotationMatrix(ref r, out var qTest);
+                    Quaternion.CreateFromRotationMatrix(r, out var qTest);
 
 #if DEBUG
                     const float epsilon = 1e-6f;

@@ -17,7 +17,7 @@ namespace BepuPhysics.Constraints
     {
         /// <summary>
         /// Local space basis attached to body A against which to measure body B's transformed axis. Expressed as a 3x3 rotation matrix, the X axis corresponds with 0 degrees, 
-        /// the Y axis corresponds to 90 degrees, and the Z axis is the twist axis.
+        /// the Y axis corresponds to 90 degrees, and the -Z axis is the twist axis. When viewed along the twist axis, positive change in angle causes counter clockwise rotation.
         /// </summary>
         public Quaternion LocalBasisA;
         /// <summary>
@@ -131,7 +131,6 @@ namespace BepuPhysics.Constraints
             //atan(dot(alignedBasisBX, basisAX), dot(alignedBasisBX, basisAY)) = 
             //sign(dot(alignedBasisBX, basisAY)) * acos(dot(alignedBasisBX, basisAX))
             QuaternionWide.GetQuaternionBetweenNormalizedVectors(basisBZ, basisA.Z, out var aligningRotation);
-            QuaternionWide.TransformWithoutOverlap(basisBZ, aligningRotation, out var shouldBeBasisAZ);
             QuaternionWide.TransformWithoutOverlap(basisBX, aligningRotation, out var alignedBasisBX);
             Vector3Wide.Dot(alignedBasisBX, basisA.X, out var x);
             Vector3Wide.Dot(alignedBasisBX, basisA.Y, out var y);

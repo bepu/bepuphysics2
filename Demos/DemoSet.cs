@@ -39,17 +39,15 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<ConstraintTestDemo>();
+            AddOption<PyramidDemo>();
+            AddOption<RagdollDemo>();
             AddOption<CompoundTestDemo>();
             AddOption<MeshDemo>();
-            AddOption<PyramidDemo>();
-            AddOption<BlockChainDemo>();
-            AddOption<ShapePileDemo>();
-            AddOption<BasicRagdollDemo>();
             AddOption<ClothLatticeDemo>();
-            AddOption<SphereBlobTestDemo>();
+            AddOption<BlockChainDemo>();
             AddOption<RayCastingDemo>();
             AddOption<SweepDemo>();
+            AddOption<ShapePileDemo>();
             AddOption<FountainStressTestDemo>();
         }
 
