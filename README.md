@@ -2,9 +2,9 @@
 
 This is the repo for the bepuphysics v2 library, a complete rewrite of the C# 3d rigid body physics engine [BEPUphysics v1](https://github.com/bepu/bepuphysics1).
 
-The library is still in alpha. Many important features are missing, and many bugs likely remain.
+The library is still in beta. Many important features are missing, and many bugs likely remain.
 
-The BepuPhysics and BepuUtilities libraries target .NET Standard 2.0 and should work on any supported platform. The demos are built on .NET Core 2.0 and require DX11.
+The BepuPhysics and BepuUtilities libraries target .NET Standard 2.0 and should work on any supported platform. The demos are built on .NET Core 2.1 and require DX11.
 
 The physics engine heavily uses System.Numerics.Vectors types, so to get good performance, you'll need a compiler which can consume those types (like RyuJIT).
 
@@ -12,22 +12,21 @@ To build the source, you'll need a recent version of Visual Studio with the .NET
 
 ## Features
 
-The alpha contains a basic featureset:
-- Spheres, capsules, boxes
-- Simple compounds of the above, mainly for use in smaller shapes where acceleration structures wouldn't be helpful
+The beta contains:
+- Spheres, capsules, boxes, triangles
+- Compounds of the above
+- Meshes
 - Highly nonidiomatic APIs
 - Automatic sleeping/waking management
-- Ball socket, hinge, swivel hinge, and swing limit
+- Ball socket, hinge, swivel hinge, swing limit, twist servo, twist motor, twist limit, angular servo, and angular motor
 - Speediness
 
 It notably does *not* yet include:
 - Convex hulls, cylinders, cones, or other complex shapes 
-- Efficient compounds supporting many children
-- Meshes
+- Dedicated heightmap terrain meshes
+- Mesh-mesh collision detection
 - Bounciness, other than the frequency/damping ratio tuning
 - Continuous collision detection, other than the speculative margin
-- Scene-wide queries like ray casts or volume queries
-- Shape casts
 - Many useful constraint types
 
 ## Links

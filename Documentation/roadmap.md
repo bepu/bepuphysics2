@@ -2,7 +2,7 @@
 
 This is a high level plan for future development. All dates and features are goals, not guarantees. For a detailed breakdown of tasks in progress, check the [issues](https://github.com/bepu/bepuphysics2/issues) page.
 
-## Near future (Q2-Q3 2018)
+## Near future (Q3-Q4 2018)
 
 The big goals for the initial version are:
 - Performance should generally be an order of magnitude better than v1.
@@ -13,30 +13,24 @@ Note that this release will lack many of v1's built in features, like:
 - Full featured character controller (though I will likely provide a simple example version in the demos, just without the full upstepping/downstepping/stance shifting feature set).
 - Dedicated vehicle type.
 
-The initial version will be split into incremental stages: alpha, beta, and release. The alpha was released on March 31, 2018.
+The initial version will be split into incremental stages: alpha, beta, and release. The alpha was released on March 31, 2018, and the beta on August 16, 2018.
 
-### Beta (July 47, 2018)
-The beta will still be missing some important pieces, but should be able to support most games.
-- Triangulated mesh colliders with boundary smoothing.
-- Tree-accelerated compound for larger collections of shapes.
-- Simulation-wide ray and shape casts.
-- A few additional common constraint types.
-
-### Release (September-October 2018)
+### Release (October-December 2018)
 Should be able to support the core features required by physically complex games.
 - Better handling of some dangerous performance corner cases in the solver.
 - Fully enabled CCD.
-- Convex hulls.
+- Convex hulls and cylinders.
 - Additional ease of use features, especially for supplying custom body properties to collision filtering and velocity integration.
+- All of the (important) constraints from v1.
 - More educational demos, including some deeper dives like showing how to create a custom voxel world collidable.
 
 ### Nice-to-haves 
-There are a few features which aren't fundamentally required for a release, but which are still high value. These might get pulled into one of the above milestones if possible. If they don't make it into the first version, they'll probably show up later.
+There are a few features which aren't fundamentally required for a release, but which are still high value. These might get pulled into one of the above milestones if possible. If they don't make it into the first version, they might show up later.
 - Further broad phase improvements.
 - Experimental general convex boundary smoothing.
-- Cylinders and cones.
+- Cones.
  
-## Medium term (Q3 2018-Q2 2019)
+## Medium term (2019)
 
 Once the initial version is ready, most of my time will move to things other than core engine development. Much of that time will be spent actually using the engine, so expect to see incremental enhancements and fixes driven by practical use.
 
