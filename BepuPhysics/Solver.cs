@@ -782,7 +782,7 @@ namespace BepuPhysics
                 for (int j = 0; j < batch.TypeBatches.Count; ++j)
                 {
                     ref var typeBatch = ref batch.TypeBatches[j];
-                    TypeProcessors[typeBatch.TypeId].Prestep(ref typeBatch, bodies, dt, inverseDt);
+                    TypeProcessors[typeBatch.TypeId].Prestep(ref typeBatch, bodies, dt, inverseDt, 0, typeBatch.BundleCount);
                 }
             }
             //TODO: May want to consider executing warmstart immediately following the prestep. Multithreading can't do that, so there could be some bitwise differences introduced.
@@ -793,7 +793,7 @@ namespace BepuPhysics
                 for (int j = 0; j < batch.TypeBatches.Count; ++j)
                 {
                     ref var typeBatch = ref batch.TypeBatches[j];
-                    TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities);
+                    TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, 0, typeBatch.BundleCount);
                 }
             }
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
@@ -804,7 +804,7 @@ namespace BepuPhysics
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
                     {
                         ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities);
+                        TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, 0, typeBatch.BundleCount);
                     }
                 }
             }

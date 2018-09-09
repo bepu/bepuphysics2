@@ -49,6 +49,7 @@ namespace Demos
             AddOption<SweepDemo>();
             AddOption<ShapePileDemo>();
             AddOption<FountainStressTestDemo>();
+            AddOption<SolverBatchTestDemo>();
         }
 
         public int Count { get { return options.Count; } }

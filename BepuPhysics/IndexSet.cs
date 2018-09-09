@@ -89,7 +89,7 @@ namespace BepuPhysics
             bundle |= slot;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(int index , BufferPool pool)
+        public void Add(int index, BufferPool pool)
         {
             var bundleIndex = index >> shift;
             if (bundleIndex >= flags.Length)
