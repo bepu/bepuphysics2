@@ -5,6 +5,7 @@ using BepuUtilities.Memory;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -15,8 +16,8 @@ namespace BepuPhysics
     /// </summary>
     public interface IJacobiBatchInformation
     {
-        int GetJacobiConstraintCountForBody(int bodyIndex);
-
+        void GetJacobiScaleForBodies(ref Vector<int> references, int count, out Vector<float> jacobiScale);
+        void GetJacobiScaleForBodies(ref TwoBodyReferences references, int count, out Vector<float> jacobiScaleA, out Vector<float> jacobiScaleB);
     }
     public struct FallbackTypeBatchResults
     {

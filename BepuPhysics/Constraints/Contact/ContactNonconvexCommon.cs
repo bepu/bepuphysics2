@@ -222,7 +222,7 @@ namespace BepuPhysics.Constraints.Contact
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
-            float dt, float inverseDt, ref TPrestep prestep, out TProjection projection)
+            float dt, float inverseDt, ref BodyInertias inertia, ref TPrestep prestep, out TProjection projection)
         {
             //TODO: This is another area where it's highly doubtful that the compiler will ever figure out that this initialization is unnecessary.
             //While we could jump through some nasty contortions now to resolve this, we'll instead opt for a little inefficient simplicity while waiting for generic pointer support
@@ -230,7 +230,7 @@ namespace BepuPhysics.Constraints.Contact
             projection = default;
             ref var prestepCommon = ref prestep.GetCommonProperties(ref prestep);
             ref var projectionCommon = ref projection.GetCommonProperties(ref projection);
-            bodies.GatherInertia(ref bodyReferences, count, out projectionCommon.InertiaA);
+            projectionCommon.InertiaA = inertia;
             projectionCommon.FrictionCoefficient = prestepCommon.FrictionCoefficient;
             ref var prestepContactStart = ref prestep.GetFirstContact(ref prestep);
             ref var projectionContactStart = ref projection.GetFirstContact(ref projection);
@@ -296,7 +296,7 @@ namespace BepuPhysics.Constraints.Contact
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
-            float dt, float inverseDt, ref TPrestep prestep, out TProjection projection)
+            float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref TPrestep prestep, out TProjection projection)
         {
             //TODO: This is another area where it's highly doubtful that the compiler will ever figure out that this initialization is unnecessary.
             //While we could jump through some nasty contortions now to resolve this, we'll instead opt for a little inefficient simplicity while waiting for generic pointer support
@@ -304,7 +304,8 @@ namespace BepuPhysics.Constraints.Contact
             projection = default;
             ref var prestepCommon = ref prestep.GetCommonProperties(ref prestep);
             ref var projectionCommon = ref projection.GetCommonProperties(ref projection);
-            bodies.GatherInertia(ref bodyReferences, count, out projectionCommon.InertiaA, out projectionCommon.InertiaB);
+            projectionCommon.InertiaA = inertiaA;
+            projectionCommon.InertiaB = inertiaB;
             projectionCommon.FrictionCoefficient = prestepCommon.FrictionCoefficient;
             ref var prestepContactStart = ref prestep.GetFirstContact(ref prestep);
             ref var projectionContactStart = ref projection.GetFirstContact(ref projection);

@@ -449,19 +449,6 @@ namespace BepuPhysics
             GatherScatter.GetFirst(ref targetSlot.InverseMass) = source.InverseMass;
         }
 
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void GatherPoseForBody(ref RigidPose source, ref Vector3Wide targetSlotPosition, ref QuaternionWide targetSlotOrientation)
-        {
-            GatherScatter.GetFirst(ref targetSlotPosition.X) = source.Position.X;
-            GatherScatter.GetFirst(ref targetSlotPosition.Y) = source.Position.Y;
-            GatherScatter.GetFirst(ref targetSlotPosition.Z) = source.Position.Z;
-            GatherScatter.GetFirst(ref targetSlotOrientation.X) = source.Orientation.X;
-            GatherScatter.GetFirst(ref targetSlotOrientation.Y) = source.Orientation.Y;
-            GatherScatter.GetFirst(ref targetSlotOrientation.Z) = source.Orientation.Z;
-            GatherScatter.GetFirst(ref targetSlotOrientation.W) = source.Orientation.W;
-        }
-
         /// <summary>
         /// Gathers inertia for two body bundles into AOSOA bundles.
         /// </summary>
@@ -504,19 +491,15 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Gathers inertia and pose information for two body bundles into AOSOA bundles.
+        /// Gathers orientations for two body bundles into AOSOA bundles.
         /// </summary>
         /// <param name="references">Active body indices being gathered.</param>
         /// <param name="count">Number of body pairs in the bundle.</param>
-        /// <param name="offsetB">Gathered offset from the origin of body A to the origin of body B.</param>
         /// <param name="orientationA">Gathered orientation of body A.</param>
         /// <param name="orientationB">Gathered orientation of body B.</param>
-        /// <param name="inertiaA">Gathered inertia of body A.</param>
-        /// <param name="inertiaB">Gathered inertia of body B.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GatherInertiaAndPose(ref TwoBodyReferences references, int count,
-            out Vector3Wide offsetB, out QuaternionWide orientationA, out QuaternionWide orientationB,
-            out BodyInertias inertiaA, out BodyInertias inertiaB)
+        public void GatherOrientation(ref TwoBodyReferences references, int count,
+            out QuaternionWide orientationA, out QuaternionWide orientationB)
         {
             Debug.Assert(count >= 0 && count <= Vector<float>.Count);
             //Grab the base references for the body indices. Note that we make use of the references memory layout again.
@@ -524,22 +507,45 @@ namespace BepuPhysics
             ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
 
             ref var poses = ref ActiveSet.Poses;
-            Vector3Wide positionA, positionB;
             for (int i = 0; i < count; ++i)
             {
                 ref var indexA = ref Unsafe.Add(ref baseIndexA, i);
-                ref var targetPositionSlotA = ref GatherScatter.GetOffsetInstance(ref positionA, i);
-                ref var targetOrientationSlotA = ref GatherScatter.GetOffsetInstance(ref orientationA, i);
-                ref var targetInertiaSlotA = ref GatherScatter.GetOffsetInstance(ref inertiaA, i);
-                GatherPoseForBody(ref poses[indexA], ref targetPositionSlotA, ref targetOrientationSlotA);
-                GatherInertiaForBody(ref Inertias[indexA], ref targetInertiaSlotA);
+                QuaternionWide.WriteFirst(poses[indexA].Orientation, ref GatherScatter.GetOffsetInstance(ref orientationA, i));
 
                 ref var indexB = ref Unsafe.Add(ref baseIndexB, i);
-                ref var targetPositionSlotB = ref GatherScatter.GetOffsetInstance(ref positionB, i);
-                ref var targetOrientationSlotB = ref GatherScatter.GetOffsetInstance(ref orientationB, i);
-                ref var targetInertiaSlotB = ref GatherScatter.GetOffsetInstance(ref inertiaB, i);
-                GatherPoseForBody(ref poses[indexB], ref targetPositionSlotB, ref targetOrientationSlotB);
-                GatherInertiaForBody(ref Inertias[indexB], ref targetInertiaSlotB);
+                QuaternionWide.WriteFirst(poses[indexB].Orientation, ref GatherScatter.GetOffsetInstance(ref orientationB, i));
+            }
+        }
+
+        /// <summary>
+        /// Gathers orientations and relative positions for a two body bundle into an AOSOA bundle.
+        /// </summary>
+        /// <param name="references">Active body indices being gathered.</param>
+        /// <param name="count">Number of body pairs in the bundle.</param>
+        /// <param name="orientationA">Gathered orientation of body A.</param>
+        /// <param name="orientationB">Gathered orientation of body B.</param>
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GatherPose(ref TwoBodyReferences references, int count,
+            out Vector3Wide offsetB, out QuaternionWide orientationA, out QuaternionWide orientationB)
+        {
+            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
+            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+
+            Vector3Wide positionA, positionB;
+            ref var poses = ref ActiveSet.Poses;
+            for (int i = 0; i < count; ++i)
+            {
+                ref var indexA = ref Unsafe.Add(ref baseIndexA, i);
+                ref var poseA = ref poses[indexA];
+                Vector3Wide.WriteFirst(poseA.Position, ref GatherScatter.GetOffsetInstance(ref positionA, i));
+                QuaternionWide.WriteFirst(poseA.Orientation, ref GatherScatter.GetOffsetInstance(ref orientationA, i));
+
+                ref var indexB = ref Unsafe.Add(ref baseIndexB, i);
+                ref var poseB = ref poses[indexB];
+                Vector3Wide.WriteFirst(poseB.Position, ref GatherScatter.GetOffsetInstance(ref positionB, i));
+                QuaternionWide.WriteFirst(poseB.Orientation, ref GatherScatter.GetOffsetInstance(ref orientationB, i));
             }
             //TODO: In future versions, we will likely store the body position in different forms to allow for extremely large worlds.
             //That will be an opt-in feature. The default implementation will use the FP32 representation, but the user could choose to swap it out for a fp64 or fixed64 representation.
@@ -553,48 +559,14 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Gathers inertia and pose information for two body bundles into AOSOA bundles.
-        /// </summary>
-        /// <param name="references">Active body indices being gathered.</param>
-        /// <param name="count">Number of body pairs in the bundle.</param>
-        /// <param name="orientationA">Gathered orientation of body A.</param>
-        /// <param name="orientationB">Gathered orientation of body B.</param>
-        /// <param name="inertiaA">Gathered inertia of body A.</param>
-        /// <param name="inertiaB">Gathered inertia of body B.</param>
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GatherInertiaAndPose(ref TwoBodyReferences references, int count,
-            out QuaternionWide orientationA, out QuaternionWide orientationB,
-            out Symmetric3x3Wide inverseInertiaA, out Symmetric3x3Wide inverseInertiaB)
-        {
-            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
-            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
-            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
-            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
-
-            ref var poses = ref ActiveSet.Poses;
-            for (int i = 0; i < count; ++i)
-            {
-                ref var indexA = ref Unsafe.Add(ref baseIndexA, i);
-                QuaternionWide.WriteFirst(poses[indexA].Orientation, ref GatherScatter.GetOffsetInstance(ref orientationA, i));
-                Symmetric3x3Wide.WriteFirst(Inertias[indexA].InverseInertiaTensor, ref GatherScatter.GetOffsetInstance(ref inverseInertiaA, i));
-
-                ref var indexB = ref Unsafe.Add(ref baseIndexB, i);
-                QuaternionWide.WriteFirst(poses[indexB].Orientation, ref GatherScatter.GetOffsetInstance(ref orientationB, i));
-                Symmetric3x3Wide.WriteFirst(Inertias[indexB].InverseInertiaTensor, ref GatherScatter.GetOffsetInstance(ref inverseInertiaB, i));
-            }
-        }
-
-        /// <summary>
-        /// Gathers inertia and pose information for a body bundle into AOSOA bundles.
+        /// Gathers pose information for a body bundle into an AOSOA bundle.
         /// </summary>
         /// <param name="references">Active body indices being gathered.</param>
         /// <param name="count">Number of body pairs in the bundle.</param>
         /// <param name="position">Gathered absolute position of the body.</param>
         /// <param name="orientation">Gathered orientation of the body.</param>
-        /// <param name="inertia">Gathered inertia of the body.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GatherInertiaAndPose(ref Vector<int> references, int count,
-            out Vector3Wide position, out QuaternionWide orientation, out BodyInertias inertia)
+        public void GatherPose(ref Vector<int> references, int count, out Vector3Wide position, out QuaternionWide orientation)
         {
             //TODO: This function and its users (which should be relatively few) is a problem for large world position precision.
             //It directly reports the position, thereby infecting vectorized logic with the high precision representation.
@@ -608,11 +580,10 @@ namespace BepuPhysics
             for (int i = 0; i < count; ++i)
             {
                 ref var indexA = ref Unsafe.Add(ref baseIndex, i);
-                ref var targetPositionSlotA = ref GatherScatter.GetOffsetInstance(ref position, i);
-                ref var targetOrientationSlotA = ref GatherScatter.GetOffsetInstance(ref orientation, i);
-                ref var targetInertiaSlotA = ref GatherScatter.GetOffsetInstance(ref inertia, i);
-                GatherPoseForBody(ref poses[indexA], ref targetPositionSlotA, ref targetOrientationSlotA);
-                GatherInertiaForBody(ref Inertias[indexA], ref targetInertiaSlotA);
+                ref var poseA = ref poses[indexA];
+                Vector3Wide.WriteFirst(poseA.Position, ref GatherScatter.GetOffsetInstance(ref position, i));
+                QuaternionWide.WriteFirst(poseA.Orientation, ref GatherScatter.GetOffsetInstance(ref orientation, i));
+
             }
         }
 

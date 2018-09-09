@@ -67,14 +67,16 @@ namespace BepuPhysics.Constraints
     public struct AngularMotorFunctions : IConstraintFunctions<AngularMotorPrestepData, AngularMotorProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref AngularMotorPrestepData prestep,
-            out AngularMotorProjection projection)
+        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
+            ref AngularMotorPrestepData prestep, out AngularMotorProjection projection)
         {
-            bodies.GatherInertiaAndPose(ref bodyReferences, count, out var orientationA, out var orientationB, out projection.ImpulseToVelocityA, out projection.NegatedImpulseToVelocityB);
+            bodies.GatherOrientation(ref bodyReferences, count, out var orientationA, out var orientationB);
+            projection.ImpulseToVelocityA = inertiaA.InverseInertiaTensor;
+            projection.NegatedImpulseToVelocityB = inertiaB.InverseInertiaTensor;
 
             //Jacobians are just the identity matrix.
             MotorSettingsWide.ComputeSoftness(prestep.Settings.Damping, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-                        
+
             Symmetric3x3Wide.Add(projection.ImpulseToVelocityA, projection.NegatedImpulseToVelocityB, out var unsoftenedInverseEffectiveMass);
             Symmetric3x3Wide.Invert(unsoftenedInverseEffectiveMass, out var unsoftenedEffectiveMass);
             Symmetric3x3Wide.Scale(unsoftenedEffectiveMass, effectiveMassCFMScale, out projection.EffectiveMass);
@@ -83,7 +85,7 @@ namespace BepuPhysics.Constraints
             Symmetric3x3Wide.TransformWithoutOverlap(biasVelocity, projection.EffectiveMass, out projection.BiasImpulse);
             projection.MaximumImpulse = prestep.Settings.MaximumForce * dt;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref AngularMotorProjection projection, ref Vector3Wide accumulatedImpulse)
         {

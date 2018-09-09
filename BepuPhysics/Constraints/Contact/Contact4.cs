@@ -210,10 +210,11 @@ namespace BepuPhysics.Constraints.Contact
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
-            float dt, float inverseDt, ref Contact4PrestepData prestep, out Contact4Projection projection)
+            float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Contact4PrestepData prestep, out Contact4Projection projection)
         {
             //Be careful about the execution order here. It should be aligned with the prestep data layout to ensure prefetching works well.
-            bodies.GatherInertia(ref bodyReferences, count, out projection.InertiaA, out projection.InertiaB);
+            projection.InertiaA = inertiaA;
+            projection.InertiaB = inertiaB;
             ComputeFrictionCenter(prestep.OffsetA0, prestep.OffsetA1, prestep.OffsetA2, prestep.OffsetA3,
                 prestep.PenetrationDepth0, prestep.PenetrationDepth1, prestep.PenetrationDepth2, prestep.PenetrationDepth3, out var offsetToManifoldCenterA);
             Vector3Wide.Subtract(offsetToManifoldCenterA, prestep.OffsetB, out var offsetToManifoldCenterB);

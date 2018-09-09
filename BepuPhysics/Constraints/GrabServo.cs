@@ -71,11 +71,11 @@ namespace BepuPhysics.Constraints
     public struct GrabServoFunctions : IOneBodyConstraintFunctions<GrabServoPrestepData, GrabServoProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count, float dt, float inverseDt, ref GrabServoPrestepData prestep,
+        public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertia, ref GrabServoPrestepData prestep,
             out GrabServoProjection projection)
         {
             //TODO: Note that this grabs a world position. That poses a problem for different position representations.
-            bodies.GatherInertiaAndPose(ref bodyReferences, count, out var position, out var orientation, out projection.Inertia);
+            bodies.GatherPose(ref bodyReferences, count, out var position, out var orientation);
 
             //The grabber is roughly equivalent to a ball socket joint with a nonzero goal (and only one body).
 

@@ -83,12 +83,10 @@ namespace BepuPhysics.Constraints
     public struct TwistMotorFunctions : IConstraintFunctions<TwistMotorPrestepData, TwistMotorProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref TwistMotorPrestepData prestep,
-            out TwistMotorProjection projection)
+        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB, 
+            ref TwistMotorPrestepData prestep, out TwistMotorProjection projection)
         {
-            bodies.GatherInertiaAndPose(ref bodyReferences, count,
-                out var orientationA, out var orientationB,
-                out var inertiaA, out var inertiaB);
+            bodies.GatherOrientation(ref bodyReferences, count, out var orientationA, out var orientationB);
             //We don't need any measurement basis in a velocity motor, so the prestep data needs only the axes.
             QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var axisA);
             QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisB, orientationB, out var axisB);
@@ -97,7 +95,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Scale(jacobianA, Vector<float>.One / length, out jacobianA);
             Vector3Wide.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-10f)), axisA, jacobianA, out jacobianA);
 
-            TwistServoFunctions.ComputeEffectiveMassContributions(inertiaA, inertiaB, jacobianA,
+            TwistServoFunctions.ComputeEffectiveMassContributions(inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, jacobianA,
                 ref projection.ImpulseToVelocityA, ref projection.NegatedImpulseToVelocityB, out var unsoftenedInverseEffectiveMass);
 
             MotorSettingsWide.ComputeSoftness(prestep.Settings.Damping, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);

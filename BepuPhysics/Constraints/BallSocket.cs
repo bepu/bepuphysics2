@@ -83,12 +83,12 @@ namespace BepuPhysics.Constraints
         //There are very few cases where a combo constraint will have less than 3DOFs...)
         //The only reason not to do that is codegen concerns. But we may want to stop holding back just because of some hopefully-not-permanent quirks in the JIT.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BallSocketPrestepData prestep,
-            out BallSocketProjection projection)
+        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
+            ref BallSocketPrestepData prestep, out BallSocketProjection projection)
         {
-            bodies.GatherInertiaAndPose(ref bodyReferences, count,
-                out var localPositionB, out var orientationA, out var orientationB,
-                out projection.InertiaA, out projection.InertiaB);
+            bodies.GatherPose(ref bodyReferences, count, out var localPositionB, out var orientationA, out var orientationB);
+            projection.InertiaA = inertiaA;
+            projection.InertiaB = inertiaB;
 
             //Anchor points attached to each body are constrained to stay in the same position, yielding a position constraint of:
             //C = positionA + anchorOffsetA - (positionB + anchorOffsetB) = 0

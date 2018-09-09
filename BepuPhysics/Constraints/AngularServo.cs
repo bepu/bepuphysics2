@@ -73,10 +73,12 @@ namespace BepuPhysics.Constraints
     public struct AngularServoFunctions : IConstraintFunctions<AngularServoPrestepData, AngularServoProjection, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref AngularServoPrestepData prestep,
-            out AngularServoProjection projection)
+        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
+            ref AngularServoPrestepData prestep, out AngularServoProjection projection)
         {
-            bodies.GatherInertiaAndPose(ref bodyReferences, count, out var orientationA, out var orientationB, out projection.ImpulseToVelocityA, out projection.NegatedImpulseToVelocityB);
+            bodies.GatherOrientation(ref bodyReferences, count, out var orientationA, out var orientationB);
+            projection.ImpulseToVelocityA = inertiaA.InverseInertiaTensor;
+            projection.NegatedImpulseToVelocityB = inertiaB.InverseInertiaTensor;
 
             //Jacobians are just the identity matrix.
 
@@ -112,8 +114,8 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, 
-            in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, in Vector3Wide biasImpulse, in Vector<float> maximumImpulse, 
+        public static void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
+            in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, in Vector3Wide biasImpulse, in Vector<float> maximumImpulse,
             in Symmetric3x3Wide impulseToVelocityA, in Symmetric3x3Wide negatedImpulseToVelocityB, ref Vector3Wide accumulatedImpulse)
         {
             //Jacobians are just I and -I.
@@ -137,7 +139,7 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref AngularServoProjection projection, ref Vector3Wide accumulatedImpulse)
         {
-            Solve(ref velocityA, ref velocityB, projection.EffectiveMass, projection.SoftnessImpulseScale, projection.BiasImpulse, 
+            Solve(ref velocityA, ref velocityB, projection.EffectiveMass, projection.SoftnessImpulseScale, projection.BiasImpulse,
                 projection.MaximumImpulse, projection.ImpulseToVelocityA, projection.NegatedImpulseToVelocityB, ref accumulatedImpulse);
         }
 

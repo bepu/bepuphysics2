@@ -86,12 +86,10 @@ namespace BepuPhysics.Constraints
     public struct SwingLimitFunctions : IConstraintFunctions<SwingLimitPrestepData, SwingLimitProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref SwingLimitPrestepData prestep,
-            out SwingLimitProjection projection)
+        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
+            ref SwingLimitPrestepData prestep, out SwingLimitProjection projection)
         {
-            bodies.GatherInertiaAndPose(ref bodyReferences, count,
-                out var localPositionB, out var orientationA, out var orientationB,
-                out var inertiaA, out var inertiaB);
+            bodies.GatherOrientation(ref bodyReferences, count, out var orientationA, out var orientationB);
 
             //The swing limit attempts to keep an axis on body A within from an axis on body B. In other words, this is the same as a hinge joint, but with one fewer DOF.
             //(Note that the jacobians are extremely similar to the AngularSwivelHinge; the difference is that this is a speculative inequality constraint.)

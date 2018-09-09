@@ -92,11 +92,11 @@ namespace BepuPhysics.Constraints
     public struct TwistLimitFunctions : IConstraintFunctions<TwistLimitPrestepData, TwistLimitProjection, Vector<float>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref TwistLimitPrestepData prestep,
-            out TwistLimitProjection projection)
+        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
+            ref TwistLimitPrestepData prestep, out TwistLimitProjection projection)
         {
             TwistServoFunctions.ComputeJacobian(bodies, bodyReferences, count, prestep.LocalBasisA, prestep.LocalBasisB,
-                out var inertiaA, out var inertiaB, out var basisBX, out var basisBZ, out var basisA, out var jacobianA);
+                out var basisBX, out var basisBZ, out var basisA, out var jacobianA);
 
             TwistServoFunctions.ComputeCurrentAngle(basisBX, basisBZ, basisA, out var angle);
 
@@ -111,7 +111,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Negate(jacobianA, out var negatedJacobianA);
             Vector3Wide.ConditionalSelect(useMin, negatedJacobianA, jacobianA, out jacobianA);
 
-            TwistServoFunctions.ComputeEffectiveMass(dt, prestep.SpringSettings, inertiaA, inertiaB, jacobianA,
+            TwistServoFunctions.ComputeEffectiveMass(dt, prestep.SpringSettings, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, jacobianA,
                 ref projection.ImpulseToVelocityA, ref projection.NegatedImpulseToVelocityB,
                 out var positionErrorToVelocity, out projection.SoftnessImpulseScale, out var effectiveMass, out projection.VelocityToImpulseA);
 

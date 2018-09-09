@@ -92,11 +92,9 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeJacobian(
             Bodies bodies, TwoBodyReferences bodyReferences, int count, in QuaternionWide localBasisA, in QuaternionWide localBasisB,
-            out Symmetric3x3Wide inertiaA, out Symmetric3x3Wide inertiaB, out Vector3Wide basisBX, out Vector3Wide basisBZ, out Matrix3x3Wide basisA, out Vector3Wide jacobianA)
+            out Vector3Wide basisBX, out Vector3Wide basisBZ, out Matrix3x3Wide basisA, out Vector3Wide jacobianA)
         {
-            bodies.GatherInertiaAndPose(ref bodyReferences, count,
-                out var orientationA, out var orientationB,
-                out inertiaA, out inertiaB);
+            bodies.GatherOrientation(ref bodyReferences, count, out var orientationA, out var orientationB);
 
             //Twist joints attempt to match rotation around each body's local axis.
             //We'll use a basis attached to each of the two bodies.
@@ -166,13 +164,13 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref TwistServoPrestepData prestep,
+        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref TwistServoPrestepData prestep,
             out TwistServoProjection projection)
         {
             ComputeJacobian(bodies, bodyReferences, count, prestep.LocalBasisA, prestep.LocalBasisB,
-                out var inverseInertiaA, out var inverseInertiaB, out var basisBX, out var basisBZ, out var basisA, out var jacobianA);
+                out var basisBX, out var basisBZ, out var basisA, out var jacobianA);
 
-            ComputeEffectiveMass(dt, prestep.SpringSettings, inverseInertiaA, inverseInertiaB, jacobianA,
+            ComputeEffectiveMass(dt, prestep.SpringSettings, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, jacobianA,
                 ref projection.ImpulseToVelocityA, ref projection.NegatedImpulseToVelocityB,
                 out var positionErrorToVelocity, out projection.SoftnessImpulseScale, out var effectiveMass, out projection.VelocityToImpulseA);
 
