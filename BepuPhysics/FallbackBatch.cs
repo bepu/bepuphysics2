@@ -39,7 +39,7 @@ namespace BepuPhysics
         public struct FallbackReference
         {
             public int ConstraintHandle;
-            public int TypeIndex;
+            public int TypeBatchIndex;
             public int IndexInTypeBatch;
             public int IndexInConstraint;
         }
@@ -119,7 +119,7 @@ namespace BepuPhysics
                 var fallbackReference = new FallbackReference
                 {
                     ConstraintHandle = handle,
-                    TypeIndex = batch.TypeIndexToTypeBatchIndex[typeId],
+                    TypeBatchIndex = batch.TypeIndexToTypeBatchIndex[typeId],
                     IndexInTypeBatch = reference.IndexInTypeBatch,
                     IndexInConstraint = i
                 };
@@ -171,6 +171,47 @@ namespace BepuPhysics
                 pool.ReturnUnsafely(typeBatchResults.BodyVelocities.Id);
             }
             pool.Return(ref results);
-        }        
+        }
+
+        public void ScatterVelocities(Bodies bodies, ref Buffer<FallbackTypeBatchResults> velocities, int start, int exclusiveEnd)
+        {
+            for (int i = start; i < exclusiveEnd; ++i)
+            {
+                //Velocity scattering is only ever executed on the active set, so the body reference is always an index.
+                var bodyIndex = bodyConstraintReferences.Keys[i];
+                BodyVelocity bodyVelocity = default;
+                ref var constraintReferences = ref bodyConstraintReferences.Values[i];
+                for (int j = 0; j < constraintReferences.Count; ++j)
+                {
+                    //TODO: This can't be optimally vectorized due to the inherent gathers involved, but you may be able to do much better in terms of wasted instructions
+                    //using platform intrinsics (like many other places). The benefit of true gather instructions here is more than some other places since it's likely all in L3 cache
+                    //(if it's a shared L3, anyway).
+                    ref var reference = ref constraintReferences[j];
+                    ref var typeBatchVelocities = ref velocities[reference.TypeBatchIndex];
+                    BundleIndexing.GetBundleIndices(reference.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
+                    ref var bundle = ref typeBatchVelocities.BodyVelocities[reference.IndexInConstraint][bundleIndex];
+                    ref var offsetBundle = ref GatherScatter.GetOffsetInstance(ref bundle, innerIndex);
+                    Vector3Wide.ReadFirst(offsetBundle.Linear, out var linear);
+                    Vector3Wide.ReadFirst(offsetBundle.Angular, out var angular);
+                    bodyVelocity.Linear += linear;
+                    bodyVelocity.Angular += angular;
+                }
+                //This simply averages all velocity results from the iteration for the body. This is equivalent to PGS/SI in terms of convergence because it is mathematically equivalent
+                //to having a linear/angular 'weld' constraint between N separate bodies that happen to all be in the same spot, except each of them has 1/N as much mass as the original.
+                //In other words, each jacobi batch constraint computed:
+                //newVelocity = oldVelocity + impulse * (1 / (inertia / N)) = oldVelocity + impulse * N / inertia
+                //All constraints together give a sum:
+                //summedVelocity = (oldVelocity + impulse0 * N / inertia) + (oldVelocity + impulse1 * N / inertia) + (oldVelocity + impulse2 * N / inertia) + ... 
+                //averageVelocity = summedVelocity / N = (oldVelocity + impulse0 * N / inertia) / N + (oldVelocity + impulse0 * N / inertia) / N + ...
+                //averageVelocity = (oldVelocity / N + impulse0 / inertia) + (oldVelocity / N + impulse0 / inertia) + ...
+                //averageVelocity = (oldVelocity / N + oldVelocity / N + ...) + impulse0 / inertia + impulse1 / inertia + ...
+                //averageVelocity = oldVelocity + (impulse0 + impulse1 + ... ) / inertia
+                //Which is exactly what we want.
+                var inverseCount = 1f / constraintReferences.Count;
+                bodyVelocity.Linear *= inverseCount;
+                bodyVelocity.Angular *= inverseCount;
+                bodies.ActiveSet.Velocities[bodyIndex] = bodyVelocity;
+            }
+        }
     }
 }
