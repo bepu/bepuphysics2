@@ -76,6 +76,7 @@ namespace BepuPhysics.Constraints
         {
             //TODO: Note that this grabs a world position. That poses a problem for different position representations.
             bodies.GatherPose(ref bodyReferences, count, out var position, out var orientation);
+            projection.Inertia = inertia;
 
             //The grabber is roughly equivalent to a ball socket joint with a nonzero goal (and only one body).
 
