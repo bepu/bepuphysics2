@@ -70,6 +70,7 @@ namespace BepuPhysics
             {
                 Batches[i].Dispose(pool);
             }
+            Fallback.Dispose(pool);
             Batches.Count = 0;
         }
 
@@ -79,6 +80,7 @@ namespace BepuPhysics
             {
                 Batches[i].Dispose(pool);
             }
+            Fallback.Dispose(pool);
             Batches.Dispose(pool.SpecializeFor<ConstraintBatch>());
             this = new ConstraintSet();
         }

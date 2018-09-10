@@ -54,6 +54,7 @@ namespace BepuPhysics
         {
             int GetBodyReference(Bodies bodies, int handle);
         }
+
         struct ActiveSetGetter : IBodyReferenceGetter
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -138,7 +139,7 @@ namespace BepuPhysics
         {
             Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, ref batch, pool, ref reference, new InactiveSetGetter(), minimumReferenceCapacity);
         }
-
+        
         public static void AllocateResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, out Buffer<FallbackTypeBatchResults> results)
         {
             pool.Take(batch.TypeBatches.Count, out results);
@@ -246,5 +247,34 @@ namespace BepuPhysics
             }
         }
 
+
+        public void Compact(BufferPool pool)
+        {
+            if (bodyConstraintReferences.Keys.Allocated)
+            {
+                var intPool = pool.SpecializeFor<int>();
+                var fallbackPool = pool.SpecializeFor<FallbackReference>();
+                bodyConstraintReferences.Compact(intPool, pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>(), intPool);
+                for (int i = 0; i < bodyConstraintReferences.Count; ++i)
+                {
+                    bodyConstraintReferences.Values[i].Compact(fallbackPool, intPool);
+                }
+            }
+        }
+
+
+        public void Dispose(BufferPool pool)
+        {
+            if (bodyConstraintReferences.Keys.Allocated)
+            {
+                var fallbackPool = pool.SpecializeFor<FallbackReference>();
+                var intPool = pool.SpecializeFor<int>();
+                for (int i = 0; i < bodyConstraintReferences.Count; ++i)
+                {
+                    bodyConstraintReferences.Values[i].Dispose(fallbackPool, intPool);
+                }
+                bodyConstraintReferences.Dispose(intPool, pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>(), intPool);
+            }
+        }
     }
 }

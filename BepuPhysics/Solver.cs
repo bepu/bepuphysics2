@@ -779,16 +779,20 @@ namespace BepuPhysics
             TypeProcessors[constraintLocation.TypeId].EnumerateConnectedBodyIndices(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
         }
 
+        internal void GetSynchronizedBatchCount(out int synchronizedBatchCount, out bool fallbackExists)
+        {
+            synchronizedBatchCount = Math.Min(ActiveSet.Batches.Count, FallbackBatchThreshold);
+            fallbackExists = ActiveSet.Batches.Count > FallbackBatchThreshold;
+            Debug.Assert(ActiveSet.Batches.Count <= FallbackBatchThreshold + 1,
+                "There cannot be more than FallbackBatchThreshold + 1 constraint batches because that +1 is the fallback batch which contains all remaining constraints.");
+        }
 
         public void Update(float dt)
         {
             var inverseDt = 1f / dt;
             ref var activeSet = ref ActiveSet;
-            var synchronizedBatchCount = Math.Min(ActiveSet.Batches.Count, FallbackBatchThreshold);
-            var fallbackExists = ActiveSet.Batches.Count > FallbackBatchThreshold;
-            Debug.Assert(ActiveSet.Batches.Count <= FallbackBatchThreshold + 1,
-                "There cannot be more than FallbackBatchThreshold + 1 constraint batches because that +1 is the fallback batch which contains all remaining constraints.");
-            for (int i = 0; i < activeSet.Batches.Count; ++i)
+            GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
+            for (int i = 0; i < synchronizedBatchCount; ++i)
             {
                 ref var batch = ref activeSet.Batches[i];
                 for (int j = 0; j < batch.TypeBatches.Count; ++j)
@@ -808,7 +812,7 @@ namespace BepuPhysics
             }
             //TODO: May want to consider executing warmstart immediately following the prestep. Multithreading can't do that, so there could be some bitwise differences introduced.
             //On the upside, it would make use of cached data.
-            for (int i = 0; i < activeSet.Batches.Count; ++i)
+            for (int i = 0; i < synchronizedBatchCount; ++i)
             {
                 ref var batch = ref activeSet.Batches[i];
                 for (int j = 0; j < batch.TypeBatches.Count; ++j)
@@ -831,7 +835,7 @@ namespace BepuPhysics
             }
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
             {
-                for (int i = 0; i < activeSet.Batches.Count; ++i)
+                for (int i = 0; i < synchronizedBatchCount; ++i)
                 {
                     ref var batch = ref activeSet.Batches[i];
                     for (int j = 0; j < batch.TypeBatches.Count; ++j)
@@ -840,16 +844,20 @@ namespace BepuPhysics
                         TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, 0, typeBatch.BundleCount);
                     }
                 }
+                if (fallbackExists)
+                {
+                    ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                    {
+                        ref var typeBatch = ref batch.TypeBatches[j];
+                        TypeProcessors[typeBatch.TypeId].JacobiSolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
+                    }
+                    activeSet.Fallback.ScatterVelocities(bodies, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
+                }
             }
             if (fallbackExists)
             {
-                ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
-                for (int j = 0; j < batch.TypeBatches.Count; ++j)
-                {
-                    ref var typeBatch = ref batch.TypeBatches[j];
-                    TypeProcessors[typeBatch.TypeId].JacobiSolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
-                }
-                FallbackBatch.DisposeResults(this, bufferPool, ref batch, ref fallbackResults);
+                FallbackBatch.DisposeResults(this, bufferPool, ref activeSet.Batches[FallbackBatchThreshold], ref fallbackResults);
             }
         }
 
@@ -897,7 +905,9 @@ namespace BepuPhysics
             }
             //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
             var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
-            for (int i = 0; i < ActiveSet.Batches.Count; ++i)
+            GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
+            //The fallback batch does not have any referenced handles.
+            for (int i = 0; i < synchronizedBatchCount; ++i)
             {
                 batchReferencedHandles[i].EnsureCapacity(targetBatchReferencedHandleSize, bufferPool);
             }
@@ -918,7 +928,9 @@ namespace BepuPhysics
             }
             //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
             var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
-            for (int i = 0; i < ActiveSet.Batches.Count; ++i)
+            GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
+            //The fallback batch does not have any referenced handles.
+            for (int i = 0; i < synchronizedBatchCount; ++i)
             {
                 batchReferencedHandles[i].Resize(targetBatchReferencedHandleSize, bufferPool);
             }
@@ -933,7 +945,7 @@ namespace BepuPhysics
                 var oldCapacity = Sets.Length;
                 bufferPool.SpecializeFor<ConstraintSet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
                 if (oldCapacity < Sets.Length)
-                    Sets.Clear(oldCapacity, Sets.Length - oldCapacity); //We rely on unused slots being default initialized.    }
+                    Sets.Clear(oldCapacity, Sets.Length - oldCapacity); //We rely on unused slots being default initialized.
             }
         }
 
