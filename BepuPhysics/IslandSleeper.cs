@@ -544,7 +544,7 @@ namespace BepuPhysics
                 }
             }
             Console.Write($"{constraintCount} constraint handles: ");
-            ConstraintReferenceCollector bodyIndexEnumerator;
+            ReferenceCollector bodyIndexEnumerator;
             var intPool = pool.SpecializeFor<int>();
             QuickSet<int, Buffer<int>, Buffer<int>, PrimitiveComparer<int>>.Create(intPool, intPool, 3, 3, out var constraintReferencedBodyHandles);
             for (int batchIndex = 0; batchIndex < island.Protobatches.Count; ++batchIndex)

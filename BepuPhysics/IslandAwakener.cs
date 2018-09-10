@@ -222,6 +222,7 @@ namespace BepuPhysics
                         //But the speculative process is *speculative*; it is fine for it to be wrong, so long as it isn't wrong in a way that makes it choose a higher batch index.
 
                         //Note that this is parallel over different batches, regardless of which source set they're from.
+                        Debug.Assert(job.BatchIndex < solver.FallbackBatchThreshold, "The fallback batch doesn't have any referenced handles to update!");
                         ref var targetBatchReferencedHandles = ref solver.batchReferencedHandles[job.BatchIndex];
                         for (int i = 0; i < uniqueSetIndices.Count; ++i)
                         {
@@ -537,18 +538,26 @@ namespace BepuPhysics
             broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount + newBodyCount, broadPhase.StaticTree.LeafCount);
             //constraints,
             solver.ActiveSet.Batches.EnsureCapacity(highestNewBatchCount, pool.SpecializeFor<ConstraintBatch>());
-            solver.batchReferencedHandles.EnsureCapacity(highestNewBatchCount, pool.SpecializeFor<IndexSet>());
+            solver.batchReferencedHandles.EnsureCapacity(Math.Min(solver.FallbackBatchThreshold, highestNewBatchCount), pool.SpecializeFor<IndexSet>());
             for (int batchIndex = solver.ActiveSet.Batches.Count; batchIndex < highestNewBatchCount; ++batchIndex)
             {
                 solver.ActiveSet.Batches.AllocateUnsafely() = new ConstraintBatch(pool);
-                solver.batchReferencedHandles.AllocateUnsafely() = new IndexSet(pool, bodies.HandlePool.HighestPossiblyClaimedId + 1);
+                //The fallback batch has no batch referenced handles.
+                if (batchIndex < solver.FallbackBatchThreshold)
+                {
+                    solver.batchReferencedHandles.AllocateUnsafely() = new IndexSet(pool, bodies.HandlePool.HighestPossiblyClaimedId + 1);
+                }
             }
             for (int batchIndex = 0; batchIndex < highestNewBatchCount; ++batchIndex)
             {
                 ref var constraintCountPerType = ref constraintCountPerTypePerBatch[batchIndex];
                 ref var batch = ref solver.ActiveSet.Batches[batchIndex];
                 batch.EnsureTypeMapSize(pool, constraintCountPerType.HighestOccupiedTypeIndex);
-                solver.batchReferencedHandles[batchIndex].EnsureCapacity(bodies.HandlePool.HighestPossiblyClaimedId + 1, pool);
+                //The fallback batch has no batch referenced handles.
+                if (batchIndex < solver.FallbackBatchThreshold)
+                {
+                    solver.batchReferencedHandles[batchIndex].EnsureCapacity(bodies.HandlePool.HighestPossiblyClaimedId + 1, pool);
+                }
                 for (int typeId = 0; typeId <= constraintCountPerType.HighestOccupiedTypeIndex; ++typeId)
                 {
                     var countForType = constraintCountPerType.TypeCounts[typeId].Count;
@@ -595,7 +604,9 @@ namespace BepuPhysics
             //(Pair caches are currently handled in a locally sequential way and do not require preallocation.)
 
             phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.PairCache };
-            for (int batchIndex = 0; batchIndex < highestNewBatchCount; ++batchIndex)
+            //Don't create batch referenced handles update jobs for the fallback batch; it has no referenced handles!
+            var highestSynchronizedBatchCount = Math.Min(solver.FallbackBatchThreshold, highestNewBatchCount);
+            for (int batchIndex = 0; batchIndex < highestSynchronizedBatchCount; ++batchIndex)
             {
                 phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.UpdateBatchReferencedHandles, BatchIndex = batchIndex };
             }

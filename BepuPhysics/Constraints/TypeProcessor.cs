@@ -102,7 +102,7 @@ namespace BepuPhysics.Constraints
         public abstract void Prestep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
         public abstract void WarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle);
         public abstract void SolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle);
-        
+
         public abstract void JacobiPrestep(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
         public abstract void JacobiWarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
         public abstract void JacobiSolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
@@ -145,7 +145,7 @@ namespace BepuPhysics.Constraints
             for (int i = 1; i < bodyCount; ++i)
             {
                 Unsafe.Add(ref targetLane, i * stride) = bodyIndices[i];
-            }            
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -286,12 +286,11 @@ namespace BepuPhysics.Constraints
             var bodyHandles = stackalloc int[bodiesPerConstraint];
             var bodyHandleCollector = new ActiveConstraintBodyHandleCollector(bodies, bodyHandles);
             EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref bodyHandleCollector);
-            ref var targetBatch = ref solver.ActiveSet.Batches[targetBatchIndex];
+            Debug.Assert(targetBatchIndex < solver.FallbackBatchThreshold,
+                "Constraint transfers should never target the fallback batch. It doesn't have any body handles so attempting to allocate in the same way wouldn't turn out well.");
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
             var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
-            targetBatch.Allocate(constraintHandle, ref bodyHandles[0], bodiesPerConstraint,
-                ref solver.batchReferencedHandles[targetBatchIndex], bodies, typeId, solver.TypeProcessors[typeId],
-                solver.GetMinimumCapacityForType(typeId), solver.bufferPool, out var targetReference);
+            solver.AllocateInBatch(targetBatchIndex, constraintHandle, ref bodyHandles[0], bodiesPerConstraint, typeId, out var targetReference);
 
             BundleIndexing.GetBundleIndices(targetReference.IndexInTypeBatch, out var targetBundle, out var targetInner);
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var sourceBundle, out var sourceInner);
@@ -314,7 +313,7 @@ namespace BepuPhysics.Constraints
             //However, removes can result in empty batches that require resource reclamation. 
             //Rather than reimplementing that we just reuse the solver's version. 
             //That sort of resource cleanup isn't required on add- everything that is needed already exists, and nothing is going away.
-            solver.RemoveFromBatch(sourceBatchIndex, typeId, indexInTypeBatch);
+            solver.RemoveFromBatch(constraintHandle, sourceBatchIndex, typeId, indexInTypeBatch);
 
             //Don't forget to keep the solver's pointers consistent! We bypassed the usual add procedure, so the solver hasn't been notified yet.
             ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle];

@@ -140,7 +140,7 @@ namespace BepuPhysics.CollisionDetection
             ref var batch = ref constraintRemover.solver.ActiveSet.Batches[location.BatchIndex];
             ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[location.TypeId]];
             Debug.Assert(typeBatch.TypeId == location.TypeId);
-            ConstraintReferenceCollector enumerator;
+            ReferenceCollector enumerator;
             enumerator.Index = 0;
             var typeProcessor = constraintRemover.solver.TypeProcessors[location.TypeId];
             var references = stackalloc int[typeProcessor.BodiesPerConstraint];

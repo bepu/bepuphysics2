@@ -50,6 +50,65 @@ namespace BepuPhysics
             Buffer<int>, Buffer<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>, Buffer<int>, PrimitiveComparer<int>> bodyConstraintReferences;
         //(but is this really ENOUGH generics?)
 
+        struct FallbackReferenceComparer : IEqualityComparerRef<FallbackReference>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Equals(ref FallbackReference a, ref FallbackReference b)
+            {
+                return a.ConstraintHandle == b.ConstraintHandle;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Hash(ref FallbackReference item)
+            {
+                return item.ConstraintHandle;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe void Allocate<TBodyReferenceGetter>(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
+           int typeId, ref ConstraintBatch batch, BufferPool pool, ref ConstraintReference reference, TBodyReferenceGetter bodyReferenceGetter, int minimumBodyCapacity, int minimumReferenceCapacity)
+            where TBodyReferenceGetter : struct, IBodyReferenceGetter
+        {
+            var fallbackPool = pool.SpecializeFor<FallbackReference>();
+            var intPool = pool.SpecializeFor<int>();
+            var referenceListPool = pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>();
+            var minimumReferencePower = SpanHelper.GetContainingPowerOf2(minimumReferenceCapacity);
+            if (bodyConstraintReferences.Keys.Allocated)
+            {
+                //This is conservative since there's no guarantee that we'll actually need to resize at all if these bodies are already present, but that's fine. 
+                bodyConstraintReferences.EnsureCapacity(bodyConstraintReferences.Count + bodyCount, intPool, referenceListPool, intPool);
+            }
+            else
+            {
+                //bleuaghg
+                QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>,
+                    Buffer<int>, Buffer<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>, Buffer<int>, PrimitiveComparer<int>>.Create(
+                    intPool, referenceListPool, intPool, SpanHelper.GetContainingPowerOf2(minimumBodyCapacity), 2, out bodyConstraintReferences);
+            }
+            for (int i = 0; i < bodyCount; ++i)
+            {
+                var bodyReference = bodyReferenceGetter.GetBodyReference(bodies, Unsafe.Add(ref constraintBodyHandles, i));
+
+                var bodyAlreadyListed = bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var elementIndex);
+                ref var constraintReferences = ref bodyConstraintReferences.Values[elementIndex];
+
+                if (!bodyAlreadyListed)
+                {
+                    //The body is not already contained. Create a list for it.
+                    QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>.Create(fallbackPool, intPool, minimumReferencePower, 2, out constraintReferences);
+                }
+                var fallbackReference = new FallbackReference
+                {
+                    ConstraintHandle = handle,
+                    TypeBatchIndex = batch.TypeIndexToTypeBatchIndex[typeId],
+                    IndexInTypeBatch = reference.IndexInTypeBatch,
+                    IndexInConstraint = i
+                };
+                constraintReferences.Add(ref fallbackReference, fallbackPool, intPool);
+            }
+        }
+
         interface IBodyReferenceGetter
         {
             int GetBodyReference(Bodies bodies, int handle);
@@ -76,70 +135,53 @@ namespace BepuPhysics
             }
         }
 
-        struct FallbackReferenceComparer : IEqualityComparerRef<FallbackReference>
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool Equals(ref FallbackReference a, ref FallbackReference b)
-            {
-                return a.ConstraintHandle == b.ConstraintHandle;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int Hash(ref FallbackReference item)
-            {
-                return item.ConstraintHandle;
-            }
-        }
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void Allocate<TBodyReferenceGetter>(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
-           int typeId, ref ConstraintBatch batch, BufferPool pool, ref ConstraintReference reference, TBodyReferenceGetter bodyReferenceGetter, int minimumReferenceCapacity)
-            where TBodyReferenceGetter : struct, IBodyReferenceGetter
+        internal unsafe void AllocateForActive(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
+           int typeId, ref ConstraintBatch batch, BufferPool pool, ref ConstraintReference reference, int minimumBodyCapacity = 8, int minimumReferenceCapacity = 8)
         {
-            var fallbackPool = pool.SpecializeFor<FallbackReference>();
-            var intPool = pool.SpecializeFor<int>();
-            var referenceListPool = pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>();
-            var minimumReferencePower = SpanHelper.GetContainingPowerOf2(minimumReferenceCapacity);
+            Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, ref batch, pool, ref reference, new ActiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void AllocateForInactive(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
+          int typeId, ref ConstraintBatch batch, BufferPool pool, ref ConstraintReference reference, int minimumBodyCapacity = 8, int minimumReferenceCapacity = 8)
+        {
+            Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, ref batch, pool, ref reference, new InactiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
+        }
+
+        internal unsafe void Remove(Solver solver, BufferPool pool, ref ConstraintBatch batch, int constraintHandle, int typeId, int indexInTypeBatch)
+        {
+            BundleIndexing.GetBundleIndices(indexInTypeBatch, out var bundleIndex, out var innerIndex);
+            var typeProcessor = solver.TypeProcessors[typeId];
+            var bodyCount = typeProcessor.BodiesPerConstraint;
+            var bodyIndices = stackalloc int[bodyCount];
+            var enumerator = new ReferenceCollector(bodyIndices);
+            typeProcessor.EnumerateConnectedBodyIndices(ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[typeId]], indexInTypeBatch, ref enumerator);
             for (int i = 0; i < bodyCount; ++i)
             {
-                var bodyReference = bodyReferenceGetter.GetBodyReference(bodies, Unsafe.Add(ref constraintBodyHandles, i));
-
-                bodyConstraintReferences.EnsureCapacity(bodyConstraintReferences.Count + 1, intPool, referenceListPool, intPool);
-                var bodyAlreadyListed = bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var elementIndex);
-                ref var constraintReferences = ref bodyConstraintReferences.Values[elementIndex];
-
-                if (!bodyAlreadyListed)
+                var bodyPresent = bodyConstraintReferences.GetTableIndices(ref bodyIndices[i], out var tableIndex, out var bodyReferencesIndex);
+                Debug.Assert(bodyPresent, "If we've been asked to remove a constraint associated with a body, that body must be in this batch.");
+                ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
+                //TODO: Should really just be using a dictionary here.
+                var dummy = new FallbackReference { ConstraintHandle = constraintHandle };
+                var removed = constraintReferences.FastRemove(ref dummy);
+                Debug.Assert(removed, "If a constraint removal was requested, it must exist within the referenced body's constraint set.");
+                if (constraintReferences.Count == 0)
                 {
-                    //The body is not already contained. Create a list for it.
-                    QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>.Create(fallbackPool, intPool, minimumReferencePower, 2, out constraintReferences);
+                    //If there are no more constraints associated with this body, get rid of the body list.
+                    constraintReferences.Dispose(pool.SpecializeFor<FallbackReference>(), pool.SpecializeFor<int>());
+                    bodyConstraintReferences.FastRemove(tableIndex, bodyReferencesIndex);
                 }
-                var fallbackReference = new FallbackReference
-                {
-                    ConstraintHandle = handle,
-                    TypeBatchIndex = batch.TypeIndexToTypeBatchIndex[typeId],
-                    IndexInTypeBatch = reference.IndexInTypeBatch,
-                    IndexInConstraint = i
-                };
-                constraintReferences.Add(ref fallbackReference, fallbackPool, intPool);
+            }
+            if (bodyConstraintReferences.Count == 0)
+            {
+                //No constraints remain in the fallback batch. Drop the dictionary.
+                bodyConstraintReferences.Dispose(pool.SpecializeFor<int>(), pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>(), pool.SpecializeFor<int>());
             }
         }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void AllocateForActive(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
-           int typeId, ref ConstraintBatch batch, BufferPool pool, ref ConstraintReference reference, int minimumReferenceCapacity = 8)
-        {
-            Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, ref batch, pool, ref reference, new ActiveSetGetter(), minimumReferenceCapacity);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void AllocateForInactive(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
-          int typeId, ref ConstraintBatch batch, BufferPool pool, ref ConstraintReference reference, int minimumReferenceCapacity = 8)
-        {
-            Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, ref batch, pool, ref reference, new InactiveSetGetter(), minimumReferenceCapacity);
-        }
-        
         public static void AllocateResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, out Buffer<FallbackTypeBatchResults> results)
         {
             pool.Take(batch.TypeBatches.Count, out results);

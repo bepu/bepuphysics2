@@ -129,7 +129,7 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe void Allocate(int handle, ref int constraintBodyHandles, int bodyCount, ref IndexSet existingHandles, Bodies bodies,
+        public unsafe void Allocate(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
             int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool, out ConstraintReference reference)
         {
             //Add all the constraint's body handles to the batch we found (or created) to block future references to the same bodies.
@@ -138,7 +138,6 @@ namespace BepuPhysics
             for (int j = 0; j < bodyCount; ++j)
             {
                 var bodyHandle = Unsafe.Add(ref constraintBodyHandles, j);
-                existingHandles.Add(bodyHandle, pool);
                 ref var location = ref bodies.HandleToLocation[bodyHandle];
                 Debug.Assert(location.SetIndex == 0, "Creating a new constraint should have forced the connected bodies awake.");
                 bodyIndices[j] = location.Index;

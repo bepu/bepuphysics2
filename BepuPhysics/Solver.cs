@@ -267,8 +267,8 @@ namespace BepuPhysics
                 }
             }
             //Validate the bodies referenced in the active batchReferencedHandles collections. 
-            //Note that this only applies to the active set; inactive sets do not explicitly track referenced handles.
-            for (int batchIndex = 0; batchIndex < ActiveSet.Batches.Count; ++batchIndex)
+            //Note that this only applies to the active set synchronized batches; inactive sets and the fallback batch do not explicitly track referenced handles.
+            for (int batchIndex = 0; batchIndex < Math.Min(ActiveSet.Batches.Count, FallbackBatchThreshold); ++batchIndex)
             {
                 ref var handles = ref batchReferencedHandles[batchIndex];
                 ref var batch = ref ActiveSet.Batches[batchIndex];
@@ -282,7 +282,7 @@ namespace BepuPhysics
                 }
             }
             //Now, for all sets, validate that constraint and body references to each other are consistent and complete.
-            ConstraintReferenceCollector enumerator;
+            ReferenceCollector enumerator;
             int maximumBodiesPerConstraint = 0;
             for (int i = 0; i < TypeProcessors.Length; ++i)
             {
@@ -398,12 +398,33 @@ namespace BepuPhysics
         internal unsafe int FindCandidateBatch(int batchStartIndex, ref int bodyHandles, int bodyCount)
         {
             ref var set = ref ActiveSet;
-            for (int batchIndex = 0; batchIndex < set.Batches.Count; ++batchIndex)
+            GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
+            for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
             {
                 if (batchReferencedHandles[batchIndex].CanFit(ref bodyHandles, bodyCount))
                     return batchIndex;
             }
-            return set.Batches.Count;
+            //No synchronized batch worked. Either there's a fallback batch or there aren't yet enough batches to warrant a fallback batch and none of the existing batches could fit the handles.
+            return synchronizedBatchCount;
+        }
+
+        internal unsafe void AllocateInBatch(int targetBatchIndex, int constraintHandle, ref int bodyHandles, int bodyCount, int typeId, out ConstraintReference reference)
+        {
+            ref var batch = ref ActiveSet.Batches[targetBatchIndex];
+            batch.Allocate(constraintHandle, ref bodyHandles, bodyCount, bodies, typeId, TypeProcessors[typeId], GetMinimumCapacityForType(typeId), bufferPool, out reference);
+            if (targetBatchIndex < FallbackBatchThreshold)
+            {
+                ref var handlesSet = ref batchReferencedHandles[targetBatchIndex];
+                for (int j = 0; j < bodyCount; ++j)
+                {
+                    handlesSet.Add(Unsafe.Add(ref bodyHandles, j), bufferPool);
+                }
+            }
+            else
+            {
+                Debug.Assert(targetBatchIndex == FallbackBatchThreshold);
+                ActiveSet.Fallback.AllocateForActive(constraintHandle, ref bodyHandles, bodyCount, bodies, typeId, ref batch, bufferPool, ref reference);
+            }
         }
 
         internal unsafe bool TryAllocateInBatch(int typeId, int targetBatchIndex, ref int bodyHandles, int bodyCount, out int constraintHandle, out ConstraintReference reference)
@@ -416,26 +437,33 @@ namespace BepuPhysics
                 //No batch available. Have to create a new one.
                 if (set.Batches.Count == set.Batches.Span.Length)
                     set.Batches.Resize(set.Batches.Count + 1, bufferPool.SpecializeFor<ConstraintBatch>());
-                if (set.Batches.Count == batchReferencedHandles.Span.Length)
-                    batchReferencedHandles.Resize(set.Batches.Count + 1, bufferPool.SpecializeFor<IndexSet>());
                 set.Batches.AllocateUnsafely() = new ConstraintBatch(bufferPool, TypeProcessors.Length);
-                batchReferencedHandles.AllocateUnsafely() = new IndexSet(bufferPool, bodies.ActiveSet.Count);
+                if (targetBatchIndex < FallbackBatchThreshold)
+                {
+                    //This batch is not the fallback batch, so create an index set for it.
+                    if (set.Batches.Count == batchReferencedHandles.Span.Length)
+                        batchReferencedHandles.Resize(set.Batches.Count + 1, bufferPool.SpecializeFor<IndexSet>());
+                    batchReferencedHandles.AllocateUnsafely() = new IndexSet(bufferPool, bodies.ActiveSet.Count);
+                }
                 //Note that if there is no constraint batch for the given index, there is no way for the constraint add to be blocked. It's guaranteed success.
             }
             else
             {
-                //A constraint batch already exists here. This may fail.
-                if (!batchReferencedHandles[targetBatchIndex].CanFit(ref bodyHandles, bodyCount))
+                //Only non-fallback batches can block an incoming constraint. Additions to the fallback batch cannot be blocked; it permits multiple constraints associated with the same body.
+                if (targetBatchIndex < FallbackBatchThreshold)
                 {
-                    //This batch cannot hold the constraint.
-                    constraintHandle = -1;
-                    reference = default;
-                    return false;
+                    //A non-fallback constraint batch already exists here. This may fail.
+                    if (!batchReferencedHandles[targetBatchIndex].CanFit(ref bodyHandles, bodyCount))
+                    {
+                        //This batch cannot hold the constraint.
+                        constraintHandle = -1;
+                        reference = default;
+                        return false;
+                    }
                 }
             }
             constraintHandle = HandlePool.Take();
-            set.Batches[targetBatchIndex].Allocate(constraintHandle, ref bodyHandles, bodyCount, ref batchReferencedHandles[targetBatchIndex],
-                bodies, typeId, TypeProcessors[typeId], GetMinimumCapacityForType(typeId), bufferPool, out reference);
+            AllocateInBatch(targetBatchIndex, constraintHandle, ref bodyHandles, bodyCount, typeId, out reference);
 
             if (constraintHandle >= HandleToConstraint.Length)
             {
@@ -667,10 +695,16 @@ namespace BepuPhysics
                         if (lastBatch.TypeBatches.Count == 0)
                         {
                             lastBatch.Dispose(bufferPool);
-                            batchReferencedHandles[lastBatchIndex].Dispose(bufferPool);
-                            --batchReferencedHandles.Count;
+                            //The fallback batch has no batch referenced handles.
+                            if (lastBatchIndex < FallbackBatchThreshold)
+                            {
+                                batchReferencedHandles[lastBatchIndex].Dispose(bufferPool);
+                                --batchReferencedHandles.Count;
+                            }
                             --set.Batches.Count;
-                            Debug.Assert(set.Batches.Count == batchReferencedHandles.Count);
+                            Debug.Assert(set.Batches.Count == batchReferencedHandles.Count ||
+                                (set.Batches.Count == FallbackBatchThreshold + 1 && batchReferencedHandles.Count == FallbackBatchThreshold),
+                                "All synchronized batches should have a 1:1 mapping with batchReferencedHandles entries, but the fallback batch doesn't have one.");
                         }
                         else
                         {
@@ -684,13 +718,23 @@ namespace BepuPhysics
         /// <summary>
         /// Removes a constraint from a batch, performing any necessary batch cleanup, but does not return the constraint's handle to the pool.
         /// </summary>
+        /// <param name="constraintHandle">Handle of the constraint being removed.</param>
         /// <param name="batchIndex">Index of the batch to remove from.</param>
         /// <param name="typeId">Type id of the constraint to remove.</param>
         /// <param name="indexInTypeBatch">Index of the constraint to remove within its type batch.</param>
-        internal void RemoveFromBatch(int batchIndex, int typeId, int indexInTypeBatch)
+        internal void RemoveFromBatch(int constraintHandle, int batchIndex, int typeId, int indexInTypeBatch)
         {
             ref var batch = ref ActiveSet.Batches[batchIndex];
-            batch.RemoveWithHandles(typeId, indexInTypeBatch, ref batchReferencedHandles[batchIndex], this);
+            if (batchIndex == FallbackBatchThreshold)
+            {
+                //If this is the fallback batch, it does not track any referenced handles.
+                batch.Remove(typeId, indexInTypeBatch, this);
+                ActiveSet.Fallback.Remove(this, bufferPool, ref batch, constraintHandle, typeId, indexInTypeBatch);
+            }
+            else
+            {
+                batch.RemoveWithHandles(typeId, indexInTypeBatch, ref batchReferencedHandles[batchIndex], this);
+            }
             RemoveBatchIfEmpty(ref batch, batchIndex);
         }
 
@@ -714,7 +758,7 @@ namespace BepuPhysics
             EnumerateConnectedBodies(handle, ref enumerator);
 
             pairCache.RemoveReferenceIfContactConstraint(handle, constraintLocation.TypeId);
-            RemoveFromBatch(constraintLocation.BatchIndex, constraintLocation.TypeId, constraintLocation.IndexInTypeBatch);
+            RemoveFromBatch(handle, constraintLocation.BatchIndex, constraintLocation.TypeId, constraintLocation.IndexInTypeBatch);
             HandlePool.Return(handle, bufferPool.SpecializeFor<int>());
         }
 
@@ -783,7 +827,7 @@ namespace BepuPhysics
         {
             synchronizedBatchCount = Math.Min(ActiveSet.Batches.Count, FallbackBatchThreshold);
             fallbackExists = ActiveSet.Batches.Count > FallbackBatchThreshold;
-            Debug.Assert(ActiveSet.Batches.Count <= FallbackBatchThreshold + 1,
+            Debug.Assert(ActiveSet.Batches.Count <= FallbackBatchThreshold,
                 "There cannot be more than FallbackBatchThreshold + 1 constraint batches because that +1 is the fallback batch which contains all remaining constraints.");
         }
 
@@ -874,7 +918,9 @@ namespace BepuPhysics
         public void Clear()
         {
             ref var activeSet = ref ActiveSet;
-            for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
+            //Fallback batches don't have any batch referenced handles.
+            GetSynchronizedBatchCount(out var synchronizedBatchCount, out _);
+            for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
             {
                 batchReferencedHandles[batchIndex].Dispose(bufferPool);
             }
@@ -983,7 +1029,9 @@ namespace BepuPhysics
         /// </remarks>
         public void Dispose()
         {
-            for (int i = 0; i < ActiveSet.Batches.Count; ++i)
+            //Note that the fallback batch does not have a batch referenced handle.
+            GetSynchronizedBatchCount(out var synchronizedBatchCount, out _);
+            for (int i = 0; i < synchronizedBatchCount; ++i)
             {
                 batchReferencedHandles[i].Dispose(bufferPool);
             }

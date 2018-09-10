@@ -29,16 +29,12 @@ namespace BepuPhysics
             Handles[Index++] = Bodies.ActiveSet.IndexToHandle[bodyIndex];
         }
     }
-    /// <summary>
-    /// Collects body references associated with a constraint. If the constraint is active, the references are in the form of indices into the active bodies set.
-    /// If the constraint is inactive, the references are in the form of body handles.
-    /// </summary>
-    public unsafe struct ConstraintReferenceCollector : IForEach<int>
+    public unsafe struct ReferenceCollector : IForEach<int>
     {
         public int* References;
         public int Index;
 
-        public ConstraintReferenceCollector(int* references)
+        public ReferenceCollector(int* references)
         {
             References = references;
             Index = 0;

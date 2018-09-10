@@ -145,6 +145,7 @@ namespace BepuPhysics
                 typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, i, ref handleAccumulator);
                 for (int batchIndex = 0; batchIndex < nextBatchIndex; ++batchIndex)
                 {
+                    //The batch index will never be the fallback batch, since the fallback batch is the very last batch (if it exists at all). So uses batch referenced handles is safe.
                     if (Solver.batchReferencedHandles[batchIndex].CanFit(ref bodyHandles[0], bodiesPerConstraint))
                     {
                         compressions.Add(new Compression { ConstraintHandle = typeBatch.IndexToHandle[i], TargetBatch = batchIndex }, pool.SpecializeFor<Compression>());
@@ -170,7 +171,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ApplyCompression(ref ConstraintBatch sourceBatch, ref Compression compression)
+        private void ApplyCompression(int sourceBatchIndex, ref ConstraintBatch sourceBatch, ref Compression compression)
         {
             //Note that we do not simply remove and re-add the constraint; while that would work, it would redo a lot of work that isn't necessary.
             //Instead, since we already know exactly where the constraint is and what constraint batch it should go to, we can avoid a lot of abstractions
@@ -328,7 +329,7 @@ namespace BepuPhysics
                     for (int i = 0; i < compressionsToSort.Count && i < maximumCompressionCount; ++i)
                     {
                         ref var target = ref compressionsToSort[i];
-                        ApplyCompression(ref sourceBatch, ref workerCompressions[target.WorkerIndex][target.Index]);
+                        ApplyCompression(nextBatchIndex, ref sourceBatch, ref workerCompressions[target.WorkerIndex][target.Index]);
                     }
 
                     compressionsToSort.Dispose(targetPool);
@@ -343,7 +344,7 @@ namespace BepuPhysics
                     ref var compressions = ref workerCompressions[i];
                     for (int j = compressions.Count - 1; j >= 0 && compressionsApplied < maximumCompressionCount; --j)
                     {
-                        ApplyCompression(ref sourceBatch, ref compressions[j]);
+                        ApplyCompression(nextBatchIndex, ref sourceBatch, ref compressions[j]);
                         ++compressionsApplied;
                     }
 

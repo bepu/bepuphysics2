@@ -392,7 +392,11 @@ namespace BepuPhysics.CollisionDetection
                 for (int removalTargetIndex = 0; removalTargetIndex < workerCache.RemovalTargets.Count; ++removalTargetIndex)
                 {
                     ref var target = ref workerCache.RemovalTargets[removalTargetIndex];
-                    solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle);
+                    //Batch referenced handles do not exist for the fallback batch.
+                    if (target.BatchIndex < solver.FallbackBatchThreshold)
+                    {
+                        solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle);
+                    }
                 }
             }
 
