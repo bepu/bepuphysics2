@@ -11,14 +11,6 @@ using System.Text;
 
 namespace BepuPhysics
 {
-    /// <summary>
-    /// Marks a type as able to provide information about a jacobi fallback batch.
-    /// </summary>
-    public interface IJacobiBatchInformation
-    {
-        void GetJacobiScaleForBodies(ref Vector<int> references, int count, out Vector<float> jacobiScale);
-        void GetJacobiScaleForBodies(ref TwoBodyReferences references, int count, out Vector<float> jacobiScaleA, out Vector<float> jacobiScaleB);
-    }
     public struct FallbackTypeBatchResults
     {
         public Buffer<Buffer<BodyVelocities>> BodyVelocities;
@@ -173,6 +165,41 @@ namespace BepuPhysics
             pool.Return(ref results);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetJacobiScaleForBodies(ref Vector<int> references, int count, out Vector<float> jacobiScale)
+        {
+            ref var start = ref Unsafe.As<Vector<int>, int>(ref references);
+            Vector<int> counts;
+            ref var countsStart = ref Unsafe.As<Vector<int>, int>(ref counts);
+            for (int i = 0; i < count; ++i)
+            {
+                var index = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref start, i));
+                Debug.Assert(index >= 0, "If a prestep is looking up constraint counts associated with a body, it better be in the jacobi batch!");
+                Unsafe.Add(ref countsStart, i) = bodyConstraintReferences.Values[index].Count;
+            }
+            jacobiScale = Vector.ConvertToSingle(counts);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetJacobiScaleForBodies(ref TwoBodyReferences references, int count, out Vector<float> jacobiScaleA, out Vector<float> jacobiScaleB)
+        {
+            ref var startA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+            ref var startB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+            Vector<int> countsA, countsB;
+            ref var countsAStart = ref Unsafe.As<Vector<int>, int>(ref countsA);
+            ref var countsBStart = ref Unsafe.As<Vector<int>, int>(ref countsB);
+            for (int i = 0; i < count; ++i)
+            {
+                var indexA = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startA, i));
+                var indexB = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startB, i));
+                Debug.Assert(indexA >= 0 && indexB >= 0, "If a prestep is looking up constraint counts associated with a body, it better be in the jacobi batch!");
+                Unsafe.Add(ref countsAStart, i) = bodyConstraintReferences.Values[indexA].Count;
+                Unsafe.Add(ref countsBStart, i) = bodyConstraintReferences.Values[indexB].Count;
+            }
+            jacobiScaleA = Vector.ConvertToSingle(countsA);
+            jacobiScaleB = Vector.ConvertToSingle(countsB);
+        }
+
         public void ScatterVelocities(Bodies bodies, ref Buffer<FallbackTypeBatchResults> velocities, int start, int exclusiveEnd)
         {
             for (int i = start; i < exclusiveEnd; ++i)
@@ -213,5 +240,6 @@ namespace BepuPhysics
                 bodies.ActiveSet.Velocities[bodyIndex] = bodyVelocity;
             }
         }
+
     }
 }

@@ -102,13 +102,10 @@ namespace BepuPhysics.Constraints
         public abstract void Prestep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
         public abstract void WarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle);
         public abstract void SolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, int startBundle, int exclusiveEndBundle);
-
-        //TODO: The IJacobiBatch abstraction isn't really necessary. It was just there to make the initial implementation a little less monolithic. If the abstraction ever gets in the way,
-        //don't be too concerned about removing it.
-        public abstract void JacobiPrestep<TJacobiBatch>(ref TypeBatch typeBatch, Bodies bodies, ref TJacobiBatch jacobiBatch, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
-            where TJacobiBatch : struct, IJacobiBatchInformation;
-        public abstract void JacobiWarmStart<TJacobiBatch>(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
-        public abstract void JacobiSolveIteration<TJacobiBatch>(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
+        
+        public abstract void JacobiPrestep(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
+        public abstract void JacobiWarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
+        public abstract void JacobiSolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle);
     }
 
     /// <summary>

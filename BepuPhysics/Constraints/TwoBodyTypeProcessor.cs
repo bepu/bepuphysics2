@@ -168,7 +168,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public unsafe override void JacobiPrestep<TJacobiBatch>(ref TypeBatch typeBatch, Bodies bodies, ref TJacobiBatch jacobiBatch, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public unsafe override void JacobiPrestep(ref TypeBatch typeBatch, Bodies bodies, ref FallbackBatch jacobiBatch, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
@@ -190,7 +190,7 @@ namespace BepuPhysics.Constraints
                 function.Prestep(bodies, ref references, count, dt, inverseDt, ref inertiaA, ref inertiaB, ref prestep, out projection);
             }
         }
-        public unsafe override void JacobiWarmStart<TJacobiBatch>(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
+        public unsafe override void JacobiWarmStart(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
@@ -210,7 +210,7 @@ namespace BepuPhysics.Constraints
                 function.WarmStart(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulses);
             }
         }
-        public unsafe override void JacobiSolveIteration<TJacobiBatch>(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
+        public unsafe override void JacobiSolveIteration(ref TypeBatch typeBatch, ref Buffer<BodyVelocity> bodyVelocities, ref FallbackTypeBatchResults jacobiResults, int startBundle, int exclusiveEndBundle)
         {
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var accumulatedImpulsesBase = ref Unsafe.AsRef<TAccumulatedImpulse>(typeBatch.AccumulatedImpulses.Memory);
