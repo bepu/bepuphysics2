@@ -787,28 +787,70 @@ namespace BepuPhysics
         }
 
 
-
-        /// <summary>
-        /// Changes the body reference of a constraint in response to an active body memory move.
-        /// </summary>
-        /// <param name="constraintHandle">Handle of the constraint to modify.</param> 
-        /// <param name="bodyIndexInConstraint">Index of the moved body in the constraint.</param>
-        /// <param name="newBodyLocation">Memory index that the moved body now inhabits.</param>
-        internal void UpdateForBodyMemoryMove(int constraintHandle, int bodyIndexInConstraint, int newBodyLocation)
+        private bool UpdateConstraintsForBodyMemoryMove(int originalIndex, int newIndex)
         {
             //Note that this function requires scanning the bodies in the constraint. This will tend to be fine since the vast majority of constraints have no more than 2 bodies.
             //While it's possible to store the index of the body in the constraint to avoid this scan, storing that information requires collecting that information on add.
             //That's not impossible by any means, but consider that this function will tend to be called in a deferred way- we have control over how many cache optimizations
             //we perform. We do not, however, have any control over how many adds must be performed. Those must be performed immediately for correctness.
             //In other words, doing a little more work here can reduce the overall work required, in addition to simplifying the storage requirements.
-            ref var constraintLocation = ref HandleToConstraint[constraintHandle];
-            //This does require a virtual call, but memory swaps should not be an ultra-frequent thing.
-            //(A few hundred calls per frame in a simulation of 10000 active objects would probably be overkill.)
-            //(Also, there's a sufficient number of cache-missy indirections here that a virtual call is pretty irrelevant.)
-            TypeProcessors[constraintLocation.TypeId].UpdateForBodyMemoryMove(
-                ref ActiveSet.Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId),
-                constraintLocation.IndexInTypeBatch, bodyIndexInConstraint, newBodyLocation);
+            ref var list = ref bodies.ActiveSet.Constraints[originalIndex];
+            bool bodyShouldBePresentInFallback = false;
+            for (int i = 0; i < list.Count; ++i)
+            {
+                ref var constraint = ref list[i];
+                ref var constraintLocation = ref HandleToConstraint[constraint.ConnectingConstraintHandle];
+                //This does require a virtual call, but memory swaps should not be an ultra-frequent thing.
+                //(A few hundred calls per frame in a simulation of 10000 active objects would probably be overkill.)
+                //(Also, there's a sufficient number of cache-missy indirections here that a virtual call is pretty irrelevant.)
+                TypeProcessors[constraintLocation.TypeId].UpdateForBodyMemoryMove(
+                    ref ActiveSet.Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId),
+                    constraintLocation.IndexInTypeBatch, constraint.BodyIndexInConstraint, newIndex);
+                if (constraintLocation.BatchIndex == FallbackBatchThreshold)
+                    bodyShouldBePresentInFallback = true;
+            }
+            return bodyShouldBePresentInFallback;
         }
+        /// <summary>
+        /// Changes the body references of all constraints associated with a body in response to its movement into a new slot.
+        /// Constraints associated with the body now at its old slot, if any, are left untouched.
+        /// </summary>
+        /// <param name="originalBodyIndex">Memory index that the moved body used to inhabit.</param>
+        /// <param name="newBodyLocation">Memory index that the moved body now inhabits.</param>
+        internal void UpdateForBodyMemoryMove(int originalBodyIndex, int newBodyLocation)
+        {
+            if (UpdateConstraintsForBodyMemoryMove(originalBodyIndex, newBodyLocation))
+            {
+                //One of the moved constraints involved the fallback batch, so we need to update the fallback batch's body indices.
+                ActiveSet.Fallback.UpdateForBodyMemoryMove(originalBodyIndex, newBodyLocation);
+            }
+        }
+
+        /// <summary>
+        /// Changes the body references of all constraints associated with two bodies in response to them swapping slots in memory.
+        /// </summary>
+        /// <param name="a">First swapped body index.</param>
+        /// <param name="b">Second swapped body index.</param>
+        internal void UpdateForBodyMemorySwap(int a, int b)
+        {
+            var aInFallback = UpdateConstraintsForBodyMemoryMove(a, b);
+            var bInFallback = UpdateConstraintsForBodyMemoryMove(b, a);
+            if (aInFallback && bInFallback)
+            {
+                ActiveSet.Fallback.UpdateForBodyMemorySwap(a, b);
+            }
+            else if (aInFallback)
+            {
+                ActiveSet.Fallback.UpdateForBodyMemoryMove(a, b);
+            }
+            else if (bInFallback)
+            {
+                ActiveSet.Fallback.UpdateForBodyMemoryMove(b, a);
+            }
+        }
+
+
+
 
         /// <summary>
         /// Enumerates the set of bodies associated with a constraint in order of their references within the constraint.

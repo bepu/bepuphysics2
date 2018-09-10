@@ -289,6 +289,22 @@ namespace BepuPhysics
             }
         }
 
+        internal void UpdateForBodyMemoryMove(int originalBodyIndex, int newBodyLocation)
+        {
+            Debug.Assert(!bodyConstraintReferences.ContainsKey(newBodyLocation), "If a body is being moved, as opposed to swapped, then the target index should not be present.");
+            bodyConstraintReferences.GetTableIndices(ref originalBodyIndex, out var tableIndex, out var elementIndex);
+            var references = bodyConstraintReferences.Values[elementIndex];
+            bodyConstraintReferences.FastRemove(tableIndex, elementIndex);
+            bodyConstraintReferences.AddUnsafely(ref newBodyLocation, ref references);
+        }
+
+        internal void UpdateForBodyMemorySwap(int a, int b)
+        {
+            var indexA = bodyConstraintReferences.IndexOf(a);
+            var indexB = bodyConstraintReferences.IndexOf(b);
+            Debug.Assert(indexA >= 0 && indexB >= 0, "A swap requires that both indices are already present.");
+            Helpers.Swap(ref bodyConstraintReferences.Values[indexA], ref bodyConstraintReferences.Values[indexB]);
+        }
 
         public void Compact(BufferPool pool)
         {
@@ -318,5 +334,6 @@ namespace BepuPhysics
                 bodyConstraintReferences.Dispose(intPool, pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>(), intPool);
             }
         }
+
     }
 }

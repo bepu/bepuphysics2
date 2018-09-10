@@ -162,17 +162,6 @@ namespace BepuPhysics
             return handle;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void UpdateAttachedConstraintsForBodyMemoryMove(int originalBodyIndex, int newBodyIndex)
-        {
-            ref var list = ref ActiveSet.Constraints[originalBodyIndex];
-            for (int i = 0; i < list.Count; ++i)
-            {
-                ref var constraint = ref list[i];
-                solver.UpdateForBodyMemoryMove(constraint.ConnectingConstraintHandle, constraint.BodyIndexInConstraint, newBodyIndex);
-            }
-        }
-
         internal int RemoveFromActiveSet(int activeBodyIndex)
         {
             //Note that this is separated from the main removal because of sleeping. Sleeping doesn't want to truly remove from the *simulation*, just the active set.
@@ -192,7 +181,7 @@ namespace BepuPhysics
             if (bodyMoved)
             {
                 //While the removed body doesn't have any constraints associated with it, the body that gets moved to fill its slot might!
-                UpdateAttachedConstraintsForBodyMemoryMove(movedBodyIndex, activeBodyIndex);
+                solver.UpdateForBodyMemoryMove(movedBodyIndex, activeBodyIndex);
                 Debug.Assert(HandleToLocation[movedBodyHandle].SetIndex == 0 && HandleToLocation[movedBodyHandle].Index == movedBodyIndex);
                 HandleToLocation[movedBodyHandle].Index = activeBodyIndex;
             }
