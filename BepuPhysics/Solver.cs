@@ -75,6 +75,14 @@ namespace BepuPhysics
         internal BufferPool bufferPool;
         public Buffer<ConstraintLocation> HandleToConstraint;
 
+        //TODO: Make this settable. Unclear if it's really appropriate for a property- properties are conventionally cheap, and changing the maximum batch count on an existing simulation is far from cheap.
+        /// <summary>
+        /// Gets the maximum number of solver batches to allow before resorting to a fallback solver.
+        /// If a single body is constrained by more than FallbackBatchThreshold constraints, all constraints beyond FallbackBatchThreshold are placed into a fallback batch.
+        /// The fallback batch uses a different solver that can handle multiple constraints affecting a single body in a single batch, allowing greater parallelism at the cost of convergence speed.
+        /// </summary>
+        public int FallbackBatchThreshold { get; private set; } = 15;
+
 
         int iterationCount;
         /// <summary>
@@ -776,6 +784,10 @@ namespace BepuPhysics
         {
             var inverseDt = 1f / dt;
             ref var activeSet = ref ActiveSet;
+            var synchronizedBatchCount = Math.Min(ActiveSet.Batches.Count, FallbackBatchThreshold);
+            var fallbackExists = ActiveSet.Batches.Count > FallbackBatchThreshold;
+            Debug.Assert(ActiveSet.Batches.Count <= FallbackBatchThreshold + 1,
+                "There cannot be more than FallbackBatchThreshold + 1 constraint batches because that +1 is the fallback batch which contains all remaining constraints.");
             for (int i = 0; i < activeSet.Batches.Count; ++i)
             {
                 ref var batch = ref activeSet.Batches[i];
@@ -783,6 +795,15 @@ namespace BepuPhysics
                 {
                     ref var typeBatch = ref batch.TypeBatches[j];
                     TypeProcessors[typeBatch.TypeId].Prestep(ref typeBatch, bodies, dt, inverseDt, 0, typeBatch.BundleCount);
+                }
+            }
+            if (fallbackExists)
+            {
+                ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[j];
+                    TypeProcessors[typeBatch.TypeId].JacobiPrestep(ref typeBatch, bodies, ref activeSet.Fallback, dt, inverseDt, 0, typeBatch.BundleCount);
                 }
             }
             //TODO: May want to consider executing warmstart immediately following the prestep. Multithreading can't do that, so there could be some bitwise differences introduced.
@@ -796,6 +817,18 @@ namespace BepuPhysics
                     TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, 0, typeBatch.BundleCount);
                 }
             }
+            Buffer<FallbackTypeBatchResults> fallbackResults = default;
+            if (fallbackExists)
+            {
+                ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                FallbackBatch.AllocateResults(this, bufferPool, ref batch, out fallbackResults);
+                for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[j];
+                    TypeProcessors[typeBatch.TypeId].JacobiWarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
+                }
+                activeSet.Fallback.ScatterVelocities(bodies, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
+            }
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
             {
                 for (int i = 0; i < activeSet.Batches.Count; ++i)
@@ -807,6 +840,16 @@ namespace BepuPhysics
                         TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, 0, typeBatch.BundleCount);
                     }
                 }
+            }
+            if (fallbackExists)
+            {
+                ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[j];
+                    TypeProcessors[typeBatch.TypeId].JacobiSolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
+                }
+                FallbackBatch.DisposeResults(this, bufferPool, ref batch, ref fallbackResults);
             }
         }
 
