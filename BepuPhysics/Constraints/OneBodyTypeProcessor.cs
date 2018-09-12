@@ -157,7 +157,6 @@ namespace BepuPhysics.Constraints
             ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
             var function = default(TConstraintFunctions);
             ref var jacobiResultsBundlesA = ref jacobiResults.GetVelocitiesForBody(0);
-            ref var jacobiResultsBundlesB = ref jacobiResults.GetVelocitiesForBody(1);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
@@ -176,7 +175,6 @@ namespace BepuPhysics.Constraints
             ref var projectionBase = ref Unsafe.AsRef<TProjection>(typeBatch.Projection.Memory);
             var function = default(TConstraintFunctions);
             ref var jacobiResultsBundlesA = ref jacobiResults.GetVelocitiesForBody(0);
-            ref var jacobiResultsBundlesB = ref jacobiResults.GetVelocitiesForBody(1);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var projection = ref Unsafe.Add(ref projectionBase, i);
@@ -184,7 +182,6 @@ namespace BepuPhysics.Constraints
                 ref var bodyReferences = ref Unsafe.Add(ref bodyReferencesBase, i);
                 int count = GetCountInBundle(ref typeBatch, i);
                 ref var wsvA = ref jacobiResultsBundlesA[i];
-                ref var wsvB = ref jacobiResultsBundlesB[i];
                 Bodies.GatherVelocities(ref bodyVelocities, ref bodyReferences, count, out wsvA);
                 function.Solve(ref wsvA, ref projection, ref accumulatedImpulses);
             }

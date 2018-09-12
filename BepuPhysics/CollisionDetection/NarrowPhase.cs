@@ -79,6 +79,7 @@ namespace BepuPhysics.CollisionDetection
         RemoveConstraintsFromBodyLists,
         ReturnConstraintHandles,
         RemoveConstraintFromBatchReferencedHandles,
+        RemoveConstraintsFromFallbackBatch,
         RemoveConstraintFromTypeBatch,
         FlushPairCacheChanges
     }
@@ -112,7 +113,7 @@ namespace BepuPhysics.CollisionDetection
             var id = contactConstraintAccessor.ConstraintTypeId;
             if (contactConstraintAccessors == null || contactConstraintAccessors.Length <= id)
                 contactConstraintAccessors = new ContactConstraintAccessor[id + 1];
-            if(contactConstraintAccessors[id] != null)
+            if (contactConstraintAccessors[id] != null)
             {
                 throw new InvalidOperationException($"Cannot register accessor for type id {id}; it is already registered by {contactConstraintAccessors[id]}.");
             }
@@ -164,6 +165,9 @@ namespace BepuPhysics.CollisionDetection
                 case NarrowPhaseFlushJobType.RemoveConstraintFromBatchReferencedHandles:
                     ConstraintRemover.RemoveConstraintsFromBatchReferencedHandles();
                     break;
+                case NarrowPhaseFlushJobType.RemoveConstraintsFromFallbackBatch:
+                    ConstraintRemover.RemoveConstraintsFromFallbackBatch();
+                    break;
                 case NarrowPhaseFlushJobType.RemoveConstraintFromTypeBatch:
                     ConstraintRemover.RemoveConstraintsFromTypeBatch(job.Index);
                     break;
@@ -188,10 +192,14 @@ namespace BepuPhysics.CollisionDetection
             //The constraint remover can be used in two ways- sleeper style, and narrow phase style.
             //In sleeping, we're not actually removing constraints from the simulation completely, so it requires fewer jobs.
             //The constraint remover just lets you choose which jobs to call. The narrow phase needs all of them.
-            flushJobs.EnsureCapacity(flushJobs.Count + removalBatchJobCount + 3, jobPool);
+            flushJobs.EnsureCapacity(flushJobs.Count + removalBatchJobCount + 4, jobPool);
             flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintsFromBodyLists });
             flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.ReturnConstraintHandles });
             flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintFromBatchReferencedHandles });
+            if (Solver.ActiveSet.Batches.Count > Solver.FallbackBatchThreshold)
+            {
+                flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintsFromFallbackBatch });
+            }
             for (int i = 0; i < removalBatchJobCount; ++i)
             {
                 flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintFromTypeBatch, Index = i });
@@ -401,8 +409,8 @@ namespace BepuPhysics.CollisionDetection
                 //This pair uses no CCD beyond its speculative margin.
                 var continuation = overlapWorker.Batcher.Callbacks.AddDiscrete(ref pair);
                 overlapWorker.Batcher.Add(
-                    aCollidable.Shape, bCollidable.Shape, 
-                    poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, velocityA, velocityB, 
+                    aCollidable.Shape, bCollidable.Shape,
+                    poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, velocityA, velocityB,
                     speculativeMargin, speculativeMargin, new PairContinuation((int)continuation.Packed));
             }
             ////Pull the velocity information for all involved bodies. We will request a number of steps that will cover the motion path.

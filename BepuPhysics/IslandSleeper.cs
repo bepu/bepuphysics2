@@ -423,7 +423,8 @@ namespace BepuPhysics
 
         enum RemovalJobType
         {
-            RemoveFromBatchReferencedHandles,
+            RemoveFromBatchReferencedHandles, 
+            RemoveConstraintsFromFallbackBatch,
             NotifyNarrowPhasePairCache,
             AddCollidablesToStaticTree,
             RemoveBodiesFromActiveSet
@@ -441,6 +442,9 @@ namespace BepuPhysics
             {
                 case RemovalJobType.RemoveFromBatchReferencedHandles:
                     constraintRemover.RemoveConstraintsFromBatchReferencedHandles();
+                    break;
+                case RemovalJobType.RemoveConstraintsFromFallbackBatch:
+                    constraintRemover.RemoveConstraintsFromFallbackBatch();
                     break;
                 case RemovalJobType.RemoveBodiesFromActiveSet:
                     {
@@ -795,12 +799,16 @@ namespace BepuPhysics
             //We don't want the static tree to resize during removals. That would use the main pool and conflict with the NotifyNarrowPhasePairCache job's usage of the main pool.
             broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount, broadPhase.StaticTree.LeafCount + sleptBodyCount);
 
-            QuickList<RemovalJob, Buffer<RemovalJob>>.Create(pool.SpecializeFor<RemovalJob>(), 4, out removalJobs);
+            QuickList<RemovalJob, Buffer<RemovalJob>>.Create(pool.SpecializeFor<RemovalJob>(), 5, out removalJobs);
             //The heavier locally sequential jobs are scheduled up front, leaving the smaller later tasks to fill gaps.
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.NotifyNarrowPhasePairCache };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveBodiesFromActiveSet };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.AddCollidablesToStaticTree };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveFromBatchReferencedHandles };
+            if (solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold)
+            {
+                removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveConstraintsFromFallbackBatch };
+            }
 
             jobIndex = -1;
             if (threadCount > 1)

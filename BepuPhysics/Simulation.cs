@@ -224,10 +224,16 @@ namespace BepuPhysics
             ProfilerStart(BroadPhaseOverlapFinder);
             BroadPhaseOverlapFinder.DispatchOverlaps(dt, threadDispatcher);
             ProfilerEnd(BroadPhaseOverlapFinder);
-            
+
+            //Solver.ActiveSet.Fallback.ValidateActiveSetReferences(Solver);
+
             ProfilerStart(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(NarrowPhase);
+
+            //Solver.ActiveSet.Fallback.ValidateActiveSetReferences(Solver);
+
+            //Bodies.ValidateMotionStates();
 
             ProfilerStart(Solver);
             if (threadDispatcher == null)
@@ -235,6 +241,8 @@ namespace BepuPhysics
             else
                 Solver.MultithreadedUpdate(threadDispatcher, BufferPool, dt);
             ProfilerEnd(Solver);
+
+            //Bodies.ValidateMotionStates();
 
             //Note that constraint optimization should be performed after body optimization, since body optimization moves the bodies- and so affects the optimal constraint position.
             //TODO: The order of these optimizer stages is performance relevant, even though they don't have any effect on correctness.
@@ -245,15 +253,15 @@ namespace BepuPhysics
             else
                 BodyLayoutOptimizer.IncrementalOptimize(BufferPool, threadDispatcher);
             ProfilerEnd(BodyLayoutOptimizer);
-            
+
             ProfilerStart(ConstraintLayoutOptimizer);
             ConstraintLayoutOptimizer.Update(BufferPool, threadDispatcher);
             ProfilerEnd(ConstraintLayoutOptimizer);
-            
+
             ProfilerStart(SolverBatchCompressor);
             SolverBatchCompressor.Compress(BufferPool, threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(SolverBatchCompressor);
-            
+
             ProfilerEnd(this);
         }
 

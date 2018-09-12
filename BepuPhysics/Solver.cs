@@ -728,8 +728,9 @@ namespace BepuPhysics
             if (batchIndex == FallbackBatchThreshold)
             {
                 //If this is the fallback batch, it does not track any referenced handles.
-                batch.Remove(typeId, indexInTypeBatch, this);
+                //Note that we have to remove from fallback first because it accesses the batch's information.
                 ActiveSet.Fallback.Remove(this, bufferPool, ref batch, constraintHandle, typeId, indexInTypeBatch);
+                batch.Remove(typeId, indexInTypeBatch, this);
             }
             else
             {
@@ -869,7 +870,7 @@ namespace BepuPhysics
         {
             synchronizedBatchCount = Math.Min(ActiveSet.Batches.Count, FallbackBatchThreshold);
             fallbackExists = ActiveSet.Batches.Count > FallbackBatchThreshold;
-            Debug.Assert(ActiveSet.Batches.Count <= FallbackBatchThreshold,
+            Debug.Assert(ActiveSet.Batches.Count <= FallbackBatchThreshold + 1,
                 "There cannot be more than FallbackBatchThreshold + 1 constraint batches because that +1 is the fallback batch which contains all remaining constraints.");
         }
 
@@ -917,7 +918,7 @@ namespace BepuPhysics
                     ref var typeBatch = ref batch.TypeBatches[j];
                     TypeProcessors[typeBatch.TypeId].JacobiWarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
                 }
-                activeSet.Fallback.ScatterVelocities(bodies, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
+                activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
             }
             for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
             {
@@ -938,7 +939,7 @@ namespace BepuPhysics
                         ref var typeBatch = ref batch.TypeBatches[j];
                         TypeProcessors[typeBatch.TypeId].JacobiSolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
                     }
-                    activeSet.Fallback.ScatterVelocities(bodies, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
+                    activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
                 }
             }
             if (fallbackExists)

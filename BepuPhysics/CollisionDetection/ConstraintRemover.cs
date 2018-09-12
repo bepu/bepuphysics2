@@ -296,6 +296,13 @@ namespace BepuPhysics.CollisionDetection
                 typeBatchCount += activeSet.Batches[i].TypeBatches.Count;
             }
             QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>>.Create(pool.SpecializeFor<TypeBatchIndex>(), typeBatchCount, out removedTypeBatches);
+
+            if (activeSet.Batches.Count > solver.FallbackBatchThreshold)
+            {
+                //Ensure that the fallback deallocation list is also large enough. The fallback batch may result in 3 returned buffers for the primary dictionary, plus another two for each potentially
+                //removed body constraint references subset.
+                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 3 + activeSet.Fallback.BodyCount * 2, out allocationIdsToFree);
+            }
             return batches.Count;
         }
 
@@ -399,7 +406,24 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
             }
+        }
 
+        QuickList<int, Buffer<int>> allocationIdsToFree;
+        public void RemoveConstraintsFromFallbackBatch()
+        {
+            Debug.Assert(solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold);
+            for (int workerIndex = 0; workerIndex < workerCaches.Length; ++workerIndex)
+            {
+                ref var workerCache = ref workerCaches[workerIndex];
+                for (int i = 0; i < workerCache.RemovalTargets.Count; ++i)
+                {
+                    ref var removalTarget = ref workerCache.RemovalTargets[i];
+                    if (removalTarget.BatchIndex == solver.FallbackBatchThreshold)
+                    {
+                        solver.ActiveSet.Fallback.Remove(removalTarget.BodyIndex, removalTarget.ConstraintHandle, ref allocationIdsToFree);
+                    }
+                }
+            }
         }
 
         QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>> removedTypeBatches;
@@ -437,7 +461,7 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
         }
-
+        
         struct TypeBatchComparer : IComparerRef<TypeBatchIndex>
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -468,6 +492,14 @@ namespace BepuPhysics.CollisionDetection
             }
             removedTypeBatches.Dispose(pool.SpecializeFor<TypeBatchIndex>());
 
+            if (allocationIdsToFree.Span.Allocated)
+            {
+                for (int i = 0; i < allocationIdsToFree.Count; ++i)
+                {
+                    pool.ReturnUnsafely(allocationIdsToFree[i]);
+                }
+                allocationIdsToFree.Dispose(pool.SpecializeFor<int>());
+            }
             //Get rid of the worker batch reference collections.
             for (int i = 0; i < batches.Count; ++i)
             {

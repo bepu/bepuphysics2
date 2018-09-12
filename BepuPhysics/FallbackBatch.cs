@@ -31,11 +31,8 @@ namespace BepuPhysics
         public struct FallbackReference
         {
             public int ConstraintHandle;
-            public int TypeBatchIndex;
-            public int IndexInTypeBatch;
             public int IndexInConstraint;
         }
-
         /// <summary>
         /// Gets the number of bodies in the fallback batch.
         /// </summary>
@@ -47,7 +44,7 @@ namespace BepuPhysics
         //Note that this is a dictionary of *sets*. This is because fallback batches are expected to be used in pathological cases where there are many constraints associated with
         //a single body. There are likely to be too many constraints for list-based containment/removal to be faster than the set implementation.
         QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>,
-            Buffer<int>, Buffer<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>, Buffer<int>, PrimitiveComparer<int>> bodyConstraintReferences;
+              Buffer<int>, Buffer<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>, Buffer<int>, PrimitiveComparer<int>> bodyConstraintReferences;
         //(but is this really ENOUGH generics?)
 
         struct FallbackReferenceComparer : IEqualityComparerRef<FallbackReference>
@@ -64,9 +61,8 @@ namespace BepuPhysics
                 return item.ConstraintHandle;
             }
         }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void Allocate<TBodyReferenceGetter>(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
+        unsafe void Allocate<TBodyReferenceGetter>(int constraintHandle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
            int typeId, ref ConstraintBatch batch, BufferPool pool, ref ConstraintReference reference, TBodyReferenceGetter bodyReferenceGetter, int minimumBodyCapacity, int minimumReferenceCapacity)
             where TBodyReferenceGetter : struct, IBodyReferenceGetter
         {
@@ -83,7 +79,7 @@ namespace BepuPhysics
             {
                 //bleuaghg
                 QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>,
-                    Buffer<int>, Buffer<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>, Buffer<int>, PrimitiveComparer<int>>.Create(
+                      Buffer<int>, Buffer<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>, Buffer<int>, PrimitiveComparer<int>>.Create(
                     intPool, referenceListPool, intPool, SpanHelper.GetContainingPowerOf2(minimumBodyCapacity), 2, out bodyConstraintReferences);
             }
             for (int i = 0; i < bodyCount; ++i)
@@ -91,20 +87,20 @@ namespace BepuPhysics
                 var bodyReference = bodyReferenceGetter.GetBodyReference(bodies, Unsafe.Add(ref constraintBodyHandles, i));
 
                 var bodyAlreadyListed = bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var elementIndex);
+                //If an entry for this body does not yet exist, we'll create one.
+                if (!bodyAlreadyListed)
+                    elementIndex = bodyConstraintReferences.Count;
                 ref var constraintReferences = ref bodyConstraintReferences.Values[elementIndex];
 
                 if (!bodyAlreadyListed)
                 {
                     //The body is not already contained. Create a list for it.
                     QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>.Create(fallbackPool, intPool, minimumReferencePower, 2, out constraintReferences);
+                    bodyConstraintReferences.Keys[elementIndex] = bodyReference;
+                    bodyConstraintReferences.Table[tableIndex] = elementIndex + 1;
+                    ++bodyConstraintReferences.Count;
                 }
-                var fallbackReference = new FallbackReference
-                {
-                    ConstraintHandle = handle,
-                    TypeBatchIndex = batch.TypeIndexToTypeBatchIndex[typeId],
-                    IndexInTypeBatch = reference.IndexInTypeBatch,
-                    IndexInConstraint = i
-                };
+                var fallbackReference = new FallbackReference { ConstraintHandle = constraintHandle, IndexInConstraint = i };
                 constraintReferences.Add(ref fallbackReference, fallbackPool, intPool);
             }
         }
@@ -150,37 +146,56 @@ namespace BepuPhysics
             Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, ref batch, pool, ref reference, new InactiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
         }
 
-        internal unsafe void Remove(Solver solver, BufferPool pool, ref ConstraintBatch batch, int constraintHandle, int typeId, int indexInTypeBatch)
+
+        internal unsafe void Remove(int bodyReference, int constraintHandle, ref QuickList<int, Buffer<int>> allocationIdsToFree)
         {
-            BundleIndexing.GetBundleIndices(indexInTypeBatch, out var bundleIndex, out var innerIndex);
+            var bodyPresent = bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex);
+            Debug.Assert(bodyPresent, "If we've been asked to remove a constraint associated with a body, that body must be in this batch.");
+            ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
+            //TODO: Should really just be using a dictionary here.
+            var dummy = new FallbackReference { ConstraintHandle = constraintHandle };
+            var removed = constraintReferences.FastRemove(ref dummy);
+            Debug.Assert(removed, "If a constraint removal was requested, it must exist within the referenced body's constraint set.");
+            if (constraintReferences.Count == 0)
+            {
+                //If there are no more constraints associated with this body, get rid of the body list.
+                allocationIdsToFree.AllocateUnsafely() = constraintReferences.Span.Id;
+                allocationIdsToFree.AllocateUnsafely() = constraintReferences.Table.Id;
+                constraintReferences = default;
+                bodyConstraintReferences.FastRemove(tableIndex, bodyReferencesIndex);
+                if (bodyConstraintReferences.Count == 0)
+                {
+                    //No constraints remain in the fallback batch. Drop the dictionary.
+                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Keys.Id;
+                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Values.Id;
+                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Table.Id;
+                    bodyConstraintReferences = default;
+                }
+            }
+        }
+
+
+        internal unsafe void Remove(Solver solver, BufferPool bufferPool, ref ConstraintBatch batch, int constraintHandle, int typeId, int indexInTypeBatch)
+        {
             var typeProcessor = solver.TypeProcessors[typeId];
             var bodyCount = typeProcessor.BodiesPerConstraint;
             var bodyIndices = stackalloc int[bodyCount];
             var enumerator = new ReferenceCollector(bodyIndices);
+            solver.EnumerateConnectedBodies(constraintHandle, ref enumerator);
+            var maximumAllocationIdsToFree = 3 + bodyCount * 2;
+            var allocationIdsToRemoveMemory = stackalloc int[maximumAllocationIdsToFree];
+            var initialSpan = new Buffer<int>(allocationIdsToRemoveMemory, maximumAllocationIdsToFree);
+            var allocationIdsToFree = new QuickList<int, Buffer<int>>(ref initialSpan);
             typeProcessor.EnumerateConnectedBodyIndices(ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[typeId]], indexInTypeBatch, ref enumerator);
             for (int i = 0; i < bodyCount; ++i)
             {
-                var bodyPresent = bodyConstraintReferences.GetTableIndices(ref bodyIndices[i], out var tableIndex, out var bodyReferencesIndex);
-                Debug.Assert(bodyPresent, "If we've been asked to remove a constraint associated with a body, that body must be in this batch.");
-                ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
-                //TODO: Should really just be using a dictionary here.
-                var dummy = new FallbackReference { ConstraintHandle = constraintHandle };
-                var removed = constraintReferences.FastRemove(ref dummy);
-                Debug.Assert(removed, "If a constraint removal was requested, it must exist within the referenced body's constraint set.");
-                if (constraintReferences.Count == 0)
-                {
-                    //If there are no more constraints associated with this body, get rid of the body list.
-                    constraintReferences.Dispose(pool.SpecializeFor<FallbackReference>(), pool.SpecializeFor<int>());
-                    bodyConstraintReferences.FastRemove(tableIndex, bodyReferencesIndex);
-                }
+                Remove(bodyIndices[i], constraintHandle, ref allocationIdsToFree);
             }
-            if (bodyConstraintReferences.Count == 0)
+            for (int i = 0; i < allocationIdsToFree.Count; ++i)
             {
-                //No constraints remain in the fallback batch. Drop the dictionary.
-                bodyConstraintReferences.Dispose(pool.SpecializeFor<int>(), pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>(), pool.SpecializeFor<int>());
+                bufferPool.ReturnUnsafely(allocationIdsToFree[i]);
             }
         }
-
 
         public static void AllocateResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, out Buffer<FallbackTypeBatchResults> results)
         {
@@ -248,8 +263,35 @@ namespace BepuPhysics
             jacobiScaleB = Vector.ConvertToSingle(countsB);
         }
 
-        public void ScatterVelocities(Bodies bodies, ref Buffer<FallbackTypeBatchResults> velocities, int start, int exclusiveEnd)
+        [Conditional("DEBUG")]
+        unsafe void ValidateReferences(Solver solver, int bodyIndex, int constraintHandle, int expectedIndexInConstraint)
         {
+            ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle];
+            Debug.Assert(constraintLocation.SetIndex == 0, "This validation is built for the active set; it assumes all body references are indices.");
+            Debug.Assert(constraintLocation.BatchIndex == solver.FallbackBatchThreshold, "Should only be working on constraints which are members of the active fallback batch.");
+            var debugReferences = stackalloc int[solver.TypeProcessors[constraintLocation.TypeId].BodiesPerConstraint];
+            var debugBodyReferenceCollector = new ReferenceCollector(debugReferences);
+            solver.EnumerateConnectedBodies(constraintHandle, ref debugBodyReferenceCollector);
+            Debug.Assert(debugReferences[expectedIndexInConstraint] == bodyIndex, "The constraint's true body indices must agree with the fallback batch.");
+        }
+        [Conditional("DEBUG")]
+        public void ValidateActiveSetReferences(Solver solver)
+        {
+            for (int i = 0; i < bodyConstraintReferences.Count; ++i)
+            {
+                var bodyIndex = bodyConstraintReferences.Keys[i];
+                ref var references = ref bodyConstraintReferences.Values[i];
+                for (int j = 0; j < references.Count; ++j)
+                {
+                    ref var reference = ref references.Span[j];
+                    ValidateReferences(solver, bodyIndex, reference.ConstraintHandle, reference.IndexInConstraint);
+                }
+            }
+        }
+
+        public void ScatterVelocities(Bodies bodies, Solver solver, ref Buffer<FallbackTypeBatchResults> velocities, int start, int exclusiveEnd)
+        {
+            ref var fallbackBatch = ref solver.ActiveSet.Batches[solver.FallbackBatchThreshold];
             for (int i = start; i < exclusiveEnd; ++i)
             {
                 //Velocity scattering is only ever executed on the active set, so the body reference is always an index.
@@ -262,14 +304,21 @@ namespace BepuPhysics
                     //using platform intrinsics (like many other places). The benefit of true gather instructions here is more than some other places since it's likely all in L3 cache
                     //(if it's a shared L3, anyway).
                     ref var reference = ref constraintReferences[j];
-                    ref var typeBatchVelocities = ref velocities[reference.TypeBatchIndex];
-                    BundleIndexing.GetBundleIndices(reference.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
+                    ref var constraintLocation = ref solver.HandleToConstraint[reference.ConstraintHandle];
+                    //ValidateReferences(solver, bodyIndex, reference.ConstraintHandle, reference.IndexInConstraint);
+                    var typeBatchIndex = fallbackBatch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId];
+                    ref var typeBatchVelocities = ref velocities[typeBatchIndex];
+                    BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
                     ref var bundle = ref typeBatchVelocities.BodyVelocities[reference.IndexInConstraint][bundleIndex];
                     ref var offsetBundle = ref GatherScatter.GetOffsetInstance(ref bundle, innerIndex);
                     Vector3Wide.ReadFirst(offsetBundle.Linear, out var linear);
                     Vector3Wide.ReadFirst(offsetBundle.Angular, out var angular);
+                    //bodyVelocity.Linear.Validate();
+                    //bodyVelocity.Angular.Validate();
                     bodyVelocity.Linear += linear;
                     bodyVelocity.Angular += angular;
+                    //bodyVelocity.Linear.Validate();
+                    //bodyVelocity.Angular.Validate();
                 }
                 //This simply averages all velocity results from the iteration for the body. This is equivalent to PGS/SI in terms of convergence because it is mathematically equivalent
                 //to having a linear/angular 'weld' constraint between N separate bodies that happen to all be in the same spot, except each of them has 1/N as much mass as the original.

@@ -286,7 +286,7 @@ namespace BepuPhysics.Constraints
             var bodyHandles = stackalloc int[bodiesPerConstraint];
             var bodyHandleCollector = new ActiveConstraintBodyHandleCollector(bodies, bodyHandles);
             EnumerateConnectedBodyIndices(ref typeBatch, indexInTypeBatch, ref bodyHandleCollector);
-            Debug.Assert(targetBatchIndex < solver.FallbackBatchThreshold,
+            Debug.Assert(targetBatchIndex <= solver.FallbackBatchThreshold,
                 "Constraint transfers should never target the fallback batch. It doesn't have any body handles so attempting to allocate in the same way wouldn't turn out well.");
             //Allocate a spot in the new batch. Note that it does not change the Handle->Constraint mapping in the Solver; that's important when we call Solver.Remove below.
             var constraintHandle = typeBatch.IndexToHandle[indexInTypeBatch];
@@ -407,7 +407,8 @@ namespace BepuPhysics.Constraints
                 var sourceIndex = sortedSourceIndices[i];
                 var targetIndex = baseIndex + i;
                 var key = sortKeyGenerator.GetSortKey(baseIndex + i, ref bodyReferences);
-                Debug.Assert(key > previousKey, "After the sort and swap completes, all constraints should be in order.");
+                //Note that this assert uses >= and not >; in a synchronized constraint batch, it's impossible for body references to be duplicated, but fallback batches CAN have duplicates.
+                Debug.Assert(key >= previousKey, "After the sort and swap completes, all constraints should be in order.");
                 Debug.Assert(key == sortedKeys[i], "After the swap goes through, the rederived sort keys should match the previously sorted ones.");
                 previousKey = key;
 
