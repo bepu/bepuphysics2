@@ -226,7 +226,13 @@ namespace BepuPhysics.CollisionDetection
             {
                 workerCaches[0] = new WorkerCache(pool, batchCapacity, capacityPerBatch);
             }
-
+            //The island sleeper job order requires this allocation to be done in the Prepare instead of CreateFlushJobs.
+            if (solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold)
+            {
+                //Ensure that the fallback deallocation list is also large enough. The fallback batch may result in 3 returned buffers for the primary dictionary, plus another two for each potentially
+                //removed body constraint references subset.
+                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 3 + solver.ActiveSet.Fallback.BodyCount * 2, out allocationIdsToFree);
+            }
         }
 
         //The general idea for multithreaded constraint removal is that there are varying levels of parallelism across the process.
@@ -296,13 +302,6 @@ namespace BepuPhysics.CollisionDetection
                 typeBatchCount += activeSet.Batches[i].TypeBatches.Count;
             }
             QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>>.Create(pool.SpecializeFor<TypeBatchIndex>(), typeBatchCount, out removedTypeBatches);
-
-            if (activeSet.Batches.Count > solver.FallbackBatchThreshold)
-            {
-                //Ensure that the fallback deallocation list is also large enough. The fallback batch may result in 3 returned buffers for the primary dictionary, plus another two for each potentially
-                //removed body constraint references subset.
-                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 3 + activeSet.Fallback.BodyCount * 2, out allocationIdsToFree);
-            }
             return batches.Count;
         }
 
@@ -425,6 +424,10 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
         }
+        public void RemoveAllConstraintsForBodyFromFallbackBatch(int bodyIndex)
+        {
+            solver.ActiveSet.Fallback.Remove(bodyIndex, ref allocationIdsToFree);
+        }
 
         QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>> removedTypeBatches;
         SpinLock removedTypeBatchLocker = new SpinLock();
@@ -461,7 +464,7 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
         }
-        
+
         struct TypeBatchComparer : IComparerRef<TypeBatchIndex>
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

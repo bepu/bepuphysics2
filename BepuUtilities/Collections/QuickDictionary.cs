@@ -100,7 +100,7 @@ namespace BepuUtilities.Collections
         public TValueSpan Values;
 
         /// <summary>
-        /// Equality comparer used 
+        /// Equality comparer used to compare and hash keys.
         /// </summary>
         public TEqualityComparer EqualityComparer;
 

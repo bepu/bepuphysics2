@@ -63,7 +63,7 @@ namespace BepuPhysics
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void Allocate<TBodyReferenceGetter>(int constraintHandle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
-           int typeId, ref ConstraintBatch batch, BufferPool pool, ref ConstraintReference reference, TBodyReferenceGetter bodyReferenceGetter, int minimumBodyCapacity, int minimumReferenceCapacity)
+           int typeId, BufferPool pool, TBodyReferenceGetter bodyReferenceGetter, int minimumBodyCapacity, int minimumReferenceCapacity)
             where TBodyReferenceGetter : struct, IBodyReferenceGetter
         {
             var fallbackPool = pool.SpecializeFor<FallbackReference>();
@@ -125,25 +125,23 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int GetBodyReference(Bodies bodies, int bodyHandle)
             {
-                ref var bodyLocation = ref bodies.HandleToLocation[bodyHandle];
-                Debug.Assert(bodyLocation.SetIndex == 0, "When creating a fallback batch for the active set, all bodies associated with it must be active.");
-                return bodyLocation.Index;
+                return bodyHandle;
             }
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe void AllocateForActive(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
-           int typeId, ref ConstraintBatch batch, BufferPool pool, ref ConstraintReference reference, int minimumBodyCapacity = 8, int minimumReferenceCapacity = 8)
+           int typeId, BufferPool pool, int minimumBodyCapacity = 8, int minimumReferenceCapacity = 8)
         {
-            Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, ref batch, pool, ref reference, new ActiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
+            Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, pool, new ActiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void AllocateForInactive(int handle, ref int constraintBodyHandles, int bodyCount, Bodies bodies,
-          int typeId, ref ConstraintBatch batch, BufferPool pool, ref ConstraintReference reference, int minimumBodyCapacity = 8, int minimumReferenceCapacity = 8)
+          int typeId, BufferPool pool, int minimumBodyCapacity = 8, int minimumReferenceCapacity = 8)
         {
-            Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, ref batch, pool, ref reference, new InactiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
+            Allocate(handle, ref constraintBodyHandles, bodyCount, bodies, typeId, pool, new InactiveSetGetter(), minimumBodyCapacity, minimumReferenceCapacity);
         }
 
 
@@ -195,6 +193,27 @@ namespace BepuPhysics
             {
                 bufferPool.ReturnUnsafely(allocationIdsToFree[i]);
             }
+        }
+
+
+        internal unsafe void Remove(int bodyReference, ref QuickList<int, Buffer<int>> allocationIdsToFree)
+        {
+            var bodyPresent = bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex);
+            Debug.Assert(bodyPresent, "If we've been asked to remove a constraint associated with a body, that body must be in this batch.");
+            ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
+            //If there are no more constraints associated with this body, get rid of the body list.
+            allocationIdsToFree.AllocateUnsafely() = constraintReferences.Span.Id;
+            allocationIdsToFree.AllocateUnsafely() = constraintReferences.Table.Id;
+            bodyConstraintReferences.FastRemove(tableIndex, bodyReferencesIndex);
+            if (bodyConstraintReferences.Count == 0)
+            {
+                //No constraints remain in the fallback batch. Drop the dictionary.
+                allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Keys.Id;
+                allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Values.Id;
+                allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Table.Id;
+                bodyConstraintReferences = default;
+            }
+
         }
 
         public static void AllocateResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, out Buffer<FallbackTypeBatchResults> results)
@@ -340,7 +359,7 @@ namespace BepuPhysics
 
         internal void UpdateForBodyMemoryMove(int originalBodyIndex, int newBodyLocation)
         {
-            Debug.Assert(!bodyConstraintReferences.ContainsKey(newBodyLocation), "If a body is being moved, as opposed to swapped, then the target index should not be present.");
+            Debug.Assert(bodyConstraintReferences.Keys.Allocated && !bodyConstraintReferences.ContainsKey(newBodyLocation), "If a body is being moved, as opposed to swapped, then the target index should not be present.");
             bodyConstraintReferences.GetTableIndices(ref originalBodyIndex, out var tableIndex, out var elementIndex);
             var references = bodyConstraintReferences.Values[elementIndex];
             bodyConstraintReferences.FastRemove(tableIndex, elementIndex);
@@ -353,6 +372,29 @@ namespace BepuPhysics
             var indexB = bodyConstraintReferences.IndexOf(b);
             Debug.Assert(indexA >= 0 && indexB >= 0, "A swap requires that both indices are already present.");
             Helpers.Swap(ref bodyConstraintReferences.Values[indexA], ref bodyConstraintReferences.Values[indexB]);
+        }
+
+        internal static void CreateFrom(ref FallbackBatch sourceBatch, BufferPool pool, out FallbackBatch targetBatch)
+        {
+            //Copy over non-buffer state. This copies buffer references pointlessly, but that doesn't matter.
+            targetBatch.bodyConstraintReferences = sourceBatch.bodyConstraintReferences;
+            pool.Take(sourceBatch.bodyConstraintReferences.Count, out targetBatch.bodyConstraintReferences.Keys);
+            pool.Take(sourceBatch.bodyConstraintReferences.Count, out targetBatch.bodyConstraintReferences.Values);
+            pool.Take(sourceBatch.bodyConstraintReferences.TableMask + 1, out targetBatch.bodyConstraintReferences.Table);
+            sourceBatch.bodyConstraintReferences.Keys.CopyTo(0, ref targetBatch.bodyConstraintReferences.Keys, 0, sourceBatch.bodyConstraintReferences.Count);
+            sourceBatch.bodyConstraintReferences.Values.CopyTo(0, ref targetBatch.bodyConstraintReferences.Values, 0, sourceBatch.bodyConstraintReferences.Count);
+            sourceBatch.bodyConstraintReferences.Table.CopyTo(0, ref targetBatch.bodyConstraintReferences.Table, 0, sourceBatch.bodyConstraintReferences.TableMask + 1);
+
+            for (int i = 0; i < sourceBatch.bodyConstraintReferences.Count; ++i)
+            {
+                ref var source = ref sourceBatch.bodyConstraintReferences.Values[i];
+                ref var target = ref sourceBatch.bodyConstraintReferences.Values[i];
+                target = source;
+                pool.Take(source.Count, out target.Span);
+                pool.Take(source.TableMask + 1, out target.Table);
+                source.Span.CopyTo(0, ref target.Span, 0, source.Count);
+                source.Table.CopyTo(0, ref target.Table, 0, source.TableMask + 1);
+            }
         }
 
         public void Compact(BufferPool pool)

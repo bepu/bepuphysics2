@@ -55,7 +55,7 @@ namespace BepuUtilities.Collections
         public TSpan Span;
 
         /// <summary>
-        /// Equality comparer used 
+        /// Equality comparer used to compare and hash elements.
         /// </summary>
         public TEqualityComparer EqualityComparer;
 

@@ -423,8 +423,7 @@ namespace BepuPhysics
 
         enum RemovalJobType
         {
-            RemoveFromBatchReferencedHandles, 
-            RemoveConstraintsFromFallbackBatch,
+            RemoveFromBatchReferencedHandles,
             NotifyNarrowPhasePairCache,
             AddCollidablesToStaticTree,
             RemoveBodiesFromActiveSet
@@ -443,19 +442,18 @@ namespace BepuPhysics
                 case RemovalJobType.RemoveFromBatchReferencedHandles:
                     constraintRemover.RemoveConstraintsFromBatchReferencedHandles();
                     break;
-                case RemovalJobType.RemoveConstraintsFromFallbackBatch:
-                    constraintRemover.RemoveConstraintsFromFallbackBatch();
-                    break;
                 case RemovalJobType.RemoveBodiesFromActiveSet:
                     {
                         for (int setReferenceIndex = 0; setReferenceIndex < newInactiveSets.Count; ++setReferenceIndex)
                         {
                             var setIndex = newInactiveSets[setReferenceIndex].Index;
-                            ref var set = ref bodies.Sets[setIndex];
-                            for (int bodyIndex = 0; bodyIndex < set.Count; ++bodyIndex)
+                            ref var inactiveBodySet = ref bodies.Sets[setIndex];
+                            ref var inactiveConstraintSet = ref solver.Sets[setIndex];
+                            for (int bodyIndex = 0; bodyIndex < inactiveBodySet.Count; ++bodyIndex)
                             {
-                                ref var location = ref bodies.HandleToLocation[set.IndexToHandle[bodyIndex]];
+                                ref var location = ref bodies.HandleToLocation[inactiveBodySet.IndexToHandle[bodyIndex]];
                                 Debug.Assert(location.SetIndex == 0, "At this point, the sleep hasn't gone through so the set should still be 0.");
+                                constraintRemover.RemoveAllConstraintsForBodyFromFallbackBatch(location.Index);
                                 bodies.RemoveFromActiveSet(location.Index);
                                 //And now we can actually update the handle->body mapping.
                                 location.SetIndex = setIndex;
@@ -705,9 +703,9 @@ namespace BepuPhysics
                         bodies.Sets[setIndex] = new BodySet(island.BodyIndices.Count, pool);
                         bodies.Sets[setIndex].Count = island.BodyIndices.Count;
                         sleptBodyCount += island.BodyIndices.Count;
+                        ref var constraintSet = ref solver.Sets[setIndex];
                         if (island.Protobatches.Count > 0)
                         {
-                            ref var constraintSet = ref solver.Sets[setIndex];
                             constraintSet = new ConstraintSet(pool, island.Protobatches.Count);
                             for (int batchIndex = 0; batchIndex < island.Protobatches.Count; ++batchIndex)
                             {
@@ -774,6 +772,14 @@ namespace BepuPhysics
                                 }
                             }
                         }
+
+                        if (island.Protobatches.Count > solver.FallbackBatchThreshold)
+                        {
+                            //Pull the fallback batch data into the new fallback batch. Note that this isn't just a shallow copy; we're pushing all the allocations into the main pool.
+                            //They were previously on a thread-specific pool. (This isn't technically required right now, but it's cheap and convenient if we change the per thread pools
+                            //to make use of the usually-ephemeral nature of their allocations.)
+                            FallbackBatch.CreateFrom(ref island.FallbackBatch, pool, out constraintSet.Fallback);
+                        }
                     }
                 }
             }
@@ -799,16 +805,12 @@ namespace BepuPhysics
             //We don't want the static tree to resize during removals. That would use the main pool and conflict with the NotifyNarrowPhasePairCache job's usage of the main pool.
             broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount, broadPhase.StaticTree.LeafCount + sleptBodyCount);
 
-            QuickList<RemovalJob, Buffer<RemovalJob>>.Create(pool.SpecializeFor<RemovalJob>(), 5, out removalJobs);
+            QuickList<RemovalJob, Buffer<RemovalJob>>.Create(pool.SpecializeFor<RemovalJob>(), 4, out removalJobs);
             //The heavier locally sequential jobs are scheduled up front, leaving the smaller later tasks to fill gaps.
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.NotifyNarrowPhasePairCache };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveBodiesFromActiveSet };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.AddCollidablesToStaticTree };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveFromBatchReferencedHandles };
-            if (solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold)
-            {
-                removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveConstraintsFromFallbackBatch };
-            }
 
             jobIndex = -1;
             if (threadCount > 1)
@@ -832,7 +834,7 @@ namespace BepuPhysics
             //Since the type batch removal for a large island (or multiple islands) will tend to create enough jobs to use the CPU,
             //we punt all other work (except for the constraint handle mapping update, type batch constraint removal relies on constraint handles for the moment)
             //to the third stage. It takes the form of a series of locally sequential jobs, so it won't have wonderful load balancing.
-            //But perfect scaling is necessarily required- we just want to reduce the frame drops as much as possible.
+            //But perfect scaling isn't necessarily required- we just want to reduce the frame drops as much as possible.
             typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs();
             jobIndex = -1;
             if (threadCount > 1)
