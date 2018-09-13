@@ -43,11 +43,11 @@ namespace BepuPhysics
         //This is consistent with the body references stored by active/inactive constraints.
         //Note that this is a dictionary of *sets*. This is because fallback batches are expected to be used in pathological cases where there are many constraints associated with
         //a single body. There are likely to be too many constraints for list-based containment/removal to be faster than the set implementation.
-        QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>,
+        internal QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>,
               Buffer<int>, Buffer<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>, Buffer<int>, PrimitiveComparer<int>> bodyConstraintReferences;
         //(but is this really ENOUGH generics?)
 
-        struct FallbackReferenceComparer : IEqualityComparerRef<FallbackReference>
+        internal struct FallbackReferenceComparer : IEqualityComparerRef<FallbackReference>
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(ref FallbackReference a, ref FallbackReference b)
@@ -68,20 +68,8 @@ namespace BepuPhysics
         {
             var fallbackPool = pool.SpecializeFor<FallbackReference>();
             var intPool = pool.SpecializeFor<int>();
-            var referenceListPool = pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>();
             var minimumReferencePower = SpanHelper.GetContainingPowerOf2(minimumReferenceCapacity);
-            if (bodyConstraintReferences.Keys.Allocated)
-            {
-                //This is conservative since there's no guarantee that we'll actually need to resize at all if these bodies are already present, but that's fine. 
-                bodyConstraintReferences.EnsureCapacity(bodyConstraintReferences.Count + bodyCount, intPool, referenceListPool, intPool);
-            }
-            else
-            {
-                //bleuaghg
-                QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>,
-                      Buffer<int>, Buffer<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>, Buffer<int>, PrimitiveComparer<int>>.Create(
-                    intPool, referenceListPool, intPool, SpanHelper.GetContainingPowerOf2(minimumBodyCapacity), 2, out bodyConstraintReferences);
-            }
+            EnsureCapacity(Math.Max(bodyConstraintReferences.Count + bodyCount, minimumBodyCapacity), pool);
             for (int i = 0; i < bodyCount; ++i)
             {
                 var bodyReference = bodyReferenceGetter.GetBodyReference(bodies, Unsafe.Add(ref constraintBodyHandles, i));
@@ -196,24 +184,25 @@ namespace BepuPhysics
         }
 
 
-        internal unsafe void Remove(int bodyReference, ref QuickList<int, Buffer<int>> allocationIdsToFree)
+        internal unsafe void TryRemove(int bodyReference, ref QuickList<int, Buffer<int>> allocationIdsToFree)
         {
-            var bodyPresent = bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex);
-            Debug.Assert(bodyPresent, "If we've been asked to remove a constraint associated with a body, that body must be in this batch.");
-            ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
-            //If there are no more constraints associated with this body, get rid of the body list.
-            allocationIdsToFree.AllocateUnsafely() = constraintReferences.Span.Id;
-            allocationIdsToFree.AllocateUnsafely() = constraintReferences.Table.Id;
-            bodyConstraintReferences.FastRemove(tableIndex, bodyReferencesIndex);
-            if (bodyConstraintReferences.Count == 0)
+            Debug.Assert(bodyConstraintReferences.Keys.Allocated);
+            if (bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
             {
-                //No constraints remain in the fallback batch. Drop the dictionary.
-                allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Keys.Id;
-                allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Values.Id;
-                allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Table.Id;
-                bodyConstraintReferences = default;
+                ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
+                //If there are no more constraints associated with this body, get rid of the body list.
+                allocationIdsToFree.AllocateUnsafely() = constraintReferences.Span.Id;
+                allocationIdsToFree.AllocateUnsafely() = constraintReferences.Table.Id;
+                bodyConstraintReferences.FastRemove(tableIndex, bodyReferencesIndex);
+                if (bodyConstraintReferences.Count == 0)
+                {
+                    //No constraints remain in the fallback batch. Drop the dictionary.
+                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Keys.Id;
+                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Values.Id;
+                    allocationIdsToFree.AllocateUnsafely() = bodyConstraintReferences.Table.Id;
+                    bodyConstraintReferences = default;
+                }
             }
-
         }
 
         public static void AllocateResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, out Buffer<FallbackTypeBatchResults> results)
@@ -395,6 +384,25 @@ namespace BepuPhysics
                 source.Span.CopyTo(0, ref target.Span, 0, source.Count);
                 source.Table.CopyTo(0, ref target.Table, 0, source.TableMask + 1);
             }
+        }
+
+        internal void EnsureCapacity(int bodyCapacity, BufferPool pool)
+        {
+            var intPool = pool.SpecializeFor<int>();
+            var referenceListPool = pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>();
+            if (bodyConstraintReferences.Keys.Allocated)
+            {
+                //This is conservative since there's no guarantee that we'll actually need to resize at all if these bodies are already present, but that's fine. 
+                bodyConstraintReferences.EnsureCapacity(bodyCapacity, intPool, referenceListPool, intPool);
+            }
+            else
+            {
+                //bleuaghg
+                QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>,
+                      Buffer<int>, Buffer<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>, Buffer<int>, PrimitiveComparer<int>>.Create(
+                    intPool, referenceListPool, intPool, SpanHelper.GetContainingPowerOf2(bodyCapacity), 2, out bodyConstraintReferences);
+            }
+
         }
 
         public void Compact(BufferPool pool)

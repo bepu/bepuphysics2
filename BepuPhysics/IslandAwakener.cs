@@ -176,6 +176,7 @@ namespace BepuPhysics
         enum PhaseTwoJobType
         {
             BroadPhase,
+            MoveFallbackBatchBodies,
             CopyConstraintRegion,
         }
         struct PhaseTwoJob
@@ -338,6 +339,26 @@ namespace BepuPhysics
                         }
                     }
                     break;
+                case PhaseTwoJobType.MoveFallbackBatchBodies:
+                    {
+                        for (int i = 0; i < uniqueSetIndices.Count; ++i)
+                        {
+                            ref var source = ref solver.Sets[uniqueSetIndices[i]].Fallback;
+                            ref var target = ref solver.ActiveSet.Fallback;
+                            if (source.bodyConstraintReferences.Count > 0)
+                            {
+                                for (int j = 0; j < source.bodyConstraintReferences.Count; ++j)
+                                {
+                                    //Inactive sets refer to body handles. Active set refers to body indices. Make the transition.
+                                    //The HandleToLocation was updated in the phase one jobs, so we can use it.
+                                    target.bodyConstraintReferences.AddUnsafely(ref bodies.HandleToLocation[source.bodyConstraintReferences.Keys[j]].Index, ref source.bodyConstraintReferences.Values[j]);
+                                }
+                                //We've reused the lists. Set the count to zero so they don't get disposed later.
+                                source.bodyConstraintReferences.Count = 0;
+                            }
+                        }
+                    }
+                    break;
                 case PhaseTwoJobType.CopyConstraintRegion:
                     {
                         //Constraints are a little more complicated than bodies for a few reasons:
@@ -467,6 +488,7 @@ namespace BepuPhysics
             int newBodyCount = 0;
             int highestNewBatchCount = 0;
             int highestRequiredTypeCapacity = 0;
+            int additionalRequiredFallbackCapacity = 0;
             for (int i = 0; i < setIndices.Count; ++i)
             {
                 var setIndex = setIndices[i];
@@ -475,6 +497,7 @@ namespace BepuPhysics
                 if (highestNewBatchCount < setBatchCount)
                     highestNewBatchCount = setBatchCount;
                 ref var constraintSet = ref solver.Sets[setIndex];
+                additionalRequiredFallbackCapacity += constraintSet.Fallback.BodyCount;
                 for (int batchIndex = 0; batchIndex < constraintSet.Batches.Count; ++batchIndex)
                 {
                     ref var batch = ref constraintSet.Batches[batchIndex];
@@ -538,6 +561,8 @@ namespace BepuPhysics
             broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount + newBodyCount, broadPhase.StaticTree.LeafCount);
             //constraints,
             solver.ActiveSet.Batches.EnsureCapacity(highestNewBatchCount, pool.SpecializeFor<ConstraintBatch>());
+            if (additionalRequiredFallbackCapacity > 0)
+                solver.ActiveSet.Fallback.EnsureCapacity(solver.ActiveSet.Fallback.BodyCount + additionalRequiredFallbackCapacity, pool);
             solver.batchReferencedHandles.EnsureCapacity(Math.Min(solver.FallbackBatchThreshold, highestNewBatchCount), pool.SpecializeFor<IndexSet>());
             for (int batchIndex = solver.ActiveSet.Batches.Count; batchIndex < highestNewBatchCount; ++batchIndex)
             {
@@ -611,6 +636,7 @@ namespace BepuPhysics
                 phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.UpdateBatchReferencedHandles, BatchIndex = batchIndex };
             }
             phaseTwoJobs.AllocateUnsafely() = new PhaseTwoJob { Type = PhaseTwoJobType.BroadPhase };
+            phaseTwoJobs.AllocateUnsafely() = new PhaseTwoJob { Type = PhaseTwoJobType.MoveFallbackBatchBodies };
 
             ref var activeBodySet = ref bodies.ActiveSet;
             ref var activeSolverSet = ref solver.ActiveSet;
@@ -696,11 +722,14 @@ namespace BepuPhysics
                 Debug.Assert(bodySet.Allocated);
                 bodySet.DisposeBuffers(pool);
                 if (constraintSet.Allocated)
+                {
                     constraintSet.Dispose(pool);
+                }
                 if (pairCacheSet.Allocated)
                     pairCacheSet.Dispose(pool);
                 this.uniqueSetIndices = new QuickList<int, Buffer<int>>();
                 sleeper.ReturnSetId(setIndex);
+                
             }
             phaseOneJobs.Dispose(pool.SpecializeFor<PhaseOneJob>());
             phaseTwoJobs.Dispose(pool.SpecializeFor<PhaseTwoJob>());

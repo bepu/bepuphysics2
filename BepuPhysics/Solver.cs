@@ -81,7 +81,7 @@ namespace BepuPhysics
         /// If a single body is constrained by more than FallbackBatchThreshold constraints, all constraints beyond FallbackBatchThreshold are placed into a fallback batch.
         /// The fallback batch uses a different solver that can handle multiple constraints affecting a single body in a single batch, allowing greater parallelism at the cost of convergence speed.
         /// </summary>
-        public int FallbackBatchThreshold { get; private set; } = 0;
+        public int FallbackBatchThreshold { get; private set; } = int.MaxValue - 1;
 
 
         int iterationCount;

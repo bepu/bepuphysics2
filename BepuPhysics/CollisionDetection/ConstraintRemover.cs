@@ -424,9 +424,12 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
         }
-        public void RemoveAllConstraintsForBodyFromFallbackBatch(int bodyIndex)
+        public void TryRemoveAllConstraintsForBodyFromFallbackBatch(int bodyIndex)
         {
-            solver.ActiveSet.Fallback.Remove(bodyIndex, ref allocationIdsToFree);
+            if (solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold)
+            {
+                solver.ActiveSet.Fallback.TryRemove(bodyIndex, ref allocationIdsToFree);
+            }
         }
 
         QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>> removedTypeBatches;
