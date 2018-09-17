@@ -28,8 +28,8 @@ namespace Demos.Demos
             var clothNodeShape = new Sphere(0.5f);
             clothNodeShape.ComputeInertia(1, out var clothNodeInertia);
             var clothNodeShapeIndex = Simulation.Shapes.Add(clothNodeShape);
-            const int width = 2;
-            const int length = 2;
+            const int width = 24;
+            const int length = 24;
             const float spacing = 1.75f;
             int[][] nodeHandles = new int[width][];
             for (int i = 0; i < width; ++i)

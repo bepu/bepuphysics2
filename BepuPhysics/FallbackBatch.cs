@@ -32,6 +32,10 @@ namespace BepuPhysics
         {
             public int ConstraintHandle;
             public int IndexInConstraint;
+            public override string ToString()
+            {
+                return $"{ConstraintHandle}, {IndexInConstraint}";
+            }
         }
         /// <summary>
         /// Gets the number of bodies in the fallback batch.
@@ -283,7 +287,7 @@ namespace BepuPhysics
             Debug.Assert(debugReferences[expectedIndexInConstraint] == bodyIndex, "The constraint's true body indices must agree with the fallback batch.");
         }
         [Conditional("DEBUG")]
-        public void ValidateActiveSetReferences(Solver solver)
+        public unsafe void ValidateActiveSetReferences(Solver solver)
         {
             for (int i = 0; i < bodyConstraintReferences.Count; ++i)
             {
@@ -293,6 +297,32 @@ namespace BepuPhysics
                 {
                     ref var reference = ref references.Span[j];
                     ValidateReferences(solver, bodyIndex, reference.ConstraintHandle, reference.IndexInConstraint);
+                }
+            }
+            if (solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold)
+            {
+                ref var batch = ref solver.ActiveSet.Batches[solver.FallbackBatchThreshold];
+                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    var bodiesPerConstraint = solver.TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
+                    var connectedBodies = stackalloc int[bodiesPerConstraint];
+                    for (int constraintIndex = 0; constraintIndex < typeBatch.ConstraintCount; ++constraintIndex)
+                    {
+                        var constraintHandle = typeBatch.IndexToHandle[constraintIndex];
+                        var collector = new ReferenceCollector(connectedBodies);
+                        solver.EnumerateConnectedBodies(constraintHandle, ref collector);
+                        for (int i = 0; i < bodiesPerConstraint; ++i)
+                        {
+                            var localBodyIndex = bodyConstraintReferences.IndexOf(connectedBodies[i]);
+                            Debug.Assert(localBodyIndex >= 0, "Any body referenced by a constraint in the fallback batch should exist within the fallback batch's body listing.");
+                            ref var references = ref bodyConstraintReferences.Values[localBodyIndex];
+                            var constraintIndexInBodySet = references.IndexOf(new FallbackReference { ConstraintHandle = constraintHandle });
+                            Debug.Assert(constraintIndexInBodySet >= 0, "Any constraint in the fallback batch should be in all connected bodies' constraint handle listings.");
+                            ref var reference = ref references[constraintIndexInBodySet];
+                            Debug.Assert(reference.ConstraintHandle == constraintHandle && reference.IndexInConstraint == i);
+                        }
+                    }
                 }
             }
         }
@@ -377,7 +407,7 @@ namespace BepuPhysics
             for (int i = 0; i < sourceBatch.bodyConstraintReferences.Count; ++i)
             {
                 ref var source = ref sourceBatch.bodyConstraintReferences.Values[i];
-                ref var target = ref sourceBatch.bodyConstraintReferences.Values[i];
+                ref var target = ref targetBatch.bodyConstraintReferences.Values[i];
                 target = source;
                 pool.Take(source.Count, out target.Span);
                 pool.Take(source.TableMask + 1, out target.Table);
