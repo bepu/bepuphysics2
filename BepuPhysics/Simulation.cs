@@ -43,8 +43,8 @@ namespace BepuPhysics
         /// Note that this can only affect determinism locally- different processor architectures may implement instructions differently.
         /// </summary>
         public bool Deterministic { get; set; }
-        
-        protected Simulation(BufferPool bufferPool, SimulationAllocationSizes initialAllocationSizes)
+
+        protected Simulation(BufferPool bufferPool, SimulationAllocationSizes initialAllocationSizes, int solverIterationCount, int solverFallbackBatchThreshold)
         {
             BufferPool = bufferPool;
             Shapes = new Shapes(bufferPool, initialAllocationSizes.ShapesPerType);
@@ -55,7 +55,7 @@ namespace BepuPhysics
                 initialAllocationSizes.ConstraintCountPerBodyEstimate);
             Statics = new Statics(bufferPool, Shapes, Bodies, BroadPhase, initialAllocationSizes.Statics);
 
-            Solver = new Solver(Bodies, BufferPool, 8,
+            Solver = new Solver(Bodies, BufferPool, solverIterationCount, solverFallbackBatchThreshold,
                 initialCapacity: initialAllocationSizes.Constraints,
                 initialIslandCapacity: initialAllocationSizes.Islands,
                 minimumCapacityPerTypeBatch: initialAllocationSizes.ConstraintsPerTypeBatch);
@@ -77,10 +77,12 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="bufferPool">Buffer pool used to fill persistent structures and main thread ephemeral resources across the engine.</param>
         /// <param name="narrowPhaseCallbacks">Callbacks to use in the narrow phase.</param>
+        /// <param name="solverIterationCount">Number of iterations the solver should use.</param>
+        /// <param name="solverFallbackBatchThreshold">Number of synchronized batches the solver should maintain before falling back to a lower quality jacobi hybrid solver.</param>
         /// <param name="initialAllocationSizes">Allocation sizes to initialize the simulation with. If left null, default values are chosen.</param>
         /// <returns>New simulation.</returns>
         public static Simulation Create<TNarrowPhaseCallbacks>(BufferPool bufferPool, TNarrowPhaseCallbacks narrowPhaseCallbacks,
-            SimulationAllocationSizes? initialAllocationSizes = null)
+            int solverIterationCount = 8, int solverFallbackBatchThreshold = 16, SimulationAllocationSizes? initialAllocationSizes = null)
             where TNarrowPhaseCallbacks : struct, INarrowPhaseCallbacks
         {
             if (initialAllocationSizes == null)
@@ -96,8 +98,8 @@ namespace BepuPhysics
                 };
             }
 
-            var simulation = new Simulation(bufferPool, initialAllocationSizes.Value);
-            var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation, 
+            var simulation = new Simulation(bufferPool, initialAllocationSizes.Value, solverIterationCount, solverFallbackBatchThreshold);
+            var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation,
                 DefaultTypes.CreateDefaultCollisionTaskRegistry(), DefaultTypes.CreateDefaultSweepTaskRegistry(),
                 narrowPhaseCallbacks, initialAllocationSizes.Value.Islands + 1);
             DefaultTypes.RegisterDefaults(simulation.Solver, narrowPhase);
@@ -191,11 +193,9 @@ namespace BepuPhysics
             //So instead, velocity integration (and deactivation candidacy management) comes before sleep.
 
             //Sleep at the start, on the other hand, stops some forms of unintuitive behavior when using direct awakenings. Just a matter of preference.
-            //FallbackBatch.ValidateReferences(Solver);
             ProfilerStart(Sleeper);
             Sleeper.Update(threadDispatcher, Deterministic);
             ProfilerEnd(Sleeper);
-            //FallbackBatch.ValidateReferences(Solver);
 
             //Note that pose integrator comes before collision detection and solving. This is a shift from v1, where collision detection went first.
             //This is a tradeoff:
@@ -218,28 +218,18 @@ namespace BepuPhysics
             ProfilerStart(PoseIntegrator);
             PoseIntegrator.Update(dt, BufferPool, threadDispatcher);
             ProfilerEnd(PoseIntegrator);
-            
+
             ProfilerStart(BroadPhase);
             BroadPhase.Update(threadDispatcher);
             ProfilerEnd(BroadPhase);
-            
+
             ProfilerStart(BroadPhaseOverlapFinder);
             BroadPhaseOverlapFinder.DispatchOverlaps(dt, threadDispatcher);
             ProfilerEnd(BroadPhaseOverlapFinder);
 
-            //Solver.ValidateConstraintMaps();
-            //Solver.ValidateExistingHandles();
-            //FallbackBatch.ValidateReferences(Solver);
-
             ProfilerStart(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(NarrowPhase);
-
-            //Solver.ValidateConstraintMaps();
-            //Solver.ValidateExistingHandles();
-            //FallbackBatch.ValidateReferences(Solver);
-
-            //Bodies.ValidateMotionStates();
 
             ProfilerStart(Solver);
             if (threadDispatcher == null)
@@ -248,18 +238,11 @@ namespace BepuPhysics
                 Solver.MultithreadedUpdate(threadDispatcher, BufferPool, dt);
             ProfilerEnd(Solver);
 
-            //Bodies.ValidateMotionStates();
-            //Solver.ValidateConstraintMaps();
-            //Solver.ValidateExistingHandles();
-
-            //Note that constraint optimization should be performed after body optimization, since body optimization moves the bodies- and so affects the optimal constraint position.
+            //Note that constraint optimization should be performed after body optimization, since body optimization moves the bodies - and so affects the optimal constraint position.
             //TODO: The order of these optimizer stages is performance relevant, even though they don't have any effect on correctness.
             //You may want to try them in different locations to see how they impact cache residency.
             ProfilerStart(BodyLayoutOptimizer);
-            //if (threadDispatcher == null)
-            //    BodyLayoutOptimizer.IncrementalOptimize();
-            //else
-            //    BodyLayoutOptimizer.IncrementalOptimize(BufferPool, threadDispatcher);
+            BodyLayoutOptimizer.IncrementalOptimize();
             ProfilerEnd(BodyLayoutOptimizer);
 
             ProfilerStart(ConstraintLayoutOptimizer);

@@ -20,7 +20,7 @@ namespace Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks(),
-            new SimulationAllocationSizes
+            initialAllocationSizes: new SimulationAllocationSizes
             {
                 Bodies = 1,
                 ConstraintCountPerBodyEstimate = 1,

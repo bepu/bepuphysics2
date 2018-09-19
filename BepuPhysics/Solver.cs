@@ -75,13 +75,12 @@ namespace BepuPhysics
         internal BufferPool bufferPool;
         public Buffer<ConstraintLocation> HandleToConstraint;
 
-        //TODO: Make this settable. Unclear if it's really appropriate for a property- properties are conventionally cheap, and changing the maximum batch count on an existing simulation is far from cheap.
         /// <summary>
         /// Gets the maximum number of solver batches to allow before resorting to a fallback solver.
         /// If a single body is constrained by more than FallbackBatchThreshold constraints, all constraints beyond FallbackBatchThreshold are placed into a fallback batch.
         /// The fallback batch uses a different solver that can handle multiple constraints affecting a single body in a single batch, allowing greater parallelism at the cost of convergence speed.
         /// </summary>
-        public int FallbackBatchThreshold { get; private set; } = int.MaxValue - 1;
+        public int FallbackBatchThreshold { get; private set; }
 
 
         int iterationCount;
@@ -181,9 +180,7 @@ namespace BepuPhysics
 
 
         Action<int> workDelegate;
-        //TODO: While 32 batches will likely cover most simulations, this will likely change when the jacobi-hybrid fallback is implemented in favor of a user configurable threshold.
-        const int BatchCountEstimate = 32;
-        public Solver(Bodies bodies, BufferPool bufferPool, int iterationCount,
+        public Solver(Bodies bodies, BufferPool bufferPool, int iterationCount, int fallbackBatchThreshold,
             int initialCapacity,
             int initialIslandCapacity,
             int minimumCapacityPerTypeBatch)
@@ -194,8 +191,8 @@ namespace BepuPhysics
             this.bufferPool = bufferPool;
             IdPool<Buffer<int>>.Create(bufferPool.SpecializeFor<int>(), 128, out HandlePool);
             ResizeSetsCapacity(initialIslandCapacity + 1, 0);
-            ActiveSet = new ConstraintSet(bufferPool, BatchCountEstimate);
-            QuickList<IndexSet, Buffer<IndexSet>>.Create(bufferPool.SpecializeFor<IndexSet>(), BatchCountEstimate, out batchReferencedHandles);
+            ActiveSet = new ConstraintSet(bufferPool, fallbackBatchThreshold + 1);
+            QuickList<IndexSet, Buffer<IndexSet>>.Create(bufferPool.SpecializeFor<IndexSet>(), fallbackBatchThreshold + 1, out batchReferencedHandles);
             bufferPool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
             workDelegate = Work;
         }

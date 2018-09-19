@@ -28,8 +28,8 @@ namespace Demos.Demos
             var clothNodeShape = new Sphere(0.5f);
             clothNodeShape.ComputeInertia(1, out var clothNodeInertia);
             var clothNodeShapeIndex = Simulation.Shapes.Add(clothNodeShape);
-            const int width = 24;
-            const int length = 24;
+            const int width = 128;
+            const int length = 128;
             const float spacing = 1.75f;
             int[][] nodeHandles = new int[width][];
             for (int i = 0; i < width; ++i)
@@ -120,7 +120,7 @@ namespace Demos.Demos
             var groundShape = new Box(200, 1, 200);
             var groundShapeIndex = Simulation.Shapes.Add(groundShape);
 
-            var groundDescription = new StaticDescription
+            var groundDescription = new BodyDescription
             {
                 Collidable = new CollidableDescription
                 {
@@ -128,25 +128,26 @@ namespace Demos.Demos
                     Shape = groundShapeIndex,
                     SpeculativeMargin = 0.1f
                 },
+                Activity = new BodyActivityDescription(0),
                 Pose = new RigidPose
                 {
                     Position = new Vector3(0, -10, 0),
                     Orientation = BepuUtilities.Quaternion.Identity
                 }
             };
-            Simulation.Statics.Add(groundDescription);
+            Simulation.Bodies.Add(groundDescription);
         }
         int bigBallHandle;
         float timeAccumulator;
         public override void Update(Input input, float dt)
         {
-            //var bigBall = new BodyReference(bigBallHandle, Simulation.Bodies);
-            //timeAccumulator += 1/60f;
-            //if (timeAccumulator > MathF.PI * 128)
-            //    timeAccumulator -= MathF.PI * 128;
-            //if (!bigBall.IsActive)
-            //    Simulation.Awakener.AwakenBody(bigBallHandle);
-            //bigBall.Velocity.Linear = new Vector3(0, 3f * MathF.Sin(timeAccumulator * 5), 0);
+            var bigBall = new BodyReference(bigBallHandle, Simulation.Bodies);
+            timeAccumulator += 1 / 60f;
+            if (timeAccumulator > MathF.PI * 128)
+                timeAccumulator -= MathF.PI * 128;
+            if (!bigBall.IsActive)
+                Simulation.Awakener.AwakenBody(bigBallHandle);
+            bigBall.Velocity.Linear = new Vector3(0, 3f * MathF.Sin(timeAccumulator * 5), 0);
             base.Update(input, dt);
         }
     }

@@ -23,7 +23,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
             //Using minimum sized allocations forces as many resizes as possible.
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks(),
+            Simulation = Simulation.Create(BufferPool, new TestCallbacks(), initialAllocationSizes:
             new SimulationAllocationSizes
             {
                 Bodies = 1,
@@ -238,7 +238,7 @@ namespace Demos.Demos
 
 
             //Spray some shapes!
-            int newShapeCount = 1;
+            int newShapeCount = 8;
             var spawnLocation = new Vector3(0, 10, 0);
             for (int i = 0; i < newShapeCount; ++i)
             {
@@ -287,14 +287,14 @@ namespace Demos.Demos
                     LocalInertia = inertia,
                     Collidable = new CollidableDescription(shapeIndex, 5),
                     Activity = new BodyActivityDescription(0.1f),
-                    Velocity = new BodyVelocity(new Vector3(-20 + 40 * (float)random.NextDouble(), 1, -20 + 40 * (float)random.NextDouble()), default)
+                    Velocity = new BodyVelocity(new Vector3(-30 + 60 * (float)random.NextDouble(), 75, -30 + 60 * (float)random.NextDouble()), default)
                 };
 
 
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(description), BufferPool.SpecializeFor<int>());
 
             }
-            int targetAsymptote = 512;
+            int targetAsymptote = 65536;
             var removalCount = (int)(dynamicHandles.Count * (newShapeCount / (float)targetAsymptote));
             for (int i = 0; i < removalCount; ++i)
             {

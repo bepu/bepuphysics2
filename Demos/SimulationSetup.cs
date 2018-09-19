@@ -145,7 +145,7 @@ namespace Demos
             simulation = Simulation.Create(
                 new BufferPool(),
                 new TestCallbacks(),
-                new SimulationAllocationSizes
+                initialAllocationSizes: new SimulationAllocationSizes
                 {
                     Bodies = bodyCount,
                     ShapesPerType = 128,

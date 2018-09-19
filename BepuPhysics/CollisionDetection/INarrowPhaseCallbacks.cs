@@ -9,8 +9,17 @@ namespace BepuPhysics.CollisionDetection
 {
     public struct PairMaterialProperties
     {
+        /// <summary>
+        /// Coefficient of friction to apply for the constraint. Maximum friction force will be equal to the normal force times the friction coefficient.
+        /// </summary>
         public float FrictionCoefficient;
+        /// <summary>
+        /// Maximum velocity at which the collision constraint will recover from penetration. Clamps the velocity goal created from the spring settings.
+        /// </summary>
         public float MaximumRecoveryVelocity;
+        /// <summary>
+        /// Defines the constraint's spring properties.
+        /// </summary>
         public SpringSettings SpringSettings;
     }
 
