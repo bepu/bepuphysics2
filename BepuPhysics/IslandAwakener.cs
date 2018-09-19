@@ -158,6 +158,7 @@ namespace BepuPhysics
         enum PhaseOneJobType
         {
             PairCache,
+            MoveFallbackBatchBodies,
             UpdateBatchReferencedHandles,
             CopyBodyRegion
         }
@@ -176,7 +177,6 @@ namespace BepuPhysics
         enum PhaseTwoJobType
         {
             BroadPhase,
-            MoveFallbackBatchBodies,
             CopyConstraintRegion,
         }
         struct PhaseTwoJob
@@ -241,6 +241,30 @@ namespace BepuPhysics
                         }
                     }
                     break;
+                case PhaseOneJobType.MoveFallbackBatchBodies:
+                    {
+                        for (int i = 0; i < uniqueSetIndices.Count; ++i)
+                        {
+                            Debug.Assert(uniqueSetIndices[i] > 0);
+                            ref var source = ref solver.Sets[uniqueSetIndices[i]].Fallback;
+                            ref var target = ref solver.ActiveSet.Fallback;
+                            if (source.bodyConstraintReferences.Count > 0)
+                            {
+                                for (int j = 0; j < source.bodyConstraintReferences.Count; ++j)
+                                {
+                                    //Inactive sets refer to body handles. Active set refers to body indices. Make the transition.
+                                    //The HandleToLocation was updated during job setup, so we can use it.
+                                    ref var bodyLocation = ref bodies.HandleToLocation[source.bodyConstraintReferences.Keys[j]];
+                                    Debug.Assert(bodyLocation.SetIndex == 0, "Any batch moved into the active set should be dealing with bodies which have already been moved into the active set.");
+                                    var added = target.bodyConstraintReferences.AddUnsafely(ref bodyLocation.Index, ref source.bodyConstraintReferences.Values[j]);
+                                    Debug.Assert(added, "Any body moving from an inactive set to the active set should not already be present in the active set's fallback batch.");
+                                }
+                                //We've reused the lists. Set the count to zero so they don't get disposed later.
+                                source.bodyConstraintReferences.Count = 0;
+                            }
+                        }
+                    }
+                    break;
                 case PhaseOneJobType.CopyBodyRegion:
                     {
                         //Since we already preallocated everything during the job preparation, all we have to do is copy from the sleeping set location.
@@ -278,16 +302,11 @@ namespace BepuPhysics
                             }
                         }
                         sourceSet.IndexToHandle.CopyTo(job.SourceStart, ref targetSet.IndexToHandle, job.TargetStart, job.Count);
-                        for (int i = 0; i < job.Count; ++i)
-                        {
-                            ref var bodyLocation = ref bodies.HandleToLocation[sourceSet.IndexToHandle[job.SourceStart + i]];
-                            bodyLocation.SetIndex = 0;
-                            bodyLocation.Index = job.TargetStart + i;
-                        }
                     }
                     break;
             }
         }
+
 
         internal unsafe void ExecutePhaseTwoJob(int index)
         {
@@ -335,26 +354,6 @@ namespace BepuPhysics
                                         }
                                     }
                                 }
-                            }
-                        }
-                    }
-                    break;
-                case PhaseTwoJobType.MoveFallbackBatchBodies:
-                    {
-                        for (int i = 0; i < uniqueSetIndices.Count; ++i)
-                        {
-                            ref var source = ref solver.Sets[uniqueSetIndices[i]].Fallback;
-                            ref var target = ref solver.ActiveSet.Fallback;
-                            if (source.bodyConstraintReferences.Count > 0)
-                            {
-                                for (int j = 0; j < source.bodyConstraintReferences.Count; ++j)
-                                {
-                                    //Inactive sets refer to body handles. Active set refers to body indices. Make the transition.
-                                    //The HandleToLocation was updated in the phase one jobs, so we can use it.
-                                    target.bodyConstraintReferences.AddUnsafely(ref bodies.HandleToLocation[source.bodyConstraintReferences.Keys[j]].Index, ref source.bodyConstraintReferences.Values[j]);
-                                }
-                                //We've reused the lists. Set the count to zero so they don't get disposed later.
-                                source.bodyConstraintReferences.Count = 0;
                             }
                         }
                     }
@@ -629,6 +628,7 @@ namespace BepuPhysics
             //(Pair caches are currently handled in a locally sequential way and do not require preallocation.)
 
             phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.PairCache };
+            phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.MoveFallbackBatchBodies };
             //Don't create batch referenced handles update jobs for the fallback batch; it has no referenced handles!
             var highestSynchronizedBatchCount = Math.Min(solver.FallbackBatchThreshold, highestNewBatchCount);
             for (int batchIndex = 0; batchIndex < highestSynchronizedBatchCount; ++batchIndex)
@@ -636,7 +636,6 @@ namespace BepuPhysics
                 phaseOneJobs.AllocateUnsafely() = new PhaseOneJob { Type = PhaseOneJobType.UpdateBatchReferencedHandles, BatchIndex = batchIndex };
             }
             phaseTwoJobs.AllocateUnsafely() = new PhaseTwoJob { Type = PhaseTwoJobType.BroadPhase };
-            phaseTwoJobs.AllocateUnsafely() = new PhaseTwoJob { Type = PhaseTwoJobType.MoveFallbackBatchBodies };
 
             ref var activeBodySet = ref bodies.ActiveSet;
             ref var activeSolverSet = ref solver.ActiveSet;
@@ -662,6 +661,18 @@ namespace BepuPhysics
                         job.Count = jobIndex >= remainder ? baseBodiesPerJob : baseBodiesPerJob + 1;
                         previousSourceEnd += job.Count;
                         activeBodySet.Count += job.Count;
+                        //We perform the body handle update up front because it's cheap, and because it makes some things simpler:
+                        //the narrow phase flush adds constraints in the second stage, and we want the awakener to have already modified the fallback batches by the time that happens.
+                        //So, we do fallback batch modification in phase one of the IslandAwakener (which happens in phase one of the narrow phase flush), and that relies on the 
+                        //body handle->location mapping being up to date.
+                        for (int j = 0; j < job.Count; ++j)
+                        {
+                            var sourceIndex = job.SourceStart + j;
+                            var targetIndex = job.TargetStart + j;
+                            ref var bodyLocation = ref bodies.HandleToLocation[sourceSet.IndexToHandle[sourceIndex]];
+                            bodyLocation.SetIndex = 0;
+                            bodyLocation.Index = targetIndex;
+                        }
                     }
                     Debug.Assert(previousSourceEnd == sourceSet.Count);
                     Debug.Assert(activeBodySet.Count <= activeBodySet.IndexToHandle.Length);
@@ -729,7 +740,7 @@ namespace BepuPhysics
                     pairCacheSet.Dispose(pool);
                 this.uniqueSetIndices = new QuickList<int, Buffer<int>>();
                 sleeper.ReturnSetId(setIndex);
-                
+
             }
             phaseOneJobs.Dispose(pool.SpecializeFor<PhaseOneJob>());
             phaseTwoJobs.Dispose(pool.SpecializeFor<PhaseTwoJob>());

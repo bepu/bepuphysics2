@@ -189,11 +189,13 @@ namespace BepuPhysics
             //That includes gravity. If we sleep objects *before* gravity is applied in a given frame, then when those bodies are awakened, the accumulated impulses
             //will be less accurate because they assume that gravity has already been applied. This can cause a small bump.
             //So instead, velocity integration (and deactivation candidacy management) comes before sleep.
-            
+
             //Sleep at the start, on the other hand, stops some forms of unintuitive behavior when using direct awakenings. Just a matter of preference.
+            //FallbackBatch.ValidateReferences(Solver);
             ProfilerStart(Sleeper);
             Sleeper.Update(threadDispatcher, Deterministic);
             ProfilerEnd(Sleeper);
+            //FallbackBatch.ValidateReferences(Solver);
 
             //Note that pose integrator comes before collision detection and solving. This is a shift from v1, where collision detection went first.
             //This is a tradeoff:
@@ -225,13 +227,17 @@ namespace BepuPhysics
             BroadPhaseOverlapFinder.DispatchOverlaps(dt, threadDispatcher);
             ProfilerEnd(BroadPhaseOverlapFinder);
 
-            //Solver.ActiveSet.Fallback.ValidateActiveSetReferences(Solver);
+            //Solver.ValidateConstraintMaps();
+            //Solver.ValidateExistingHandles();
+            //FallbackBatch.ValidateReferences(Solver);
 
             ProfilerStart(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(NarrowPhase);
 
-            //Solver.ActiveSet.Fallback.ValidateActiveSetReferences(Solver);
+            //Solver.ValidateConstraintMaps();
+            //Solver.ValidateExistingHandles();
+            //FallbackBatch.ValidateReferences(Solver);
 
             //Bodies.ValidateMotionStates();
 
@@ -243,15 +249,17 @@ namespace BepuPhysics
             ProfilerEnd(Solver);
 
             //Bodies.ValidateMotionStates();
+            //Solver.ValidateConstraintMaps();
+            //Solver.ValidateExistingHandles();
 
             //Note that constraint optimization should be performed after body optimization, since body optimization moves the bodies- and so affects the optimal constraint position.
             //TODO: The order of these optimizer stages is performance relevant, even though they don't have any effect on correctness.
             //You may want to try them in different locations to see how they impact cache residency.
             ProfilerStart(BodyLayoutOptimizer);
-            if (threadDispatcher == null)
-                BodyLayoutOptimizer.IncrementalOptimize();
-            else
-                BodyLayoutOptimizer.IncrementalOptimize(BufferPool, threadDispatcher);
+            //if (threadDispatcher == null)
+            //    BodyLayoutOptimizer.IncrementalOptimize();
+            //else
+            //    BodyLayoutOptimizer.IncrementalOptimize(BufferPool, threadDispatcher);
             ProfilerEnd(BodyLayoutOptimizer);
 
             ProfilerStart(ConstraintLayoutOptimizer);

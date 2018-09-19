@@ -276,32 +276,38 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        unsafe void ValidateReferences(Solver solver, int bodyIndex, int constraintHandle, int expectedIndexInConstraint)
+        unsafe static void ValidateBodyConstraintReference(Solver solver, int setIndex, int bodyReference, int constraintHandle, int expectedIndexInConstraint)
         {
             ref var constraintLocation = ref solver.HandleToConstraint[constraintHandle];
-            Debug.Assert(constraintLocation.SetIndex == 0, "This validation is built for the active set; it assumes all body references are indices.");
+            Debug.Assert(constraintLocation.SetIndex == setIndex);
             Debug.Assert(constraintLocation.BatchIndex == solver.FallbackBatchThreshold, "Should only be working on constraints which are members of the active fallback batch.");
             var debugReferences = stackalloc int[solver.TypeProcessors[constraintLocation.TypeId].BodiesPerConstraint];
             var debugBodyReferenceCollector = new ReferenceCollector(debugReferences);
             solver.EnumerateConnectedBodies(constraintHandle, ref debugBodyReferenceCollector);
-            Debug.Assert(debugReferences[expectedIndexInConstraint] == bodyIndex, "The constraint's true body indices must agree with the fallback batch.");
+            Debug.Assert(debugReferences[expectedIndexInConstraint] == bodyReference, "The constraint's true body references must agree with the fallback batch.");
         }
         [Conditional("DEBUG")]
-        public unsafe void ValidateActiveSetReferences(Solver solver)
+        public static unsafe void ValidateSetReferences(Solver solver, int setIndex)
         {
-            for (int i = 0; i < bodyConstraintReferences.Count; ++i)
+            ref var set = ref solver.Sets[setIndex];
+            Debug.Assert(set.Allocated);
+            if (set.Batches.Count > solver.FallbackBatchThreshold)
             {
-                var bodyIndex = bodyConstraintReferences.Keys[i];
-                ref var references = ref bodyConstraintReferences.Values[i];
-                for (int j = 0; j < references.Count; ++j)
+                Debug.Assert(set.Fallback.bodyConstraintReferences.Keys.Allocated);
+                ref var bodyConstraintReferences = ref set.Fallback.bodyConstraintReferences;
+                for (int i = 0; i < bodyConstraintReferences.Count; ++i)
                 {
-                    ref var reference = ref references.Span[j];
-                    ValidateReferences(solver, bodyIndex, reference.ConstraintHandle, reference.IndexInConstraint);
+                    //This is a handle on inactive sets, and an index for active sets.
+                    var bodyReference = bodyConstraintReferences.Keys[i];
+                    ref var references = ref bodyConstraintReferences.Values[i];
+                    Debug.Assert(references.Count > 0, "If there exists a body reference set, it should be populated.");
+                    for (int j = 0; j < references.Count; ++j)
+                    {
+                        ref var reference = ref references.Span[j];
+                        ValidateBodyConstraintReference(solver, setIndex, bodyReference, reference.ConstraintHandle, reference.IndexInConstraint);
+                    }
                 }
-            }
-            if (solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold)
-            {
-                ref var batch = ref solver.ActiveSet.Batches[solver.FallbackBatchThreshold];
+                ref var batch = ref set.Batches[solver.FallbackBatchThreshold];
                 for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                 {
                     ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
@@ -324,6 +330,15 @@ namespace BepuPhysics
                         }
                     }
                 }
+            }
+        }
+        [Conditional("DEBUG")]
+        public static unsafe void ValidateReferences(Solver solver)
+        {
+            for (int i = 0; i < solver.Sets.Length; ++i)
+            {
+                if (solver.Sets[i].Allocated)
+                    ValidateSetReferences(solver, i);
             }
         }
 
@@ -398,7 +413,7 @@ namespace BepuPhysics
             //Copy over non-buffer state. This copies buffer references pointlessly, but that doesn't matter.
             targetBatch.bodyConstraintReferences = sourceBatch.bodyConstraintReferences;
             pool.Take(sourceBatch.bodyConstraintReferences.Count, out targetBatch.bodyConstraintReferences.Keys);
-            pool.Take(sourceBatch.bodyConstraintReferences.Count, out targetBatch.bodyConstraintReferences.Values);
+            pool.Take(targetBatch.bodyConstraintReferences.Keys.Length, out targetBatch.bodyConstraintReferences.Values);
             pool.Take(sourceBatch.bodyConstraintReferences.TableMask + 1, out targetBatch.bodyConstraintReferences.Table);
             sourceBatch.bodyConstraintReferences.Keys.CopyTo(0, ref targetBatch.bodyConstraintReferences.Keys, 0, sourceBatch.bodyConstraintReferences.Count);
             sourceBatch.bodyConstraintReferences.Values.CopyTo(0, ref targetBatch.bodyConstraintReferences.Values, 0, sourceBatch.bodyConstraintReferences.Count);
