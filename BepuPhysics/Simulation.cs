@@ -82,7 +82,7 @@ namespace BepuPhysics
         /// <param name="initialAllocationSizes">Allocation sizes to initialize the simulation with. If left null, default values are chosen.</param>
         /// <returns>New simulation.</returns>
         public static Simulation Create<TNarrowPhaseCallbacks>(BufferPool bufferPool, TNarrowPhaseCallbacks narrowPhaseCallbacks,
-            int solverIterationCount = 8, int solverFallbackBatchThreshold = 16, SimulationAllocationSizes? initialAllocationSizes = null)
+            int solverIterationCount = 8, int solverFallbackBatchThreshold = 32, SimulationAllocationSizes? initialAllocationSizes = null)
             where TNarrowPhaseCallbacks : struct, INarrowPhaseCallbacks
         {
             if (initialAllocationSizes == null)

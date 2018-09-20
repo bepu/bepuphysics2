@@ -146,7 +146,7 @@ namespace BepuPhysics
                 for (int batchIndex = 0; batchIndex < nextBatchIndex; ++batchIndex)
                 {
                     //The batch index will never be the fallback batch, since the fallback batch is the very last batch (if it exists at all). So uses batch referenced handles is safe.
-                    if (Solver.batchReferencedHandles[batchIndex].CanFit(ref bodyHandles[0], bodiesPerConstraint))
+                    if (Solver.batchReferencedHandles[batchIndex].CanFit(ref *bodyHandles, bodiesPerConstraint))
                     {
                         compressions.Add(new Compression { ConstraintHandle = typeBatch.IndexToHandle[i], TargetBatch = batchIndex }, pool.SpecializeFor<Compression>());
                         break;
@@ -171,14 +171,34 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ApplyCompression(int sourceBatchIndex, ref ConstraintBatch sourceBatch, ref Compression compression)
+        private unsafe void ApplyCompression(int sourceBatchIndex, ref ConstraintBatch sourceBatch, ref Compression compression)
         {
+            //Careful here: this is a reference for the sake of not doing pointless copies, but you cannot rely on it having the same values after the completion of the transfer.
+            ref var constraintLocation = ref Solver.HandleToConstraint[compression.ConstraintHandle];
+            var typeProcessor = Solver.TypeProcessors[constraintLocation.TypeId];
+            if (sourceBatchIndex == Solver.FallbackBatchThreshold)
+            {
+                //We're optimizing the fallback batch, so we need to be careful about compressions interfering with each other. The parallel analysis assumed each batch
+                //contained at most one instance of each body, which doesn't hold for the fallback batch.
+                //Easy enough to address: check to see if the target batch can still hold the constraint.
+                var bodyHandles = stackalloc int[typeProcessor.BodiesPerConstraint];
+                ActiveConstraintBodyHandleCollector handleAccumulator;
+                handleAccumulator.Bodies = Bodies;
+                handleAccumulator.Handles = bodyHandles;
+                handleAccumulator.Index = 0;
+                Solver.EnumerateConnectedBodies(compression.ConstraintHandle, ref handleAccumulator);
+                if (!Solver.batchReferencedHandles[compression.TargetBatch].CanFit(ref *bodyHandles, typeProcessor.BodiesPerConstraint))
+                {
+                    //Another compression from the fallback batch has blocked this compression.
+                    //Note that this isn't really a problem- batch compression is an incremental process. If some other compression was possible, a future frame will find it pretty quickly.
+                    return;
+                }
+            }
+            //Console.WriteLine($"Compressing: {compression.ConstraintHandle} moving from {Solver.Batches.IndexOf(sourceBatch)} to {compression.TargetBatch}");
+
             //Note that we do not simply remove and re-add the constraint; while that would work, it would redo a lot of work that isn't necessary.
             //Instead, since we already know exactly where the constraint is and what constraint batch it should go to, we can avoid a lot of abstractions
             //and do more direct copies.
-            //Careful here: this is a reference for the sake of not doing pointless copies, but you cannot rely on it having the same values after the completion of the transfer.
-            ref var constraintLocation = ref Solver.HandleToConstraint[compression.ConstraintHandle];
-            //Console.WriteLine($"Compressing: {compression.ConstraintHandle} moving from {Solver.Batches.IndexOf(sourceBatch)} to {compression.TargetBatch}");
             Solver.TypeProcessors[constraintLocation.TypeId].TransferConstraint(
                 ref sourceBatch.GetTypeBatch(constraintLocation.TypeId), nextBatchIndex, constraintLocation.IndexInTypeBatch, Solver, Bodies, compression.TargetBatch);
         }
@@ -210,6 +230,7 @@ namespace BepuPhysics
             //This provides a guarantee that every optimization that occurs over the course of the compression
             //does not affect any other optimization, because a ConstraintBatch guarantees that bodies are only referenced by a single constraint.
             //That's useful when multithreading- we don't have to worry about what candidates other threads have found.
+            //The exception is the fallback batch; if we're currently optimizing the fallback batch, we must protect against multiple compressions interfering with one another.
 
             //Note that the application of compression is sequential. Solver.Add and Solver.Remove can't be called from multiple threads. So when multithreading,
             //only the candidate analysis is actually multithreaded. That's fine- actual compressions are actually pretty rare in nonpathological cases!
