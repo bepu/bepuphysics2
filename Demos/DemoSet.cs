@@ -39,7 +39,6 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<SolverBatchTestDemo>();
             AddOption<PyramidDemo>();
             AddOption<RagdollDemo>();
             AddOption<CompoundTestDemo>();

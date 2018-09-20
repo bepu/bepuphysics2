@@ -14,11 +14,11 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public float FrictionCoefficient;
         /// <summary>
-        /// Maximum velocity at which the collision constraint will recover from penetration. Clamps the velocity goal created from the spring settings.
+        /// Maximum relative velocity along the contact normal at which the collision constraint will recover from penetration. Clamps the velocity goal created from the spring settings.
         /// </summary>
         public float MaximumRecoveryVelocity;
         /// <summary>
-        /// Defines the constraint's spring properties.
+        /// Defines the constraint's penetration recovery spring properties.
         /// </summary>
         public SpringSettings SpringSettings;
     }

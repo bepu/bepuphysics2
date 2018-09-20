@@ -29,6 +29,7 @@ namespace BepuPhysics
             Handles[Index++] = Bodies.ActiveSet.IndexToHandle[bodyIndex];
         }
     }
+
     public unsafe struct ReferenceCollector : IForEach<int>
     {
         public int* References;
@@ -43,6 +44,24 @@ namespace BepuPhysics
         public void LoopBody(int reference)
         {
             References[Index++] = reference;
+        }
+    }
+
+
+    public unsafe struct FloatCollector : IForEach<float>
+    {
+        public float* Values;
+        public int Index;
+
+        public FloatCollector(float* values)
+        {
+            Values = values;
+            Index = 0;
+        }
+
+        public void LoopBody(float value)
+        {
+            Values[Index++] = value;
         }
     }
 }

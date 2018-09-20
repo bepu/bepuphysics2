@@ -125,7 +125,7 @@ namespace Demos.Demos
                     coinDescription.Velocity.Linear = direction * (5 + 30 * (float)random.NextDouble());
                     Simulation.Bodies.Add(coinDescription);
                 }
-            }
+            }            
             base.Update(input, dt);
         }
 

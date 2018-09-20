@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using BepuPhysics.Constraints;
 using DemoContentLoader;
+using DemoUtilities;
 
 namespace Demos.Demos
 {
@@ -521,7 +522,7 @@ namespace Demos.Demos
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        AddRagdoll(origin + spacing * new Vector3(i, j, k), Quaternion.CreateFromAxisAngle(new Vector3(0,1,0), MathHelper.Pi * 0.05f), ragdollIndex++, masks, Simulation);
+                        AddRagdoll(origin + spacing * new Vector3(i, j, k), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f), ragdollIndex++, masks, Simulation);
                     }
                 }
             }
@@ -540,14 +541,14 @@ namespace Demos.Demos
                 Pose = new RigidPose
                 {
                     Position = new Vector3(0, -0.5f, 0),
-                    Orientation = BepuUtilities.Quaternion.Identity
+                    Orientation = Quaternion.Identity
                 }
             };
             Simulation.Statics.Add(staticDescription);
 
 
         }
-
+        
     }
 }
 

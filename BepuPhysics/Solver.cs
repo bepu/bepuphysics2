@@ -191,6 +191,7 @@ namespace BepuPhysics
             this.bufferPool = bufferPool;
             IdPool<Buffer<int>>.Create(bufferPool.SpecializeFor<int>(), 128, out HandlePool);
             ResizeSetsCapacity(initialIslandCapacity + 1, 0);
+            FallbackBatchThreshold = fallbackBatchThreshold;
             ActiveSet = new ConstraintSet(bufferPool, fallbackBatchThreshold + 1);
             QuickList<IndexSet, Buffer<IndexSet>>.Create(bufferPool.SpecializeFor<IndexSet>(), fallbackBatchThreshold + 1, out batchReferencedHandles);
             bufferPool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
@@ -847,8 +848,51 @@ namespace BepuPhysics
             }
         }
 
+        /// <summary>
+        /// Enumerates the accumulated impulses associated with a constraint.
+        /// </summary>
+        /// <param name="constraintHandle">Constraint to enumerate.</param>
+        /// <param name="enumerator">Enumerator to use.</param>
+        public void EnumerateAccumulatedImpulses<TEnumerator>(int constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<float>
+        {
+            ref var constraintLocation = ref HandleToConstraint[constraintHandle];
+            ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
+            Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
+            TypeProcessors[constraintLocation.TypeId].EnumerateAccumulatedImpulses(ref typeBatch, constraintLocation.IndexInTypeBatch, ref enumerator);
+        }
 
+        /// <summary>
+        /// Gathers the squared magnitude of the accumulated impulse for a given constraint.
+        /// </summary>
+        /// <param name="constraintHandle">Constraint to look up the accumulated impulses of.</param>
+        /// <returns>Squared magnitude of the accumulated impulses associated with the given constraint.</returns>
+        public unsafe float GetAccumulatedImpulseMagnitudeSquared(int constraintHandle)
+        {
+            ref var constraintLocation = ref HandleToConstraint[constraintHandle];
+            ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
+            Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
+            var typeProcessor = TypeProcessors[constraintLocation.TypeId];
+            var impulses = stackalloc float[typeProcessor.ConstrainedDegreesOfFreedom];
+            var floatCollector = new FloatCollector(impulses);
+            TypeProcessors[constraintLocation.TypeId].EnumerateAccumulatedImpulses(ref typeBatch, constraintLocation.IndexInTypeBatch, ref floatCollector);
+            var sumOfSquares = 0f;
+            for (int i = 0; i < typeProcessor.ConstrainedDegreesOfFreedom; ++i)
+            {
+                var impulse = impulses[i];
+                sumOfSquares += impulse * impulse;
+            }
+            return sumOfSquares;
+        }
 
+        /// <summary>
+        /// Gathers the magnitude of the accumulated impulse for a given constraint.
+        /// </summary>
+        /// <param name="constraintHandle">Constraint to look up the accumulated impulses of.</param>
+        /// <returns>Magnitude of the accumulated impulses associated with the given constraint.</returns>
+        public unsafe float GetAccumulatedImpulseMagnitude(int constraintHandle)
+        {
+            return (float)Math.Sqrt(GetAccumulatedImpulseMagnitudeSquared(constraintHandle));
+        }
 
         /// <summary>
         /// Enumerates the set of bodies associated with a constraint in order of their references within the constraint.
