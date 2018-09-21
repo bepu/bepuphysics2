@@ -41,7 +41,7 @@ namespace Demos.SpecializedTests
             simulation.BodyLayoutOptimizer.OptimizationFraction = 0.005f;
             for (int i = 0; i < bodyOptimizationIterations; ++i)
             {
-                simulation.BodyLayoutOptimizer.IncrementalOptimize(simulation.BufferPool, initializationThreadPool);
+                simulation.BodyLayoutOptimizer.IncrementalOptimize();
             }
 
             simulation.ConstraintLayoutOptimizer.OptimizationFraction = 0.044f;

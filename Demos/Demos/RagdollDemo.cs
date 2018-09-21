@@ -509,7 +509,7 @@ namespace Demos.Demos
             var callbacks = new RagdollCallbacks { Masks = masks };
             Simulation = Simulation.Create(BufferPool, callbacks);
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
-
+            
             int ragdollIndex = 0;
             var spacing = new Vector3(2f, 3, 1);
             int width = 8;
@@ -545,8 +545,6 @@ namespace Demos.Demos
                 }
             };
             Simulation.Statics.Add(staticDescription);
-
-
         }
 
     }

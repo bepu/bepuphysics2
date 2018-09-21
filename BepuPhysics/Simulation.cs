@@ -295,7 +295,6 @@ namespace BepuPhysics
             Bodies.MinimumConstraintCapacityPerBody = allocationTarget.ConstraintCountPerBodyEstimate;
             Bodies.EnsureConstraintListCapacities();
             Sleeper.EnsureSetsCapacity(allocationTarget.Islands + 1);
-            BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.EnsureCapacity(allocationTarget.Statics);
             Shapes.EnsureBatchCapacities(allocationTarget.ShapesPerType);
             BroadPhase.EnsureCapacity(allocationTarget.Bodies, allocationTarget.Bodies + allocationTarget.Statics);
@@ -326,7 +325,6 @@ namespace BepuPhysics
             Bodies.MinimumConstraintCapacityPerBody = allocationTarget.ConstraintCountPerBodyEstimate;
             Bodies.ResizeConstraintListCapacities();
             Sleeper.ResizeSetsCapacity(allocationTarget.Islands + 1);
-            BodyLayoutOptimizer.ResizeForBodiesCapacity(BufferPool);
             Statics.Resize(allocationTarget.Statics);
             Shapes.ResizeBatches(allocationTarget.ShapesPerType);
             BroadPhase.Resize(allocationTarget.Bodies, allocationTarget.Bodies + allocationTarget.Statics);
@@ -344,7 +342,6 @@ namespace BepuPhysics
             NarrowPhase.Dispose();
             Bodies.Dispose();
             Statics.Dispose();
-            BodyLayoutOptimizer.Dispose(BufferPool);
             Shapes.Dispose();
         }
     }
