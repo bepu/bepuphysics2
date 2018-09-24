@@ -444,6 +444,7 @@ namespace BepuUtilities.Memory
         public void Resize<T>(ref Buffer<T> buffer, int targetSize, int copyCount)
         {
             //Only do anything if the new size is actually different from the current size.
+            Debug.Assert(copyCount <= targetSize && copyCount <= buffer.Length, "Can't copy more elements than exist in the source or target buffers.");
             targetSize = BufferPool<T>.GetLowestContainingElementCount(targetSize);
             if (buffer.Length != targetSize) //Note that we don't check for allocated status- for buffers, a length of 0 is the same as being unallocated.
             {

@@ -544,7 +544,7 @@ namespace Demos.Demos
                     Orientation = Quaternion.Identity
                 }
             };
-            Simulation.Statics.Add(staticDescription);
+            Simulation.Statics.Add(staticDescription);        
         }
 
     }

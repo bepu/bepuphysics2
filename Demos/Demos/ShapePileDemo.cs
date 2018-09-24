@@ -40,7 +40,7 @@ namespace Demos.Demos
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        var location = new Vector3(3, 3, 3) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 1.5f, -length * 1.5f);
+                        var location = new Vector3(3, 3, 3) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 2.5f, -length * 1.5f);
                         var bodyDescription = new BodyDescription
                         {
                             Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.01f },
@@ -75,10 +75,9 @@ namespace Demos.Demos
                     }
                 }
             }
-            
+
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
-            Simulation.Deterministic = false;
-            
+
             var staticShape = new Box(1, 1, 1);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
             const int staticGridWidth = 100;
