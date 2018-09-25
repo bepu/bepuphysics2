@@ -426,10 +426,7 @@ namespace BepuPhysics.CollisionDetection
         }
         public void TryRemoveAllConstraintsForBodyFromFallbackBatch(int bodyIndex)
         {
-            if (solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold)
-            {
-                solver.ActiveSet.Fallback.TryRemove(bodyIndex, ref allocationIdsToFree);
-            }
+            solver.ActiveSet.Fallback.TryRemove(bodyIndex, ref allocationIdsToFree);
         }
 
         QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>> removedTypeBatches;

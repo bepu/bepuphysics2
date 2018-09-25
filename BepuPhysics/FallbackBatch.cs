@@ -187,11 +187,9 @@ namespace BepuPhysics
             }
         }
 
-
         internal unsafe void TryRemove(int bodyReference, ref QuickList<int, Buffer<int>> allocationIdsToFree)
         {
-            Debug.Assert(bodyConstraintReferences.Keys.Allocated);
-            if (bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
+            if (bodyConstraintReferences.Keys.Allocated && bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
             {
                 ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
                 //If there are no more constraints associated with this body, get rid of the body list.

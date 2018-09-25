@@ -128,34 +128,9 @@ namespace BepuPhysics.CollisionDetection
                 return a.Handles.CompareTo(b.Handles);
             }
         }
-        unsafe interface ISortingHandleCollector
-        {
-            ulong GetHandles(void* memory);
-        }
 
-        struct OneBodyHandleCollector : ISortingHandleCollector
+        unsafe void BuildSortingTargets(ref QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>> list, int typeIndex, int workerCount)
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe ulong GetHandles(void* memory)
-            {
-                //Only one body; can't just return an 8 byte block of memory directly. Expand 4 bytes to 8.
-                return *(uint*)memory;
-            }
-        }
-        struct TwoBodyHandleCollector : ISortingHandleCollector
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe ulong GetHandles(void* memory)
-            {
-                //Two bodies- just reinterpret the existing memory.
-                return *(ulong*)memory;
-            }
-        }
-
-
-        unsafe void BuildSortingTargets<THandleCollector>(ref QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>> list, int typeIndex, int workerCount) where THandleCollector : struct, ISortingHandleCollector
-        {
-            var handleCollector = default(THandleCollector);
             for (int i = 0; i < workerCount; ++i)
             {
                 ref var workerList = ref overlapWorkers[i].PendingConstraints.pendingConstraintsByType[typeIndex];
@@ -170,9 +145,9 @@ namespace BepuPhysics.CollisionDetection
                         constraint.WorkerIndex = i;
                         constraint.ByteIndexInCache = indexInBytes;
                         //Note two details:
-                        //1) We rely on the layout of memory in the pending constraint add. If the body handles don't occupy the first bytes, this breaks.
-                        //2) We rely on the order of body handles. The narrow phase should always guarantee a consistent order.
-                        constraint.Handles = handleCollector.GetHandles(workerList.Buffer.Memory + indexInBytes);
+                        //1) We rely on the layout of memory in the pending constraint add. If the collidable pair doesn't occupy the first 8 bytes, this breaks.
+                        //2) We rely on the order of collidable pair references. The narrow phase should always guarantee a consistent order.
+                        constraint.Handles = *(ulong*)(workerList.Buffer.Memory + indexInBytes);
                         indexInBytes += entrySizeInBytes;
                     }
                 }
@@ -191,15 +166,7 @@ namespace BepuPhysics.CollisionDetection
                         //The main thread has already allocated lists of appropriate capacities for all types that exist.
                         //We initialize and sort those lists on multiple threads.
                         ref var list = ref sortedConstraints[job.TypeIndex];
-                        //One and two body constraints require separate initialization to work in a single pass with a minimum of last second branches.
-                        if (ExtractContactConstraintBodyCount(job.TypeIndex) == 2)
-                        {
-                            BuildSortingTargets<TwoBodyHandleCollector>(ref list, job.TypeIndex, job.WorkerCount);
-                        }
-                        else
-                        {
-                            BuildSortingTargets<OneBodyHandleCollector>(ref list, job.TypeIndex, job.WorkerCount);
-                        }
+                        BuildSortingTargets(ref list, job.TypeIndex, job.WorkerCount);
 
                         //Since duplicates are impossible (as that would imply the narrow phase generated two constraints for one pair), the non-threeway sort is used.
                         PendingConstraintComparer comparer;
