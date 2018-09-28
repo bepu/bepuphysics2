@@ -102,7 +102,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Test(
             ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin,
-            ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+            ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex4ContactManifoldWide manifold)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var worldRA);
@@ -270,7 +270,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Edge BX, -y offset
             var edgeIdBX0 = twiceAxisIdBX + axisIdBY + axisZEdgeIdContribution;
             AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref epsilonScale, ref bX0Min, ref bX0Max,
-                ref bX0Min, ref negativeHalfSpanBY, ref bX0Max, ref negativeHalfSpanBY, ref edgeIdBX0);
+                ref bX0Min, ref negativeHalfSpanBY, ref bX0Max, ref negativeHalfSpanBY, ref edgeIdBX0, pairCount);
             //Edge BX, +y offset
             //Note that the interval is flipped. This makes the edge intervals wound clockwise, 
             //so creating contacts when the interval max is at the halfSpan will put contacts at each of the 4 corners rather than 2 in the same spot.
@@ -278,7 +278,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var flippedBX1Max = -bX1Min;
             var edgeIdBX1 = twiceAxisIdBX + axisIdBY * three + axisZEdgeIdContribution;
             AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref epsilonScale, ref flippedBX1Min, ref flippedBX1Max,
-                ref bX1Max, ref halfSpanBY, ref bX1Min, ref halfSpanBY, ref edgeIdBX1);
+                ref bX1Max, ref halfSpanBY, ref bX1Min, ref halfSpanBY, ref edgeIdBX1, pairCount);
 
             var negativeHalfSpanBX = -halfSpanBX;
             var twiceAxisIdBY = axisIdBY * new Vector<int>(2);
@@ -288,11 +288,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var flippedBY0Max = -bY0Min;
             var edgeIdBY0 = axisIdBX + twiceAxisIdBY + axisZEdgeIdContribution;
             AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBY, ref epsilonScale, ref flippedBY0Min, ref flippedBY0Max,
-                ref negativeHalfSpanBX, ref bY0Max, ref negativeHalfSpanBX, ref bY0Min, ref edgeIdBY0);
+                ref negativeHalfSpanBX, ref bY0Max, ref negativeHalfSpanBX, ref bY0Min, ref edgeIdBY0, pairCount);
             //Edge BY, +x offset
             var edgeIdBY1 = axisIdBX * three + twiceAxisIdBY + axisZEdgeIdContribution;
             AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBY, ref epsilonScale, ref bY1Min, ref bY1Max,
-                ref halfSpanBX, ref bY1Min, ref halfSpanBX, ref bY1Max, ref edgeIdBY1);
+                ref halfSpanBX, ref bY1Min, ref halfSpanBX, ref bY1Max, ref edgeIdBY1, pairCount);
 
             Vector3Wide.Scale(normalA, halfSpanAZ, out var faceCenterA);
             Vector3Wide.Subtract(faceCenterA, faceCenterB, out var faceCenterBToFaceCenterA);
@@ -307,7 +307,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             AddFaceVertexContact(ref vertexA, ref vertexId,
                 ref tangentBX, ref tangentBY, ref halfSpanBX, ref halfSpanBY,
-                ref candidates, ref rawContactCount);
+                ref candidates, ref rawContactCount, pairCount);
 
             //Vertex A -x, +y
             Vector3Wide.Subtract(faceCenterBToFaceCenterA, edgeOffsetAX, out vertexA);
@@ -318,7 +318,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             AddFaceVertexContact(ref vertexA, ref vertexId,
                 ref tangentBX, ref tangentBY, ref halfSpanBX, ref halfSpanBY,
-                ref candidates, ref rawContactCount);
+                ref candidates, ref rawContactCount, pairCount);
 
             //Vertex A +x, -y
             Vector3Wide.Add(faceCenterBToFaceCenterA, edgeOffsetAX, out vertexA);
@@ -329,7 +329,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             AddFaceVertexContact(ref vertexA, ref vertexId,
                 ref tangentBX, ref tangentBY, ref halfSpanBX, ref halfSpanBY,
-                ref candidates, ref rawContactCount);
+                ref candidates, ref rawContactCount, pairCount);
 
             //Vertex A +x, +y
             Vector3Wide.Add(faceCenterBToFaceCenterA, edgeOffsetAX, out vertexA);
@@ -340,9 +340,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             AddFaceVertexContact(ref vertexA, ref vertexId,
                 ref tangentBX, ref tangentBY, ref halfSpanBX, ref halfSpanBY,
-                ref candidates, ref rawContactCount);
+                ref candidates, ref rawContactCount, pairCount);
 
-            ManifoldCandidateHelper.Reduce(ref candidates, rawContactCount, 8, normalA, manifold.Normal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin,
+            ManifoldCandidateHelper.Reduce(ref candidates, rawContactCount, 8, normalA, manifold.Normal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin, pairCount,
               out var contact0, out var contact1, out var contact2, out var contact3,
               out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
@@ -369,7 +369,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void AddFaceVertexContact(ref Vector3Wide faceCenterBToVertexA, ref Vector<int> vertexId,
             ref Vector3Wide tangentBX, ref Vector3Wide tangentBY, ref Vector<float> halfSpanBX, ref Vector<float> halfSpanBY,
-            ref ManifoldCandidate candidates, ref Vector<int> rawContactCount)
+            ref ManifoldCandidate candidates, ref Vector<int> rawContactCount, int pairCount)
         {
             //Get the closest point on face B to vertex A.
             //Note that contacts outside of face B are not added; that could generate contacts outside of either representative face, which can cause some poor contact choices.
@@ -387,7 +387,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //but it is very cheap and guarantees no memory stomping with a pretty reasonable fallback.
             var belowBufferCapacity = Vector.LessThan(rawContactCount, new Vector<int>(8));
             var contactExists = Vector.BitwiseAnd(containedInFaceB, belowBufferCapacity);
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, contactExists);
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, contactExists, pairCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -397,7 +397,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref Vector<float> tMin, ref Vector<float> tMax,
             ref Vector<float> candidateMinX, ref Vector<float> candidateMinY,
             ref Vector<float> candidateMaxX, ref Vector<float> candidateMaxY,
-            ref Vector<int> edgeIdB)
+            ref Vector<int> edgeIdB, int pairCount)
         {
             //If -halfSpan<min<halfSpan && max>min for an edge, use the min intersection as a contact.
             //If -halfSpan<max<=halfSpan && (max-min)>epsilon, use the max intersection as a contact.
@@ -414,7 +414,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.GreaterThanOrEqual(tMax, tMin),
                 Vector.GreaterThan(tMin, -halfSpanB)),
                 Vector.LessThan(tMin, halfSpanB));
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, minContactExists);
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, minContactExists, pairCount);
             candidate.X = candidateMaxX;
             candidate.Y = candidateMaxY;
             candidate.FeatureId = edgeIdB + new Vector<int>(64);
@@ -422,7 +422,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.GreaterThan(tMax, -halfSpanB),
                 Vector.LessThanOrEqual(tMax, halfSpanB)),
                 Vector.GreaterThan(tMax - tMin, new Vector<float>(1e-5f) * epsilonScale));
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, maxContactExists);
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, maxContactExists, pairCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -476,12 +476,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             b1Max = Vector.Min(halfSpanB, Vector.Min(tAX1Max, tAY1Max));
         }
 
-        public void Test(ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex4ContactManifoldWide manifold)
+        public void Test(ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex4ContactManifoldWide manifold)
+        public void Test(ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

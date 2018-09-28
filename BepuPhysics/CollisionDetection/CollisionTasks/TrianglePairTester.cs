@@ -68,7 +68,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             in Vector3Wide tangentBX, in Vector3Wide tangentBY, in Vector3Wide triangleCenterB, in Vector3Wide faceNormalB, in Vector3Wide triangleCenterA, in Vector3Wide faceNormalA,
             in Vector3Wide edgeABPlaneNormalA, in Vector3Wide edgeBCPlaneNormalA, in Vector3Wide edgeCAPlaneNormalA, in Vector3Wide aA, in Vector3Wide aB,
             in Vector<int> faceNormalInverseIsValid, in Vector<float> inverseFaceNormalDot,
-            ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
+            ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
         {
             //Unproject onto triangle A.
             //(vertexOnB + faceNormalB * t - triangleCenterA) * faceNormalA = 0
@@ -96,7 +96,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(offsetOnB, tangentBX, out candidate.X);
             Vector3Wide.Dot(offsetOnB, tangentBY, out candidate.Y);
             candidate.FeatureId = vertexId;
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, Vector.BitwiseAnd(faceNormalInverseIsValid, contained));
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, Vector.BitwiseAnd(faceNormalInverseIsValid, contained), pairCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -120,7 +120,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
              in Vector3Wide aA, in Vector3Wide aB,
              in Vector3Wide edgeDirectionA, in Vector3Wide edgeStartA, in Vector<int> entryId, in Vector<int> exitIdOffset,
              in Vector3Wide triangleCenterB, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
-             in Vector<float> epsilon, ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
+             in Vector<float> epsilon, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
         {
             //The base id is the id of the vertex in the corner along the negative boxEdgeDirection and boxEdgeCenterOffsetDirection.
             //The edgeDirectionId is the amount to add when you move along the boxEdgeDirection to the other vertex.
@@ -156,7 +156,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             candidate.X = entry * edgeDirectionX + offsetX;
             candidate.Y = entry * edgeDirectionY + offsetY;
             candidate.FeatureId = entryId;
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists);
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists, pairCount);
             //Exit
             exists = Vector.BitwiseAnd(Vector.BitwiseAnd(
                 Vector.LessThan(candidateCount, six),
@@ -167,7 +167,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             candidate.X = exit * edgeDirectionX + offsetX;
             candidate.Y = exit * edgeDirectionY + offsetY;
             candidate.FeatureId = entryId + exitIdOffset;
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists);
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, exists, pairCount);
         }
 
 
@@ -175,7 +175,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Test(
             ref TriangleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin,
-            ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+            ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex4ContactManifoldWide manifold)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var worldRA);
@@ -277,9 +277,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.CrossWithoutOverlap(abA, faceNormalA, out var edgeABPlaneNormalA);
             Vector3Wide.CrossWithoutOverlap(bcA, faceNormalA, out var edgeBCPlaneNormalA);
             Vector3Wide.CrossWithoutOverlap(caA, faceNormalA, out var edgeCAPlaneNormalA);
-            TryAddTriangleBVertex(bA, Vector<int>.Zero, tangentBX, tangentBY, localTriangleCenterB, faceNormalB, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, faceNormalsDotIsValid, inverseFaceNormalsDot, ref candidates, ref candidateCount);
-            TryAddTriangleBVertex(bB, Vector<int>.One, tangentBX, tangentBY, localTriangleCenterB, faceNormalB, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, faceNormalsDotIsValid, inverseFaceNormalsDot, ref candidates, ref candidateCount);
-            TryAddTriangleBVertex(bC, new Vector<int>(2), tangentBX, tangentBY, localTriangleCenterB, faceNormalB, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, faceNormalsDotIsValid, inverseFaceNormalsDot, ref candidates, ref candidateCount);
+            TryAddTriangleBVertex(bA, Vector<int>.Zero, tangentBX, tangentBY, localTriangleCenterB, faceNormalB, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, faceNormalsDotIsValid, inverseFaceNormalsDot, ref candidates, ref candidateCount, pairCount);
+            TryAddTriangleBVertex(bB, Vector<int>.One, tangentBX, tangentBY, localTriangleCenterB, faceNormalB, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, faceNormalsDotIsValid, inverseFaceNormalsDot, ref candidates, ref candidateCount, pairCount);
+            TryAddTriangleBVertex(bC, new Vector<int>(2), tangentBX, tangentBY, localTriangleCenterB, faceNormalB, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, faceNormalsDotIsValid, inverseFaceNormalsDot, ref candidates, ref candidateCount, pairCount);
 
             //Note that edge cases will also add triangle A vertices that are within triangle B's bounds, so no A vertex case is required.
             //Note that each of these calls can generate 4 contacts, so we have to start checking capacities.
@@ -296,12 +296,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.CrossWithoutOverlap(abB, faceNormalB, out var edgeABPlaneNormalB);
             Vector3Wide.CrossWithoutOverlap(bcB, faceNormalB, out var edgeBCPlaneNormalB);
             Vector3Wide.CrossWithoutOverlap(caB, faceNormalB, out var edgeCAPlaneNormalB);
-            ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, abA, a.A, new Vector<int>(3), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount);
-            ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, bcA, a.B, new Vector<int>(4), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount);
-            ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, caA, a.C, new Vector<int>(5), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount);
+            ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, abA, a.A, new Vector<int>(3), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount, pairCount);
+            ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, bcA, a.B, new Vector<int>(4), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount, pairCount);
+            ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, caA, a.C, new Vector<int>(5), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount, pairCount);
 
             Vector3Wide.Subtract(localTriangleCenterA, localTriangleCenterB, out var faceCenterBToFaceCenterA);
-            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, faceNormalA, localNormal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin,
+            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, faceNormalA, localNormal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin, pairCount,
                 out var contact0, out var contact1, out var contact2, out var contact3,
                 out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
@@ -343,12 +343,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifoldFeatureId = rawContact.FeatureId;
         }
 
-        public void Test(ref TriangleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out Convex4ContactManifoldWide manifold)
+        public void Test(ref TriangleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref TriangleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out Convex4ContactManifoldWide manifold)
+        public void Test(ref TriangleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

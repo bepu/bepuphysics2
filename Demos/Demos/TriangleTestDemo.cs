@@ -33,7 +33,7 @@ namespace Demos.Demos
                 var margin = new Vector<float>(1f);
                 Vector3Wide.Broadcast(new Vector3(1, -1, 0), out var offsetB);
                 QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), out var orientationB);
-                tester.Test(ref sphere, ref triangle, ref margin, ref offsetB, ref orientationB, out var manifold);
+                tester.Test(ref sphere, ref triangle, ref margin, ref offsetB, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
                 CapsuleTriangleTester tester;
@@ -52,7 +52,7 @@ namespace Demos.Demos
                 Vector3Wide.Broadcast(new Vector3(-1f, -0.5f, -1f), out var offsetB);
                 QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), MathHelper.PiOver2), out var orientationA);
                 QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
-                tester.Test(ref capsule, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, out var manifold);
+                tester.Test(ref capsule, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
                 BoxTriangleTester tester;
@@ -71,7 +71,7 @@ namespace Demos.Demos
                 Vector3Wide.Broadcast(new Vector3(-1f, -0.5f, -1f), out var offsetB);
                 QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), MathHelper.PiOver2), out var orientationA);
                 QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
-                tester.Test(ref shape, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, out var manifold);
+                tester.Test(ref shape, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
                 TrianglePairTester tester;
@@ -83,7 +83,7 @@ namespace Demos.Demos
                 Vector3Wide.Broadcast(new Vector3(0, -1, 0), out var offsetB);
                 QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), 0), out var orientationA);
                 QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
-                tester.Test(ref a, ref b, ref margin, ref offsetB, ref orientationA, ref orientationB, out var manifold);
+                tester.Test(ref a, ref b, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
                 camera.Position = new Vector3(0, 3, 10);

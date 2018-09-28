@@ -18,9 +18,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         //Note that, while the interface requires all three of these implementations, concrete implementers will only ever have one defined or called.
         //Including the other unused functions is just here to simplify its use in the batch execution loop.
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, out TManifoldWideType manifold);
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, out TManifoldWideType manifold);
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, out TManifoldWideType manifold);
+        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out TManifoldWideType manifold);
+        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out TManifoldWideType manifold);
+        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out TManifoldWideType manifold);
     }
 
     public interface IContactManifoldWide
@@ -81,6 +81,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         ref pairWide.GetOffsetB(ref pairWide),
                         ref pairWide.GetOrientationA(ref pairWide),
                         ref pairWide.GetOrientationB(ref pairWide),
+                        countInBundle,
                         out manifoldWide);
                 }
                 else if (pairWide.OrientationCount == 1)
@@ -94,6 +95,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         ref pairWide.GetSpeculativeMargin(ref pairWide),
                         ref pairWide.GetOffsetB(ref pairWide),
                         ref pairWide.GetOrientationB(ref pairWide),
+                        countInBundle,
                         out manifoldWide);
                 }
                 else
@@ -106,6 +108,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         ref pairWide.GetShapeB(ref pairWide),
                         ref pairWide.GetSpeculativeMargin(ref pairWide),
                         ref pairWide.GetOffsetB(ref pairWide),
+                        countInBundle,
                         out manifoldWide);
                 }
 

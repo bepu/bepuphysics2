@@ -35,20 +35,19 @@ namespace Demos.SpecializedTests
                     }
                 }
             }
-            Console.WriteLine();
-            Console.WriteLine($"Completed run.");
             demo.Dispose();
-
+            Console.WriteLine();
             return bodyPoses;
         }
 
         public static void Test(ContentArchive archive, int runCount, int frameCount)
         {
             var initialPoses = ExecuteSimulation(archive, frameCount);
+            Console.WriteLine($"Completed initial run.");
             for (int i = 0; i < runCount; ++i)
             {
                 var poses = ExecuteSimulation(archive, frameCount);
-                Console.WriteLine($"Completed iteration {i}; checking...");
+                Console.Write($"Completed iteration {i}; checking... ");
                 if (poses.Count != initialPoses.Count)
                     Console.WriteLine("DETERMINISM FAILURE: Differing body count.");
                 foreach (var bodyPose in poses)
