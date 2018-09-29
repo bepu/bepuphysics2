@@ -586,7 +586,7 @@ namespace BepuPhysics
         }
 
 
-        void Sleep(ref QuickList<int, Buffer<int>> traversalStartBodyIndices, IThreadDispatcher threadDispatcher,
+        void Sleep(ref QuickList<int, Buffer<int>> traversalStartBodyIndices, IThreadDispatcher threadDispatcher, bool deterministic,
             int targetSleptBodyCountPerThread, int targetTraversedBodyCountPerThread, bool forceSleep)
         {
             //There are four threaded phases to sleep:
@@ -835,7 +835,7 @@ namespace BepuPhysics
             //we punt all other work (except for the constraint handle mapping update, type batch constraint removal relies on constraint handles for the moment)
             //to the third stage. It takes the form of a series of locally sequential jobs, so it won't have wonderful load balancing.
             //But perfect scaling isn't necessarily required- we just want to reduce the frame drops as much as possible.
-            typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs();
+            typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs(deterministic);
             jobIndex = -1;
             if (threadCount > 1)
             {
@@ -898,9 +898,10 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="bodyIndices">List of body indices to sleep.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use for the sleep attempt, if any. If null, sleep is performed on the calling thread.</param>
-        public void Sleep(ref QuickList<int, Buffer<int>> bodyIndices, IThreadDispatcher threadDispatcher = null)
+        /// <param name="deterministic">True if the sleep should produce deterministic results at higher cost, false otherwise.</param>
+        public void Sleep(ref QuickList<int, Buffer<int>> bodyIndices, IThreadDispatcher threadDispatcher = null, bool deterministic = false)
         {
-            Sleep(ref bodyIndices, threadDispatcher, int.MaxValue, int.MaxValue, true);
+            Sleep(ref bodyIndices, threadDispatcher, deterministic, int.MaxValue, int.MaxValue, true);
         }
 
         /// <summary>
@@ -976,7 +977,7 @@ namespace BepuPhysics
             var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
             var targetSleptBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetSleptFraction / threadCount);
             var targetTraversedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetTraversedFraction / threadCount);
-            Sleep(ref traversalStartBodyIndices, threadDispatcher, targetSleptBodyCountPerThread, targetTraversedBodyCountPerThread, false);
+            Sleep(ref traversalStartBodyIndices, threadDispatcher, deterministic, targetSleptBodyCountPerThread, targetTraversedBodyCountPerThread, false);
 
             traversalStartBodyIndices.Dispose(pool.SpecializeFor<int>());
         }

@@ -130,6 +130,12 @@ namespace Demos.SpecializedTests
             Test<AngularHinge>(pool, random, 2);
             Test<AngularSwivelHinge>(pool, random, 2);
             Test<SwingLimit>(pool, random, 2);
+            Test<TwistLimit>(pool, random, 2);
+            Test<TwistMotor>(pool, random, 2);
+            Test<TwistServo>(pool, random, 2);
+            Test<AngularServo>(pool, random, 2);
+            Test<AngularMotor>(pool, random, 2);
+            Test<GrabServo>(pool, random, 1);
 
             pool.Clear();
         }

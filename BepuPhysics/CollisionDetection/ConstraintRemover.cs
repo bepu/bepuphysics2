@@ -10,40 +10,11 @@ using System.Threading;
 
 namespace BepuPhysics.CollisionDetection
 {
-    //generiiiiiiiiiiiics
-    using Batches = QuickDictionary<
-        TypeBatchIndex,
-        QuickList<WorkerBatchReference, Buffer<WorkerBatchReference>>,
-        Buffer<TypeBatchIndex>,
-        Buffer<QuickList<WorkerBatchReference, Buffer<WorkerBatchReference>>>,
-        Buffer<int>, TypeBatchIndexComparer>;
-
-    struct WorkerBatchReference
-    {
-        public short WorkerIndex;
-        public short WorkerBatchIndex;
-    }
-
     struct TypeBatchIndex
     {
         public short TypeBatch;
         public short Batch;
     }
-    struct TypeBatchIndexComparer : IEqualityComparerRef<TypeBatchIndex>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Equals(ref TypeBatchIndex a, ref TypeBatchIndex b)
-        {
-            return Unsafe.As<TypeBatchIndex, int>(ref a) == Unsafe.As<TypeBatchIndex, int>(ref b);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int Hash(ref TypeBatchIndex item)
-        {
-            return Unsafe.As<TypeBatchIndex, int>(ref item);
-        }
-    }
-
 
     /// <summary>
     /// Accumulates constraints to remove from multiple threads, and efficiently removes them all as a batch.
@@ -54,33 +25,103 @@ namespace BepuPhysics.CollisionDetection
         internal Bodies bodies;
         BufferPool pool;
 
-        struct WorkerCache
+        internal struct PerBodyRemovalTarget
         {
-            internal struct RemovalTarget
-            {
-                public int BodyIndex;
-                public int ConstraintHandle;
+            public int BodyIndex;
+            public int ConstraintHandle;
 
-                public int BatchIndex;
-                public int BodyHandle;
-            }
+            public int BatchIndex;
+            public int BodyHandle;
+        }
 
-            internal BufferPool pool;
-            internal QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>> Batches;
-            internal QuickList<QuickList<int, Buffer<int>>, Buffer<QuickList<int, Buffer<int>>>> BatchHandles;
-            internal QuickList<RemovalTarget, Buffer<RemovalTarget>> RemovalTargets;
+
+        struct RemovalsForTypeBatch
+        {
+            public QuickList<int, Buffer<int>> ConstraintHandlesToRemove;
+            public QuickList<PerBodyRemovalTarget, Buffer<PerBodyRemovalTarget>> PerBodyRemovalTargets;
+        }
+
+        struct RemovalCache
+        {
+            public int BatchCount;
+            public Buffer<TypeBatchIndex> TypeBatches;
+            public Buffer<RemovalsForTypeBatch> RemovalsForTypeBatches;
 
             //Storing this stuff by constraint batch is an option, but it would require more prefiltering that isn't free.
             int minimumCapacityPerBatch;
+
+            public RemovalCache(BufferPool pool, int batchCapacity, int minimumCapacityPerBatch)
+            {
+                this.minimumCapacityPerBatch = minimumCapacityPerBatch;
+
+                pool.Take(batchCapacity, out TypeBatches);
+                pool.Take(batchCapacity, out RemovalsForTypeBatches);
+                BatchCount = 0;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int IndexOf(TypeBatchIndex typeBatchIndex)
+            {
+                //Working under the assumption that the number of batches/type batches will be pretty small, so using linear enumeration should beat a dictionary.
+                ref var indexAsInt = ref Unsafe.As<TypeBatchIndex, int>(ref typeBatchIndex);
+                for (int i = 0; i < BatchCount; ++i)
+                {
+                    if (indexAsInt == Unsafe.As<TypeBatchIndex, int>(ref TypeBatches[i]))
+                        return i;
+                }
+                return -1;
+            }
+            public int AllocateSpaceForTargets(TypeBatchIndex typeBatchIndex, int constraintHandleCount, int perBodyRemovalCount, BufferPool pool)
+            {
+                var index = IndexOf(typeBatchIndex);
+                if (index >= 0)
+                {
+                    ref var slot = ref RemovalsForTypeBatches[index];
+                    Debug.Assert(slot.ConstraintHandlesToRemove.Span.Allocated && slot.PerBodyRemovalTargets.Span.Allocated);
+                    slot.PerBodyRemovalTargets.EnsureCapacity(slot.PerBodyRemovalTargets.Count + perBodyRemovalCount, pool.SpecializeFor<PerBodyRemovalTarget>());
+                    slot.ConstraintHandlesToRemove.EnsureCapacity(slot.ConstraintHandlesToRemove.Count + constraintHandleCount, pool.SpecializeFor<int>());
+                    return index;
+                }
+                index = BatchCount;
+                BatchCount = BatchCount + 1;
+                if (TypeBatches.Length == index)
+                    pool.Resize(ref TypeBatches, BatchCount, index);
+                if (RemovalsForTypeBatches.Length == index)
+                    pool.Resize(ref RemovalsForTypeBatches, BatchCount, index);
+                TypeBatches[index] = typeBatchIndex;
+                ref var newSlot = ref RemovalsForTypeBatches[index];
+                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), Math.Max(constraintHandleCount, minimumCapacityPerBatch), out newSlot.ConstraintHandlesToRemove);
+                QuickList<PerBodyRemovalTarget, Buffer<PerBodyRemovalTarget>>.Create(pool.SpecializeFor<PerBodyRemovalTarget>(), Math.Max(perBodyRemovalCount, minimumCapacityPerBatch), out newSlot.PerBodyRemovalTargets);
+                return index;
+            }
+
+            public void Dispose(BufferPool pool)
+            {
+                pool.Return(ref TypeBatches);
+                var intPool = pool.SpecializeFor<int>();
+                var targetPool = pool.SpecializeFor<PerBodyRemovalTarget>();
+                for (int i = 0; i < BatchCount; ++i)
+                {
+                    ref var removal = ref RemovalsForTypeBatches[i];
+                    removal.PerBodyRemovalTargets.Dispose(targetPool);
+                    removal.ConstraintHandlesToRemove.Dispose(intPool);
+                }
+                this = default;
+            }
+        }
+
+
+        struct WorkerCache
+        {
+
+            internal BufferPool pool;
+            public RemovalCache Removals;
 
             public WorkerCache(BufferPool pool, int batchCapacity, int minimumCapacityPerBatch)
             {
                 this.pool = pool;
                 Debug.Assert(minimumCapacityPerBatch > 0);
-                this.minimumCapacityPerBatch = minimumCapacityPerBatch;
-                QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>>.Create(pool.SpecializeFor<TypeBatchIndex>(), batchCapacity, out Batches);
-                QuickList<QuickList<int, Buffer<int>>, Buffer<QuickList<int, Buffer<int>>>>.Create(pool.SpecializeFor<QuickList<int, Buffer<int>>>(), batchCapacity, out BatchHandles);
-                QuickList<RemovalTarget, Buffer<RemovalTarget>>.Create(pool.SpecializeFor<RemovalTarget>(), batchCapacity, out RemovalTargets);
+                Removals = new RemovalCache(pool, batchCapacity, minimumCapacityPerBatch);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -95,62 +136,23 @@ namespace BepuPhysics.CollisionDetection
                 ref var constraintBatch = ref solver.ActiveSet.Batches[constraint.BatchIndex];
                 typeBatchIndex.TypeBatch = (short)constraintBatch.TypeIndexToTypeBatchIndex[constraint.TypeId];
 
-                int index = -1;
-                //Note that we just scan for an existing type batch entry that matches the new one.
-                //Given the limited number of constraint types and removes happening, this brute force approach will tend to be faster than a full dictionary.
-                //(TODO: That's worth testing.)
-                for (int i = 0; i < Batches.Count; ++i)
-                {
-                    if (Unsafe.As<TypeBatchIndex, int>(ref typeBatchIndex) == Unsafe.As<TypeBatchIndex, int>(ref Batches[i]))
-                    {
-                        //Guarantee we can hold the new handle before we add it. Ensuring capacity beforehand avoids the need for creating pools, and shares the add
-                        //with the other no-index-found path.
-                        ref var handles = ref BatchHandles[i];
-                        if (handles.Span.Length == handles.Count)
-                        {
-                            //Buffers resize by powers of 2, no worry of incremental resizes.
-                            handles.EnsureCapacity(handles.Count + 1, pool.SpecializeFor<int>());
-                        }
-                        index = i;
-                        break;
-                    }
-                }
-                if (index == -1)
-                {
-                    index = Batches.Count;
-                    //Note that the spans are not of equal length; just test them independently.
-                    //In the extremely unlikely event that this shows up in profiling, you can simply ensure batch handles capacity on the post-ensurecapacity Batches capacity.
-                    if (Batches.Span.Length == Batches.Count)
-                    {
-                        var newCount = Batches.Count + 1;
-                        Batches.EnsureCapacity(newCount, pool.SpecializeFor<TypeBatchIndex>());
-                    }
-                    if (BatchHandles.Span.Length == BatchHandles.Count)
-                    {
-                        var newCount = Batches.Count + 1;
-                        BatchHandles.EnsureCapacity(newCount, pool.SpecializeFor<QuickList<int, Buffer<int>>>());
-                    }
-                    Batches.AllocateUnsafely() = typeBatchIndex;
-                    ref var handles = ref BatchHandles.AllocateUnsafely();
-                    QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), minimumCapacityPerBatch, out handles);
-                }
-                BatchHandles[index].AllocateUnsafely() = constraintHandle;
+                var typeProcessor = solver.TypeProcessors[constraint.TypeId];
+                var bodiesPerConstraint = typeProcessor.BodiesPerConstraint;
+                var linearTypeBatchIndex = Removals.AllocateSpaceForTargets(typeBatchIndex, 1, bodiesPerConstraint, pool);
+
+                ref var typeBatchRemovals = ref Removals.RemovalsForTypeBatches[linearTypeBatchIndex];
+                typeBatchRemovals.ConstraintHandlesToRemove.AllocateUnsafely() = constraintHandle;
 
                 //Now extract and enqueue the body list constraint removal targets and the constraint batch body handle removal targets.
                 //We have to perform the enumeration here rather than in the later flush. Removals from type batches make enumerating connected body indices a race condition there.
                 ref var typeBatch = ref constraintBatch.TypeBatches[typeBatchIndex.TypeBatch];
-                BodyIndexCollector enumerator;
-                var typeProcessor = solver.TypeProcessors[constraint.TypeId];
-                var bodiesPerConstraint = typeProcessor.BodiesPerConstraint;
                 var bodyIndices = stackalloc int[bodiesPerConstraint];
-                enumerator.BodyIndices = bodyIndices;
-                enumerator.IndexInConstraint = 0;
+                var enumerator = new ReferenceCollector(bodyIndices);
                 typeProcessor.EnumerateConnectedBodyIndices(ref typeBatch, constraint.IndexInTypeBatch, ref enumerator);
 
-                RemovalTargets.EnsureCapacity(RemovalTargets.Count + bodiesPerConstraint, pool.SpecializeFor<RemovalTarget>());
                 for (int i = 0; i < bodiesPerConstraint; ++i)
                 {
-                    ref var target = ref RemovalTargets.AllocateUnsafely();
+                    ref var target = ref typeBatchRemovals.PerBodyRemovalTargets.AllocateUnsafely();
                     target.BodyIndex = bodyIndices[i];
                     target.ConstraintHandle = constraintHandle;
 
@@ -159,29 +161,9 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
 
-            unsafe struct BodyIndexCollector : IForEach<int>
-            {
-                internal int* BodyIndices;
-                internal int IndexInConstraint;
-                [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void LoopBody(int bodyIndex)
-                {
-                    BodyIndices[IndexInConstraint++] = bodyIndex;
-                }
-            }
-
-
             public void Dispose()
             {
-                Batches.Dispose(pool.SpecializeFor<TypeBatchIndex>());
-                var intPool = pool.SpecializeFor<int>();
-                for (int i = 0; i < BatchHandles.Count; ++i)
-                {
-                    BatchHandles[i].Dispose(intPool);
-                }
-                BatchHandles.Dispose(pool.SpecializeFor<QuickList<int, Buffer<int>>>());
-                RemovalTargets.Dispose(pool.SpecializeFor<RemovalTarget>());
-                this = new WorkerCache();
+                Removals.Dispose(pool);
             }
         }
 
@@ -235,6 +217,27 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
+        struct PerBodyRemovalTargetComparer : IComparerRef<PerBodyRemovalTarget>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(ref PerBodyRemovalTarget a, ref PerBodyRemovalTarget b)
+            {
+                //Constraint handles take precedence, but we have to distinguish between body handles for a globally unique sort.
+                //(There are potentially multiple PerBodyRemovalTargets per constraint, since it creates one for each body associated with the constraint.)
+                var aLong = ((long)a.ConstraintHandle << 32) | (long)a.BodyHandle;
+                var bLong = ((long)b.ConstraintHandle << 32) | (long)b.BodyHandle;
+                return aLong.CompareTo(bLong);
+            }
+        }
+        struct TypeBatchIndexComparer : IComparerRef<TypeBatchIndex>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(ref TypeBatchIndex a, ref TypeBatchIndex b)
+            {
+                return Unsafe.As<TypeBatchIndex, int>(ref a).CompareTo(Unsafe.As<TypeBatchIndex, int>(ref b));
+            }
+        }
+
         //The general idea for multithreaded constraint removal is that there are varying levels of parallelism across the process.
         //You can't call solver.RemoveConstraint from multiple threads without locks, and we don't want to pay the price of constant syncs.
         //So instead, we identify the pieces of pretty-much-sequential work, and stick them into locally sequential jobs.
@@ -245,46 +248,55 @@ namespace BepuPhysics.CollisionDetection
         //in sequence at that point- sequential removes would cost around 5us in that case, so any kind of multithreaded overhead can overwhelm the work being done.
         //Doubling the cost of the best case, resulting in handfuls of wasted microseconds, isn't concerning (and we could special case it if we really wanted to).
         //Cutting the cost of the worst case when thousands of constraints get removed by a factor of ~ThreadCount is worth this complexity. Frame spikes are evil!
-
-        Batches batches;
+        
+        RemovalCache batches;
         /// <summary>
         /// Processes enqueued constraint removals and prepares removal jobs.
         /// </summary>
+        /// <param name="deterministic">True if the constraint remover should maintain determinism at an added cost, false otherwise.</param>
         /// <returns>The number of removal jobs created. To complete the jobs, execute RemoveConstraintsFromTypeBatch for every index from 0 to the returned job count.</returns>
-        public int CreateFlushJobs()
+        public int CreateFlushJobs(bool deterministic)
         {
             //Accumulate the set of unique type batches in a contiguous list so we can easily execute multithreaded jobs over them.
-            //Note that we're not actually copying over the contents of the per-worker lists here- just storing a reference to the per-worker lists.
-            Batches.Create(pool.SpecializeFor<TypeBatchIndex>(), pool.SpecializeFor<QuickList<WorkerBatchReference, Buffer<WorkerBatchReference>>>(), pool.SpecializeFor<int>(),
-                7, 3, out batches);
+            //Note that we're actually copying here, rather than merely creating references. This simplifies the deterministic/nondeterministic split at a pretty tiny cost.
+            batches = new RemovalCache(pool, 32, 8);
             var typeBatchIndexPool = pool.SpecializeFor<TypeBatchIndex>();
-            var quickListPool = pool.SpecializeFor<QuickList<WorkerBatchReference, Buffer<WorkerBatchReference>>>();
+            var removalTargetPool = pool.SpecializeFor<PerBodyRemovalTarget>();
             var intPool = pool.SpecializeFor<int>();
             var removedConstraintCount = 0;
             for (int i = 0; i < threadCount; ++i)
             {
                 ref var cache = ref workerCaches[i];
-                for (int j = 0; j < cache.Batches.Count; ++j)
+                for (int j = 0; j < cache.Removals.BatchCount; ++j)
                 {
-                    removedConstraintCount += cache.BatchHandles[j].Count;
-                    var batchIndex = batches.IndexOf(cache.Batches[j]);
-                    if (batchIndex >= 0)
-                    {
-                        ref var slot = ref batches.Values[batchIndex].AllocateUnsafely();
-                        slot.WorkerIndex = (short)i;
-                        slot.WorkerBatchIndex = (short)j;
-                    }
-                    else
-                    {
-                        //This worker batch doesn't exist in the combined set. Add it now.
-                        QuickList<WorkerBatchReference, Buffer<WorkerBatchReference>>.Create(pool.SpecializeFor<WorkerBatchReference>(), threadCount - i, out var references);
-                        WorkerBatchReference reference;
-                        reference.WorkerIndex = (short)i;
-                        reference.WorkerBatchIndex = (short)j;
-                        references.AddUnsafely(reference);
-                        batches.Add(ref cache.Batches[j], ref references, typeBatchIndexPool, quickListPool, intPool);
-                    }
+                    ref var typeBatchIndex = ref cache.Removals.TypeBatches[j];
+                    ref var workerRemovals = ref cache.Removals.RemovalsForTypeBatches[j];
+                    removedConstraintCount += workerRemovals.ConstraintHandlesToRemove.Count;
+                    var batchIndex = batches.AllocateSpaceForTargets(typeBatchIndex, workerRemovals.ConstraintHandlesToRemove.Count, workerRemovals.PerBodyRemovalTargets.Count, pool);
+
+                    ref var combinedRemovalsForBatch = ref batches.RemovalsForTypeBatches[batchIndex];
+                    combinedRemovalsForBatch.ConstraintHandlesToRemove.AddRangeUnsafely(ref workerRemovals.ConstraintHandlesToRemove.Span, 0, workerRemovals.ConstraintHandlesToRemove.Count);
+                    combinedRemovalsForBatch.PerBodyRemovalTargets.AddRangeUnsafely(ref workerRemovals.PerBodyRemovalTargets.Span, 0, workerRemovals.PerBodyRemovalTargets.Count);
+
                 }
+            }
+            if (deterministic)
+            {
+                //To ensure determinism, sort within each type batch by constraint handle (and, for removal targets, also by the body handle).
+                //The handles are unique and deterministic, so processing the sorted list in order will produce deterministic results.
+                //This (and perhaps the contiguous list gathering phase) could be punted to a multithreaded dispatch, but only do that if it actually seems beneficial. 
+                var constraintHandleComparer = new PrimitiveComparer<int>();
+                var perBodyRemovalTargetComparer = new PerBodyRemovalTargetComparer();
+                for (int i = 0; i < batches.BatchCount; ++i)
+                {
+                    ref var batchRemovals = ref batches.RemovalsForTypeBatches[i];
+                    QuickSort.Sort(ref batchRemovals.ConstraintHandlesToRemove.Span[0], 0, batchRemovals.ConstraintHandlesToRemove.Count - 1, ref constraintHandleComparer);
+                    QuickSort.Sort(ref batchRemovals.PerBodyRemovalTargets[0], 0, batchRemovals.PerBodyRemovalTargets.Count - 1, ref perBodyRemovalTargetComparer);
+                }
+                //Also sort the batches according to the type batch index. Note that batch indices/type batch indices are deterministic if the simulation is deterministic;
+                //if they weren't, the solver would produce nondeterministic results.
+                var typeBatchIndexComparer = new TypeBatchIndexComparer();
+                QuickSort.Sort(ref batches.TypeBatches[0], ref batches.RemovalsForTypeBatches[0], 0, batches.BatchCount - 1, ref typeBatchIndexComparer);
             }
 
             //Ensure that the solver's id pool is large enough to hold all constraint handles being removed.
@@ -302,73 +314,23 @@ namespace BepuPhysics.CollisionDetection
                 typeBatchCount += activeSet.Batches[i].TypeBatches.Count;
             }
             QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>>.Create(pool.SpecializeFor<TypeBatchIndex>(), typeBatchCount, out removedTypeBatches);
-            return batches.Count;
+            return batches.BatchCount;
         }
 
         /// <summary>
         /// Returns the handles associated with all removed constraints to the solver's handle pool.
         /// </summary>
-        /// <param name="deterministic">True if the return should be deterministic, false otherwise.</param>
         /// <param name="threadPool">Pool to allocate from to support the deterministic sort.</param>
-        public void ReturnConstraintHandles(bool deterministic, BufferPool threadPool)
+        public void ReturnConstraintHandles(BufferPool threadPool)
         {
-            //Note that neither of these paths actually zero out the slot associated with the handle. It is assumed that the typebatch removal is proceeding in parallel.
+            //Note that this does not zero out the slot associated with the handle. It is assumed that the typebatch removal is proceeding in parallel.
             //It will attempt to look up handle->index mappings, so we can't corrupt them.
-            if (deterministic)
+            for (int i = 0; i < batches.BatchCount; ++i)
             {
-                var intPool = threadPool.SpecializeFor<int>();
-                //The batch compressor requires constraint handles to be deterministic. While that could be changed, ensuring handle determinism fits conceptually
-                //with the user-managed constraint handles- they are all deterministic, so the contact ones might as well be too.
-                int count = 0;
-                for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
+                ref var batchHandles = ref batches.RemovalsForTypeBatches[i].ConstraintHandlesToRemove;
+                for (int j = 0; j < batchHandles.Count; ++j)
                 {
-                    ref var workerCache = ref workerCaches[workerIndex];
-                    for (int batchIndex = 0; batchIndex < workerCache.BatchHandles.Count; ++batchIndex)
-                    {
-                        count += workerCache.BatchHandles[batchIndex].Count;
-                    }
-                }
-                if (count > 0)
-                {
-                    intPool.Take(count, out var sortedHandles);
-                    int sortIndex = 0;
-                    for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
-                    {
-                        ref var workerCache = ref workerCaches[workerIndex];
-                        for (int batchIndex = 0; batchIndex < workerCache.BatchHandles.Count; ++batchIndex)
-                        {
-                            ref var handles = ref workerCache.BatchHandles[batchIndex];
-                            for (int handleIndex = 0; handleIndex < handles.Count; ++handleIndex)
-                            {
-                                sortedHandles[sortIndex++] = handles[handleIndex];
-                            }
-                        }
-                    }
-                    var comparer = new PrimitiveComparer<int>();
-                    QuickSort.Sort(ref sortedHandles[0], 0, count - 1, ref comparer);
-                    for (int i = 0; i < count; ++i)
-                    {
-                        //We ensured the capacity of the handle pool during job creation; no need to worry about resizing.
-                        solver.HandlePool.ReturnUnsafely(sortedHandles[i]);
-                    }
-                    intPool.Return(ref sortedHandles);
-                }
-            }
-            else
-            {
-                for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
-                {
-                    ref var workerCache = ref workerCaches[workerIndex];
-                    //If it's nondeterministic anyway, don't worry about the handle ordering.
-                    for (int batchIndex = 0; batchIndex < workerCache.BatchHandles.Count; ++batchIndex)
-                    {
-                        ref var handles = ref workerCache.BatchHandles[batchIndex];
-                        for (int handleIndex = 0; handleIndex < handles.Count; ++handleIndex)
-                        {
-                            //We ensured the capacity of the handle pool during job creation; no need to worry about resizing.
-                            solver.HandlePool.ReturnUnsafely(handles[handleIndex]);
-                        }
-                    }
+                    solver.HandlePool.ReturnUnsafely(batchHandles[j]);
                 }
             }
         }
@@ -378,31 +340,31 @@ namespace BepuPhysics.CollisionDetection
             //While body list removal could technically be internally multithreaded, it would be pretty complex- you would have to do one dispatch per solver.Batches batch
             //to guarantee that no two threads hit the same body constraint list at the same time. 
             //That is more complicated and would almost certainly be slower than this locally sequential version.
-            for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
+            for (int i = 0; i < batches.BatchCount; ++i)
             {
-                ref var workerCache = ref workerCaches[workerIndex];
-                for (int removalTargetIndex = 0; removalTargetIndex < workerCache.RemovalTargets.Count; ++removalTargetIndex)
+                ref var removals = ref batches.RemovalsForTypeBatches[i].PerBodyRemovalTargets;
+                for (int j = 0; j < removals.Count; ++j)
                 {
-                    ref var target = ref workerCache.RemovalTargets[removalTargetIndex];
+                    ref var target = ref removals[j];
                     bodies.RemoveConstraintReference(target.BodyIndex, target.ConstraintHandle);
                 }
             }
-
         }
 
         public void RemoveConstraintsFromBatchReferencedHandles()
         {
-            for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
+            for (int i = 0; i < batches.BatchCount; ++i)
             {
-                ref var workerCache = ref workerCaches[workerIndex];
-                for (int removalTargetIndex = 0; removalTargetIndex < workerCache.RemovalTargets.Count; ++removalTargetIndex)
+                ref var removals = ref batches.RemovalsForTypeBatches[i].PerBodyRemovalTargets;
+                if (batches.TypeBatches[i].Batch == solver.FallbackBatchThreshold)
                 {
-                    ref var target = ref workerCache.RemovalTargets[removalTargetIndex];
                     //Batch referenced handles do not exist for the fallback batch.
-                    if (target.BatchIndex < solver.FallbackBatchThreshold)
-                    {
-                        solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle);
-                    }
+                    continue;
+                }
+                for (int j = 0; j < removals.Count; ++j)
+                {
+                    ref var target = ref removals[j];
+                    solver.batchReferencedHandles[target.BatchIndex].Remove(target.BodyHandle);
                 }
             }
         }
@@ -411,15 +373,15 @@ namespace BepuPhysics.CollisionDetection
         public void RemoveConstraintsFromFallbackBatch()
         {
             Debug.Assert(solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold);
-            for (int workerIndex = 0; workerIndex < workerCaches.Length; ++workerIndex)
+            for (int i = 0; i < batches.BatchCount; ++i)
             {
-                ref var workerCache = ref workerCaches[workerIndex];
-                for (int i = 0; i < workerCache.RemovalTargets.Count; ++i)
+                ref var removals = ref batches.RemovalsForTypeBatches[i].PerBodyRemovalTargets;
+                if (batches.TypeBatches[i].Batch == solver.FallbackBatchThreshold)
                 {
-                    ref var removalTarget = ref workerCache.RemovalTargets[i];
-                    if (removalTarget.BatchIndex == solver.FallbackBatchThreshold)
+                    for (int j = 0; j < removals.Count; ++j)
                     {
-                        solver.ActiveSet.Fallback.Remove(removalTarget.BodyIndex, removalTarget.ConstraintHandle, ref allocationIdsToFree);
+                        ref var target = ref removals[j];
+                        solver.ActiveSet.Fallback.Remove(target.BodyIndex, target.ConstraintHandle, ref allocationIdsToFree);
                     }
                 }
             }
@@ -433,34 +395,28 @@ namespace BepuPhysics.CollisionDetection
         SpinLock removedTypeBatchLocker = new SpinLock();
         public void RemoveConstraintsFromTypeBatch(int index)
         {
-            var batch = batches.Keys[index];
+            var batch = batches.TypeBatches[index];
             ref var constraintBatch = ref solver.ActiveSet.Batches[batch.Batch];
             ref var typeBatch = ref constraintBatch.TypeBatches[batch.TypeBatch];
             var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
-            ref var batchReferences = ref batches.Values[index];
+            ref var removals = ref batches.RemovalsForTypeBatches[index];
             bool lockTaken = false;
-            for (int i = 0; i < batchReferences.Count; ++i)
+            for (int i = 0; i < removals.ConstraintHandlesToRemove.Count; ++i)
             {
-                ref var reference = ref batchReferences[i];
-                ref var workerCache = ref workerCaches[reference.WorkerIndex];
-                ref var handles = ref workerCache.BatchHandles[reference.WorkerBatchIndex];
-                for (int j = 0; j < handles.Count; ++j)
+                var handle = removals.ConstraintHandlesToRemove[i];
+                //Note that we look up the index in the type batch dynamically even though we could have cached it alongside batch and typebatch indices.
+                //That's because removals can change the index, so caching indices would require sorting the indices for each type batch before removing.
+                //That's very much doable, but not doing it is simpler, and the performance difference is likely trivial.
+                //TODO: Likely worth testing.
+                typeProcessor.Remove(ref typeBatch, solver.HandleToConstraint[handle].IndexInTypeBatch, ref solver.HandleToConstraint);
+                if (typeBatch.ConstraintCount == 0)
                 {
-                    var handle = handles[j];
-                    //Note that we look up the index in the type batch dynamically even though we could have cached it alongside batch and typebatch indices.
-                    //That's because removals can change the index, so caching indices would require sorting the indices for each type batch before removing.
-                    //That's very much doable, but not doing it is simpler, and the performance difference is likely trivial.
-                    //TODO: Likely worth testing.
-                    typeProcessor.Remove(ref typeBatch, solver.HandleToConstraint[handle].IndexInTypeBatch, ref solver.HandleToConstraint);
-                    if (typeBatch.ConstraintCount == 0)
-                    {
-                        //This batch-typebatch needs to be removed.
-                        //Note that we just use a spinlock here, nothing tricky- the number of typebatch/batch removals should tend to be extremely low (averaging 0),
-                        //so it's not worth doing a bunch of per worker accumulators and stuff.
-                        removedTypeBatchLocker.Enter(ref lockTaken);
-                        removedTypeBatches.AddUnsafely(batch);
-                        removedTypeBatchLocker.Exit();
-                    }
+                    //This batch-typebatch needs to be removed.
+                    //Note that we just use a spinlock here, nothing tricky- the number of typebatch/batch removals should tend to be extremely low (averaging 0),
+                    //so it's not worth doing a bunch of per worker accumulators and stuff.
+                    removedTypeBatchLocker.Enter(ref lockTaken);
+                    removedTypeBatches.AddUnsafely(batch);
+                    removedTypeBatchLocker.Exit();
                 }
             }
         }
@@ -503,25 +459,20 @@ namespace BepuPhysics.CollisionDetection
                 }
                 allocationIdsToFree.Dispose(pool.SpecializeFor<int>());
             }
-            //Get rid of the worker batch reference collections.
-            for (int i = 0; i < batches.Count; ++i)
-            {
-                batches.Values[i].Dispose(pool.SpecializeFor<WorkerBatchReference>());
-            }
-            batches.Dispose(pool.SpecializeFor<TypeBatchIndex>(), pool.SpecializeFor<QuickList<WorkerBatchReference, Buffer<WorkerBatchReference>>>(), pool.SpecializeFor<int>());
+            batches.Dispose(pool);
 
             //Get rid of the worker cache allocations and store the capacities for next frame initialization.
             previousCapacityPerBatch = 0;
             for (int i = 0; i < threadCount; ++i)
             {
                 ref var workerCache = ref workerCaches[i];
-                for (int j = 0; j < workerCache.BatchHandles.Count; ++j)
+                for (int j = 0; j < workerCache.Removals.BatchCount; ++j)
                 {
-                    if (previousCapacityPerBatch < workerCache.BatchHandles[j].Count)
-                        previousCapacityPerBatch = workerCache.BatchHandles[j].Count;
+                    if (previousCapacityPerBatch < workerCache.Removals.RemovalsForTypeBatches[j].ConstraintHandlesToRemove.Count)
+                        previousCapacityPerBatch = workerCache.Removals.RemovalsForTypeBatches[j].ConstraintHandlesToRemove.Count;
                 }
-                if (previousBatchCapacity < workerCache.BatchHandles.Count)
-                    previousBatchCapacity = workerCache.BatchHandles.Count;
+                if (previousBatchCapacity < workerCache.Removals.BatchCount)
+                    previousBatchCapacity = workerCache.Removals.BatchCount;
                 workerCache.Dispose();
             }
         }

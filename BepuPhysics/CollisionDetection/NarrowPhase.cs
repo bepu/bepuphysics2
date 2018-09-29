@@ -160,7 +160,7 @@ namespace BepuPhysics.CollisionDetection
                     ConstraintRemover.RemoveConstraintsFromBodyLists();
                     break;
                 case NarrowPhaseFlushJobType.ReturnConstraintHandles:
-                    ConstraintRemover.ReturnConstraintHandles(deterministic, threadPool);
+                    ConstraintRemover.ReturnConstraintHandles(threadPool);
                     break;
                 case NarrowPhaseFlushJobType.RemoveConstraintFromBatchReferencedHandles:
                     ConstraintRemover.RemoveConstraintsFromBatchReferencedHandles();
@@ -185,9 +185,7 @@ namespace BepuPhysics.CollisionDetection
             var jobPool = Pool.SpecializeFor<NarrowPhaseFlushJob>();
             QuickList<NarrowPhaseFlushJob, Buffer<NarrowPhaseFlushJob>>.Create(jobPool, 128, out flushJobs);
             PairCache.PrepareFlushJobs(ref flushJobs);
-            //We indirectly pass the determinism state; it's used by the constraint remover bookkeeping.
-            this.deterministic = deterministic;
-            var removalBatchJobCount = ConstraintRemover.CreateFlushJobs();
+            var removalBatchJobCount = ConstraintRemover.CreateFlushJobs(deterministic);
             //Note that we explicitly add the constraint remover jobs here. 
             //The constraint remover can be used in two ways- sleeper style, and narrow phase style.
             //In sleeping, we're not actually removing constraints from the simulation completely, so it requires fewer jobs.

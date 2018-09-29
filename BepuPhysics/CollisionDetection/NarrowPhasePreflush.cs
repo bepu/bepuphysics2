@@ -103,7 +103,7 @@ namespace BepuPhysics.CollisionDetection
             //This caching avoids the need to repeatedly pull in cache lines from the different worker sets. 
             //In chaotic large simulations, the poor cache line utilization (since we're only looking up 4-8 bytes) could result in spilling into L3.
             //As an added bonus, the access pattern during the initial pass is prefetchable, while a comparison-time lookup is not.
-            public ulong Handles;
+            public ulong SortKey;
         }
         Buffer<QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>>> sortedConstraints;
 
@@ -125,7 +125,7 @@ namespace BepuPhysics.CollisionDetection
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe int Compare(ref SortConstraintTarget a, ref SortConstraintTarget b)
             {
-                return a.Handles.CompareTo(b.Handles);
+                return a.SortKey.CompareTo(b.SortKey);
             }
         }
 
@@ -147,7 +147,7 @@ namespace BepuPhysics.CollisionDetection
                         //Note two details:
                         //1) We rely on the layout of memory in the pending constraint add. If the collidable pair doesn't occupy the first 8 bytes, this breaks.
                         //2) We rely on the order of collidable pair references. The narrow phase should always guarantee a consistent order.
-                        constraint.Handles = *(ulong*)(workerList.Buffer.Memory + indexInBytes);
+                        constraint.SortKey = *(ulong*)(workerList.Buffer.Memory + indexInBytes);
                         indexInBytes += entrySizeInBytes;
                     }
                 }
@@ -376,7 +376,7 @@ namespace BepuPhysics.CollisionDetection
                         if (typeList.Span.Allocated)
                             typeList.Dispose(targetPool);
                     }
-                    Pool.SpecializeFor<QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>>>().Return(ref sortedConstraints);
+                    Pool.Return(ref sortedConstraints);
                 }
                 preflushJobs.Dispose(preflushJobPool);
             }
