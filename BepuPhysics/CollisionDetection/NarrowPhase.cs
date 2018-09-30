@@ -318,7 +318,7 @@ namespace BepuPhysics.CollisionDetection
         {
             Callbacks.Dispose();
         }
-
+        
         public unsafe void HandleOverlap(int workerIndex, CollidableReference a, CollidableReference b)
         {
             Debug.Assert(a.Packed != b.Packed, "Excuse me, broad phase, but an object cannot collide with itself!");

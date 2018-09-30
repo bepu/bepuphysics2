@@ -206,8 +206,7 @@ namespace BepuPhysics.CollisionDetection
                     break;
             }
         }
-
-
+        
         protected override void OnPreflush(IThreadDispatcher threadDispatcher, bool deterministic)
         {
             var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
@@ -325,7 +324,7 @@ namespace BepuPhysics.CollisionDetection
                 var originalPairCacheMappingCount = PairCache.Mapping.Count;
                 //var start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;
-                threadDispatcher.DispatchWorkers(preflushWorkerLoop);
+                threadDispatcher.DispatchWorkers(preflushWorkerLoop);                
                 //for (int i = 0; i < preflushJobs.Count; ++i)
                 //{
                 //    ExecutePreflushJob(0, ref preflushJobs[i]);

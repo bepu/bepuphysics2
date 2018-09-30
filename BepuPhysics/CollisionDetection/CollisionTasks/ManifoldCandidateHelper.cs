@@ -131,22 +131,25 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 }
             }
 
-            if (maxCandidateCount <= 4)
-            {
-                //There is no need for a reduction; all lanes fit within a 4 contact manifold.
-                //This can result in some pretty questionably redundant contacts sometimes, but our epsilons are sufficiently small that most such things
-                //would get let through anyway. 
-                //TODO: Could play with this to see what the net impact on performance is. Probably negligible either way.
-                contact0 = candidates;
-                contact1 = Unsafe.Add(ref candidates, 1);
-                contact2 = Unsafe.Add(ref candidates, 2);
-                contact3 = Unsafe.Add(ref candidates, 3);
-                CandidateExists(contact0, minimumDepth, maskedContactCount, 0, out contact0Exists);
-                CandidateExists(contact1, minimumDepth, maskedContactCount, 1, out contact1Exists);
-                CandidateExists(contact2, minimumDepth, maskedContactCount, 2, out contact2Exists);
-                CandidateExists(contact3, minimumDepth, maskedContactCount, 3, out contact3Exists);
-                return;
-            }
+            //This early out breaks determinism. Early out and non-early out produce different results, and the choice of early out depends on the entire bundle.
+            //Since the bundle is subject to nondeterminism from overlap discovery, this can't be used with determinism on.
+            //For now, we'll just keep it disabled and assume the collision batcher produces deterministic results regardless.
+            //The actual performance impact is fairly small (0-2% simulation time).
+            //if (maxCandidateCount <= 4)
+            //{
+            //    //There is no need for a reduction; all lanes fit within a 4 contact manifold.
+            //    //This can result in some pretty questionably redundant contacts sometimes, but our epsilons are sufficiently small that most such things
+            //    //would get let through anyway. 
+            //    contact0 = candidates;
+            //    contact1 = Unsafe.Add(ref candidates, 1);
+            //    contact2 = Unsafe.Add(ref candidates, 2);
+            //    contact3 = Unsafe.Add(ref candidates, 3);
+            //    CandidateExists(contact0, minimumDepth, maskedContactCount, 0, out contact0Exists);
+            //    CandidateExists(contact1, minimumDepth, maskedContactCount, 1, out contact1Exists);
+            //    CandidateExists(contact2, minimumDepth, maskedContactCount, 2, out contact2Exists);
+            //    CandidateExists(contact3, minimumDepth, maskedContactCount, 3, out contact3Exists);
+            //    return;
+            //}
 
             //minor todo: don't really need to waste time initializing to an invalid value.
             var bestScore = new Vector<float>(-float.MaxValue);
