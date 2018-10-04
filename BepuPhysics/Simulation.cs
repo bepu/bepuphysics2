@@ -191,7 +191,7 @@ namespace BepuPhysics
             //That includes gravity. If we sleep objects *before* gravity is applied in a given frame, then when those bodies are awakened, the accumulated impulses
             //will be less accurate because they assume that gravity has already been applied. This can cause a small bump.
             //So instead, velocity integration (and deactivation candidacy management) comes before sleep.
-
+            
             //Sleep at the start, on the other hand, stops some forms of unintuitive behavior when using direct awakenings. Just a matter of preference.
             ProfilerStart(Sleeper);
             Sleeper.Update(threadDispatcher, Deterministic);
@@ -222,15 +222,15 @@ namespace BepuPhysics
             ProfilerStart(BroadPhase);
             BroadPhase.Update(threadDispatcher);
             ProfilerEnd(BroadPhase);
-
+            
             ProfilerStart(BroadPhaseOverlapFinder);
             BroadPhaseOverlapFinder.DispatchOverlaps(dt, threadDispatcher);
             ProfilerEnd(BroadPhaseOverlapFinder);
-
+            
             ProfilerStart(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(NarrowPhase);
-
+            
             ProfilerStart(Solver);
             if (threadDispatcher == null)
                 Solver.Update(dt);
@@ -252,7 +252,7 @@ namespace BepuPhysics
             ProfilerStart(SolverBatchCompressor);
             SolverBatchCompressor.Compress(BufferPool, threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(SolverBatchCompressor);
-
+            
             ProfilerEnd(this);
         }
 

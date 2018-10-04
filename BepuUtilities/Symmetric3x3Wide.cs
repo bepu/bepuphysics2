@@ -63,16 +63,40 @@ namespace BepuUtilities
             inverse.ZZ = zz * determinantInverse;
         }
 
+        /// <summary>
+        /// Adds the components of two symmetric matrices together.
+        /// </summary>
+        /// <param name="a">First matrix to add.</param>
+        /// <param name="b">Second matrix to add.</param>
+        /// <param name="result">Sum of the two input matrices.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(in Symmetric3x3Wide a, in Symmetric3x3Wide b, out Symmetric3x3Wide sum)
+        public static void Add(in Symmetric3x3Wide a, in Symmetric3x3Wide b, out Symmetric3x3Wide result)
         {
-            sum.XX = a.XX + b.XX;
-            sum.YX = a.YX + b.YX;
-            sum.YY = a.YY + b.YY;
-            sum.ZX = a.ZX + b.ZX;
-            sum.ZY = a.ZY + b.ZY;
-            sum.ZZ = a.ZZ + b.ZZ;
+            result.XX = a.XX + b.XX;
+            result.YX = a.YX + b.YX;
+            result.YY = a.YY + b.YY;
+            result.ZX = a.ZX + b.ZX;
+            result.ZY = a.ZY + b.ZY;
+            result.ZZ = a.ZZ + b.ZZ;
         }
+
+        /// <summary>
+        /// Subtracts one symmetric matrix's components from another.
+        /// </summary>
+        /// <param name="a">Matrix to be subtracted from.</param>
+        /// <param name="b">Matrix to subtract from the first matrix.</param>
+        /// <param name="result">Result of a - b.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Subtract(in Symmetric3x3Wide a, in Symmetric3x3Wide b, out Symmetric3x3Wide result)
+        {
+            result.XX = a.XX - b.XX;
+            result.YX = a.YX - b.YX;
+            result.YY = a.YY - b.YY;
+            result.ZX = a.ZX - b.ZX;
+            result.ZY = a.ZY - b.ZY;
+            result.ZZ = a.ZZ - b.ZZ;
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Scale(in Symmetric3x3Wide m, in Vector<float> scale, out Symmetric3x3Wide result)
@@ -84,7 +108,7 @@ namespace BepuUtilities
             result.ZY = m.ZY * scale;
             result.ZZ = m.ZZ * scale;
         }
-
+        
         //If you ever need a triangular invert, a couple of options:
         //For matrices of the form:
         //[ 1  0  0 ]
@@ -150,6 +174,7 @@ namespace BepuUtilities
             var z = v.X * m.ZX + v.Y * m.ZY + v.Z * m.ZZ;
             sandwich = x * v.X + y * v.Y + z * v.Z;
         }
+
         /// <summary>
         /// Computes rT * m * r for a symmetric matrix m and a rotation matrix R.
         /// </summary>
@@ -197,6 +222,72 @@ namespace BepuUtilities
         }
 
         /// <summary>
+        /// Computes result = a * b, assuming that b represents a symmetric 3x3 matrix. Assumes that input parameters and output result do not overlap.
+        /// </summary>
+        /// <param name="a">First matrix of the pair to multiply.</param>
+        /// <param name="b">Matrix to be reinterpreted as symmetric for the multiply.</param>
+        /// <param name="result">Result of multiplying a * b.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Multiply(in Matrix3x3Wide a, in Symmetric3x3Wide b, out Matrix3x3Wide result)
+        {
+            result.X.X = a.X.X * b.XX + a.X.Y * b.YX + a.X.Z * b.ZX;
+            result.X.Y = a.X.X * b.YX + a.X.Y * b.YY + a.X.Z * b.ZY;
+            result.X.Z = a.X.X * b.ZX + a.X.Y * b.ZY + a.X.Z * b.ZZ;
+
+            result.Y.X = a.Y.X * b.XX + a.Y.Y * b.YX + a.Y.Z * b.ZX;
+            result.Y.Y = a.Y.X * b.YX + a.Y.Y * b.YY + a.Y.Z * b.ZY;
+            result.Y.Z = a.Y.X * b.ZX + a.Y.Y * b.ZY + a.Y.Z * b.ZZ;
+
+            result.Z.X = a.Z.X * b.XX + a.Z.Y * b.YX + a.Z.Z * b.ZX;
+            result.Z.Y = a.Z.X * b.YX + a.Z.Y * b.YY + a.Z.Z * b.ZY;
+            result.Z.Z = a.Z.X * b.ZX + a.Z.Y * b.ZY + a.Z.Z * b.ZZ;
+        }
+
+        /// <summary>
+        /// Computes result = a * b, assuming that a represents a symmetric 3x3 matrix. Assumes that input parameters and output result do not overlap.
+        /// </summary>
+        /// <param name="a">Matrix to be reinterpreted as symmetric for the multiply.</param>
+        /// <param name="b">Second matrix of the pair to multiply.</param>
+        /// <param name="result">Result of multiplying a * b.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Multiply(in Symmetric3x3Wide a, in Matrix3x3Wide b, out Matrix3x3Wide result)
+        {
+            result.X.X = a.XX * b.X.X + a.YX * b.Y.X + a.ZX * b.Z.X;
+            result.X.Y = a.XX * b.X.Y + a.YX * b.Y.Y + a.ZX * b.Z.Y;
+            result.X.Z = a.XX * b.X.Z + a.YX * b.Y.Z + a.ZX * b.Z.Z;
+
+            result.Y.X = a.YX * b.X.X + a.YY * b.Y.X + a.ZY * b.Z.X;
+            result.Y.Y = a.YX * b.X.Y + a.YY * b.Y.Y + a.ZY * b.Z.Y;
+            result.Y.Z = a.YX * b.X.Z + a.YY * b.Y.Z + a.ZY * b.Z.Z;
+
+            result.Z.X = a.ZX * b.X.X + a.ZY * b.Y.X + a.ZZ * b.Z.X;
+            result.Z.Y = a.ZX * b.X.Y + a.ZY * b.Y.Y + a.ZZ * b.Z.Y;
+            result.Z.Z = a.ZX * b.X.Z + a.ZY * b.Y.Z + a.ZZ * b.Z.Z;
+        }
+
+        /// <summary>
+        /// Computes result = a * transpose(b).
+        /// </summary>
+        /// <param name="a">Matrix to multiply with the transposed matrix.</param>
+        /// <param name="b">Matrix to transpose and concatenate with the first matrix.</param>
+        /// <param name="result">Result of a * transpose(b).</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void MultiplyByTransposed(in Symmetric3x3Wide a, in Matrix3x3Wide b, out Matrix3x3Wide result)
+        {
+            result.X.X = a.XX * b.X.X + a.YX * b.X.Y + a.ZX * b.X.Z;
+            result.X.Y = a.XX * b.Y.X + a.YX * b.Y.Y + a.ZX * b.Y.Z;
+            result.X.Z = a.XX * b.Z.X + a.YX * b.Z.Y + a.ZX * b.Z.Z;
+
+            result.Y.X = a.YX * b.X.X + a.YY * b.X.Y + a.ZY * b.X.Z;
+            result.Y.Y = a.YX * b.Y.X + a.YY * b.Y.Y + a.ZY * b.Y.Z;
+            result.Y.Z = a.YX * b.Z.X + a.YY * b.Z.Y + a.ZY * b.Z.Z;
+
+            result.Z.X = a.ZX * b.X.X + a.ZY * b.X.Y + a.ZZ * b.X.Z;
+            result.Z.Y = a.ZX * b.Y.X + a.ZY * b.Y.Y + a.ZZ * b.Y.Z;
+            result.Z.Z = a.ZX * b.Z.X + a.ZY * b.Z.Y + a.ZZ * b.Z.Z;
+        }
+
+        /// <summary>
         /// Computes m * t * mT for a symmetric matrix t and a matrix m.
         /// </summary>
         /// <param name="m">Matrix to use as the sandwich bread.</param>
@@ -214,6 +305,46 @@ namespace BepuUtilities
             result.XX = ixx * m.X.X + ixy * m.X.Y + ixz * m.X.Z;
             result.YX = iyx * m.X.X + iyy * m.X.Y + iyz * m.X.Z;
             result.YY = iyx * m.Y.X + iyy * m.Y.Y + iyz * m.Y.Z;
+        }
+
+        /// <summary>
+        /// Computes result = a * b, where a = transpose(b) * M for some symmetric matrix M.
+        /// </summary>
+        /// <param name="a">Some matrix equal to transpose(b) * M for some symmetric matrix M.</param>
+        /// <param name="b">Matrix used to sandwich the original matrix M.</param>
+        /// <param name="result">Complete result of transpose(b) * M * b.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CompleteMatrixSandwich(in Matrix3x3Wide a, in Matrix3x3Wide b, out Symmetric3x3Wide result)
+        {
+            //The only benefit of these 'completion' functions is knowing that the final result is symmetric, so there's no need to compute some of the results.
+            //Other than that, it's equivalent to a 3x3 multiply.
+            result.XX = a.X.X * b.X.X + a.X.Y * b.Y.X + a.X.Z * b.Z.X;
+
+            result.YX = a.Y.X * b.X.X + a.Y.Y * b.Y.X + a.Y.Z * b.Z.X;
+            result.YY = a.Y.X * b.X.Y + a.Y.Y * b.Y.Y + a.Y.Z * b.Z.Y;
+
+            result.ZX = a.Z.X * b.X.X + a.Z.Y * b.Y.X + a.Z.Z * b.Z.X;
+            result.ZY = a.Z.X * b.X.Y + a.Z.Y * b.Y.Y + a.Z.Z * b.Z.Y;
+            result.ZZ = a.Z.X * b.X.Z + a.Z.Y * b.Y.Z + a.Z.Z * b.Z.Z;
+        }
+
+        /// <summary>
+        /// Computes result = transpose(a) * b, where b = M * a for some symmetric matrix M.
+        /// </summary>
+        /// <param name="a">Matrix used to sandwich the original matrix M.</param>
+        /// <param name="b">Some matrix equal to M * a for some symmetric matrix M.</param>
+        /// <param name="result">Complete result of transpose(a) * M * a.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CompleteMatrixSandwichTransposed(in Matrix3x3Wide a, in Matrix3x3Wide b, out Symmetric3x3Wide result)
+        {
+            result.XX = a.X.X * b.X.X + a.Y.X * b.Y.X + a.Z.X * b.Z.X;
+
+            result.YX = a.X.Y * b.X.X + a.Y.Y * b.Y.X + a.Z.Y * b.Z.X;
+            result.YY = a.X.Y * b.X.Y + a.Y.Y * b.Y.Y + a.Z.Y * b.Z.Y;
+
+            result.ZX = a.X.Z * b.X.X + a.Y.Z * b.Y.X + a.Z.Z * b.Z.X;
+            result.ZY = a.X.Z * b.X.Y + a.Y.Z * b.Y.Y + a.Z.Z * b.Z.Y;
+            result.ZZ = a.X.Z * b.X.Z + a.Y.Z * b.Y.Z + a.Z.Z * b.Z.Z;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

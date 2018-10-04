@@ -157,7 +157,7 @@ namespace BepuPhysics.CollisionDetection
                     target.ConstraintHandle = constraintHandle;
 
                     target.BatchIndex = typeBatchIndex.Batch;
-                    target.BodyHandle = bodies.ActiveSet.IndexToHandle[bodyIndices[i]];
+                    target.BodyHandle = bodies.ActiveSet.IndexToHandle[target.BodyIndex];
                 }
             }
 
@@ -355,12 +355,12 @@ namespace BepuPhysics.CollisionDetection
         {
             for (int i = 0; i < batches.BatchCount; ++i)
             {
-                ref var removals = ref batches.RemovalsForTypeBatches[i].PerBodyRemovalTargets;
                 if (batches.TypeBatches[i].Batch == solver.FallbackBatchThreshold)
                 {
                     //Batch referenced handles do not exist for the fallback batch.
                     continue;
                 }
+                ref var removals = ref batches.RemovalsForTypeBatches[i].PerBodyRemovalTargets;
                 for (int j = 0; j < removals.Count; ++j)
                 {
                     ref var target = ref removals[j];

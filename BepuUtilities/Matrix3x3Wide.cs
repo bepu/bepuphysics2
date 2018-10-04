@@ -91,8 +91,7 @@ namespace BepuUtilities
             result.Z.Y = a.Z.X * b.Y.X + a.Z.Y * b.Y.Y + a.Z.Z * b.Y.Z;
             result.Z.Z = a.Z.X * b.Z.X + a.Z.Y * b.Z.Y + a.Z.Z * b.Z.Z;
         }
-
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void TransformWithoutOverlap(in Vector3Wide v, in Matrix3x3Wide m, out Vector3Wide result)
         {
@@ -154,6 +153,25 @@ namespace BepuUtilities
             skew.Z.X = -v.Y;
             skew.Z.Y = v.X;
             skew.Z.Z = Vector<float>.Zero;
+        }
+
+        /// <summary>
+        /// Negates the components of a matrix.
+        /// </summary>
+        /// <param name="m">Matrix to negate.</param>
+        /// <param name="result">Negated result matrix.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Negate(in Matrix3x3Wide m, out Matrix3x3Wide result)
+        {
+            result.X.X = -m.X.X;
+            result.X.Y = -m.X.Y;
+            result.X.Z = -m.X.Z;
+            result.Y.X = -m.Y.X;
+            result.Y.Y = -m.Y.Y;
+            result.Y.Z = -m.Y.Z;
+            result.Z.X = -m.Z.X;
+            result.Z.Y = -m.Z.Y;
+            result.Z.Z = -m.Z.Z;
         }
 
         /// <summary>

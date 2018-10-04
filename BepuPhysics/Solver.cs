@@ -278,6 +278,18 @@ namespace BepuPhysics
                     else
                         ValidateBodyReference(i, 0, ref batch);
                 }
+                //No inactive bodies should be present in the active set solver batch referenced handles.
+                for (int inactiveBodySetIndex = 1; inactiveBodySetIndex < bodies.Sets.Length; ++inactiveBodySetIndex)
+                {
+                    ref var bodySet = ref bodies.Sets[inactiveBodySetIndex];
+                    if (bodies.Sets[inactiveBodySetIndex].Allocated)
+                    {
+                        for (int i = 0; i < bodySet.Count; ++i)
+                        {
+                            Debug.Assert(!handles.Contains(bodySet.IndexToHandle[i]), "Bodies in an inactive set should not show up in the active solver set's referenced body handles.");
+                        }
+                    }
+                }
             }
             //Now, for all sets, validate that constraint and body references to each other are consistent and complete.
             ReferenceCollector enumerator;

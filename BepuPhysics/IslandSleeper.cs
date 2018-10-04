@@ -804,6 +804,8 @@ namespace BepuPhysics
 
             //We don't want the static tree to resize during removals. That would use the main pool and conflict with the NotifyNarrowPhasePairCache job's usage of the main pool.
             broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount, broadPhase.StaticTree.LeafCount + sleptBodyCount);
+            //Note that we create flush jobs before the third phase execution. This creates some necessary internal structures in the constraint remover that will be referenced.
+            typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs(deterministic);
 
             QuickList<RemovalJob, Buffer<RemovalJob>>.Create(pool.SpecializeFor<RemovalJob>(), 4, out removalJobs);
             //The heavier locally sequential jobs are scheduled up front, leaving the smaller later tasks to fill gaps.
@@ -835,7 +837,6 @@ namespace BepuPhysics
             //we punt all other work (except for the constraint handle mapping update, type batch constraint removal relies on constraint handles for the moment)
             //to the third stage. It takes the form of a series of locally sequential jobs, so it won't have wonderful load balancing.
             //But perfect scaling isn't necessarily required- we just want to reduce the frame drops as much as possible.
-            typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs(deterministic);
             jobIndex = -1;
             if (threadCount > 1)
             {

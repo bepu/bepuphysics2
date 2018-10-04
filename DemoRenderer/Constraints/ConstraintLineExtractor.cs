@@ -112,8 +112,8 @@ namespace DemoRenderer.Constraints
         public ConstraintLineExtractor()
         {
             lineExtractors = new TypeLineExtractor[32];
-            AllocateSlot(BallSocketTypeProcessor.BatchTypeId) =
-                new TypeLineExtractor<BallSocketLineExtractor, TwoBodyReferences, BallSocketPrestepData, BallSocketProjection, Vector3Wide>();
+            AllocateSlot(BallSocketTypeProcessor.BatchTypeId) = new TypeLineExtractor<BallSocketLineExtractor, TwoBodyReferences, BallSocketPrestepData, BallSocketProjection, Vector3Wide>();
+            AllocateSlot(WeldTypeProcessor.BatchTypeId) = new TypeLineExtractor<WeldLineExtractor, TwoBodyReferences, WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>();
             AllocateSlot(Contact1OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact1OneBodyLineExtractor, Vector<int>, Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses>();
             AllocateSlot(Contact2OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact2OneBodyLineExtractor, Vector<int>, Contact2OneBodyPrestepData, Contact2OneBodyProjection, Contact2AccumulatedImpulses>();
             AllocateSlot(Contact3OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact3OneBodyLineExtractor, Vector<int>, Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses>();
@@ -131,7 +131,7 @@ namespace DemoRenderer.Constraints
             AllocateSlot(Contact6NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact6NonconvexOneBodyLineExtractor, Vector<int>, Contact6NonconvexOneBodyPrestepData, Contact6NonconvexOneBodyProjection, Contact6NonconvexAccumulatedImpulses>();
             AllocateSlot(Contact7NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact7NonconvexOneBodyLineExtractor, Vector<int>, Contact7NonconvexOneBodyPrestepData, Contact7NonconvexOneBodyProjection, Contact7NonconvexAccumulatedImpulses>();
             AllocateSlot(Contact8NonconvexOneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact8NonconvexOneBodyLineExtractor, Vector<int>, Contact8NonconvexOneBodyPrestepData, Contact8NonconvexOneBodyProjection, Contact8NonconvexAccumulatedImpulses>();
-            
+
             AllocateSlot(Contact2NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact2NonconvexLineExtractor, TwoBodyReferences, Contact2NonconvexPrestepData, Contact2NonconvexProjection, Contact2NonconvexAccumulatedImpulses>();
             AllocateSlot(Contact3NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact3NonconvexLineExtractor, TwoBodyReferences, Contact3NonconvexPrestepData, Contact3NonconvexProjection, Contact3NonconvexAccumulatedImpulses>();
             AllocateSlot(Contact4NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact4NonconvexLineExtractor, TwoBodyReferences, Contact4NonconvexPrestepData, Contact4NonconvexProjection, Contact4NonconvexAccumulatedImpulses>();
@@ -172,6 +172,8 @@ namespace DemoRenderer.Constraints
                         for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
                         {
                             ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                            if (typeBatch.TypeId >= lineExtractors.Length)
+                                continue; //No registered extractor for this type, clearly.
                             var extractor = lineExtractors[typeBatch.TypeId];
                             var isContactBatch = PairCache.IsContactBatch(typeBatch.TypeId);
                             if (extractor != null && ((isContactBatch && showContacts) || (!isContactBatch && showConstraints)))

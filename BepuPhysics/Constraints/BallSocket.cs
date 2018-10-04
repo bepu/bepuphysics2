@@ -29,29 +29,19 @@ namespace BepuPhysics.Constraints
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var target = ref GatherScatter.GetOffsetInstance(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            GetFirst(ref target.LocalOffsetA.X) = LocalOffsetA.X;
-            GetFirst(ref target.LocalOffsetA.Y) = LocalOffsetA.Y;
-            GetFirst(ref target.LocalOffsetA.Z) = LocalOffsetA.Z;
-            GetFirst(ref target.LocalOffsetB.X) = LocalOffsetB.X;
-            GetFirst(ref target.LocalOffsetB.Y) = LocalOffsetB.Y;
-            GetFirst(ref target.LocalOffsetB.Z) = LocalOffsetB.Z;
-            GetFirst(ref target.SpringSettings.AngularFrequency) = SpringSettings.AngularFrequency;
-            GetFirst(ref target.SpringSettings.TwiceDampingRatio) = SpringSettings.TwiceDampingRatio;
+            ref var target = ref GetOffsetInstance(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            Vector3Wide.WriteFirst(LocalOffsetA, ref target.LocalOffsetA);
+            Vector3Wide.WriteFirst(LocalOffsetB, ref target.LocalOffsetB);
+            SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out BallSocket description)
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var source = ref GatherScatter.GetOffsetInstance(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            description.LocalOffsetA.X = GetFirst(ref source.LocalOffsetA.X);
-            description.LocalOffsetA.Y = GetFirst(ref source.LocalOffsetA.Y);
-            description.LocalOffsetA.Z = GetFirst(ref source.LocalOffsetA.Z);
-            description.LocalOffsetB.X = GetFirst(ref source.LocalOffsetB.X);
-            description.LocalOffsetB.Y = GetFirst(ref source.LocalOffsetB.Y);
-            description.LocalOffsetB.Z = GetFirst(ref source.LocalOffsetB.Z);
-            description.SpringSettings.AngularFrequency = GetFirst(ref source.SpringSettings.AngularFrequency);
-            description.SpringSettings.TwiceDampingRatio = GetFirst(ref source.SpringSettings.TwiceDampingRatio);
+            ref var source = ref GetOffsetInstance(ref Buffer<BallSocketPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            Vector3Wide.ReadFirst(source.LocalOffsetA, out description.LocalOffsetA);
+            Vector3Wide.ReadFirst(source.LocalOffsetB, out description.LocalOffsetB);
+            SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
         }
     }
 
@@ -86,7 +76,7 @@ namespace BepuPhysics.Constraints
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
             ref BallSocketPrestepData prestep, out BallSocketProjection projection)
         {
-            bodies.GatherPose(ref bodyReferences, count, out var localPositionB, out var orientationA, out var orientationB);
+            bodies.GatherPose(ref bodyReferences, count, out var offsetB, out var orientationA, out var orientationB);
             projection.InertiaA = inertiaA;
             projection.InertiaB = inertiaB;
 
@@ -133,8 +123,8 @@ namespace BepuPhysics.Constraints
             Symmetric3x3Wide.Scale(projection.EffectiveMass, effectiveMassCFMScale, out projection.EffectiveMass);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            Vector3Wide.Add(localPositionB, projection.OffsetB, out var localB);
-            Vector3Wide.Subtract(localB, projection.OffsetA, out var error);
+            Vector3Wide.Add(offsetB, projection.OffsetB, out var anchorB);
+            Vector3Wide.Subtract(anchorB, projection.OffsetA, out var error);
             Vector3Wide.Scale(error, positionErrorToVelocity, out projection.BiasVelocity);
 
             //NOTE:
