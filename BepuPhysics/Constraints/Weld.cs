@@ -118,10 +118,7 @@ namespace BepuPhysics.Constraints
             Symmetric3x3Wide.CompleteMatrixSandwich(xAB, jmjtB, out var jmjtD);
             var diagonalAdd = inertiaA.InverseMass + inertiaB.InverseMass;
             jmjtD.XX += diagonalAdd;
-            jmjtD.YX += diagonalAdd;
             jmjtD.YY += diagonalAdd;
-            jmjtD.ZX += diagonalAdd;
-            jmjtD.ZY += diagonalAdd;
             jmjtD.ZZ += diagonalAdd;
             Symmetric6x6Wide.Invert(jmjtA, jmjtB, jmjtD, out projection.EffectiveMass);
 
@@ -138,7 +135,6 @@ namespace BepuPhysics.Constraints
 
             Vector3Wide.Scale(positionError, positionErrorToVelocity, out projection.OffsetBiasVelocity);
             Vector3Wide.Scale(rotationErrorAxis, rotationErrorLength * positionErrorToVelocity, out projection.OrientationBiasVelocity);
-
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -168,7 +164,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Subtract(velocityB.Linear, negatedLinearChangeB, out velocityB.Linear); //note subtraction; the jacobian is -I
             
             Symmetric3x3Wide.TransformWithoutOverlap(orientationCSI, projection.InertiaB.InverseInertiaTensor, out var negatedAngularChangeB);
-            Vector3Wide.Subtract(velocityB.Angular, negatedAngularChangeB, out velocityB.Angular); //note subtraction; the jacobian is -I
+            Vector3Wide.Subtract(velocityB.Angular, negatedAngularChangeB, out velocityB.Angular); //note subtraction; the jacobian is -I        
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -188,8 +184,9 @@ namespace BepuPhysics.Constraints
             Vector3Wide.CrossWithoutOverlap(velocityA.Angular, projection.Offset, out var offsetAngularCSV);
             Vector3Wide.Add(offsetAngularCSV, offsetCSV, out offsetCSV);
 
-            Vector3Wide.Subtract(orientationCSV, projection.OrientationBiasVelocity, out orientationCSV);
-            Vector3Wide.Subtract(offsetCSV, projection.OffsetBiasVelocity, out offsetCSV);
+            //Note subtraction: this is computing biasVelocity - csv, and later we'll compute (biasVelocity-csv) - softness.
+            Vector3Wide.Subtract(projection.OrientationBiasVelocity, orientationCSV, out orientationCSV);
+            Vector3Wide.Subtract(projection.OffsetBiasVelocity, offsetCSV, out offsetCSV);
 
             Symmetric6x6Wide.TransformWithoutOverlap(orientationCSV, offsetCSV, projection.EffectiveMass, out var orientationCSI, out var offsetCSI);
             Vector3Wide.Scale(accumulatedImpulse.Offset, projection.SoftnessImpulseScale, out var offsetSoftness);
@@ -208,7 +205,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of ball socket constraints.
     /// </summary>
-    public class WeldTypeProcessor : TwoBodyTypeProcessor<BallSocketPrestepData, BallSocketProjection, Vector3Wide, BallSocketFunctions>
+    public class WeldTypeProcessor : TwoBodyTypeProcessor<WeldPrestepData, WeldProjection, WeldAccumulatedImpulses, WeldFunctions>
     {
         public const int BatchTypeId = 31;
     }

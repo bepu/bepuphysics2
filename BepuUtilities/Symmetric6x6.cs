@@ -61,9 +61,9 @@ namespace BepuUtilities
             result0.Y = v0.X * m.A.YX + v0.Y * m.A.YY + v0.Z * m.A.ZY + v1.X * m.B.Y.X + v1.Y * m.B.Y.Y + v1.Z * m.B.Y.Z;
             result0.Z = v0.X * m.A.ZX + v0.Y * m.A.ZY + v0.Z * m.A.ZZ + v1.X * m.B.Z.X + v1.Y * m.B.Z.Y + v1.Z * m.B.Z.Z;
 
-            result1.X = v0.X * m.B.X.X + v0.Y * m.B.Y.X + v0.Z * m.B.Z.X + v0.X * m.D.XX + v0.Y * m.D.YX + v0.Z * m.D.ZX;
-            result1.Y = v0.X * m.B.X.Y + v0.Y * m.B.Y.Y + v0.Z * m.B.Z.Y + v0.X * m.D.YX + v0.Y * m.D.YY + v0.Z * m.D.ZY;
-            result1.Z = v0.X * m.B.X.Z + v0.Y * m.B.Y.Z + v0.Z * m.B.Z.Z + v0.X * m.D.ZX + v0.Y * m.D.ZY + v0.Z * m.D.ZZ;
+            result1.X = v0.X * m.B.X.X + v0.Y * m.B.Y.X + v0.Z * m.B.Z.X + v1.X * m.D.XX + v1.Y * m.D.YX + v1.Z * m.D.ZX;
+            result1.Y = v0.X * m.B.X.Y + v0.Y * m.B.Y.Y + v0.Z * m.B.Z.Y + v1.X * m.D.YX + v1.Y * m.D.YY + v1.Z * m.D.ZY;
+            result1.Z = v0.X * m.B.X.Z + v0.Y * m.B.Y.Z + v0.Z * m.B.Z.Z + v1.X * m.D.ZX + v1.Y * m.D.ZY + v1.Z * m.D.ZZ;
         }
     }
 }

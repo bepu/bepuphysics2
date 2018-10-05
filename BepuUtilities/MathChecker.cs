@@ -220,6 +220,23 @@ namespace BepuUtilities
             m.Z.Validate(laneCount);
             m.W.Validate(laneCount);
         }
+        [Conditional("CHECKMATH")]
+        public static void Validate(this Symmetric3x3Wide m, int laneCount = -1)
+        {
+            m.XX.Validate(laneCount);
+            m.YX.Validate(laneCount);
+            m.YY.Validate(laneCount);
+            m.ZX.Validate(laneCount);
+            m.ZY.Validate(laneCount);
+            m.ZZ.Validate(laneCount);
+        }
+        [Conditional("CHECKMATH")]
+        public static void Validate(this Symmetric6x6Wide m, int laneCount = -1)
+        {
+            m.A.Validate(laneCount);
+            m.B.Validate(laneCount);
+            m.D.Validate(laneCount);
+        }
 
         [Conditional("CHECKMATH")]
         public static void Validate(this Vector2Wide v, Vector<int> laneMask)
@@ -260,6 +277,23 @@ namespace BepuUtilities
             m.Y.Validate(laneMask);
             m.Z.Validate(laneMask);
             m.W.Validate(laneMask);
+        }
+        [Conditional("CHECKMATH")]
+        public static void Validate(this Symmetric3x3Wide m, Vector<int> laneMask)
+        {
+            m.XX.Validate(laneMask);
+            m.YX.Validate(laneMask);
+            m.YY.Validate(laneMask);
+            m.ZX.Validate(laneMask);
+            m.ZY.Validate(laneMask);
+            m.ZZ.Validate(laneMask);
+        }
+        [Conditional("CHECKMATH")]
+        public static void Validate(this Symmetric6x6Wide m, Vector<int> laneMask)
+        {
+            m.A.Validate(laneMask);
+            m.B.Validate(laneMask);
+            m.D.Validate(laneMask);
         }
     }
 }
