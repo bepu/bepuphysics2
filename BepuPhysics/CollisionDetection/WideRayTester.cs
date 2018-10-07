@@ -17,7 +17,7 @@ namespace BepuPhysics.CollisionDetection
             where TShape : IConvexShape
             where TShapeWide : IShapeWide<TShape>
             where TRaySource : IRaySource
-            where TRayHitHandler : IShapeRayHitHandler
+            where TRayHitHandler : IShapeRayBatchHitHandler
         {
             RayWide rayWide;
             Vector<int> intersected;

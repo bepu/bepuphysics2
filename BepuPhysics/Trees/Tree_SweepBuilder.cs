@@ -63,7 +63,7 @@ namespace BepuPhysics.Trees
             for (int i = 1; i < lastIndex; ++i)
             {
                 var index = indexMap[i];
-                BoundingBox.CreateMerged(ref aMerged[i - 1], ref boundingBoxes[index], out aMerged[i]);
+                BoundingBox.CreateMerged(aMerged[i - 1], boundingBoxes[index], out aMerged[i]);
             }
 
             //Sweep from high to low.
@@ -78,7 +78,7 @@ namespace BepuPhysics.Trees
             {
                 int aIndex = i - 1;
                 var subtreeIndex = indexMap[i];
-                BoundingBox.CreateMerged(ref bMerged, ref boundingBoxes[subtreeIndex], out bMerged);
+                BoundingBox.CreateMerged(bMerged, boundingBoxes[subtreeIndex], out bMerged);
 
                 var aCost = i * ComputeBoundsMetric(ref aMerged[aIndex]);
                 var bCost = (count - i) * ComputeBoundsMetric(ref bMerged);

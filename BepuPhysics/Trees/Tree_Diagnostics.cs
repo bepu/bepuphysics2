@@ -27,7 +27,7 @@ namespace BepuPhysics.Trees
             for (int i = 0; i < leafCount; ++i)
             {
                 ref var child = ref rootChildren[i];
-                BoundingBox.CreateMerged(ref child.Min, ref child.Max, ref merged.Min, ref merged.Max, out merged.Min, out merged.Max);
+                BoundingBox.CreateMerged(child.Min, child.Max, merged.Min, merged.Max, out merged.Min, out merged.Max);
             }
             float rootMetric = ComputeBoundsMetric(ref merged);
 
@@ -86,7 +86,7 @@ namespace BepuPhysics.Trees
                 ref var child = ref children[i];
                 if (child.Min == badMinValue || child.Max == badMaxValue)
                     throw new Exception($"Node {nodeIndex} child {i} has a bad bounding box.");
-                BoundingBox.CreateMerged(ref mergedMin, ref mergedMax, ref child.Min, ref child.Max, out mergedMin, out mergedMax);
+                BoundingBox.CreateMerged(mergedMin, mergedMax, child.Min, child.Max, out mergedMin, out mergedMax);
                 if (child.Index >= 0)
                 {
                     if (child.Index >= nodeCount)

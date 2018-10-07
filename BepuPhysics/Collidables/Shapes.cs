@@ -60,7 +60,7 @@ namespace BepuPhysics.Collidables
             throw new InvalidOperationException("Nonconvex shapes are not required to have a maximum ardius or angular expansion implementation. This should only ever be called on convexes.");
         }
         public abstract bool RayTest(int shapeIndex, in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal);
-        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose rigidPose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose rigidPose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler;
 
         /// <summary>
         /// Gets a raw untyped pointer to a shape's data.

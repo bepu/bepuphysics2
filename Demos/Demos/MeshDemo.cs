@@ -124,7 +124,7 @@ namespace Demos.Demos
         }
 
 
-        static void LoadModel(ContentArchive content, BufferPool pool, string contentName, in Vector3 scaling, out Mesh mesh)
+        public static void LoadModel(ContentArchive content, BufferPool pool, string contentName, in Vector3 scaling, out Mesh mesh)
         {
             var meshContent = content.Load<MeshContent>(contentName);
             pool.Take<Triangle>(meshContent.Triangles.Length, out var triangles);

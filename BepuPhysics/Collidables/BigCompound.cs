@@ -46,7 +46,7 @@ namespace BepuPhysics.Collidables
             {
                 ref var child = ref Children[i];
                 Compound.ComputeChildBounds(Children[i], orientation, shapeBatches, out var childMin, out var childMax);
-                BoundingBox.CreateMerged(ref min, ref max, ref childMin, ref childMax, out min, out max);
+                BoundingBox.CreateMerged(min, max, childMin, childMax, out min, out max);
             }
         }
 
@@ -108,7 +108,7 @@ namespace BepuPhysics.Collidables
             return false;
         }
 
-        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, Shapes shapes, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, Shapes shapes, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler
         {
             //TODO: Note that we dispatch a bunch of scalar tests here. You could be more clever than this- batched tests are possible. 
             //May be worth creating a different traversal designed for low ray counts- might be able to get some benefit out of a semidynamic packet or something.

@@ -84,7 +84,7 @@ namespace BepuPhysics.Collidables
             {
                 ref var child = ref Children[i];
                 ComputeChildBounds(Children[i], orientation, shapeBatches, out var childMin, out var childMax);
-                BoundingBox.CreateMerged(ref min, ref max, ref childMin, ref childMax, out min, out max);
+                BoundingBox.CreateMerged(min, max, childMin, childMax, out min, out max);
             }
         }
 
@@ -118,7 +118,7 @@ namespace BepuPhysics.Collidables
             return t < float.MaxValue;
         }
 
-        public void RayTest<TRayHitHandler>(in RigidPose pose, Shapes shapeBatches, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public void RayTest<TRayHitHandler>(in RigidPose pose, Shapes shapeBatches, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler
         {
             for (int i = 0; i < Children.Length; ++i)
             {

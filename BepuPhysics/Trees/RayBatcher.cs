@@ -63,7 +63,7 @@ namespace BepuPhysics.Trees
         ushort* rayPointers;
         int rayCount;
 
-        internal RaySource(TreeRay* treeRays, RayData* rays, ushort* rayPointerStack, int rayCount)
+        public RaySource(TreeRay* treeRays, RayData* rays, ushort* rayPointerStack, int rayCount)
         {
             this.treeRays = treeRays;
             this.rays = rays;

@@ -163,7 +163,7 @@ namespace BepuPhysics
                     {
                         var min = new Vector3(sourceBundleMin.X[0], sourceBundleMin.Y[0], sourceBundleMin.Z[0]);
                         var max = new Vector3(sourceBundleMax.X[0], sourceBundleMax.Y[0], sourceBundleMax.Z[0]);
-                        BoundingBox.CreateMerged(ref *minPointer, ref *maxPointer, ref min, ref max, out *minPointer, out *maxPointer);
+                        BoundingBox.CreateMerged(*minPointer, *maxPointer,  min, max, out *minPointer, out *maxPointer);
                     }
                     else
                     {
@@ -197,6 +197,8 @@ namespace BepuPhysics
                 var minimumComponents = Vector3.Min(absMin, absMax);
                 var minimumRadius = MathHelper.Min(minimumComponents.X, MathHelper.Min(minimumComponents.Y, minimumComponents.Z));
                 BoundingBoxHelpers.ExpandBoundingBox(ref *min, ref *max, instance.Velocities.Linear, instance.Velocities.Angular, dt, maximumRadius, maximumRadius - minimumRadius, maximumAllowedExpansion);
+                *min += instance.Pose.Position;
+                *max += instance.Pose.Position;
             }
         }
 

@@ -291,7 +291,7 @@ namespace BepuPhysics.Trees
                                 for (int i = 0; i < 2; ++i)
                                 {
                                     ref var child = ref children[i];
-                                    BoundingBox.CreateMerged(ref child.Min, ref child.Max, ref merged.Min, ref merged.Max, out merged.Min, out merged.Max);
+                                    BoundingBox.CreateMerged(child.Min, child.Max, merged.Min, merged.Max, out merged.Min, out merged.Max);
                                 }
                                 var postmetric = ComputeBoundsMetric(ref merged);
                                 if (postmetric > 1e-9f)
@@ -312,7 +312,7 @@ namespace BepuPhysics.Trees
                                 for (int i = 0; i < 2; ++i)
                                 {
                                     ref var child = ref children[i];
-                                    BoundingBox.CreateMerged(ref child.Min, ref child.Max, ref childInParent->Min, ref childInParent->Max, out childInParent->Min, out childInParent->Max);
+                                    BoundingBox.CreateMerged(child.Min, child.Max,  childInParent->Min, childInParent->Max, out childInParent->Min, out childInParent->Max);
                                 }
                                 var postmetric = ComputeBoundsMetric(ref childInParent->Min, ref childInParent->Max);
                                 metanode->LocalCostChange += postmetric - premetric;

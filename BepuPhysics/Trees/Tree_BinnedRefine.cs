@@ -165,12 +165,12 @@ namespace BepuPhysics.Trees
                 leafCountB = 0;
                 for (int i = 0; i < splitIndex; ++i)
                 {
-                    BoundingBox.CreateMerged(ref a, ref resources.BoundingBoxes[localIndexMap[i]], out a);
+                    BoundingBox.CreateMerged(a, resources.BoundingBoxes[localIndexMap[i]], out a);
                     leafCountA += resources.LeafCounts[localIndexMap[i]];
                 }
                 for (int i = splitIndex; i < count; ++i)
                 {
-                    BoundingBox.CreateMerged(ref b, ref resources.BoundingBoxes[localIndexMap[i]], out b);
+                    BoundingBox.CreateMerged(b, resources.BoundingBoxes[localIndexMap[i]], out b);
                     leafCountB += resources.LeafCounts[localIndexMap[i]];
                 }
                 splitIndex += start;
@@ -235,9 +235,9 @@ namespace BepuPhysics.Trees
                 ++resources.BinSubtreeCountsY[y];
                 ++resources.BinSubtreeCountsZ[z];
 
-                BoundingBox.CreateMerged(ref resources.BinBoundingBoxesX[x], ref *subtreeBoundingBox, out resources.BinBoundingBoxesX[x]);
-                BoundingBox.CreateMerged(ref resources.BinBoundingBoxesY[y], ref *subtreeBoundingBox, out resources.BinBoundingBoxesY[y]);
-                BoundingBox.CreateMerged(ref resources.BinBoundingBoxesZ[z], ref *subtreeBoundingBox, out resources.BinBoundingBoxesZ[z]);
+                BoundingBox.CreateMerged(resources.BinBoundingBoxesX[x], *subtreeBoundingBox, out resources.BinBoundingBoxesX[x]);
+                BoundingBox.CreateMerged(resources.BinBoundingBoxesY[y], *subtreeBoundingBox, out resources.BinBoundingBoxesY[y]);
+                BoundingBox.CreateMerged(resources.BinBoundingBoxesZ[z], *subtreeBoundingBox, out resources.BinBoundingBoxesZ[z]);
             }
 
             //Determine split axes for all axes simultaneously.
@@ -256,9 +256,9 @@ namespace BepuPhysics.Trees
                 resources.ALeafCountsX[i] = resources.BinLeafCountsX[i] + resources.ALeafCountsX[previousIndex];
                 resources.ALeafCountsY[i] = resources.BinLeafCountsY[i] + resources.ALeafCountsY[previousIndex];
                 resources.ALeafCountsZ[i] = resources.BinLeafCountsZ[i] + resources.ALeafCountsZ[previousIndex];
-                BoundingBox.CreateMerged(ref resources.AMergedX[previousIndex], ref resources.BinBoundingBoxesX[i], out resources.AMergedX[i]);
-                BoundingBox.CreateMerged(ref resources.AMergedY[previousIndex], ref resources.BinBoundingBoxesY[i], out resources.AMergedY[i]);
-                BoundingBox.CreateMerged(ref resources.AMergedZ[previousIndex], ref resources.BinBoundingBoxesZ[i], out resources.AMergedZ[i]);
+                BoundingBox.CreateMerged(resources.AMergedX[previousIndex], resources.BinBoundingBoxesX[i], out resources.AMergedX[i]);
+                BoundingBox.CreateMerged(resources.AMergedY[previousIndex], resources.BinBoundingBoxesY[i], out resources.AMergedY[i]);
+                BoundingBox.CreateMerged(resources.AMergedZ[previousIndex], resources.BinBoundingBoxesZ[i], out resources.AMergedZ[i]);
             }
 
             //Sweep from high to low.
@@ -281,9 +281,9 @@ namespace BepuPhysics.Trees
             for (int i = lastIndex; i >= 1; --i)
             {
                 int aIndex = i - 1;
-                BoundingBox.CreateMerged(ref bMergedX, ref resources.BinBoundingBoxesX[i], out bMergedX);
-                BoundingBox.CreateMerged(ref bMergedY, ref resources.BinBoundingBoxesY[i], out bMergedY);
-                BoundingBox.CreateMerged(ref bMergedZ, ref resources.BinBoundingBoxesZ[i], out bMergedZ);
+                BoundingBox.CreateMerged(bMergedX, resources.BinBoundingBoxesX[i], out bMergedX);
+                BoundingBox.CreateMerged(bMergedY, resources.BinBoundingBoxesY[i], out bMergedY);
+                BoundingBox.CreateMerged(bMergedZ, resources.BinBoundingBoxesZ[i], out bMergedZ);
                 bLeafCountX += resources.BinLeafCountsX[i];
                 bLeafCountY += resources.BinLeafCountsY[i];
                 bLeafCountZ += resources.BinLeafCountsZ[i];

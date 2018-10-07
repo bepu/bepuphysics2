@@ -22,7 +22,6 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(0, 4, 15);
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
-            Simulation.Solver.IterationCount = 100;
 
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 

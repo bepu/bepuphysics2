@@ -218,6 +218,6 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public class Weld2TypeProcessor : TwoBodyTypeProcessor<Weld2PrestepData, Weld2Projection, Weld2AccumulatedImpulses, Weld2Functions>
     {
-        public const int BatchTypeId = 32;
+        public const int BatchTypeId = 33;
     }
 }

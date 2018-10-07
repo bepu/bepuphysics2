@@ -58,7 +58,7 @@ namespace BepuPhysics.Trees
                 //Compute the new bounding box for this node.
                 var parent = nodes + metanode->Parent;
                 ref var childInParent = ref (&parent->A)[metanode->IndexInParent];
-                BoundingBox.CreateMerged(ref node->A.Min, ref node->A.Max, ref node->B.Min, ref node->B.Max, out childInParent.Min, out childInParent.Max);
+                BoundingBox.CreateMerged(node->A.Min, node->A.Max, node->B.Min, node->B.Max, out childInParent.Min, out childInParent.Max);
                 --childInParent.LeafCount;
                 node = parent;
                 metanode = metanodes + metanode->Parent;

@@ -89,7 +89,7 @@ namespace BepuUtilities
         /// <param name="min">Minimum of the merged bounding box.</param>
         /// <param name="max">Maximum of the merged bounding box.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateMerged(ref Vector3 minA, ref Vector3 maxA, ref Vector3 minB, ref Vector3 maxB, out Vector3 min, out Vector3 max)
+        public static void CreateMerged(in Vector3 minA, in Vector3 maxA, in Vector3 minB, in Vector3 maxB, out Vector3 min, out Vector3 max)
         {
             min = Vector3.Min(minA, minB);
             max = Vector3.Max(maxA, maxB);
@@ -102,9 +102,9 @@ namespace BepuUtilities
         /// <param name="b">Second bounding box to contain.</param>
         /// <param name="merged">Bounding box to contain both input boxes.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateMerged(ref BoundingBox a, ref BoundingBox b, out BoundingBox merged)
+        public static void CreateMerged(in BoundingBox a, in BoundingBox b, out BoundingBox merged)
         {
-            CreateMerged(ref a.Min, ref a.Max, ref b.Min, ref b.Max, out merged.Min, out merged.Max);
+            CreateMerged(a.Min, a.Max, b.Min, b.Max, out merged.Min, out merged.Max);
         }
 
         /// <summary>

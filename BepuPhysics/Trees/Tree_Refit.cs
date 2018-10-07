@@ -24,7 +24,7 @@ namespace BepuPhysics.Trees
             {
                 Refit(b.Index, out b.Min, out b.Max);
             }
-            BoundingBox.CreateMerged(ref a.Min, ref a.Max, ref b.Min, ref b.Max, out min, out max);
+            BoundingBox.CreateMerged(a.Min, a.Max, b.Min, b.Max, out min, out max);
         }
         
         public unsafe void Refit()

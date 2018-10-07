@@ -30,7 +30,7 @@ namespace BepuPhysics.Trees
             {
                 childChange += RefitAndMeasure(ref b);
             }
-            BoundingBox.CreateMerged(ref a.Min, ref a.Max, ref b.Min, ref b.Max, out child.Min, out child.Max);
+            BoundingBox.CreateMerged(a.Min, a.Max, b.Min, b.Max, out child.Min, out child.Max);
 
             var postmetric = ComputeBoundsMetric(ref child.Min, ref child.Max);
             return postmetric - premetric + childChange; //TODO: would clamping produce a superior result?
@@ -76,7 +76,7 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            BoundingBox.CreateMerged(ref a.Min, ref a.Max, ref b.Min, ref b.Max, out child.Min, out child.Max);
+            BoundingBox.CreateMerged(a.Min, a.Max, b.Min, b.Max, out child.Min, out child.Max);
 
 
             var postmetric = ComputeBoundsMetric(ref child.Min, ref child.Max);
@@ -113,7 +113,7 @@ namespace BepuPhysics.Trees
                         childChange += RefitAndMark(ref child, leafCountThreshold, ref refinementCandidates, intPool);
                     }
                 }
-                BoundingBox.CreateMerged(ref child.Min, ref child.Max, ref merged.Min, ref merged.Max, out merged.Min, out merged.Max);
+                BoundingBox.CreateMerged(child.Min, child.Max, merged.Min, merged.Max, out merged.Min, out merged.Max);
             }
 
             var postmetric = ComputeBoundsMetric(ref merged);

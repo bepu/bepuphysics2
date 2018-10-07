@@ -18,6 +18,8 @@ namespace BepuPhysics
         //There may be an argument for the matrix variant to ALSO be stored for some bandwidth-unconstrained stages, but don't worry about that until there's a reason to worry about it.
         public Quaternion Orientation;
 
+        public static RigidPose Identity { get; } = new RigidPose(new Vector3());
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public RigidPose(in Vector3 position, in Quaternion orientation)
         {
@@ -30,6 +32,7 @@ namespace BepuPhysics
             Position = position;
             Orientation = Quaternion.Identity;
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Transform(in Vector3 v, in RigidPose pose, out Vector3 result)

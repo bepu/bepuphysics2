@@ -124,7 +124,7 @@ namespace BepuPhysics.CollisionDetection
             public Simulation Simulation;
             public ShapeHitHandler HitHandler;
 
-            public struct ShapeHitHandler : IShapeRayHitHandler
+            public struct ShapeHitHandler : IShapeRayBatchHitHandler
             {
                 public TRayHitHandler HitHandler;
                 public CollidableReference Reference;
