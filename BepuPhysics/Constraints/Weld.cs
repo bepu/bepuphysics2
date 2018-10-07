@@ -114,26 +114,13 @@ namespace BepuPhysics.Constraints
             Symmetric3x3Wide.Add(inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, out var jmjtA);
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out projection.Offset);
             Matrix3x3Wide.CreateCrossProduct(projection.Offset, out var xAB);
-            Symmetric3x3Wide.MultiplyByTransposed(inertiaA.InverseInertiaTensor, xAB, out var jmjtB);
-            //Ia^-1 * xABT
-            Matrix3x3Wide.MultiplyWithoutOverlap(xAB, jmjtB, out var test);
-            Symmetric3x3Wide.CompleteMatrixSandwich(xAB, jmjtB, out var jmjtD);
-            Debug.Assert(test.X.X[0] == jmjtD.XX[0]);
-            Debug.Assert(test.Y.X[0] == jmjtD.YX[0]);
-            Debug.Assert(test.Y.Y[0] == jmjtD.YY[0]);
-            Debug.Assert(test.Z.X[0] == jmjtD.ZX[0]);
-            Debug.Assert(test.Z.Y[0] == jmjtD.ZY[0]);
-            Debug.Assert(test.Z.Z[0] == jmjtD.ZZ[0]);
+            Symmetric3x3Wide.Multiply(inertiaA.InverseInertiaTensor, xAB, out var jmjtB);
+            Symmetric3x3Wide.CompleteMatrixSandwichTranspose(xAB, jmjtB, out var jmjtD);
             var diagonalAdd = inertiaA.InverseMass + inertiaB.InverseMass;
             jmjtD.XX += diagonalAdd;
             jmjtD.YY += diagonalAdd;
             jmjtD.ZZ += diagonalAdd;
             Symmetric6x6Wide.Invert(jmjtA, jmjtB, jmjtD, out projection.EffectiveMass);
-            Vector3Wide.Broadcast(new Vector3(1, 2, 3), out var testV0);
-            Vector3Wide.Broadcast(new Vector3(4, 5, 6), out var testV1);
-            Symmetric6x6Wide.TransformWithoutOverlap(testV0, testV1, projection.EffectiveMass, out var r0, out var r1);
-            Symmetric6x6Wide.Invert(projection.EffectiveMass, out var inverseEffectiveMass);
-            Symmetric6x6Wide.TransformWithoutOverlap(r0, r1, inverseEffectiveMass, out var shouldBeTestV0, out var shouldBeTestV1);
 
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             Symmetric6x6Wide.Scale(projection.EffectiveMass, effectiveMassCFMScale, out projection.EffectiveMass);
@@ -148,8 +135,6 @@ namespace BepuPhysics.Constraints
 
             Vector3Wide.Scale(positionError, positionErrorToVelocity, out projection.OffsetBiasVelocity);
             Vector3Wide.Scale(rotationErrorAxis, rotationErrorLength * positionErrorToVelocity, out projection.OrientationBiasVelocity);
-            projection.OffsetBiasVelocity = new Vector3Wide();
-            projection.OrientationBiasVelocity = new Vector3Wide();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -170,7 +155,7 @@ namespace BepuPhysics.Constraints
             //Note order of cross relative to the SolveIteration. 
             //SolveIteration transforms velocity into constraint space velocity using JT, while this converts constraint space to world space using J.
             //The elements are transposed, and transposed skew symmetric matrices are negated. Flipping the cross product is equivalent to a negation.
-            Vector3Wide.CrossWithoutOverlap(offsetCSI, projection.Offset, out var offsetWorldImpulse);
+            Vector3Wide.CrossWithoutOverlap(projection.Offset, offsetCSI, out var offsetWorldImpulse);
             Vector3Wide.Add(offsetWorldImpulse, orientationCSI, out var angularImpulseA);
             Symmetric3x3Wide.TransformWithoutOverlap(angularImpulseA, projection.InertiaA.InverseInertiaTensor, out var angularChangeA);
             Vector3Wide.Add(velocityA.Angular, angularChangeA, out velocityA.Angular);
@@ -185,8 +170,7 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref WeldProjection projection, ref WeldAccumulatedImpulses accumulatedImpulse)
         {
-            accumulatedImpulse = new WeldAccumulatedImpulses();
-            //ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse.Orientation, ref accumulatedImpulse.Offset);
+            ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse.Orientation, ref accumulatedImpulse.Offset);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -197,7 +181,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Subtract(velocityA.Angular, velocityB.Angular, out var orientationCSV);
             Vector3Wide.Subtract(velocityA.Linear, velocityB.Linear, out var offsetCSV);
 
-            Vector3Wide.CrossWithoutOverlap(projection.Offset, velocityA.Angular, out var offsetAngularCSV);
+            Vector3Wide.CrossWithoutOverlap(velocityA.Angular, projection.Offset,  out var offsetAngularCSV);
             Vector3Wide.Add(offsetCSV, offsetAngularCSV, out offsetCSV);
 
             //Note subtraction: this is computing biasVelocity - csv, and later we'll compute (biasVelocity-csv) - softness.

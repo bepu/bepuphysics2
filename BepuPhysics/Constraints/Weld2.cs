@@ -179,7 +179,6 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref Weld2Projection projection, ref Weld2AccumulatedImpulses accumulatedImpulse)
         {
-            accumulatedImpulse = new Weld2AccumulatedImpulses();
             ApplyOrientationImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse.Orientation);
             ApplyOffsetImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse.Offset);
         }
