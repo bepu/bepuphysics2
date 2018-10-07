@@ -329,13 +329,32 @@ namespace BepuUtilities
         }
 
         /// <summary>
+        /// Computes result = a * transpose(b), where a = b * M for some symmetric matrix M.
+        /// </summary>
+        /// <param name="a">Some matrix equal to b * M for some symmetric matrix M.</param>
+        /// <param name="b">Matrix used to sandwich the original matrix M, to be transposed.</param>
+        /// <param name="result">Complete result of b * M * transpose(b).</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CompleteMatrixSandwichByTranspose(in Matrix3x3Wide a, in Matrix3x3Wide b, out Symmetric3x3Wide result)
+        {
+            result.XX = a.X.X * b.X.X + a.X.Y * b.X.Y + a.X.Z * b.X.Z;
+
+            result.YX = a.Y.X * b.X.X + a.Y.Y * b.X.Y + a.Y.Z * b.X.Z;
+            result.YY = a.Y.X * b.Y.X + a.Y.Y * b.Y.Y + a.Y.Z * b.Y.Z;
+
+            result.ZX = a.Z.X * b.X.X + a.Z.Y * b.X.Y + a.Z.Z * b.X.Z;
+            result.ZY = a.Z.X * b.Y.X + a.Z.Y * b.Y.Y + a.Z.Z * b.Y.Z;
+            result.ZZ = a.Z.X * b.Z.X + a.Z.Y * b.Z.Y + a.Z.Z * b.Z.Z;
+        }
+
+        /// <summary>
         /// Computes result = transpose(a) * b, where b = M * a for some symmetric matrix M.
         /// </summary>
         /// <param name="a">Matrix used to sandwich the original matrix M.</param>
         /// <param name="b">Some matrix equal to M * a for some symmetric matrix M.</param>
         /// <param name="result">Complete result of transpose(a) * M * a.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CompleteMatrixSandwichTransposed(in Matrix3x3Wide a, in Matrix3x3Wide b, out Symmetric3x3Wide result)
+        public static void CompleteMatrixSandwichTranspose(in Matrix3x3Wide a, in Matrix3x3Wide b, out Symmetric3x3Wide result)
         {
             result.XX = a.X.X * b.X.X + a.Y.X * b.Y.X + a.Z.X * b.Z.X;
 

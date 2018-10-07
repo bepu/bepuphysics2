@@ -22,6 +22,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(0, 4, 15);
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
+            Simulation.Solver.IterationCount = 100;
 
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
@@ -105,14 +106,34 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, b, new AngularMotor { TargetVelocityLocalA = new Vector3(0, 1, 0), Settings = new MotorSettings(15, 0.0001f) });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(14, 3, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(14, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var aDescription = new BodyDescription(new Vector3(14, 3, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(new Vector3(14, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f));
+                //aDescription.Velocity.Angular = new Vector3(0, 0, 5);
+                var a = Simulation.Bodies.Add(aDescription);
+                var b = Simulation.Bodies.Add(bDescription);
                 Simulation.Solver.Add(a, b, new Weld { LocalOffset = new Vector3(0, 2, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
+            }
+            {
+                var aDescription = new BodyDescription(new Vector3(17, 3, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(new Vector3(17, 5, 0), new BodyInertia(), Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f));
+                //aDescription.Velocity.Angular = new Vector3(0, 0, 5);
+                var a = Simulation.Bodies.Add(aDescription);
+                var b = Simulation.Bodies.Add(bDescription);
+                Simulation.Solver.Add(a, b, new Weld2 { LocalOffset = new Vector3(0, 2, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
             }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
 
 
+        }
+
+        public override void Update(Input input, float dt)
+        {
+            if (input.WasPushed(OpenTK.Input.Key.P))
+            {
+                Console.Write($"4df");
+            }
+            base.Update(input, dt);
         }
 
     }
