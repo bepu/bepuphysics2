@@ -103,6 +103,7 @@ namespace BepuPhysics
 
         void AddCollidableToBroadPhase(int bodyHandle, in RigidPose pose, in BodyInertia localInertia, ref Collidable collidable)
         {
+            Debug.Assert(collidable.Shape.Exists);
             //This body has a collidable; stick it in the broadphase.
             //Note that we have to calculate an initial bounding box for the broad phase to be able to insert it efficiently.
             //(In the event of batch adds, you'll want to use batched AABB calculations or just use cached values.)
@@ -122,6 +123,7 @@ namespace BepuPhysics
         }
         void RemoveCollidableFromBroadPhase(int activeBodyIndex, ref Collidable collidable)
         {
+            Debug.Assert(collidable.Shape.Exists && collidable.BroadPhaseIndex >= 0);
             var removedBroadPhaseIndex = collidable.BroadPhaseIndex;
             //The below removes a body's collidable from the broad phase and adjusts the broad phase index of any moved leaf.
             if (broadPhase.RemoveActiveAt(removedBroadPhaseIndex, out var movedLeaf))

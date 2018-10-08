@@ -152,8 +152,11 @@ namespace DemoRenderer.ShapeDrawing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void AddShape(Shapes shapes, TypedIndex shapeIndex, ref RigidPose pose, in Vector3 color)
         {
-            shapes[shapeIndex.Type].GetShapeData(shapeIndex.Index, out var shapeData, out _);
-            AddShape(shapeData, shapeIndex.Type, shapes, ref pose, color);
+            if (shapeIndex.Exists)
+            {
+                shapes[shapeIndex.Type].GetShapeData(shapeIndex.Index, out var shapeData, out _);
+                AddShape(shapeData, shapeIndex.Type, shapes, ref pose, color);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

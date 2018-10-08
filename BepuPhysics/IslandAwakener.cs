@@ -268,6 +268,7 @@ namespace BepuPhysics
                 case PhaseOneJobType.CopyBodyRegion:
                     {
                         //Since we already preallocated everything during the job preparation, all we have to do is copy from the sleeping set location.
+                        //Note that the broad phase index associated with a body is not updated here. That's handled in phase 2; this just puts the rest of the data into position.
                         ref var sourceSet = ref bodies.Sets[job.SourceSet];
                         ref var targetSet = ref bodies.ActiveSet;
                         sourceSet.Collidables.CopyTo(job.SourceStart, ref targetSet.Collidables, job.TargetStart, job.Count);

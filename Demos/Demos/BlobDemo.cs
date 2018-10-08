@@ -1,5 +1,6 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuPhysics.Constraints;
 using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Collections;
@@ -14,6 +15,7 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos
 {
@@ -484,7 +486,7 @@ namespace Demos.Demos
             for (int i = 0; i < tetrahedraVertices.Length; ++i)
             {
                 ref var index = ref vertexIndices[i];
-                tetrahedraVertices[i] = new Vector3(index.X, index.Y, index.Z) * inverseCellSize + min;
+                tetrahedraVertices[i] = new Vector3(index.X, index.Y, index.Z) * cellSize + min;
             }
 
 
@@ -508,20 +510,8 @@ namespace Demos.Demos
                 ++vertexEdgeCounts[b];
             }
         }
-        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        private unsafe void CreateDeformable(in Vector3 position, float cellSize, ref Buffer<Vector3> vertices, ref Buffer<CellVertexIndices> cellVertexIndices)
         {
-            camera.Position = new Vector3(-30, 8, -110);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
-
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
-
-            //MeshDemo.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(10), out var mesh);
-            //Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
-
-            var meshContent = content.Load<MeshContent>("Content\\newt.obj");
-            DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, 0.25f, BufferPool, out var vertices, out var cellVertexIndices, out var tetrahedraVertexIndices);
-
             BufferPool.Take<int>(vertices.Length, out var vertexEdgeCounts);
             vertexEdgeCounts.Clear(0, vertices.Length);
             var cellEdgePool = BufferPool.SpecializeFor<Int2>();
@@ -547,10 +537,49 @@ namespace Demos.Demos
             }
 
             BufferPool.Take<int>(vertices.Length, out var vertexHandles);
+            var vertexShape = new Sphere(cellSize * 0.5f);
+            vertexShape.ComputeInertia(1, out var vertexInertia);
+            var vertexShapeIndex = Simulation.Shapes.Add(vertexShape);
             for (int i = 0; i < vertices.Length; ++i)
             {
-
+                vertexHandles[i] = Simulation.Bodies.Add(new BodyDescription(
+                    position + vertices[i], vertexInertia,
+                    //Bodies don't have to have collidables. Take advantage of this for all the internal vertices.
+                    vertexEdgeCounts[i] == 6 ? new TypedIndex() : vertexShapeIndex, 0.1f,
+                    new BodyActivityDescription(0.01f)));
             }
+
+            for (int i = 0; i < cellEdges.Count; ++i)
+            {
+                ref var edge = ref cellEdges[i];
+                var offset = vertices[edge.Y] - vertices[edge.X];
+                Simulation.Solver.Add(vertexHandles[edge.X], vertexHandles[edge.Y],
+                    new Weld
+                    {
+                        LocalOffset = offset,
+                        LocalOrientation = Quaternion.Identity,
+                        SpringSettings = new SpringSettings(30, 1)
+                    });
+            }
+
+            BufferPool.Return(ref vertexEdgeCounts);
+            cellEdges.Dispose(BufferPool.SpecializeFor<Int2>(), BufferPool.SpecializeFor<int>());
+        }
+        public unsafe override void Initialize(ContentArchive content, Camera camera)
+        {
+            camera.Position = new Vector3(-5, 2, -5);
+            camera.Yaw = MathHelper.Pi * 3f / 4;
+
+            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
+            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+
+            //MeshDemo.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(10), out var mesh);
+            //Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
+
+            var meshContent = content.Load<MeshContent>("Content\\newt.obj");
+            float cellSize = 0.1f;
+            DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool, out var vertices, out var cellVertexIndices, out var tetrahedraVertexIndices);
+            CreateDeformable(new Vector3(0, 2, 0), cellSize, ref vertices, ref cellVertexIndices);
 
             var staticShape = new Box(1500, 1, 1500);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);

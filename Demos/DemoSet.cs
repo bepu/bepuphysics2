@@ -39,6 +39,8 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<BlobDemo>();
+            AddOption<ConstraintTestDemo>();
             AddOption<PyramidDemo>();
             AddOption<RagdollDemo>();
             AddOption<CompoundTestDemo>();
@@ -50,8 +52,6 @@ namespace Demos
             AddOption<ShapePileDemo>();
             AddOption<FountainStressTestDemo>();
             AddOption<SolverBatchTestDemo>();
-            AddOption<BlobDemo>();
-            AddOption<ConstraintTestDemo>();
         }
 
         public int Count { get { return options.Count; } }

@@ -367,12 +367,15 @@ namespace BepuPhysics
                         targetSet.Poses[targetIndex] = sourceSet.Poses[sourceIndex];
                         targetSet.Velocities[targetIndex] = sourceSet.Velocities[sourceIndex];
 
-                        //Gather the broad phase data so that the later active set removal phase can stick it into the static broad phase structures.
-                        ref var broadPhaseData = ref inactiveSetReference.BroadPhaseData[targetIndex];
-                        broadPhaseData.Reference = broadPhase.activeLeaves[sourceCollidable.BroadPhaseIndex];
-                        broadPhase.GetActiveBoundsPointers(sourceCollidable.BroadPhaseIndex, out var minPtr, out var maxPtr);
-                        broadPhaseData.Bounds.Min = *minPtr;
-                        broadPhaseData.Bounds.Max = *maxPtr;
+                        if (sourceCollidable.Shape.Exists)
+                        {
+                            //Gather the broad phase data so that the later active set removal phase can stick it into the static broad phase structures.
+                            ref var broadPhaseData = ref inactiveSetReference.BroadPhaseData[targetIndex];
+                            broadPhaseData.Reference = broadPhase.activeLeaves[sourceCollidable.BroadPhaseIndex];
+                            broadPhase.GetActiveBoundsPointers(sourceCollidable.BroadPhaseIndex, out var minPtr, out var maxPtr);
+                            broadPhaseData.Bounds.Min = *minPtr;
+                            broadPhaseData.Bounds.Max = *maxPtr;
+                        }
                     }
                 }
                 else
@@ -475,6 +478,11 @@ namespace BepuPhysics
                                 {
                                     ref var data = ref setReference.BroadPhaseData[bodyIndex];
                                     collidable.BroadPhaseIndex = broadPhase.AddStatic(data.Reference, ref data.Bounds);
+                                }
+                                else
+                                {
+                                    //This isn't strictly required- if there is no shape, the broad phase index should not be used. But it helps catch invalid usages.
+                                    collidable.BroadPhaseIndex = -1;
                                 }
                             }
                         }
