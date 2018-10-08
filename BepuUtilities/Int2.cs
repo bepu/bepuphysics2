@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BepuUtilities.Collections;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
@@ -6,7 +7,7 @@ namespace BepuUtilities
     /// <summary>
     /// Provides simple 2d cell hashing.
     /// </summary>
-    public struct Int2 : IEquatable<Int2>
+    public struct Int2 : IEquatable<Int2>, IEqualityComparerRef<Int2>
     {
         public int X;
         public int Y;
@@ -55,6 +56,16 @@ namespace BepuUtilities
             return $"{{{X}, {Y}}}";
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Hash(ref Int2 item)
+        {
+            return item.GetHashCode();
+        }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(ref Int2 a, ref Int2 b)
+        {
+            return a.X == b.X && a.Y == b.Y;
+        }
     }
 }

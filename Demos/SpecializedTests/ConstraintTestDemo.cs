@@ -106,7 +106,7 @@ namespace Demos.SpecializedTests
             }
             {
                 var aDescription = new BodyDescription(new Vector3(14, 3, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(new Vector3(14, 15, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(new Vector3(14, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f));
                 //aDescription.Velocity.Angular = new Vector3(0, 0, 5);
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
@@ -114,7 +114,7 @@ namespace Demos.SpecializedTests
             }
             {
                 var aDescription = new BodyDescription(new Vector3(17, 3, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(new Vector3(17, 15, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(new Vector3(17, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f));
                 //aDescription.Velocity.Angular = new Vector3(0, 0, 5);
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
