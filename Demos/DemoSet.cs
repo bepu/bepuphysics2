@@ -39,7 +39,7 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<BlobDemo>();
+            AddOption<NewtDemo>();
             AddOption<ConstraintTestDemo>();
             AddOption<PyramidDemo>();
             AddOption<RagdollDemo>();

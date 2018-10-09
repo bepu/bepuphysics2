@@ -518,7 +518,7 @@ namespace Demos.Demos
             if (a.instanceId != b.instanceId)
                 return true;
             //Disallow collisions between vertices which are near each other. We measure distance as max(abs(ax - bx), abs(ay - by), abs(az - bz)).
-            const int minimumDistance = 2;
+            const int minimumDistance = 3;
             const int mask = (1 << 10) - 1;
             var ax = a.localIndices & mask;
             var bx = b.localIndices & mask;
@@ -599,7 +599,7 @@ namespace Demos.Demos
     /// <summary>
     /// Some blobs composed of springy welds and volume preservation constraints.
     /// </summary>
-    public class BlobDemo : Demo
+    public class NewtDemo : Demo
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TryAddEdge(int a, int b, ref QuickSet<Int2, Buffer<Int2>, Buffer<int>, Int2> edges, ref Buffer<int> vertexEdgeCounts, BufferPool<Int2> edgePool, BufferPool<int> tablePool)
@@ -610,7 +610,7 @@ namespace Demos.Demos
                 ++vertexEdgeCounts[b];
             }
         }
-        private unsafe void CreateDeformable(in Vector3 position, float cellSize, float frequency, float dampingRatio, int instanceId,
+        private unsafe void CreateDeformable(in Vector3 position, in Quaternion orientation, float cellSize, float frequency, float dampingRatio, int instanceId,
             BodyProperty<DeformableCollisionFilter> filters, ref Buffer<Vector3> vertices, ref CellSet vertexSpatialIndices, ref Buffer<CellVertexIndices> cellVertexIndices)
         {
             BufferPool.Take<int>(vertices.Length, out var vertexEdgeCounts);
@@ -638,13 +638,13 @@ namespace Demos.Demos
             }
 
             BufferPool.Take<int>(vertices.Length, out var vertexHandles);
-            var vertexShape = new Sphere(cellSize * 0.5f);
+            var vertexShape = new Sphere(cellSize * 0.7f);
             vertexShape.ComputeInertia(1, out var vertexInertia);
             var vertexShapeIndex = Simulation.Shapes.Add(vertexShape);
             for (int i = 0; i < vertices.Length; ++i)
             {
                 vertexHandles[i] = Simulation.Bodies.Add(new BodyDescription(
-                    position + vertices[i], vertexInertia,
+                    position + Quaternion.Transform(vertices[i], orientation), orientation, vertexInertia,
                     //Bodies don't have to have collidables. Take advantage of this for all the internal vertices.
                     vertexEdgeCounts[i] == 6 ? new TypedIndex() : vertexShapeIndex, 0.1f,
                     new BodyActivityDescription(0.01f)));
@@ -670,26 +670,27 @@ namespace Demos.Demos
         }
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(-5, 2, -5);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Position = new Vector3(-5, 2, 5);
+            camera.Yaw = MathHelper.Pi / 4;
 
             var filters = new BodyProperty<DeformableCollisionFilter>();
             Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters });
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
-            //MeshDemo.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(10), out var mesh);
-            //Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
-
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
-            float cellSize = 0.05f;
-            DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool, 
+            float cellSize = 0.1f;
+            DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool,
                 out var vertices, out var vertexSpatialIndices, out var cellVertexIndices, out var tetrahedraVertexIndices);
-            CreateDeformable(new Vector3(0, 20, 0), cellSize, 30, 1f, 0, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices);
+            CreateDeformable(new Vector3(0, 5, 0), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.15f), cellSize, 30, 1f, 0, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices);
+            CreateDeformable(new Vector3(0, 8, 0), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), -MathF.PI * 0.5f), cellSize, 30, 1f, 1, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices);
 
             BufferPool.Return(ref vertices);
             vertexSpatialIndices.Dispose(BufferPool.SpecializeFor<Cell>(), BufferPool.SpecializeFor<int>());
             BufferPool.Return(ref cellVertexIndices);
             BufferPool.Return(ref tetrahedraVertexIndices);
+
+            BodyDescription.Create(new Vector3(0, 100, -1.5f), new Sphere(5), Simulation.Shapes, 500, out var ouch);
+            Simulation.Bodies.Add(ouch);
 
             var staticShape = new Box(1500, 1, 1500);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
