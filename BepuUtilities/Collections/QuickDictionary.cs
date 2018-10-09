@@ -82,6 +82,11 @@ namespace BepuUtilities.Collections
         public int TableMask;
 
         /// <summary>
+        /// Desired size of the table relative to the size of the key/value spans in terms of a power of 2. Table capacity target will be elementCapacityTarget * 2^TablePowerOffset.
+        /// </summary>
+        public int TablePowerOffset;
+
+        /// <summary>
         /// Backing memory of the dictionary's table. Values are distributed according to the EqualityComparer's hash function.
         /// Slots containing 0 are unused and point to nothing. Slots containing higher values are equal to one plus the index of an element in the Span.
         /// </summary>
@@ -136,15 +141,17 @@ namespace BepuUtilities.Collections
         /// <param name="initialValueSpan">Span to use as backing memory of the dictionary values.</param>
         /// <param name="initialTableSpan">Span to use as backing memory of the table. Must be zeroed.</param>
         /// <param name="comparer">Comparer to use for the dictionary.</param>
+        /// <param name="tablePowerOffset">Target size of the table relative to the number of stored elements.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickDictionary(ref TKeySpan initialKeySpan, ref TValueSpan initialValueSpan, ref TTableSpan initialTableSpan, TEqualityComparer comparer)
+        public QuickDictionary(ref TKeySpan initialKeySpan, ref TValueSpan initialValueSpan, ref TTableSpan initialTableSpan, TEqualityComparer comparer, int tablePowerOffset = 2)
         {
             ValidateSpanCapacity(ref initialKeySpan, ref initialValueSpan, ref initialTableSpan);
             Keys = initialKeySpan;
             Values = initialValueSpan;
             Table = initialTableSpan;
-            TableMask = Table.Length - 1;
             Count = 0;
+            TableMask = Table.Length - 1;
+            TablePowerOffset = tablePowerOffset;
             EqualityComparer = comparer;
             Debug.Assert(EqualityComparer != null);
             ValidateTableIsCleared(ref initialTableSpan);
@@ -157,9 +164,10 @@ namespace BepuUtilities.Collections
         /// <param name="initialValueSpan">Span to use as backing memory of the dictionary values.</param>
         /// <param name="initialTableSpan">Span to use as backing memory of the table. Must be zeroed.</param>
         /// <param name="comparer">Comparer to use for the dictionary.</param>
+        /// <param name="tablePowerOffset">Target size of the table relative to the number of stored elements.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickDictionary(ref TKeySpan initialKeySpan, ref TValueSpan initialValueSpan, ref TTableSpan initialTableSpan)
-            : this(ref initialKeySpan, ref initialValueSpan, ref initialTableSpan, default(TEqualityComparer))
+        public QuickDictionary(ref TKeySpan initialKeySpan, ref TValueSpan initialValueSpan, ref TTableSpan initialTableSpan, int tablePowerOffset = 2)
+            : this(ref initialKeySpan, ref initialValueSpan, ref initialTableSpan, default(TEqualityComparer), tablePowerOffset)
         {
         }
 
@@ -188,7 +196,7 @@ namespace BepuUtilities.Collections
             tablePool.TakeForPower(initialElementPoolIndex + tableSizePower, out var tableSpan);
             //No guarantee that the table is clean; clear it.
             tableSpan.Clear(0, tableSpan.Length);
-            dictionary = new QuickDictionary<TKey, TValue, TKeySpan, TValueSpan, TTableSpan, TEqualityComparer>(ref keySpan, ref valueSpan, ref tableSpan, comparer);
+            dictionary = new QuickDictionary<TKey, TValue, TKeySpan, TValueSpan, TTableSpan, TEqualityComparer>(ref keySpan, ref valueSpan, ref tableSpan, comparer, tableSizePower);
         }
         /// <summary>
         /// Creates a new dictionary with a default constructed comparer.
@@ -257,7 +265,6 @@ namespace BepuUtilities.Collections
         /// If the new span is smaller, the dictionary's count is truncated and the extra elements are dropped. 
         /// </summary>
         /// <param name="newSizePower">Exponent of the size of the new memory block. New size will be 2^newSizePower.</param>
-        /// <param name="tablePoolOffset">Offset to apply to the object size power to get the table power. New table size will be 2^(newSizePower + tablePoolOffset).</param>
         /// <param name="keyPool">Pool used for key spans.</param>   
         /// <param name="valuePool">Pool used for value spans.</param>   
         /// <param name="tablePool">Pool used for table spans.</param>
@@ -265,14 +272,14 @@ namespace BepuUtilities.Collections
         /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
         /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ResizeForPower<TKeyPool, TValuePool, TTablePool>(int newSizePower, int tablePoolOffset, TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool)
+        public void ResizeForPower<TKeyPool, TValuePool, TTablePool>(int newSizePower, TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool)
             where TKeyPool : IMemoryPool<TKey, TKeySpan>
             where TValuePool : IMemoryPool<TValue, TValueSpan>
             where TTablePool : IMemoryPool<int, TTableSpan>
         {
             keyPool.TakeForPower(newSizePower, out var newKeySpan);
             valuePool.TakeForPower(newSizePower, out var newValueSpan);
-            tablePool.TakeForPower(newSizePower + tablePoolOffset, out var newTableSpan);
+            tablePool.TakeForPower(newSizePower + TablePowerOffset, out var newTableSpan);
             //There is no guarantee that the table retrieved from the pool is clean. Clear it!
             newTableSpan.Clear(0, newTableSpan.Length);
             var oldDictionary = this;
@@ -297,10 +304,7 @@ namespace BepuUtilities.Collections
             where TValuePool : IMemoryPool<TValue, TValueSpan>
             where TTablePool : IMemoryPool<int, TTableSpan>
         {
-            var oldSpanPower = SpanHelper.GetContainingPowerOf2(Keys.Length);
-            var oldTableSpanPower = SpanHelper.GetContainingPowerOf2(Table.Length);
-            var tablePoolOffset = oldTableSpanPower - oldSpanPower;
-            ResizeForPower(SpanHelper.GetContainingPowerOf2(newSize), tablePoolOffset, keyPool, valuePool, tablePool);
+            ResizeForPower(SpanHelper.GetContainingPowerOf2(newSize), keyPool, valuePool, tablePool);
         }
 
         /// <summary>

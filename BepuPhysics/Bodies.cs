@@ -52,7 +52,7 @@ namespace BepuPhysics
         /// It is only updated once during the frame. It should be treated as ephemeral information.
         /// </summary>
         public Buffer<BodyInertia> Inertias;
-        internal BufferPool pool;
+        public BufferPool Pool { get; private set; }
 
         internal IslandAwakener awakener;
         internal Shapes shapes;
@@ -77,7 +77,7 @@ namespace BepuPhysics
         public unsafe Bodies(BufferPool pool, Shapes shapes, BroadPhase broadPhase,
             int initialBodyCapacity, int initialIslandCapacity, int initialConstraintCapacityPerBody)
         {
-            this.pool = pool;
+            this.Pool = pool;
 
             //Note that the id pool only grows upon removal, so this is just a heuristic initialization.
             //You could get by with something a lot less aggressive, but it does tend to avoid resizes in the case of extreme churn.
@@ -154,7 +154,7 @@ namespace BepuPhysics
 
             //All new bodies are active for simplicity. Someday, it may be worth offering an optimized path for inactives, but it adds complexity.
             //(Directly adding inactive bodies can be helpful in some networked open world scenarios.)
-            var index = ActiveSet.Add(description, handle, MinimumConstraintCapacityPerBody, pool);
+            var index = ActiveSet.Add(description, handle, MinimumConstraintCapacityPerBody, Pool);
             HandleToLocation[handle] = new BodyLocation { SetIndex = 0, Index = index };
 
             if (description.Collidable.Shape.Exists)
@@ -179,7 +179,7 @@ namespace BepuPhysics
                 RemoveCollidableFromBroadPhase(activeBodyIndex, ref collidable);
             }
 
-            var bodyMoved = set.RemoveAt(activeBodyIndex, pool, out var handle, out var movedBodyIndex, out var movedBodyHandle);
+            var bodyMoved = set.RemoveAt(activeBodyIndex, Pool, out var handle, out var movedBodyIndex, out var movedBodyHandle);
             if (bodyMoved)
             {
                 //While the removed body doesn't have any constraints associated with it, the body that gets moved to fill its slot might!
@@ -202,11 +202,11 @@ namespace BepuPhysics
             {
                 solver.Remove(constraints[i].ConnectingConstraintHandle);
             }
-            constraints.Dispose(pool.SpecializeFor<BodyConstraintReference>());
+            constraints.Dispose(Pool.SpecializeFor<BodyConstraintReference>());
 
             var handle = RemoveFromActiveSet(activeBodyIndex);
 
-            HandlePool.Return(handle, pool.SpecializeFor<int>());
+            HandlePool.Return(handle, Pool.SpecializeFor<int>());
             ref var removedBodyLocation = ref HandleToLocation[handle];
             removedBodyLocation.SetIndex = -1;
             removedBodyLocation.Index = -1;
@@ -232,7 +232,7 @@ namespace BepuPhysics
         /// <param name="indexInConstraint">Index of the body in the constraint.</param>
         internal void AddConstraint(int bodyIndex, int constraintHandle, int indexInConstraint)
         {
-            ActiveSet.AddConstraint(bodyIndex, constraintHandle, indexInConstraint, pool);
+            ActiveSet.AddConstraint(bodyIndex, constraintHandle, indexInConstraint, Pool);
         }
 
         /// <summary>
@@ -242,7 +242,7 @@ namespace BepuPhysics
         /// <param name="constraintHandle">Handle of the constraint to remove.</param>
         internal void RemoveConstraintReference(int bodyIndex, int constraintHandle)
         {
-            ActiveSet.RemoveConstraintReference(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, pool);
+            ActiveSet.RemoveConstraintReference(bodyIndex, constraintHandle, MinimumConstraintCapacityPerBody, Pool);
         }
 
         /// <summary>
@@ -382,7 +382,25 @@ namespace BepuPhysics
             set.GetDescription(location.Index, out description);
         }
 
-
+        /// <summary>
+        /// Checks whether a body handle is currently registered with the bodies set.
+        /// </summary>
+        /// <param name="handle">Handle to check for.</param>
+        /// <returns>True if the handle exists in the collection, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool HandleExists(int handle)
+        {
+            if (handle < 0 || handle >= HandleToLocation.Length)
+                return false;
+            ref var location = ref HandleToLocation[handle];
+            if (location.SetIndex < 0 || location.SetIndex > Sets.Length)
+                return false;
+            ref var set = ref Sets[location.SetIndex];
+            if (!set.Allocated)
+                return false;
+            return location.Index >= 0 && location.Index < set.Count && set.IndexToHandle[location.Index] == handle;
+        }
+               
         [Conditional("DEBUG")]
         internal void ValidateExistingHandle(int handle)
         {
@@ -693,7 +711,7 @@ namespace BepuPhysics
             if (Sets.Length != setsCapacity)
             {
                 var oldCapacity = Sets.Length;
-                pool.SpecializeFor<BodySet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
+                Pool.SpecializeFor<BodySet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
                 if (oldCapacity < Sets.Length)
                     Sets.Clear(oldCapacity, Sets.Length - oldCapacity); //We rely on unused slots being default initialized.
             }
@@ -829,14 +847,14 @@ namespace BepuPhysics
         /// </summary>
         public unsafe void Clear()
         {
-            ActiveSet.Clear(pool);
+            ActiveSet.Clear(Pool);
             //While the top level pool represents active bodies and will persist (as it would after a series of removals),
             //subsequent sets represent inactive bodies. When they are not present, the backing memory is released.
             for (int i = 1; i < Sets.Length; ++i)
             {
                 ref var set = ref Sets[i];
                 if (set.Allocated)
-                    set.Dispose(pool);
+                    set.Dispose(Pool);
             }
             Unsafe.InitBlockUnaligned(HandleToLocation.Memory, 0xFF, (uint)(sizeof(BodyLocation) * HandleToLocation.Length));
             HandlePool.Clear();
@@ -850,7 +868,7 @@ namespace BepuPhysics
             if (newCapacity != HandleToLocation.Length)
             {
                 var oldCapacity = HandleToLocation.Length;
-                pool.SpecializeFor<BodyLocation>().Resize(ref HandleToLocation, newCapacity, Math.Min(oldCapacity, newCapacity));
+                Pool.SpecializeFor<BodyLocation>().Resize(ref HandleToLocation, newCapacity, Math.Min(oldCapacity, newCapacity));
                 if (HandleToLocation.Length > oldCapacity)
                 {
                     Unsafe.InitBlockUnaligned(
@@ -869,7 +887,7 @@ namespace BepuPhysics
             var targetCapacity = BufferPool<BodyInertia>.GetLowestContainingElementCount(Math.Max(capacity, ActiveSet.Count));
             if (Inertias.Length != targetCapacity)
             {
-                pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, targetCapacity, Math.Min(Inertias.Length, ActiveSet.Count));
+                Pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, targetCapacity, Math.Min(Inertias.Length, ActiveSet.Count));
             }
         }
         /// <summary>
@@ -881,7 +899,7 @@ namespace BepuPhysics
                 capacity = ActiveSet.Count;
             if (Inertias.Length < capacity)
             {
-                pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, capacity, Math.Min(Inertias.Length, ActiveSet.Count));
+                Pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, capacity, Math.Min(Inertias.Length, ActiveSet.Count));
             }
         }
 
@@ -894,7 +912,7 @@ namespace BepuPhysics
             var targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, ActiveSet.Count));
             if (ActiveSet.IndexToHandle.Length != targetBodyCapacity)
             {
-                ActiveSet.InternalResize(targetBodyCapacity, pool);
+                ActiveSet.InternalResize(targetBodyCapacity, Pool);
             }
             ResizeInertias(capacity);
             var targetHandleCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, HandlePool.HighestPossiblyClaimedId + 1));
@@ -910,7 +928,7 @@ namespace BepuPhysics
         /// </summary>
         public void ResizeConstraintListCapacities()
         {
-            var bodyReferencePool = pool.SpecializeFor<BodyConstraintReference>();
+            var bodyReferencePool = Pool.SpecializeFor<BodyConstraintReference>();
             for (int i = 0; i < ActiveSet.Count; ++i)
             {
                 ref var list = ref ActiveSet.Constraints[i];
@@ -928,7 +946,7 @@ namespace BepuPhysics
         {
             if (ActiveSet.IndexToHandle.Length < capacity)
             {
-                ActiveSet.InternalResize(capacity, pool);
+                ActiveSet.InternalResize(capacity, Pool);
             }
             EnsureInertiasCapacity(capacity);
             if (HandleToLocation.Length < capacity)
@@ -942,7 +960,7 @@ namespace BepuPhysics
         /// </summary>
         public void EnsureConstraintListCapacities()
         {
-            var bodyReferencePool = pool.SpecializeFor<BodyConstraintReference>();
+            var bodyReferencePool = Pool.SpecializeFor<BodyConstraintReference>();
             for (int i = 0; i < ActiveSet.Count; ++i)
             {
                 ref var list = ref ActiveSet.Constraints[i];
@@ -962,14 +980,14 @@ namespace BepuPhysics
                 ref var set = ref Sets[i];
                 if (set.Allocated)
                 {
-                    set.Dispose(pool);
+                    set.Dispose(Pool);
                 }
             }
-            pool.SpecializeFor<BodySet>().Return(ref Sets);
+            Pool.SpecializeFor<BodySet>().Return(ref Sets);
             if (Inertias.Allocated)
-                pool.SpecializeFor<BodyInertia>().Return(ref Inertias);
-            pool.SpecializeFor<BodyLocation>().Return(ref HandleToLocation);
-            HandlePool.Dispose(pool.SpecializeFor<int>());
+                Pool.SpecializeFor<BodyInertia>().Return(ref Inertias);
+            Pool.SpecializeFor<BodyLocation>().Return(ref HandleToLocation);
+            HandlePool.Dispose(Pool.SpecializeFor<int>());
         }
 
     }

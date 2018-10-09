@@ -1,5 +1,6 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuPhysics.Trees;
 using BepuUtilities;
@@ -279,6 +280,7 @@ namespace Demos.Demos
     }
 
     //Why dumb? Because in the original project, there was a less dumb variant. The less dumb variant was, unfortunately, way more complicated, so I didn't copy it over.
+    //It's also pretty darn slow with denser cell sizes.
     public static class DumbTetrahedralizer
     {
         private static void AddVertexSpatialIndex(ref Cell vertexSpatialIndex, BufferPool pool, ref CellSet vertexIndices, out int index)
@@ -374,7 +376,7 @@ namespace Demos.Demos
 
 
         public static void Tetrahedralize(Span<TriangleContent> triangles, float cellSize, BufferPool pool,
-            out Buffer<Vector3> tetrahedraVertices, out Buffer<CellVertexIndices> cellVertexIndices, out Buffer<TetrahedronVertices> tetrahedraVertexIndices)
+            out Buffer<Vector3> vertices, out CellSet vertexSpatialIndices, out Buffer<CellVertexIndices> cellVertexIndices, out Buffer<TetrahedronVertices> tetrahedraVertexIndices)
         {
             //Compute the size of the 3d grid by scanning all vertices.
             Vector3 min = new Vector3(float.MaxValue), max = new Vector3(float.MinValue);
@@ -423,7 +425,7 @@ namespace Demos.Demos
             }
 
             //Build the vertex list and per-cell vertex index lists.
-            CellSet.Create(cellPool, intPool, SpanHelper.GetContainingPowerOf2(cells.Count) + 2, 3, out var vertexIndices);
+            CellSet.Create(cellPool, intPool, SpanHelper.GetContainingPowerOf2(cells.Count) + 2, 3, out vertexSpatialIndices);
             int cellIndex = 0;
             pool.Take(cells.Count, out cellVertexIndices);
             cellVertexIndices = cellVertexIndices.Slice(0, cells.Count);
@@ -432,35 +434,35 @@ namespace Demos.Demos
                 ref var cell = ref cells[i];
                 CellVertexIndices cellIndices;
                 var vertexSpatialIndex = cell;
-                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexIndices, out cellIndices.V000);
+                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexSpatialIndices, out cellIndices.V000);
                 vertexSpatialIndex.X = cell.X;
                 vertexSpatialIndex.Y = cell.Y;
                 vertexSpatialIndex.Z = cell.Z + 1;
-                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexIndices, out cellIndices.V001);
+                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexSpatialIndices, out cellIndices.V001);
                 vertexSpatialIndex.X = cell.X;
                 vertexSpatialIndex.Y = cell.Y + 1;
                 vertexSpatialIndex.Z = cell.Z;
-                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexIndices, out cellIndices.V010);
+                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexSpatialIndices, out cellIndices.V010);
                 vertexSpatialIndex.X = cell.X;
                 vertexSpatialIndex.Y = cell.Y + 1;
                 vertexSpatialIndex.Z = cell.Z + 1;
-                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexIndices, out cellIndices.V011);
+                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexSpatialIndices, out cellIndices.V011);
                 vertexSpatialIndex.X = cell.X + 1;
                 vertexSpatialIndex.Y = cell.Y;
                 vertexSpatialIndex.Z = cell.Z;
-                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexIndices, out cellIndices.V100);
+                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexSpatialIndices, out cellIndices.V100);
                 vertexSpatialIndex.X = cell.X + 1;
                 vertexSpatialIndex.Y = cell.Y;
                 vertexSpatialIndex.Z = cell.Z + 1;
-                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexIndices, out cellIndices.V101);
+                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexSpatialIndices, out cellIndices.V101);
                 vertexSpatialIndex.X = cell.X + 1;
                 vertexSpatialIndex.Y = cell.Y + 1;
                 vertexSpatialIndex.Z = cell.Z;
-                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexIndices, out cellIndices.V110);
+                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexSpatialIndices, out cellIndices.V110);
                 vertexSpatialIndex.X = cell.X + 1;
                 vertexSpatialIndex.Y = cell.Y + 1;
                 vertexSpatialIndex.Z = cell.Z + 1;
-                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexIndices, out cellIndices.V111);
+                AddVertexSpatialIndex(ref vertexSpatialIndex, pool, ref vertexSpatialIndices, out cellIndices.V111);
 
                 cellVertexIndices[cellIndex++] = cellIndices;
             }
@@ -481,21 +483,119 @@ namespace Demos.Demos
             }
 
             //Create the vertices.
-            pool.Take(vertexIndices.Count, out tetrahedraVertices);
-            tetrahedraVertices = tetrahedraVertices.Slice(0, vertexIndices.Count);
-            for (int i = 0; i < tetrahedraVertices.Length; ++i)
+            pool.Take(vertexSpatialIndices.Count, out vertices);
+            vertices = vertices.Slice(0, vertexSpatialIndices.Count);
+            for (int i = 0; i < vertices.Length; ++i)
             {
-                ref var index = ref vertexIndices[i];
-                tetrahedraVertices[i] = new Vector3(index.X, index.Y, index.Z) * cellSize + min;
+                ref var index = ref vertexSpatialIndices[i];
+                vertices[i] = new Vector3(index.X, index.Y, index.Z) * cellSize + min;
             }
 
 
             //We can fail to dispose the quick collections. All of the buffers are getting GC'd anyway.
             cells.Dispose(cellPool, intPool);
             floodFilledCells.Dispose(cellPool, intPool);
-            vertexIndices.Dispose(cellPool, intPool);
         }
     }
+
+    struct DeformableCollisionFilter
+    {
+        int localIndices;
+        int instanceId;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public DeformableCollisionFilter(int x, int y, int z, int instanceId)
+        {
+            const int max = 1 << 10;
+            Debug.Assert(x >= 0 && x < max && y >= 0 && y < max && z >= 0 && z < max, "This filter packs local indices, so their range is limited.");
+            localIndices = x | (y << 10) | (z << 20);
+            this.instanceId = instanceId;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Test(in DeformableCollisionFilter a, in DeformableCollisionFilter b)
+        {
+            if (a.instanceId != b.instanceId)
+                return true;
+            //Disallow collisions between vertices which are near each other. We measure distance as max(abs(ax - bx), abs(ay - by), abs(az - bz)).
+            const int minimumDistance = 2;
+            const int mask = (1 << 10) - 1;
+            var ax = a.localIndices & mask;
+            var bx = b.localIndices & mask;
+            var differenceX = ax - bx;
+            if (differenceX < -minimumDistance || differenceX > minimumDistance)
+                return true;
+            var ay = (a.localIndices >> 10) & mask;
+            var by = (b.localIndices >> 10) & mask;
+            var differenceY = ay - by;
+            if (differenceY < -minimumDistance || differenceY > minimumDistance)
+                return true;
+            var az = (a.localIndices >> 20) & mask;
+            var bz = (b.localIndices >> 20) & mask;
+            var differenceZ = az - bz;
+            if (differenceZ < -minimumDistance || differenceZ > minimumDistance)
+                return true;
+            return false;
+        }
+    }
+
+
+    struct DeformableCallbacks : INarrowPhaseCallbacks
+    {
+        public BodyProperty<DeformableCollisionFilter> Filters;
+        public void Initialize(Simulation simulation)
+        {
+            Filters.Initialize(simulation.Bodies);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b)
+        {
+            if (a.Mobility == CollidableMobility.Dynamic && b.Mobility == CollidableMobility.Dynamic)
+            {
+                return DeformableCollisionFilter.Test(Filters[a.Handle], Filters[b.Handle]);
+            }
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool AllowContactGeneration(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB)
+        {
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void ConfigureMaterial(out PairMaterialProperties pairMaterial)
+        {
+            pairMaterial.FrictionCoefficient = 1;
+            pairMaterial.MaximumRecoveryVelocity = 2f;
+            pairMaterial.SpringSettings = new SpringSettings(30, 1);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
+        {
+            ConfigureMaterial(out pairMaterial);
+            return true;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
+        {
+            ConfigureMaterial(out pairMaterial);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ConvexContactManifold* manifold)
+        {
+            return true;
+        }
+
+        public void Dispose()
+        {
+            Filters.Dispose();
+        }
+    }
+
     /// <summary>
     /// Some blobs composed of springy welds and volume preservation constraints.
     /// </summary>
@@ -510,7 +610,8 @@ namespace Demos.Demos
                 ++vertexEdgeCounts[b];
             }
         }
-        private unsafe void CreateDeformable(in Vector3 position, float cellSize, ref Buffer<Vector3> vertices, ref Buffer<CellVertexIndices> cellVertexIndices)
+        private unsafe void CreateDeformable(in Vector3 position, float cellSize, float frequency, float dampingRatio, int instanceId,
+            BodyProperty<DeformableCollisionFilter> filters, ref Buffer<Vector3> vertices, ref CellSet vertexSpatialIndices, ref Buffer<CellVertexIndices> cellVertexIndices)
         {
             BufferPool.Take<int>(vertices.Length, out var vertexEdgeCounts);
             vertexEdgeCounts.Clear(0, vertices.Length);
@@ -547,6 +648,8 @@ namespace Demos.Demos
                     //Bodies don't have to have collidables. Take advantage of this for all the internal vertices.
                     vertexEdgeCounts[i] == 6 ? new TypedIndex() : vertexShapeIndex, 0.1f,
                     new BodyActivityDescription(0.01f)));
+                ref var vertexSpatialIndex = ref vertexSpatialIndices[i];
+                filters.Allocate(vertexHandles[i]) = new DeformableCollisionFilter(vertexSpatialIndex.X, vertexSpatialIndex.Y, vertexSpatialIndex.Z, instanceId);
             }
 
             for (int i = 0; i < cellEdges.Count; ++i)
@@ -558,7 +661,7 @@ namespace Demos.Demos
                     {
                         LocalOffset = offset,
                         LocalOrientation = Quaternion.Identity,
-                        SpringSettings = new SpringSettings(30, 1)
+                        SpringSettings = new SpringSettings(frequency, dampingRatio)
                     });
             }
 
@@ -570,16 +673,23 @@ namespace Demos.Demos
             camera.Position = new Vector3(-5, 2, -5);
             camera.Yaw = MathHelper.Pi * 3f / 4;
 
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
+            var filters = new BodyProperty<DeformableCollisionFilter>();
+            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters });
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             //MeshDemo.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(10), out var mesh);
             //Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, 0), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
-            float cellSize = 0.1f;
-            DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool, out var vertices, out var cellVertexIndices, out var tetrahedraVertexIndices);
-            CreateDeformable(new Vector3(0, 2, 0), cellSize, ref vertices, ref cellVertexIndices);
+            float cellSize = 0.05f;
+            DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool, 
+                out var vertices, out var vertexSpatialIndices, out var cellVertexIndices, out var tetrahedraVertexIndices);
+            CreateDeformable(new Vector3(0, 20, 0), cellSize, 30, 1f, 0, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices);
+
+            BufferPool.Return(ref vertices);
+            vertexSpatialIndices.Dispose(BufferPool.SpecializeFor<Cell>(), BufferPool.SpecializeFor<int>());
+            BufferPool.Return(ref cellVertexIndices);
+            BufferPool.Return(ref tetrahedraVertexIndices);
 
             var staticShape = new Box(1500, 1, 1500);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);

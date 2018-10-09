@@ -41,6 +41,10 @@ namespace BepuUtilities.Collections
         /// Mask for use in performing fast modulo operations for hashes. Requires that the table span is a power of 2.
         /// </summary>
         public int TableMask;
+        /// <summary>
+        /// Desired size of the table relative to the size of the key/value spans in terms of a power of 2. Table capacity target will be elementCapacityTarget * 2^TablePowerOffset.
+        /// </summary>
+        public int TablePowerOffset;
 
         /// <summary>
         /// Backing memory of the set's table. Values are distributed according to the EqualityComparer's hash function.
@@ -82,14 +86,16 @@ namespace BepuUtilities.Collections
         /// <param name="initialSpan">Span to use as backing memory of the set elements.</param>
         /// <param name="initialTableSpan">Span to use as backing memory of the table. Must be zeroed out.</param>
         /// <param name="comparer">Comparer to use for the set.</param>
+        /// <param name="tablePowerOffset">Target size of the table relative to the number of stored elements.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickSet(ref TSpan initialSpan, ref TTableSpan initialTableSpan, TEqualityComparer comparer)
+        public QuickSet(ref TSpan initialSpan, ref TTableSpan initialTableSpan, TEqualityComparer comparer, int tablePowerOffset = 2)
         {
             ValidateSpanCapacity(ref initialSpan, ref initialTableSpan);
             Span = initialSpan;
             Table = initialTableSpan;
-            TableMask = Table.Length - 1;
             Count = 0;
+            TableMask = Table.Length - 1;
+            TablePowerOffset = tablePowerOffset;
             EqualityComparer = comparer;
             Debug.Assert(EqualityComparer != null);
             ValidateTableIsCleared(ref initialTableSpan);
@@ -100,9 +106,10 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="initialSpan">Span to use as backing memory of the set elements.</param>
         /// <param name="initialTableSpan">Span to use as backing memory of the table. Must be zeroed.</param>
+        /// <param name="tablePowerOffset">Target size of the table relative to the number of stored elements.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickSet(ref TSpan initialSpan, ref TTableSpan initialTableSpan)
-            : this(ref initialSpan, ref initialTableSpan, default(TEqualityComparer))
+        public QuickSet(ref TSpan initialSpan, ref TTableSpan initialTableSpan, int tablePowerOffset = 2)
+            : this(ref initialSpan, ref initialTableSpan, default(TEqualityComparer), tablePowerOffset)
         {
         }
 
@@ -127,7 +134,7 @@ namespace BepuUtilities.Collections
             tablePool.TakeForPower(initialElementPoolIndex + tableSizePower, out var tableSpan);
             //No guarantee that the table is clean; clear it.
             tableSpan.Clear(0, tableSpan.Length);
-            set = new QuickSet<T, TSpan, TTableSpan, TEqualityComparer>(ref span, ref tableSpan, comparer);
+            set = new QuickSet<T, TSpan, TTableSpan, TEqualityComparer>(ref span, ref tableSpan, comparer, tableSizePower);
         }
         /// <summary>
         /// Creates a new set with a default constructed comparer.
@@ -187,19 +194,18 @@ namespace BepuUtilities.Collections
         /// If the new span is smaller, the set's count is truncated and the extra elements are dropped. 
         /// </summary>
         /// <param name="newSizePower">Exponent of the size of the new memory block. New size will be 2^newSizePower.</param>
-        /// <param name="tablePoolOffset">Offset to apply to the object size power to get the table power. New table size will be 2^(newSizePower + tablePoolOffset).</param>
         /// <param name="pool">Pool used for element spans.</param>   
         /// <param name="tablePool">Pool used for table spans.</param>
         /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
         /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ResizeForPower<TPool, TTablePool>(int newSizePower, int tablePoolOffset, TPool pool, TTablePool tablePool)
+        public void ResizeForPower<TPool, TTablePool>(int newSizePower, TPool pool, TTablePool tablePool)
             where TPool : IMemoryPool<T, TSpan>
             where TTablePool : IMemoryPool<int, TTableSpan>
         {
             var oldSet = this;
             pool.TakeForPower(newSizePower, out var newSpan);
-            tablePool.TakeForPower(newSizePower + tablePoolOffset, out var newTableSpan);
+            tablePool.TakeForPower(newSizePower + TablePowerOffset, out var newTableSpan);
             //There is no guarantee that the table retrieved from the pool is clean. Clear it!
             newTableSpan.Clear(0, newTableSpan.Length);
             Resize(ref newSpan, ref newTableSpan, out var oldSpan, out var oldTableSpan);
@@ -221,10 +227,7 @@ namespace BepuUtilities.Collections
             where TPool : IMemoryPool<T, TSpan>
             where TTablePool : IMemoryPool<int, TTableSpan>
         {
-            var oldSpanPower = SpanHelper.GetContainingPowerOf2(Span.Length);
-            var oldTableSpanPower = SpanHelper.GetContainingPowerOf2(Table.Length);
-            var tablePoolOffset = oldTableSpanPower - oldSpanPower;
-            ResizeForPower(SpanHelper.GetContainingPowerOf2(newSize), tablePoolOffset, pool, tablePool);
+            ResizeForPower(SpanHelper.GetContainingPowerOf2(newSize), pool, tablePool);
         }
 
         /// <summary>
