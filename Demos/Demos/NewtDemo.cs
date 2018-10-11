@@ -610,7 +610,7 @@ namespace Demos.Demos
                 ++vertexEdgeCounts[b];
             }
         }
-        private unsafe void CreateDeformable(in Vector3 position, in Quaternion orientation, float cellSize, float frequency, float dampingRatio, int instanceId,
+        private unsafe void CreateDeformable(in Vector3 position, in Quaternion orientation, float density, float cellSize, float frequency, float dampingRatio, int instanceId,
             BodyProperty<DeformableCollisionFilter> filters, ref Buffer<Vector3> vertices, ref CellSet vertexSpatialIndices, ref Buffer<CellVertexIndices> cellVertexIndices)
         {
             BufferPool.Take<int>(vertices.Length, out var vertexEdgeCounts);
@@ -641,12 +641,13 @@ namespace Demos.Demos
             var vertexShape = new Sphere(cellSize * 0.7f);
             vertexShape.ComputeInertia(1, out var vertexInertia);
             var vertexShapeIndex = Simulation.Shapes.Add(vertexShape);
+            var massPerVertex = density * (cellSize * cellSize * cellSize);
             for (int i = 0; i < vertices.Length; ++i)
             {
                 vertexHandles[i] = Simulation.Bodies.Add(new BodyDescription(
                     position + Quaternion.Transform(vertices[i], orientation), orientation, vertexInertia,
                     //Bodies don't have to have collidables. Take advantage of this for all the internal vertices.
-                    vertexEdgeCounts[i] == 6 ? new TypedIndex() : vertexShapeIndex, 0.1f,
+                    vertexEdgeCounts[i] == 6 ? new TypedIndex() : vertexShapeIndex, massPerVertex,
                     new BodyActivityDescription(0.01f)));
                 ref var vertexSpatialIndex = ref vertexSpatialIndices[i];
                 filters.Allocate(vertexHandles[i]) = new DeformableCollisionFilter(vertexSpatialIndex.X, vertexSpatialIndex.Y, vertexSpatialIndex.Z, instanceId);
@@ -678,18 +679,18 @@ namespace Demos.Demos
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
-            float cellSize = 0.1f;
+            float cellSize = 0.12f;
             DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool,
                 out var vertices, out var vertexSpatialIndices, out var cellVertexIndices, out var tetrahedraVertexIndices);
-            CreateDeformable(new Vector3(0, 5, 0), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.15f), cellSize, 30, 1f, 0, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices);
-            CreateDeformable(new Vector3(0, 8, 0), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), -MathF.PI * 0.5f), cellSize, 30, 1f, 1, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices);
+            CreateDeformable(new Vector3(0, 5, 0), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.15f), 1f, cellSize, 30, 1f, 0, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices);
+            CreateDeformable(new Vector3(0, 8, 0), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), -MathF.PI * 0.5f), 1f, cellSize, 30, 1f, 1, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices);
 
             BufferPool.Return(ref vertices);
             vertexSpatialIndices.Dispose(BufferPool.SpecializeFor<Cell>(), BufferPool.SpecializeFor<int>());
             BufferPool.Return(ref cellVertexIndices);
             BufferPool.Return(ref tetrahedraVertexIndices);
 
-            BodyDescription.Create(new Vector3(0, 100, -1.5f), new Sphere(5), Simulation.Shapes, 500, out var ouch);
+            BodyDescription.Create(new Vector3(0, 100, -1.5f), new Sphere(5), Simulation.Shapes, 100, out var ouch);
             Simulation.Bodies.Add(ouch);
 
             var staticShape = new Box(1500, 1, 1500);

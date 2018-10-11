@@ -28,6 +28,7 @@ namespace BepuPhysics
             solver.Register<AngularMotor>();
             solver.Register<Weld>();
             solver.Register<Weld2>();
+            solver.Register<VolumeConstraint>();
             solver.Register<GrabServo>();
 
             solver.Register<Contact1OneBody>();

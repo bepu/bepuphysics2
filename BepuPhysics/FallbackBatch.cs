@@ -271,6 +271,37 @@ namespace BepuPhysics
             }
             jacobiScaleA = Vector.ConvertToSingle(countsA);
             jacobiScaleB = Vector.ConvertToSingle(countsB);
+        } 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetJacobiScaleForBodies(ref FourBodyReferences references, int count, 
+            out Vector<float> jacobiScaleA, out Vector<float> jacobiScaleB, out Vector<float> jacobiScaleC, out Vector<float> jacobiScaleD)
+        {
+            ref var startA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+            ref var startB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+            ref var startC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
+            ref var startD = ref Unsafe.As<Vector<int>, int>(ref references.IndexD);
+            Vector<int> countsA, countsB, countsC, countsD;
+            ref var countsAStart = ref Unsafe.As<Vector<int>, int>(ref countsA);
+            ref var countsBStart = ref Unsafe.As<Vector<int>, int>(ref countsB);
+            ref var countsCStart = ref Unsafe.As<Vector<int>, int>(ref countsC);
+            ref var countsDStart = ref Unsafe.As<Vector<int>, int>(ref countsD);
+            for (int i = 0; i < count; ++i)
+            {
+                var indexA = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startA, i));
+                var indexB = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startB, i));
+                var indexC = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startC, i));
+                var indexD = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startD, i));
+                Debug.Assert(indexA >= 0 && indexB >= 0, "If a prestep is looking up constraint counts associated with a body, it better be in the jacobi batch!");
+                Unsafe.Add(ref countsAStart, i) = bodyConstraintReferences.Values[indexA].Count;
+                Unsafe.Add(ref countsBStart, i) = bodyConstraintReferences.Values[indexB].Count;
+                Unsafe.Add(ref countsCStart, i) = bodyConstraintReferences.Values[indexC].Count;
+                Unsafe.Add(ref countsDStart, i) = bodyConstraintReferences.Values[indexD].Count;
+            }
+            jacobiScaleA = Vector.ConvertToSingle(countsA);
+            jacobiScaleB = Vector.ConvertToSingle(countsB);
+            jacobiScaleC = Vector.ConvertToSingle(countsC);
+            jacobiScaleD = Vector.ConvertToSingle(countsD);
         }
 
         [Conditional("DEBUG")]

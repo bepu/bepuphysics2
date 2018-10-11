@@ -19,7 +19,7 @@ namespace Demos.SpecializedTests
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(0, 4, 15);
+            camera.Position = new Vector3(0, 4, 20);
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
@@ -27,29 +27,31 @@ namespace Demos.SpecializedTests
 
             var shapeA = new Box(.75f, 1, .5f);
             var shapeB = new Box(.75f, 1, .5f);
+            var shapeIndexA = Simulation.Shapes.Add(shapeA);
+            var shapeIndexB = Simulation.Shapes.Add(shapeB);
             shapeA.ComputeInertia(1, out var inertiaA);
             shapeA.ComputeInertia(1, out var inertiaB);
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-10, 3, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-10, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-10, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-10, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-7, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-7, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-7, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-7, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-4, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-4, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-4, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-4, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularSwivelHinge { SwivelAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(1, 0, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new SwingLimit { AxisLocalA = new Vector3(0, 1, 0), AxisLocalB = new Vector3(0, 1, 0), MaximumSwingAngle = MathHelper.PiOver2, SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-1, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-1, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-1, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-1, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new TwistServo
                 {
@@ -61,8 +63,8 @@ namespace Demos.SpecializedTests
                 });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(2, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(2, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(2, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(2, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new TwistLimit
                 {
@@ -75,8 +77,8 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(5, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(5, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(5, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(5, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new TwistMotor
                 {
@@ -88,8 +90,8 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(8, 3, 0), new BodyInertia(), Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(8, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(8, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(8, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularServo
                 {
@@ -99,27 +101,44 @@ namespace Demos.SpecializedTests
                 });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(11, 3, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(11, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(11, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
+                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(11, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularMotor { TargetVelocityLocalA = new Vector3(0, 1, 0), Settings = new MotorSettings(15, 0.0001f) });
             }
             {
-                var aDescription = new BodyDescription(new Vector3(14, 3, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(new Vector3(14, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f));
+                var aDescription = new BodyDescription(new Vector3(14, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(new Vector3(14, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f));
                 //aDescription.Velocity.Angular = new Vector3(0, 0, 5);
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
                 Simulation.Solver.Add(a, b, new Weld { LocalOffset = new Vector3(0, 2, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var aDescription = new BodyDescription(new Vector3(17, 3, 0), inertiaA, Simulation.Shapes.Add(shapeA), 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(new Vector3(17, 5, 0), inertiaB, Simulation.Shapes.Add(shapeB), 0.1f, new BodyActivityDescription(0.01f));
+                var aDescription = new BodyDescription(new Vector3(17, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(new Vector3(17, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f));
                 //aDescription.Velocity.Angular = new Vector3(0, 0, 5);
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
                 Simulation.Solver.Add(a, b, new Weld2 { LocalOffset = new Vector3(0, 2, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
             }
+            //{
+            //    var sphere = new Sphere(0.125f);
+            //    sphere.ComputeInertia(1, out var sphereInertia);
+            //    var sphereIndex = Simulation.Shapes.Add(sphere);
+            //    var aDescription = new BodyDescription(new Vector3(20, 3, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+            //    var bDescription = new BodyDescription(new Vector3(20, 4, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+            //    var cDescription = new BodyDescription(new Vector3(20, 3, 1), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+            //    var dDescription = new BodyDescription(new Vector3(21, 3, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+            //    var a = Simulation.Bodies.Add(aDescription);
+            //    var b = Simulation.Bodies.Add(bDescription);
+            //    var c = Simulation.Bodies.Add(cDescription);
+            //    var d = Simulation.Bodies.Add(dDescription);
+            //    Simulation.Solver.Add(a, b, new Weld { LocalOffset = new Vector3(0, 1, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
+            //    Simulation.Solver.Add(a, c, new Weld { LocalOffset = new Vector3(0, 0, 1), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
+            //    Simulation.Solver.Add(a, d, new Weld { LocalOffset = new Vector3(1, 0, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
+            //    Simulation.Solver.Add(a, b, c, d, new VolumeConstraint { TargetScaledVolume = 1, SpringSettings = new SpringSettings(30, 1) });
+            //}
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
 

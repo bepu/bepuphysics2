@@ -39,8 +39,8 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<NewtDemo>();
             AddOption<ConstraintTestDemo>();
+            AddOption<NewtDemo>();
             AddOption<PyramidDemo>();
             AddOption<RagdollDemo>();
             AddOption<CompoundTestDemo>();
