@@ -9,15 +9,31 @@ using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
     /// <summary>
-    /// Constrains the volume of a tetrahedron connecting the centers of four bodies to match a goal volume.
+    /// Constrains the volume of a tetrahedron connecting the centers of four bodies to match a goal volume. 
+    /// Scaled volume computed from (ab x ac) * ad; the volume may be negative depending on the winding of the tetrahedron.
     /// </summary>
     public struct VolumeConstraint : IConstraintDescription<VolumeConstraint>
     {
         /// <summary>
-        /// 6 times the target volume of the tetrahedra.
+        /// 6 times the target volume of the tetrahedra. Computed from (ab x ac) * ad; this may be negative depending on the winding of the tetrahedron.
         /// </summary>
         public float TargetScaledVolume;
         public SpringSettings SpringSettings;
+
+        /// <summary>
+        /// Creates a new volume constraint, initializing the target volume using a set of initial positions.
+        /// </summary>
+        /// <param name="a">Initial position of the first body.</param>
+        /// <param name="b">Initial position of the second body.</param>
+        /// <param name="c">Initial position of the third body.</param>
+        /// <param name="d">Initial position of the fourth body.</param>
+        /// <param name="springSettings">Spring settings to apply to the volume constraint.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public VolumeConstraint(in Vector3 a, in Vector3 b, in Vector3 c, in Vector3 d, SpringSettings springSettings)
+        {
+            TargetScaledVolume = Vector3.Dot(Vector3.Cross(b - a, c - a), d - a);
+            SpringSettings = springSettings;
+        }
 
         public int ConstraintTypeId
         {
@@ -118,18 +134,17 @@ namespace BepuPhysics.Constraints
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             Vector3Wide.Dot(projection.JacobianD, ad, out var unscaledVolume);
-            projection.BiasImpulse = (unscaledVolume - prestep.TargetScaledVolume) * positionErrorToVelocity * projection.EffectiveMass;
-
+            projection.BiasImpulse = (prestep.TargetScaledVolume - unscaledVolume) * (1f / 6f) * positionErrorToVelocity * projection.EffectiveMass;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref BodyVelocities velocityD, 
+        private static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref BodyVelocities velocityD,
             ref VolumeConstraintProjection projection, ref Vector3Wide negatedJacobianA, ref Vector<float> impulse)
         {
-            Vector3Wide.Scale(negatedJacobianA, projection.InverseMassA, out var negativeVelocityChangeA);
-            Vector3Wide.Scale(projection.JacobianB, projection.InverseMassB, out var velocityChangeB);
-            Vector3Wide.Scale(projection.JacobianC, projection.InverseMassC, out var velocityChangeC);
-            Vector3Wide.Scale(projection.JacobianD, projection.InverseMassD, out var velocityChangeD);
+            Vector3Wide.Scale(negatedJacobianA, projection.InverseMassA * impulse, out var negativeVelocityChangeA);
+            Vector3Wide.Scale(projection.JacobianB, projection.InverseMassB * impulse, out var velocityChangeB);
+            Vector3Wide.Scale(projection.JacobianC, projection.InverseMassC * impulse, out var velocityChangeC);
+            Vector3Wide.Scale(projection.JacobianD, projection.InverseMassD * impulse, out var velocityChangeD);
             Vector3Wide.Subtract(velocityA.Linear, negativeVelocityChangeA, out velocityA.Linear);
             Vector3Wide.Add(velocityB.Linear, velocityChangeB, out velocityB.Linear);
             Vector3Wide.Add(velocityC.Linear, velocityChangeC, out velocityC.Linear);
@@ -155,12 +170,12 @@ namespace BepuPhysics.Constraints
         {
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             GetNegatedJacobianA(projection, out var negatedJacobianA);
-            Vector3Wide.Dot(negatedJacobianA, velocityA.Linear, out var negatedcontributionA);
+            Vector3Wide.Dot(negatedJacobianA, velocityA.Linear, out var negatedContributionA);
             Vector3Wide.Dot(projection.JacobianB, velocityB.Linear, out var contributionB);
             Vector3Wide.Dot(projection.JacobianC, velocityC.Linear, out var contributionC);
             Vector3Wide.Dot(projection.JacobianD, velocityD.Linear, out var contributionD);
-            var csv = contributionB + contributionC + contributionD - negatedcontributionA;
-            var csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - csv;
+            var csv = contributionB + contributionC + contributionD - negatedContributionA;
+            var csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - csv * projection.EffectiveMass;
             accumulatedImpulse += csi;
 
             ApplyImpulse(ref velocityA, ref velocityB, ref velocityC, ref velocityD, ref projection, ref negatedJacobianA, ref csi);

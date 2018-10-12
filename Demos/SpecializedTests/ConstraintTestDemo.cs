@@ -122,23 +122,23 @@ namespace Demos.SpecializedTests
                 var b = Simulation.Bodies.Add(bDescription);
                 Simulation.Solver.Add(a, b, new Weld2 { LocalOffset = new Vector3(0, 2, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
             }
-            //{
-            //    var sphere = new Sphere(0.125f);
-            //    sphere.ComputeInertia(1, out var sphereInertia);
-            //    var sphereIndex = Simulation.Shapes.Add(sphere);
-            //    var aDescription = new BodyDescription(new Vector3(20, 3, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-            //    var bDescription = new BodyDescription(new Vector3(20, 4, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-            //    var cDescription = new BodyDescription(new Vector3(20, 3, 1), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-            //    var dDescription = new BodyDescription(new Vector3(21, 3, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-            //    var a = Simulation.Bodies.Add(aDescription);
-            //    var b = Simulation.Bodies.Add(bDescription);
-            //    var c = Simulation.Bodies.Add(cDescription);
-            //    var d = Simulation.Bodies.Add(dDescription);
-            //    Simulation.Solver.Add(a, b, new Weld { LocalOffset = new Vector3(0, 1, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
-            //    Simulation.Solver.Add(a, c, new Weld { LocalOffset = new Vector3(0, 0, 1), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
-            //    Simulation.Solver.Add(a, d, new Weld { LocalOffset = new Vector3(1, 0, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
-            //    Simulation.Solver.Add(a, b, c, d, new VolumeConstraint { TargetScaledVolume = 1, SpringSettings = new SpringSettings(30, 1) });
-            //}
+            {
+                var sphere = new Sphere(0.125f);
+                sphere.ComputeInertia(1, out var sphereInertia);
+                var sphereIndex = Simulation.Shapes.Add(sphere);
+                var aDescription = new BodyDescription(new Vector3(20, 3, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(new Vector3(20, 4, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var cDescription = new BodyDescription(new Vector3(20, 3, 1), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var dDescription = new BodyDescription(new Vector3(21, 3, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var a = Simulation.Bodies.Add(aDescription);
+                var b = Simulation.Bodies.Add(bDescription);
+                var c = Simulation.Bodies.Add(cDescription);
+                var d = Simulation.Bodies.Add(dDescription);
+                Simulation.Solver.Add(a, b, new Weld { LocalOffset = new Vector3(0, 1, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(10, 1) });
+                Simulation.Solver.Add(a, c, new Weld { LocalOffset = new Vector3(0, 0, 1), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(10, 1) });
+                Simulation.Solver.Add(a, d, new Weld { LocalOffset = new Vector3(1, 0, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(10, 1) });
+                Simulation.Solver.Add(a, b, c, d, new VolumeConstraint { TargetScaledVolume = 1, SpringSettings = new SpringSettings(30, 1) });
+            }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
 

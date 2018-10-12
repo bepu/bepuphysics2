@@ -268,14 +268,14 @@ namespace Demos.Demos
 
     public struct TetrahedronVertices
     {
-        public readonly uint A, B, C, D;
+        public readonly int A, B, C, D;
 
         public TetrahedronVertices(int a, int b, int c, int d)
         {
-            A = (uint)a;
-            B = (uint)b;
-            C = (uint)c;
-            D = (uint)d;
+            A = a;
+            B = b;
+            C = c;
+            D = d;
         }
     }
 
@@ -610,8 +610,8 @@ namespace Demos.Demos
                 ++vertexEdgeCounts[b];
             }
         }
-        private unsafe void CreateDeformable(in Vector3 position, in Quaternion orientation, float density, float cellSize, float frequency, float dampingRatio, int instanceId,
-            BodyProperty<DeformableCollisionFilter> filters, ref Buffer<Vector3> vertices, ref CellSet vertexSpatialIndices, ref Buffer<CellVertexIndices> cellVertexIndices)
+        private unsafe void CreateDeformable(in Vector3 position, in Quaternion orientation, float density, float cellSize, in SpringSettings weldSpringiness, in SpringSettings volumeSpringiness, int instanceId, BodyProperty<DeformableCollisionFilter> filters,
+            ref Buffer<Vector3> vertices, ref CellSet vertexSpatialIndices, ref Buffer<CellVertexIndices> cellVertexIndices, ref Buffer<TetrahedronVertices> tetrahedraVertexIndices)
         {
             BufferPool.Take<int>(vertices.Length, out var vertexEdgeCounts);
             vertexEdgeCounts.Clear(0, vertices.Length);
@@ -662,8 +662,14 @@ namespace Demos.Demos
                     {
                         LocalOffset = offset,
                         LocalOrientation = Quaternion.Identity,
-                        SpringSettings = new SpringSettings(frequency, dampingRatio)
+                        SpringSettings = weldSpringiness
                     });
+            }
+            for (int i = 0; i < tetrahedraVertexIndices.Length; ++i)
+            {
+                ref var tetrahedron = ref tetrahedraVertexIndices[i];
+                Simulation.Solver.Add(vertexHandles[tetrahedron.A], vertexHandles[tetrahedron.B], vertexHandles[tetrahedron.C], vertexHandles[tetrahedron.D],
+                    new VolumeConstraint(vertices[tetrahedron.A], vertices[tetrahedron.B], vertices[tetrahedron.C], vertices[tetrahedron.D], volumeSpringiness));
             }
 
             BufferPool.Return(ref vertexEdgeCounts);
@@ -671,46 +677,36 @@ namespace Demos.Demos
         }
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(-5, 2, 5);
+            camera.Position = new Vector3(-5f, 5.5f, 5f);
             camera.Yaw = MathHelper.Pi / 4;
+            camera.Pitch = MathHelper.Pi * 0.15f;
 
             var filters = new BodyProperty<DeformableCollisionFilter>();
             Simulation = Simulation.Create(BufferPool, new DeformableCallbacks { Filters = filters });
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
-            float cellSize = 0.12f;
+            float cellSize = 0.1f;
             DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool,
                 out var vertices, out var vertexSpatialIndices, out var cellVertexIndices, out var tetrahedraVertexIndices);
-            CreateDeformable(new Vector3(0, 5, 0), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.15f), 1f, cellSize, 30, 1f, 0, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices);
-            CreateDeformable(new Vector3(0, 8, 0), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), -MathF.PI * 0.5f), 1f, cellSize, 30, 1f, 1, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices);
+            var weldSpringiness = new SpringSettings(10, 1);
+            var volumeSpringiness = new SpringSettings(30, 1);
+            for (int i = 0; i < 5; ++i)
+            {
+                CreateDeformable(new Vector3(i * 3, 5 + i * 1.5f, 0), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * (i * 0.55f)), 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
+            }
 
             BufferPool.Return(ref vertices);
             vertexSpatialIndices.Dispose(BufferPool.SpecializeFor<Cell>(), BufferPool.SpecializeFor<int>());
             BufferPool.Return(ref cellVertexIndices);
             BufferPool.Return(ref tetrahedraVertexIndices);
 
-            BodyDescription.Create(new Vector3(0, 100, -1.5f), new Sphere(5), Simulation.Shapes, 100, out var ouch);
+            BodyDescription.Create(new Vector3(0, 100, -.5f), new Sphere(5), Simulation.Shapes, 100, out var ouch);
             Simulation.Bodies.Add(ouch);
 
-            var staticShape = new Box(1500, 1, 1500);
-            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
 
-            var staticDescription = new StaticDescription
-            {
-                Collidable = new CollidableDescription
-                {
-                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                    Shape = staticShapeIndex,
-                    SpeculativeMargin = 0.1f
-                },
-                Pose = new RigidPose
-                {
-                    Position = new Vector3(1, -0.5f, 1),
-                    Orientation = BepuUtilities.Quaternion.Identity
-                }
-            };
-            Simulation.Statics.Add(staticDescription);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(3)), 0.1f)));
 
         }
 
