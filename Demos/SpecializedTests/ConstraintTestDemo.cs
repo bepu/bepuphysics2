@@ -19,7 +19,7 @@ namespace Demos.SpecializedTests
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(0, 4, 20);
+            camera.Position = new Vector3(0, 4, 25);
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
@@ -124,20 +124,43 @@ namespace Demos.SpecializedTests
             }
             {
                 var sphere = new Sphere(0.125f);
-                sphere.ComputeInertia(1, out var sphereInertia);
+                //Treat each vertex as a point mass that cannot rotate.
+                var sphereInertia = new BodyInertia { InverseMass = 1 };
                 var sphereIndex = Simulation.Shapes.Add(sphere);
-                var aDescription = new BodyDescription(new Vector3(20, 3, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(new Vector3(20, 4, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-                var cDescription = new BodyDescription(new Vector3(20, 3, 1), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-                var dDescription = new BodyDescription(new Vector3(21, 3, 0), sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var a = new Vector3(20, 3, 0);
+                var b = new Vector3(20, 4, 0);
+                var c = new Vector3(20, 3, 1);
+                var d = new Vector3(21, 3, 0);
+                var aDescription = new BodyDescription(a, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(b, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var cDescription = new BodyDescription(c, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var dDescription = new BodyDescription(d, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var aHandle = Simulation.Bodies.Add(aDescription);
+                var bHandle = Simulation.Bodies.Add(bDescription);
+                var cHandle = Simulation.Bodies.Add(cDescription);
+                var dHandle = Simulation.Bodies.Add(dDescription);
+                var distanceSpringiness = new SpringSettings(5f, 1);
+                Simulation.Solver.Add(aHandle, bHandle, new DistanceServo(default, default, Vector3.Distance(a, b), distanceSpringiness));
+                Simulation.Solver.Add(aHandle, cHandle, new DistanceServo(default, default, Vector3.Distance(a, c), distanceSpringiness));
+                Simulation.Solver.Add(aHandle, dHandle, new DistanceServo(default, default, Vector3.Distance(a, d), distanceSpringiness));
+                Simulation.Solver.Add(bHandle, cHandle, new DistanceServo(default, default, Vector3.Distance(b, c), distanceSpringiness));
+                Simulation.Solver.Add(bHandle, dHandle, new DistanceServo(default, default, Vector3.Distance(b, d), distanceSpringiness));
+                Simulation.Solver.Add(cHandle, dHandle, new DistanceServo(default, default, Vector3.Distance(c, d), distanceSpringiness));
+                Simulation.Solver.Add(aHandle, bHandle, cHandle, dHandle, new VolumeConstraint { TargetScaledVolume = 1, SpringSettings = new SpringSettings(30, 1) });
+            }
+            {
+                var aDescription = new BodyDescription(new Vector3(23, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(new Vector3(23, 6, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f));
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
-                var c = Simulation.Bodies.Add(cDescription);
-                var d = Simulation.Bodies.Add(dDescription);
-                Simulation.Solver.Add(a, b, new Weld { LocalOffset = new Vector3(0, 1, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(10, 1) });
-                Simulation.Solver.Add(a, c, new Weld { LocalOffset = new Vector3(0, 0, 1), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(10, 1) });
-                Simulation.Solver.Add(a, d, new Weld { LocalOffset = new Vector3(1, 0, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(10, 1) });
-                Simulation.Solver.Add(a, b, c, d, new VolumeConstraint { TargetScaledVolume = 1, SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new DistanceServo
+                {
+                    LocalOffsetA = new Vector3(0, 0.55f, 0),
+                    LocalOffsetB = new Vector3(0, -0.55f, 0),
+                    TargetDistance = 3,
+                    SpringSettings = new SpringSettings(30, 1),
+                    ServoSettings = ServoSettings.Default
+                });
             }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
@@ -147,10 +170,6 @@ namespace Demos.SpecializedTests
 
         public override void Update(Input input, float dt)
         {
-            if (input.WasPushed(OpenTK.Input.Key.P))
-            {
-                Console.Write($"4df");
-            }
             base.Update(input, dt);
         }
 

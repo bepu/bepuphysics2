@@ -29,6 +29,7 @@ namespace BepuPhysics
             solver.Register<Weld>();
             solver.Register<Weld2>();
             solver.Register<VolumeConstraint>();
+            solver.Register<DistanceServo>();
             solver.Register<GrabServo>();
 
             solver.Register<Contact1OneBody>();

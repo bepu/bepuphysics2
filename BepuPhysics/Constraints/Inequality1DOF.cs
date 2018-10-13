@@ -233,19 +233,18 @@ namespace BepuPhysics.Constraints
             //wsv += impulse * J * M^-1
             //So while we need to store something here, we can take advantage of the fact that we aren't using the jacobian anywhere else (it's replaced by the JT * effectiveMass term above).
             //Precompute J*M^-1, too.
-            //So you're still loading a jacobian-sized matrix, but you don't need to load M^-1! That saves you 20 scalars. (3x3 + 1 + 3x3 + 1, inverse inertia and mass of two bodies.)
+            //So you're still loading a jacobian-sized matrix, but you don't need to load M^-1! That saves you 14 scalars. (symmetric 3x3 + 1 + symmetric 3x3 + 1)
             //That saves you the multiplication of (impulse * J) * M^-1, which is 6 multiplies and 6 dot products.
 
             //Note that this optimization's value depends on the number of constrained DOFs.
 
             //Net memory change, opt vs no opt, in scalars:
-            //1DOF: costs 1x12, saves 1x1 effective mass and the 20 scalar M^-1: -9
-            //2DOF: costs 2x12, saves 2x2 effective mass and the 20 scalar M^-1: 0
-            //3DOF: costs 3x12, saves 3x3 effective mass and the 20 scalar M^-1: 7
-            //4DOF: costs 4x12, saves 4x4 effective mass and the 20 scalar M^-1: 12
-            //5DOF: costs 5x12, saves 5x5 effective mass and the 20 scalar M^-1: 15
-            //6DOF: costs 6x12, saves 6x6 effective mass and the 20 scalar M^-1: 16
-
+            //1DOF: costs 1x12, saves 1x1 effective mass and the 14 scalar M^-1: -3
+            //2DOF: costs 2x12, saves 2x2 symmetric effective mass and the 14 scalar M^-1: 7
+            //3DOF: costs 3x12, saves 3x3 symmetric effective mass and the 14 scalar M^-1: 16
+            //4DOF: costs 4x12, saves 4x4 symmetric effective mass and the 14 scalar M^-1: 24
+            //5DOF: costs 5x12, saves 5x5 symmetric effective mass and the 14 scalar M^-1: 31
+            //6DOF: costs 6x12, saves 6x6 symmetric effective mass and the 14 scalar M^-1: 37
 
             //Net compute savings, opt vs no opt:
             //DOF savings = 1xDOF * DOFxDOF (DOF DOFdot products), 2 1x3 * scalar (6 multiplies), 2 1x3 * 3x3 (6 3dot products)
@@ -259,17 +258,17 @@ namespace BepuPhysics.Constraints
             //6DOF: 60 multiplies, 42 adds
 
             //So does our 'optimization' actually do anything useful? 
-            //In 1 or 2 DOF constraints, it's a win with no downsides.
-            //3+ are difficult to determine.
+            //In 1 DOF constraints, it's often a win with no downsides.
+            //2+ are difficult to determine.
             //This depends on heavily on the machine's SIMD width. You do every lane's ALU ops in parallel, but the loads are still fundamentally bound by memory bandwidth.
             //The loads are coherent, at least- no gathers on this stuff. But I wouldn't be surprised if 3DOF+ constraints end up being faster *without* the pretransformations on wide SIMD.
-            //This is just something that will require testing.
+            //This is just something that will require case by case analysis. Constraints can have special structure which change the judgment.
 
             //(Also, note that large DOF jacobians are often very sparse. Consider the jacobians used by a 6DOF weld joint. You could likely do special case optimizations to reduce the
             //load further. It is unlikely that you could find a way to do the same to JT * effectiveMass. J * M^-1 might have some savings, though. But J*M^-1 isn't *sparser*
             //than J by itself, so the space savings are limited. As long as you precompute, the above load requirement offset will persist.)
 
-            //Good news, though! There are a lot of 1DOF and 2DOF constraints where this is an unambiguous win.
+            //Good news, though! There are a lot of constraints where this trick is applicable.
 
             //We'll start with the unsoftened effective mass, constructed from the contributions computed above:
             var effectiveMass = Vector<float>.One / (linearA + linearB + angularA + angularB);

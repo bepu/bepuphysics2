@@ -13,6 +13,11 @@ namespace BepuPhysics.Constraints
         public float BaseSpeed;
         public float MaximumForce;
 
+        /// <summary>
+        /// Gets settings representing a servo with unlimited force, speed, and no base speed.
+        /// </summary>
+        public static ServoSettings Default { get { return new ServoSettings(float.MaxValue, 0, float.MaxValue); } }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ServoSettings(float maximumSpeed, float baseSpeed, float maximumForce)
         {
@@ -49,6 +54,14 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ClampImpulse(in Vector<float> maximumImpulse, ref Vector<float> accumulatedImpulse, ref Vector<float> csi)
+        {
+            var previousImpulse = accumulatedImpulse;
+            accumulatedImpulse = Vector.Max(-maximumImpulse, Vector.Min(maximumImpulse, accumulatedImpulse + csi));
+            csi = accumulatedImpulse - previousImpulse;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteFirst(in ServoSettings source, ref ServoSettingsWide target)
         {
             GatherScatter.GetFirst(ref target.MaximumSpeed) = source.MaximumSpeed;
@@ -63,5 +76,6 @@ namespace BepuPhysics.Constraints
             target.BaseSpeed = source.BaseSpeed[0];
             target.MaximumForce = source.MaximumForce[0];
         }
+
     }
 }
