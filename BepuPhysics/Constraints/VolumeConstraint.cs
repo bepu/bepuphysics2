@@ -130,7 +130,7 @@ namespace BepuPhysics.Constraints
             //Scaling the volume by a constant factor will not match the growth rate of the jacobian contributions.
             //We're going to ignore this until proven to be a noticeable problem because Vector<T> does not expose exp or pow and this is cheap. 
             //Could still implement it, but it's not super high value.
-            var epsilon = 5e-3f * prestep.TargetScaledVolume;
+            var epsilon = 5e-4f * prestep.TargetScaledVolume;
             contributionA = Vector.Max(epsilon, contributionA);
             contributionB = Vector.Max(epsilon, contributionB);
             contributionC = Vector.Max(epsilon, contributionC);
@@ -173,8 +173,16 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref BodyVelocities velocityD, ref VolumeConstraintProjection projection, ref Vector<float> accumulatedImpulse)
         {
-            GetNegatedJacobianA(projection, out var negatedJacobianA);
-            ApplyImpulse(ref velocityA, ref velocityB, ref velocityC, ref velocityD, ref projection, ref negatedJacobianA, ref accumulatedImpulse);
+            //Unlike most constraints, the jacobians in a volume constraint can change magnitude and direction wildly in some cases.
+            //Reusing the previous frame's accumulated impulse can result in catastrophically wrong guesses which require many iterations to correct.
+            //Instead, for now, we simply clear the accumulated impulse. The constraint will be a little softer during sustained forces because of this, but it helps avoid
+            //explosions in the worst case and the slight softness isn't usually a big issue for volume constraints.
+            //TODO: This is a fairly hacky approach since we already loaded the velocities despite not doing anything with them.
+            //Two options: fix the underlying issue by updating the accumulated impulse in response to changes in the jacobian, or special case this by not loading the velocities at all.
+            accumulatedImpulse = default;
+            //A true warm start would look like this:
+            //GetNegatedJacobianA(projection, out var negatedJacobianA);
+            //ApplyImpulse(ref velocityA, ref velocityB, ref velocityC, ref velocityD, ref projection, ref negatedJacobianA, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -201,6 +209,6 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public class VolumeConstraintTypeProcessor : FourBodyTypeProcessor<VolumeConstraintPrestepData, VolumeConstraintProjection, Vector<float>, VolumeConstraintFunctions>
     {
-        public const int BatchTypeId = 33;
+        public const int BatchTypeId = 32;
     }
 }

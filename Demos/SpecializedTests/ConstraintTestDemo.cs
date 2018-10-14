@@ -115,22 +115,14 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, b, new Weld { LocalOffset = new Vector3(0, 2, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var aDescription = new BodyDescription(new Vector3(17, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(new Vector3(17, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f));
-                //aDescription.Velocity.Angular = new Vector3(0, 0, 5);
-                var a = Simulation.Bodies.Add(aDescription);
-                var b = Simulation.Bodies.Add(bDescription);
-                Simulation.Solver.Add(a, b, new Weld2 { LocalOffset = new Vector3(0, 2, 0), LocalOrientation = Quaternion.Identity, SpringSettings = new SpringSettings(30, 1) });
-            }
-            {
                 var sphere = new Sphere(0.125f);
                 //Treat each vertex as a point mass that cannot rotate.
                 var sphereInertia = new BodyInertia { InverseMass = 1 };
                 var sphereIndex = Simulation.Shapes.Add(sphere);
-                var a = new Vector3(20, 3, 0);
-                var b = new Vector3(20, 4, 0);
-                var c = new Vector3(20, 3, 1);
-                var d = new Vector3(21, 3, 0);
+                var a = new Vector3(17, 3, 0);
+                var b = new Vector3(17, 4, 0);
+                var c = new Vector3(17, 3, 1);
+                var d = new Vector3(18, 3, 0);
                 var aDescription = new BodyDescription(a, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
                 var bDescription = new BodyDescription(b, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
                 var cDescription = new BodyDescription(c, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
@@ -149,8 +141,8 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(aHandle, bHandle, cHandle, dHandle, new VolumeConstraint { TargetScaledVolume = 1, SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var aDescription = new BodyDescription(new Vector3(23, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(new Vector3(23, 6, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f));
+                var aDescription = new BodyDescription(new Vector3(20, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(new Vector3(20, 6, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f));
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
                 Simulation.Solver.Add(a, b, new DistanceServo

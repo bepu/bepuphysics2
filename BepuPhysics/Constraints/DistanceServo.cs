@@ -95,12 +95,27 @@ namespace BepuPhysics.Constraints
 
     public struct DistanceServoFunctions : IConstraintFunctions<DistanceServoPrestepData, DistanceServoProjection, Vector<float>>
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
-            ref DistanceServoPrestepData prestep, out DistanceServoProjection projection)
+        public static void GetDistance(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, in Vector3Wide localOffsetA, in Vector3Wide localOffsetB,
+            out Vector3Wide anchorOffsetA, out Vector3Wide anchorOffsetB, out Vector3Wide anchorOffset, out Vector<float> distance)
         {
             bodies.GatherPose(ref bodyReferences, count, out var offsetB, out var orientationA, out var orientationB);
 
+            QuaternionWide.TransformWithoutOverlap(localOffsetA, orientationA, out anchorOffsetA);
+            QuaternionWide.TransformWithoutOverlap(localOffsetB, orientationB, out anchorOffsetB);
+            Vector3Wide.Add(anchorOffsetB, offsetB, out var anchorB);
+            Vector3Wide.Subtract(anchorB, anchorOffsetA, out anchorOffset);
+
+            Vector3Wide.Length(anchorOffset, out distance);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ComputeTransforms(
+            in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide anchorOffsetA, in Vector3Wide anchorOffsetB, in Vector<float> distance, ref Vector3Wide direction,
+            float dt, in SpringSettingsWide springSettings,
+            out Vector<float> positionErrorToVelocity, out Vector<float> softnessImpulseScale, out Vector<float> effectiveMass,
+            out Vector3Wide linearVelocityToImpulseA, out Vector3Wide angularVelocityToImpulseA, out Vector3Wide angularVelocityToImpulseB,
+            out Vector3Wide linearImpulseToVelocityA, out Vector3Wide angularImpulseToVelocityA, out Vector3Wide linearImpulseToVelocityB, out Vector3Wide angularImpulseToVelocityB)
+        {
             //Position constraint:
             //||positionA + localOffsetA * orientationA - positionB - localOffsetB * orientationB|| = distance
             //Skipping a bunch of algebra, the velocity constraint applies to the change in velocity along the separating axis.
@@ -119,14 +134,6 @@ namespace BepuPhysics.Constraints
             //Note that we're working with the distance instead of distance squared. That makes it easier to use and reason about at the cost of a square root in the prestep.
             //That really, really doesn't matter.
 
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out var anchorOffsetA);
-            QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetB, orientationB, out var anchorOffsetB);
-            Vector3Wide.Add(anchorOffsetB, offsetB, out var anchorB);
-            Vector3Wide.Subtract(anchorB, anchorOffsetA, out var anchorOffset);
-
-            Vector3Wide.Length(anchorOffset, out var distance);
-            Vector3Wide.Scale(anchorOffset, Vector<float>.One / distance, out var direction);
-
             //If the distance is zero, there is no valid offset direction. Pick one arbitrarily.
             var needFallback = Vector.LessThan(distance, new Vector<float>(1e-9f));
             Vector3Wide.Broadcast(new Vector3(1, 0, 0), out var fallback);
@@ -142,17 +149,32 @@ namespace BepuPhysics.Constraints
             Symmetric3x3Wide.VectorSandwich(angularJB, inertiaB.InverseInertiaTensor, out var angularContributionB);
             var inverseEffectiveMass = inertiaA.InverseMass + inertiaB.InverseMass + angularContributionA + angularContributionB;
 
-            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            var effectiveMass = effectiveMassCFMScale / inverseEffectiveMass;
+            SpringSettingsWide.ComputeSpringiness(springSettings, dt, out positionErrorToVelocity, out var effectiveMassCFMScale, out softnessImpulseScale);
+            effectiveMass = effectiveMassCFMScale / inverseEffectiveMass;
+            Vector3Wide.Scale(direction, effectiveMass, out linearVelocityToImpulseA);
+            Vector3Wide.Scale(angularJA, effectiveMass, out angularVelocityToImpulseA);
+            Vector3Wide.Scale(angularJB, effectiveMass, out angularVelocityToImpulseB);
 
-            Vector3Wide.Scale(direction, effectiveMass, out projection.LinearVelocityToImpulseA);
-            Vector3Wide.Scale(angularJA, effectiveMass, out projection.AngularVelocityToImpulseA);
-            Vector3Wide.Scale(angularJB, effectiveMass, out projection.AngularVelocityToImpulseB);
+            Vector3Wide.Scale(direction, inertiaA.InverseMass, out linearImpulseToVelocityA);
+            Symmetric3x3Wide.TransformWithoutOverlap(angularJA, inertiaA.InverseInertiaTensor, out angularImpulseToVelocityA);
+            Vector3Wide.Scale(direction, -inertiaB.InverseMass, out linearImpulseToVelocityB);
+            Symmetric3x3Wide.TransformWithoutOverlap(angularJB, inertiaB.InverseInertiaTensor, out angularImpulseToVelocityB);
+        }
 
-            Vector3Wide.Scale(direction, inertiaA.InverseMass, out projection.LinearImpulseToVelocityA);
-            Symmetric3x3Wide.TransformWithoutOverlap(angularJA, inertiaA.InverseInertiaTensor, out projection.AngularImpulseToVelocityA);
-            Vector3Wide.Scale(direction, -inertiaB.InverseMass, out projection.LinearImpulseToVelocityB);
-            Symmetric3x3Wide.TransformWithoutOverlap(angularJB, inertiaB.InverseInertiaTensor, out projection.AngularImpulseToVelocityB);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
+            ref DistanceServoPrestepData prestep, out DistanceServoProjection projection)
+        {
+            bodies.GatherPose(ref bodyReferences, count, out var offsetB, out var orientationA, out var orientationB);
+
+            GetDistance(bodies, ref bodyReferences, count, prestep.LocalOffsetA, prestep.LocalOffsetB, out var anchorOffsetA, out var anchorOffsetB, out var anchorOffset, out var distance);
+
+            Vector3Wide.Scale(anchorOffset, Vector<float>.One / distance, out var direction);
+
+            ComputeTransforms(inertiaA, inertiaB, anchorOffsetA, anchorOffsetB, distance, ref direction, dt, prestep.SpringSettings,
+                out var positionErrorToVelocity, out projection.SoftnessImpulseScale, out var effectiveMass,
+                out projection.LinearVelocityToImpulseA, out projection.AngularVelocityToImpulseA, out projection.AngularVelocityToImpulseB,
+                out projection.LinearImpulseToVelocityA, out projection.AngularImpulseToVelocityA, out projection.LinearImpulseToVelocityB, out projection.AngularImpulseToVelocityB);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             var error = distance - prestep.TargetDistance;
@@ -162,15 +184,18 @@ namespace BepuPhysics.Constraints
 
         }
 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref DistanceServoProjection projection, ref Vector<float> csi)
+        public static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
+            in Vector3Wide linearImpulseToVelocityA, in Vector3Wide angularImpulseToVelocityA, in Vector3Wide linearImpulseToVelocityB, in Vector3Wide angularImpulseToVelocityB,
+            ref Vector<float> csi)
         {
-            Vector3Wide.Scale(projection.LinearImpulseToVelocityA, csi, out var linearVelocityChangeA);
-            Vector3Wide.Scale(projection.AngularImpulseToVelocityA, csi, out var angularVelocityChangeA);
+            Vector3Wide.Scale(linearImpulseToVelocityA, csi, out var linearVelocityChangeA);
+            Vector3Wide.Scale(angularImpulseToVelocityA, csi, out var angularVelocityChangeA);
             Vector3Wide.Add(linearVelocityChangeA, velocityA.Linear, out velocityA.Linear);
             Vector3Wide.Add(angularVelocityChangeA, velocityA.Angular, out velocityA.Angular);
-            Vector3Wide.Scale(projection.LinearImpulseToVelocityB, csi, out var linearVelocityChangeB);
-            Vector3Wide.Scale(projection.AngularImpulseToVelocityB, csi, out var angularVelocityChangeB);
+            Vector3Wide.Scale(linearImpulseToVelocityB, csi, out var linearVelocityChangeB);
+            Vector3Wide.Scale(angularImpulseToVelocityB, csi, out var angularVelocityChangeB);
             Vector3Wide.Add(linearVelocityChangeB, velocityB.Linear, out velocityB.Linear);
             Vector3Wide.Add(angularVelocityChangeB, velocityB.Angular, out velocityB.Angular);
         }
@@ -178,7 +203,8 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref DistanceServoProjection projection, ref Vector<float> accumulatedImpulse)
         {
-            ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse);
+            ApplyImpulse(ref velocityA, ref velocityB,
+                projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.LinearImpulseToVelocityB, projection.AngularImpulseToVelocityB, ref accumulatedImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -192,7 +218,8 @@ namespace BepuPhysics.Constraints
             var csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (linearCSIA + angularCSIA - negatedLinearCSIB + angularCSIB);
             ServoSettingsWide.ClampImpulse(projection.MaximumImpulse, ref accumulatedImpulse, ref csi);
 
-            ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref csi);
+            ApplyImpulse(ref velocityA, ref velocityB,
+                projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.LinearImpulseToVelocityB, projection.AngularImpulseToVelocityB, ref csi);
         }
 
     }
@@ -203,6 +230,6 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public class DistanceServoTypeProcessor : TwoBodyTypeProcessor<DistanceServoPrestepData, DistanceServoProjection, Vector<float>, DistanceServoFunctions>
     {
-        public const int BatchTypeId = 35;
+        public const int BatchTypeId = 33;
     }
 }
