@@ -96,7 +96,7 @@ namespace BepuPhysics.Constraints
                 out var anchorOffsetA, out var anchorOffsetB, out var anchorOffset, out var distance);
             //If the current distance is closer to the minimum, calibrate for the minimum. Otherwise, calibrate for the maximum.
             var useMinimum = Vector.LessThan(Vector.Abs(distance - prestep.MinimumDistance), Vector.Abs(distance - prestep.MaximumDistance));
-            var sign = Vector.ConditionalSelect(useMinimum, Vector<float>.One, new Vector<float>(-1f));
+            var sign = Vector.ConditionalSelect(useMinimum, new Vector<float>(-1f), Vector<float>.One);
             Vector3Wide.Scale(anchorOffset, sign / distance, out var direction);
             DistanceServoFunctions.ComputeTransforms(inertiaA, inertiaB, anchorOffsetA, anchorOffsetB, distance, ref direction, dt,
                 prestep.SpringSettings, out var positionErrorToVelocity, out projection.SoftnessImpulseScale, out var effectiveMass,
@@ -104,7 +104,7 @@ namespace BepuPhysics.Constraints
                 out projection.LinearImpulseToVelocityA, out projection.AngularImpulseToVelocityA, out projection.LinearImpulseToVelocityB, out projection.AngularImpulseToVelocityB);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            var error = Vector.ConditionalSelect(useMinimum, distance - prestep.MinimumDistance, prestep.MaximumDistance - distance);
+            var error = Vector.ConditionalSelect(useMinimum, prestep.MinimumDistance - distance, distance - prestep.MaximumDistance);
             var biasVelocity = Vector.Min(error * new Vector<float>(inverseDt), error * positionErrorToVelocity);
             projection.BiasImpulse = biasVelocity * effectiveMass;
 

@@ -145,14 +145,14 @@ namespace Demos.SpecializedTests
                 var bDescription = new BodyDescription(new Vector3(20, 6, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f));
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
-                Simulation.Solver.Add(a, b, new DistanceServo
-                {
-                    LocalOffsetA = new Vector3(0, 0.55f, 0),
-                    LocalOffsetB = new Vector3(0, -0.55f, 0),
-                    TargetDistance = 1.9f,
-                    SpringSettings = new SpringSettings(30, 1),
-                    ServoSettings = ServoSettings.Default
-                });
+                Simulation.Solver.Add(a, b, new DistanceServo(new Vector3(0, 0.55f, 0), new Vector3(0, -0.55f, 0), 1.9f, new SpringSettings(30, 1), ServoSettings.Default));
+            }
+            {
+                var aDescription = new BodyDescription(new Vector3(23, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(new Vector3(23, 6, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f));
+                var a = Simulation.Bodies.Add(aDescription);
+                var b = Simulation.Bodies.Add(bDescription);
+                Simulation.Solver.Add(a, b, new DistanceLimit(new Vector3(0, 0.55f, 0), new Vector3(0, -0.55f, 0), 1f, 3, new SpringSettings(30, 1)));
             }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
