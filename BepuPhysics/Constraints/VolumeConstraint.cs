@@ -122,6 +122,19 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Dot(projection.JacobianC, projection.JacobianC, out var contributionC);
             Vector3Wide.Dot(projection.JacobianD, projection.JacobianD, out var contributionD);
 
+            //Protect against singularity by padding the jacobian contributions. This is very much a hack, but it's a pretty simple hack.
+            //Less sensitive to tuning than attempting to guard the inverseEffectiveMass itself, since that is sensitive to both scale AND mass.
+
+            //Choose an epsilon based on the target volume. Note that volume ~= width^3, whereas our jacobian contributions are things like (ac x ad) * (ac x ad), which is proportional
+            //to the area of the triangle acd squared. In other words, the contribution is ~ width^4. 
+            //Scaling the volume by a constant factor will not match the growth rate of the jacobian contributions.
+            //We're going to ignore this until proven to be a noticeable problem because Vector<T> does not expose exp or pow and this is cheap. 
+            //Could still implement it, but it's not super high value.
+            var epsilon = 5e-3f * prestep.TargetScaledVolume;
+            contributionA = Vector.Max(epsilon, contributionA);
+            contributionB = Vector.Max(epsilon, contributionB);
+            contributionC = Vector.Max(epsilon, contributionC);
+            contributionD = Vector.Max(epsilon, contributionD);
             var inverseEffectiveMass = contributionA * inertiaA.InverseMass + contributionB * inertiaB.InverseMass + contributionC * inertiaC.InverseMass + contributionD * inertiaD.InverseMass;
             projection.InverseMassA = inertiaA.InverseMass;
             projection.InverseMassB = inertiaB.InverseMass;
@@ -131,7 +144,6 @@ namespace BepuPhysics.Constraints
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
 
             projection.EffectiveMass = effectiveMassCFMScale / inverseEffectiveMass;
-
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             Vector3Wide.Dot(projection.JacobianD, ad, out var unscaledVolume);
             projection.BiasImpulse = (prestep.TargetScaledVolume - unscaledVolume) * (1f / 6f) * positionErrorToVelocity * projection.EffectiveMass;

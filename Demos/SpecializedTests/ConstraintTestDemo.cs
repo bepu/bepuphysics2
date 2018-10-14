@@ -139,7 +139,7 @@ namespace Demos.SpecializedTests
                 var bHandle = Simulation.Bodies.Add(bDescription);
                 var cHandle = Simulation.Bodies.Add(cDescription);
                 var dHandle = Simulation.Bodies.Add(dDescription);
-                var distanceSpringiness = new SpringSettings(5f, 1);
+                var distanceSpringiness = new SpringSettings(3f, 1);
                 Simulation.Solver.Add(aHandle, bHandle, new DistanceServo(default, default, Vector3.Distance(a, b), distanceSpringiness));
                 Simulation.Solver.Add(aHandle, cHandle, new DistanceServo(default, default, Vector3.Distance(a, c), distanceSpringiness));
                 Simulation.Solver.Add(aHandle, dHandle, new DistanceServo(default, default, Vector3.Distance(a, d), distanceSpringiness));
@@ -157,7 +157,7 @@ namespace Demos.SpecializedTests
                 {
                     LocalOffsetA = new Vector3(0, 0.55f, 0),
                     LocalOffsetB = new Vector3(0, -0.55f, 0),
-                    TargetDistance = 3,
+                    TargetDistance = 1.9f,
                     SpringSettings = new SpringSettings(30, 1),
                     ServoSettings = ServoSettings.Default
                 });
