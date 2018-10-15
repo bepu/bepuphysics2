@@ -316,7 +316,7 @@ namespace Demos.SpecializedTests
                 new Vector2(32, y), 16, new Vector3(1), font);
         }
 
-        public override void Render(Renderer renderer, TextBuilder text, Font font)
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             text.Clear().Append("Multithreading: ").Append(shouldUseMultithreading ? "On" : "Off");
             renderer.TextBatcher.Write(text, new Vector2(32, renderer.Surface.Resolution.Y - 128), 16, new Vector3(1), font);
@@ -336,7 +336,7 @@ namespace Demos.SpecializedTests
                 WriteResults(algorithms[i].Name, stats.Average, baseStats.Average, renderer.Surface.Resolution.Y - (baseHeight - 16 * i), renderer.TextBatcher, text, font);
             }
 
-            base.Render(renderer, text, font);
+            base.Render(renderer, camera, input, text, font);
         }
 
     }

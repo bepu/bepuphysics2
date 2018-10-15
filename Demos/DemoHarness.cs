@@ -293,7 +293,7 @@ namespace Demos
             renderer.Lines.ClearInstances();
 
             //Perform any demo-specific rendering first.
-            demo.Render(renderer, uiText, font);
+            demo.Render(renderer, camera, input, uiText, font);
 #if DEBUG
             float warningHeight = 15f;
             renderer.TextBatcher.Write(uiText.Clear().Append("Running in Debug configuration. Compile in Release or, better yet, ReleaseStrip configuration for performance testing."),

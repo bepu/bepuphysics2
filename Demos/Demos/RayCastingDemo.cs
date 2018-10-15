@@ -558,7 +558,7 @@ namespace Demos
                 new Vector2(32, y), 16, new Vector3(1), font);
         }
 
-        public override void Render(Renderer renderer, TextBuilder text, Font font)
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             var batchedPackedColor = Helpers.PackColor(new Vector3(0.75f, 0.75f, 0));
             var batchedPackedNormalColor = Helpers.PackColor(new Vector3(1f, 1f, 0));
@@ -594,7 +594,7 @@ namespace Demos
                 WriteResults(algorithms[i].Name, stats.Average, baseStats.Average, renderer.Surface.Resolution.Y - (baseHeight - 16 * i), renderer.TextBatcher, text, font);
             }
 
-            base.Render(renderer, text, font);
+            base.Render(renderer, camera, input, text, font);
         }
 
     }

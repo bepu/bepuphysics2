@@ -148,7 +148,7 @@ namespace Demos.Demos
             maxExpansion = maxExpansionA + maxExpansionB;
         }
 
-        public unsafe override void Render(Renderer renderer, TextBuilder text, Font font)
+        public unsafe override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             var testBox = new Box(1, 1, 1);
             var orientationA = Quaternion.Identity;
@@ -216,7 +216,7 @@ namespace Demos.Demos
                 Console.WriteLine($"Time per sweep bound test (ns): {(end - start) * (1e9 / (testCount * Stopwatch.Frequency))}");
             }
 
-            base.Render(renderer, text, font);
+            base.Render(renderer, camera, input, text, font);
         }
     }
 }

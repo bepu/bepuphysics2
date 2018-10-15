@@ -40,12 +40,13 @@ namespace Demos
         public DemoSet()
         {
             AddOption<ConstraintTestDemo>();
-            AddOption<NewtDemo>();
             AddOption<PyramidDemo>();
             AddOption<RagdollDemo>();
             AddOption<CompoundTestDemo>();
             AddOption<MeshDemo>();
             AddOption<ClothLatticeDemo>();
+            AddOption<NewtDemo>();
+            AddOption<WreckingBallStabilityDemo>();
             AddOption<BlockChainDemo>();
             AddOption<RayCastingDemo>();
             AddOption<SweepDemo>();
