@@ -500,6 +500,30 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Gathers inertia for three body bundles into AOSOA bundles.
+        /// </summary>
+        /// <param name="references">Active body indices being gathered.</param>
+        /// <param name="count">Number of bodies in the bundle.</param>
+        /// <param name="inertiaA">Gathered inertia of body A.</param>
+        /// <param name="inertiaB">Gathered inertia of body B.</param>
+        /// <param name="inertiaC">Gathered inertia of body C.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GatherInertia(ref ThreeBodyReferences references, int count, out BodyInertias inertiaA, out BodyInertias inertiaB, out BodyInertias inertiaC)
+        {
+            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
+            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+            ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
+            for (int i = 0; i < count; ++i)
+            {
+                GatherInertiaForBody(ref Inertias[Unsafe.Add(ref baseIndexA, i)], ref GatherScatter.GetOffsetInstance(ref inertiaA, i));
+                GatherInertiaForBody(ref Inertias[Unsafe.Add(ref baseIndexB, i)], ref GatherScatter.GetOffsetInstance(ref inertiaB, i));
+                GatherInertiaForBody(ref Inertias[Unsafe.Add(ref baseIndexC, i)], ref GatherScatter.GetOffsetInstance(ref inertiaC, i));
+            }
+        }
+
+        /// <summary>
         /// Gathers inertia for four body bundles into AOSOA bundles.
         /// </summary>
         /// <param name="references">Active body indices being gathered.</param>
@@ -626,15 +650,42 @@ namespace BepuPhysics
             Vector3Wide.Subtract(positionB, positionA, out offsetB);
         }
 
+        /// <summary>
+        /// Gathers relative positions for a three body bundle into an AOSOA bundle.
+        /// </summary>
+        /// <param name="references">Active body indices being gathered.</param>
+        /// <param name="count">Number of body pairs in the bundle.</param>
+        /// <param name="ab">Gathered offset from body A to of body B.</param>
+        /// <param name="ac">Gathered offset from body A to of body C.</param>
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GatherOffsets(ref ThreeBodyReferences references, int count, out Vector3Wide ab, out Vector3Wide ac)
+        {
+            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
+            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+            ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
 
+            Vector3Wide positionA, positionB, positionC, positionD;
+            ref var poses = ref ActiveSet.Poses;
+            for (int i = 0; i < count; ++i)
+            {
+                Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexA, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionA, i));
+                Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexB, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionB, i));
+                Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexC, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionC, i));
+            }
+            //Same as two body case; this is sensitive to changes in the representation of body position. In high precision modes, this'll need to change.
+            Vector3Wide.Subtract(positionB, positionA, out ab);
+            Vector3Wide.Subtract(positionC, positionA, out ac);
+        }
         /// <summary>
         /// Gathers relative positions for a four body bundle into an AOSOA bundle.
         /// </summary>
         /// <param name="references">Active body indices being gathered.</param>
         /// <param name="count">Number of body pairs in the bundle.</param>
-        /// <param name="ab">Gathered orientation of body A.</param>
-        /// <param name="ac">Gathered orientation of body B.</param>
-        /// <param name="ad">Gathered orientation of body C.</param>
+        /// <param name="ab">Gathered offset from body A to of body B.</param>
+        /// <param name="ac">Gathered offset from body A to of body C.</param>
+        /// <param name="ad">Gathered offset from body A to of body D.</param>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GatherOffsets(ref FourBodyReferences references, int count, out Vector3Wide ab, out Vector3Wide ac, out Vector3Wide ad)
         {
@@ -708,6 +759,31 @@ namespace BepuPhysics
             {
                 GatherVelocities(ref sourceVelocities, ref velocitiesA, ref baseIndexA, i);
                 GatherVelocities(ref sourceVelocities, ref velocitiesB, ref baseIndexB, i);
+            }
+        }
+
+        /// <summary>
+        /// Gathers velocities for three body bundles and stores it into velocity bundles.
+        /// </summary>
+        /// <param name="references">Active set indices of the bodies to gather velocity data for.</param>
+        /// <param name="count">Number of body pairs in the bundle.</param>
+        /// <param name="velocitiesA">Gathered velocities of A bodies.</param>
+        /// <param name="velocitiesB">Gathered velocities of B bodies.</param>
+        /// <param name="velocitiesC">Gathered velocities of C bodies.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe void GatherVelocities(ref Buffer<BodyVelocity> sourceVelocities, ref ThreeBodyReferences references, int count,
+            out BodyVelocities velocitiesA, out BodyVelocities velocitiesB, out BodyVelocities velocitiesC)
+        {
+            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
+            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+            ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
+            for (int i = 0; i < count; ++i)
+            {
+                GatherVelocities(ref sourceVelocities, ref velocitiesA, ref baseIndexA, i);
+                GatherVelocities(ref sourceVelocities, ref velocitiesB, ref baseIndexB, i);
+                GatherVelocities(ref sourceVelocities, ref velocitiesC, ref baseIndexC, i);
             }
         }
 
@@ -793,6 +869,33 @@ namespace BepuPhysics
                 ScatterVelocities(ref sourceVelocitiesB, ref targetVelocities, ref baseIndexB, i);
             }
         }
+
+        /// <summary>
+        /// Scatters velocities for three body bundles into the active body set.
+        /// </summary>
+        /// <param name="sourceVelocitiesA">Velocities of body bundle A to scatter.</param>
+        /// <param name="sourceVelocitiesB">Velocities of body bundle B to scatter.</param>
+        /// <param name="sourceVelocitiesC">Velocities of body bundle A to scatter.</param>
+        /// <param name="references">Active set indices of the bodies to scatter velocity data to.</param>
+        /// <param name="count">Number of body pairs in the bundle.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe void ScatterVelocities(
+            ref BodyVelocities sourceVelocitiesA, ref BodyVelocities sourceVelocitiesB, ref BodyVelocities sourceVelocitiesC,
+            ref Buffer<BodyVelocity> targetVelocities, ref ThreeBodyReferences references, int count)
+        {
+            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
+            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+            ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
+            for (int i = 0; i < count; ++i)
+            {
+                ScatterVelocities(ref sourceVelocitiesA, ref targetVelocities, ref baseIndexA, i);
+                ScatterVelocities(ref sourceVelocitiesB, ref targetVelocities, ref baseIndexB, i);
+                ScatterVelocities(ref sourceVelocitiesC, ref targetVelocities, ref baseIndexC, i);
+            }
+        }
+
         /// <summary>
         /// Scatters velocities for four body bundles into the active body set.
         /// </summary>
@@ -821,8 +924,6 @@ namespace BepuPhysics
                 ScatterVelocities(ref sourceVelocitiesD, ref targetVelocities, ref baseIndexD, i);
             }
         }
-
-
 
         internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
         {

@@ -271,7 +271,33 @@ namespace BepuPhysics
             }
             jacobiScaleA = Vector.ConvertToSingle(countsA);
             jacobiScaleB = Vector.ConvertToSingle(countsB);
-        } 
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetJacobiScaleForBodies(ref ThreeBodyReferences references, int count,
+            out Vector<float> jacobiScaleA, out Vector<float> jacobiScaleB, out Vector<float> jacobiScaleC)
+        {
+            ref var startA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+            ref var startB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+            ref var startC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
+            Vector<int> countsA, countsB, countsC;
+            ref var countsAStart = ref Unsafe.As<Vector<int>, int>(ref countsA);
+            ref var countsBStart = ref Unsafe.As<Vector<int>, int>(ref countsB);
+            ref var countsCStart = ref Unsafe.As<Vector<int>, int>(ref countsC);
+            for (int i = 0; i < count; ++i)
+            {
+                var indexA = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startA, i));
+                var indexB = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startB, i));
+                var indexC = bodyConstraintReferences.IndexOf(ref Unsafe.Add(ref startC, i));
+                Debug.Assert(indexA >= 0 && indexB >= 0, "If a prestep is looking up constraint counts associated with a body, it better be in the jacobi batch!");
+                Unsafe.Add(ref countsAStart, i) = bodyConstraintReferences.Values[indexA].Count;
+                Unsafe.Add(ref countsBStart, i) = bodyConstraintReferences.Values[indexB].Count;
+                Unsafe.Add(ref countsCStart, i) = bodyConstraintReferences.Values[indexC].Count;
+            }
+            jacobiScaleA = Vector.ConvertToSingle(countsA);
+            jacobiScaleB = Vector.ConvertToSingle(countsB);
+            jacobiScaleC = Vector.ConvertToSingle(countsC);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetJacobiScaleForBodies(ref FourBodyReferences references, int count, 
