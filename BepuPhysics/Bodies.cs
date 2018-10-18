@@ -651,6 +651,31 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Gathers relative positions for a two body bundle into an AOSOA bundle.
+        /// </summary>
+        /// <param name="references">Active body indices being gathered.</param>
+        /// <param name="count">Number of body pairs in the bundle.</param>
+        /// <param name="ab">Gathered offset from body A to of body B.</param>
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GatherOffsets(ref TwoBodyReferences references, int count, out Vector3Wide ab)
+        {
+            Debug.Assert(count >= 0 && count <= Vector<float>.Count);
+            //Grab the base references for the body indices. Note that we make use of the references memory layout again.
+            ref var baseIndexA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
+            ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
+
+            Vector3Wide positionA, positionB;
+            ref var poses = ref ActiveSet.Poses;
+            for (int i = 0; i < count; ++i)
+            {
+                Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexA, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionA, i));
+                Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexB, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionB, i));
+            }
+            //Same as other gather case; this is sensitive to changes in the representation of body position. In high precision modes, this'll need to change.
+            Vector3Wide.Subtract(positionB, positionA, out ab);
+        }
+
+        /// <summary>
         /// Gathers relative positions for a three body bundle into an AOSOA bundle.
         /// </summary>
         /// <param name="references">Active body indices being gathered.</param>
@@ -666,7 +691,7 @@ namespace BepuPhysics
             ref var baseIndexB = ref Unsafe.As<Vector<int>, int>(ref references.IndexB);
             ref var baseIndexC = ref Unsafe.As<Vector<int>, int>(ref references.IndexC);
 
-            Vector3Wide positionA, positionB, positionC, positionD;
+            Vector3Wide positionA, positionB, positionC;
             ref var poses = ref ActiveSet.Poses;
             for (int i = 0; i < count; ++i)
             {

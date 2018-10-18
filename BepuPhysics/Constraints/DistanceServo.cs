@@ -10,7 +10,7 @@ namespace BepuPhysics.Constraints
 {
 
     /// <summary>
-    /// Constraints points on two bodies to be separated by a goal distance.
+    /// Constrains points on two bodies to be separated by a goal distance.
     /// </summary>
     public struct DistanceServo : IConstraintDescription<DistanceServo>
     {
@@ -165,8 +165,6 @@ namespace BepuPhysics.Constraints
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, ref BodyInertias inertiaA, ref BodyInertias inertiaB,
             ref DistanceServoPrestepData prestep, out DistanceServoProjection projection)
         {
-            bodies.GatherPose(ref bodyReferences, count, out var offsetB, out var orientationA, out var orientationB);
-
             GetDistance(bodies, ref bodyReferences, count, prestep.LocalOffsetA, prestep.LocalOffsetB, out var anchorOffsetA, out var anchorOffsetB, out var anchorOffset, out var distance);
 
             Vector3Wide.Scale(anchorOffset, Vector<float>.One / distance, out var direction);

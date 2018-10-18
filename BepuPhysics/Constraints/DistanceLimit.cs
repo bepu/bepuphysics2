@@ -10,7 +10,7 @@ namespace BepuPhysics.Constraints
 {
 
     /// <summary>
-    /// Constraints points on two bodies to be separated by a distance within a range.
+    /// Constrains points on two bodies to be separated by a distance within a range.
     /// </summary>
     public struct DistanceLimit : IConstraintDescription<DistanceLimit>
     {

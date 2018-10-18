@@ -187,6 +187,6 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public class AreaConstraintTypeProcessor : ThreeBodyTypeProcessor<AreaConstraintPrestepData, AreaConstraintProjection, Vector<float>, AreaConstraintFunctions>
     {
-        public const int BatchTypeId = 35;
+        public const int BatchTypeId = 36;
     }
 }

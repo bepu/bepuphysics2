@@ -131,14 +131,14 @@ namespace Demos.SpecializedTests
                 var bHandle = Simulation.Bodies.Add(bDescription);
                 var cHandle = Simulation.Bodies.Add(cDescription);
                 var dHandle = Simulation.Bodies.Add(dDescription);
-                var distanceSpringiness = new SpringSettings(3f, 1);
-                Simulation.Solver.Add(aHandle, bHandle, new DistanceServo(default, default, Vector3.Distance(a, b), distanceSpringiness));
-                Simulation.Solver.Add(aHandle, cHandle, new DistanceServo(default, default, Vector3.Distance(a, c), distanceSpringiness));
-                Simulation.Solver.Add(aHandle, dHandle, new DistanceServo(default, default, Vector3.Distance(a, d), distanceSpringiness));
-                Simulation.Solver.Add(bHandle, cHandle, new DistanceServo(default, default, Vector3.Distance(b, c), distanceSpringiness));
-                Simulation.Solver.Add(bHandle, dHandle, new DistanceServo(default, default, Vector3.Distance(b, d), distanceSpringiness));
-                Simulation.Solver.Add(cHandle, dHandle, new DistanceServo(default, default, Vector3.Distance(c, d), distanceSpringiness));
-                Simulation.Solver.Add(aHandle, bHandle, cHandle, dHandle, new VolumeConstraint(a, b, c, d, new SpringSettings(30, 1)));
+                //var distanceSpringiness = new SpringSettings(3f, 1);
+                //Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceConstraint(Vector3.Distance(a, b), distanceSpringiness));
+                //Simulation.Solver.Add(aHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(a, c), distanceSpringiness));
+                //Simulation.Solver.Add(aHandle, dHandle, new CenterDistanceConstraint(Vector3.Distance(a, d), distanceSpringiness));
+                //Simulation.Solver.Add(bHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(b, c), distanceSpringiness));
+                //Simulation.Solver.Add(bHandle, dHandle, new CenterDistanceConstraint(Vector3.Distance(b, d), distanceSpringiness));
+                //Simulation.Solver.Add(cHandle, dHandle, new CenterDistanceConstraint(Vector3.Distance(c, d), distanceSpringiness));
+                //Simulation.Solver.Add(aHandle, bHandle, cHandle, dHandle, new VolumeConstraint(a, b, c, d, new SpringSettings(30, 1)));
             }
             {
                 var aDescription = new BodyDescription(new Vector3(20, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
@@ -168,11 +168,11 @@ namespace Demos.SpecializedTests
                 var aHandle = Simulation.Bodies.Add(aDescription);
                 var bHandle = Simulation.Bodies.Add(bDescription);
                 var cHandle = Simulation.Bodies.Add(cDescription);
-                var distanceSpringiness = new SpringSettings(1f, 1);
-                Simulation.Solver.Add(aHandle, bHandle, new DistanceServo(default, default, Vector3.Distance(a, b), distanceSpringiness));
-                Simulation.Solver.Add(aHandle, cHandle, new DistanceServo(default, default, Vector3.Distance(a, c), distanceSpringiness));
-                Simulation.Solver.Add(bHandle, cHandle, new DistanceServo(default, default, Vector3.Distance(b, c), distanceSpringiness));
-                Simulation.Solver.Add(aHandle, bHandle, cHandle, new AreaConstraint(a, b, c, new SpringSettings(30, 1)));
+                var distanceSpringiness = new SpringSettings(30f, 1);
+                //Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceConstraint(Vector3.Distance(a, b), distanceSpringiness));
+                //Simulation.Solver.Add(aHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(a, c), distanceSpringiness));
+                //Simulation.Solver.Add(bHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(b, c), distanceSpringiness));
+                //Simulation.Solver.Add(aHandle, bHandle, cHandle, new AreaConstraint(a, b, c, new SpringSettings(30, 1)));
             }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
