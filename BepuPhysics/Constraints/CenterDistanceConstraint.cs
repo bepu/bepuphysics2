@@ -91,15 +91,15 @@ namespace BepuPhysics.Constraints
             projection.InverseMassB = inertiaB.InverseMass;
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            projection.BiasVelocity = default;// (distance - prestep.TargetDistance) * positionErrorToVelocity;
+            projection.BiasVelocity = (distance - prestep.TargetDistance) * positionErrorToVelocity;
 
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ApplyImpulse(ref BodyVelocities a, ref BodyVelocities b, ref CenterDistanceProjection projection, ref Vector<float> impulse)
         {
-            Vector3Wide.Add(projection.JacobianA, impulse * projection.InverseMassA, out var changeA);
-            Vector3Wide.Add(projection.JacobianA, impulse * projection.InverseMassB, out var negatedChangeB);
+            Vector3Wide.Scale(projection.JacobianA, impulse * projection.InverseMassA, out var changeA);
+            Vector3Wide.Scale(projection.JacobianA, impulse * projection.InverseMassB, out var negatedChangeB);
             Vector3Wide.Add(a.Linear, changeA, out a.Linear);
             Vector3Wide.Subtract(b.Linear, negatedChangeB, out b.Linear);
         }
@@ -107,7 +107,6 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref CenterDistanceProjection projection, ref Vector<float> accumulatedImpulse)
         {
-            accumulatedImpulse = default;
             ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref accumulatedImpulse);
         }
 
@@ -117,7 +116,7 @@ namespace BepuPhysics.Constraints
             //csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
             Vector3Wide.Dot(velocityA.Linear, projection.JacobianA, out var linearCSVA);
             Vector3Wide.Dot(velocityB.Linear, projection.JacobianA, out var negatedCSVB);
-            var csi = (projection.BiasVelocity - (linearCSVA - negatedCSVB)) * projection.EffectiveMass;// - accumulatedImpulse * projection.SoftnessImpulseScale;
+            var csi = (projection.BiasVelocity - (linearCSVA - negatedCSVB)) * projection.EffectiveMass - accumulatedImpulse * projection.SoftnessImpulseScale;
             accumulatedImpulse += csi;
             ApplyImpulse(ref velocityA, ref velocityB, ref projection, ref csi);
         }
