@@ -712,7 +712,7 @@ namespace Demos.Demos
                         SpringSettings = weldSpringiness
                     });
                 //Simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
-                //    new DistanceServo(default, default, offset.Length(), weldSpringiness));
+                //    new CenterDistanceConstraint(offset.Length(), weldSpringiness));
             }
             for (int i = 0; i < tetrahedraVertexIndices.Length; ++i)
             {
