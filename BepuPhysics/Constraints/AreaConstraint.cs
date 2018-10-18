@@ -161,14 +161,6 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref BodyVelocities velocityC, ref AreaConstraintProjection projection, ref Vector<float> accumulatedImpulse)
         {
-            ////Unlike most constraints, the jacobians in a volume constraint can change magnitude and direction wildly in some cases.
-            ////Reusing the previous frame's accumulated impulse can result in catastrophically wrong guesses which require many iterations to correct.
-            ////Instead, for now, we simply clear the accumulated impulse. The constraint will be a little softer during sustained forces because of this, but it helps avoid
-            ////explosions in the worst case and the slight softness isn't usually a big issue for volume constraints.
-            ////TODO: This is a fairly hacky approach since we already loaded the velocities despite not doing anything with them.
-            ////Two options: fix the underlying issue by updating the accumulated impulse in response to changes in the jacobian, or special case this by not loading the velocities at all.
-            //accumulatedImpulse = default;
-            ////A true warm start would look like this:
             Vector3Wide.Add(projection.JacobianB, projection.JacobianC, out var negatedJacobianA);
             ApplyImpulse(ref velocityA, ref velocityB, ref velocityC, ref projection, ref negatedJacobianA, ref accumulatedImpulse);
         }
@@ -187,7 +179,6 @@ namespace BepuPhysics.Constraints
 
             ApplyImpulse(ref velocityA, ref velocityB, ref velocityC, ref projection, ref negatedJacobianA, ref csi);
         }
-
     }
 
 

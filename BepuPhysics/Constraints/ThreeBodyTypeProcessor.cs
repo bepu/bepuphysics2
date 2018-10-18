@@ -39,7 +39,7 @@ namespace BepuPhysics.Constraints
         : TypeProcessor<ThreeBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
         where TConstraintFunctions : struct, IThreeBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
-        protected sealed override int InternalBodiesPerConstraint => 4;
+        protected sealed override int InternalBodiesPerConstraint => 3;
 
         public sealed unsafe override void EnumerateConnectedBodyIndices<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator)
         {

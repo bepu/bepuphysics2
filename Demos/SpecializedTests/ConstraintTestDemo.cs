@@ -138,7 +138,7 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(bHandle, cHandle, new DistanceServo(default, default, Vector3.Distance(b, c), distanceSpringiness));
                 Simulation.Solver.Add(bHandle, dHandle, new DistanceServo(default, default, Vector3.Distance(b, d), distanceSpringiness));
                 Simulation.Solver.Add(cHandle, dHandle, new DistanceServo(default, default, Vector3.Distance(c, d), distanceSpringiness));
-                Simulation.Solver.Add(aHandle, bHandle, cHandle, dHandle, new VolumeConstraint { TargetScaledVolume = 1, SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(aHandle, bHandle, cHandle, dHandle, new VolumeConstraint(a, b, c, d, new SpringSettings(30, 1)));
             }
             {
                 var aDescription = new BodyDescription(new Vector3(20, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
@@ -153,6 +153,26 @@ namespace Demos.SpecializedTests
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
                 Simulation.Solver.Add(a, b, new DistanceLimit(new Vector3(0, 0.55f, 0), new Vector3(0, -0.55f, 0), 1f, 3, new SpringSettings(30, 1)));
+            }
+            {
+                var sphere = new Sphere(0.125f);
+                //Treat each vertex as a point mass that cannot rotate.
+                var sphereInertia = new BodyInertia { InverseMass = 1 };
+                var sphereIndex = Simulation.Shapes.Add(sphere);
+                var a = new Vector3(26, 3, 0);
+                var b = new Vector3(26, 4, 0);
+                var c = new Vector3(27, 3, 0);
+                var aDescription = new BodyDescription(a, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var bDescription = new BodyDescription(b, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var cDescription = new BodyDescription(c, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var aHandle = Simulation.Bodies.Add(aDescription);
+                var bHandle = Simulation.Bodies.Add(bDescription);
+                var cHandle = Simulation.Bodies.Add(cDescription);
+                var distanceSpringiness = new SpringSettings(1f, 1);
+                Simulation.Solver.Add(aHandle, bHandle, new DistanceServo(default, default, Vector3.Distance(a, b), distanceSpringiness));
+                Simulation.Solver.Add(aHandle, cHandle, new DistanceServo(default, default, Vector3.Distance(a, c), distanceSpringiness));
+                Simulation.Solver.Add(bHandle, cHandle, new DistanceServo(default, default, Vector3.Distance(b, c), distanceSpringiness));
+                Simulation.Solver.Add(aHandle, bHandle, cHandle, new AreaConstraint(a, b, c, new SpringSettings(30, 1)));
             }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));

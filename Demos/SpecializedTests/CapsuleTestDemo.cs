@@ -10,7 +10,7 @@ using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using DemoContentLoader;
 
-namespace Demos.Demos
+namespace Demos.SpecializedTests
 {
     public class CapsuleTestDemo : Demo
     {

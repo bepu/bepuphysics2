@@ -659,7 +659,7 @@ namespace BepuPhysics
             bodyReferences[1] = bodyHandleB;
             return Add(ref bodyReferences[0], 2, ref description);
         }
-         
+
         /// <summary>
         /// Allocates a two-body constraint slot and sets up a constraint with the specified description.
         /// </summary>
@@ -671,6 +671,39 @@ namespace BepuPhysics
             where TDescription : IConstraintDescription<TDescription>
         {
             return Add(bodyHandleA, bodyHandleB, ref description);
+        }
+
+        /// <summary>
+        /// Allocates a three-body constraint slot and sets up a constraint with the specified description.
+        /// </summary>
+        /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
+        /// <param name="bodyHandleA">First body of the constraint.</param>
+        /// <param name="bodyHandleB">Second body of the constraint.</param>
+        /// <param name="bodyHandleC">Third body of the constraint.</param>
+        /// <returns>Allocated constraint handle.</returns>
+        public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, int bodyHandleC, ref TDescription description)
+            where TDescription : IConstraintDescription<TDescription>
+        {
+            //Don't really want to take a dependency on the stack layout of parameters, so...
+            var bodyReferences = stackalloc int[3];
+            bodyReferences[0] = bodyHandleA;
+            bodyReferences[1] = bodyHandleB;
+            bodyReferences[2] = bodyHandleC;
+            return Add(ref bodyReferences[0], 3, ref description);
+        }
+
+        /// <summary>
+        /// Allocates a three-body constraint slot and sets up a constraint with the specified description.
+        /// </summary>
+        /// <typeparam name="TDescription">Type of the constraint description to add.</typeparam>
+        /// <param name="bodyHandleA">First body of the constraint.</param>
+        /// <param name="bodyHandleB">Second body of the constraint.</param>
+        /// <param name="bodyHandleC">Third body of the constraint.</param>
+        /// <returns>Allocated constraint handle.</returns>
+        public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, int bodyHandleC, TDescription description)
+            where TDescription : IConstraintDescription<TDescription>
+        {
+            return Add(bodyHandleA, bodyHandleB, bodyHandleC, ref description);
         }
 
         /// <summary>

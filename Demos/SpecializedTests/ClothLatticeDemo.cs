@@ -11,7 +11,7 @@ using BepuUtilities.Collections;
 using BepuPhysics.Constraints;
 using DemoContentLoader;
 
-namespace Demos.Demos
+namespace Demos.SpecializedTests
 {
     public class ClothLatticeDemo : Demo
     {

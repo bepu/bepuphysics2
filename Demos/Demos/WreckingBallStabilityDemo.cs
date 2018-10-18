@@ -74,14 +74,8 @@ namespace Demos.Demos
             return wreckingBallBodyHandle;
         }
 
+        RolloverInfo rolloverInfo;
 
-        struct RopeDescription
-        {
-            public Vector3 Start;
-            public string Description;
-        }
-
-        List<RopeDescription> ropeDescriptions;
 
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
@@ -91,7 +85,7 @@ namespace Demos.Demos
 
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
-            ropeDescriptions = new List<RopeDescription>();
+            rolloverInfo = new RolloverInfo();
             var smallWreckingBall = new Sphere(1);
             smallWreckingBall.ComputeInertia(5, out var smallWreckingBallInertia);
             var smallWreckingBallIndex = Simulation.Shapes.Add(smallWreckingBall);
@@ -105,7 +99,7 @@ namespace Demos.Demos
 
                 //With a small wrecking ball, this actually works fine with reasonable spring settings.
                 AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, bodyRadius, smallWreckingBall.Radius, smallWreckingBallInertia, smallWreckingBallIndex, springSettings);
-                ropeDescriptions.Add(new RopeDescription { Start = startLocation, Description = "Naive, 5:1 mass ratio" });
+                rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "Naive, 5:1 mass ratio");
             }
             var bigWreckingBall = new Sphere(3);
             //This wrecking ball is much, much heavier.
@@ -127,7 +121,7 @@ namespace Demos.Demos
                 var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 1, 1, springSettings);
 
                 AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
-                ropeDescriptions.Add(new RopeDescription { Start = startLocation, Description = "Naive, 100:1 mass ratio" });
+                rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "Naive, 100:1 mass ratio");
             }
             {
                 //If stiffness is causing a problem, how about we reduce the stiffness by adjusting the spring settings frequency? 
@@ -140,7 +134,7 @@ namespace Demos.Demos
                 var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 1, 1, springSettings);
 
                 AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
-                ropeDescriptions.Add(new RopeDescription { Start = startLocation, Description = "Softer constraints" });
+                rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "Softer constraints");
             }
             {
                 //If the mass ratio between the wrecking ball and rope bodies make it hard to propagate impulses, how about increasing the mass of the rope?
@@ -152,7 +146,7 @@ namespace Demos.Demos
                 var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 20, 1, springSettings);
 
                 AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
-                ropeDescriptions.Add(new RopeDescription { Start = startLocation, Description = "20x rope mass boost" });
+                rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "20x rope mass boost");
             }
             {
                 //The difficulty of propagating impulses isn't just a matter of mass alone. The constraint lever arms and body inertia tensors are also very important.
@@ -165,7 +159,7 @@ namespace Demos.Demos
                 var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 5, 0.2f, springSettings);
 
                 AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
-                ropeDescriptions.Add(new RopeDescription { Start = startLocation, Description = "5x rope mass boost, 25x rope inertia boost" });
+                rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "5x rope mass boost, 25x rope inertia boost");
             }
             {
                 //If increasing the inertia helped, and longer lever arms can make things trickier to solve, how about reducing the constraint lever arms to zero 
@@ -180,7 +174,7 @@ namespace Demos.Demos
                 var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, 0, 1, 0, springSettings);
 
                 AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, 0, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
-                ropeDescriptions.Add(new RopeDescription { Start = startLocation, Description = "5x rope mass boost, 0 lever arm" });
+                rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "5x rope mass boost, 0 lever arm");
             }
             {
                 //But what if we don't want to change the mass of the rope bodies?
@@ -200,7 +194,7 @@ namespace Demos.Demos
                     new BodyReference(bodyHandles[0], Simulation.Bodies).Pose.Position,
                     new BodyReference(wreckingBallHandle, Simulation.Bodies).Pose.Position + wreckingBallConnectionOffset);
                 Simulation.Solver.Add(bodyHandles[0], wreckingBallHandle, new DistanceLimit(default, wreckingBallConnectionOffset, 0.01f, maximumDistance, springSettings));
-                ropeDescriptions.Add(new RopeDescription { Start = startLocation, Description = "100:1 mass ratio, direct cheat constraint" });
+                rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "100:1 mass ratio, direct cheat constraint");
             }
             {
                 //The last attempt was pretty stable, but how do we address its problems? Instead of having a single constraint from the source to the target, we can
@@ -248,7 +242,7 @@ namespace Demos.Demos
                         new BodyReference(wreckingBallHandle, Simulation.Bodies).Pose.Position + wreckingBallConnectionOffset);
                     Simulation.Solver.Add(bodyHandles[targetBodyHandleIndex], wreckingBallHandle, new DistanceLimit(default, wreckingBallConnectionOffset, 0.01f, maximumDistance, springSettings));
                 }
-                ropeDescriptions.Add(new RopeDescription { Start = startLocation, Description = $"100:1 mass ratio, {constraintsPerBody - 1}x extra skip constraints" });
+                rolloverInfo.Add(startLocation, $"100:1 mass ratio, {constraintsPerBody - 1}x extra skip constraints");
             }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
@@ -260,45 +254,7 @@ namespace Demos.Demos
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
-            var resolution = new Vector2(renderer.Surface.Resolution.X, renderer.Surface.Resolution.Y);
-            Span<Vector2> ropeDescriptionLocations = stackalloc Vector2[ropeDescriptions.Count];
-            int closestIndex = -1;
-            float closestDistance = MathF.Max(resolution.X, resolution.Y) * 0.1f;
-            for (int i = 0; i < ropeDescriptions.Count; ++i)
-            {
-                var textPosition = ropeDescriptions[i].Start + new Vector3(0, 2, 0);
-                Matrix.Transform(new Vector4(textPosition, 1), camera.ViewProjection, out var projected);
-                projected /= projected.W;
-                if (projected.Z <= 0 || MathF.Abs(projected.X) > 1 || MathF.Abs(projected.Y) > 1)
-                    continue;
-                var ndc = new Vector2(projected.X, projected.Y);
-                ropeDescriptionLocations[i] = (ndc * new Vector2(0.5f, -0.5f) + new Vector2(0.5f)) * resolution;
-                var mouse = input.MousePosition;
-                var distance = Vector2.Distance(new Vector2(mouse.X, mouse.Y), ropeDescriptionLocations[i]);
-                if (distance < closestDistance)
-                {
-                    closestDistance = distance;
-                    closestIndex = i;
-                }
-            }
-
-            text.Clear().Append("Info...");
-            const float infoHeight = 8;
-            const float descriptionHeight = 16;
-            var infoLength = GlyphBatch.MeasureLength(text, font, infoHeight);
-            for (int i = 0; i < ropeDescriptions.Count; ++i)
-            {
-                if (i != closestIndex)
-                {
-                    renderer.TextBatcher.Write(text, ropeDescriptionLocations[i] + new Vector2(-infoLength * 0.5f, -1.2f * descriptionHeight), infoHeight, new Vector3(1), font);
-                }
-            }
-            if (closestIndex >= 0)
-            {
-                text.Clear().Append(ropeDescriptions[closestIndex].Description);
-                var descriptionLength = GlyphBatch.MeasureLength(text, font, descriptionHeight);
-                renderer.TextBatcher.Write(text, ropeDescriptionLocations[closestIndex] - new Vector2(descriptionLength * 0.5f, 0), 16, new Vector3(1), font);
-            }
+            rolloverInfo.Render(renderer, camera, input, text, font);   
             base.Render(renderer, camera, input, text, font);
         }
 

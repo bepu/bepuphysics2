@@ -44,7 +44,7 @@ namespace Demos
             AddOption<RagdollDemo>();
             AddOption<CompoundTestDemo>();
             AddOption<MeshDemo>();
-            AddOption<ClothLatticeDemo>();
+            AddOption<ClothDemo>();
             AddOption<NewtDemo>();
             AddOption<WreckingBallStabilityDemo>();
             AddOption<BlockChainDemo>();
