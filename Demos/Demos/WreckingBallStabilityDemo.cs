@@ -58,7 +58,7 @@ namespace Demos.Demos
         {
             var lastBodyReference = new BodyReference(bodyHandles[bodyHandles.Length - 1], Simulation.Bodies);
             var wreckingBallPosition = lastBodyReference.Pose.Position - new Vector3(0, ropeBodyRadius + bodySpacing + wreckingBallRadius, 0);
-            var description = new BodyDescription(wreckingBallPosition, wreckingBallInertia, wreckingBallShapeIndex, 0.1f, new BodyActivityDescription(0.01f));
+            var description = BodyDescription.CreateDynamic(wreckingBallPosition, wreckingBallInertia, new CollidableDescription(wreckingBallShapeIndex, 0.1f), new BodyActivityDescription(0.01f));
             //Give it a little bump.
             description.Velocity = new BodyVelocity(new Vector3(-10, 0, 0), default);
             var wreckingBallBodyHandle = Simulation.Bodies.Add(description);

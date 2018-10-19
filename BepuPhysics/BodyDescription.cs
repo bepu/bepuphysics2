@@ -31,7 +31,6 @@ namespace BepuPhysics
             SleepThreshold = sleepThreshold;
             MinimumTimestepCountUnderThreshold = minimumTimestepCountUnderThreshold;
         }
-
     }
 
     public struct BodyDescription
@@ -41,134 +40,6 @@ namespace BepuPhysics
         public BodyVelocity Velocity;
         public CollidableDescription Collidable;
         public BodyActivityDescription Activity;
-
-        /// <summary>
-        /// Builds a new body description.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        /// <param name="localInertia">Local inertia of the body. If default initialized (all values set to zero), the body is considered kinematic.</param>
-        /// <param name="collidable">Collidable description for the body.</param>
-        /// <param name="activity">Activity description for the body.</param>
-        public BodyDescription(in Vector3 position, in Quaternion orientation, in BodyVelocity velocity, in BodyInertia localInertia, in CollidableDescription collidable, in BodyActivityDescription activity)
-        {
-            Pose.Position = position;
-            Pose.Orientation = orientation;
-            LocalInertia = localInertia;
-            Velocity = velocity;
-            Collidable = collidable;
-            Activity = activity;
-        }
-
-        //General direct constructors.
-
-        /// <summary>
-        /// Builds a new body description with discrete continuity.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        /// <param name="localInertia">Local inertia of the body. If default initialized (all values set to zero), the body is considered kinematic.</param>
-        /// <param name="shapeIndex">Index of the shape in the simulation shape set.</param>
-        /// <param name="speculativeMargin">Distance beyond the surface of the body to allow speculative contacts to be generated.</param>
-        /// <param name="activity">Activity description for the body.</param>
-        public BodyDescription(in Vector3 position, in Quaternion orientation, in BodyVelocity velocity, in BodyInertia localInertia, TypedIndex shapeIndex, float speculativeMargin, in BodyActivityDescription activity)
-            : this(position, orientation, velocity, localInertia, new CollidableDescription { Shape = shapeIndex, SpeculativeMargin = speculativeMargin }, activity)
-        {
-        }
-
-        /// <summary>
-        /// Builds a new body description with discrete continuity..
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        /// <param name="localInertia">Local inertia of the body. If default initialized (all values set to zero), the body is considered kinematic.</param>
-        /// <param name="shapeIndex">Index of the shape in the simulation shape set.</param>
-        /// <param name="speculativeMargin">Distance beyond the surface of the body to allow speculative contacts to be generated.</param>
-        /// <param name="activity">Activity description for the body.</param>
-        public BodyDescription(in Vector3 position, in BodyVelocity velocity, in BodyInertia localInertia, TypedIndex shapeIndex, float speculativeMargin, in BodyActivityDescription activity)
-            : this(position, Quaternion.Identity, velocity, localInertia, new CollidableDescription { Shape = shapeIndex, SpeculativeMargin = speculativeMargin }, activity)
-        {
-        }
-        /// <summary>
-        /// Builds a new body description with discrete continuity.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="localInertia">Local inertia of the body. If default initialized (all values set to zero), the body is considered kinematic.</param>
-        /// <param name="shapeIndex">Index of the shape in the simulation shape set.</param>
-        /// <param name="speculativeMargin">Distance beyond the surface of the body to allow speculative contacts to be generated.</param>
-        /// <param name="activity">Activity description for the body.</param>
-        public BodyDescription(in Vector3 position, in Quaternion orientation, in BodyInertia localInertia, TypedIndex shapeIndex, float speculativeMargin, in BodyActivityDescription activity)
-            : this(position, orientation, new BodyVelocity(), localInertia, new CollidableDescription { Shape = shapeIndex, SpeculativeMargin = speculativeMargin }, activity)
-        {
-        }
-        /// <summary>
-        /// Builds a new body description with discrete continuity.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="localInertia">Local inertia of the body. If default initialized (all values set to zero), the body is considered kinematic.</param>
-        /// <param name="shapeIndex">Index of the shape in the simulation shape set.</param>
-        /// <param name="speculativeMargin">Distance beyond the surface of the body to allow speculative contacts to be generated.</param>
-        /// <param name="activity">Activity description for the body.</param>
-        public BodyDescription(in Vector3 position, in BodyInertia localInertia, TypedIndex shapeIndex, float speculativeMargin, in BodyActivityDescription activity)
-           : this(position, Quaternion.Identity, new BodyVelocity(), localInertia, new CollidableDescription { Shape = shapeIndex, SpeculativeMargin = speculativeMargin }, activity)
-        {
-        }
-
-        //Kinematic direct constructors.    
-        /// <summary>
-        /// Builds a new kinematic body description with discrete continuity.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        /// <param name="shapeIndex">Index of the shape in the simulation shape set.</param>
-        /// <param name="speculativeMargin">Distance beyond the surface of the body to allow speculative contacts to be generated.</param>
-        /// <param name="activity">Activity description for the body.</param>
-        public BodyDescription(in Vector3 position, in Quaternion orientation, in BodyVelocity velocity, TypedIndex shapeIndex, float speculativeMargin, in BodyActivityDescription activity)
-            : this(position, orientation, velocity, new BodyInertia(), new CollidableDescription { Shape = shapeIndex, SpeculativeMargin = speculativeMargin }, activity)
-        {
-        }
-
-        /// <summary>
-        /// Builds a new kinematic body description with discrete continuity.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        /// <param name="shapeIndex">Index of the shape in the simulation shape set.</param>
-        /// <param name="speculativeMargin">Distance beyond the surface of the body to allow speculative contacts to be generated.</param>
-        /// <param name="activity">Activity description for the body.</param>
-        public BodyDescription(in Vector3 position, in BodyVelocity velocity, TypedIndex shapeIndex, float speculativeMargin, in BodyActivityDescription activity)
-            : this(position, Quaternion.Identity, velocity, new BodyInertia(), new CollidableDescription { Shape = shapeIndex, SpeculativeMargin = speculativeMargin }, activity)
-        {
-        }
-
-        /// <summary>
-        /// Builds a new kinematic body description with discrete continuity.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="shapeIndex">Index of the shape in the simulation shape set.</param>
-        /// <param name="speculativeMargin">Distance beyond the surface of the body to allow speculative contacts to be generated.</param>
-        /// <param name="activity">Activity description for the body.</param>
-        public BodyDescription(in Vector3 position, in Quaternion orientation, TypedIndex shapeIndex, float speculativeMargin, in BodyActivityDescription activity)
-            : this(position, orientation, new BodyVelocity(), new BodyInertia(), new CollidableDescription { Shape = shapeIndex, SpeculativeMargin = speculativeMargin }, activity)
-        {
-        }
-
-        /// <summary>
-        /// Builds a new kinematic body description with discrete continuity.
-        /// </summary>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="shapeIndex">Index of the shape in the simulation shape set.</param>
-        /// <param name="speculativeMargin">Distance beyond the surface of the body to allow speculative contacts to be generated.</param>
-        /// <param name="activity">Activity description for the body.</param>
-        public BodyDescription(in Vector3 position, TypedIndex shapeIndex, float speculativeMargin, in BodyActivityDescription activity)
-           : this(position, Quaternion.Identity, new BodyVelocity(), new BodyInertia(), new CollidableDescription { Shape = shapeIndex, SpeculativeMargin = speculativeMargin }, activity)
-        {
-        }
 
         //Convex shape helpers.
         /// <summary>
@@ -189,164 +60,262 @@ namespace BepuPhysics
         /// </summary>
         /// <typeparam name="TShape">Type of the shape to create an activity description for.</typeparam>
         /// <param name="shape">Shape to create an activity description for.</param>
-        /// <param name="activity">Default activity description for the given shape.</param>
-        public static void GetDefaultActivity<TShape>(in TShape shape, out BodyActivityDescription activity) where TShape : struct, IConvexShape
+        /// <returns>Default activity description for the given shape.</returns>
+        public static BodyActivityDescription GetDefaultActivity<TShape>(in TShape shape) where TShape : struct, IConvexShape
         {
+            BodyActivityDescription activity;
             activity.MinimumTimestepCountUnderThreshold = 32;
             shape.ComputeAngularExpansionData(out var maximumRadius, out _);
             activity.SleepThreshold = maximumRadius * maximumRadius * 0.01f;
+            return activity;
         }
 
         /// <summary>
-        /// Creates a body description. Adds the given convex shape to the shape set and uses it to initialize inertia.
+        /// Creates a dynamic body description.
         /// </summary>
-        /// <typeparam name="TShape">Type of the shape to build a description for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        /// <param name="shape">Shape to build a description for.</param>
-        /// <param name="shapes">Shape set of the simulation.</param>
-        /// <param name="mass">Mass of the body. Use 0 if kinematic.</param>
-        /// <param name="speculativeMargin">Distance beyond the surface of the body to allow speculative contacts to be generated.</param>
-        /// <param name="continuity">Continuous collision detection settings for the body.</param>
+        /// <param name="pose">Pose of the body.</param>
+        /// <param name="velocity">Initial velocity of the body.</param>
+        /// <param name="inertia">Local inertia of the body.</param>
+        /// <param name="collidable">Collidable to associate with the body.</param>
         /// <param name="activity">Activity settings for the body.</param>
-        /// <param name="description">Resulting description.</param>
-        public static void Create<TShape>(in Vector3 position, in Quaternion orientation, in BodyVelocity velocity,
-            in TShape shape, Shapes shapes, float mass, float speculativeMargin,
-            in ContinuousDetectionSettings continuity, in BodyActivityDescription activity, out BodyDescription description) where TShape : struct, IConvexShape
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateDynamic(in RigidPose pose, in BodyVelocity velocity, in BodyInertia inertia, in CollidableDescription collidable, in BodyActivityDescription activity)
         {
-            var index = shapes.Add(shape);
-            description.Collidable.Shape = index;
-            description.Collidable.SpeculativeMargin = speculativeMargin;
-            description.Collidable.Continuity = continuity;
-            description.Pose.Position = position;
-            description.Pose.Orientation = orientation;
-            description.Velocity = velocity;
-            description.Activity = activity;
+            return new BodyDescription { Pose = pose, Velocity = velocity, LocalInertia = inertia, Activity = activity, Collidable = collidable };
+        }
+
+        /// <summary>
+        /// Creates a dynamic body description with zero initial velocity.
+        /// </summary>
+        /// <param name="pose">Pose of the body.</param>
+        /// <param name="inertia">Local inertia of the body.</param>
+        /// <param name="collidable">Collidable to associate with the body.</param>
+        /// <param name="activity">Activity settings for the body.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateDynamic(in RigidPose pose, in BodyInertia inertia, in CollidableDescription collidable, in BodyActivityDescription activity)
+        {
+            return new BodyDescription { Pose = pose, LocalInertia = inertia, Activity = activity, Collidable = collidable };
+        }
+
+        /// <summary>
+        /// Creates a dynamic body description with identity orientation.
+        /// </summary>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="velocity">Initial velocity of the body.</param>
+        /// <param name="inertia">Local inertia of the body.</param>
+        /// <param name="collidable">Collidable to associate with the body.</param>
+        /// <param name="activity">Activity settings for the body.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateDynamic(in Vector3 position, in BodyVelocity velocity, in BodyInertia inertia, in CollidableDescription collidable, in BodyActivityDescription activity)
+        {
+            return new BodyDescription { Pose = new RigidPose(position), Velocity = velocity, LocalInertia = inertia, Activity = activity, Collidable = collidable };
+        }
+
+        /// <summary>
+        /// Creates a dynamic body description with zero initial velocity and identity orientation.
+        /// </summary>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="inertia">Local inertia of the body.</param>
+        /// <param name="collidable">Collidable to associate with the body.</param>
+        /// <param name="activity">Activity settings for the body.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateDynamic(in Vector3 position, in BodyInertia inertia, in CollidableDescription collidable, in BodyActivityDescription activity)
+        {
+            return new BodyDescription { Pose = new RigidPose(position), LocalInertia = inertia, Activity = activity, Collidable = collidable };
+        }
+
+        /// <summary>
+        /// Creates a dynamic body description with collidable, inertia, and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
+        /// </summary>
+        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
+        /// <param name="pose">Pose of the body.</param>
+        /// <param name="velocity">Initial velocity of the body.</param>
+        /// <param name="mass">Mass of the body. The inertia tensor will be calculated based on this mass and the shape.</param>
+        /// <param name="shapes">Shape collection to add the shape to.</param>
+        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateConvexDynamic<TConvexShape>(
+            in RigidPose pose, in BodyVelocity velocity, float mass, Shapes shapes, in TConvexShape shape)
+            where TConvexShape : struct, IConvexShape
+        {
+            var description = new BodyDescription
+            {
+                Pose = pose,
+                Velocity = velocity,
+                Activity = GetDefaultActivity(shape),
+                Collidable = new CollidableDescription(shapes.Add(shape), GetDefaultSpeculativeMargin(shape))
+            };
             shape.ComputeInertia(mass, out description.LocalInertia);
+            return description;
         }
 
         /// <summary>
-        /// Creates a body description. Adds the given convex shape to the shape set and uses it to initialize inertia, activity, and collidable descriptions. Uses discrete continuity.
+        /// Creates a dynamic body description with identity orientation and collidable, inertia, and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
         /// </summary>
-        /// <typeparam name="TShape">Type of the shape to build a description for.</typeparam>
+        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
         /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        /// <param name="shape">Shape to build a description for.</param>
-        /// <param name="shapes">Shape set of the simulation.</param>
-        /// <param name="mass">Mass of the body. Use 0 if kinematic.</param>
-        /// <param name="description">Resulting description.</param>
-        public static void Create<TShape>(in Vector3 position, in Quaternion orientation, in BodyVelocity velocity,
-            in TShape shape, Shapes shapes, float mass, out BodyDescription description) where TShape : struct, IConvexShape
+        /// <param name="velocity">Initial velocity of the body.</param>
+        /// <param name="mass">Mass of the body. The inertia tensor will be calculated based on this mass and the shape.</param>
+        /// <param name="shapes">Shape collection to add the shape to.</param>
+        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateConvexDynamic<TConvexShape>(
+            in Vector3 position, in BodyVelocity velocity, float mass, Shapes shapes, in TConvexShape shape)
+            where TConvexShape : struct, IConvexShape
         {
-            GetDefaultActivity(shape, out var activity);
-            Create(position, orientation, velocity, shape, shapes, mass, GetDefaultSpeculativeMargin(shape), new ContinuousDetectionSettings(), activity, out description);
-        }
-        /// <summary>
-        /// Creates a body description. Adds the given convex shape to the shape set and uses it to initialize inertia, activity, and collidable descriptions. Uses discrete continuity.
-        /// </summary>
-        /// <typeparam name="TShape">Type of the shape to build a description for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="shape">Shape to build a description for.</param>
-        /// <param name="shapes">Shape set of the simulation.</param>
-        /// <param name="mass">Mass of the body. Use 0 if kinematic.</param>
-        /// <param name="description">Resulting description.</param>
-        public static void Create<TShape>(in Vector3 position, in Quaternion orientation,
-            in TShape shape, Shapes shapes, float mass, out BodyDescription description) where TShape : struct, IConvexShape
-        {
-            Create(position, orientation, new BodyVelocity(), shape, shapes, mass, out description);
-        }
-        /// <summary>
-        /// Creates a body description. Adds the given convex shape to the shape set and uses it to initialize inertia, activity, and collidable descriptions. Uses discrete continuity.
-        /// </summary>
-        /// <typeparam name="TShape">Type of the shape to build a description for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        /// <param name="shape">Shape to build a description for.</param>
-        /// <param name="shapes">Shape set of the simulation.</param>
-        /// <param name="mass">Mass of the body. Use 0 if kinematic.</param>
-        /// <param name="description">Resulting description.</param>
-        public static void Create<TShape>(in Vector3 position, in BodyVelocity velocity,
-            in TShape shape, Shapes shapes, float mass, out BodyDescription description) where TShape : struct, IConvexShape
-        {
-            Create(position, Quaternion.Identity, velocity, shape, shapes, mass, out description);
-        }
-        /// <summary>
-        /// Creates a body description. Adds the given convex shape to the shape set and uses it to initialize inertia, activity, and collidable descriptions. Uses discrete continuity.
-        /// </summary>
-        /// <typeparam name="TShape">Type of the shape to build a description for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="shape">Shape to build a description for.</param>
-        /// <param name="shapes">Shape set of the simulation.</param>
-        /// <param name="mass">Mass of the body. Use 0 if kinematic.</param>
-        /// <param name="description">Resulting description.</param>
-        public static void Create<TShape>(in Vector3 position,
-           in TShape shape, Shapes shapes, float mass, out BodyDescription description) where TShape : struct, IConvexShape
-        {
-            Create(position, Quaternion.Identity, new BodyVelocity(), shape, shapes, mass, out description);
+            return CreateConvexDynamic(new RigidPose(position), velocity, mass, shapes, shape);
         }
 
-        //Kinematic variants.
         /// <summary>
-        /// Creates a kinematic body description. Adds the given convex shape to the shape set and uses it to initialize activity and collidable descriptions. Uses discrete continuity.
+        /// Creates a dynamic body description with zero initial velocity and collidable, inertia, and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
         /// </summary>
-        /// <typeparam name="TShape">Type of the shape to build a description for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        /// <param name="shape">Shape to build a description for.</param>
-        /// <param name="shapes">Shape set of the simulation.</param>
-        /// <param name="description">Resulting description.</param>
-        public static void Create<TShape>(in Vector3 position, in Quaternion orientation, in BodyVelocity velocity,
-            in TShape shape, Shapes shapes, out BodyDescription description) where TShape : struct, IConvexShape
+        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
+        /// <param name="pose">Pose of the body.</param>
+        /// <param name="mass">Mass of the body. The inertia tensor will be calculated based on this mass and the shape.</param>
+        /// <param name="shapes">Shape collection to add the shape to.</param>
+        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateConvexDynamic<TConvexShape>(
+            in RigidPose pose, float mass, Shapes shapes, in TConvexShape shape)
+            where TConvexShape : struct, IConvexShape
         {
-            GetDefaultActivity(shape, out var activity);
-            Create(position, orientation, velocity, shape, shapes, 0, GetDefaultSpeculativeMargin(shape), new ContinuousDetectionSettings(), activity, out description);
-        }
-        /// <summary>
-        /// Creates a kinematic body description. Adds the given convex shape to the shape set and uses it to initialize activity and collidable descriptions. Uses discrete continuity.
-        /// </summary>
-        /// <typeparam name="TShape">Type of the shape to build a description for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="orientation">Orientation of the body.</param>
-        /// <param name="shape">Shape to build a description for.</param>
-        /// <param name="shapes">Shape set of the simulation.</param>
-        /// <param name="description">Resulting description.</param>
-        public static void Create<TShape>(in Vector3 position, in Quaternion orientation,
-            in TShape shape, Shapes shapes, out BodyDescription description) where TShape : struct, IConvexShape
-        {
-            Create(position, orientation, new BodyVelocity(), shape, shapes, out description);
-        }
-        /// <summary>
-        /// Creates a kinematic body description. Adds the given convex shape to the shape set and uses it to initialize activity and collidable descriptions. Uses discrete continuity.
-        /// </summary>
-        /// <typeparam name="TShape">Type of the shape to build a description for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="velocity">Velocity of the body.</param>
-        /// <param name="shape">Shape to build a description for.</param>
-        /// <param name="shapes">Shape set of the simulation.</param>
-        /// <param name="description">Resulting description.</param>
-        public static void Create<TShape>(in Vector3 position, in BodyVelocity velocity,
-            in TShape shape, Shapes shapes, out BodyDescription description) where TShape : struct, IConvexShape
-        {
-            Create(position, Quaternion.Identity, velocity, shape, shapes, out description);
-        }
-        /// <summary>
-        /// Creates a kinematic body description. Adds the given convex shape to the shape set and uses it to initialize activity and collidable descriptions. Uses discrete continuity.
-        /// </summary>
-        /// <typeparam name="TShape">Type of the shape to build a description for.</typeparam>
-        /// <param name="position">Position of the body.</param>
-        /// <param name="shape">Shape to build a description for.</param>
-        /// <param name="shapes">Shape set of the simulation.</param>
-        /// <param name="description">Resulting description.</param>
-        public static void Create<TShape>(in Vector3 position,
-           in TShape shape, Shapes shapes, out BodyDescription description) where TShape : struct, IConvexShape
-        {
-            Create(position, Quaternion.Identity, new BodyVelocity(), shape, shapes, out description);
+            return CreateConvexDynamic(pose, default, mass, shapes, shape);
         }
 
+        /// <summary>
+        /// Creates a dynamic body description with zero initial velocity, identity orientation, and collidable, inertia, and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
+        /// </summary>
+        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="mass">Mass of the body. The inertia tensor will be calculated based on this mass and the shape.</param>
+        /// <param name="shapes">Shape collection to add the shape to.</param>
+        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateConvexDynamic<TConvexShape>(
+            in Vector3 position, float mass, Shapes shapes, in TConvexShape shape)
+            where TConvexShape : struct, IConvexShape
+        {
+            return CreateConvexDynamic(new RigidPose(position), default, mass, shapes, shape);
+        }
+
+        /// <summary>
+        /// Creates a kinematic body description.
+        /// </summary>
+        /// <param name="pose">Pose of the body.</param>
+        /// <param name="velocity">Initial velocity of the body.</param>
+        /// <param name="collidable">Collidable to associate with the body.</param>
+        /// <param name="activity">Activity settings for the body.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateKinematic(in RigidPose pose, in BodyVelocity velocity, in CollidableDescription collidable, in BodyActivityDescription activity)
+        {
+            return new BodyDescription { Pose = pose, Velocity = velocity, Activity = activity, Collidable = collidable };
+        }
+
+        /// <summary>
+        /// Creates a kinematic body description with zero initial velocity.
+        /// </summary>
+        /// <param name="pose">Pose of the body.</param>
+        /// <param name="collidable">Collidable to associate with the body.</param>
+        /// <param name="activity">Activity settings for the body.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateKinematic(in RigidPose pose, in CollidableDescription collidable, in BodyActivityDescription activity)
+        {
+            return new BodyDescription { Pose = pose, Activity = activity, Collidable = collidable };
+        }
+
+        /// <summary>
+        /// Creates a kinematic body description with identity orientation.
+        /// </summary>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="velocity">Initial velocity of the body.</param>
+        /// <param name="collidable">Collidable to associate with the body.</param>
+        /// <param name="activity">Activity settings for the body.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateKinematic(in Vector3 position, in BodyVelocity velocity, in CollidableDescription collidable, in BodyActivityDescription activity)
+        {
+            return new BodyDescription { Pose = new RigidPose(position), Velocity = velocity, Activity = activity, Collidable = collidable };
+        }
+
+        /// <summary>
+        /// Creates a kinematic body description with identity orientation and zero initial velocity.
+        /// </summary>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="collidable">Collidable to associate with the body.</param>
+        /// <param name="activity">Activity settings for the body.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateKinematic(in Vector3 position, in CollidableDescription collidable, in BodyActivityDescription activity)
+        {
+            return new BodyDescription { Pose = new RigidPose(position), Activity = activity, Collidable = collidable };
+        }
+
+        /// <summary>
+        /// Creates a kinematic body description with collidable and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
+        /// </summary>
+        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
+        /// <param name="pose">Pose of the body.</param>
+        /// <param name="velocity">Initial velocity of the body.</param>
+        /// <param name="shapes">Shape collection to add the shape to.</param>
+        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateConvexKinematic<TConvexShape>(
+            in RigidPose pose, in BodyVelocity velocity, Shapes shapes, in TConvexShape shape)
+            where TConvexShape : struct, IConvexShape
+        {
+            var description = new BodyDescription
+            {
+                Pose = pose,
+                Velocity = velocity,
+                Activity = GetDefaultActivity(shape),
+                Collidable = new CollidableDescription(shapes.Add(shape), GetDefaultSpeculativeMargin(shape))
+            };
+            return description;
+        }
+
+        /// <summary>
+        /// Creates a kinematic body description with identity orientation and collidable and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
+        /// </summary>
+        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="velocity">Initial velocity of the body.</param>
+        /// <param name="shapes">Shape collection to add the shape to.</param>
+        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateConvexKinematic<TConvexShape>(
+            in Vector3 position, in BodyVelocity velocity, Shapes shapes, in TConvexShape shape)
+            where TConvexShape : struct, IConvexShape
+        {
+            return CreateConvexKinematic(new RigidPose(position), velocity, shapes, shape);
+        }
+
+        /// <summary>
+        /// Creates a kinematic body description with zero initial velocity and collidable and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
+        /// </summary>
+        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
+        /// <param name="pose">Pose of the body.</param>
+        /// <param name="shapes">Shape collection to add the shape to.</param>
+        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateConvexKinematic<TConvexShape>(
+            in RigidPose pose, Shapes shapes, in TConvexShape shape)
+            where TConvexShape : struct, IConvexShape
+        {
+            return CreateConvexKinematic(pose, default, shapes, shape);
+        }
+
+        /// <summary>
+        /// Creates a kinematic body description with zero initial velocity, identity orientation, and collidable and activity descriptions generated from a convex shape. Adds the shape to the given shape set.
+        /// </summary>
+        /// <typeparam name="TConvexShape">Type of the shape to create a body for.</typeparam>
+        /// <param name="position">Position of the body.</param>
+        /// <param name="shapes">Shape collection to add the shape to.</param>
+        /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
+        /// <returns>Constructed description for the body.</returns>
+        public static BodyDescription CreateConvexKinematic<TConvexShape>(
+            in Vector3 position, Shapes shapes, in TConvexShape shape)
+            where TConvexShape : struct, IConvexShape
+        {
+            return CreateConvexKinematic(new RigidPose(position), default, shapes, shape);
+        }
 
     }
 

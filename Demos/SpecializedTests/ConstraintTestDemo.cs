@@ -26,32 +26,35 @@ namespace Demos.SpecializedTests
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             var shapeA = new Box(.75f, 1, .5f);
-            var shapeB = new Box(.75f, 1, .5f);
             var shapeIndexA = Simulation.Shapes.Add(shapeA);
+            var collidableA = new CollidableDescription(shapeIndexA, 0.1f);
+            var shapeB = new Box(.75f, 1, .5f);
             var shapeIndexB = Simulation.Shapes.Add(shapeB);
+            var collidableB = new CollidableDescription(shapeIndexB, 0.1f);
+            var activity = new BodyActivityDescription(0.01f);
             shapeA.ComputeInertia(1, out var inertiaA);
             shapeA.ComputeInertia(1, out var inertiaB);
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-10, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-10, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-10, 3, 0), inertiaA, collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-10, 5, 0), inertiaB, collidableB, activity));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-7, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-7, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(-7, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-7, 5, 0), inertiaB, collidableB, activity));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-4, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-4, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(-4, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-4, 5, 0), inertiaB, collidableB, activity));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularSwivelHinge { SwivelAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(1, 0, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new SwingLimit { AxisLocalA = new Vector3(0, 1, 0), AxisLocalB = new Vector3(0, 1, 0), MaximumSwingAngle = MathHelper.PiOver2, SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(-1, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(-1, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(-1, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-1, 5, 0), inertiaB, collidableB, activity));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new TwistServo
                 {
@@ -63,8 +66,8 @@ namespace Demos.SpecializedTests
                 });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(2, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(2, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(2, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(2, 5, 0), inertiaB, collidableB, activity));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new TwistLimit
                 {
@@ -77,8 +80,8 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(5, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(5, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(5, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(5, 5, 0), inertiaB, collidableB, activity));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new TwistMotor
                 {
@@ -90,8 +93,8 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(8, 3, 0), new BodyInertia(), shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(8, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(8, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(8, 5, 0), inertiaB, collidableB, activity));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularServo
                 {
@@ -101,14 +104,14 @@ namespace Demos.SpecializedTests
                 });
             }
             {
-                var a = Simulation.Bodies.Add(new BodyDescription(new Vector3(11, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f)));
-                var b = Simulation.Bodies.Add(new BodyDescription(new Vector3(11, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f)));
+                var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(11, 3, 0), inertiaA, collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(11, 5, 0), inertiaB, collidableB, activity));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularMotor { TargetVelocityLocalA = new Vector3(0, 1, 0), Settings = new MotorSettings(15, 0.0001f) });
             }
             {
-                var aDescription = new BodyDescription(new Vector3(14, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(new Vector3(14, 5, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f));
+                var aDescription = BodyDescription.CreateDynamic(new Vector3(14, 3, 0), inertiaA, collidableA, activity);
+                var bDescription = BodyDescription.CreateDynamic(new Vector3(14, 5, 0), inertiaB, collidableB, activity);
                 //aDescription.Velocity.Angular = new Vector3(0, 0, 5);
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
@@ -118,15 +121,15 @@ namespace Demos.SpecializedTests
                 var sphere = new Sphere(0.125f);
                 //Treat each vertex as a point mass that cannot rotate.
                 var sphereInertia = new BodyInertia { InverseMass = 1 };
-                var sphereIndex = Simulation.Shapes.Add(sphere);
+                var sphereCollidable = new CollidableDescription(Simulation.Shapes.Add(sphere), 0.1f);
                 var a = new Vector3(17, 3, 0);
                 var b = new Vector3(17, 4, 0);
                 var c = new Vector3(17, 3, 1);
                 var d = new Vector3(18, 3, 0);
-                var aDescription = new BodyDescription(a, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(b, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-                var cDescription = new BodyDescription(c, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-                var dDescription = new BodyDescription(d, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var aDescription = BodyDescription.CreateDynamic(a, sphereInertia, sphereCollidable, activity);
+                var bDescription = BodyDescription.CreateDynamic(b, sphereInertia, sphereCollidable, activity);
+                var cDescription = BodyDescription.CreateDynamic(c, sphereInertia, sphereCollidable, activity);
+                var dDescription = BodyDescription.CreateDynamic(d, sphereInertia, sphereCollidable, activity);
                 var aHandle = Simulation.Bodies.Add(aDescription);
                 var bHandle = Simulation.Bodies.Add(bDescription);
                 var cHandle = Simulation.Bodies.Add(cDescription);
@@ -141,15 +144,15 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(aHandle, bHandle, cHandle, dHandle, new VolumeConstraint(a, b, c, d, new SpringSettings(30, 1)));
             }
             {
-                var aDescription = new BodyDescription(new Vector3(20, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(new Vector3(20, 6, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f));
+                var aDescription = BodyDescription.CreateDynamic(new Vector3(20, 3, 0), inertiaA, collidableA, activity);
+                var bDescription = BodyDescription.CreateDynamic(new Vector3(20, 6, 0), inertiaB, collidableB, activity);
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
                 Simulation.Solver.Add(a, b, new DistanceServo(new Vector3(0, 0.55f, 0), new Vector3(0, -0.55f, 0), 1.9f, new SpringSettings(30, 1), ServoSettings.Default));
             }
             {
-                var aDescription = new BodyDescription(new Vector3(23, 3, 0), inertiaA, shapeIndexA, 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(new Vector3(23, 6, 0), inertiaB, shapeIndexB, 0.1f, new BodyActivityDescription(0.01f));
+                var aDescription = BodyDescription.CreateDynamic(new Vector3(23, 3, 0), inertiaA, collidableA, activity);
+                var bDescription = BodyDescription.CreateDynamic(new Vector3(23, 6, 0), inertiaB, collidableB, activity);
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
                 Simulation.Solver.Add(a, b, new DistanceLimit(new Vector3(0, 0.55f, 0), new Vector3(0, -0.55f, 0), 1f, 3, new SpringSettings(30, 1)));
@@ -158,13 +161,13 @@ namespace Demos.SpecializedTests
                 var sphere = new Sphere(0.125f);
                 //Treat each vertex as a point mass that cannot rotate.
                 var sphereInertia = new BodyInertia { InverseMass = 1 };
-                var sphereIndex = Simulation.Shapes.Add(sphere);
+                var sphereCollidable = new CollidableDescription(Simulation.Shapes.Add(sphere), 0.1f);
                 var a = new Vector3(26, 3, 0);
                 var b = new Vector3(26, 4, 0);
                 var c = new Vector3(27, 3, 0);
-                var aDescription = new BodyDescription(a, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-                var bDescription = new BodyDescription(b, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
-                var cDescription = new BodyDescription(c, sphereInertia, sphereIndex, 0.1f, new BodyActivityDescription(0.01f));
+                var aDescription = BodyDescription.CreateDynamic(a, sphereInertia, sphereCollidable, activity);
+                var bDescription = BodyDescription.CreateDynamic(b, sphereInertia, sphereCollidable, activity);
+                var cDescription = BodyDescription.CreateDynamic(c, sphereInertia, sphereCollidable, activity);
                 var aHandle = Simulation.Bodies.Add(aDescription);
                 var bHandle = Simulation.Bodies.Add(bDescription);
                 var cHandle = Simulation.Bodies.Add(cDescription);

@@ -250,7 +250,7 @@ namespace Demos.Demos
                     var compoundIndex = Simulation.Shapes.Add(compound);
                     for (int i = 0; i < 8; ++i)
                     {
-                        Simulation.Bodies.Add(new BodyDescription(new Vector3(0, 4 + 5 * i, 32), inertia, compoundIndex, 0.1f, new BodyActivityDescription(0.01f)));
+                        Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 4 + 5 * i, 32), inertia, new CollidableDescription(compoundIndex, 0.1f), new BodyActivityDescription(0.01f)));
                     }
 
 

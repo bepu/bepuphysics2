@@ -691,10 +691,10 @@ namespace Demos.Demos
             var vertexShapeIndex = Simulation.Shapes.Add(vertexShape);
             for (int i = 0; i < vertices.Length; ++i)
             {
-                vertexHandles[i] = Simulation.Bodies.Add(new BodyDescription(
-                    position + Quaternion.Transform(vertices[i], orientation), orientation, vertexInertia,
+                vertexHandles[i] = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(
+                    position + Quaternion.Transform(vertices[i], orientation), orientation), vertexInertia,
                     //Bodies don't have to have collidables. Take advantage of this for all the internal vertices.
-                    vertexEdgeCounts[i] == edgeCountForInternalVertex ? new TypedIndex() : vertexShapeIndex, cellSize * 0.5f,
+                    new CollidableDescription(vertexEdgeCounts[i] == edgeCountForInternalVertex ? new TypedIndex() : vertexShapeIndex, cellSize * 0.5f),
                     new BodyActivityDescription(0.01f)));
                 ref var vertexSpatialIndex = ref vertexSpatialIndices[i];
                 filters.Allocate(vertexHandles[i]) = new DeformableCollisionFilter(vertexSpatialIndex.X, vertexSpatialIndex.Y, vertexSpatialIndex.Z, instanceId);
@@ -753,10 +753,8 @@ namespace Demos.Demos
             vertexSpatialIndices.Dispose(BufferPool.SpecializeFor<Cell>(), BufferPool.SpecializeFor<int>());
             BufferPool.Return(ref cellVertexIndices);
             BufferPool.Return(ref tetrahedraVertexIndices);
-
-            BodyDescription.Create(new Vector3(0, 100, -.5f), new Sphere(5), Simulation.Shapes, 10, out var ouch);
-            Simulation.Bodies.Add(ouch);
-
+            
+            Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 100, -.5f), 10, Simulation.Shapes, new Sphere(5)));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)), 0.1f)));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(3)), 0.1f)));
