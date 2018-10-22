@@ -98,6 +98,7 @@ namespace BepuPhysics
 
         internal ref TypeBatch CreateNewTypeBatch(int typeId, TypeProcessor typeProcessor, int initialCapacity, BufferPool pool)
         {
+            Debug.Assert(typeProcessor != null, "Can't create a type batch for a nonexistent type processor. Did you forget to call Solver.Register<T> for the constraint type?");
             var newIndex = TypeBatches.Count;
             TypeBatches.EnsureCapacity(TypeBatches.Count + 1, pool.SpecializeFor<TypeBatch>());
             TypeIndexToTypeBatchIndex[typeId] = newIndex;

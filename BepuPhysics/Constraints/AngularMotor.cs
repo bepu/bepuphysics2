@@ -75,7 +75,7 @@ namespace BepuPhysics.Constraints
             projection.NegatedImpulseToVelocityB = inertiaB.InverseInertiaTensor;
 
             //Jacobians are just the identity matrix.
-            MotorSettingsWide.ComputeSoftness(prestep.Settings.Damping, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
 
             Symmetric3x3Wide.Add(projection.ImpulseToVelocityA, projection.NegatedImpulseToVelocityB, out var unsoftenedInverseEffectiveMass);
             Symmetric3x3Wide.Invert(unsoftenedInverseEffectiveMass, out var unsoftenedEffectiveMass);
@@ -83,7 +83,6 @@ namespace BepuPhysics.Constraints
 
             QuaternionWide.TransformWithoutOverlap(prestep.TargetVelocityLocalA, orientationA, out var biasVelocity);
             Symmetric3x3Wide.TransformWithoutOverlap(biasVelocity, projection.EffectiveMass, out projection.BiasImpulse);
-            projection.MaximumImpulse = prestep.Settings.MaximumForce * dt;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

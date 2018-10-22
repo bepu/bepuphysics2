@@ -58,7 +58,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeSoftness(in Vector<float> damping, float dt, out Vector<float> effectiveMassCFMScale, out Vector<float> softnessImpulseScale)
+        public static void ComputeSoftness(in MotorSettingsWide settings, float dt, out Vector<float> effectiveMassCFMScale, out Vector<float> softnessImpulseScale, out Vector<float> maximumImpulse)
         {
             //We can't use damping ratio for a velocity motor; there is no position goal, so there is no such thing as critical damping.
             //Instead, we start with the damping constant.
@@ -81,9 +81,10 @@ namespace BepuPhysics.Constraints
             //CFM/dt * softenedEffectiveMass = 1 / (d * dt + 1)
             //(For more, see the Inequality1DOF example constraint.)
 
-            var dtd = dt * damping;
+            var dtd = dt * settings.Damping;
             softnessImpulseScale = Vector<float>.One / (dtd + Vector<float>.One);
             effectiveMassCFMScale = dtd * softnessImpulseScale;
+            maximumImpulse = settings.MaximumForce * dt;
         }
     }
 }

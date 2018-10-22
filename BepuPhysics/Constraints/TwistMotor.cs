@@ -98,12 +98,11 @@ namespace BepuPhysics.Constraints
             TwistServoFunctions.ComputeEffectiveMassContributions(inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, jacobianA,
                 ref projection.ImpulseToVelocityA, ref projection.NegatedImpulseToVelocityB, out var unsoftenedInverseEffectiveMass);
 
-            MotorSettingsWide.ComputeSoftness(prestep.Settings.Damping, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
+            MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
             var effectiveMass = effectiveMassCFMScale / unsoftenedInverseEffectiveMass;
             Vector3Wide.Scale(jacobianA, effectiveMass, out projection.VelocityToImpulseA);
             
             projection.BiasImpulse = prestep.TargetVelocity * effectiveMass;
-            projection.MaximumImpulse = prestep.Settings.MaximumForce * dt;
         }
 
 
