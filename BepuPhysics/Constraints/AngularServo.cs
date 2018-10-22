@@ -93,9 +93,8 @@ namespace BepuPhysics.Constraints
             Symmetric3x3Wide.Invert(unsoftenedInverseEffectiveMass, out var unsoftenedEffectiveMass);
             Symmetric3x3Wide.Scale(unsoftenedEffectiveMass, effectiveMassCFMScale, out projection.EffectiveMass);
 
-            ServoSettingsWide.ComputeClampedBiasVelocity(errorAxis, errorLength, positionErrorToVelocity, prestep.ServoSettings, inverseDt, out var clampedBiasVelocity);
+            ServoSettingsWide.ComputeClampedBiasVelocity(errorAxis, errorLength, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out var clampedBiasVelocity, out projection.MaximumImpulse);
             Symmetric3x3Wide.TransformWithoutOverlap(clampedBiasVelocity, projection.EffectiveMass, out projection.BiasImpulse);
-            projection.MaximumImpulse = prestep.ServoSettings.MaximumForce * dt;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

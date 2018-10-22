@@ -32,6 +32,7 @@ namespace BepuPhysics
             solver.Register<DistanceLimit>();
             solver.Register<CenterDistanceConstraint>();
             solver.Register<AreaConstraint>();
+            solver.Register<PointOnLineServo>();
             solver.Register<GrabServo>();
 
             solver.Register<Contact1OneBody>();

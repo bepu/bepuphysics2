@@ -177,6 +177,20 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(bHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(b, c), distanceSpringiness));
                 Simulation.Solver.Add(aHandle, bHandle, cHandle, new AreaConstraint(a, b, c, new SpringSettings(30, 1)));
             }
+            {
+                var aDescription = BodyDescription.CreateDynamic(new Vector3(29, 3, 0), default, collidableA, activity);
+                var bDescription = BodyDescription.CreateDynamic(new Vector3(29, 6, 0), inertiaB, collidableB, activity);
+                var a = Simulation.Bodies.Add(aDescription);
+                var b = Simulation.Bodies.Add(bDescription);
+                Simulation.Solver.Add(a, b, new PointOnLineServo
+                {
+                    LocalOffsetA = new Vector3(0, 0.5f, 0),
+                    LocalOffsetB = new Vector3(0, -0.5f, 0),
+                    LocalDirection = new Vector3(0, 1, 0),
+                    SpringSettings = new SpringSettings(30, 1),
+                    ServoSettings = ServoSettings.Default
+                });
+            }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
 

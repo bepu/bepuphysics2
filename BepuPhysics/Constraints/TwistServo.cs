@@ -178,9 +178,8 @@ namespace BepuPhysics.Constraints
 
             MathHelper.GetSignedAngleDifference(prestep.TargetAngle, angle, out var error);
 
-            ServoSettingsWide.ClampBiasVelocity(error * positionErrorToVelocity, error, prestep.ServoSettings, inverseDt, out var clampedBiasVelocity);
+            ServoSettingsWide.ComputeClampedBiasVelocity(error, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out var clampedBiasVelocity, out projection.MaximumImpulse);
             projection.BiasImpulse = clampedBiasVelocity * effectiveMass;
-            projection.MaximumImpulse = prestep.ServoSettings.MaximumForce * dt;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

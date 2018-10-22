@@ -176,9 +176,8 @@ namespace BepuPhysics.Constraints
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             var error = distance - prestep.TargetDistance;
-            ServoSettingsWide.ClampBiasVelocity(error * positionErrorToVelocity, error, prestep.ServoSettings, inverseDt, out var clampedBiasVelocity);
+            ServoSettingsWide.ComputeClampedBiasVelocity(error, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out var clampedBiasVelocity, out projection.MaximumImpulse);
             projection.BiasImpulse = clampedBiasVelocity * effectiveMass;
-            projection.MaximumImpulse = prestep.ServoSettings.MaximumForce * dt;
 
         }
 

@@ -67,7 +67,7 @@ namespace BepuUtilities
             result.X = v.X * m.XX + v.Y * m.YX;
             result.Y = v.X * m.YX + v.Y * m.YY;
         }
-
+        
         /// <summary>
         /// Computes result = transpose(transpose(a) * b), assuming b is symmetric.
         /// </summary>
