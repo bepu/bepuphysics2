@@ -42,6 +42,7 @@ namespace BepuPhysics.Constraints
             clampedBiasVelocity = Vector.ConditionalSelect(Vector.LessThan(biasVelocity, Vector<float>.Zero),
                 Vector.Max(-servoSettings.MaximumSpeed, Vector.Min(-baseSpeed, biasVelocity)),
                 Vector.Min(servoSettings.MaximumSpeed, Vector.Max(baseSpeed, biasVelocity)));
+            maximumImpulse = servoSettings.MaximumForce * dt;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -77,6 +78,7 @@ namespace BepuPhysics.Constraints
             var unclampedBiasSpeed = errorLength * positionErrorToBiasVelocity;
             var scale = Vector.Min(Vector<float>.One, servoSettings.MaximumSpeed / Vector.Max(baseSpeed, unclampedBiasSpeed));
             Vector3Wide.Scale(errorAxis, scale * unclampedBiasSpeed, out clampedBiasVelocity);
+            maximumImpulse = servoSettings.MaximumForce * dt;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -145,18 +145,18 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Dot(anchorOffset, normal, out var planeNormalDot);
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
-            ServoSettingsWide.ComputeClampedBiasVelocity(prestep.TargetOffset - planeNormalDot, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out projection.BiasImpulse, out projection.MaximumImpulse);
+            ServoSettingsWide.ComputeClampedBiasVelocity(planeNormalDot - prestep.TargetOffset, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out projection.BiasImpulse, out projection.MaximumImpulse);
             projection.BiasImpulse *= effectiveMass;
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
-            in Vector3Wide linearImpulseToVelocityA, in Vector3Wide negatedLinearImpulseToVelocityB, in Vector3Wide angularImpulseToVelocityA, in Vector3Wide angularImpulseToVelocityB, ref Vector<float> csi)
+            in Vector3Wide linearImpulseToVelocityA, in Vector3Wide angularImpulseToVelocityA, in Vector3Wide negatedLinearImpulseToVelocityB, in Vector3Wide angularImpulseToVelocityB, ref Vector<float> csi)
         {
             Vector3Wide.Scale(linearImpulseToVelocityA, csi, out var linearChangeA);
-            Vector3Wide.Scale(negatedLinearImpulseToVelocityB, csi, out var negatedLinearChangeB);
             Vector3Wide.Scale(angularImpulseToVelocityA, csi, out var angularChangeA);
+            Vector3Wide.Scale(negatedLinearImpulseToVelocityB, csi, out var negatedLinearChangeB);
             Vector3Wide.Scale(angularImpulseToVelocityB, csi, out var angularChangeB);
 
             Vector3Wide.Add(linearChangeA, velocityA.Linear, out velocityA.Linear);
@@ -169,11 +169,11 @@ namespace BepuPhysics.Constraints
         public void WarmStart(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
         {
             ApplyImpulse(ref velocityA, ref velocityB,
-                projection.LinearImpulseToVelocityA, projection.NegatedLinearImpulseToVelocityB, projection.AngularImpulseToVelocityA, projection.AngularImpulseToVelocityB,
+                projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.NegatedLinearImpulseToVelocityB, projection.AngularImpulseToVelocityB,
                 ref accumulatedImpulse);
         }
 
-        public static void GetCSI(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
+        public static void ComputeCorrectiveImpulse(ref BodyVelocities velocityA, ref BodyVelocities velocityB,
             in Vector3Wide linearVelocityToImpulseA, in Vector3Wide angularVelocityToImpulseA, in Vector3Wide angularVelocityToImpulseB,
             in Vector<float> biasImpulse, in Vector<float> softnessImpulseScale, in Vector<float> accumulatedImpulse, out Vector<float> csi)
         {
@@ -183,18 +183,18 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Dot(velocityA.Angular, angularVelocityToImpulseA, out var angularA);
             Vector3Wide.Dot(velocityB.Angular, angularVelocityToImpulseB, out var angularB);
 
-            csi = biasImpulse - accumulatedImpulse * softnessImpulseScale - (linearA - negatedLinearB + angularA + angularB);
+            csi = biasImpulse - accumulatedImpulse * softnessImpulseScale - (linearA + angularA - negatedLinearB + angularB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Solve(ref BodyVelocities velocityA, ref BodyVelocities velocityB, ref LinearAxisServoProjection projection, ref Vector<float> accumulatedImpulse)
         {
-            GetCSI(ref velocityA, ref velocityB, projection.LinearVelocityToImpulseA, projection.AngularVelocityToImpulseA, projection.AngularVelocityToImpulseB,
+            ComputeCorrectiveImpulse(ref velocityA, ref velocityB, projection.LinearVelocityToImpulseA, projection.AngularVelocityToImpulseA, projection.AngularVelocityToImpulseB,
                 projection.BiasImpulse, projection.SoftnessImpulseScale, accumulatedImpulse, out var csi);
             ServoSettingsWide.ClampImpulse(projection.MaximumImpulse, ref accumulatedImpulse, ref csi);
             ApplyImpulse(ref velocityA, ref velocityB,
-                projection.LinearImpulseToVelocityA, projection.NegatedLinearImpulseToVelocityB, projection.AngularImpulseToVelocityA, projection.AngularImpulseToVelocityB,
-                ref accumulatedImpulse);
+                projection.LinearImpulseToVelocityA, projection.AngularImpulseToVelocityA, projection.NegatedLinearImpulseToVelocityB, projection.AngularImpulseToVelocityB,
+                ref csi);
         }
 
     }
