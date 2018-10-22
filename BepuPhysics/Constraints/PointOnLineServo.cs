@@ -9,7 +9,7 @@ using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
     /// <summary>
-    /// Constrains points on two bodies to be on a line defined in the local space of one of the body.
+    /// Constrains points on two bodies to be on a line defined in the local space of one of the bodies.
     /// </summary>
     public struct PointOnLineServo : IConstraintDescription<PointOnLineServo>
     {
@@ -210,10 +210,6 @@ namespace BepuPhysics.Constraints
 
     }
 
-
-    /// <summary>
-    /// Handles the solve iterations of a bunch of distance servos.
-    /// </summary>
     public class PointOnLineServoTypeProcessor : TwoBodyTypeProcessor<PointOnLineServoPrestepData, PointOnLineServoProjection, Vector2Wide, PointOnLineServoFunctions>
     {
         public const int BatchTypeId = 37;
