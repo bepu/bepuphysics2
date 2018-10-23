@@ -36,6 +36,7 @@ namespace BepuPhysics
             solver.Register<LinearAxisServo>();
             solver.Register<LinearAxisMotor>();
             solver.Register<LinearAxisLimit>();
+            solver.Register<AngularAxisMotor>();
             solver.Register<GrabServo>();
 
             solver.Register<Contact1OneBody>();
