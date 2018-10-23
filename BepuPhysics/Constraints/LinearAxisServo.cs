@@ -88,13 +88,27 @@ namespace BepuPhysics.Constraints
 
     public struct LinearAxisServoFunctions : IConstraintFunctions<LinearAxisServoPrestepData, LinearAxisServoProjection, Vector<float>>
     {
+        public interface IJacobianModifier
+        {
+            void Modify(in Vector3Wide anchorA, in Vector3Wide anchorB, ref Vector3Wide normal);
+        }
+
+        public struct NoChangeModifier : IJacobianModifier
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Modify(in Vector3Wide anchorA, in Vector3Wide anchorB, ref Vector3Wide normal)
+            {
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeTransforms(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
+        public static void ComputeTransforms<TJacobianModifier>(ref TJacobianModifier jacobianModifier, Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
             in Vector3Wide localOffsetA, in Vector3Wide localOffsetB, in Vector3Wide localPlaneNormal,
             in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector<float> effectiveMassCFMScale,
             out Vector3Wide anchorA, out Vector3Wide anchorB, out Vector3Wide normal, out Vector<float> effectiveMass,
             out Vector3Wide linearVelocityToImpulseA, out Vector3Wide angularVelocityToImpulseA, out Vector3Wide angularVelocityToImpulseB,
             out Vector3Wide linearImpulseToVelocityA, out Vector3Wide angularImpulseToVelocityA, out Vector3Wide negatedLinearImpulseToVelocityB, out Vector3Wide angularImpulseToVelocityB)
+            where TJacobianModifier : IJacobianModifier
         {
             //This is similar to the point on line joint in that we pick the closest point on the plane as the A's offset.
             //From there, the jacobians are very similar to penetration constraints.
@@ -112,6 +126,7 @@ namespace BepuPhysics.Constraints
             Matrix3x3Wide.TransformWithoutOverlap(localPlaneNormal, orientationMatrixA, out normal);
             QuaternionWide.TransformWithoutOverlap(localOffsetB, orientationB, out var offsetB);
             Vector3Wide.Add(ab, offsetB, out anchorB);
+            jacobianModifier.Modify(anchorA, anchorB, ref normal);
 
             //This is a 1DOF constraint, so premultiplication is the best option. Store out JT * Me and J * I^-1. Can avoid storing out JT * Me for linearB since it's just linearA negated.
 
@@ -136,7 +151,8 @@ namespace BepuPhysics.Constraints
             ref LinearAxisServoPrestepData prestep, out LinearAxisServoProjection projection)
         {
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-            ComputeTransforms(bodies, ref bodyReferences, count, prestep.LocalOffsetA, prestep.LocalOffsetB, prestep.LocalPlaneNormal, inertiaA, inertiaB, effectiveMassCFMScale,
+            var modifier = new NoChangeModifier();
+            ComputeTransforms(ref modifier, bodies, ref bodyReferences, count, prestep.LocalOffsetA, prestep.LocalOffsetB, prestep.LocalPlaneNormal, inertiaA, inertiaB, effectiveMassCFMScale,
                 out var anchorA, out var anchorB, out var normal, out var effectiveMass,
                 out projection.LinearVelocityToImpulseA, out projection.AngularVelocityToImpulseA, out projection.AngularVelocityToImpulseB,
                 out projection.LinearImpulseToVelocityA, out projection.AngularImpulseToVelocityA, out projection.NegatedLinearImpulseToVelocityB, out projection.AngularImpulseToVelocityB);

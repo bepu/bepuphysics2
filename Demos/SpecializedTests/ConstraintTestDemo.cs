@@ -228,6 +228,29 @@ namespace Demos.SpecializedTests
                     Settings = new MotorSettings(15, 0.01f)
                 });
             }
+            {
+                var aDescription = BodyDescription.CreateDynamic(new Vector3(38, 3, 0), inertiaA, collidableA, activity);
+                var bDescription = BodyDescription.CreateDynamic(new Vector3(38, 6, 0), inertiaB, collidableB, activity);
+                var a = Simulation.Bodies.Add(aDescription);
+                var b = Simulation.Bodies.Add(bDescription);
+                Simulation.Solver.Add(a, b, new PointOnLineServo
+                {
+                    LocalOffsetA = new Vector3(0, 0.5f, 0),
+                    LocalOffsetB = new Vector3(0, -0.5f, 0),
+                    LocalDirection = new Vector3(0, 1, 0),
+                    SpringSettings = new SpringSettings(30, 1),
+                    ServoSettings = ServoSettings.Default
+                });
+                Simulation.Solver.Add(a, b, new LinearAxisLimit
+                {
+                    LocalOffsetA = new Vector3(0, 0.5f, 0),
+                    LocalOffsetB = new Vector3(0, -0.5f, 0),
+                    LocalAxis = new Vector3(0, 1, 0),
+                    MinimumOffset = 1,
+                    MaximumOffset = 2,
+                    SpringSettings = new SpringSettings(30, 1)
+                });
+            }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
 

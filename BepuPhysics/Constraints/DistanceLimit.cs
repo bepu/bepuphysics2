@@ -105,7 +105,7 @@ namespace BepuPhysics.Constraints
 
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             var error = Vector.ConditionalSelect(useMinimum, prestep.MinimumDistance - distance, distance - prestep.MaximumDistance);
-            var biasVelocity = Vector.Min(error * new Vector<float>(inverseDt), error * positionErrorToVelocity);
+            InequalityHelpers.ComputeBiasVelocity(error, positionErrorToVelocity, inverseDt, out var biasVelocity);
             projection.BiasImpulse = biasVelocity * effectiveMass;
 
         }
