@@ -125,12 +125,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Subtract(biasImpulse, softnessComponent, out var csi);
             Vector3Wide.Subtract(csi, csiVelocityComponent, out csi);
 
-            var previousAccumulatedImpulse = accumulatedImpulse;
-            Vector3Wide.Add(accumulatedImpulse, csi, out accumulatedImpulse);
-            Vector3Wide.Length(accumulatedImpulse, out var newMagnitude);
-            var impulseScale = Vector.Min(maximumImpulse / newMagnitude, Vector<float>.One);
-            Vector3Wide.Scale(accumulatedImpulse, impulseScale, out accumulatedImpulse);
-            Vector3Wide.Subtract(accumulatedImpulse, previousAccumulatedImpulse, out csi);
+            ServoSettingsWide.ClampImpulse(maximumImpulse, ref accumulatedImpulse, ref csi);
 
             ApplyImpulse(ref velocityA.Angular, ref velocityB.Angular, impulseToVelocityA, negatedImpulseToVelocityB, csi);
         }

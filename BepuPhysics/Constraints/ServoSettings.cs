@@ -82,6 +82,18 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ComputeClampedBiasVelocity(in Vector3Wide error, in Vector<float> positionErrorToBiasVelocity, in ServoSettingsWide servoSettings,
+           float dt, float inverseDt, out Vector3Wide clampedBiasVelocity, out Vector<float> maximumImpulse)
+        {
+            Vector3Wide.Length(error, out var errorLength);
+            Vector3Wide.Scale(error, Vector<float>.One / errorLength, out var errorAxis);
+            var useFallback = Vector.LessThan(errorLength, new Vector<float>(1e-10f));
+            errorAxis.X = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, errorAxis.X);
+            errorAxis.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, errorAxis.Y);
+            ComputeClampedBiasVelocity(errorAxis, errorLength, positionErrorToBiasVelocity, servoSettings, dt, inverseDt, out clampedBiasVelocity, out maximumImpulse);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ClampImpulse(in Vector<float> maximumImpulse, ref Vector<float> accumulatedImpulse, ref Vector<float> csi)
         {
             var previousImpulse = accumulatedImpulse;
@@ -98,6 +110,17 @@ namespace BepuPhysics.Constraints
             var scale = Vector.Min(Vector<float>.One, maximumImpulse / impulseMagnitude);
             Vector2Wide.Scale(unclamped, scale, out accumulatedImpulse);
             Vector2Wide.Subtract(accumulatedImpulse, previousImpulse, out csi);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ClampImpulse(in Vector<float> maximumImpulse, ref Vector3Wide accumulatedImpulse, ref Vector3Wide csi)
+        {
+            var previousAccumulatedImpulse = accumulatedImpulse;
+            Vector3Wide.Add(accumulatedImpulse, csi, out accumulatedImpulse);
+            Vector3Wide.Length(accumulatedImpulse, out var newMagnitude);
+            var impulseScale = Vector.Min(maximumImpulse / newMagnitude, Vector<float>.One);
+            Vector3Wide.Scale(accumulatedImpulse, impulseScale, out accumulatedImpulse);
+            Vector3Wide.Subtract(accumulatedImpulse, previousAccumulatedImpulse, out csi);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

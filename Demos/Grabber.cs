@@ -64,9 +64,9 @@ namespace Demos
             return rayDirection;
         }
 
-        void CreateMotorDescription(in Vector3 target, float inverseMass, out GrabServo description)
+        void CreateMotorDescription(in Vector3 target, float inverseMass, out OneBodyLinearServo description)
         {
-            description = new GrabServo
+            description = new OneBodyLinearServo
             {
                 LocalOffset = localGrabPoint,
                 Target = target,

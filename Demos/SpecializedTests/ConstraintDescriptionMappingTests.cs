@@ -126,16 +126,31 @@ namespace Demos.SpecializedTests
             Test<Contact6Nonconvex>(pool, random, 2);
             Test<Contact7Nonconvex>(pool, random, 2);
             Test<Contact8Nonconvex>(pool, random, 2);
+
             Test<BallSocket>(pool, random, 2);
             Test<AngularHinge>(pool, random, 2);
             Test<AngularSwivelHinge>(pool, random, 2);
             Test<SwingLimit>(pool, random, 2);
+            Test<TwistServo>(pool, random, 2);
             Test<TwistLimit>(pool, random, 2);
             Test<TwistMotor>(pool, random, 2);
-            Test<TwistServo>(pool, random, 2);
             Test<AngularServo>(pool, random, 2);
             Test<AngularMotor>(pool, random, 2);
-            Test<GrabServo>(pool, random, 1);
+            Test<Weld>(pool, random, 2);
+            Test<VolumeConstraint>(pool, random, 2);
+            Test<DistanceServo>(pool, random, 2);
+            Test<DistanceLimit>(pool, random, 2);
+            Test<CenterDistanceConstraint>(pool, random, 2);
+            Test<AreaConstraint>(pool, random, 2);
+            Test<PointOnLineServo>(pool, random, 2);
+            Test<LinearAxisServo>(pool, random, 2);
+            Test<LinearAxisMotor>(pool, random, 2);
+            Test<LinearAxisLimit>(pool, random, 2);
+            Test<AngularAxisMotor>(pool, random, 2);
+            Test<OneBodyAngularServo>(pool, random, 1);
+            Test<OneBodyAngularMotor>(pool, random, 1);
+            Test<OneBodyLinearServo>(pool, random, 1);
+            Test<OneBodyLinearMotor>(pool, random, 1);
 
             pool.Clear();
         }
