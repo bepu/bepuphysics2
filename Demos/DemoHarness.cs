@@ -368,7 +368,6 @@ namespace Demos
                     uiText.Clear().Append(1e3 * timeSamples.Simulation[timeSamples.Simulation.End - 1], timingGraph.Description.VerticalIntervalLabelRounding).Append(" ms/step"),
                     new Vector2(window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, timingTextSize), inset), timingTextSize, timingGraph.Description.TextColor, font);
             }
-            grabber.Draw(renderer.Lines, camera, input.MouseLocked, controls.Grab.IsDown(input), GetNormalizedMousePosition());
             renderer.Shapes.AddInstances(demo.Simulation, demo.ThreadDispatcher);
             renderer.Lines.Extract(demo.Simulation.Bodies, demo.Simulation.Solver, demo.Simulation.BroadPhase, showConstraints, showContacts, showBoundingBoxes, demo.ThreadDispatcher);
         }

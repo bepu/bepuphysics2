@@ -90,6 +90,7 @@ namespace BepuPhysics.Constraints
             var useFallback = Vector.LessThan(errorLength, new Vector<float>(1e-10f));
             errorAxis.X = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, errorAxis.X);
             errorAxis.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, errorAxis.Y);
+            errorAxis.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, errorAxis.Z);
             ComputeClampedBiasVelocity(errorAxis, errorLength, positionErrorToBiasVelocity, servoSettings, dt, inverseDt, out clampedBiasVelocity, out maximumImpulse);
         }
 

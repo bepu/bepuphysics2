@@ -101,7 +101,7 @@ namespace BepuPhysics.Constraints
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             Vector3Wide.Add(projection.Offset, position, out var worldGrabPoint);
             Vector3Wide.Subtract(prestep.Target, worldGrabPoint, out var error);
-            ServoSettingsWide.ComputeClampedBiasVelocity(error, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out projection.BiasVelocity, out projection.MaximumImpulse);
+            ServoSettingsWide.ComputeClampedBiasVelocity(error, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out projection.BiasVelocity, out projection.MaximumImpulse);            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

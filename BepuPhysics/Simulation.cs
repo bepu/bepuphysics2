@@ -196,7 +196,7 @@ namespace BepuPhysics
             ProfilerStart(Sleeper);
             Sleeper.Update(threadDispatcher, Deterministic);
             ProfilerEnd(Sleeper);
-
+            
             //Note that pose integrator comes before collision detection and solving. This is a shift from v1, where collision detection went first.
             //This is a tradeoff:
             //1) Any externally set velocities will be integrated without input from the solver. The v1-style external velocity control won't work as well-
@@ -230,7 +230,7 @@ namespace BepuPhysics
             ProfilerStart(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(NarrowPhase);
-            
+
             ProfilerStart(Solver);
             if (threadDispatcher == null)
                 Solver.Update(dt);

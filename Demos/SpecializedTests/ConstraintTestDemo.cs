@@ -19,7 +19,7 @@ namespace Demos.SpecializedTests
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(0, 4, 35);
+            camera.Position = new Vector3(20, 4, 35);
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
@@ -261,6 +261,16 @@ namespace Demos.SpecializedTests
                     LocalAxisB = new Vector3(0, 1, 0),
                     TargetVelocity = MathHelper.Pi * 2,
                     Settings = new MotorSettings(float.MaxValue, 0.1f)
+                });
+            }
+            {
+                var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(44, 3, 0), inertiaA, collidableA, activity));
+                Simulation.Solver.Add(a, new OneBodyLinearServo
+                {
+                    LocalOffset = new Vector3(0, 1, 0),
+                    Target = new Vector3(44, 3, 0),
+                    ServoSettings = new ServoSettings(2, 0, float.MaxValue),
+                    SpringSettings = new SpringSettings(5, 1)
                 });
             }
 

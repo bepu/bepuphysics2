@@ -125,29 +125,5 @@ namespace Demos
             }
         }
         const float MaximumLength = 3;
-
-        public void Draw(LineExtractor lines, Camera camera, bool mouseLocked, bool shouldGrab, in Vector2 normalizedMousePosition)
-        {
-            if (active && body.Exists)
-            {
-                RigidPose.Transform(localGrabPoint, body.Pose, out var grabbedPoint);
-                var rayDirection = GetRayDirection(camera, mouseLocked, normalizedMousePosition);
-                var targetPoint = camera.Position + rayDirection * t;
-                var distance = Vector3.Distance(grabbedPoint, targetPoint);
-                var fractionOfMaximum = MathF.Min(distance / MaximumLength, 1);
-                lines.Allocate() = new LineInstance(grabbedPoint, targetPoint, new Vector3(1, 0, 0) * fractionOfMaximum + new Vector3(1, 1, 1) * (1 - fractionOfMaximum), new Vector3());
-            }
-            else if (shouldGrab && !active && mouseLocked)
-            {
-                //Draw a crosshair if there is no mouse cursor.
-                var center = camera.Position + camera.Forward * (camera.NearClip * 2);
-
-                var crosshairLength = 0.02f * camera.NearClip * MathF.Tan(camera.FieldOfView * 0.5f);
-                var rightOffset = camera.Right * crosshairLength;
-                var upOffset = camera.Up * crosshairLength;
-                lines.Allocate() = new LineInstance(center - rightOffset, center + rightOffset, new Vector3(1, 0, 0), new Vector3());
-                lines.Allocate() = new LineInstance(center - upOffset, center + upOffset, new Vector3(1, 0, 0), new Vector3());
-            }
-        }
     }
 }
