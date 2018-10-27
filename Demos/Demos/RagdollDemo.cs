@@ -199,8 +199,8 @@ namespace Demos.Demos
             });
             simulation.Solver.Add(upperArm.Handle, lowerArm.Handle, new AngularSwivelHinge
             {
-                SwivelAxisLocalA = new Vector3(1, 0, 0),
-                HingeAxisLocalB = new Vector3(0, 1, 0),
+                LocalSwivelAxisA = new Vector3(1, 0, 0),
+                LocalHingeAxisB = new Vector3(0, 1, 0),
                 SpringSettings = constraintSpringSettings
             });
             simulation.Solver.Add(upperArm.Handle, lowerArm.Handle, new SwingLimit

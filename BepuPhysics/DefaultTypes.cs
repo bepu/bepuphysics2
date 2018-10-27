@@ -41,6 +41,7 @@ namespace BepuPhysics
             solver.Register<OneBodyAngularMotor>();
             solver.Register<OneBodyLinearServo>();
             solver.Register<OneBodyLinearMotor>();
+            solver.Register<SwivelHinge>();
 
             solver.Register<Contact1OneBody>();
             solver.Register<Contact2OneBody>();

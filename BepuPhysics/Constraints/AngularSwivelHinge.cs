@@ -10,8 +10,8 @@ namespace BepuPhysics.Constraints
 {
     public struct AngularSwivelHinge : IConstraintDescription<AngularSwivelHinge>
     {
-        public Vector3 SwivelAxisLocalA;
-        public Vector3 HingeAxisLocalB;
+        public Vector3 LocalSwivelAxisA;
+        public Vector3 LocalHingeAxisB;
         public SpringSettings SpringSettings;
 
         public int ConstraintTypeId
@@ -29,12 +29,8 @@ namespace BepuPhysics.Constraints
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<AngularSwivelHingePrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            GetFirst(ref target.SwivelAxisLocalA.X) = SwivelAxisLocalA.X;
-            GetFirst(ref target.SwivelAxisLocalA.Y) = SwivelAxisLocalA.Y;
-            GetFirst(ref target.SwivelAxisLocalA.Z) = SwivelAxisLocalA.Z;
-            GetFirst(ref target.HingeAxisLocalB.X) = HingeAxisLocalB.X;
-            GetFirst(ref target.HingeAxisLocalB.Y) = HingeAxisLocalB.Y;
-            GetFirst(ref target.HingeAxisLocalB.Z) = HingeAxisLocalB.Z;
+            Vector3Wide.WriteFirst(LocalSwivelAxisA, ref target.LocalSwivelAxisA);
+            Vector3Wide.WriteFirst(LocalHingeAxisB, ref target.LocalHingeAxisB);
             GetFirst(ref target.SpringSettings.AngularFrequency) = SpringSettings.AngularFrequency;
             GetFirst(ref target.SpringSettings.TwiceDampingRatio) = SpringSettings.TwiceDampingRatio;
         }
@@ -43,12 +39,8 @@ namespace BepuPhysics.Constraints
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<AngularSwivelHingePrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            description.SwivelAxisLocalA.X = GetFirst(ref source.SwivelAxisLocalA.X);
-            description.SwivelAxisLocalA.Y = GetFirst(ref source.SwivelAxisLocalA.Y);
-            description.SwivelAxisLocalA.Z = GetFirst(ref source.SwivelAxisLocalA.Z);
-            description.HingeAxisLocalB.X = GetFirst(ref source.HingeAxisLocalB.X);
-            description.HingeAxisLocalB.Y = GetFirst(ref source.HingeAxisLocalB.Y);
-            description.HingeAxisLocalB.Z = GetFirst(ref source.HingeAxisLocalB.Z);
+            Vector3Wide.ReadFirst(source.LocalSwivelAxisA, out description.LocalSwivelAxisA);
+            Vector3Wide.ReadFirst(source.LocalHingeAxisB, out description.LocalHingeAxisB);            
             description.SpringSettings.AngularFrequency = GetFirst(ref source.SpringSettings.AngularFrequency);
             description.SpringSettings.TwiceDampingRatio = GetFirst(ref source.SpringSettings.TwiceDampingRatio);
         }
@@ -56,8 +48,8 @@ namespace BepuPhysics.Constraints
 
     public struct AngularSwivelHingePrestepData
     {
-        public Vector3Wide SwivelAxisLocalA;
-        public Vector3Wide HingeAxisLocalB;
+        public Vector3Wide LocalSwivelAxisA;
+        public Vector3Wide LocalHingeAxisB;
         public SpringSettingsWide SpringSettings;
     }
 
@@ -92,8 +84,8 @@ namespace BepuPhysics.Constraints
             //Now, we choose the storage representation. The default approach would be to store JA, the effective mass, and both inverse inertias, requiring 6 + 1 + 6 + 6 scalars.  
             //The alternative is to store JAT * effectiveMass, and then also JA * inverseInertiaTensor(A/B), requiring only 3 + 3 + 3 scalars.
             //So, overall, prebaking saves us 10 scalars and a bit of iteration-time ALU.
-            QuaternionWide.TransformWithoutOverlap(prestep.SwivelAxisLocalA, orientationA, out var swivelAxis);
-            QuaternionWide.TransformWithoutOverlap(prestep.HingeAxisLocalB, orientationB, out var hingeAxis);
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalSwivelAxisA, orientationA, out var swivelAxis);
+            QuaternionWide.TransformWithoutOverlap(prestep.LocalHingeAxisB, orientationB, out var hingeAxis);
             Vector3Wide.CrossWithoutOverlap(swivelAxis, hingeAxis, out var jacobianA);
             //In the event that the axes are parallel, there is no unique jacobian. Arbitrarily pick one.
             //Note that this causes a discontinuity in jacobian length at the poles. We just don't worry about it.

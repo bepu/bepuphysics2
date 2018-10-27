@@ -489,29 +489,29 @@ namespace BepuUtilities
             float m41 = m.W.X;
             float m42 = m.W.Y;
 
-            inverted.X = new Vector4(
-                (m.Y.Y * c5 - m.Y.Z * c4 + m.Y.W * c3) * inverseDeterminant,
-                (-m.X.Y * c5 + m.X.Z * c4 - m.X.W * c3) * inverseDeterminant,
-                (m.W.Y * s5 - m.W.Z * s4 + m.W.W * s3) * inverseDeterminant,
-                (-m.Z.Y * s5 + m.Z.Z * s4 - m.Z.W * s3) * inverseDeterminant);
+            inverted.X = inverseDeterminant * new Vector4(
+                m.Y.Y * c5 - m.Y.Z * c4 + m.Y.W * c3,
+                -m.X.Y * c5 + m.X.Z * c4 - m.X.W * c3,
+                m.W.Y * s5 - m.W.Z * s4 + m.W.W * s3,
+                -m.Z.Y * s5 + m.Z.Z * s4 - m.Z.W * s3);
 
-            inverted.Y = new Vector4(
-                (-m.Y.X * c5 + m.Y.Z * c2 - m.Y.W * c1) * inverseDeterminant,
-                (m11 * c5 - m13 * c2 + m14 * c1) * inverseDeterminant,
-                (-m.W.X * s5 + m.W.Z * s2 - m.W.W * s1) * inverseDeterminant,
-                (m.Z.X * s5 - m.Z.Z * s2 + m.Z.W * s1) * inverseDeterminant);
+            inverted.Y = inverseDeterminant * new Vector4(
+                -m.Y.X * c5 + m.Y.Z * c2 - m.Y.W * c1,
+                m11 * c5 - m13 * c2 + m14 * c1,
+                -m.W.X * s5 + m.W.Z * s2 - m.W.W * s1,
+                m.Z.X * s5 - m.Z.Z * s2 + m.Z.W * s1);
 
-            inverted.Z = new Vector4(
-                (m21 * c4 - m22 * c2 + m.Y.W * c0) * inverseDeterminant,
-                (-m11 * c4 + m12 * c2 - m14 * c0) * inverseDeterminant,
-                (m.W.X * s4 - m.W.Y * s2 + m.W.W * s0) * inverseDeterminant,
-                (-m31 * s4 + m32 * s2 - m.Z.W * s0) * inverseDeterminant);
+            inverted.Z = inverseDeterminant * new Vector4(
+                m21 * c4 - m22 * c2 + m.Y.W * c0,
+                -m11 * c4 + m12 * c2 - m14 * c0,
+                m.W.X * s4 - m.W.Y * s2 + m.W.W * s0,
+                -m31 * s4 + m32 * s2 - m.Z.W * s0);
 
-            inverted.W = new Vector4(
-                (-m21 * c3 + m22 * c1 - m23 * c0) * inverseDeterminant,
-                (m11 * c3 - m12 * c1 + m13 * c0) * inverseDeterminant,
-                (-m41 * s3 + m42 * s1 - m.W.Z * s0) * inverseDeterminant,
-                (m31 * s3 - m32 * s1 + m33 * s0) * inverseDeterminant);
+            inverted.W = inverseDeterminant * new Vector4(
+                -m21 * c3 + m22 * c1 - m23 * c0,
+                m11 * c3 - m12 * c1 + m13 * c0,
+                -m41 * s3 + m42 * s1 - m.W.Z * s0,
+                m31 * s3 - m32 * s1 + m33 * s0);
         }
 
 
