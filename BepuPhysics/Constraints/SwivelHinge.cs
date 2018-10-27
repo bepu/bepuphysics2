@@ -128,7 +128,9 @@ namespace BepuPhysics.Constraints
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             Vector3Wide.Add(ab, projection.OffsetB, out var anchorB);
             Vector3Wide.Subtract(anchorB, projection.OffsetA, out var ballSocketError);
-            Vector3Wide.Scale(ballSocketError, positionErrorToVelocity, out Unsafe.As<Vector<float>, Vector3Wide>(ref projection.BiasVelocity.X));
+            projection.BiasVelocity.X = ballSocketError.X * positionErrorToVelocity;
+            projection.BiasVelocity.Y = ballSocketError.Y * positionErrorToVelocity;
+            projection.BiasVelocity.Z = ballSocketError.Z * positionErrorToVelocity;
 
             Vector3Wide.Dot(hingeAxis, swivelAxis, out var error);
             //Note the negation: we want to oppose the separation. TODO: arguably, should bake the negation into positionErrorToVelocity, given its name.
@@ -179,7 +181,9 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Add(ballSocketAngularCSVA, ballSocketAngularCSVB, out var ballSocketAngularCSV);
             Vector3Wide.Subtract(velocityA.Linear, velocityB.Linear, out var ballSocketLinearCSV);
             Vector4Wide csv;
-            Vector3Wide.Add(ballSocketAngularCSV, ballSocketLinearCSV, out Unsafe.As<Vector<float>, Vector3Wide>(ref csv.X));
+            csv.X = ballSocketAngularCSV.X + ballSocketLinearCSV.X;
+            csv.Y = ballSocketAngularCSV.Y + ballSocketLinearCSV.Y;
+            csv.Z = ballSocketAngularCSV.Z + ballSocketLinearCSV.Z;
             csv.W = swivelHingeCSVA - negatedSwivelHingeCSVB;
             Vector4Wide.Subtract(projection.BiasVelocity, csv, out csv);
 

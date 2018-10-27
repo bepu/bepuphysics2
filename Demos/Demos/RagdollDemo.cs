@@ -191,15 +191,11 @@ namespace Demos.Demos
             simulation.Solver.Add(chestHandle, upperArm.Handle, BuildAngularMotor());
 
             //Upper Arm-Lower Arm
-            simulation.Solver.Add(upperArm.Handle, lowerArm.Handle, new BallSocket
+            simulation.Solver.Add(upperArm.Handle, lowerArm.Handle, new SwivelHinge
             {
                 LocalOffsetA = Quaternion.Transform(localElbow - upperArmPosition, Quaternion.Conjugate(upperArmOrientation)),
-                LocalOffsetB = Quaternion.Transform(localElbow - lowerArmPosition, Quaternion.Conjugate(lowerArmOrientation)),
-                SpringSettings = constraintSpringSettings
-            });
-            simulation.Solver.Add(upperArm.Handle, lowerArm.Handle, new AngularSwivelHinge
-            {
                 LocalSwivelAxisA = new Vector3(1, 0, 0),
+                LocalOffsetB = Quaternion.Transform(localElbow - lowerArmPosition, Quaternion.Conjugate(lowerArmOrientation)),
                 LocalHingeAxisB = new Vector3(0, 1, 0),
                 SpringSettings = constraintSpringSettings
             });
