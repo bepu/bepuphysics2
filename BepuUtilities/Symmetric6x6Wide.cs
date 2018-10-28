@@ -35,7 +35,7 @@ namespace BepuUtilities
             //N = D^-1 * BT => 
             //D^-1 * BT * M * B * D^-1 = N * M * NT, because D is symmetric.
             Symmetric3x3Wide.Invert(d, out var invD);
-            Symmetric3x3Wide.Multiply(b, invD, out var bInvD);
+            Symmetric3x3Wide.MultiplyWithoutOverlap(b, invD, out var bInvD);
             Symmetric3x3Wide.CompleteMatrixSandwichByTranspose(bInvD, b, out var bInvDBT);
             Symmetric3x3Wide.Subtract(a, bInvDBT, out var resultAInverse);
             Symmetric3x3Wide.Invert(resultAInverse, out result.A);

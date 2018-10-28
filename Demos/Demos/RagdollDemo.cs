@@ -14,7 +14,7 @@ using DemoUtilities;
 using BepuUtilities.Memory;
 
 namespace Demos.Demos
-{    
+{
     //For the purposes of this demo, we have custom collision filtering rules.
     struct RagdollCallbacks : INarrowPhaseCallbacks
     {
@@ -293,16 +293,12 @@ namespace Demos.Demos
             simulation.Solver.Add(hipsHandle, upperLeg.Handle, BuildAngularMotor());
 
             //Upper Leg-Lower Leg
-            simulation.Solver.Add(upperLeg.Handle, lowerLeg.Handle, new BallSocket
+            simulation.Solver.Add(upperLeg.Handle, lowerLeg.Handle, new Hinge
             {
+                LocalHingeAxisA = Quaternion.Transform(new Vector3(1, 0, 0), Quaternion.Conjugate(upperLegOrientation)),
                 LocalOffsetA = Quaternion.Transform(localKnee - upperLegPosition, Quaternion.Conjugate(upperLegOrientation)),
+                LocalHingeAxisB = Quaternion.Transform(new Vector3(1, 0, 0), Quaternion.Conjugate(lowerLegOrientation)),
                 LocalOffsetB = Quaternion.Transform(localKnee - lowerLegPosition, Quaternion.Conjugate(lowerLegOrientation)),
-                SpringSettings = constraintSpringSettings
-            });
-            simulation.Solver.Add(upperLeg.Handle, lowerLeg.Handle, new AngularHinge
-            {
-                HingeAxisLocalA = Quaternion.Transform(new Vector3(1, 0, 0), Quaternion.Conjugate(upperLegOrientation)),
-                HingeAxisLocalB = Quaternion.Transform(new Vector3(1, 0, 0), Quaternion.Conjugate(lowerLegOrientation)),
                 SpringSettings = constraintSpringSettings
             });
             simulation.Solver.Add(upperLeg.Handle, lowerLeg.Handle, new SwingLimit

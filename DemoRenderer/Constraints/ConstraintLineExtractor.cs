@@ -121,6 +121,7 @@ namespace DemoRenderer.Constraints
             AllocateSlot(LinearAxisServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<LinearAxisServoLineExtractor, TwoBodyReferences, LinearAxisServoPrestepData, LinearAxisServoProjection, Vector<float>>();
             AllocateSlot(AngularSwivelHingeTypeProcessor.BatchTypeId) = new TypeLineExtractor<AngularSwivelHingeLineExtractor, TwoBodyReferences, AngularSwivelHingePrestepData, AngularSwivelHingeProjection, Vector<float>>();
             AllocateSlot(SwivelHingeTypeProcessor.BatchTypeId) = new TypeLineExtractor<SwivelHingeLineExtractor, TwoBodyReferences, SwivelHingePrestepData, SwivelHingeProjection, Vector4Wide>();
+            AllocateSlot(HingeTypeProcessor.BatchTypeId) = new TypeLineExtractor<HingeLineExtractor, TwoBodyReferences, HingePrestepData, HingeProjection, HingeAccumulatedImpulses>();
             AllocateSlot(OneBodyLinearServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<OneBodyLinearServoLineExtractor, Vector<int>, OneBodyLinearServoPrestepData, OneBodyLinearServoProjection, Vector<float>>();
 
             AllocateSlot(Contact1OneBodyTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact1OneBodyLineExtractor, Vector<int>, Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses>();

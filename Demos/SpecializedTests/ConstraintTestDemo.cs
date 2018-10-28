@@ -26,7 +26,7 @@ namespace Demos.SpecializedTests
 
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(20, 4, 35);
+            camera.Position = new Vector3(25, 4, 40);
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool, new TestCallbacks());
 
@@ -53,7 +53,20 @@ namespace Demos.SpecializedTests
                 var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
                 var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
-                Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
+            }
+            {
+                var x = GetNextPosition(ref nextX);
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
+                var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
+                Simulation.Solver.Add(a, b, new Hinge
+                {
+                    LocalOffsetA = new Vector3(0, 1, 0),
+                    LocalHingeAxisA = new Vector3(0, 1, 0),
+                    LocalOffsetB = new Vector3(0, -1, 0),
+                    LocalHingeAxisB = new Vector3(0, 1, 0),
+                    SpringSettings = new SpringSettings(30, 1)
+                });
             }
             {
                 var x = GetNextPosition(ref nextX);
@@ -104,7 +117,7 @@ namespace Demos.SpecializedTests
                     MaximumAngle = MathHelper.Pi * 0.95f,
                     SpringSettings = new SpringSettings(30, 1),
                 });
-                Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
                 var x = GetNextPosition(ref nextX);
@@ -118,7 +131,7 @@ namespace Demos.SpecializedTests
                     TargetVelocity = MathHelper.Pi * 2,
                     Settings = new MotorSettings(float.MaxValue, 0.1f)
                 });
-                Simulation.Solver.Add(a, b, new AngularHinge { HingeAxisLocalA = new Vector3(0, 1, 0), HingeAxisLocalB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
+                Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
             {
                 var x = GetNextPosition(ref nextX);

@@ -108,8 +108,11 @@ namespace BepuPhysics.Constraints
             var previousImpulse = accumulatedImpulse;
             Vector2Wide.Add(accumulatedImpulse, csi, out var unclamped);
             Vector2Wide.Length(unclamped, out var impulseMagnitude);
-            var scale = Vector.Min(Vector<float>.One, maximumImpulse / impulseMagnitude);
-            Vector2Wide.Scale(unclamped, scale, out accumulatedImpulse);
+            var impulseScale = Vector.ConditionalSelect(
+                Vector.LessThan(Vector.Abs(impulseMagnitude), new Vector<float>(1e-10f)),
+                Vector<float>.One,
+                Vector.Min(maximumImpulse / impulseMagnitude, Vector<float>.One));
+            Vector2Wide.Scale(unclamped, impulseScale, out accumulatedImpulse);
             Vector2Wide.Subtract(accumulatedImpulse, previousImpulse, out csi);
         }
 
@@ -118,8 +121,11 @@ namespace BepuPhysics.Constraints
         {
             var previousAccumulatedImpulse = accumulatedImpulse;
             Vector3Wide.Add(accumulatedImpulse, csi, out accumulatedImpulse);
-            Vector3Wide.Length(accumulatedImpulse, out var newMagnitude);
-            var impulseScale = Vector.Min(maximumImpulse / newMagnitude, Vector<float>.One);
+            Vector3Wide.Length(accumulatedImpulse, out var impulseMagnitude);
+            var impulseScale = Vector.ConditionalSelect(
+                Vector.LessThan(Vector.Abs(impulseMagnitude), new Vector<float>(1e-10f)), 
+                Vector<float>.One, 
+                Vector.Min(maximumImpulse / impulseMagnitude, Vector<float>.One));
             Vector3Wide.Scale(accumulatedImpulse, impulseScale, out accumulatedImpulse);
             Vector3Wide.Subtract(accumulatedImpulse, previousAccumulatedImpulse, out csi);
         }
