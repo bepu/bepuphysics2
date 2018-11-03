@@ -49,7 +49,7 @@ namespace DemoRenderer.ShapeDrawing
             pixelShader = new PixelShader(device, cache.GetShader(@"ShapeDrawing\RenderMeshes.hlsl.pshader"));
         }
 
-        public unsafe void Render(DeviceContext context, Camera camera, Int2 screenResolution, MeshInstance[] instances, int start, int count)
+        public unsafe void Render(DeviceContext context, Camera camera, Int2 screenResolution, Span<MeshInstance> instances, int start, int count)
         {
             //Examine the set of instances and batch them into groups using the same mesh data.
             var keyPool = meshCache.Pool.SpecializeFor<ulong>();

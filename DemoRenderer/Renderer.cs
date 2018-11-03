@@ -8,6 +8,7 @@ using System;
 using DemoRenderer.ShapeDrawing;
 using DemoRenderer.Constraints;
 using BepuUtilities.Memory;
+using DemoUtilities;
 
 namespace DemoRenderer
 {
@@ -225,14 +226,14 @@ namespace DemoRenderer
 
             //All ray traced shapes use analytic coverage writes to get antialiasing.
             context.OutputMerger.SetBlendState(a2cBlendState);
-            SphereRenderer.Render(context, camera, Surface.Resolution, Shapes.spheres.Span.Memory, 0, Shapes.spheres.Count);
-            CapsuleRenderer.Render(context, camera, Surface.Resolution, Shapes.capsules.Span.Memory, 0, Shapes.capsules.Count);
+            SphereRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.spheres.Span), 0, Shapes.spheres.Count);
+            CapsuleRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.capsules.Span), 0, Shapes.capsules.Count);
 
             //Non-raytraced shapes just use regular opaque rendering.
             context.OutputMerger.SetBlendState(opaqueBlendState);
-            BoxRenderer.Render(context, camera, Surface.Resolution, Shapes.boxes.Span.Memory, 0, Shapes.boxes.Count);
-            TriangleRenderer.Render(context, camera, Surface.Resolution, Shapes.triangles.Span.Memory, 0, Shapes.triangles.Count);
-            MeshRenderer.Render(context, camera, Surface.Resolution, Shapes.meshes.Span.Memory, 0, Shapes.meshes.Count);
+            BoxRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.boxes.Span), 0, Shapes.boxes.Count);
+            TriangleRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.triangles.Span), 0, Shapes.triangles.Count);
+            MeshRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.meshes.Span), 0, Shapes.meshes.Count);
             LineRenderer.Render(context, camera, Surface.Resolution, Lines.lines.Span.Memory, 0, Lines.lines.Count);
 
             Background.Render(context, camera);

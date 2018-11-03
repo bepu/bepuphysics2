@@ -13,23 +13,25 @@ namespace DemoRenderer.ShapeDrawing
     public class ShapesExtractor : IDisposable
     {
         //For now, we only have spheres. Later, once other shapes exist, this will be responsible for bucketing the different shape types and when necessary caching shape models.
-        internal QuickList<SphereInstance, Array<SphereInstance>> spheres;
-        internal QuickList<CapsuleInstance, Array<CapsuleInstance>> capsules;
-        internal QuickList<BoxInstance, Array<BoxInstance>> boxes;
-        internal QuickList<TriangleInstance, Array<TriangleInstance>> triangles;
-        internal QuickList<MeshInstance, Array<MeshInstance>> meshes;
+        internal QuickList<SphereInstance, Buffer<SphereInstance>> spheres;
+        internal QuickList<CapsuleInstance, Buffer<CapsuleInstance>> capsules;
+        internal QuickList<BoxInstance, Buffer<BoxInstance>> boxes;
+        internal QuickList<TriangleInstance, Buffer<TriangleInstance>> triangles;
+        internal QuickList<MeshInstance, Buffer<MeshInstance>> meshes;
 
+        BufferPool pool;
         public MeshCache MeshCache;
 
         ParallelLooper looper;
         public ShapesExtractor(Device device, ParallelLooper looper, BufferPool pool, int initialCapacityPerShapeType = 1024)
         {
-            QuickList<SphereInstance, Array<SphereInstance>>.Create(new PassthroughArrayPool<SphereInstance>(), initialCapacityPerShapeType, out spheres);
-            QuickList<CapsuleInstance, Array<CapsuleInstance>>.Create(new PassthroughArrayPool<CapsuleInstance>(), initialCapacityPerShapeType, out capsules);
-            QuickList<BoxInstance, Array<BoxInstance>>.Create(new PassthroughArrayPool<BoxInstance>(), initialCapacityPerShapeType, out boxes);
-            QuickList<TriangleInstance, Array<TriangleInstance>>.Create(new PassthroughArrayPool<TriangleInstance>(), initialCapacityPerShapeType, out triangles);
-            QuickList<MeshInstance, Array<MeshInstance>>.Create(new PassthroughArrayPool<MeshInstance>(), initialCapacityPerShapeType, out meshes);
+            QuickList<SphereInstance, Buffer<SphereInstance>>.Create(pool.SpecializeFor<SphereInstance>(), initialCapacityPerShapeType, out spheres);
+            QuickList<CapsuleInstance, Buffer<CapsuleInstance>>.Create(pool.SpecializeFor<CapsuleInstance>(), initialCapacityPerShapeType, out capsules);
+            QuickList<BoxInstance, Buffer<BoxInstance>>.Create(pool.SpecializeFor<BoxInstance>(), initialCapacityPerShapeType, out boxes);
+            QuickList<TriangleInstance, Buffer<TriangleInstance>>.Create(pool.SpecializeFor<TriangleInstance>(), initialCapacityPerShapeType, out triangles);
+            QuickList<MeshInstance, Buffer<MeshInstance>>.Create(pool.SpecializeFor<MeshInstance>(), initialCapacityPerShapeType, out meshes);
             this.MeshCache = new MeshCache(device, pool);
+            this.pool = pool;
             this.looper = looper;
         }
 
@@ -66,7 +68,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.Radius = Unsafe.AsRef<Sphere>(shapeData).Radius;
                         Helpers.PackOrientation(pose.Orientation, out instance.PackedOrientation);
                         instance.PackedColor = Helpers.PackColor(color);
-                        spheres.Add(ref instance, new PassthroughArrayPool<SphereInstance>());
+                        spheres.Add(ref instance, pool.SpecializeFor<SphereInstance>());
                     }
                     break;
                 case Capsule.Id:
@@ -78,7 +80,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.HalfLength = capsule.HalfLength;
                         instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
                         instance.PackedColor = Helpers.PackColor(color);
-                        capsules.Add(ref instance, new PassthroughArrayPool<CapsuleInstance>());
+                        capsules.Add(ref instance, pool.SpecializeFor<CapsuleInstance>());
                     }
                     break;
                 case Box.Id:
@@ -91,7 +93,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.HalfWidth = box.HalfWidth;
                         instance.HalfHeight = box.HalfHeight;
                         instance.HalfLength = box.HalfLength;
-                        boxes.Add(ref instance, new PassthroughArrayPool<BoxInstance>());
+                        boxes.Add(ref instance, pool.SpecializeFor<BoxInstance>());
                     }
                     break;
                 case Triangle.Id:
@@ -106,7 +108,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.X = pose.Position.X;
                         instance.Y = pose.Position.Y;
                         instance.Z = pose.Position.Z;
-                        triangles.Add(ref instance, new PassthroughArrayPool<TriangleInstance>());
+                        triangles.Add(ref instance, pool.SpecializeFor<TriangleInstance>());
                     }
                     break;
                 case Compound.Id:
@@ -142,7 +144,7 @@ namespace DemoRenderer.ShapeDrawing
                                 vertices[baseVertexIndex + 2] = triangle.B;
                             }
                         }
-                        meshes.Add(ref instance, new PassthroughArrayPool<MeshInstance>());
+                        meshes.Add(ref instance, pool.SpecializeFor<MeshInstance>());
                     }
                     break;
             }
@@ -242,6 +244,11 @@ namespace DemoRenderer.ShapeDrawing
         public void Dispose()
         {
             MeshCache.Dispose();
+            spheres.Dispose(pool.SpecializeFor<SphereInstance>());
+            capsules.Dispose(pool.SpecializeFor<CapsuleInstance>());
+            boxes.Dispose(pool.SpecializeFor<BoxInstance>());
+            triangles.Dispose(pool.SpecializeFor<TriangleInstance>());
+            meshes.Dispose(pool.SpecializeFor<MeshInstance>());
         }
     }
 }

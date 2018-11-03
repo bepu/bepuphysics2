@@ -39,7 +39,6 @@ namespace Demos
         DemoSwapper swapper;
         internal DemoSet demoSet;
         Demo demo;
-        BufferPool pool;
         internal void TryChangeToDemo(int demoIndex)
         {
             if (demoIndex >= 0 && demoIndex < demoSet.Count)
@@ -60,8 +59,7 @@ namespace Demos
             this.input = loop.Input;
             this.camera = loop.Camera;
             this.content = content;
-            this.pool = new BufferPool();
-            timeSamples = new SimulationTimeSamples(512, pool);
+            timeSamples = new SimulationTimeSamples(512, loop.Pool);
             if (controls == null)
                 this.controls = Controls.Default;
             

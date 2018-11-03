@@ -96,7 +96,7 @@ namespace BepuUtilities.Memory
                 return Memory != null;
             }
         }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear(int start, int count)
         {

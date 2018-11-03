@@ -155,7 +155,7 @@ namespace DemoContentBuilder
                         //Scan the alphas. Add border texels of the glyph to the point set. We collect both the nonzero alpha outline and the 'negative space' zero alpha outline.
                         //While scanning distances, nonzero alpha texels will look for the shortest distance to a zero alpha texel, while zero alpha texels will look for the shortest
                         //distance to a nonzero alpha texel.
-                        QuickList<Int2, Array<Int2>>.Create(pool, (max.X - min.X) * (max.Y - min.Y), out var glyphOutline);
+                        var glyphOutline = new List<Int2>((max.X - min.X) * (max.Y - min.Y));
                         int coverageThreshold = 127;
                         for (int rowIndex = min.Y; rowIndex < max.Y; ++rowIndex)
                         {
@@ -180,7 +180,7 @@ namespace DemoContentBuilder
                                         Int2 texelCoordinates;
                                         texelCoordinates.X = columnIndex;
                                         texelCoordinates.Y = rowIndex;
-                                        glyphOutline.AddUnsafely(ref texelCoordinates);
+                                        glyphOutline.Add(texelCoordinates);
                                     }
                                 }
                             }
@@ -200,7 +200,7 @@ namespace DemoContentBuilder
                                 float lowestDistance = float.MaxValue;
                                 for (int pointIndex = 0; pointIndex < glyphOutline.Count; ++pointIndex)
                                 {
-                                    ref var point = ref glyphOutline[pointIndex];
+                                    var point = glyphOutline[pointIndex];
                                     var offsetX = point.X - columnIndex;
                                     var offsetY = point.Y - rowIndex;
                                     var candidateDistance = (float)Math.Sqrt(offsetX * offsetX + offsetY * offsetY);

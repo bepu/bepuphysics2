@@ -51,7 +51,7 @@ namespace DemoRenderer.ShapeDrawing
 
         }
 
-        public void Render(DeviceContext context, Camera camera, Int2 screenResolution, TInstance[] instances, int start, int count)
+        public void Render(DeviceContext context, Camera camera, Int2 screenResolution, Span<TInstance> instances, int start, int count)
         {
             var vertexConstantsData = new RasterizedVertexConstants
             {

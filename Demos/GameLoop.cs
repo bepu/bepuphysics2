@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 using BepuUtilities;
 using OpenTK;
+using BepuUtilities.Memory;
 
 namespace Demos
 {
@@ -16,11 +17,12 @@ namespace Demos
         public RenderSurface Surface { get; private set; }
         public Renderer Renderer { get; private set; }
         public DemoHarness DemoHarness { get; set; }
+        public BufferPool Pool { get; } = new BufferPool();
 
         public GameLoop(Window window)
         {
             Window = window;
-            Input = new Input(window);
+            Input = new Input(window, Pool);
             var useDebugLayer =
 #if DEBUG
                 true;
@@ -69,6 +71,7 @@ namespace Demos
                 disposed = true;
                 Input.Dispose();
                 Renderer.Dispose();
+                Pool.Clear();
                 //Note that we do not own the window.
             }
         }

@@ -13,41 +13,47 @@ namespace DemoUtilities
     /// </summary>
     public class TextBuilder
     {
-        QuickList<char, Array<char>> characters;
+        char[] characters;
+        int count;
 
         public ref char this[int index] { get { return ref characters[index]; } }
 
         public int Length
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return characters.Count; }
+            get { return count; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
-                Debug.Assert(value >= 0); characters.EnsureCapacity(value, new PassthroughArrayPool<char>()); characters.Count = value;
+                Debug.Assert(value >= 0);
+                if (value > characters.Length)
+                    Array.Resize(ref characters, value);
+                count = value;
             }
         }
 
         public TextBuilder(int initialCapacity = 32)
         {
-            QuickList<char, Array<char>>.Create(new PassthroughArrayPool<char>(), initialCapacity, out characters);
+            characters = new char[initialCapacity];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TextBuilder Clear()
         {
-            characters.Count = 0;
+            count = 0;
             return this;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TextBuilder Append(string text, int start, int count)
         {
-            characters.EnsureCapacity(characters.Count + text.Length, new PassthroughArrayPool<char>());
+            var newCount = this.count + count;
+            if (newCount > characters.Length)
+                Array.Resize(ref characters, SpanHelper.GetContainingPowerOf2(newCount));
             int end = start + count;
             for (int i = start; i < end; ++i)
             {
-                characters.AddUnsafely(text[i]);
+                characters[this.count++] = text[i];
             }
             return this;
         }
@@ -65,33 +71,40 @@ namespace DemoUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void AddDigit(ref double value, ref double multiplier, ref PassthroughArrayPool<char> pool)
+        void Add(char character)
+        {
+            if (characters.Length == count)
+                Array.Resize(ref characters, SpanHelper.GetContainingPowerOf2(count * 2));
+            characters[count++] = character;
+
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void AddDigit(ref double value, ref double multiplier)
         {
             var digit = (int)((value * multiplier) % 10);
-            characters.Add(GetCharForDigit(digit), pool);
+            Add(GetCharForDigit(digit));
             value -= digit / multiplier;
             multiplier *= 10;
         }
-        
+
         public TextBuilder Append(double value, int decimalCount)
         {
             //This is a bit of a throwaway implementation and is far from the fastest or numerically best implementation,
             //but it is fairly simple and it doesn't matter very much.
-
             const double minimumDoubleMagnitude = 2.22507385850720138309023271733240406421921598046233e-308;
             bool negative = value < 0;
             if (negative)
                 value = -value;
-            var pool = new PassthroughArrayPool<char>();
             if (value <= minimumDoubleMagnitude)
             {
                 //Don't bother with signed zeroes.
-                characters.Add('0', pool);
+                Add('0');
                 return this;
             }
             if (negative)
             {
-                characters.Add('-', pool);
+                Add('-');
             }
             value = Math.Round(value, decimalCount);
             var place = (int)Math.Floor(Math.Log10(value));
@@ -100,18 +113,18 @@ namespace DemoUtilities
 
             for (int i = place; i >= 0; --i)
             {
-                AddDigit(ref value, ref multiplier, ref pool);
+                AddDigit(ref value, ref multiplier);
             }
             if (value > epsilon)
             {
-                characters.Add('.', pool);
+                Add('.');
                 for (int i = -1; i > place; --i)
                 {
-                    characters.Add('0', pool);
+                    Add('0');
                 }
                 do
                 {
-                    AddDigit(ref value, ref multiplier, ref pool);
+                    AddDigit(ref value, ref multiplier);
                 } while (value > epsilon);
             }
             return this;
@@ -126,7 +139,7 @@ namespace DemoUtilities
 
         public override string ToString()
         {
-            return new string(characters.Span.Memory, 0, characters.Count);
+            return new string(characters, 0, count);
         }
     }
 }
