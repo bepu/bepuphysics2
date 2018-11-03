@@ -72,12 +72,13 @@ namespace Demos.UI
     {
         public struct Series
         {
+            //The use of a string here blocks the use of unmanaged storage. Not a big deal; drawing a Graph isn't exactly performance critical.
             public string Name;
             public Vector3 LineColor;
             public float LineRadius;
             public IDataSeries Data;
         }
-        QuickList<Series, Array<Series>> graphSeries;
+        List<Series> graphSeries;
 
         GraphDescription description;
 
@@ -94,7 +95,7 @@ namespace Demos.UI
             Description = description;
             if (initialSeriesCapacity <= 0)
                 throw new ArgumentException("Capacity must be positive.");
-            QuickList<Series, Array<Series>>.Create(new PassthroughArrayPool<Series>(), initialSeriesCapacity, out graphSeries);
+            graphSeries = new List<Series>(initialSeriesCapacity);
         }
 
         int IndexOf(string name)
@@ -115,24 +116,24 @@ namespace Demos.UI
             }
             return -1;
         }
-        public ref Series GetSeries(string name)
+        public Series GetSeries(string name)
         {
             var index = IndexOf(name);
             if (index >= 0)
-                return ref graphSeries[index];
+                return graphSeries[index];
             throw new ArgumentException("No series with the given name exists within the graph.");
         }
-        public ref Series GetSeries(IDataSeries data)
+        public Series GetSeries(IDataSeries data)
         {
             var index = IndexOf(data);
             if (index >= 0)
-                return ref graphSeries[index];
+                return graphSeries[index];
             throw new ArgumentException("No series with the given data exists within the graph.");
         }
 
         public void AddSeries(string name, Vector3 lineColor, float lineRadius, IDataSeries series)
         {
-            graphSeries.Add(new Series { Name = name, Data = series, LineRadius = lineRadius, LineColor = lineColor }, new PassthroughArrayPool<Series>());
+            graphSeries.Add(new Series { Name = name, Data = series, LineRadius = lineRadius, LineColor = lineColor });
         }
 
         public void RemoveSeries(string name)
@@ -304,7 +305,7 @@ namespace Demos.UI
 
                 for (int i = 0; i < graphSeries.Count; ++i)
                 {
-                    ref var series = ref graphSeries[i];
+                    var series = graphSeries[i];
                     var data = series.Data;
                     var count = data.End - data.Start;
                     if (count > 0)
@@ -336,7 +337,7 @@ namespace Demos.UI
 
                 for (int i = 0; i < graphSeries.Count; ++i)
                 {
-                    ref var series = ref graphSeries[i];
+                    var series = graphSeries[i];
                     var lineStart = new Vector2(penPosition.X, penPosition.Y);
                     var lineEnd = lineStart + new Vector2(description.LegendLineLength, -0.7f * description.LegendNameHeight);
 

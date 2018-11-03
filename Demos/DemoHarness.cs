@@ -1,4 +1,5 @@
 ﻿using BepuUtilities;
+using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
@@ -38,6 +39,7 @@ namespace Demos
         DemoSwapper swapper;
         internal DemoSet demoSet;
         Demo demo;
+        BufferPool pool;
         internal void TryChangeToDemo(int demoIndex)
         {
             if (demoIndex >= 0 && demoIndex < demoSet.Count)
@@ -49,7 +51,7 @@ namespace Demos
             }
         }
 
-        SimulationTimeSamples timeSamples = new SimulationTimeSamples(512);
+        SimulationTimeSamples timeSamples;
 
         public DemoHarness(GameLoop loop, ContentArchive content,
             Controls? controls = null)
@@ -58,6 +60,8 @@ namespace Demos
             this.input = loop.Input;
             this.camera = loop.Camera;
             this.content = content;
+            this.pool = new BufferPool();
+            timeSamples = new SimulationTimeSamples(512, pool);
             if (controls == null)
                 this.controls = Controls.Default;
             
@@ -379,6 +383,7 @@ namespace Demos
             {
                 disposed = true;
                 demo?.Dispose();
+                timeSamples.Dispose();
             }
         }
 

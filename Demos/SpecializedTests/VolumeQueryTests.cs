@@ -158,8 +158,8 @@ namespace Demos.SpecializedTests
                 box.Max = boxOrigin + boxHalfSize;
             }
 
-            QuickList<BoxQueryAlgorithm, Array<BoxQueryAlgorithm>>.Create(new PassthroughArrayPool<BoxQueryAlgorithm>(), 2, out algorithms);
-            algorithms.Add(new BoxQueryAlgorithm("1", Worker1), new PassthroughArrayPool<BoxQueryAlgorithm>());
+            algorithms = new BoxQueryAlgorithm[1];
+            algorithms[0] = new BoxQueryAlgorithm("1", BufferPool, Worker1);
 
             BufferPool.Take(Environment.ProcessorCount * 2, out jobs);
         }
@@ -178,10 +178,10 @@ namespace Demos.SpecializedTests
             Action<int> internalWorker;
             public int JobIndex;
 
-            public BoxQueryAlgorithm(string name, Func<int, BoxQueryAlgorithm, int> worker, int timingSampleCount = 16)
+            public BoxQueryAlgorithm(string name, BufferPool pool, Func<int, BoxQueryAlgorithm, int> worker, int timingSampleCount = 16)
             {
                 Name = name;
-                Timings = new TimingsRingBuffer(timingSampleCount);
+                Timings = new TimingsRingBuffer(timingSampleCount, pool);
                 this.worker = worker;
                 internalWorker = ExecuteWorker;
             }
@@ -229,9 +229,9 @@ namespace Demos.SpecializedTests
             }
             return intersectionCount;
         }
-        
 
-        QuickList<BoxQueryAlgorithm, Array<BoxQueryAlgorithm>> algorithms;
+
+        BoxQueryAlgorithm[] algorithms;
 
         struct QueryJob
         {
@@ -252,11 +252,7 @@ namespace Demos.SpecializedTests
                 return true;
             }
         }
-
-
-        const int sampleCount = 32;
-        TimingsRingBuffer recursiveQueryTimes = new TimingsRingBuffer(sampleCount);
-        TimingsRingBuffer directQueryTimes = new TimingsRingBuffer(sampleCount);
+                
         bool shouldUseMultithreading = true;
 
         public unsafe override void Update(Input input, float dt)
@@ -280,11 +276,11 @@ namespace Demos.SpecializedTests
             }
 
 
-            for (int i = 0; i < algorithms.Count; ++i)
+            for (int i = 0; i < algorithms.Length; ++i)
             {
                 algorithms[i].Execute(ref queryBoxes, shouldUseMultithreading ? ThreadDispatcher : null);
             }
-            for (int i = 1; i < algorithms.Count; ++i)
+            for (int i = 1; i < algorithms.Length; ++i)
             {
                 Debug.Assert(algorithms[i].IntersectionCount == algorithms[0].IntersectionCount);
             }
@@ -330,7 +326,7 @@ namespace Demos.SpecializedTests
 
             var baseStats = algorithms[0].Timings.ComputeStats();
             var baseHeight = 48;
-            for (int i = 0; i < algorithms.Count; ++i)
+            for (int i = 0; i < algorithms.Length; ++i)
             {
                 var stats = algorithms[i].Timings.ComputeStats();
                 WriteResults(algorithms[i].Name, stats.Average, baseStats.Average, renderer.Surface.Resolution.Y - (baseHeight - 16 * i), renderer.TextBatcher, text, font);

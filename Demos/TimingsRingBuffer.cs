@@ -5,9 +5,10 @@ using System;
 
 namespace Demos
 {
-    public class TimingsRingBuffer : IDataSeries
+    public class TimingsRingBuffer : IDataSeries, IDisposable
     {
-        QuickQueue<double, Array<double>> queue;
+        QuickQueue<double, Buffer<double>> queue;
+        BufferPool pool;
 
         /// <summary>
         /// Gets or sets the maximum number of time measurements that can be held by the ring buffer.
@@ -21,27 +22,25 @@ namespace Demos
                     throw new ArgumentException("Capacity must be positive.");
                 if (Capacity != value)
                 {
-                    var newSpan = new Array<double>(new double[value]);
-                    queue.Resize(value, new PassthroughArrayPool<double>());
+                    queue.Resize(value, pool.SpecializeFor<double>());
                 }
             }
         }
-        public TimingsRingBuffer(int maximumCapacity)
+        public TimingsRingBuffer(int maximumCapacity, BufferPool pool)
         {
             if(maximumCapacity <= 0)
                 throw new ArgumentException("Capacity must be positive.");
-            QuickQueue<double, Array<double>>.Create(new PassthroughArrayPool<double>(), maximumCapacity, out queue);
+            this.pool = pool;
+            QuickQueue<double, Buffer<double>>.Create(pool.SpecializeFor<double>(), maximumCapacity, out queue);
         }
 
         public void Add(double time)
         {
-
             if(queue.Count == Capacity)
             {
                 queue.Dequeue();
             }
             queue.EnqueueUnsafely(time);
-
         }
 
 
@@ -71,6 +70,11 @@ namespace Demos
             stats.Average = stats.Total / queue.Count;
             stats.StdDev = Math.Sqrt(Math.Max(0, sumOfSquares / queue.Count - stats.Average * stats.Average));
             return stats;
+        }
+
+        public void Dispose()
+        {
+            queue.Dispose(pool.SpecializeFor<double>());
         }
     }
 }

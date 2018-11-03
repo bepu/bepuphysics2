@@ -85,11 +85,13 @@ namespace Demos.SpecializedTests
                     }
                 }
             }
+            refineTimes = new TimingsRingBuffer(sampleCount, BufferPool);
+            testTimes = new TimingsRingBuffer(sampleCount, BufferPool);
         }
 
         const int sampleCount = 128;
-        TimingsRingBuffer refineTimes = new TimingsRingBuffer(sampleCount);
-        TimingsRingBuffer testTimes = new TimingsRingBuffer(sampleCount);
+        TimingsRingBuffer refineTimes;
+        TimingsRingBuffer testTimes;
         long frameCount;
         public override void Update(Input input, float dt)
         {

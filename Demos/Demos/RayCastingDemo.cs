@@ -293,7 +293,7 @@ namespace Demos
                 BufferPool pool, int largestRayCount, int timingSampleCount = 16)
             {
                 Name = name;
-                Timings = new TimingsRingBuffer(timingSampleCount);
+                Timings = new TimingsRingBuffer(timingSampleCount, pool);
                 this.worker = worker;
                 internalWorker = ExecuteWorker;
                 pool.Take(largestRayCount, out Results);
@@ -405,10 +405,6 @@ namespace Demos
             }
         }
 
-
-        const int sampleCount = 32;
-        TimingsRingBuffer batchedQueryTimes = new TimingsRingBuffer(sampleCount);
-        TimingsRingBuffer unbatchedQueryTimes = new TimingsRingBuffer(sampleCount);
         bool shouldCycle = true;
         bool shouldRotate = true;
         bool shouldUseMultithreading = true;
