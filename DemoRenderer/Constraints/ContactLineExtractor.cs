@@ -30,7 +30,7 @@ namespace DemoRenderer.Constraints
         }
 
         public static void Add(in RigidPose poseA, ref Vector3Wide offsetAWide, ref Vector3Wide normalWide, ref Vector<float> depthWide, int innerIndex, 
-            in Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            in Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             Vector3Wide.ReadSlot(ref offsetAWide, innerIndex, out var offsetA);
             Vector3Wide.ReadSlot(ref normalWide, innerIndex, out var normal);
@@ -56,7 +56,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 2;
 
         public unsafe void ExtractLines(ref Contact1OneBodyPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, innerIndex, tint, ref lines);            
@@ -67,7 +67,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 4;
 
         public unsafe void ExtractLines(ref Contact2OneBodyPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, innerIndex, tint, ref lines);
@@ -79,7 +79,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 6;
 
         public unsafe void ExtractLines(ref Contact3OneBodyPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, innerIndex, tint, ref lines);
@@ -92,7 +92,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 8;
 
         public unsafe void ExtractLines(ref Contact4OneBodyPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, innerIndex, tint, ref lines);
@@ -107,7 +107,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 2;
 
         public unsafe void ExtractLines(ref Contact1PrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, innerIndex, tint, ref lines);
@@ -118,7 +118,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 4;
 
         public unsafe void ExtractLines(ref Contact2PrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, innerIndex, tint, ref lines);
@@ -130,7 +130,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 6;
 
         public unsafe void ExtractLines(ref Contact3PrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, innerIndex, tint, ref lines);
@@ -143,7 +143,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 8;
 
         public unsafe void ExtractLines(ref Contact4PrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, innerIndex, tint, ref lines);
@@ -159,7 +159,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 4;
 
         public unsafe void ExtractLines(ref Contact2NonconvexOneBodyPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -171,7 +171,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 6;
 
         public unsafe void ExtractLines(ref Contact3NonconvexOneBodyPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -184,7 +184,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 8;
 
         public unsafe void ExtractLines(ref Contact4NonconvexOneBodyPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -198,7 +198,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 10;
 
         public unsafe void ExtractLines(ref Contact5NonconvexOneBodyPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -213,7 +213,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 12;
 
         public unsafe void ExtractLines(ref Contact6NonconvexOneBodyPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -229,7 +229,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 14;
 
         public unsafe void ExtractLines(ref Contact7NonconvexOneBodyPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -246,7 +246,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 16;
 
         public unsafe void ExtractLines(ref Contact8NonconvexOneBodyPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -265,7 +265,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 4;
 
         public unsafe void ExtractLines(ref Contact2NonconvexPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -277,7 +277,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 6;
 
         public unsafe void ExtractLines(ref Contact3NonconvexPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -290,7 +290,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 8;
 
         public unsafe void ExtractLines(ref Contact4NonconvexPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -304,7 +304,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 10;
 
         public unsafe void ExtractLines(ref Contact5NonconvexPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -319,7 +319,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 12;
 
         public unsafe void ExtractLines(ref Contact6NonconvexPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -335,7 +335,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 14;
 
         public unsafe void ExtractLines(ref Contact7NonconvexPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);
@@ -352,7 +352,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 16;
 
         public unsafe void ExtractLines(ref Contact8NonconvexPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ContactLines.Add(poseA, ref prestepBundle.Contact0.Offset, ref prestepBundle.Contact0.Normal, ref prestepBundle.Contact0.Depth, innerIndex, tint, ref lines);

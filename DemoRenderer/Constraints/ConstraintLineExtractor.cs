@@ -17,12 +17,12 @@ namespace DemoRenderer.Constraints
     {
         int LinesPerConstraint { get; }
 
-        void ExtractLines(ref TPrestep prestepBundle, int innerIndex, int setIndex, int* bodyLocations, Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines);
+        void ExtractLines(ref TPrestep prestepBundle, int innerIndex, int setIndex, int* bodyLocations, Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines);
     }
     abstract class TypeLineExtractor
     {
         public abstract int LinesPerConstraint { get; }
-        public abstract void ExtractLines(Bodies bodies, int setIndex, ref TypeBatch typeBatch, int constraintStart, int constraintCount, ref QuickList<LineInstance, Array<LineInstance>> lines);
+        public abstract void ExtractLines(Bodies bodies, int setIndex, ref TypeBatch typeBatch, int constraintStart, int constraintCount, ref QuickList<LineInstance, Buffer<LineInstance>> lines);
     }
 
     class TypeLineExtractor<T, TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses> : TypeLineExtractor
@@ -30,7 +30,7 @@ namespace DemoRenderer.Constraints
     {
         public override int LinesPerConstraint => default(T).LinesPerConstraint;
         public unsafe override void ExtractLines(Bodies bodies, int setIndex, ref TypeBatch typeBatch, int constraintStart, int constraintCount,
-            ref QuickList<LineInstance, Array<LineInstance>> lines)
+            ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             ref var prestepStart = ref Buffer<TPrestep>.Get(ref typeBatch.PrestepData, 0);
             ref var referencesStart = ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, 0);
@@ -81,11 +81,12 @@ namespace DemoRenderer.Constraints
         }
     }
 
-    internal class ConstraintLineExtractor
+    internal class ConstraintLineExtractor : IDisposable
     {
         TypeLineExtractor[] lineExtractors;
         const int jobsPerThread = 4;
-        QuickList<ThreadJob, Array<ThreadJob>> jobs;
+        QuickList<ThreadJob, Buffer<ThreadJob>> jobs;
+        BufferPool pool;
 
         struct ThreadJob
         {
@@ -96,7 +97,7 @@ namespace DemoRenderer.Constraints
             public int ConstraintCount;
             public int LineStart;
             public int LinesPerConstraint;
-            public QuickList<LineInstance, Array<LineInstance>> jobLines;
+            public QuickList<LineInstance, Buffer<LineInstance>> jobLines;
         }
 
         public bool Enabled { get; set; } = true;
@@ -109,8 +110,9 @@ namespace DemoRenderer.Constraints
                 Array.Resize(ref lineExtractors, typeId + 1);
             return ref lineExtractors[typeId];
         }
-        public ConstraintLineExtractor()
+        public ConstraintLineExtractor(BufferPool pool)
         {
+            this.pool = pool;
             lineExtractors = new TypeLineExtractor[32];
             AllocateSlot(BallSocketTypeProcessor.BatchTypeId) = new TypeLineExtractor<BallSocketLineExtractor, TwoBodyReferences, BallSocketPrestepData, BallSocketProjection, Vector3Wide>();
             AllocateSlot(WeldTypeProcessor.BatchTypeId) = new TypeLineExtractor<WeldLineExtractor, TwoBodyReferences, WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>();
@@ -150,7 +152,7 @@ namespace DemoRenderer.Constraints
             AllocateSlot(Contact7NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact7NonconvexLineExtractor, TwoBodyReferences, Contact7NonconvexPrestepData, Contact7NonconvexProjection, Contact7NonconvexAccumulatedImpulses>();
             AllocateSlot(Contact8NonconvexTypeProcessor.BatchTypeId) = new TypeLineExtractor<Contact8NonconvexLineExtractor, TwoBodyReferences, Contact8NonconvexPrestepData, Contact8NonconvexProjection, Contact8NonconvexAccumulatedImpulses>();
 
-            QuickList<ThreadJob, Array<ThreadJob>>.Create(new PassthroughArrayPool<ThreadJob>(), Environment.ProcessorCount * (jobsPerThread + 1), out jobs);
+            QuickList<ThreadJob, Buffer<ThreadJob>>.Create(pool.SpecializeFor<ThreadJob>(), Environment.ProcessorCount * (jobsPerThread + 1), out jobs);
 
             executeJobDelegate = ExecuteJob;
         }
@@ -166,11 +168,11 @@ namespace DemoRenderer.Constraints
         }
 
 
-        internal void AddInstances(Bodies bodies, Solver solver, bool showConstraints, bool showContacts, ref QuickList<LineInstance, Array<LineInstance>> lines, ParallelLooper looper)
+        internal void AddInstances(Bodies bodies, Solver solver, bool showConstraints, bool showContacts, ref QuickList<LineInstance, Buffer<LineInstance>> lines, ParallelLooper looper)
         {
             int neededLineCapacity = lines.Count;
             jobs.Count = 0;
-            var jobPool = new PassthroughArrayPool<ThreadJob>();
+            var jobPool = pool.SpecializeFor<ThreadJob>();
             for (int setIndex = 0; setIndex < solver.Sets.Length; ++setIndex)
             {
                 ref var set = ref solver.Sets[setIndex];
@@ -234,12 +236,12 @@ namespace DemoRenderer.Constraints
                     }
                 }
             }
-            lines.EnsureCapacity(neededLineCapacity, new PassthroughArrayPool<LineInstance>());
+            lines.EnsureCapacity(neededLineCapacity, pool.SpecializeFor<LineInstance>());
             lines.Count = neededLineCapacity; //Line additions will be performed on suballocated lists. This count will be used by the renderer when reading line data.
             for (int i = 0; i < jobs.Count; ++i)
             {
                 //Creating a local copy of the list reference and count allows additions to proceed in parallel. 
-                jobs[i].jobLines = new QuickList<LineInstance, Array<LineInstance>>(ref lines.Span);
+                jobs[i].jobLines = new QuickList<LineInstance, Buffer<LineInstance>>(lines.Span);
                 //By setting the count, we work around the fact that Array<T> doesn't support slicing.
                 jobs[i].jobLines.Count = jobs[i].LineStart;
             }
@@ -250,5 +252,9 @@ namespace DemoRenderer.Constraints
             this.solver = solver;
         }
 
+        public void Dispose()
+        {
+            jobs.Dispose(pool.SpecializeFor<ThreadJob>());
+        }
     }
 }

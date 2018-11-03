@@ -56,7 +56,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="initialSpan">Span to use as backing memory to begin with.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickList(ref TSpan initialSpan)
+        public QuickList(in TSpan initialSpan)
         {
             Span = initialSpan;
             Count = 0;

@@ -78,7 +78,7 @@ namespace DemoRenderer.Constraints
             pixelShader = new PixelShader(device, cache.GetShader(@"Constraints\RenderLines.hlsl.pshader"));
         }
 
-        public void Render(DeviceContext context, Camera camera, Int2 resolution, LineInstance[] instances, int start, int count)
+        public void Render(DeviceContext context, Camera camera, Int2 resolution, Span<LineInstance> instances, int start, int count)
         {
             var vertexConstantsData = new VertexConstants
             {

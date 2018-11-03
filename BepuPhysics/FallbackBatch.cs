@@ -175,7 +175,7 @@ namespace BepuPhysics
             var maximumAllocationIdsToFree = 3 + bodyCount * 2;
             var allocationIdsToRemoveMemory = stackalloc int[maximumAllocationIdsToFree];
             var initialSpan = new Buffer<int>(allocationIdsToRemoveMemory, maximumAllocationIdsToFree);
-            var allocationIdsToFree = new QuickList<int, Buffer<int>>(ref initialSpan);
+            var allocationIdsToFree = new QuickList<int, Buffer<int>>(initialSpan);
             typeProcessor.EnumerateConnectedBodyIndices(ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[typeId]], indexInTypeBatch, ref enumerator);
             for (int i = 0; i < bodyCount; ++i)
             {

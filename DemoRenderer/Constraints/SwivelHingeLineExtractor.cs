@@ -13,7 +13,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 5;
 
         public unsafe void ExtractLines(ref SwivelHingePrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Array<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
         {
             //Could do bundles of constraints at a time, but eh.
             ref var poseA = ref bodies.Sets[setIndex].Poses[bodyIndices[0]];

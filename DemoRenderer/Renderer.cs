@@ -72,7 +72,7 @@ namespace DemoRenderer
             BoxRenderer = new BoxRenderer(surface.Device, ShaderCache);
             TriangleRenderer = new TriangleRenderer(surface.Device, ShaderCache);
             MeshRenderer = new MeshRenderer(surface.Device, Shapes.MeshCache, ShaderCache);
-            Lines = new LineExtractor(looper);
+            Lines = new LineExtractor(pool, looper);
             LineRenderer = new LineRenderer(surface.Device, ShaderCache);
             Background = new BackgroundRenderer(surface.Device, ShaderCache);
             CompressToSwap = new CompressToSwap(surface.Device, ShaderCache);
@@ -234,7 +234,7 @@ namespace DemoRenderer
             BoxRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.boxes.Span), 0, Shapes.boxes.Count);
             TriangleRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.triangles.Span), 0, Shapes.triangles.Count);
             MeshRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.meshes.Span), 0, Shapes.meshes.Count);
-            LineRenderer.Render(context, camera, Surface.Resolution, Lines.lines.Span.Memory, 0, Lines.lines.Count);
+            LineRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Lines.lines.Span), 0, Lines.lines.Count);
 
             Background.Render(context, camera);
 
@@ -265,6 +265,8 @@ namespace DemoRenderer
                 disposed = true;
                 Background.Dispose();
                 CompressToSwap.Dispose();
+
+                Lines.Dispose();
 
                 SphereRenderer.Dispose();
                 CapsuleRenderer.Dispose();
