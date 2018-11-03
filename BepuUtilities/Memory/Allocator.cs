@@ -10,9 +10,9 @@ namespace BepuUtilities.Memory
     /// Never moves any memory.
     /// </summary>
     /// <remarks>Uses an extremely simple ring buffer that makes no attempt to skip groups of allocations. Not particularly efficient.</remarks>
-    public class Allocator
+    public class Allocator : IDisposable
     {
-
+        BufferPool pool;
         long capacity;
         /// <summary>
         /// Gets or sets the capacity of the allocator.
@@ -47,17 +47,18 @@ namespace BepuUtilities.Memory
             public ulong Next;
         }
 
-        private QuickDictionary<ulong, Allocation, Array<ulong>, Array<Allocation>, Array<int>, PrimitiveComparer<ulong>> allocations;
+        private QuickDictionary<ulong, Allocation, Buffer<ulong>, Buffer<Allocation>, Buffer<int>, PrimitiveComparer<ulong>> allocations;
 
         /// <summary>
         /// Creates a new memory pool.
         /// </summary>
         /// <param name="memoryPoolSize">Size of the pool in elements.</param>
-        public Allocator(long memoryPoolSize, int allocationCountEstimate = 128)
+        public Allocator(BufferPool pool, long memoryPoolSize, int allocationCountEstimate = 128)
         {
+            this.pool = pool;
             this.Capacity = memoryPoolSize;
-            QuickDictionary<ulong, Allocation, Array<ulong>, Array<Allocation>, Array<int>, PrimitiveComparer<ulong>>.Create(
-                new PassthroughArrayPool<ulong>(), new PassthroughArrayPool<Allocation>(), new PassthroughArrayPool<int>(),
+            QuickDictionary<ulong, Allocation, Buffer<ulong>, Buffer<Allocation>, Buffer<int>, PrimitiveComparer<ulong>>.Create(
+                pool.SpecializeFor<ulong>(), pool.SpecializeFor<Allocation>(), pool.SpecializeFor<int>(),
                 SpanHelper.GetContainingPowerOf2(allocationCountEstimate), 3, out allocations);
         }
 
@@ -186,7 +187,7 @@ namespace BepuUtilities.Memory
             nextAllocation.Previous = id;
             //About to add a new allocation. We had space here this time, so there's a high chance we'll have some more space next time. Point the search to this index.
             searchStartIndex = allocations.Count;
-            allocations.Add(id, newAllocation, new PassthroughArrayPool<ulong>(), new PassthroughArrayPool<Allocation>(), new PassthroughArrayPool<int>());
+            allocations.Add(id, newAllocation, pool.SpecializeFor<ulong>(), pool.SpecializeFor<Allocation>(), pool.SpecializeFor<int>());
         }
         /// <summary>
         /// Attempts to allocate a range of memory.
@@ -205,7 +206,7 @@ namespace BepuUtilities.Memory
                 {
                     outputStart = 0;
                     allocations.Add(id, new Allocation { Start = 0, End = size, Next = id, Previous = id },
-                        new PassthroughArrayPool<ulong>(), new PassthroughArrayPool<Allocation>(), new PassthroughArrayPool<int>());
+                        pool.SpecializeFor<ulong>(), pool.SpecializeFor<Allocation>(), pool.SpecializeFor<int>());
                     searchStartIndex = 0;
                     return true;
                 }
@@ -463,6 +464,11 @@ namespace BepuUtilities.Memory
                 forwardId = allocations.Values[forwardIndex].Next;
             }
             Debug.Assert(initialId == backwardId && initialId == forwardId, "We should be able to walk back to the starting id in exactly allocations.Count steps in either direction.");
+        }
+
+        public void Dispose()
+        {
+            allocations.Dispose(pool.SpecializeFor<ulong>(), pool.SpecializeFor<Allocation>(), pool.SpecializeFor<int>());
         }
     }
 }

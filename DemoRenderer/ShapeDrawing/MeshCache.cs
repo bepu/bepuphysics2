@@ -34,7 +34,7 @@ namespace DemoRenderer.ShapeDrawing
             Pool = pool;
             pool.Take(initialSizeInVertices, out vertices);
             TriangleBuffer = new StructuredBuffer<Vector3>(device, initialSizeInVertices, "Mesh Cache Vertex Buffer");
-            allocator = new Allocator(initialSizeInVertices);
+            allocator = new Allocator(pool, initialSizeInVertices);
 
             QuickList<UploadRequest, Buffer<UploadRequest>>.Create(pool.SpecializeFor<UploadRequest>(), 128, out pendingUploads);
             QuickList<ulong, Buffer<ulong>>.Create(pool.SpecializeFor<ulong>(), 128, out requestedIds);
@@ -121,6 +121,7 @@ namespace DemoRenderer.ShapeDrawing
                 Pool.Return(ref vertices);
                 requestedIds.Dispose(Pool.SpecializeFor<ulong>());
                 previouslyAllocatedIds.Dispose(Pool.SpecializeFor<ulong>(), Pool.SpecializeFor<int>());
+                allocator.Dispose();
                 disposed = true;
             }
         }

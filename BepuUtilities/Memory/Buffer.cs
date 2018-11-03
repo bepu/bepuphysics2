@@ -135,7 +135,7 @@ namespace BepuUtilities.Memory
             if (SpanHelper.IsPrimitive<T>())
             {
                 var defaultComparer = default(PrimitiveComparer<T>);
-                for (int i = start; start < end; ++i)
+                for (int i = start; i < end; ++i)
                     if (defaultComparer.Equals(ref this[i], ref element))
                         return i;
                 return -1;
@@ -143,7 +143,7 @@ namespace BepuUtilities.Memory
             else
             {
                 WrapperEqualityComparer<T>.CreateDefault(out var defaultComparer);
-                for (int i = start; start < end; ++i)
+                for (int i = start; i < end; ++i)
                     if (defaultComparer.Equals(ref this[i], ref element))
                         return i;
                 return -1;
