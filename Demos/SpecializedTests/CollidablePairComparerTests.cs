@@ -53,8 +53,9 @@ namespace Demos.SpecializedTests
                 lookupRemap[i] = i;
             }
 
-            QuickDictionary<CollidablePair, int, Array<CollidablePair>, Array<int>, Array<int>, CollidablePairComparer>.Create(
-                new PassthroughArrayPool<CollidablePair>(), new PassthroughArrayPool<int>(), new PassthroughArrayPool<int>(), SpanHelper.GetContainingPowerOf2(creationRemap.Length), 1,
+            BufferPool pool = new BufferPool();
+            QuickDictionary<CollidablePair, int, Buffer<CollidablePair>, Buffer<int>, Buffer<int>, CollidablePairComparer>.Create(
+                pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<int>(), pool.SpecializeFor<int>(), SpanHelper.GetContainingPowerOf2(creationRemap.Length), 1,
                 out var dictionary);
 
             var random = new Random(5);
@@ -114,6 +115,7 @@ namespace Demos.SpecializedTests
             }
             Console.WriteLine($"Time per lookup (ns): {1e9 * totalTime / (iterationCount * creationRemap.Length)}, acc{accumulator}");
 
+            pool.Clear();
         }
     }
 }

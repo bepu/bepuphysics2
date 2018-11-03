@@ -240,9 +240,9 @@ namespace Demos
             var maxRayCount = Math.Max(randomRays.Count, Math.Max(frustumRays.Count, wallRays.Count));
             QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), maxRayCount, out testRays);
             var timeSampleCount = 16;
-            QuickList<IntersectionAlgorithm, Array<IntersectionAlgorithm>>.Create(new PassthroughArrayPool<IntersectionAlgorithm>(), 2, out algorithms);
-            algorithms.Add(new IntersectionAlgorithm("Unbatched", UnbatchedWorker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
-            algorithms.Add(new IntersectionAlgorithm("Batched", BatchedWorker, BufferPool, maxRayCount, timeSampleCount), new PassthroughArrayPool<IntersectionAlgorithm>());
+            algorithms = new IntersectionAlgorithm[2];
+            algorithms[0] = new IntersectionAlgorithm("Unbatched", UnbatchedWorker, BufferPool, maxRayCount, timeSampleCount);
+            algorithms[1] = new IntersectionAlgorithm("Batched", BatchedWorker, BufferPool, maxRayCount, timeSampleCount);
 
             BufferPool.Take(Environment.ProcessorCount * 2, out jobs);
         }
@@ -368,7 +368,7 @@ namespace Demos
             return intersectionCount;
         }
 
-        QuickList<IntersectionAlgorithm, Array<IntersectionAlgorithm>> algorithms;
+        IntersectionAlgorithm[] algorithms;
 
         struct RayJob
         {
@@ -482,11 +482,11 @@ namespace Demos
             }
 
 
-            for (int i = 0; i < algorithms.Count; ++i)
+            for (int i = 0; i < algorithms.Length; ++i)
             {
                 algorithms[i].Execute(ref testRays, shouldUseMultithreading ? ThreadDispatcher : null);
             }
-            for (int i = 1; i < algorithms.Count; ++i)
+            for (int i = 1; i < algorithms.Length; ++i)
             {
                 Debug.Assert(algorithms[i].IntersectionCount == algorithms[0].IntersectionCount);
                 var current = algorithms[i];
@@ -584,7 +584,7 @@ namespace Demos
 
             var baseStats = algorithms[0].Timings.ComputeStats();
             var baseHeight = 48;
-            for (int i = 0; i < algorithms.Count; ++i)
+            for (int i = 0; i < algorithms.Length; ++i)
             {
                 var stats = algorithms[i].Timings.ComputeStats();
                 WriteResults(algorithms[i].Name, stats.Average, baseStats.Average, renderer.Surface.Resolution.Y - (baseHeight - 16 * i), renderer.TextBatcher, text, font);
