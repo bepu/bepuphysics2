@@ -16,12 +16,8 @@ namespace BepuPhysics
     {
         //Really, using dictionaries here is overkill. There will likely never be more than a handful of stages, so a list would actually be faster.
         //But then we'd have to set up a key-value association and so on. It matters very little, so shrug.
-        PassthroughArrayPool<int> intPool = new PassthroughArrayPool<int>();
-        PassthroughArrayPool<object> objectPool = new PassthroughArrayPool<object>();
-        PassthroughArrayPool<double> doublePool = new PassthroughArrayPool<double>();
-        PassthroughArrayPool<long> longPool = new PassthroughArrayPool<long>();
-        QuickDictionary<object, double, Array<object>, Array<double>, Array<int>, ReferenceComparer<object>> stages;
-        QuickDictionary<object, long, Array<object>, Array<long>, Array<int>, ReferenceComparer<object>> startTimeStamps;
+        Dictionary<object, double> stages;
+        Dictionary<object, long> startTimeStamps;
 
         /// <summary>
         /// Gets the time it took to complete the last execution of the given stage. If no stage matching the given object ran, returns -1.
@@ -42,44 +38,26 @@ namespace BepuPhysics
 
         public SimulationProfiler(int initialStageCount = 8)
         {
-            QuickDictionary<object, double, Array<object>, Array<double>, Array<int>, ReferenceComparer<object>>.Create(
-                objectPool, doublePool, intPool, SpanHelper.GetContainingPowerOf2(initialStageCount), 3, out stages);
-            QuickDictionary<object, long, Array<object>, Array<long>, Array<int>, ReferenceComparer<object>>.Create(
-                objectPool, longPool, intPool, SpanHelper.GetContainingPowerOf2(initialStageCount), 3, out startTimeStamps);
+            stages = new Dictionary<object, double>(initialStageCount);
+            startTimeStamps = new Dictionary<object, long>(initialStageCount);
         }
 
         internal void Start(object o)
         {
-            //This technically does a double lookup, but the performance of this doesn't matter in the slightest. It'll be invoked a handful of times per frame.
-            //Even the value of deferring the measurement until after the add is questionable.
-            if (!startTimeStamps.Add(o, 0, objectPool, longPool, intPool))
-            {
-                throw new InvalidOperationException("Can't start a stage which was already started without ending it first.");
-            }
-            var index = startTimeStamps.IndexOf(o);
-            startTimeStamps.Values[index] = Stopwatch.GetTimestamp();
+            Debug.Assert(!startTimeStamps.ContainsKey(o), "Cannot start a stage that has already been started.");
+            startTimeStamps.Add(o, Stopwatch.GetTimestamp());
         }
 
         internal void End(object o)
         {
             var endTimeStamp = Stopwatch.GetTimestamp();
-            //Could avoid a double lookup here too. If it mattered. But it doesn't!
-            var startIndex = startTimeStamps.IndexOf(o);
-            if(startIndex < 0)
-                throw new InvalidOperationException("Can't end a stage which wasn't started first.");
-            var stageTime = (endTimeStamp - startTimeStamps.Values[startIndex]) / (double)Stopwatch.Frequency;
-            startTimeStamps.FastRemove(o);
-
-            //We allow stages to be started multiple times. Could be useful at some point, maybe.
-            var stageIndex = stages.IndexOf(o);
-            if(stageIndex < 0)
+            Debug.Assert(startTimeStamps.ContainsKey(o), "To end a stage, it must currently be active (started and not already stopped).");
+            if (!stages.TryGetValue(o, out var accumulatedStageTime))
             {
-                stages.Add(o, stageTime, objectPool, doublePool, intPool);
+                accumulatedStageTime = 0;
             }
-            else
-            {
-                stages.Values[stageIndex] += stageTime;
-            }
+            stages[o] = accumulatedStageTime + (endTimeStamp - startTimeStamps[o]) / (double)Stopwatch.Frequency;
+            startTimeStamps.Remove(o);           
         }
 
         internal void Clear()

@@ -343,12 +343,13 @@ namespace BepuPhysics.Collidables
 
     public class Shapes
     {
-        QuickList<ShapeBatch, Array<ShapeBatch>> batches;
+        ShapeBatch[] batches;
+        int registeredTypeSpan;
 
         //Note that not every index within the batches list is guaranteed to be filled. For example, if only a cylinder has been added, and a cylinder's type id is 7,
         //then the batches.Count and RegisteredTypeSpan will be 8- but indices 0 through 6 will be null.
         //We don't tend to do any performance sensitive iteration over shape type batches, so this lack of contiguity is fine.
-        public int RegisteredTypeSpan => batches.Count;
+        public int RegisteredTypeSpan => registeredTypeSpan;
 
         public int InitialCapacityPerTypeBatch { get; set; }
         public ShapeBatch this[int typeIndex] => batches[typeIndex];
@@ -359,7 +360,7 @@ namespace BepuPhysics.Collidables
         {
             InitialCapacityPerTypeBatch = initialCapacityPerTypeBatch;
             //This list pretty much will never resize unless something really strange happens, and since batches use virtual calls, we have to allow storage of reference types.
-            QuickList<ShapeBatch, Array<ShapeBatch>>.Create(new PassthroughArrayPool<ShapeBatch>(), 16, out batches);
+            batches = new ShapeBatch[16];
             this.pool = pool;
         }
 
@@ -389,11 +390,11 @@ namespace BepuPhysics.Collidables
             var typeId = default(TShape).TypeId;
             if (RegisteredTypeSpan <= typeId)
             {
-                if (batches.Span.Length <= typeId)
+                registeredTypeSpan = typeId + 1;
+                if (batches.Length <= typeId)
                 {
-                    batches.Resize(typeId, new PassthroughArrayPool<ShapeBatch>());
+                    Array.Resize(ref batches, typeId + 1);
                 }
-                batches.Count = typeId + 1;
             }
             if (batches[typeId] == null)
             {
@@ -445,7 +446,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public void Clear()
         {
-            for (int i = 0; i < batches.Count; ++i)
+            for (int i = 0; i < registeredTypeSpan; ++i)
             {
                 if (batches[i] != null)
                     batches[i].Clear();
@@ -462,7 +463,7 @@ namespace BepuPhysics.Collidables
         /// <param name="shapeCapacity">Capacity to ensure for all existing shape batches.</param>
         public void EnsureBatchCapacities(int shapeCapacity)
         {
-            for (int i = 0; i < batches.Count; ++i)
+            for (int i = 0; i < registeredTypeSpan; ++i)
             {
                 if (batches[i] != null)
                     batches[i].EnsureCapacity(shapeCapacity);
@@ -475,7 +476,7 @@ namespace BepuPhysics.Collidables
         /// <param name="shapeCapacity">Capacity to target for all existing shape batches.</param>
         public void ResizeBatches(int shapeCapacity)
         {
-            for (int i = 0; i < batches.Count; ++i)
+            for (int i = 0; i < registeredTypeSpan; ++i)
             {
                 if (batches[i] != null)
                     batches[i].Resize(shapeCapacity);
@@ -487,7 +488,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public void Dispose()
         {
-            for (int i = 0; i < batches.Count; ++i)
+            for (int i = 0; i < registeredTypeSpan; ++i)
             {
                 if (batches[i] != null)
                     batches[i].Dispose();
