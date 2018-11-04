@@ -52,7 +52,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [Conditional("DEBUG")]
-        internal unsafe void ValidateConstraintHandleToPairMapping(ref QuickList<WorkerPairCache, Array<WorkerPairCache>> caches, bool ignoreStale)
+        internal unsafe void ValidateConstraintHandleToPairMapping(ref ArrayList<WorkerPairCache> caches, bool ignoreStale)
         {
             for (int i = 0; i < Mapping.Count; ++i)
             {
@@ -126,12 +126,12 @@ namespace BepuPhysics.CollisionDetection
 
             //Also note that we only deal with one worker cache. Wake ups just dump new caches into the first thread. This works out since
             //the actual pair cache modification is locally sequential right now.
-            if (NextWorkerCaches.Span.Allocated && NextWorkerCaches.Count > 0 && NextWorkerCaches[0].collisionCaches.Allocated)
+            if (NextWorkerCaches.Allocated && NextWorkerCaches.Count > 0 && NextWorkerCaches[0].collisionCaches.Allocated)
                 return ref NextWorkerCaches[0];
-            if (workerCaches.Span.Allocated)
+            if (workerCaches.Allocated)
                 return ref workerCaches[0];
             //No caches exist yet; this must be an external call taking place before the first update. Lazily initialize one worker cache.
-            QuickList<WorkerPairCache, Array<WorkerPairCache>>.Create(new PassthroughArrayPool<WorkerPairCache>(), 1, out workerCaches);
+            workerCaches = new ArrayList<WorkerPairCache>(1);
             var preallocationSizesPool = pool.SpecializeFor<WorkerPairCache.PreallocationSizes>();
             QuickList<WorkerPairCache.PreallocationSizes, Buffer<WorkerPairCache.PreallocationSizes>>.Create(preallocationSizesPool, 1, out var constraints);
             QuickList<WorkerPairCache.PreallocationSizes, Buffer<WorkerPairCache.PreallocationSizes>>.Create(preallocationSizesPool, 1, out var collisions);

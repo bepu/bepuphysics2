@@ -86,7 +86,7 @@ namespace BepuPhysics.CollisionDetection
             return new TypedIndex(typeId, targetByteIndex);
         }
 
-        public int Add(ref QuickList<WorkerPairCache, Array<WorkerPairCache>> pairCaches, BufferPool pool, ref CollidablePair pair, ref CollidablePairPointers sourcePointers)
+        public int Add(ref ArrayList<WorkerPairCache> pairCaches, BufferPool pool, ref CollidablePair pair, ref CollidablePairPointers sourcePointers)
         {
             var pairIndex = Pairs.Count;
             Pairs.EnsureCapacity(Pairs.Count + 1, pool.SpecializeFor<SleepingPair>());

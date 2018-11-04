@@ -70,7 +70,26 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public PairCacheIndex CollisionDetectionCache;
     }
+    
+    internal struct ArrayList<T>
+    {
+        public T[] Values;
+        public int Count;
+        public ref T this[int index] { get { return ref Values[index]; } }
+        public bool Allocated { get { return Values != null; } }
+        public ArrayList(int initialCapacity)
+        {
+            Values = new T[initialCapacity];
+            Count = 0;
+        }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ref T AllocateUnsafely()
+        {
+            Debug.Assert(Count < Values.Length);
+            return ref Values[Count++];
+        }
+    }
 
     public partial class PairCache
     {
@@ -90,12 +109,13 @@ namespace BepuPhysics.CollisionDetection
         int minimumPerTypeCapacity;
         int previousPendingSize;
 
+
         //While the current worker caches are read from, the next caches are written to.
         //The worker pair caches contain a reference to a buffer pool, which is a reference type. That makes WorkerPairCache non-blittable, so in the interest of not being
         //super duper gross, we don't use the untyped buffer pools to store it. 
         //Given that the size of the arrays here will be small and almost never change, this isn't a significant issue.
-        QuickList<WorkerPairCache, Array<WorkerPairCache>> workerCaches;
-        internal QuickList<WorkerPairCache, Array<WorkerPairCache>> NextWorkerCaches;
+        ArrayList<WorkerPairCache> workerCaches;
+        internal ArrayList<WorkerPairCache> NextWorkerCaches;
 
 
         public PairCache(BufferPool pool, int initialSetCapacity, int minimumMappingSize, int minimumPendingSize, int minimumPerTypeCapacity)
@@ -132,14 +152,15 @@ namespace BepuPhysics.CollisionDetection
 
             var threadCount = threadDispatcher != null ? threadDispatcher.ThreadCount : 1;
             //Ensure that the new worker pair caches can hold all workers.
-            if (!NextWorkerCaches.Span.Allocated || NextWorkerCaches.Span.Length < threadCount)
+            if (!NextWorkerCaches.Allocated || NextWorkerCaches.Values.Length < threadCount)
             {
                 //The next worker caches should never need to be disposed here. The flush should have taken care of it.
 #if DEBUG
                 for (int i = 0; i < NextWorkerCaches.Count; ++i)
                     Debug.Assert(NextWorkerCaches[i].Equals(default(WorkerPairCache)));
 #endif
-                QuickList<WorkerPairCache, Array<WorkerPairCache>>.Create(new PassthroughArrayPool<WorkerPairCache>(), threadCount, out NextWorkerCaches);
+                Array.Resize(ref NextWorkerCaches.Values, threadCount);
+                NextWorkerCaches.Count = threadCount;
             }
             //Note that we have not initialized the workerCaches from the previous frame. In the event that this is the first frame and there are no previous worker caches,
             //there will be no pointers into the caches, and removal analysis loops over the count which defaults to zero- so it's safe.
@@ -219,6 +240,7 @@ namespace BepuPhysics.CollisionDetection
 
             jobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.FlushPairCacheChanges }, pool.SpecializeFor<NarrowPhaseFlushJob>());
         }
+
         public unsafe void FlushMappingChanges()
         {
             //Flush all pending adds from the new set.
@@ -287,7 +309,7 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
 #if DEBUG
-            if (NextWorkerCaches.Span.Allocated)
+            if (NextWorkerCaches.Allocated)
             {
                 for (int i = 0; i < NextWorkerCaches.Count; ++i)
                 {
@@ -305,7 +327,7 @@ namespace BepuPhysics.CollisionDetection
             }
             //Note that we do not need to dispose the worker cache arrays themselves- they were just arrays pulled out of a passthrough pool.
 #if DEBUG
-            if (NextWorkerCaches.Span.Allocated)
+            if (NextWorkerCaches.Allocated)
             {
                 for (int i = 0; i < NextWorkerCaches.Count; ++i)
                 {
