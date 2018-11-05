@@ -21,8 +21,7 @@ namespace BepuUtilities.Collections
     /// it does not (and is incapable of) checking that provided memory gets returned to the same pool that it came from.
     /// </remarks>
     /// <typeparam name="T">Type of the elements in the queue.</typeparam>
-    /// <typeparam name="TSpan">Type of the memory span backing the queue.</typeparam>
-    public struct QuickQueue<T, TSpan> where TSpan : ISpan<T>
+    public struct QuickQueue<T> where T : struct
     {
         /// <summary>
         /// Number of elements in the queue.
@@ -49,9 +48,7 @@ namespace BepuUtilities.Collections
         /// Indices from FirstIndex to LastIndex inclusive hold actual data. All other data is undefined.
         /// Watch out for wrap around; LastIndex can be less than FirstIndex even when count > 0!
         /// </summary>
-        public TSpan Span;
-
-
+        public Buffer<T> Span;
 
         /// <summary>
         /// Gets the backing array index for the logical queue index.
@@ -93,7 +90,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="initialSpan">Span to use as backing memory to begin with.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickQueue(ref TSpan initialSpan)
+        public QuickQueue(ref Buffer<T> initialSpan)
         {
             Span = initialSpan;
             Count = 0;
@@ -109,7 +106,7 @@ namespace BepuUtilities.Collections
         /// <param name="minimumInitialCount">The minimum size of the region to be pulled from the pool. Actual span may be larger.</param>
         /// <param name="queue">Created queue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create<TPool>(TPool pool, int minimumInitialCount, out QuickQueue<T, TSpan> queue) where TPool : IMemoryPool<T, TSpan>
+        public static void Create(IUnmanagedMemoryPool pool, int minimumInitialCount, out QuickQueue<T> queue) 
         {
             pool.Take(minimumInitialCount, out queue.Span);
             queue.Count = 0;
@@ -129,7 +126,7 @@ namespace BepuUtilities.Collections
         /// <param name="newSpan">New span to use.</param>
         /// <param name="oldSpan">Previous span used for elements.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Resize(ref TSpan newSpan, out TSpan oldSpan)
+        public void Resize(ref Buffer<T> newSpan, out Buffer<T> oldSpan)
         {
             Validate();
             Debug.Assert(Span.Length != newSpan.Length, "Resizing without changing the size is pretty peculiar. Is something broken?");
@@ -163,54 +160,36 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
-        /// Resizes the queue's backing array for the given size as a power of two.
-        /// If the new span is smaller, the queue's count is truncated and the extra elements are dropped. 
-        /// </summary>
-        /// <typeparam name="TPool">Type of the span pool.</typeparam>
-        /// <param name="newSizePower">Exponent of the size of the new memory block. New size will be at least 2^newSizePower.</param>
-        /// <param name="pool">Pool to pull a new span from and return the old span to.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ResizeForPower<TPool>(int newSizePower, TPool pool) where TPool : IMemoryPool<T, TSpan>
-        {
-            var oldQueue = this;
-            pool.TakeForPower(newSizePower, out var newSpan);
-            Resize(ref newSpan, out var oldSpan);
-            oldQueue.Dispose(pool);
-        }
-
-        /// <summary>
         /// Resizes the queue's backing array for the given size.
         /// Any elements that do not fit in the resized span are dropped and the count is truncated.
         /// </summary>
-        /// <typeparam name="TPool">Type of the span pool.</typeparam>
         /// <param name="newSize">Minimum number of elements required in the new backing array. Actual capacity of the created span may exceed this size.</param>
         /// <param name="pool">Pool to pull a new span from and return the old span to.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Resize<TPool>(int newSize, TPool pool) where TPool : IMemoryPool<T, TSpan>
+        public void Resize(int newSize, IUnmanagedMemoryPool pool)
         {
-            ResizeForPower(SpanHelper.GetContainingPowerOf2(newSize), pool);
+            var oldQueue = this;
+            pool.Take<T>(newSize, out var newSpan);
+            Resize(ref newSpan, out var oldSpan);
+            oldQueue.Dispose(pool);
         }
 
         /// <summary>
         /// Returns the resources associated with the queue to pools. Any managed references still contained within the queue are cleared (and some unmanaged resources may also be cleared).
         /// </summary>
         /// <param name="pool">Pool used for element spans.</param>   
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose<TPool>(TPool pool)
-             where TPool : IMemoryPool<T, TSpan>
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
-            ClearSpanManaged(ref Span, FirstIndex, LastIndex, Count);
             pool.Return(ref Span);
         }
         /// <summary>
         /// Ensures that the queue has enough room to hold the specified number of elements.
         /// </summary>
-        /// <typeparam name="TPool">Type of the span pool.</typeparam>
         /// <param name="count">Number of elements to hold.</param>
         /// <param name="pool">Pool to pull a new span from and return the old span to.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnsureCapacity<TPool>(int count, TPool pool) where TPool : IMemoryPool<T, TSpan>
+        public void EnsureCapacity(int count, IUnmanagedMemoryPool pool)
         {
             if (count >= CapacityMask)
             {
@@ -221,14 +200,13 @@ namespace BepuUtilities.Collections
         /// <summary>
         /// Compacts the internal buffer to the minimum size required for the number of elements in the queue.
         /// </summary>
-        /// <typeparam name="TPool">Type of the pool to pull from if necessary.</typeparam>
         /// <param name="pool">Pool to pull from if necessary.</param>
-        public void Compact<TPool>(TPool pool) where TPool : IMemoryPool<T, TSpan>
+        public void Compact(IUnmanagedMemoryPool pool) 
         {
             Validate();
-            var newPoolIndex = SpanHelper.GetContainingPowerOf2(Count);
-            if ((1 << newPoolIndex) != Span.Length)
-                ResizeForPower(newPoolIndex, pool);
+            var targetCapacity = pool.GetCapacityForCount<T>(Count);
+            if (targetCapacity < Span.Length)
+                Resize(targetCapacity, pool);
         }
 
         /// <summary>
@@ -288,7 +266,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Enqueue<TPool>(T element, TPool pool) where TPool : IMemoryPool<T, TSpan>
+        public void Enqueue(T element, IUnmanagedMemoryPool pool)
         {
             Validate();
             if (Count == Span.Length)
@@ -301,7 +279,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Enqueue<TPool>(ref T element, TPool pool) where TPool : IMemoryPool<T, TSpan>
+        public void Enqueue(ref T element, IUnmanagedMemoryPool pool)
         {
             Validate();
             if (Count == Span.Length)
@@ -314,7 +292,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnqueueFirst<TPool>(T element, TPool pool) where TPool : IMemoryPool<T, TSpan>
+        public void EnqueueFirst(T element, IUnmanagedMemoryPool pool)
         {
             Validate();
             if (Count == Span.Length)
@@ -328,7 +306,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnqueueFirst<TPool>(ref T element, TPool pool) where TPool : IMemoryPool<T, TSpan>
+        public void EnqueueFirst(ref T element, IUnmanagedMemoryPool pool)
         {
             Validate();
             if (Count == Span.Length)
@@ -465,7 +443,7 @@ namespace BepuUtilities.Collections
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ClearSpan(ref TSpan span, int firstIndex, int lastIndex, int count)
+        private static void ClearSpan(ref Buffer<T> span, int firstIndex, int lastIndex, int count)
         {
             if (lastIndex >= firstIndex)
             {
@@ -477,19 +455,7 @@ namespace BepuUtilities.Collections
                 span.Clear(0, lastIndex + 1);
             }
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ClearSpanManaged(ref TSpan span, int firstIndex, int lastIndex, int count)
-        {
-            if (lastIndex >= firstIndex)
-            {
-                span.ClearManagedReferences(firstIndex, count);
-            }
-            else if (count > 0)
-            {
-                span.ClearManagedReferences(firstIndex, span.Length - firstIndex);
-                span.ClearManagedReferences(0, lastIndex + 1);
-            }
-        }
+
         /// <summary>
         /// Clears the queue by setting the count to zero and explicitly setting all relevant indices in the backing array to default values.
         /// </summary>
@@ -516,18 +482,18 @@ namespace BepuUtilities.Collections
 
         public Enumerator GetEnumerator()
         {
-            return new Enumerator(ref Span, Count, FirstIndex, CapacityMask);
+            return new Enumerator(Span, Count, FirstIndex, CapacityMask);
         }
 
         public struct Enumerator : IEnumerator<T>
         {
-            private readonly TSpan span;
+            private Buffer<T> span;
             private readonly int count;
             private readonly int firstIndex;
             private readonly int capacityMask;
             private int index;
 
-            public Enumerator(ref TSpan span, int count, int firstIndex, int capacityMask)
+            public Enumerator(in Buffer<T> span, int count, int firstIndex, int capacityMask)
             {
                 this.span = span;
                 this.count = count;
@@ -568,7 +534,7 @@ namespace BepuUtilities.Collections
         }
 
         [Conditional("DEBUG")]
-        static void ValidateSpanCapacity(ref TSpan span, int capacityMask)
+        static void ValidateSpanCapacity(ref Buffer<T> span, int capacityMask)
         {
             Debug.Assert((1 << SpanHelper.GetPowerOf2(span.Length)) - 1 == capacityMask,
                 "Capacity mask should be the largest power of 2 that fits in the allocated span, minus one. This is necessary for efficient modulo operations.");

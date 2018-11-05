@@ -7,7 +7,7 @@ namespace Demos
 {
     public class TimingsRingBuffer : IDataSeries, IDisposable
     {
-        QuickQueue<double, Buffer<double>> queue;
+        QuickQueue<double> queue;
         BufferPool pool;
 
         /// <summary>
@@ -22,7 +22,7 @@ namespace Demos
                     throw new ArgumentException("Capacity must be positive.");
                 if (Capacity != value)
                 {
-                    queue.Resize(value, pool.SpecializeFor<double>());
+                    queue.Resize(value, pool);
                 }
             }
         }
@@ -31,7 +31,7 @@ namespace Demos
             if(maximumCapacity <= 0)
                 throw new ArgumentException("Capacity must be positive.");
             this.pool = pool;
-            QuickQueue<double, Buffer<double>>.Create(pool.SpecializeFor<double>(), maximumCapacity, out queue);
+            QuickQueue<double>.Create(pool, maximumCapacity, out queue);
         }
 
         public void Add(double time)
@@ -74,7 +74,7 @@ namespace Demos
 
         public void Dispose()
         {
-            queue.Dispose(pool.SpecializeFor<double>());
+            queue.Dispose(pool);
         }
     }
 }

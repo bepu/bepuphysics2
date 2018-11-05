@@ -9,7 +9,7 @@ namespace BepuPhysics.Trees
     partial struct Tree
     {
         unsafe void CollectSubtreesForNodeDirect(int nodeIndex, int remainingDepth, 
-            ref QuickList<int> subtrees, ref QuickQueue<int, Buffer<int>> internalNodes, out float treeletCost)
+            ref QuickList<int> subtrees, ref QuickQueue<int> internalNodes, out float treeletCost)
         {
             internalNodes.EnqueueUnsafely(nodeIndex);
 
@@ -50,7 +50,7 @@ namespace BepuPhysics.Trees
         }
 
         public unsafe void CollectSubtreesDirect(int nodeIndex, int maximumSubtrees,
-            ref QuickList<int> subtrees, ref QuickQueue<int, Buffer<int>> internalNodes, out float treeletCost)
+            ref QuickList<int> subtrees, ref QuickQueue<int> internalNodes, out float treeletCost)
         {
             var maximumDepth = SpanHelper.GetContainingPowerOf2(maximumSubtrees) - 1;
             Debug.Assert(maximumDepth > 0);

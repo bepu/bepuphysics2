@@ -14,8 +14,8 @@ namespace Demos.Demos
 {
     public class FountainStressTestDemo : Demo
     {
-        QuickQueue<StaticDescription, Buffer<StaticDescription>> removedStatics;
-        QuickQueue<int, Buffer<int>> dynamicHandles;
+        QuickQueue<StaticDescription> removedStatics;
+        QuickQueue<int> dynamicHandles;
         Random random;
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
@@ -105,8 +105,8 @@ namespace Demos.Demos
                 kinematicHandles[i] = Simulation.Bodies.Add(description);
             }
 
-            QuickQueue<int, Buffer<int>>.Create(BufferPool.SpecializeFor<int>(), 65536, out dynamicHandles);
-            QuickQueue<StaticDescription, Buffer<StaticDescription>>.Create(BufferPool.SpecializeFor<StaticDescription>(), 512, out removedStatics);
+            QuickQueue<int>.Create(BufferPool, 65536, out dynamicHandles);
+            QuickQueue<StaticDescription>.Create(BufferPool, 512, out removedStatics);
             random = new Random(5);
         }
 
@@ -223,7 +223,7 @@ namespace Demos.Demos
                 var indexToRemove = random.Next(Simulation.Statics.Count);
                 Simulation.Statics.GetDescription(Simulation.Statics.IndexToHandle[indexToRemove], out var staticDescription);
                 Simulation.Statics.RemoveAt(indexToRemove);
-                removedStatics.Enqueue(ref staticDescription, BufferPool.SpecializeFor<StaticDescription>());
+                removedStatics.Enqueue(ref staticDescription, BufferPool);
             }
 
 
@@ -291,7 +291,7 @@ namespace Demos.Demos
                 };
 
 
-                dynamicHandles.Enqueue(Simulation.Bodies.Add(description), BufferPool.SpecializeFor<int>());
+                dynamicHandles.Enqueue(Simulation.Bodies.Add(description), BufferPool);
 
             }
             int targetAsymptote = 65536;
