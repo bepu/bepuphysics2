@@ -21,7 +21,7 @@ using Quaternion = BepuUtilities.Quaternion;
 namespace Demos.Demos
 {
     //(You might notice that this demo is really large, uses some older idioms, and is a little out of place. I just pulled most of this stuff out of my older GPU deformable physics project.)
-    using CellSet = QuickSet<Cell, Buffer<Cell>, Buffer<int>, CellComparer>;
+    using CellSet = QuickSet<Cell, CellComparer>;
     using CellList = QuickList<Cell>;
     public static class BoxTriangleCollider
     {
@@ -187,7 +187,7 @@ namespace Demos.Demos
 
     internal static class TriangleRasterizer
     {
-        public static void RasterizeTriangle(ref Vector3 a, ref Vector3 b, ref Vector3 c, float cellSize, ref Vector3 gridOrigin, BufferPool pool, ref QuickSet<Cell, Buffer<Cell>, Buffer<int>, CellComparer> cells)
+        public static void RasterizeTriangle(ref Vector3 a, ref Vector3 b, ref Vector3 c, float cellSize, ref Vector3 gridOrigin, BufferPool pool, ref QuickSet<Cell, CellComparer> cells)
         {
             var gridA = a - gridOrigin;
             var gridB = b - gridOrigin;
@@ -214,8 +214,6 @@ namespace Demos.Demos
 
             //Test the triangle against each cell.
             var halfExtents = new Vector3(cellSize * 0.5f);
-            var cellPool = pool.SpecializeFor<Cell>();
-            var tablePool = pool.SpecializeFor<int>();
             for (int i = startX; i <= endX; ++i)
             {
                 for (int j = startY; j <= endY; ++j)
@@ -230,7 +228,7 @@ namespace Demos.Demos
 
                         if (BoxTriangleCollider.Intersecting(ref halfExtents, ref shiftedA, ref shiftedB, ref shiftedC))
                         {
-                            cells.Add(new Cell { X = i, Y = j, Z = k }, cellPool, tablePool);
+                            cells.Add(new Cell { X = i, Y = j, Z = k }, pool);
                         }
                     }
                 }
@@ -289,7 +287,7 @@ namespace Demos.Demos
             if (index < 0)
             {
                 index = vertexIndices.Count;
-                vertexIndices.Add(vertexSpatialIndex, pool.SpecializeFor<Cell>(), pool.SpecializeFor<int>());
+                vertexIndices.Add(vertexSpatialIndex, pool);
             }
         }
 
@@ -323,7 +321,7 @@ namespace Demos.Demos
             }
 
             var cellPool = pool.SpecializeFor<Cell>();
-            newlyFilledCells.Add(cell, cellPool, pool.SpecializeFor<int>());
+            newlyFilledCells.Add(cell, pool);
 
             cellsToVisit.Add(new Cell { X = cell.X, Y = cell.Y, Z = cell.Z - 1 }, pool);
             cellsToVisit.Add(new Cell { X = cell.X, Y = cell.Y, Z = cell.Z + 1 }, pool);
@@ -357,7 +355,7 @@ namespace Demos.Demos
             //Flood fill completed without reaching the voxel bounds. Dump newly filled cells.
             for (int i = 0; i < newlyFilledCells.Count; ++i)
             {
-                occupiedCells.Add(newlyFilledCells[i], pool.SpecializeFor<Cell>(), pool.SpecializeFor<int>());
+                occupiedCells.Add(newlyFilledCells[i], pool);
             }
             newlyFilledCells.Clear();
         }
@@ -393,9 +391,7 @@ namespace Demos.Demos
             var buffer = new Vector3(cellSize);
             min -= buffer;
 
-            var cellPool = pool.SpecializeFor<Cell>();
-            var intPool = pool.SpecializeFor<int>();
-            CellSet.Create(pool.SpecializeFor<Cell>(), pool.SpecializeFor<int>(), SpanHelper.GetContainingPowerOf2(triangles.Length), 3, out var cells);
+            CellSet.Create(pool, triangles.Length, 3, out var cells);
             for (int i = 0; i < triangles.Length; ++i)
             {
                 ref var triangle = ref triangles[i];
@@ -415,7 +411,7 @@ namespace Demos.Demos
             bounds.Z = (int)(Math.Ceiling(inverseCellSize * size.Z));
             //Perform a flood fill on every surface vertex.
             //We can use the cells set directly, since it behaves like a regular list with regard to element placement (always at the end).
-            CellSet.Create(cellPool, intPool, 5, 3, out var floodFilledCells);
+            CellSet.Create(pool, 32, 3, out var floodFilledCells);
             CellList.Create(pool, 32, out var cellsToVisit);
             for (int i = cells.Count - 1; i >= 0; --i)
             {
@@ -424,7 +420,7 @@ namespace Demos.Demos
             }
 
             //Build the vertex list and per-cell vertex index lists.
-            CellSet.Create(cellPool, intPool, SpanHelper.GetContainingPowerOf2(cells.Count) + 2, 3, out vertexSpatialIndices);
+            CellSet.Create(pool, cells.Count  * 4, 2, out vertexSpatialIndices);
             int cellIndex = 0;
             pool.Take(cells.Count, out cellVertexIndices);
             cellVertexIndices = cellVertexIndices.Slice(0, cells.Count);
@@ -492,8 +488,8 @@ namespace Demos.Demos
 
 
             //We can fail to dispose the quick collections. All of the buffers are getting GC'd anyway.
-            cells.Dispose(cellPool, intPool);
-            floodFilledCells.Dispose(cellPool, intPool);
+            cells.Dispose(pool);
+            floodFilledCells.Dispose(pool);
         }
     }
 
@@ -614,15 +610,15 @@ namespace Demos.Demos
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(ref Edge a, ref Edge b)
             {
-                return (a.A == b.A && a.B == b.B) || (a.B == b.A && a.A == b.B); 
+                return (a.A == b.A && a.B == b.B) || (a.B == b.A && a.A == b.B);
             }
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void TryAddEdge(int a, int b, ref QuickSet<Edge, Buffer<Edge>, Buffer<int>, Edge> edges, ref Buffer<int> vertexEdgeCounts, BufferPool<Edge> edgePool, BufferPool<int> tablePool)
+        static void TryAddEdge(int a, int b, ref QuickSet<Edge, Edge> edges, ref Buffer<int> vertexEdgeCounts, BufferPool pool)
         {
-            if (edges.Add(new Edge { A = a, B = b }, edgePool, tablePool))
+            if (edges.Add(new Edge { A = a, B = b }, pool))
             {
                 ++vertexEdgeCounts[a];
                 ++vertexEdgeCounts[b];
@@ -630,42 +626,42 @@ namespace Demos.Demos
         }
 
         private static unsafe int CreateTetrahedralUniqueEdgesList(ref Buffer<TetrahedronVertices> tetrahedraVertices,
-            ref Buffer<int> vertexEdgeCounts, ref BufferPool<Edge> cellEdgePool, ref BufferPool<int> intPool, ref QuickSet<Edge, Buffer<Edge>, Buffer<int>, Edge> cellEdges)
+            ref Buffer<int> vertexEdgeCounts, BufferPool pool, ref QuickSet<Edge, Edge> cellEdges)
         {
             for (int i = 0; i < tetrahedraVertices.Length; ++i)
             {
                 //Collect all unique hexahedral edges. We're going to stick welds between all of them.
                 ref var tetrahedron = ref tetrahedraVertices[i];
 
-                TryAddEdge(tetrahedron.A, tetrahedron.B, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(tetrahedron.A, tetrahedron.C, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(tetrahedron.A, tetrahedron.D, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(tetrahedron.B, tetrahedron.C, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(tetrahedron.B, tetrahedron.D, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(tetrahedron.C, tetrahedron.D, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
+                TryAddEdge(tetrahedron.A, tetrahedron.B, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(tetrahedron.A, tetrahedron.C, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(tetrahedron.A, tetrahedron.D, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(tetrahedron.B, tetrahedron.C, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(tetrahedron.B, tetrahedron.D, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(tetrahedron.C, tetrahedron.D, ref cellEdges, ref vertexEdgeCounts, pool);
             }
             return 18;
         }
 
         private static unsafe int CreateHexahedralUniqueEdgesList(ref Buffer<CellVertexIndices> cellVertexIndices,
-            ref Buffer<int> vertexEdgeCounts, ref BufferPool<Edge> cellEdgePool, ref BufferPool<int> intPool, ref QuickSet<Edge, Buffer<Edge>, Buffer<int>, Edge> cellEdges)
+            ref Buffer<int> vertexEdgeCounts, BufferPool pool, ref QuickSet<Edge, Edge> cellEdges)
         {
             for (int i = 0; i < cellVertexIndices.Length; ++i)
             {
                 //Collect all unique hexahedral edges. We're going to stick welds between all of them.
                 ref var cell = ref cellVertexIndices[i];
-                TryAddEdge(cell.V000, cell.V001, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(cell.V000, cell.V010, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(cell.V000, cell.V100, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(cell.V001, cell.V011, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(cell.V001, cell.V101, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(cell.V010, cell.V011, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(cell.V010, cell.V110, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(cell.V011, cell.V111, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(cell.V100, cell.V101, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(cell.V100, cell.V110, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(cell.V101, cell.V111, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
-                TryAddEdge(cell.V110, cell.V111, ref cellEdges, ref vertexEdgeCounts, cellEdgePool, intPool);
+                TryAddEdge(cell.V000, cell.V001, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(cell.V000, cell.V010, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(cell.V000, cell.V100, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(cell.V001, cell.V011, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(cell.V001, cell.V101, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(cell.V010, cell.V011, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(cell.V010, cell.V110, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(cell.V011, cell.V111, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(cell.V100, cell.V101, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(cell.V100, cell.V110, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(cell.V101, cell.V111, ref cellEdges, ref vertexEdgeCounts, pool);
+                TryAddEdge(cell.V110, cell.V111, ref cellEdges, ref vertexEdgeCounts, pool);
             }
             return 6;
         }
@@ -675,11 +671,8 @@ namespace Demos.Demos
         {
             BufferPool.Take<int>(vertices.Length, out var vertexEdgeCounts);
             vertexEdgeCounts.Clear(0, vertices.Length);
-            var cellEdgePool = BufferPool.SpecializeFor<Edge>();
-            var intPool = BufferPool.SpecializeFor<int>();
-            QuickSet<Edge, Buffer<Edge>, Buffer<int>, Edge>.Create(
-                cellEdgePool, intPool, SpanHelper.GetContainingPowerOf2(vertices.Length * 3), 3, out var edges);
-            var edgeCountForInternalVertex = CreateHexahedralUniqueEdgesList(ref cellVertexIndices, ref vertexEdgeCounts, ref cellEdgePool, ref intPool, ref edges);
+            QuickSet<Edge, Edge>.Create(BufferPool, vertices.Length * 3, 2, out var edges);
+            var edgeCountForInternalVertex = CreateHexahedralUniqueEdgesList(ref cellVertexIndices, ref vertexEdgeCounts, BufferPool, ref edges);
             //var edgeCountForInternalVertex = CreateTetrahedralUniqueEdgesList(ref tetrahedraVertexIndices, ref vertexEdgeCounts, ref cellEdgePool, ref intPool, ref edges);
 
             BufferPool.Take<int>(vertices.Length, out var vertexHandles);
@@ -721,7 +714,7 @@ namespace Demos.Demos
             }
 
             BufferPool.Return(ref vertexEdgeCounts);
-            edges.Dispose(BufferPool.SpecializeFor<Edge>(), BufferPool.SpecializeFor<int>());
+            edges.Dispose(BufferPool);
         }
 
 
@@ -749,10 +742,10 @@ namespace Demos.Demos
             }
 
             BufferPool.Return(ref vertices);
-            vertexSpatialIndices.Dispose(BufferPool.SpecializeFor<Cell>(), BufferPool.SpecializeFor<int>());
+            vertexSpatialIndices.Dispose(BufferPool);
             BufferPool.Return(ref cellVertexIndices);
             BufferPool.Return(ref tetrahedraVertexIndices);
-            
+
             Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 100, -.5f), 10, Simulation.Shapes, new Sphere(5)));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1500, 1, 1500)), 0.1f)));

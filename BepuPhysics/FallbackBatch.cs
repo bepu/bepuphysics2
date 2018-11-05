@@ -47,7 +47,7 @@ namespace BepuPhysics
         //This is consistent with the body references stored by active/inactive constraints.
         //Note that this is a dictionary of *sets*. This is because fallback batches are expected to be used in pathological cases where there are many constraints associated with
         //a single body. There are likely to be too many constraints for list-based containment/removal to be faster than the set implementation.
-        internal QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>, PrimitiveComparer<int>> bodyConstraintReferences;
+        internal QuickDictionary<int, QuickSet<FallbackReference, FallbackReferenceComparer>, PrimitiveComparer<int>> bodyConstraintReferences;
         //(but is this really ENOUGH generics?)
 
         internal struct FallbackReferenceComparer : IEqualityComparerRef<FallbackReference>
@@ -69,9 +69,6 @@ namespace BepuPhysics
            int typeId, BufferPool pool, TBodyReferenceGetter bodyReferenceGetter, int minimumBodyCapacity, int minimumReferenceCapacity)
             where TBodyReferenceGetter : struct, IBodyReferenceGetter
         {
-            var fallbackPool = pool.SpecializeFor<FallbackReference>();
-            var intPool = pool.SpecializeFor<int>();
-            var minimumReferencePower = SpanHelper.GetContainingPowerOf2(minimumReferenceCapacity);
             EnsureCapacity(Math.Max(bodyConstraintReferences.Count + bodyCount, minimumBodyCapacity), pool);
             for (int i = 0; i < bodyCount; ++i)
             {
@@ -86,13 +83,13 @@ namespace BepuPhysics
                 if (!bodyAlreadyListed)
                 {
                     //The body is not already contained. Create a list for it.
-                    QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>.Create(fallbackPool, intPool, minimumReferencePower, 2, out constraintReferences);
+                    QuickSet<FallbackReference, FallbackReferenceComparer>.Create(pool, minimumReferenceCapacity, 2, out constraintReferences);
                     bodyConstraintReferences.Keys[elementIndex] = bodyReference;
                     bodyConstraintReferences.Table[tableIndex] = elementIndex + 1;
                     ++bodyConstraintReferences.Count;
                 }
                 var fallbackReference = new FallbackReference { ConstraintHandle = constraintHandle, IndexInConstraint = i };
-                constraintReferences.Add(ref fallbackReference, fallbackPool, intPool);
+                constraintReferences.Add(ref fallbackReference, pool);
             }
         }
 
@@ -487,7 +484,7 @@ namespace BepuPhysics
 
         internal void EnsureCapacity(int bodyCapacity, BufferPool pool)
         {
-            var referenceListPool = pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>();
+            var referenceListPool = pool.SpecializeFor<QuickSet<FallbackReference, FallbackReferenceComparer>>();
             if (bodyConstraintReferences.Keys.Allocated)
             {
                 //This is conservative since there's no guarantee that we'll actually need to resize at all if these bodies are already present, but that's fine. 
@@ -496,7 +493,7 @@ namespace BepuPhysics
             else
             {
                 //bleuaghg
-                QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>, PrimitiveComparer<int>>.Create(
+                QuickDictionary<int, QuickSet<FallbackReference, FallbackReferenceComparer>, PrimitiveComparer<int>>.Create(
                     pool, bodyCapacity, 2, out bodyConstraintReferences);
             }
 
@@ -506,12 +503,10 @@ namespace BepuPhysics
         {
             if (bodyConstraintReferences.Keys.Allocated)
             {
-                var intPool = pool.SpecializeFor<int>();
-                var fallbackPool = pool.SpecializeFor<FallbackReference>();
                 bodyConstraintReferences.Compact(pool);
                 for (int i = 0; i < bodyConstraintReferences.Count; ++i)
                 {
-                    bodyConstraintReferences.Values[i].Compact(fallbackPool, intPool);
+                    bodyConstraintReferences.Values[i].Compact(pool);
                 }
             }
         }
@@ -521,11 +516,9 @@ namespace BepuPhysics
         {
             if (bodyConstraintReferences.Keys.Allocated)
             {
-                var fallbackPool = pool.SpecializeFor<FallbackReference>();
-                var intPool = pool.SpecializeFor<int>();
                 for (int i = 0; i < bodyConstraintReferences.Count; ++i)
                 {
-                    bodyConstraintReferences.Values[i].Dispose(fallbackPool, intPool);
+                    bodyConstraintReferences.Values[i].Dispose(pool);
                 }
                 bodyConstraintReferences.Dispose(pool);
             }

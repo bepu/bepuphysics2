@@ -10,8 +10,8 @@ using System.Text;
 
 namespace DemoUtilities
 {
-    using KeySet = QuickSet<Key, Buffer<Key>, Buffer<int>, KeyComparer>;
-    using MouseButtonSet = QuickSet<MouseButton, Buffer<MouseButton>, Buffer<int>, MouseButtonComparer>;
+    using KeySet = QuickSet<Key, KeyComparer>;
+    using MouseButtonSet = QuickSet<MouseButton, MouseButtonComparer>;
     struct KeyComparer : IEqualityComparerRef<Key>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -116,16 +116,13 @@ namespace DemoUtilities
             this.window.MouseUp += MouseUp;
             this.window.MouseWheel += MouseWheel;
             this.window.KeyPress += KeyPress;
-            var keyPool = pool.SpecializeFor<Key>();
-            var mouseButtonPool = pool.SpecializeFor<MouseButton>();
-            var intPool = pool.SpecializeFor<int>();
             this.pool = pool;
-            MouseButtonSet.Create(mouseButtonPool, intPool, 3, 3, out anyDownedButtons);
-            MouseButtonSet.Create(mouseButtonPool, intPool, 3, 3, out downedButtons);
-            MouseButtonSet.Create(mouseButtonPool, intPool, 3, 3, out previousDownedButtons);
-            KeySet.Create(keyPool, intPool, 3, 3, out anyDownedKeys);
-            KeySet.Create(keyPool, intPool, 3, 3, out downedKeys);
-            KeySet.Create(keyPool, intPool, 3, 3, out previousDownedKeys);
+            MouseButtonSet.Create(pool, 8, 3, out anyDownedButtons);
+            MouseButtonSet.Create(pool, 8, 3, out downedButtons);
+            MouseButtonSet.Create(pool, 8, 3, out previousDownedButtons);
+            KeySet.Create(pool, 8, 3, out anyDownedKeys);
+            KeySet.Create(pool, 8, 3, out downedKeys);
+            KeySet.Create(pool, 8, 3, out previousDownedKeys);
             QuickList<char>.Create(pool, 32, out TypedCharacters);
         }
 
@@ -144,8 +141,8 @@ namespace DemoUtilities
 
         private void MouseDown(object sender, MouseButtonEventArgs e)
         {
-            anyDownedButtons.Add(e.Button, pool.SpecializeFor<MouseButton>(), pool.SpecializeFor<int>());
-            downedButtons.Add(e.Button, pool.SpecializeFor<MouseButton>(), pool.SpecializeFor<int>());
+            anyDownedButtons.Add(e.Button, pool);
+            downedButtons.Add(e.Button, pool);
         }
         private void MouseUp(object sender, MouseButtonEventArgs e)
         {
@@ -154,8 +151,8 @@ namespace DemoUtilities
 
         private void KeyDown(object sender, KeyboardKeyEventArgs e)
         {
-            anyDownedKeys.Add(e.Key, pool.SpecializeFor<Key>(), pool.SpecializeFor<int>());
-            downedKeys.Add(e.Key, pool.SpecializeFor<Key>(), pool.SpecializeFor<int>());
+            anyDownedKeys.Add(e.Key, pool);
+            downedKeys.Add(e.Key, pool);
             //Unfortunately, backspace isn't reported by keypress, so we do it manually.
             if (e.Key == Key.BackSpace)
                 TypedCharacters.Add('\b', pool);
@@ -258,9 +255,9 @@ namespace DemoUtilities
             previousDownedKeys.Clear();
             previousDownedButtons.Clear();
             for (int i = 0; i < downedKeys.Count; ++i)
-                previousDownedKeys.Add(downedKeys[i], pool.SpecializeFor<Key>(), pool.SpecializeFor<int>());
+                previousDownedKeys.Add(downedKeys[i], pool);
             for (int i = 0; i < downedButtons.Count; ++i)
-                previousDownedButtons.Add(downedButtons[i], pool.SpecializeFor<MouseButton>(), pool.SpecializeFor<int>());
+                previousDownedButtons.Add(downedButtons[i], pool);
             ScrolledDown = 0;
             ScrolledUp = 0;
             TypedCharacters.Count = 0;
@@ -276,12 +273,12 @@ namespace DemoUtilities
             window.MouseDown -= MouseDown;
             window.MouseUp -= MouseUp;
 
-            anyDownedKeys.Dispose(pool.SpecializeFor<Key>(), pool.SpecializeFor<int>());
-            downedKeys.Dispose(pool.SpecializeFor<Key>(), pool.SpecializeFor<int>());
-            previousDownedKeys.Dispose(pool.SpecializeFor<Key>(), pool.SpecializeFor<int>());
-            anyDownedButtons.Dispose(pool.SpecializeFor<MouseButton>(), pool.SpecializeFor<int>());
-            downedButtons.Dispose(pool.SpecializeFor<MouseButton>(), pool.SpecializeFor<int>());
-            previousDownedButtons.Dispose(pool.SpecializeFor<MouseButton>(), pool.SpecializeFor<int>());
+            anyDownedKeys.Dispose(pool);
+            downedKeys.Dispose(pool);
+            previousDownedKeys.Dispose(pool);
+            anyDownedButtons.Dispose(pool);
+            downedButtons.Dispose(pool);
+            previousDownedButtons.Dispose(pool);
         }
     }
 }

@@ -25,13 +25,8 @@ namespace BepuUtilities.Collections
     /// <para>Note that the implementation is extremely simple. It uses single-step linear probing under the assumption of very low collision rates.
     /// A generous table capacity is recommended; this trades some memory for simplicity and runtime performance.</para></remarks>
     /// <typeparam name="T">Type of element held by the container.</typeparam>
-    /// <typeparam name="TSpan">Type of the element holding span.</typeparam>
-    /// <typeparam name="TTableSpan">Type of the index table span.</typeparam>
     /// <typeparam name="TEqualityComparer">Type of the equality tester and hash calculator used.</typeparam>
-    public struct QuickSet<T, TSpan, TTableSpan, TEqualityComparer>
-        where TSpan : ISpan<T>
-        where TTableSpan : ISpan<int>
-        where TEqualityComparer : IEqualityComparerRef<T>
+    public struct QuickSet<T, TEqualityComparer> where TEqualityComparer : IEqualityComparerRef<T> where T : struct
     {
         /// <summary>
         /// Gets the number of elements in the set.
@@ -50,13 +45,13 @@ namespace BepuUtilities.Collections
         /// Backing memory of the set's table. Values are distributed according to the EqualityComparer's hash function.
         /// Slots containing 0 are unused and point to nothing. Slots containing higher values are equal to one plus the index of an element in the Span.
         /// </summary>
-        public TTableSpan Table;
+        public Buffer<int> Table;
 
         /// <summary>
         /// Backing memory containing the elements of the set.
         /// Indices from 0 to Count-1 hold actual data. All other data is undefined.
         /// </summary>
-        public TSpan Span;
+        public Buffer<T> Span;
 
         /// <summary>
         /// Equality comparer used to compare and hash elements.
@@ -88,7 +83,7 @@ namespace BepuUtilities.Collections
         /// <param name="comparer">Comparer to use for the set.</param>
         /// <param name="tablePowerOffset">Target size of the table relative to the number of stored elements.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickSet(ref TSpan initialSpan, ref TTableSpan initialTableSpan, TEqualityComparer comparer, int tablePowerOffset = 2)
+        public QuickSet(ref Buffer<T> initialSpan, ref Buffer<int> initialTableSpan, TEqualityComparer comparer, int tablePowerOffset = 2)
         {
             ValidateSpanCapacity(ref initialSpan, ref initialTableSpan);
             Span = initialSpan;
@@ -108,51 +103,40 @@ namespace BepuUtilities.Collections
         /// <param name="initialTableSpan">Span to use as backing memory of the table. Must be zeroed.</param>
         /// <param name="tablePowerOffset">Target size of the table relative to the number of stored elements.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickSet(ref TSpan initialSpan, ref TTableSpan initialTableSpan, int tablePowerOffset = 2)
-            : this(ref initialSpan, ref initialTableSpan, default(TEqualityComparer), tablePowerOffset)
+        public QuickSet(ref Buffer<T> initialSpan, ref Buffer<int> initialTableSpan, int tablePowerOffset = 2)
+            : this(ref initialSpan, ref initialTableSpan, default, tablePowerOffset)
         {
         }
 
         /// <summary>
         /// Creates a new set.
         /// </summary>
-        /// <param name="pool">Pool to pull a span from.</param>   
-        /// <param name="tablePool">Pool to pull a table span from.</param>
-        /// <param name="initialElementPoolIndex">Initial pool index to pull the object buffer from. The size of the initial buffer will be 2^initialElementPoolIndex.</param>
-        /// <param name="tableSizePower">Initial pool index to pull the object buffer from. The size of the initial table buffer will be 2^(initialElementPoolIndex + tableSizePower).</param>
+        /// <param name="pool">Pool to pull spans from.</param>   
+        /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
+        /// <param name="tableSizePower">Target capacity relative to the initial capacity in terms of a power of 2. The size of the initial table buffer will be at least 2^tableSizePower times larger than the initial capacity.</param>
         /// <param name="comparer">Comparer to use in the set.</param>
         /// <param name="set">Created set.</param>
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create<TPool, TTablePool>(TPool pool, TTablePool tablePool, int initialElementPoolIndex, int tableSizePower, TEqualityComparer comparer,
-            out QuickSet<T, TSpan, TTableSpan, TEqualityComparer> set)
-            where TPool : IMemoryPool<T, TSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public static void Create(IUnmanagedMemoryPool pool, int initialCapacity, int tableSizePower, TEqualityComparer comparer,
+            out QuickSet<T, TEqualityComparer> set)
         {
-            pool.TakeForPower(initialElementPoolIndex, out var span);
-            tablePool.TakeForPower(initialElementPoolIndex + tableSizePower, out var tableSpan);
+            pool.Take<T>(initialCapacity, out var span);
+            pool.Take<int>(span.Length << tableSizePower, out var tableSpan);
             //No guarantee that the table is clean; clear it.
             tableSpan.Clear(0, tableSpan.Length);
-            set = new QuickSet<T, TSpan, TTableSpan, TEqualityComparer>(ref span, ref tableSpan, comparer, tableSizePower);
+            set = new QuickSet<T, TEqualityComparer>(ref span, ref tableSpan, comparer, tableSizePower);
         }
         /// <summary>
         /// Creates a new set with a default constructed comparer.
         /// </summary>
-        /// <param name="pool">Pool to pull a span from.</param>   
-        /// <param name="tablePool">Pool to pull a table span from.</param>
-        /// <param name="initialElementPoolIndex">Initial pool index to pull the object buffer from. The size of the initial buffer will be 2^initialElementPoolIndex.</param>
-        /// <param name="tableSizePower">Initial pool index to pull the object buffer from. The size of the initial table buffer will be 2^(initialElementPoolIndex + tableSizePower).</param>
+        /// <param name="pool">Pool to pull spans from.</param>   
+        /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
+        /// <param name="tableSizePower">Target capacity relative to the initial capacity in terms of a power of 2. The size of the initial table buffer will be at least 2^tableSizePower times larger than the initial capacity.</param>
         /// <param name="set">Created set.</param>
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create<TPool, TTablePool>(TPool pool, TTablePool tablePool, int initialElementPoolIndex, int tableSizePower,
-            out QuickSet<T, TSpan, TTableSpan, TEqualityComparer> set)
-            where TPool : IMemoryPool<T, TSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public static void Create(IUnmanagedMemoryPool pool, int initialCapacity, int tableSizePower, out QuickSet<T, TEqualityComparer> set)
         {
-            Create(pool, tablePool, initialElementPoolIndex, tableSizePower, default(TEqualityComparer), out set);
+            Create(pool, initialCapacity, tableSizePower, default, out set);
         }
 
         /// <summary>
@@ -164,7 +148,7 @@ namespace BepuUtilities.Collections
         /// <param name="newTableSpan">New span to use for the table. Must be zeroed.</param>
         /// <param name="oldSpan">Previous span used for elements.</param>
         /// <param name="oldTableSpan">Previous span used for the table.</param>
-        public void Resize(ref TSpan newSpan, ref TTableSpan newTableSpan, out TSpan oldSpan, out TTableSpan oldTableSpan)
+        public void Resize(ref Buffer<T> newSpan, ref Buffer<int> newTableSpan, out Buffer<T> oldSpan, out Buffer<int> oldTableSpan)
         {
             ValidateSpanCapacity(ref newSpan, ref newTableSpan);
             ValidateTableIsCleared(ref newTableSpan);
@@ -188,81 +172,49 @@ namespace BepuUtilities.Collections
             oldTableSpan = oldSet.Table;
 
         }
-
-        /// <summary>
-        /// Resizes the set's backing array for the given size as a power of two.
-        /// If the new span is smaller, the set's count is truncated and the extra elements are dropped. 
-        /// </summary>
-        /// <param name="newSizePower">Exponent of the size of the new memory block. New size will be 2^newSizePower.</param>
-        /// <param name="pool">Pool used for element spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ResizeForPower<TPool, TTablePool>(int newSizePower, TPool pool, TTablePool tablePool)
-            where TPool : IMemoryPool<T, TSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
-        {
-            var oldSet = this;
-            pool.TakeForPower(newSizePower, out var newSpan);
-            tablePool.TakeForPower(newSizePower + TablePowerOffset, out var newTableSpan);
-            //There is no guarantee that the table retrieved from the pool is clean. Clear it!
-            newTableSpan.Clear(0, newTableSpan.Length);
-            Resize(ref newSpan, ref newTableSpan, out var oldSpan, out var oldTableSpan);
-
-            oldSet.Dispose(pool, tablePool);
-        }
-
+        
         /// <summary>
         /// Resizes the set's backing array for the given size.
         /// If the new span is smaller, the set's count is truncated and the extra elements are dropped. 
         /// </summary>
         /// <param name="newSize">Minimum size of the new object memory block. Actual size may be larger.</param>
-        /// <param name="pool">Pool used for element spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool to take spans from.</param>   
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Resize<TPool, TTablePool>(int newSize, TPool pool, TTablePool tablePool)
-            where TPool : IMemoryPool<T, TSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public void Resize(int newSize, IUnmanagedMemoryPool pool)
         {
-            ResizeForPower(SpanHelper.GetContainingPowerOf2(newSize), pool, tablePool);
+            var oldSet = this;
+            pool.Take<T>(newSize, out var newSpan);
+            pool.Take<int>(newSpan.Length << TablePowerOffset, out var newTableSpan);
+            //There is no guarantee that the table retrieved from the pool is clean. Clear it!
+            newTableSpan.Clear(0, newTableSpan.Length);
+            Resize(ref newSpan, ref newTableSpan, out var oldSpan, out var oldTableSpan);
+
+            oldSet.Dispose(pool);
         }
 
         /// <summary>
         /// Returns the resources associated with the set to pools. Any managed references still contained within the set are cleared (and some unmanaged resources may also be cleared).
         /// </summary>
         /// <param name="pool">Pool used for element spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose<TPool, TTablePool>(TPool pool, TTablePool tablePool)
-             where TPool : IMemoryPool<T, TSpan>
-             where TTablePool : IMemoryPool<int, TTableSpan>
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
             Span.ClearManagedReferences(0, Count);
             pool.Return(ref Span);
-            tablePool.Return(ref Table);
+            pool.Return(ref Table);
         }
 
         /// <summary>
         /// Ensures that the set has enough room to hold the specified number of elements.
         /// </summary>     
-        /// <param name="pool">Pool used for element spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         /// <param name="count">Number of elements to hold.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnsureCapacity<TPool, TTablePool>(int count, TPool pool, TTablePool tablePool)
-            where TPool : IMemoryPool<T, TSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public void EnsureCapacity(int count, IUnmanagedMemoryPool pool)
         {
             if (count > Span.Length)
             {
-                Resize(count, pool, tablePool);
+                Resize(count, pool);
             }
         }
 
@@ -270,18 +222,13 @@ namespace BepuUtilities.Collections
         /// Shrinks the internal buffers to the smallest acceptable size and releases the old buffers to the pools.
         /// </summary>
         /// <param name="element">Element to add.</param>
-        /// <param name="pool">Pool used for element spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
-        public void Compact<TPool, TTablePool>(TPool pool, TTablePool tablePool)
-            where TPool : IMemoryPool<T, TSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        /// <param name="pool">Pool used for spans.</param>   
+        public void Compact(IUnmanagedMemoryPool pool)
         {
             Validate();
-            var minimumRequiredPoolIndex = SpanHelper.GetContainingPowerOf2(Count);
-            if ((1 << minimumRequiredPoolIndex) != Span.Length)
-                Resize(Count, pool, tablePool);
+            var targetCapacity = pool.GetCapacityForCount<T>(Count);
+            if (targetCapacity < Span.Length)
+                Resize(Count, pool);
         }
 
         /// <summary>
@@ -439,20 +386,15 @@ namespace BepuUtilities.Collections
         /// it is replaced by the given version.
         /// </summary>
         /// <param name="element">Element to add.</param>
-        /// <param name="pool">Pool used for element spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the element was added to the set, false if the element was already present and was instead replaced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddAndReplace<TPool, TTablePool>(ref T element, TPool pool, TTablePool tablePool)
-            where TPool : IMemoryPool<T, TSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public bool AddAndReplace(ref T element, IUnmanagedMemoryPool pool)
         {
             if (Count == Span.Length)
             {
                 //There's no room left; resize.
-                Resize(Count * 2, pool, tablePool);
+                Resize(Count * 2, pool);
 
                 //Note that this is tested before any indices are found.
                 //If we resized only after determining that it was going to be added,
@@ -466,20 +408,15 @@ namespace BepuUtilities.Collections
         /// Adds an element to the set if it is not already present.
         /// </summary>
         /// <param name="element">Element to add.</param>
-        /// <param name="pool">Pool used for element spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the element was added to the set, false if the element was already present.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Add<TPool, TTablePool>(ref T element, TPool pool, TTablePool tablePool)
-            where TPool : IMemoryPool<T, TSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public bool Add(ref T element, IUnmanagedMemoryPool pool)
         {
             if (Count == Span.Length)
             {
                 //There's no room left; resize.
-                Resize(Count * 2, pool, tablePool);
+                Resize(Count * 2, pool);
 
                 //Note that this is tested before any indices are found.
                 //If we resized only after determining that it was going to be added,
@@ -494,17 +431,11 @@ namespace BepuUtilities.Collections
         /// it is replaced by the given version.
         /// </summary>
         /// <param name="element">Element to add.</param>
-        /// <param name="pool">Pool used for element spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the element was added to the set, false if the element was already present and was instead replaced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddAndReplace<TPool, TTablePool>(T element, TPool pool, TTablePool tablePool)
-            where TPool : IMemoryPool<T, TSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public bool AddAndReplace(T element, IUnmanagedMemoryPool pool)
         {
-
             return AddAndReplaceUnsafely(ref element);
         }
 
@@ -513,17 +444,12 @@ namespace BepuUtilities.Collections
         /// Adds an element to the set if it is not already present.
         /// </summary>
         /// <param name="element">Element to add.</param>
-        /// <param name="pool">Pool used for element spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TPool">Type of the pool used for element spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the element was added to the set, false if the element was already present.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Add<TPool, TTablePool>(T element, TPool pool, TTablePool tablePool)
-            where TPool : IMemoryPool<T, TSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public bool Add(T element, IUnmanagedMemoryPool pool)
         {
-            return Add(ref element, pool, tablePool);
+            return Add(ref element, pool);
         }
 
         //Note: the reason this is named "FastRemove" instead of just "Remove" despite it being the only remove present is that
@@ -643,11 +569,11 @@ namespace BepuUtilities.Collections
 
         public struct Enumerator : IEnumerator<T>
         {
-            private readonly TSpan backingArray;
+            private readonly Buffer<T> backingArray;
             private readonly int count;
             private int index;
 
-            public Enumerator(ref TSpan backingArray, int count)
+            public Enumerator(ref Buffer<T> backingArray, int count)
             {
                 this.backingArray = backingArray;
                 this.count = count;
@@ -680,7 +606,7 @@ namespace BepuUtilities.Collections
             }
         }
         [Conditional("DEBUG")]
-        static void ValidateSpanCapacity(ref TSpan span, ref TTableSpan tableSpan)
+        static void ValidateSpanCapacity(ref Buffer<T> span, ref Buffer<int> tableSpan)
         {
             Debug.Assert(tableSpan.Length >= span.Length, "The table span must be at least as large as the element span.");
             Debug.Assert((tableSpan.Length & (tableSpan.Length - 1)) == 0, "QuickSets depend upon power of 2 backing table span sizes for efficient modulo operations.");
@@ -700,7 +626,7 @@ namespace BepuUtilities.Collections
         }
 
         [Conditional("DEBUG")]
-        void ValidateTableIsCleared(ref TTableSpan span)
+        void ValidateTableIsCleared(ref Buffer<int> span)
         {
             for (int i = 0; i < span.Length; ++i)
             {

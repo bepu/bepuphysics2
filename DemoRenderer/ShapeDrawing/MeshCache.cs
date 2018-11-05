@@ -17,7 +17,7 @@ namespace DemoRenderer.ShapeDrawing
     {
         Buffer<Vector3> vertices;
         public StructuredBuffer<Vector3> TriangleBuffer;
-        QuickSet<ulong, Buffer<ulong>, Buffer<int>, PrimitiveComparer<ulong>> previouslyAllocatedIds;
+        QuickSet<ulong, PrimitiveComparer<ulong>> previouslyAllocatedIds;
         QuickList<ulong> requestedIds;
 
         struct UploadRequest
@@ -38,7 +38,7 @@ namespace DemoRenderer.ShapeDrawing
 
             QuickList<UploadRequest>.Create(pool, 128, out pendingUploads);
             QuickList<ulong>.Create(pool, 128, out requestedIds);
-            QuickSet<ulong, Buffer<ulong>, Buffer<int>, PrimitiveComparer<ulong>>.Create(pool.SpecializeFor<ulong>(), pool.SpecializeFor<int>(), 8, 3, out previouslyAllocatedIds);
+            QuickSet<ulong, PrimitiveComparer<ulong>>.Create(pool, 256, 2, out previouslyAllocatedIds);
         }
 
         public unsafe bool Allocate(ulong id, int vertexCount, out int start, out Buffer<Vector3> vertices)
@@ -98,7 +98,7 @@ namespace DemoRenderer.ShapeDrawing
             previouslyAllocatedIds.FastClear();
             for (int i = 0; i < requestedIds.Count; ++i)
             {
-                previouslyAllocatedIds.Add(requestedIds[i], Pool.SpecializeFor<ulong>(), Pool.SpecializeFor<int>());
+                previouslyAllocatedIds.Add(requestedIds[i], Pool);
             }
             requestedIds.Count = 0;
 
@@ -120,7 +120,7 @@ namespace DemoRenderer.ShapeDrawing
                 pendingUploads.Dispose(Pool);
                 Pool.Return(ref vertices);
                 requestedIds.Dispose(Pool);
-                previouslyAllocatedIds.Dispose(Pool.SpecializeFor<ulong>(), Pool.SpecializeFor<int>());
+                previouslyAllocatedIds.Dispose(Pool);
                 allocator.Dispose();
                 disposed = true;
             }

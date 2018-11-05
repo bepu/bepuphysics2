@@ -552,8 +552,7 @@ namespace BepuPhysics
             }
             Console.Write($"{constraintCount} constraint handles: ");
             ReferenceCollector bodyIndexEnumerator;
-            var intPool = pool.SpecializeFor<int>();
-            QuickSet<int, Buffer<int>, Buffer<int>, PrimitiveComparer<int>>.Create(intPool, intPool, 3, 3, out var constraintReferencedBodyHandles);
+            QuickSet<int, PrimitiveComparer<int>>.Create(pool, 8, 3, out var constraintReferencedBodyHandles);
             for (int batchIndex = 0; batchIndex < island.Protobatches.Count; ++batchIndex)
             {
                 ref var batch = ref island.Protobatches[batchIndex];
@@ -575,7 +574,7 @@ namespace BepuPhysics
                             ref solverBatch.TypeBatches[solverBatch.TypeIndexToTypeBatchIndex[location.TypeId]], location.IndexInTypeBatch, ref bodyIndexEnumerator);
                         for (int i = 0; i < typeProcessor.BodiesPerConstraint; ++i)
                         {
-                            constraintReferencedBodyHandles.Add(ref bodies.ActiveSet.IndexToHandle[references[i]], intPool, intPool);
+                            constraintReferencedBodyHandles.Add(ref bodies.ActiveSet.IndexToHandle[references[i]], pool);
                         }
                         Console.Write($"{handle}, ");
                     }

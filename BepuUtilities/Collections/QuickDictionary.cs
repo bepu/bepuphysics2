@@ -168,7 +168,7 @@ namespace BepuUtilities.Collections
         /// Creates a new dictionary.
         /// </summary>
         /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
-        /// <param name="tableSizePower">Initial pool index to pull the object buffer from. The size of the initial table buffer will be 2^(initialElementPoolIndex + tableSizePower).</param>
+        /// <param name="tableSizePower">Target capacity relative to the initial capacity in terms of a power of 2. The size of the initial table buffer will be at least 2^tableSizePower times larger than the initial capacity.</param>
         /// <param name="comparer">Comparer to use in the dictionary.</param>
         /// <param name="dictionary">Created dictionary.</param>
         /// <param name="pool">Pool used for spans.</param>   
@@ -176,7 +176,7 @@ namespace BepuUtilities.Collections
         public static void Create(IUnmanagedMemoryPool pool, int initialCapacity, int tableSizePower, TEqualityComparer comparer,
             out QuickDictionary<TKey, TValue, TEqualityComparer> dictionary)
         {
-            pool.Take<TKey>(1 << initialCapacity, out var keySpan);
+            pool.Take<TKey>(initialCapacity, out var keySpan);
             pool.Take<TValue>(keySpan.Length, out var valueSpan);
             pool.Take<int>(keySpan.Length << tableSizePower, out var tableSpan);
             //No guarantee that the table is clean; clear it.
@@ -187,7 +187,7 @@ namespace BepuUtilities.Collections
         /// Creates a new dictionary with a default constructed comparer.
         /// </summary>
         /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
-        /// <param name="tableSizePower">Initial pool index to pull the object buffer from. The size of the initial table buffer will be 2^(initialElementPoolIndex + tableSizePower).</param>
+        /// <param name="tableSizePower">Target capacity relative to the initial capacity in terms of a power of 2. The size of the initial table buffer will be at least 2^tableSizePower times larger than the initial capacity.</param>
         /// <param name="comparer">Comparer to use in the dictionary.</param>
         /// <param name="dictionary">Created dictionary.</param>
         /// <param name="pool">Pool used for spans.</param>   
@@ -297,7 +297,7 @@ namespace BepuUtilities.Collections
         {
             Validate();
             var targetKeyCapacity = pool.GetCapacityForCount<TKey>(Count);
-            if (targetKeyCapacity != Keys.Length)
+            if (targetKeyCapacity < Keys.Length)
                 Resize(Count, pool);
         }
 
