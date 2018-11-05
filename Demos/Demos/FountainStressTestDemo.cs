@@ -223,7 +223,7 @@ namespace Demos.Demos
                 var indexToRemove = random.Next(Simulation.Statics.Count);
                 Simulation.Statics.GetDescription(Simulation.Statics.IndexToHandle[indexToRemove], out var staticDescription);
                 Simulation.Statics.RemoveAt(indexToRemove);
-                removedStatics.Enqueue(ref staticDescription, BufferPool);
+                removedStatics.Enqueue(staticDescription, BufferPool);
             }
 
 

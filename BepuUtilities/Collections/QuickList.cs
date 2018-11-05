@@ -248,7 +248,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="element">Item to add.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AddUnsafely(T element)
+        public void AddUnsafely(in T element)
         {
             Validate();
             ValidateUnsafeAdd();
@@ -261,39 +261,14 @@ namespace BepuUtilities.Collections
         /// <param name="element">Item to add.</param>
         /// <param name="pool">Pool used to obtain a new span if needed.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(T element, IUnmanagedMemoryPool pool)
+        public void Add(in T element, IUnmanagedMemoryPool pool)
         {
             Validate();
             if (Count == Span.Length)
                 Resize(Count * 2, pool);
             AddUnsafely(element);
         }
-
-        /// <summary>
-        /// Adds the element to the list without checking the count against the capacity.
-        /// </summary>
-        /// <param name="element">Element to add.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AddUnsafely(ref T element)
-        {
-            Validate();
-            ValidateUnsafeAdd();
-            AllocateUnsafely() = element;
-        }
-
-        /// <summary>
-        /// Adds the element to the list.
-        /// </summary>
-        /// <param name="element">Element to add.</param>
-        /// <param name="pool">Pool used to obtain a new span if needed.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(ref T element, IUnmanagedMemoryPool pool)
-        {
-            if (Count == Span.Length)
-                Resize(Count * 2, pool);
-            AddUnsafely(ref element);
-        }
-
+        
         /// <summary>
         /// Gets the index of the element in the list using the default comparer, if present.
         /// </summary>
@@ -303,7 +278,7 @@ namespace BepuUtilities.Collections
         public int IndexOf(T element)
         {
             Validate();
-            return Span.IndexOf(element, 0, Count);
+            return Span.IndexOf(ref element, 0, Count);
         }
 
 
@@ -331,17 +306,16 @@ namespace BepuUtilities.Collections
             return Span.IndexOf(ref predicate, 0, Count);
         }
 
-
-        /// <summary>
+                       /// <summary>
         /// Removes an element from the list. Preserves the order of elements.
         /// </summary>
         /// <param name="element">Element to remove from the list.</param>
         /// <returns>True if the element was present and was removed, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Remove(T element)
+        public bool Remove(ref T element)
         {
             Validate();
-            var index = IndexOf(element);
+            var index = IndexOf(ref element);
             if (index >= 0)
             {
                 RemoveAt(index);
@@ -356,16 +330,9 @@ namespace BepuUtilities.Collections
         /// <param name="element">Element to remove from the list.</param>
         /// <returns>True if the element was present and was removed, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Remove(ref T element)
+        public bool Remove(T element)
         {
-            Validate();
-            var index = IndexOf(element);
-            if (index >= 0)
-            {
-                RemoveAt(index);
-                return true;
-            }
-            return false;
+            return Remove(ref element);
         }
 
         /// <summary>
@@ -386,23 +353,7 @@ namespace BepuUtilities.Collections
             return false;
         }
 
-        /// <summary>
-        /// Removes an element from the list. Comparisons use the default comparer for the type. Does not preserve the order of elements.
-        /// </summary>
-        /// <param name="element">Element to remove from the list.</param>
-        /// <returns>True if the element was present and was removed, false otherwise.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool FastRemove(T element)
-        {
-            Validate();
-            var index = IndexOf(element);
-            if (index >= 0)
-            {
-                FastRemoveAt(index);
-                return true;
-            }
-            return false;
-        }
+     
 
         /// <summary>
         /// Removes an element from the list. Does not preserve the order of elements.
@@ -420,6 +371,17 @@ namespace BepuUtilities.Collections
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Removes an element from the list. Comparisons use the default comparer for the type. Does not preserve the order of elements.
+        /// </summary>
+        /// <param name="element">Element to remove from the list.</param>
+        /// <returns>True if the element was present and was removed, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool FastRemove(T element)
+        {
+            return FastRemove(ref element);
         }
 
         /// <summary>
@@ -456,7 +418,7 @@ namespace BepuUtilities.Collections
                 Span.CopyTo(index + 1, ref Span, index, Count - index);
             }
             //Clear out the former last slot.
-            Span[Count] = default(T);
+            Span[Count] = default;
         }
 
         /// <summary>
@@ -475,7 +437,7 @@ namespace BepuUtilities.Collections
                 Span[index] = Span[Count];
             }
             //Clear out the former last slot.
-            Span[Count] = default(T);
+            Span[Count] = default;
         }
 
         /// <summary>
@@ -506,7 +468,7 @@ namespace BepuUtilities.Collections
                 element = Span[Count];
                 return true;
             }
-            element = default(T);
+            element = default;
             return false;
         }
 

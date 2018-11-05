@@ -24,12 +24,10 @@ namespace DemoRenderer.Constraints
             var color = new Vector3(0.2f, 0.2f, 1f) * tint;
             var packedColor = Helpers.PackColor(color);
             var backgroundColor = new Vector3(0f, 0f, 1f) * tint;
-            var line = new LineInstance(poseA.Position, bTarget, packedColor, 0);
-            lines.AddUnsafely(ref line);
+            lines.AllocateUnsafely() = new LineInstance(poseA.Position, bTarget, packedColor, 0);
             var errorColor = new Vector3(1, 0, 0) * tint;
             var packedErrorColor = Helpers.PackColor(errorColor);
-            var errorLine = new LineInstance(bTarget, poseB.Position, packedErrorColor, 0);
-            lines.AddUnsafely(ref errorLine);
+            lines.AllocateUnsafely() = new LineInstance(bTarget, poseB.Position, packedErrorColor, 0);
         }
     }
 }

@@ -62,7 +62,7 @@ namespace DemoRenderer.ShapeDrawing
                 if (batches.GetTableIndices(ref id, out var tableIndex, out var elementIndex))
                 {
                     //The id was already present.
-                    batches.Values[elementIndex].Add(ref instance, meshCache.Pool);
+                    batches.Values[elementIndex].Add(instance, meshCache.Pool);
                 }
                 else
                 {
@@ -77,7 +77,7 @@ namespace DemoRenderer.ShapeDrawing
                     batches.Keys[batches.Count] = id;
                     ref var listSlot = ref batches.Values[batches.Count];
                     listSlot = new QuickList<MeshInstance>(64, meshCache.Pool);
-                    listSlot.Add(ref instance, meshCache.Pool);
+                    listSlot.Add(instance, meshCache.Pool);
                     batches.Table[tableIndex] = newCount;
                     batches.Count = newCount;
                 }

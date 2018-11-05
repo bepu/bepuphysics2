@@ -174,7 +174,7 @@ namespace BepuPhysics.CollisionDetection
                     {
                         pointers.CollisionDetectionCache = new PairCacheIndex();
                     }
-                    Mapping.AddUnsafely(ref pair.Pair, ref pointers);
+                    Mapping.AddUnsafely(ref pair.Pair, pointers);
                 }
             }
         }

@@ -338,7 +338,7 @@ namespace Demos.Demos
             //Check to make sure that this cell isn't already occupied before starting a new fill.
             if (occupiedCells.Contains(cell))
                 return;
-            cellsToVisit.Add(ref cell, pool);
+            cellsToVisit.Add(cell, pool);
             while (cellsToVisit.Count > 0)
             {
                 if (cellsToVisit.TryPop(out cell))
@@ -391,7 +391,7 @@ namespace Demos.Demos
             var buffer = new Vector3(cellSize);
             min -= buffer;
 
-            var cells = new CellSet(triangles.Length, 2, pool);
+            var cells = new CellSet(triangles.Length, pool);
             for (int i = 0; i < triangles.Length; ++i)
             {
                 ref var triangle = ref triangles[i];
@@ -411,7 +411,7 @@ namespace Demos.Demos
             bounds.Z = (int)(Math.Ceiling(inverseCellSize * size.Z));
             //Perform a flood fill on every surface vertex.
             //We can use the cells set directly, since it behaves like a regular list with regard to element placement (always at the end).
-            var floodFilledCells = new CellSet(32, 3, pool);
+            var floodFilledCells = new CellSet(32, pool);
             var cellsToVisit = new CellList(32, pool);
             for (int i = cells.Count - 1; i >= 0; --i)
             {
@@ -420,7 +420,7 @@ namespace Demos.Demos
             }
 
             //Build the vertex list and per-cell vertex index lists.
-            vertexSpatialIndices = new CellSet(cells.Count * 4, 2, pool);
+            vertexSpatialIndices = new CellSet(cells.Count * 4, pool);
             int cellIndex = 0;
             pool.Take(cells.Count, out cellVertexIndices);
             cellVertexIndices = cellVertexIndices.Slice(0, cells.Count);
@@ -671,7 +671,7 @@ namespace Demos.Demos
         {
             BufferPool.Take<int>(vertices.Length, out var vertexEdgeCounts);
             vertexEdgeCounts.Clear(0, vertices.Length);
-            var edges = new QuickSet<Edge, Edge>(vertices.Length * 3, 2, BufferPool);
+            var edges = new QuickSet<Edge, Edge>(vertices.Length * 3, BufferPool);
             var edgeCountForInternalVertex = CreateHexahedralUniqueEdgesList(ref cellVertexIndices, ref vertexEdgeCounts, BufferPool, ref edges);
             //var edgeCountForInternalVertex = CreateTetrahedralUniqueEdgesList(ref tetrahedraVertexIndices, ref vertexEdgeCounts, ref cellEdgePool, ref intPool, ref edges);
 

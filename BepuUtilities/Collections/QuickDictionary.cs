@@ -239,7 +239,7 @@ namespace BepuUtilities.Collections
             {
                 //We assume that ref adds will get inlined reasonably here. That's not actually guaranteed, but we'll bite the bullet.
                 //(You could technically branch on the Unsafe.SizeOf<T>, which should result in a compile time specialized zero overhead implementation... but meh!)
-                AddUnsafely(ref oldDictionary.Keys[i], ref oldDictionary.Values[i]);
+                AddUnsafely(ref oldDictionary.Keys[i], oldDictionary.Values[i]);
             }
             oldKeySpan = oldDictionary.Keys;
             oldValueSpan = oldDictionary.Values;
@@ -439,7 +439,7 @@ namespace BepuUtilities.Collections
         /// <param name="value">Value of the pair to add.</param>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present and its pair was replaced.</returns>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)] //TODO: Test performance of full chain inline.
-        public bool AddAndReplaceUnsafely(ref TKey key, ref TValue value)
+        public bool AddAndReplaceUnsafely(ref TKey key, in TValue value)
         {
             Validate();
             ValidateUnsafeAdd();
@@ -468,9 +468,9 @@ namespace BepuUtilities.Collections
         /// <param name="value">Value of the pair to add.</param>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present and its pair was replaced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddAndReplaceUnsafely(TKey key, TValue value)
+        public bool AddAndReplaceUnsafely(TKey key, in TValue value)
         {
-            return AddAndReplaceUnsafely(ref key, ref value);
+            return AddAndReplaceUnsafely(ref key, value);
         }
 
         /// <summary>
@@ -480,7 +480,7 @@ namespace BepuUtilities.Collections
         /// <param name="value">Value of the pair to add.</param>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present.</returns>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)] //TODO: Test performance of full chain inline.
-        public bool AddUnsafely(ref TKey key, ref TValue value)
+        public bool AddUnsafely(ref TKey key, in TValue value)
         {
             Validate();
             ValidateUnsafeAdd();
@@ -505,9 +505,9 @@ namespace BepuUtilities.Collections
         /// <param name="value">Value of the pair to add.</param>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddUnsafely(TKey key, TValue value)
+        public bool AddUnsafely(TKey key, in TValue value)
         {
-            return AddUnsafely(ref key, ref value);
+            return AddUnsafely(ref key, value);
         }
 
         /// <summary>
@@ -519,7 +519,7 @@ namespace BepuUtilities.Collections
         /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the pair was added to the dictionary, false if the key was already present and its pair was replaced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddAndReplace(ref TKey key, ref TValue value, IUnmanagedMemoryPool pool)
+        public bool AddAndReplace(ref TKey key, in TValue value, IUnmanagedMemoryPool pool)
         {
             if (Count == Keys.Length)
             {
@@ -530,7 +530,7 @@ namespace BepuUtilities.Collections
                 //If we resized only after determining that it was going to be added,
                 //the potential resize would invalidate the computed indices.
             }
-            return AddAndReplaceUnsafely(ref key, ref value);
+            return AddAndReplaceUnsafely(ref key, value);
         }
 
         /// <summary>
@@ -542,9 +542,9 @@ namespace BepuUtilities.Collections
         /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the pair was added to the dictionary, false if the key was already present and its pair was replaced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddAndReplace<TKeyPool, TValuePool, TTablePool>(TKey key, TValue value, IUnmanagedMemoryPool pool)
+        public bool AddAndReplace<TKeyPool, TValuePool, TTablePool>(TKey key, in TValue value, IUnmanagedMemoryPool pool)
         {
-            return AddAndReplace(ref key, ref value, pool);
+            return AddAndReplace(ref key, value, pool);
         }
 
         /// <summary>
@@ -556,7 +556,7 @@ namespace BepuUtilities.Collections
         /// <typeparam name="TPool">Type of the pool used for spans.</typeparam>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Add(ref TKey key, ref TValue value, IUnmanagedMemoryPool pool)
+        public bool Add(ref TKey key, in TValue value, IUnmanagedMemoryPool pool)
         {
             Validate();
 
@@ -569,7 +569,7 @@ namespace BepuUtilities.Collections
                 //If we resized only after determining that it was going to be added,
                 //the potential resize would invalidate the computed indices.
             }
-            return AddUnsafely(ref key, ref value);
+            return AddUnsafely(ref key, value);
         }
 
         /// <summary>
@@ -581,9 +581,9 @@ namespace BepuUtilities.Collections
         /// <typeparam name="TPool">Type of the pool to use.</typeparam>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Add(TKey key, TValue value, IUnmanagedMemoryPool pool)
+        public bool Add(TKey key, in TValue value, IUnmanagedMemoryPool pool)
         {
-            return Add(ref key, ref value, pool);
+            return Add(ref key, value, pool);
         }
 
         //Note: the reason this is named "FastRemove" instead of just "Remove" despite it being the only remove present is that

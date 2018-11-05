@@ -159,7 +159,7 @@ namespace BepuPhysics.CollisionDetection
             PendingAdd pendingAdd;
             WorkerCacheAdd(ref collisionCache, ref constraintCache, out pendingAdd.Pointers);
             pendingAdd.Pair = pair;
-            PendingAdds.Add(ref pendingAdd, pool);
+            PendingAdds.Add(pendingAdd, pool);
             return pendingAdd.Pointers.ConstraintCache;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -301,7 +301,7 @@ namespace BepuPhysics
                     //island, but we let that happen in favor of avoiding tons of sync overhead.
                     //The gathering phase will check each worker's island against all previous workers. If it's a duplicate, it will get thrown out.
                     var island = new IslandScaffold(ref bodyIndices, ref constraintHandles, solver, threadPool);
-                    results.Islands.Add(ref island, threadPool);
+                    results.Islands.Add(island, threadPool);
                 }
                 traversedBodies += bodyIndices.Count;
                 bodyIndices.Count = 0;

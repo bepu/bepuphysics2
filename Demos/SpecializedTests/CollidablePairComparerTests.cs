@@ -87,7 +87,7 @@ namespace Demos.SpecializedTests
                         A = new CollidableReference(CollidableMobility.Kinematic, index),
                         B = new CollidableReference(CollidableMobility.Dynamic, index + perLayerCollidableCount)
                     };
-                    dictionary.AddUnsafely(ref pair, ref index);
+                    dictionary.AddUnsafely(ref pair, index);
                 }
                 CacheBlaster.Blast();
                 //Prewarm the remap into cache to more closely mirror the behavior in the narrow phase.

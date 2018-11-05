@@ -68,7 +68,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.Radius = Unsafe.AsRef<Sphere>(shapeData).Radius;
                         Helpers.PackOrientation(pose.Orientation, out instance.PackedOrientation);
                         instance.PackedColor = Helpers.PackColor(color);
-                        spheres.Add(ref instance, pool);
+                        spheres.Add(instance, pool);
                     }
                     break;
                 case Capsule.Id:
@@ -80,7 +80,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.HalfLength = capsule.HalfLength;
                         instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
                         instance.PackedColor = Helpers.PackColor(color);
-                        capsules.Add(ref instance, pool);
+                        capsules.Add(instance, pool);
                     }
                     break;
                 case Box.Id:
@@ -93,7 +93,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.HalfWidth = box.HalfWidth;
                         instance.HalfHeight = box.HalfHeight;
                         instance.HalfLength = box.HalfLength;
-                        boxes.Add(ref instance, pool);
+                        boxes.Add(instance, pool);
                     }
                     break;
                 case Triangle.Id:
@@ -108,7 +108,7 @@ namespace DemoRenderer.ShapeDrawing
                         instance.X = pose.Position.X;
                         instance.Y = pose.Position.Y;
                         instance.Z = pose.Position.Z;
-                        triangles.Add(ref instance, pool);
+                        triangles.Add(instance, pool);
                     }
                     break;
                 case Compound.Id:
@@ -144,7 +144,7 @@ namespace DemoRenderer.ShapeDrawing
                                 vertices[baseVertexIndex + 2] = triangle.B;
                             }
                         }
-                        meshes.Add(ref instance, pool);
+                        meshes.Add(instance, pool);
                     }
                     break;
             }

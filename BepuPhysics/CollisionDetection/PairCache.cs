@@ -258,7 +258,7 @@ namespace BepuPhysics.CollisionDetection
                 for (int j = 0; j < cache.PendingAdds.Count; ++j)
                 {
                     ref var pending = ref cache.PendingAdds[j];
-                    var added = Mapping.AddUnsafely(ref pending.Pair, ref pending.Pointers);
+                    var added = Mapping.AddUnsafely(ref pending.Pair, pending.Pointers);
                     Debug.Assert(added);
                 }
             }

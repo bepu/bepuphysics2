@@ -48,7 +48,6 @@ namespace BepuPhysics
         //Note that this is a dictionary of *sets*. This is because fallback batches are expected to be used in pathological cases where there are many constraints associated with
         //a single body. There are likely to be too many constraints for list-based containment/removal to be faster than the set implementation.
         internal QuickDictionary<int, QuickSet<FallbackReference, FallbackReferenceComparer>, PrimitiveComparer<int>> bodyConstraintReferences;
-        //(but is this really ENOUGH generics?)
 
         internal struct FallbackReferenceComparer : IEqualityComparerRef<FallbackReference>
         {
@@ -448,7 +447,7 @@ namespace BepuPhysics
             bodyConstraintReferences.GetTableIndices(ref originalBodyIndex, out var tableIndex, out var elementIndex);
             var references = bodyConstraintReferences.Values[elementIndex];
             bodyConstraintReferences.FastRemove(tableIndex, elementIndex);
-            bodyConstraintReferences.AddUnsafely(ref newBodyLocation, ref references);
+            bodyConstraintReferences.AddUnsafely(ref newBodyLocation, references);
         }
 
         internal void UpdateForBodyMemorySwap(int a, int b)

@@ -41,9 +41,9 @@ namespace DemoRenderer.Constraints
             t1 *= 0.5f;
             t2 *= 0.5f;
             var t1Line = new LineInstance(contactPosition - t1, contactPosition + t1, packedColor, 0);
-            lines.AddUnsafely(ref t1Line);
+            lines.AddUnsafely(t1Line);
             var t2Line = new LineInstance(contactPosition - t2, contactPosition + t2, packedColor, 0);
-            lines.AddUnsafely(ref t2Line);
+            lines.AddUnsafely(t2Line);
 
         }
     }

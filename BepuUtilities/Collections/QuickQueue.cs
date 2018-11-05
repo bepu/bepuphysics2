@@ -105,7 +105,7 @@ namespace BepuUtilities.Collections
         /// <param name="pool">Pool to pull a span from.</param>
         /// <param name="minimumInitialCount">The minimum size of the region to be pulled from the pool. Actual span may be larger.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickQueue(int minimumInitialCount, IUnmanagedMemoryPool pool) 
+        public QuickQueue(int minimumInitialCount, IUnmanagedMemoryPool pool)
         {
             pool.Take(minimumInitialCount, out Span);
             Count = 0;
@@ -166,8 +166,8 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Resize(int newSize, IUnmanagedMemoryPool pool)
         {
-            var targetCapacity  = pool.GetCapacityForCount<T>(newSize);
-            if(targetCapacity != Span.Length)
+            var targetCapacity = pool.GetCapacityForCount<T>(newSize);
+            if (targetCapacity != Span.Length)
             {
                 var oldQueue = this;
                 pool.Take<T>(newSize, out var newSpan);
@@ -203,7 +203,7 @@ namespace BepuUtilities.Collections
         /// Compacts the internal buffer to the minimum size required for the number of elements in the queue.
         /// </summary>
         /// <param name="pool">Pool to pull from if necessary.</param>
-        public void Compact(IUnmanagedMemoryPool pool) 
+        public void Compact(IUnmanagedMemoryPool pool)
         {
             Validate();
             var targetCapacity = pool.GetCapacityForCount<T>(Count);
@@ -216,20 +216,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnqueueUnsafely(T element)
-        {
-            Validate();
-            ValidateUnsafeAdd();
-            Span[(LastIndex = ((LastIndex + 1) & CapacityMask))] = element;
-            ++Count;
-        }
-
-        /// <summary>
-        /// Enqueues the element to the end of the queue, incrementing the last index.
-        /// </summary>
-        /// <param name="element">Item to enqueue.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnqueueUnsafely(ref T element)
+        public void EnqueueUnsafely(in T element)
         {
             Validate();
             ValidateUnsafeAdd();
@@ -242,33 +229,20 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnqueueFirstUnsafely(T element)
+        public void EnqueueFirstUnsafely(in T element)
         {
             Validate();
             ValidateUnsafeAdd();
             Span[(FirstIndex = ((FirstIndex - 1) & CapacityMask))] = element;
             ++Count;
         }
-
-        /// <summary>
-        /// Enqueues the element to the start of the queue, decrementing the first index.
-        /// </summary>
-        /// <param name="element">Item to enqueue.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnqueueFirstUnsafely(ref T element)
-        {
-            Validate();
-            ValidateUnsafeAdd();
-            Span[(FirstIndex = ((FirstIndex - 1) & CapacityMask))] = element;
-            ++Count;
-        }
-
+        
         /// <summary>
         /// Enqueues the element to the end of the queue, incrementing the last index.
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Enqueue(T element, IUnmanagedMemoryPool pool)
+        public void Enqueue(in T element, IUnmanagedMemoryPool pool)
         {
             Validate();
             if (Count == Span.Length)
@@ -277,43 +251,16 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
-        /// Enqueues the element to the end of the queue, incrementing the last index.
-        /// </summary>
-        /// <param name="element">Item to enqueue.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Enqueue(ref T element, IUnmanagedMemoryPool pool)
-        {
-            Validate();
-            if (Count == Span.Length)
-                Resize(Span.Length * 2, pool);
-            EnqueueUnsafely(ref element);
-        }
-
-        /// <summary>
         /// Enqueues the element to the start of the queue, decrementing the first index.
         /// </summary>
         /// <param name="element">Item to enqueue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnqueueFirst(T element, IUnmanagedMemoryPool pool)
+        public void EnqueueFirst(in T element, IUnmanagedMemoryPool pool)
         {
             Validate();
             if (Count == Span.Length)
                 Resize(Span.Length * 2, pool);
             EnqueueFirstUnsafely(element);
-        }
-
-
-        /// <summary>
-        /// Enqueues the element to the start of the queue, decrementing the first index.
-        /// </summary>
-        /// <param name="element">Item to enqueue.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnqueueFirst(ref T element, IUnmanagedMemoryPool pool)
-        {
-            Validate();
-            if (Count == Span.Length)
-                Resize(Span.Length * 2, pool);
-            EnqueueFirstUnsafely(ref element);
         }
 
         /// <summary>
@@ -363,7 +310,7 @@ namespace BepuUtilities.Collections
                 DeleteFirst();
                 return true;
             }
-            element = default(T);
+            element = default;
             return false;
 
         }
