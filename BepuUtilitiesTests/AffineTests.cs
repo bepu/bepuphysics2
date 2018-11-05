@@ -43,16 +43,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 Vector3 r0, r1;
-                AffineTransform.Transform(ref v, ref m, out r0);
-                AffineTransform.Transform(ref r0, ref m, out r1);
-                AffineTransform.Transform(ref r1, ref m, out r0);
-                AffineTransform.Transform(ref r0, ref m, out r1);
-                AffineTransform.Transform(ref r1, ref m, out r0);
-                AffineTransform.Transform(ref r0, ref m, out r1);
-                AffineTransform.Transform(ref r1, ref m, out r0);
-                AffineTransform.Transform(ref r0, ref m, out r1);
-                AffineTransform.Transform(ref r1, ref m, out r0);
-                AffineTransform.Transform(ref r0, ref m, out r1);
+                AffineTransform.Transform(v, m, out r0);
+                AffineTransform.Transform(r0, m, out r1);
+                AffineTransform.Transform(r1, m, out r0);
+                AffineTransform.Transform(r0, m, out r1);
+                AffineTransform.Transform(r1, m, out r0);
+                AffineTransform.Transform(r0, m, out r1);
+                AffineTransform.Transform(r1, m, out r0);
+                AffineTransform.Transform(r0, m, out r1);
+                AffineTransform.Transform(r1, m, out r0);
+                AffineTransform.Transform(r0, m, out r1);
                 accumulator += 0.000001f * r1.X;
             }
             return accumulator;
@@ -89,16 +89,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 AffineTransform r0, r1;
-                AffineTransform.Multiply(ref m1, ref m2, out r0);
-                AffineTransform.Multiply(ref r0, ref m2, out r1);
-                AffineTransform.Multiply(ref r1, ref m2, out r0);
-                AffineTransform.Multiply(ref r0, ref m2, out r1);
-                AffineTransform.Multiply(ref r1, ref m2, out r0);
-                AffineTransform.Multiply(ref r0, ref m2, out r1);
-                AffineTransform.Multiply(ref r1, ref m2, out r0);
-                AffineTransform.Multiply(ref r0, ref m2, out r1);
-                AffineTransform.Multiply(ref r1, ref m2, out r0);
-                AffineTransform.Multiply(ref r0, ref m2, out r1);
+                AffineTransform.Multiply(m1, m2, out r0);
+                AffineTransform.Multiply(r0, m2, out r1);
+                AffineTransform.Multiply(r1, m2, out r0);
+                AffineTransform.Multiply(r0, m2, out r1);
+                AffineTransform.Multiply(r1, m2, out r0);
+                AffineTransform.Multiply(r0, m2, out r1);
+                AffineTransform.Multiply(r1, m2, out r0);
+                AffineTransform.Multiply(r0, m2, out r1);
+                AffineTransform.Multiply(r1, m2, out r0);
+                AffineTransform.Multiply(r0, m2, out r1);
                 accumulator += 0.000001f * r1.Translation.X;
             }
             return accumulator;
@@ -258,16 +258,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 AffineTransform r0, r1;
-                AffineTransform.Invert(ref m, out r0);
-                AffineTransform.Invert(ref r0, out r1);
-                AffineTransform.Invert(ref r1, out r0);
-                AffineTransform.Invert(ref r0, out r1);
-                AffineTransform.Invert(ref r1, out r0);
-                AffineTransform.Invert(ref r0, out r1);
-                AffineTransform.Invert(ref r1, out r0);
-                AffineTransform.Invert(ref r0, out r1);
-                AffineTransform.Invert(ref r1, out r0);
-                AffineTransform.Invert(ref r0, out r1);
+                AffineTransform.Invert(m, out r0);
+                AffineTransform.Invert(r0, out r1);
+                AffineTransform.Invert(r1, out r0);
+                AffineTransform.Invert(r0, out r1);
+                AffineTransform.Invert(r1, out r0);
+                AffineTransform.Invert(r0, out r1);
+                AffineTransform.Invert(r1, out r0);
+                AffineTransform.Invert(r0, out r1);
+                AffineTransform.Invert(r1, out r0);
+                AffineTransform.Invert(r0, out r1);
                 accumulator += r1.Translation.X;
 
             }

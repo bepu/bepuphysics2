@@ -10,12 +10,12 @@ namespace BEPUutilitiesTests
 
         public static void TestChurnStability()
         {
-            var allocator = new Allocator(2048);
+            var pool = new BufferPool();
+            var allocator = new Allocator(2048, pool);
             var random = new Random(5);
             ulong idCounter = 0;
-            var pool = new PassthroughArrayPool<ulong>();
-            QuickList<ulong, Array<ulong>>.Create(pool, 8, out var allocatedIds);
-            QuickList<ulong, Array<ulong>>.Create(pool, 8, out var unallocatedIds);
+            var allocatedIds = new QuickList<ulong>(8, pool);
+            var unallocatedIds = new QuickList<ulong>(8, pool);
             for (int i = 0; i < 512; ++i)
             {
                 long start;
@@ -81,6 +81,7 @@ namespace BEPUutilitiesTests
             {
                 Debug.Assert(!allocator.Contains(unallocatedIds[i]));
             }
+            pool.Clear();
         }
     }
 }

@@ -38,16 +38,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 Vector3 r0, r1;
-                Vector3x.Cross(ref v1, ref v2, out r0);
-                Vector3x.Cross(ref r0, ref v2, out r1);
-                Vector3x.Cross(ref r1, ref v2, out r0);
-                Vector3x.Cross(ref r0, ref v2, out r1);
-                Vector3x.Cross(ref r1, ref v2, out r0);
-                Vector3x.Cross(ref r0, ref v2, out r1);
-                Vector3x.Cross(ref r1, ref v2, out r0);
-                Vector3x.Cross(ref r0, ref v2, out r1);
-                Vector3x.Cross(ref r1, ref v2, out r0);
-                Vector3x.Cross(ref r0, ref v2, out r1);
+                Vector3x.Cross(v1, v2, out r0);
+                Vector3x.Cross(r0, v2, out r1);
+                Vector3x.Cross(r1, v2, out r0);
+                Vector3x.Cross(r0, v2, out r1);
+                Vector3x.Cross(r1, v2, out r0);
+                Vector3x.Cross(r0, v2, out r1);
+                Vector3x.Cross(r1, v2, out r0);
+                Vector3x.Cross(r0, v2, out r1);
+                Vector3x.Cross(r1, v2, out r0);
+                Vector3x.Cross(r0, v2, out r1);
                 accumulator += 0.000001f * r1.X;
             }
             return accumulator;

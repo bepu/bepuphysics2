@@ -50,14 +50,16 @@ namespace BepuUtilities.Memory
         private QuickDictionary<ulong, Allocation, PrimitiveComparer<ulong>> allocations;
 
         /// <summary>
-        /// Creates a new memory pool.
+        /// Creates a new allocator.
         /// </summary>
-        /// <param name="memoryPoolSize">Size of the pool in elements.</param>
-        public Allocator(BufferPool pool, long memoryPoolSize, int allocationCountEstimate = 128)
+        /// <param name="capacity">Size of the memory handled by the allocator in elements.</param>
+        /// <param name="initialAllocationCapacity">Estimated number of allocations to allocate room for in the internal structures.</param>
+        /// <param name="pool">Pool to pull internal resources from.</param>
+        public Allocator(long capacity, BufferPool pool, int initialAllocationCapacity = 128)
         {
             this.pool = pool;
-            this.Capacity = memoryPoolSize;
-            allocations = new QuickDictionary<ulong, Allocation, PrimitiveComparer<ulong>>(allocationCountEstimate, 2, pool);
+            this.Capacity = capacity;
+            allocations = new QuickDictionary<ulong, Allocation, PrimitiveComparer<ulong>>(initialAllocationCapacity, 2, pool);
         }
 
         /// <summary>

@@ -12,7 +12,7 @@ namespace BepuUtilities.Memory
     /// Unmanaged memory pool that creates pinned blocks of memory for use in spans.
     /// </summary>
     /// <remarks>This currently works by allocating large managed arrays and pinning them under the assumption that they'll end up in the large object heap.</remarks>
-    public class BufferPool : IUnmanagedMemoryPool
+    public class BufferPool : IUnmanagedMemoryPool, IDisposable
     {
         unsafe struct Block
         {
@@ -572,6 +572,11 @@ namespace BepuUtilities.Memory
             }
         }
 
+        void IDisposable.Dispose()
+        {
+            Clear();
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetCapacityForCount<T>(int count)
         {
@@ -599,6 +604,7 @@ namespace BepuUtilities.Memory
             Debug.Assert(totalBlockCount == 0 || !Pinned, "Memory leak warning! Don't let a buffer pool die without unpinning it!");
         }
 #endif
+
     }
 
     /// <summary>

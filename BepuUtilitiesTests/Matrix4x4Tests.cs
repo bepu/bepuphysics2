@@ -62,16 +62,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 Vector4 r0, r1;
-                Matrix.TransformTranspose(ref v, ref m, out r0);
-                Matrix.TransformTranspose(ref r0, ref m, out r1);
-                Matrix.TransformTranspose(ref r1, ref m, out r0);
-                Matrix.TransformTranspose(ref r0, ref m, out r1);
-                Matrix.TransformTranspose(ref r1, ref m, out r0);
-                Matrix.TransformTranspose(ref r0, ref m, out r1);
-                Matrix.TransformTranspose(ref r1, ref m, out r0);
-                Matrix.TransformTranspose(ref r0, ref m, out r1);
-                Matrix.TransformTranspose(ref r1, ref m, out r0);
-                Matrix.TransformTranspose(ref r0, ref m, out r1);
+                Matrix.TransformTranspose(v, m, out r0);
+                Matrix.TransformTranspose(r0, m, out r1);
+                Matrix.TransformTranspose(r1, m, out r0);
+                Matrix.TransformTranspose(r0, m, out r1);
+                Matrix.TransformTranspose(r1, m, out r0);
+                Matrix.TransformTranspose(r0, m, out r1);
+                Matrix.TransformTranspose(r1, m, out r0);
+                Matrix.TransformTranspose(r0, m, out r1);
+                Matrix.TransformTranspose(r1, m, out r0);
+                Matrix.TransformTranspose(r0, m, out r1);
                 accumulator += 0.000001f * r1.X;
             }
             return accumulator;
@@ -85,16 +85,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 Vector4 r0, r1;
-                Matrix.Transform(ref v, ref m, out r0);
-                Matrix.Transform(ref r0, ref m, out r1);
-                Matrix.Transform(ref r1, ref m, out r0);
-                Matrix.Transform(ref r0, ref m, out r1);
-                Matrix.Transform(ref r1, ref m, out r0);
-                Matrix.Transform(ref r0, ref m, out r1);
-                Matrix.Transform(ref r1, ref m, out r0);
-                Matrix.Transform(ref r0, ref m, out r1);
-                Matrix.Transform(ref r1, ref m, out r0);
-                Matrix.Transform(ref r0, ref m, out r1);
+                Matrix.Transform(v, m, out r0);
+                Matrix.Transform(r0, m, out r1);
+                Matrix.Transform(r1, m, out r0);
+                Matrix.Transform(r0, m, out r1);
+                Matrix.Transform(r1, m, out r0);
+                Matrix.Transform(r0, m, out r1);
+                Matrix.Transform(r1, m, out r0);
+                Matrix.Transform(r0, m, out r1);
+                Matrix.Transform(r1, m, out r0);
+                Matrix.Transform(r0, m, out r1);
                 accumulator += 0.000001f * r1.X;
             }
             return accumulator;
@@ -154,16 +154,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 Matrix r0, r1;
-                Matrix.Multiply(ref m1, ref m2, out r0);
-                Matrix.Multiply(ref r0, ref m2, out r1);
-                Matrix.Multiply(ref r1, ref m2, out r0);
-                Matrix.Multiply(ref r0, ref m2, out r1);
-                Matrix.Multiply(ref r1, ref m2, out r0);
-                Matrix.Multiply(ref r0, ref m2, out r1);
-                Matrix.Multiply(ref r1, ref m2, out r0);
-                Matrix.Multiply(ref r0, ref m2, out r1);
-                Matrix.Multiply(ref r1, ref m2, out r0);
-                Matrix.Multiply(ref r0, ref m2, out r1);
+                Matrix.Multiply(m1, m2, out r0);
+                Matrix.Multiply(r0, m2, out r1);
+                Matrix.Multiply(r1, m2, out r0);
+                Matrix.Multiply(r0, m2, out r1);
+                Matrix.Multiply(r1, m2, out r0);
+                Matrix.Multiply(r0, m2, out r1);
+                Matrix.Multiply(r1, m2, out r0);
+                Matrix.Multiply(r0, m2, out r1);
+                Matrix.Multiply(r1, m2, out r0);
+                Matrix.Multiply(r0, m2, out r1);
                 accumulator += 0.000001f * r1.X.X;
             }
             return accumulator;
@@ -230,7 +230,7 @@ namespace BEPUutilitiesTests
         //            scalarPointerA[i] = systemPointerA[i] = simdPointerA[i] = (float)(random.NextDouble() * 4 - 2);
         //            scalarPointerB[i] = systemPointerB[i] = simdPointerB[i] = (float)(random.NextDouble() * 4 - 2);
         //        }
-                
+
         //        Matrix.Multiply(ref simdA, ref simdB, out simdA);
         //        systemA = Matrix4x4.Multiply(systemA, systemB);
         //        bMatrix.Multiply(ref scalarA, ref scalarB, out scalarA);
@@ -324,16 +324,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 Matrix r0, r1;
-                Matrix.Transpose(ref m, out r0);
-                Matrix.Transpose(ref r0, out r1);
-                Matrix.Transpose(ref r1, out r0);
-                Matrix.Transpose(ref r0, out r1);
-                Matrix.Transpose(ref r1, out r0);
-                Matrix.Transpose(ref r0, out r1);
-                Matrix.Transpose(ref r1, out r0);
-                Matrix.Transpose(ref r0, out r1);
-                Matrix.Transpose(ref r1, out r0);
-                Matrix.Transpose(ref r0, out r1);
+                Matrix.Transpose(m, out r0);
+                Matrix.Transpose(r0, out r1);
+                Matrix.Transpose(r1, out r0);
+                Matrix.Transpose(r0, out r1);
+                Matrix.Transpose(r1, out r0);
+                Matrix.Transpose(r0, out r1);
+                Matrix.Transpose(r1, out r0);
+                Matrix.Transpose(r0, out r1);
+                Matrix.Transpose(r1, out r0);
+                Matrix.Transpose(r0, out r1);
                 accumulator += r1.X.X;
 
             }

@@ -15,7 +15,7 @@ namespace BEPUutilitiesTests
             accumulator = 0;
             for (int i = 0; i < iterations; ++i)
             {
-                for (int j =0; j < span.Length; ++j)
+                for (int j = 0; j < span.Length; ++j)
                 {
                     if (span[j] * 73 == 1)
                         break;
@@ -34,7 +34,7 @@ namespace BEPUutilitiesTests
                 //    accumulator += span[j - 8] + span[j];
                 //    accumulator += span[j - 9] + span[j];
                 //    accumulator += span[j - 10] + span[j];
-                    
+
                 //}
             }
 
@@ -90,7 +90,7 @@ namespace BEPUutilitiesTests
                 const int iterations = 20000000;
                 Console.WriteLine($"Pointer: {Test(ref pSpan, iterations, out accumulator)}");
                 Console.WriteLine($"Managed: {Test(ref mSpan, iterations, out accumulator)}");
-                
+
                 Console.WriteLine($"Raw: {RawPointerTest(pointer, array.Length, iterations, out accumulator)}");
             }
         }

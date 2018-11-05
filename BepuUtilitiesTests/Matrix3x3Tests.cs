@@ -40,16 +40,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 Vector3 r0, r1;
-                Matrix3x3.TransformTranspose(ref v, ref m, out r0);
-                Matrix3x3.TransformTranspose(ref r0, ref m, out r1);
-                Matrix3x3.TransformTranspose(ref r1, ref m, out r0);
-                Matrix3x3.TransformTranspose(ref r0, ref m, out r1);
-                Matrix3x3.TransformTranspose(ref r1, ref m, out r0);
-                Matrix3x3.TransformTranspose(ref r0, ref m, out r1);
-                Matrix3x3.TransformTranspose(ref r1, ref m, out r0);
-                Matrix3x3.TransformTranspose(ref r0, ref m, out r1);
-                Matrix3x3.TransformTranspose(ref r1, ref m, out r0);
-                Matrix3x3.TransformTranspose(ref r0, ref m, out r1);
+                Matrix3x3.TransformTranspose(v, m, out r0);
+                Matrix3x3.TransformTranspose(r0, m, out r1);
+                Matrix3x3.TransformTranspose(r1, m, out r0);
+                Matrix3x3.TransformTranspose(r0, m, out r1);
+                Matrix3x3.TransformTranspose(r1, m, out r0);
+                Matrix3x3.TransformTranspose(r0, m, out r1);
+                Matrix3x3.TransformTranspose(r1, m, out r0);
+                Matrix3x3.TransformTranspose(r0, m, out r1);
+                Matrix3x3.TransformTranspose(r1, m, out r0);
+                Matrix3x3.TransformTranspose(r0, m, out r1);
                 accumulator += 0.000001f * r1.X;
             }
             return accumulator;
@@ -63,16 +63,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 Vector3 r0, r1;
-                Matrix3x3.Transform(ref v, ref m, out r0);
-                Matrix3x3.Transform(ref r0, ref m, out r1);
-                Matrix3x3.Transform(ref r1, ref m, out r0);
-                Matrix3x3.Transform(ref r0, ref m, out r1);
-                Matrix3x3.Transform(ref r1, ref m, out r0);
-                Matrix3x3.Transform(ref r0, ref m, out r1);
-                Matrix3x3.Transform(ref r1, ref m, out r0);
-                Matrix3x3.Transform(ref r0, ref m, out r1);
-                Matrix3x3.Transform(ref r1, ref m, out r0);
-                Matrix3x3.Transform(ref r0, ref m, out r1);
+                Matrix3x3.Transform(v, m, out r0);
+                Matrix3x3.Transform(r0, m, out r1);
+                Matrix3x3.Transform(r1, m, out r0);
+                Matrix3x3.Transform(r0, m, out r1);
+                Matrix3x3.Transform(r1, m, out r0);
+                Matrix3x3.Transform(r0, m, out r1);
+                Matrix3x3.Transform(r1, m, out r0);
+                Matrix3x3.Transform(r0, m, out r1);
+                Matrix3x3.Transform(r1, m, out r0);
+                Matrix3x3.Transform(r0, m, out r1);
                 accumulator += 0.000001f * r1.X;
             }
             return accumulator;
@@ -109,16 +109,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 Matrix3x3 r0, r1;
-                Matrix3x3.Multiply(ref m1, ref m2, out r0);
-                Matrix3x3.Multiply(ref r0, ref m2, out r1);
-                Matrix3x3.Multiply(ref r1, ref m2, out r0);
-                Matrix3x3.Multiply(ref r0, ref m2, out r1);
-                Matrix3x3.Multiply(ref r1, ref m2, out r0);
-                Matrix3x3.Multiply(ref r0, ref m2, out r1);
-                Matrix3x3.Multiply(ref r1, ref m2, out r0);
-                Matrix3x3.Multiply(ref r0, ref m2, out r1);
-                Matrix3x3.Multiply(ref r1, ref m2, out r0);
-                Matrix3x3.Multiply(ref r0, ref m2, out r1);
+                Matrix3x3.Multiply(m1, m2, out r0);
+                Matrix3x3.Multiply(r0, m2, out r1);
+                Matrix3x3.Multiply(r1, m2, out r0);
+                Matrix3x3.Multiply(r0, m2, out r1);
+                Matrix3x3.Multiply(r1, m2, out r0);
+                Matrix3x3.Multiply(r0, m2, out r1);
+                Matrix3x3.Multiply(r1, m2, out r0);
+                Matrix3x3.Multiply(r0, m2, out r1);
+                Matrix3x3.Multiply(r1, m2, out r0);
+                Matrix3x3.Multiply(r0, m2, out r1);
                 accumulator += 0.000001f * r1.X.X;
             }
             return accumulator;
@@ -254,16 +254,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 Matrix3x3 r0, r1;
-                Matrix3x3.Transpose(ref m, out r0);
-                Matrix3x3.Transpose(ref r0, out r1);
-                Matrix3x3.Transpose(ref r1, out r0);
-                Matrix3x3.Transpose(ref r0, out r1);
-                Matrix3x3.Transpose(ref r1, out r0);
-                Matrix3x3.Transpose(ref r0, out r1);
-                Matrix3x3.Transpose(ref r1, out r0);
-                Matrix3x3.Transpose(ref r0, out r1);
-                Matrix3x3.Transpose(ref r1, out r0);
-                Matrix3x3.Transpose(ref r0, out r1);
+                Matrix3x3.Transpose(m, out r0);
+                Matrix3x3.Transpose(r0, out r1);
+                Matrix3x3.Transpose(r1, out r0);
+                Matrix3x3.Transpose(r0, out r1);
+                Matrix3x3.Transpose(r1, out r0);
+                Matrix3x3.Transpose(r0, out r1);
+                Matrix3x3.Transpose(r1, out r0);
+                Matrix3x3.Transpose(r0, out r1);
+                Matrix3x3.Transpose(r1, out r0);
+                Matrix3x3.Transpose(r0, out r1);
                 accumulator += r1.X.X;
 
             }
@@ -346,16 +346,16 @@ namespace BEPUutilitiesTests
             for (int i = 0; i < iterationCount; ++i)
             {
                 Matrix3x3 r0, r1;
-                Matrix3x3.Invert(ref m, out r0);
-                Matrix3x3.Invert(ref r0, out r1);
-                Matrix3x3.Invert(ref r1, out r0);
-                Matrix3x3.Invert(ref r0, out r1);
-                Matrix3x3.Invert(ref r1, out r0);
-                Matrix3x3.Invert(ref r0, out r1);
-                Matrix3x3.Invert(ref r1, out r0);
-                Matrix3x3.Invert(ref r0, out r1);
-                Matrix3x3.Invert(ref r1, out r0);
-                Matrix3x3.Invert(ref r0, out r1);
+                Matrix3x3.Invert(m, out r0);
+                Matrix3x3.Invert(r0, out r1);
+                Matrix3x3.Invert(r1, out r0);
+                Matrix3x3.Invert(r0, out r1);
+                Matrix3x3.Invert(r1, out r0);
+                Matrix3x3.Invert(r0, out r1);
+                Matrix3x3.Invert(r1, out r0);
+                Matrix3x3.Invert(r0, out r1);
+                Matrix3x3.Invert(r1, out r0);
+                Matrix3x3.Invert(r0, out r1);
                 accumulator += r1.X.X;
 
             }

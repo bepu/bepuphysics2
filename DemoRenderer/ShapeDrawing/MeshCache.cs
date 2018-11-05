@@ -34,7 +34,7 @@ namespace DemoRenderer.ShapeDrawing
             Pool = pool;
             pool.Take(initialSizeInVertices, out vertices);
             TriangleBuffer = new StructuredBuffer<Vector3>(device, initialSizeInVertices, "Mesh Cache Vertex Buffer");
-            allocator = new Allocator(pool, initialSizeInVertices);
+            allocator = new Allocator(initialSizeInVertices, pool);
 
             pendingUploads = new QuickList<UploadRequest>(128, pool);
             requestedIds = new QuickList<ulong>(128, pool);

@@ -11,13 +11,11 @@ namespace BEPUutilitiesTests
     public static class QuickCollectionTests
     {
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void TestQueueResizing<TSpan, TPool>(TPool pool)
-            where TSpan : ISpan<int>
-            where TPool : IMemoryPool<int, TSpan>
+        public static void TestQueueResizing(IUnmanagedMemoryPool pool)
         {
             Random random = new Random(5);
 
-            QuickQueue<int, TSpan>.Create(pool, 4, out var queue);
+            var queue = new QuickQueue<int>(4, pool);
             Queue<int> controlQueue = new Queue<int>();
 
             for (int iterationIndex = 0; iterationIndex < 1000000; ++iterationIndex)
@@ -55,12 +53,10 @@ namespace BEPUutilitiesTests
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void TestListResizing<TSpan, TPool>(TPool pool)
-            where TSpan : ISpan<int>
-            where TPool : IMemoryPool<int, TSpan>
+        public static void TestListResizing(IUnmanagedMemoryPool pool)
         {
             Random random = new Random(5);
-            QuickList<int, TSpan>.Create(pool, 4, out var list);
+            var list = new QuickList<int>(4, pool);
             List<int> controlList = new List<int>();
 
             for (int iterationIndex = 0; iterationIndex < 100000; ++iterationIndex)
@@ -99,19 +95,17 @@ namespace BEPUutilitiesTests
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void TestSetResizing<TSpan, TPool>(TPool pool)
-            where TSpan : ISpan<int>
-            where TPool : IMemoryPool<int, TSpan>
+        public static void TestSetResizing(IUnmanagedMemoryPool pool)
         {
             Random random = new Random(5);
-            QuickSet<int, TSpan, TSpan, PrimitiveComparer<int>>.Create(pool, pool, 2, 3, out var set);
+            var set = new QuickSet<int, PrimitiveComparer<int>>(4, pool);
             HashSet<int> controlSet = new HashSet<int>();
 
             for (int iterationIndex = 0; iterationIndex < 100000; ++iterationIndex)
             {
                 if (random.NextDouble() < 0.7)
                 {
-                    set.Add(iterationIndex, pool, pool);
+                    set.Add(iterationIndex, pool);
                     controlSet.Add(iterationIndex);
                 }
                 if (random.NextDouble() < 0.2)
@@ -123,11 +117,11 @@ namespace BEPUutilitiesTests
                 }
                 if (iterationIndex % 1000 == 0)
                 {
-                    set.EnsureCapacity(set.Count * 3, pool, pool);
+                    set.EnsureCapacity(set.Count * 3, pool);
                 }
                 else if (iterationIndex % 7777 == 0)
                 {
-                    set.Compact(pool, pool);
+                    set.Compact(pool);
                 }
             }
 
@@ -141,23 +135,21 @@ namespace BEPUutilitiesTests
                 Debug.Assert(set.Contains(element));
             }
 
-            set.Dispose(pool, pool);
+            set.Dispose(pool);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static void TestDictionaryResizing<TSpan, TPool>(TPool pool)
-            where TSpan : ISpan<int>
-            where TPool : IMemoryPool<int, TSpan>
+        public static void TestDictionaryResizing(IUnmanagedMemoryPool pool)
         {
             Random random = new Random(5);
-            QuickDictionary<int, int, TSpan, TSpan, TSpan, PrimitiveComparer<int>>.Create(pool, pool, pool, 2, 3, out var dictionary);
+            var dictionary = new QuickDictionary<int, int, PrimitiveComparer<int>>(4, pool);
             Dictionary<int, int> controlDictionary = new Dictionary<int, int>();
 
             for (int iterationIndex = 0; iterationIndex < 100000; ++iterationIndex)
             {
                 if (random.NextDouble() < 0.7)
                 {
-                    dictionary.Add(iterationIndex, iterationIndex, pool, pool, pool);
+                    dictionary.Add(iterationIndex, iterationIndex, pool);
                     controlDictionary.Add(iterationIndex, iterationIndex);
                 }
                 if (random.NextDouble() < 0.2)
@@ -169,11 +161,11 @@ namespace BEPUutilitiesTests
                 }
                 if (iterationIndex % 1000 == 0)
                 {
-                    dictionary.EnsureCapacity(dictionary.Count * 3, pool, pool, pool);
+                    dictionary.EnsureCapacity(dictionary.Count * 3, pool);
                 }
                 else if (iterationIndex % 7777 == 0)
                 {
-                    dictionary.Compact(pool, pool, pool);
+                    dictionary.Compact(pool);
                 }
             }
 
@@ -186,24 +178,18 @@ namespace BEPUutilitiesTests
             {
                 Debug.Assert(dictionary.ContainsKey(element));
             }
-            dictionary.Dispose(pool, pool, pool);
+            dictionary.Dispose(pool);
         }
 
         public static void Test()
         {
-            var bufferPool = new BufferPool(256).SpecializeFor<int>();
-            TestQueueResizing<Buffer<int>, BufferPool<int>>(bufferPool);
-            TestListResizing<Buffer<int>, BufferPool<int>>(bufferPool);
-            TestSetResizing<Buffer<int>, BufferPool<int>>(bufferPool);
-            TestDictionaryResizing<Buffer<int>, BufferPool<int>>(bufferPool);
-            bufferPool.Raw.Clear();
-
-            var arrayPool = new ArrayPool<int>();
-            TestQueueResizing<Array<int>, ArrayPool<int>>(arrayPool);
-            TestListResizing<Array<int>, ArrayPool<int>>(arrayPool);
-            TestSetResizing<Array<int>, ArrayPool<int>>(arrayPool);
-            TestDictionaryResizing<Array<int>, ArrayPool<int>>(arrayPool);
-            arrayPool.Clear();
+            var bufferPool = new BufferPool(256);
+            TestQueueResizing(bufferPool);
+            TestListResizing(bufferPool);
+            TestSetResizing(bufferPool);
+            TestDictionaryResizing(bufferPool);
+            bufferPool.Clear();
+            
 
         }
     }
