@@ -51,7 +51,7 @@ namespace BepuPhysics
         /// <summary>
         /// List of constraints associated with each body in the set.
         /// </summary>
-        public Buffer<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>> Constraints;
+        public Buffer<QuickList<BodyConstraintReference>> Constraints;
 
         public int Count;
         /// <summary>
@@ -74,7 +74,7 @@ namespace BepuPhysics
             ++Count;
             IndexToHandle[index] = handle;
             //Collidable's broad phase index is left unset. The Bodies collection is responsible for attaching that data.
-            QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>.Create(pool.SpecializeFor<BodyConstraintReference>(), minimumConstraintCapacity, out Constraints[index]);
+            QuickList<BodyConstraintReference>.Create(pool, minimumConstraintCapacity, out Constraints[index]);
             ApplyDescriptionByIndex(index, bodyDescription);
             return index;
         }
@@ -154,7 +154,7 @@ namespace BepuPhysics
             ref var constraints = ref Constraints[bodyIndex];
             Debug.Assert(constraints.Span.Allocated, "Any time a body is created, a list should be built to support it.");
             if (constraints.Span.Length == constraints.Count)
-                constraints.Resize(constraints.Span.Length * 2, pool.SpecializeFor<BodyConstraintReference>());
+                constraints.Resize(constraints.Span.Length * 2, pool);
             constraints.AllocateUnsafely() = constraint;
         }
 
@@ -182,7 +182,7 @@ namespace BepuPhysics
             if (list.Span.Length >= 2 * targetCapacity)
             {
                 //The list can be trimmed down a bit while still holding all existing constraints and obeying the minimum capacity.
-                list.Resize(targetCapacity, pool.SpecializeFor<BodyConstraintReference>());
+                list.Resize(targetCapacity, pool);
             }
         }
 
@@ -224,23 +224,22 @@ namespace BepuPhysics
             Debug.Assert(targetBodyCapacity > 0, "Resize is not meant to be used as Dispose. If you want to return everything to the pool, use Dispose instead.");
             //Note that we base the bundle capacities on post-resize capacity of the IndexToHandle array. This simplifies the conditions on allocation, but increases memory use.
             //You may want to change this in the future if memory use is concerning.
-            targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(targetBodyCapacity);
-            Debug.Assert(Poses.Length != BufferPool<RigidPoses>.GetLowestContainingElementCount(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
+            targetBodyCapacity = BufferPool.GetCapacityForCount<int>(targetBodyCapacity);
+            Debug.Assert(Poses.Length != BufferPool.GetCapacityForCount<RigidPoses>(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
             pool.SpecializeFor<RigidPose>().Resize(ref Poses, targetBodyCapacity, Count);
             pool.SpecializeFor<BodyVelocity>().Resize(ref Velocities, targetBodyCapacity, Count);
             pool.SpecializeFor<BodyInertia>().Resize(ref LocalInertias, targetBodyCapacity, Count);
             pool.SpecializeFor<int>().Resize(ref IndexToHandle, targetBodyCapacity, Count);
             pool.SpecializeFor<Collidable>().Resize(ref Collidables, targetBodyCapacity, Count);
             pool.SpecializeFor<BodyActivity>().Resize(ref Activity, targetBodyCapacity, Count);
-            pool.SpecializeFor<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>>().Resize(ref Constraints, targetBodyCapacity, Count);
+            pool.SpecializeFor<QuickList<BodyConstraintReference>>().Resize(ref Constraints, targetBodyCapacity, Count);
         }
 
         public unsafe void Clear(BufferPool pool)
         {
-            var constraintReferencePool = pool.SpecializeFor<BodyConstraintReference>();
             for (int i = 0; i < Count; ++i)
             {
-                Constraints[i].Dispose(constraintReferencePool);
+                Constraints[i].Dispose(pool);
             }
             Count = 0;
         }
@@ -257,7 +256,7 @@ namespace BepuPhysics
             pool.SpecializeFor<int>().Return(ref IndexToHandle);
             pool.SpecializeFor<Collidable>().Return(ref Collidables);
             pool.SpecializeFor<BodyActivity>().Return(ref Activity);
-            pool.SpecializeFor<QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>>>().Return(ref Constraints);
+            pool.SpecializeFor<QuickList<BodyConstraintReference>>().Return(ref Constraints);
         }
 
         /// <summary>
@@ -266,10 +265,9 @@ namespace BepuPhysics
         /// <param name="pool">Pool to return resources to.</param>
         public void Dispose(BufferPool pool)
         {
-            var constraintReferencePool = pool.SpecializeFor<BodyConstraintReference>();
             for (int i = 0; i < Count; ++i)
             {
-                Constraints[i].Dispose(constraintReferencePool);
+                Constraints[i].Dispose(pool);
             }
             DisposeBuffers(pool);
             this = new BodySet();

@@ -60,7 +60,7 @@ namespace BepuPhysics
 
         //Note that the referenced handles for the active set are stored outside the constraint set;
         //inactive islands do not store the referenced handles since no new constraints are ever added.
-        internal QuickList<IndexSet, Buffer<IndexSet>> batchReferencedHandles;
+        internal QuickList<IndexSet> batchReferencedHandles;
 
         public TypeProcessor[] TypeProcessors;
 
@@ -72,7 +72,7 @@ namespace BepuPhysics
         /// Pool to retrieve constraint handles from when creating new constraints.
         /// </summary>
         public IdPool<Buffer<int>> HandlePool;
-        internal BufferPool bufferPool;
+        internal BufferPool pool;
         public Buffer<ConstraintLocation> HandleToConstraint;
 
         /// <summary>
@@ -180,7 +180,7 @@ namespace BepuPhysics
 
 
         Action<int> workDelegate;
-        public Solver(Bodies bodies, BufferPool bufferPool, int iterationCount, int fallbackBatchThreshold,
+        public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
             int initialCapacity,
             int initialIslandCapacity,
             int minimumCapacityPerTypeBatch)
@@ -188,13 +188,13 @@ namespace BepuPhysics
             this.iterationCount = iterationCount;
             this.minimumCapacityPerTypeBatch = minimumCapacityPerTypeBatch;
             this.bodies = bodies;
-            this.bufferPool = bufferPool;
-            IdPool<Buffer<int>>.Create(bufferPool.SpecializeFor<int>(), 128, out HandlePool);
+            this.pool = pool;
+            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 128, out HandlePool);
             ResizeSetsCapacity(initialIslandCapacity + 1, 0);
             FallbackBatchThreshold = fallbackBatchThreshold;
-            ActiveSet = new ConstraintSet(bufferPool, fallbackBatchThreshold + 1);
-            QuickList<IndexSet, Buffer<IndexSet>>.Create(bufferPool.SpecializeFor<IndexSet>(), fallbackBatchThreshold + 1, out batchReferencedHandles);
-            bufferPool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
+            ActiveSet = new ConstraintSet(pool, fallbackBatchThreshold + 1);
+            QuickList<IndexSet>.Create(pool, fallbackBatchThreshold + 1, out batchReferencedHandles);
+            pool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
             workDelegate = Work;
         }
 
@@ -421,19 +421,19 @@ namespace BepuPhysics
         internal unsafe void AllocateInBatch(int targetBatchIndex, int constraintHandle, ref int bodyHandles, int bodyCount, int typeId, out ConstraintReference reference)
         {
             ref var batch = ref ActiveSet.Batches[targetBatchIndex];
-            batch.Allocate(constraintHandle, ref bodyHandles, bodyCount, bodies, typeId, TypeProcessors[typeId], GetMinimumCapacityForType(typeId), bufferPool, out reference);
+            batch.Allocate(constraintHandle, ref bodyHandles, bodyCount, bodies, typeId, TypeProcessors[typeId], GetMinimumCapacityForType(typeId), pool, out reference);
             if (targetBatchIndex < FallbackBatchThreshold)
             {
                 ref var handlesSet = ref batchReferencedHandles[targetBatchIndex];
                 for (int j = 0; j < bodyCount; ++j)
                 {
-                    handlesSet.Add(Unsafe.Add(ref bodyHandles, j), bufferPool);
+                    handlesSet.Add(Unsafe.Add(ref bodyHandles, j), pool);
                 }
             }
             else
             {
                 Debug.Assert(targetBatchIndex == FallbackBatchThreshold);
-                ActiveSet.Fallback.AllocateForActive(constraintHandle, ref bodyHandles, bodyCount, bodies, typeId, bufferPool);
+                ActiveSet.Fallback.AllocateForActive(constraintHandle, ref bodyHandles, bodyCount, bodies, typeId, pool);
             }
         }
 
@@ -446,14 +446,14 @@ namespace BepuPhysics
             {
                 //No batch available. Have to create a new one.
                 if (set.Batches.Count == set.Batches.Span.Length)
-                    set.Batches.Resize(set.Batches.Count + 1, bufferPool.SpecializeFor<ConstraintBatch>());
-                set.Batches.AllocateUnsafely() = new ConstraintBatch(bufferPool, TypeProcessors.Length);
+                    set.Batches.Resize(set.Batches.Count + 1, pool);
+                set.Batches.AllocateUnsafely() = new ConstraintBatch(pool, TypeProcessors.Length);
                 if (targetBatchIndex < FallbackBatchThreshold)
                 {
                     //This batch is not the fallback batch, so create an index set for it.
                     if (set.Batches.Count == batchReferencedHandles.Span.Length)
-                        batchReferencedHandles.Resize(set.Batches.Count + 1, bufferPool.SpecializeFor<IndexSet>());
-                    batchReferencedHandles.AllocateUnsafely() = new IndexSet(bufferPool, bodies.ActiveSet.Count);
+                        batchReferencedHandles.Resize(set.Batches.Count + 1, pool);
+                    batchReferencedHandles.AllocateUnsafely() = new IndexSet(pool, bodies.ActiveSet.Count);
                 }
                 //Note that if there is no constraint batch for the given index, there is no way for the constraint add to be blocked. It's guaranteed success.
             }
@@ -477,7 +477,7 @@ namespace BepuPhysics
 
             if (constraintHandle >= HandleToConstraint.Length)
             {
-                bufferPool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, HandleToConstraint.Length * 2, HandleToConstraint.Length);
+                pool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, HandleToConstraint.Length * 2, HandleToConstraint.Length);
                 Debug.Assert(constraintHandle < HandleToConstraint.Length, "Handle indices should never jump by more than 1 slot, so doubling should always be sufficient.");
             }
             ref var constraintLocation = ref HandleToConstraint[constraintHandle];
@@ -773,11 +773,11 @@ namespace BepuPhysics
                         ref var lastBatch = ref set.Batches[lastBatchIndex];
                         if (lastBatch.TypeBatches.Count == 0)
                         {
-                            lastBatch.Dispose(bufferPool);
+                            lastBatch.Dispose(pool);
                             //The fallback batch has no batch referenced handles.
                             if (lastBatchIndex < FallbackBatchThreshold)
                             {
-                                batchReferencedHandles[lastBatchIndex].Dispose(bufferPool);
+                                batchReferencedHandles[lastBatchIndex].Dispose(pool);
                                 --batchReferencedHandles.Count;
                             }
                             --set.Batches.Count;
@@ -808,7 +808,7 @@ namespace BepuPhysics
             {
                 //If this is the fallback batch, it does not track any referenced handles.
                 //Note that we have to remove from fallback first because it accesses the batch's information.
-                ActiveSet.Fallback.Remove(this, bufferPool, ref batch, constraintHandle, typeId, indexInTypeBatch);
+                ActiveSet.Fallback.Remove(this, pool, ref batch, constraintHandle, typeId, indexInTypeBatch);
                 batch.Remove(typeId, indexInTypeBatch, this);
             }
             else
@@ -839,7 +839,7 @@ namespace BepuPhysics
 
             pairCache.RemoveReferenceIfContactConstraint(handle, constraintLocation.TypeId);
             RemoveFromBatch(handle, constraintLocation.BatchIndex, constraintLocation.TypeId, constraintLocation.IndexInTypeBatch);
-            HandlePool.Return(handle, bufferPool.SpecializeFor<int>());
+            HandlePool.Return(handle, pool.SpecializeFor<int>());
         }
 
         public void GetDescription<TConstraintDescription, TTypeBatch>(ref ConstraintReference constraintReference, out TConstraintDescription description)
@@ -1034,7 +1034,7 @@ namespace BepuPhysics
             if (fallbackExists)
             {
                 ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
-                FallbackBatch.AllocateResults(this, bufferPool, ref batch, out fallbackResults);
+                FallbackBatch.AllocateResults(this, pool, ref batch, out fallbackResults);
                 for (int j = 0; j < batch.TypeBatches.Count; ++j)
                 {
                     ref var typeBatch = ref batch.TypeBatches[j];
@@ -1066,7 +1066,7 @@ namespace BepuPhysics
             }
             if (fallbackExists)
             {
-                FallbackBatch.DisposeResults(this, bufferPool, ref activeSet.Batches[FallbackBatchThreshold], ref fallbackResults);
+                FallbackBatch.DisposeResults(this, pool, ref activeSet.Batches[FallbackBatchThreshold], ref fallbackResults);
             }
         }
 
@@ -1087,17 +1087,17 @@ namespace BepuPhysics
             GetSynchronizedBatchCount(out var synchronizedBatchCount, out _);
             for (int batchIndex = 0; batchIndex < synchronizedBatchCount; ++batchIndex)
             {
-                batchReferencedHandles[batchIndex].Dispose(bufferPool);
+                batchReferencedHandles[batchIndex].Dispose(pool);
             }
             batchReferencedHandles.Clear();
-            ActiveSet.Clear(bufferPool);
+            ActiveSet.Clear(pool);
             //All inactive sets are returned to the pool.
             //Their allocations are always created to fit the actual island size.
             for (int i = 1; i < Sets.Length; ++i)
             {
                 if (Sets[i].Allocated)
                 {
-                    Sets[i].Dispose(bufferPool);
+                    Sets[i].Dispose(pool);
                 }
             }
             HandlePool.Clear();
@@ -1112,7 +1112,7 @@ namespace BepuPhysics
         {
             if (HandleToConstraint.Length < constraintHandleCapacity)
             {
-                bufferPool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1);
+                pool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1);
             }
             //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
             var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
@@ -1120,7 +1120,7 @@ namespace BepuPhysics
             //The fallback batch does not have any referenced handles.
             for (int i = 0; i < synchronizedBatchCount; ++i)
             {
-                batchReferencedHandles[i].EnsureCapacity(targetBatchReferencedHandleSize, bufferPool);
+                batchReferencedHandles[i].EnsureCapacity(targetBatchReferencedHandleSize, pool);
             }
         }
 
@@ -1132,10 +1132,10 @@ namespace BepuPhysics
         /// <param name="constraintHandleCapacity">Number of constraint handles to allocate space for. Applies to the handle->constraint mapping table.</param>
         public void ResizeSolverCapacities(int bodyHandleCapacity, int constraintHandleCapacity)
         {
-            var targetConstraintCount = BufferPool<ConstraintLocation>.GetLowestContainingElementCount(Math.Max(constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1));
+            var targetConstraintCount = BufferPool.GetCapacityForCount<ConstraintLocation>(Math.Max(constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1));
             if (HandleToConstraint.Length != targetConstraintCount)
             {
-                bufferPool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, targetConstraintCount, HandlePool.HighestPossiblyClaimedId + 1);
+                pool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, targetConstraintCount, HandlePool.HighestPossiblyClaimedId + 1);
             }
             //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
             var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
@@ -1143,18 +1143,18 @@ namespace BepuPhysics
             //The fallback batch does not have any referenced handles.
             for (int i = 0; i < synchronizedBatchCount; ++i)
             {
-                batchReferencedHandles[i].Resize(targetBatchReferencedHandleSize, bufferPool);
+                batchReferencedHandles[i].Resize(targetBatchReferencedHandleSize, pool);
             }
         }
 
         internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
         {
             Debug.Assert(setsCapacity >= potentiallyAllocatedCount && potentiallyAllocatedCount <= Sets.Length);
-            setsCapacity = BufferPool<ConstraintSet>.GetLowestContainingElementCount(setsCapacity);
+            setsCapacity = BufferPool.GetCapacityForCount<ConstraintSet>(setsCapacity);
             if (Sets.Length != setsCapacity)
             {
                 var oldCapacity = Sets.Length;
-                bufferPool.SpecializeFor<ConstraintSet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
+                pool.SpecializeFor<ConstraintSet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
                 if (oldCapacity < Sets.Length)
                     Sets.Clear(oldCapacity, Sets.Length - oldCapacity); //We rely on unused slots being default initialized.
             }
@@ -1198,17 +1198,17 @@ namespace BepuPhysics
             GetSynchronizedBatchCount(out var synchronizedBatchCount, out _);
             for (int i = 0; i < synchronizedBatchCount; ++i)
             {
-                batchReferencedHandles[i].Dispose(bufferPool);
+                batchReferencedHandles[i].Dispose(pool);
             }
-            batchReferencedHandles.Dispose(bufferPool.SpecializeFor<IndexSet>());
+            batchReferencedHandles.Dispose(pool);
             for (int i = 0; i < Sets.Length; ++i)
             {
                 if (Sets[i].Allocated)
-                    Sets[i].Dispose(bufferPool);
+                    Sets[i].Dispose(pool);
             }
-            bufferPool.SpecializeFor<ConstraintSet>().Return(ref Sets);
-            bufferPool.SpecializeFor<ConstraintLocation>().Return(ref HandleToConstraint);
-            HandlePool.Dispose(bufferPool.SpecializeFor<int>());
+            pool.SpecializeFor<ConstraintSet>().Return(ref Sets);
+            pool.SpecializeFor<ConstraintLocation>().Return(ref HandleToConstraint);
+            HandlePool.Dispose(pool.SpecializeFor<int>());
         }
 
 

@@ -53,14 +53,12 @@ namespace DemoRenderer.ShapeDrawing
         {
             //Examine the set of instances and batch them into groups using the same mesh data.
             var keyPool = meshCache.Pool.SpecializeFor<ulong>();
-            var valuePool = meshCache.Pool.SpecializeFor<QuickList<MeshInstance, Buffer<MeshInstance>>>();
+            var valuePool = meshCache.Pool.SpecializeFor<QuickList<MeshInstance>>();
             var tablePool = meshCache.Pool.SpecializeFor<int>();
-            var instancePool = meshCache.Pool.SpecializeFor<MeshInstance>();
             //(but is this ENOUGH generics?)
             QuickDictionary<
-                ulong, QuickList<MeshInstance,
-                Buffer<MeshInstance>>, Buffer<ulong>,
-                Buffer<QuickList<MeshInstance, Buffer<MeshInstance>>>, Buffer<int>,
+                ulong, QuickList<MeshInstance>, Buffer<ulong>,
+                Buffer<QuickList<MeshInstance>>, Buffer<int>,
                 PrimitiveComparer<ulong>>.Create(keyPool, valuePool, tablePool, 4, 3, out var batches);
             var end = start + count;
             for (int i = start; i < end; ++i)
@@ -71,7 +69,7 @@ namespace DemoRenderer.ShapeDrawing
                 if (batches.GetTableIndices(ref id, out var tableIndex, out var elementIndex))
                 {
                     //The id was already present.
-                    batches.Values[elementIndex].Add(ref instance, instancePool);
+                    batches.Values[elementIndex].Add(ref instance, meshCache.Pool);
                 }
                 else
                 {
@@ -85,8 +83,8 @@ namespace DemoRenderer.ShapeDrawing
                     }
                     batches.Keys[batches.Count] = id;
                     ref var listSlot = ref batches.Values[batches.Count];
-                    QuickList<MeshInstance, Buffer<MeshInstance>>.Create(instancePool, 64, out listSlot);
-                    listSlot.Add(ref instance, instancePool);
+                    QuickList<MeshInstance>.Create(meshCache.Pool, 64, out listSlot);
+                    listSlot.Add(ref instance, meshCache.Pool);
                     batches.Table[tableIndex] = newCount;
                     batches.Count = newCount;
                 }
@@ -123,10 +121,10 @@ namespace DemoRenderer.ShapeDrawing
                     context.DrawInstanced(batchVertexCount, subbatchCount, 0, 0);
                     batch.Count -= subbatchCount;
                 }
-                batch.Dispose(instancePool);
+                batch.Dispose(meshCache.Pool);
             }
             batches.Dispose(keyPool, valuePool, tablePool);
-            
+
         }
 
         bool disposed;

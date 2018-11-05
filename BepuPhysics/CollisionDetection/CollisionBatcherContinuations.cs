@@ -84,7 +84,7 @@ namespace BepuPhysics.CollisionDetection
         public int ChildIndex { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)(Packed & ((1 << 18) - 1)); } }
     }
 
-    public struct BatcherContinuations<T> where T : ICollisionTestContinuation
+    public struct BatcherContinuations<T> where T : struct, ICollisionTestContinuation
     {
         public Buffer<T> Continuations;
         public IdPool<Buffer<int>> IdPool;
@@ -94,7 +94,7 @@ namespace BepuPhysics.CollisionDetection
         {
             if (!Continuations.Allocated)
             {
-                Debug.Assert(!IdPool.AvailableIds.Span.Allocated);
+                Debug.Assert(!IdPool.Allocated);
                 //Lazy initialization.
                 pool.Take(InitialCapacity, out Continuations);
                 IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), InitialCapacity, out IdPool);
@@ -128,7 +128,7 @@ namespace BepuPhysics.CollisionDetection
             if (Continuations.Allocated)
             {
                 pool.ReturnUnsafely(Continuations.Id);
-                Debug.Assert(IdPool.AvailableIds.Span.Allocated);
+                Debug.Assert(IdPool.Allocated);
                 IdPool.Dispose(pool.SpecializeFor<int>());
             }
 #if DEBUG

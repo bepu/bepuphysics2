@@ -94,11 +94,11 @@ namespace BepuPhysics.Trees
         public void Resize(BufferPool pool, int targetLeafSlotCount)
         {
             //Note that it's not safe to resize below the size of potentially used leaves. If the user wants to go smaller, they'll need to explicitly deal with the leaves somehow first.
-            var leafCapacityForTarget = BufferPool<Leaf>.GetLowestContainingElementCount(Math.Max(leafCount, targetLeafSlotCount));
+            var leafCapacityForTarget = BufferPool.GetCapacityForCount<Leaf>(Math.Max(leafCount, targetLeafSlotCount));
             //Adding incrementally checks the capacity of leaves, and issues a resize if there isn't enough space. But it doesn't check nodes.
             //You could change that, but for now, we simply ensure that the node array has sufficient room to hold everything in the resized leaf array.
-            var nodeCapacityForTarget = BufferPool<Node>.GetLowestContainingElementCount(Math.Max(nodeCount, leafCapacityForTarget - 1));
-            var metanodeCapacityForTarget = BufferPool<Metanode>.GetLowestContainingElementCount(Math.Max(nodeCount, leafCapacityForTarget - 1));
+            var nodeCapacityForTarget = BufferPool.GetCapacityForCount<Node>(Math.Max(nodeCount, leafCapacityForTarget - 1));
+            var metanodeCapacityForTarget = BufferPool.GetCapacityForCount<Metanode>(Math.Max(nodeCount, leafCapacityForTarget - 1));
             bool wasAllocated = Leaves.Allocated;
             Debug.Assert(Leaves.Allocated == Nodes.Allocated);
             if (leafCapacityForTarget != Leaves.Length)

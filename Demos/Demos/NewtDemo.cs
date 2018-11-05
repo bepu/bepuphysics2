@@ -22,7 +22,7 @@ namespace Demos.Demos
 {
     //(You might notice that this demo is really large, uses some older idioms, and is a little out of place. I just pulled most of this stuff out of my older GPU deformable physics project.)
     using CellSet = QuickSet<Cell, Buffer<Cell>, Buffer<int>, CellComparer>;
-    using CellList = QuickList<Cell, Buffer<Cell>>;
+    using CellList = QuickList<Cell>;
     public static class BoxTriangleCollider
     {
         private const float IntersectionEpsilon = 1e-4f;
@@ -325,12 +325,12 @@ namespace Demos.Demos
             var cellPool = pool.SpecializeFor<Cell>();
             newlyFilledCells.Add(cell, cellPool, pool.SpecializeFor<int>());
 
-            cellsToVisit.Add(new Cell { X = cell.X, Y = cell.Y, Z = cell.Z - 1 }, cellPool);
-            cellsToVisit.Add(new Cell { X = cell.X, Y = cell.Y, Z = cell.Z + 1 }, cellPool);
-            cellsToVisit.Add(new Cell { X = cell.X, Y = cell.Y - 1, Z = cell.Z }, cellPool);
-            cellsToVisit.Add(new Cell { X = cell.X, Y = cell.Y + 1, Z = cell.Z }, cellPool);
-            cellsToVisit.Add(new Cell { X = cell.X - 1, Y = cell.Y, Z = cell.Z }, cellPool);
-            cellsToVisit.Add(new Cell { X = cell.X + 1, Y = cell.Y, Z = cell.Z }, cellPool);
+            cellsToVisit.Add(new Cell { X = cell.X, Y = cell.Y, Z = cell.Z - 1 }, pool);
+            cellsToVisit.Add(new Cell { X = cell.X, Y = cell.Y, Z = cell.Z + 1 }, pool);
+            cellsToVisit.Add(new Cell { X = cell.X, Y = cell.Y - 1, Z = cell.Z }, pool);
+            cellsToVisit.Add(new Cell { X = cell.X, Y = cell.Y + 1, Z = cell.Z }, pool);
+            cellsToVisit.Add(new Cell { X = cell.X - 1, Y = cell.Y, Z = cell.Z }, pool);
+            cellsToVisit.Add(new Cell { X = cell.X + 1, Y = cell.Y, Z = cell.Z }, pool);
 
             return true;
         }
@@ -340,8 +340,7 @@ namespace Demos.Demos
             //Check to make sure that this cell isn't already occupied before starting a new fill.
             if (occupiedCells.Contains(cell))
                 return;
-            var cellPool = pool.SpecializeFor<Cell>();
-            cellsToVisit.Add(ref cell, cellPool);
+            cellsToVisit.Add(ref cell, pool);
             while (cellsToVisit.Count > 0)
             {
                 if (cellsToVisit.TryPop(out cell))
@@ -358,7 +357,7 @@ namespace Demos.Demos
             //Flood fill completed without reaching the voxel bounds. Dump newly filled cells.
             for (int i = 0; i < newlyFilledCells.Count; ++i)
             {
-                occupiedCells.Add(newlyFilledCells[i], cellPool, pool.SpecializeFor<int>());
+                occupiedCells.Add(newlyFilledCells[i], pool.SpecializeFor<Cell>(), pool.SpecializeFor<int>());
             }
             newlyFilledCells.Clear();
         }
@@ -417,7 +416,7 @@ namespace Demos.Demos
             //Perform a flood fill on every surface vertex.
             //We can use the cells set directly, since it behaves like a regular list with regard to element placement (always at the end).
             CellSet.Create(cellPool, intPool, 5, 3, out var floodFilledCells);
-            CellList.Create(cellPool, 32, out var cellsToVisit);
+            CellList.Create(pool, 32, out var cellsToVisit);
             for (int i = cells.Count - 1; i >= 0; --i)
             {
                 ref var cell = ref cells[i];

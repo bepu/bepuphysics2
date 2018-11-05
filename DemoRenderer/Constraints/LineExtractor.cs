@@ -9,7 +9,7 @@ namespace DemoRenderer.Constraints
 {
     public class LineExtractor : IDisposable
     {
-        internal QuickList<LineInstance, Buffer<LineInstance>> lines;
+        internal QuickList<LineInstance> lines;
         ConstraintLineExtractor constraints;
         BoundingBoxLineExtractor boundingBoxes;
 
@@ -17,7 +17,7 @@ namespace DemoRenderer.Constraints
         ParallelLooper looper;
         public LineExtractor(BufferPool pool, ParallelLooper looper, int initialLineCapacity = 8192)
         {
-            QuickList<LineInstance, Buffer<LineInstance>>.Create(pool.SpecializeFor<LineInstance>(), initialLineCapacity, out lines);
+            QuickList<LineInstance>.Create(pool, initialLineCapacity, out lines);
             constraints = new ConstraintLineExtractor(pool);
             boundingBoxes = new BoundingBoxLineExtractor(pool);
             this.pool = pool;
@@ -35,12 +35,12 @@ namespace DemoRenderer.Constraints
 
         public ref LineInstance Allocate()
         {
-            return ref lines.Allocate(pool.SpecializeFor<LineInstance>());
+            return ref lines.Allocate(pool);
         }
 
         public ref LineInstance Allocate(int count)
         {
-            return ref lines.Allocate(count, pool.SpecializeFor<LineInstance>());
+            return ref lines.Allocate(count, pool);
         }
 
         public void ClearInstances()
@@ -50,7 +50,7 @@ namespace DemoRenderer.Constraints
 
         public void Dispose()
         {
-            lines.Dispose(pool.SpecializeFor<LineInstance>());
+            lines.Dispose(pool);
             constraints.Dispose();
             boundingBoxes.Dispose();
         }

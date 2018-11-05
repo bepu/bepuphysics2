@@ -493,7 +493,7 @@ namespace BepuPhysics.Trees
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void ReifyChildren(int internalNodeIndex, Node* stagingNodes,
-            ref QuickList<int, Buffer<int>> subtrees, ref QuickList<int, Buffer<int>> treeletInternalNodes, ref int nextInternalNodeIndexToUse)
+            ref QuickList<int> subtrees, ref QuickList<int> treeletInternalNodes, ref int nextInternalNodeIndexToUse)
         {
             Debug.Assert(subtrees.Count > 1);
             var internalNode = nodes + internalNodeIndex;
@@ -533,7 +533,7 @@ namespace BepuPhysics.Trees
         }
 
         unsafe int ReifyStagingNode(int parent, int indexInParent, Node* stagingNodes, int stagingNodeIndex,
-           ref QuickList<int, Buffer<int>> subtrees, ref QuickList<int, Buffer<int>> treeletInternalNodes,
+           ref QuickList<int> subtrees, ref QuickList<int> treeletInternalNodes,
            ref int nextInternalNodeIndexToUse)
         {
 
@@ -564,7 +564,7 @@ namespace BepuPhysics.Trees
         }
 
         unsafe void ReifyStagingNodes(int treeletRootIndex, Node* stagingNodes,
-            ref QuickList<int, Buffer<int>> subtrees, ref QuickList<int, Buffer<int>> treeletInternalNodes, ref int nextInternalNodeIndexToUse)
+            ref QuickList<int> subtrees, ref QuickList<int> treeletInternalNodes, ref int nextInternalNodeIndexToUse)
         {
             //We take the staging node's child bounds, child indices, leaf counts, and child count.
             //The parent and index in parent of the treelet root CANNOT BE TOUCHED.
@@ -578,8 +578,8 @@ namespace BepuPhysics.Trees
 
 
         public unsafe void BinnedRefine(int nodeIndex,
-            ref QuickList<int, Buffer<int>> subtreeReferences, int maximumSubtrees,
-            ref QuickList<int, Buffer<int>> treeletInternalNodes,
+            ref QuickList<int> subtreeReferences, int maximumSubtrees,
+            ref QuickList<int> treeletInternalNodes,
             ref BinnedResources resources, BufferPool pool)
         {
             Debug.Assert(subtreeReferences.Count == 0, "The subtree references list should be empty since it's about to get filled.");

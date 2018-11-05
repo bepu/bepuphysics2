@@ -147,7 +147,7 @@ namespace Demos.SpecializedTests
             int boxCount = 16384;
             var randomMin = new Vector3(width, height, length) * spacing * -0.5f;
             var randomSpan = randomMin * -2;
-            QuickList<BoundingBox, Buffer<BoundingBox>>.Create(BufferPool.SpecializeFor<BoundingBox>(), boxCount, out queryBoxes);
+            QuickList<BoundingBox>.Create(BufferPool, boxCount, out queryBoxes);
             for (int i = 0; i < boxCount; ++i)
             {
                 ref var box = ref queryBoxes.AllocateUnsafely();
@@ -165,7 +165,7 @@ namespace Demos.SpecializedTests
         }
 
 
-        QuickList<BoundingBox, Buffer<BoundingBox>> queryBoxes;
+        QuickList<BoundingBox> queryBoxes;
 
                 
         class BoxQueryAlgorithm
@@ -192,7 +192,7 @@ namespace Demos.SpecializedTests
                 Interlocked.Add(ref IntersectionCount, intersectionCount);
             }
 
-            public void Execute(ref QuickList<BoundingBox, Buffer<BoundingBox>> boxes, SimpleThreadDispatcher dispatcher)
+            public void Execute(ref QuickList<BoundingBox> boxes, SimpleThreadDispatcher dispatcher)
             {
                 CacheBlaster.Blast();
                 JobIndex = -1;

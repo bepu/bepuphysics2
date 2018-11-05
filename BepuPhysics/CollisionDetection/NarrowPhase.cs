@@ -140,7 +140,7 @@ namespace BepuPhysics.CollisionDetection
 
         bool deterministic;
         int flushJobIndex;
-        QuickList<NarrowPhaseFlushJob, Buffer<NarrowPhaseFlushJob>> flushJobs;
+        QuickList<NarrowPhaseFlushJob> flushJobs;
         IThreadDispatcher threadDispatcher;
         Action<int> flushWorkerLoop;
         void FlushWorkerLoop(int workerIndex)
@@ -182,15 +182,14 @@ namespace BepuPhysics.CollisionDetection
         {
             OnPreflush(threadDispatcher, deterministic);
             //var start = Stopwatch.GetTimestamp();
-            var jobPool = Pool.SpecializeFor<NarrowPhaseFlushJob>();
-            QuickList<NarrowPhaseFlushJob, Buffer<NarrowPhaseFlushJob>>.Create(jobPool, 128, out flushJobs);
+            QuickList<NarrowPhaseFlushJob>.Create(Pool, 128, out flushJobs);
             PairCache.PrepareFlushJobs(ref flushJobs);
             var removalBatchJobCount = ConstraintRemover.CreateFlushJobs(deterministic);
             //Note that we explicitly add the constraint remover jobs here. 
             //The constraint remover can be used in two ways- sleeper style, and narrow phase style.
             //In sleeping, we're not actually removing constraints from the simulation completely, so it requires fewer jobs.
             //The constraint remover just lets you choose which jobs to call. The narrow phase needs all of them.
-            flushJobs.EnsureCapacity(flushJobs.Count + removalBatchJobCount + 4, jobPool);
+            flushJobs.EnsureCapacity(flushJobs.Count + removalBatchJobCount + 4, Pool);
             flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintsFromBodyLists });
             flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.ReturnConstraintHandles });
             flushJobs.AddUnsafely(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.RemoveConstraintFromBatchReferencedHandles });
@@ -219,7 +218,7 @@ namespace BepuPhysics.CollisionDetection
             }
             //var end = Stopwatch.GetTimestamp();
             //Console.WriteLine($"Flush stage 3 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
-            flushJobs.Dispose(Pool.SpecializeFor<NarrowPhaseFlushJob>());
+            flushJobs.Dispose(Pool);
 
             PairCache.Postflush();
             ConstraintRemover.Postflush();
@@ -256,14 +255,14 @@ namespace BepuPhysics.CollisionDetection
         {
             public CollisionBatcher<CollisionCallbacks> Batcher;
             public PendingConstraintAddCache PendingConstraints;
-            public QuickList<int, Buffer<int>> PendingSetAwakenings;
+            public QuickList<int> PendingSetAwakenings;
 
             public OverlapWorker(int workerIndex, BufferPool pool, NarrowPhase<TCallbacks> narrowPhase)
             {
                 Batcher = new CollisionBatcher<CollisionCallbacks>(pool, narrowPhase.Shapes, narrowPhase.CollisionTaskRegistry, narrowPhase.timestepDuration,
                     new CollisionCallbacks(workerIndex, pool, narrowPhase));
                 PendingConstraints = new PendingConstraintAddCache(pool);
-                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out PendingSetAwakenings);
+                QuickList<int>.Create(pool, 16, out PendingSetAwakenings);
             }
         }
 

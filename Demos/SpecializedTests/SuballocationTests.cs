@@ -24,19 +24,18 @@ namespace Demos.SpecializedTests
         }
         public static void Test()
         {
-            var rawPool = new BufferPool();
+            var pool = new BufferPool();
             for (int i = 3; i < 7; ++i)
             {
-                rawPool.EnsureCapacityForPower(1 << 19, i);
+                pool.EnsureCapacityForPower(1 << 19, i);
             }
-            var bufferPool = rawPool.SpecializeFor<int>();
 
             var random = new Random(5);
             const int listCount = 1000;
-            var lists = new QuickList<int, Buffer<int>>[listCount];
+            var lists = new QuickList<int>[listCount];
             for (int i = 0; i < 1000; ++i)
             {
-                QuickList<int, Buffer<int>>.Create(bufferPool, 0 + random.Next(9), out lists[i]);
+                QuickList<int>.Create(pool, 0 + random.Next(9), out lists[i]);
                 ref var list = ref lists[i];
                 const int anchorSize = 128;
                 for (int j = 0; j < 1000; ++j)
@@ -66,15 +65,15 @@ namespace Demos.SpecializedTests
                     else
                     {
                         var toAdd = random.Next(256);
-                        list.Add(toAdd, bufferPool);
+                        list.Add(toAdd, pool);
                     }
                 }
             }
             for (int i = 0; i < listCount; ++i)
             {
-                lists[i].Dispose(bufferPool);
+                lists[i].Dispose(pool);
             }
-            rawPool.Clear();
+            pool.Clear();
         }
     }
 }

@@ -140,8 +140,8 @@ namespace BepuPhysics.CollisionDetection
                 if (constraint > maximumConstraintTypeCount)
                     maximumConstraintTypeCount = constraint;
             }
-            QuickList<PreallocationSizes, Buffer<PreallocationSizes>>.Create(pool.SpecializeFor<PreallocationSizes>(), maximumConstraintTypeCount, out var minimumSizesPerConstraintType);
-            QuickList<PreallocationSizes, Buffer<PreallocationSizes>>.Create(pool.SpecializeFor<PreallocationSizes>(), maximumCollisionTypeCount, out var minimumSizesPerCollisionType);
+            QuickList<PreallocationSizes>.Create(pool, maximumConstraintTypeCount, out var minimumSizesPerConstraintType);
+            QuickList<PreallocationSizes>.Create(pool, maximumCollisionTypeCount, out var minimumSizesPerCollisionType);
             //Since the minimum size accumulation builds the minimum size incrementally, bad data within the array can corrupt the result- we must clear it.
             minimumSizesPerConstraintType.Span.Clear(0, minimumSizesPerConstraintType.Span.Length);
             minimumSizesPerCollisionType.Span.Clear(0, minimumSizesPerCollisionType.Span.Length);
@@ -179,8 +179,8 @@ namespace BepuPhysics.CollisionDetection
             {
                 NextWorkerCaches[0] = new WorkerPairCache(0, pool, ref minimumSizesPerConstraintType, ref minimumSizesPerCollisionType, pendingSize, minimumPerTypeCapacity);
             }
-            minimumSizesPerConstraintType.Dispose(pool.SpecializeFor<PreallocationSizes>());
-            minimumSizesPerCollisionType.Dispose(pool.SpecializeFor<PreallocationSizes>());
+            minimumSizesPerConstraintType.Dispose(pool);
+            minimumSizesPerCollisionType.Dispose(pool);
 
             //Create the pair freshness array for the existing overlaps.
             pool.Take(Mapping.Count, out PairFreshness);
@@ -202,7 +202,7 @@ namespace BepuPhysics.CollisionDetection
 
         internal void ResizeConstraintToPairMappingCapacity(Solver solver, int targetCapacity)
         {
-            targetCapacity = BufferPool<CollisionPairLocation>.GetLowestContainingElementCount(Math.Max(solver.HandlePool.HighestPossiblyClaimedId + 1, targetCapacity));
+            targetCapacity = BufferPool.GetCapacityForCount<CollisionPairLocation>(Math.Max(solver.HandlePool.HighestPossiblyClaimedId + 1, targetCapacity));
             if (ConstraintHandleToPair.Length != targetCapacity)
             {
                 pool.SpecializeFor<CollisionPairLocation>().Resize(ref ConstraintHandleToPair, targetCapacity, Math.Min(targetCapacity, ConstraintHandleToPair.Length));
@@ -214,7 +214,7 @@ namespace BepuPhysics.CollisionDetection
         /// <summary>
         /// Flush all deferred changes from the last narrow phase execution.
         /// </summary>
-        public void PrepareFlushJobs(ref QuickList<NarrowPhaseFlushJob, Buffer<NarrowPhaseFlushJob>> jobs)
+        public void PrepareFlushJobs(ref QuickList<NarrowPhaseFlushJob> jobs)
         {
             //Get rid of the now-unused worker caches.
             for (int i = 0; i < workerCaches.Count; ++i)
@@ -238,7 +238,7 @@ namespace BepuPhysics.CollisionDetection
             }
             Mapping.EnsureCapacity(largestIntermediateSize, pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
 
-            jobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.FlushPairCacheChanges }, pool.SpecializeFor<NarrowPhaseFlushJob>());
+            jobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.FlushPairCacheChanges }, pool);
         }
 
         public unsafe void FlushMappingChanges()
@@ -281,8 +281,8 @@ namespace BepuPhysics.CollisionDetection
                 {
                     largestPendingSize = cache.PendingRemoves.Count;
                 }
-                cache.PendingAdds.Dispose(cache.pool.SpecializeFor<PendingAdd>());
-                cache.PendingRemoves.Dispose(cache.pool.SpecializeFor<CollidablePair>());
+                cache.PendingAdds.Dispose(cache.pool);
+                cache.PendingRemoves.Dispose(cache.pool);
             }
             previousPendingSize = largestPendingSize;
 

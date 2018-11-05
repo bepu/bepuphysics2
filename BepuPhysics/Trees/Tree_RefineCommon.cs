@@ -25,7 +25,7 @@ namespace BepuPhysics.Trees
         }
 
 
-        public unsafe void Insert(Node* node, Node* nodes, ref QuickList<int, Buffer<int>> subtrees)
+        public unsafe void Insert(Node* node, Node* nodes, ref QuickList<int> subtrees)
         {
             var children = &node->A;
             for (int childIndex = 0; childIndex < 2; ++childIndex)
@@ -129,7 +129,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryPop(Metanode* metanodes, ref int remainingSubtreeSpace, ref QuickList<int, Buffer<int>> subtrees, out int index, out float cost)
+        public bool TryPop(Metanode* metanodes, ref int remainingSubtreeSpace, ref QuickList<int> subtrees, out int index, out float cost)
         {
             while (Count > 0)
             {
@@ -171,7 +171,7 @@ namespace BepuPhysics.Trees
     {
 
         public unsafe void CollectSubtrees(int nodeIndex, int maximumSubtrees, SubtreeHeapEntry* entries,
-            ref QuickList<int, Buffer<int>> subtrees, ref QuickList<int, Buffer<int>> internalNodes, out float treeletCost)
+            ref QuickList<int> subtrees, ref QuickList<int> internalNodes, out float treeletCost)
         {
 
             //Collect subtrees iteratively by choosing the highest cost subtree repeatedly.
@@ -229,13 +229,13 @@ namespace BepuPhysics.Trees
         }
 
 
-        unsafe void ValidateStaging(Node* stagingNodes, ref QuickList<int, Buffer<int>> subtreeNodePointers, int treeletParent, int treeletIndexInParent, BufferPool pool)
+        unsafe void ValidateStaging(Node* stagingNodes, ref QuickList<int> subtreeNodePointers, int treeletParent, int treeletIndexInParent, BufferPool pool)
         {
             var intPool = pool.SpecializeFor<int>();
-            QuickList<int, Buffer<int>>.Create(intPool, subtreeNodePointers.Count, out var collectedSubtreeReferences);
-            QuickList<int, Buffer<int>>.Create(intPool, subtreeNodePointers.Count, out var internalReferences);
-            internalReferences.Add(0, intPool);
-            ValidateStaging(stagingNodes, 0, ref subtreeNodePointers, ref collectedSubtreeReferences, ref internalReferences, intPool, out int foundSubtrees, out int foundLeafCount);
+            QuickList<int>.Create(pool, subtreeNodePointers.Count, out var collectedSubtreeReferences);
+            QuickList<int>.Create(pool, subtreeNodePointers.Count, out var internalReferences);
+            internalReferences.Add(0, pool);
+            ValidateStaging(stagingNodes, 0, ref subtreeNodePointers, ref collectedSubtreeReferences, ref internalReferences, pool, out int foundSubtrees, out int foundLeafCount);
             if (treeletParent < -1 || treeletParent >= nodeCount)
                 throw new Exception("Bad treelet parent.");
             if (treeletIndexInParent < -1 || (treeletParent >= 0 && treeletIndexInParent >= 2))
@@ -253,12 +253,12 @@ namespace BepuPhysics.Trees
                 if (!subtreeNodePointers.Contains(collectedSubtreeReferences[i]) || !collectedSubtreeReferences.Contains(subtreeNodePointers[i]))
                     throw new Exception("Bad subtree reference.");
             }
-            collectedSubtreeReferences.Dispose(intPool);
-            internalReferences.Dispose(intPool);
+            collectedSubtreeReferences.Dispose(pool);
+            internalReferences.Dispose(pool);
         }
         unsafe void ValidateStaging(Node* stagingNodes, int stagingNodeIndex,
-            ref QuickList<int, Buffer<int>> subtreeNodePointers, ref QuickList<int, Buffer<int>> collectedSubtreeReferences,
-            ref QuickList<int, Buffer<int>> internalReferences, BufferPool<int> intPool, out int foundSubtrees, out int foundLeafCount)
+            ref QuickList<int> subtreeNodePointers, ref QuickList<int> collectedSubtreeReferences,
+            ref QuickList<int> internalReferences, BufferPool pool, out int foundSubtrees, out int foundLeafCount)
         {
             var stagingNode = stagingNodes + stagingNodeIndex;
             var children = &stagingNode->A;
@@ -270,8 +270,8 @@ namespace BepuPhysics.Trees
                 {
                     if (internalReferences.Contains(child.Index))
                         throw new Exception("A child points to an internal node that was visited. Possible loop, or just general invalid.");
-                    internalReferences.Add(child.Index, intPool);
-                    ValidateStaging(stagingNodes, child.Index, ref subtreeNodePointers, ref collectedSubtreeReferences, ref internalReferences, intPool, out int childFoundSubtrees, out int childFoundLeafCount);
+                    internalReferences.Add(child.Index, pool);
+                    ValidateStaging(stagingNodes, child.Index, ref subtreeNodePointers, ref collectedSubtreeReferences, ref internalReferences, pool, out int childFoundSubtrees, out int childFoundLeafCount);
 
                     if (childFoundLeafCount != child.LeafCount)
                         throw new Exception("Bad leaf count.");
@@ -304,7 +304,7 @@ namespace BepuPhysics.Trees
                         foundLeafCount += 1;
                     }
                     ++foundSubtrees;
-                    collectedSubtreeReferences.Add(subtreeNodePointer, intPool);
+                    collectedSubtreeReferences.Add(subtreeNodePointer, pool);
                 }
             }
 

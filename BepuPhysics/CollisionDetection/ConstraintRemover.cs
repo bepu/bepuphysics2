@@ -37,8 +37,8 @@ namespace BepuPhysics.CollisionDetection
 
         struct RemovalsForTypeBatch
         {
-            public QuickList<int, Buffer<int>> ConstraintHandlesToRemove;
-            public QuickList<PerBodyRemovalTarget, Buffer<PerBodyRemovalTarget>> PerBodyRemovalTargets;
+            public QuickList<int> ConstraintHandlesToRemove;
+            public QuickList<PerBodyRemovalTarget> PerBodyRemovalTargets;
         }
 
         struct RemovalCache
@@ -78,8 +78,8 @@ namespace BepuPhysics.CollisionDetection
                 {
                     ref var slot = ref RemovalsForTypeBatches[index];
                     Debug.Assert(slot.ConstraintHandlesToRemove.Span.Allocated && slot.PerBodyRemovalTargets.Span.Allocated);
-                    slot.PerBodyRemovalTargets.EnsureCapacity(slot.PerBodyRemovalTargets.Count + perBodyRemovalCount, pool.SpecializeFor<PerBodyRemovalTarget>());
-                    slot.ConstraintHandlesToRemove.EnsureCapacity(slot.ConstraintHandlesToRemove.Count + constraintHandleCount, pool.SpecializeFor<int>());
+                    slot.PerBodyRemovalTargets.EnsureCapacity(slot.PerBodyRemovalTargets.Count + perBodyRemovalCount, pool);
+                    slot.ConstraintHandlesToRemove.EnsureCapacity(slot.ConstraintHandlesToRemove.Count + constraintHandleCount, pool);
                     return index;
                 }
                 index = BatchCount;
@@ -90,22 +90,21 @@ namespace BepuPhysics.CollisionDetection
                     pool.Resize(ref RemovalsForTypeBatches, BatchCount, index);
                 TypeBatches[index] = typeBatchIndex;
                 ref var newSlot = ref RemovalsForTypeBatches[index];
-                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), Math.Max(constraintHandleCount, minimumCapacityPerBatch), out newSlot.ConstraintHandlesToRemove);
-                QuickList<PerBodyRemovalTarget, Buffer<PerBodyRemovalTarget>>.Create(pool.SpecializeFor<PerBodyRemovalTarget>(), Math.Max(perBodyRemovalCount, minimumCapacityPerBatch), out newSlot.PerBodyRemovalTargets);
+                QuickList<int>.Create(pool, Math.Max(constraintHandleCount, minimumCapacityPerBatch), out newSlot.ConstraintHandlesToRemove);
+                QuickList<PerBodyRemovalTarget>.Create(pool, Math.Max(perBodyRemovalCount, minimumCapacityPerBatch), out newSlot.PerBodyRemovalTargets);
                 return index;
             }
 
             public void Dispose(BufferPool pool)
             {
                 pool.Return(ref TypeBatches);
-                var intPool = pool.SpecializeFor<int>();
-                var targetPool = pool.SpecializeFor<PerBodyRemovalTarget>();
                 for (int i = 0; i < BatchCount; ++i)
                 {
                     ref var removal = ref RemovalsForTypeBatches[i];
-                    removal.PerBodyRemovalTargets.Dispose(targetPool);
-                    removal.ConstraintHandlesToRemove.Dispose(intPool);
+                    removal.PerBodyRemovalTargets.Dispose(pool);
+                    removal.ConstraintHandlesToRemove.Dispose(pool);
                 }
+                pool.Return(ref RemovalsForTypeBatches);
                 this = default;
             }
         }
@@ -213,7 +212,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 //Ensure that the fallback deallocation list is also large enough. The fallback batch may result in 3 returned buffers for the primary dictionary, plus another two for each potentially
                 //removed body constraint references subset.
-                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 3 + solver.ActiveSet.Fallback.BodyCount * 2, out allocationIdsToFree);
+                QuickList<int>.Create(pool, 3 + solver.ActiveSet.Fallback.BodyCount * 2, out allocationIdsToFree);
             }
         }
 
@@ -302,7 +301,7 @@ namespace BepuPhysics.CollisionDetection
             //Ensure that the solver's id pool is large enough to hold all constraint handles being removed.
             //(Note that we do this even if we end up using this for sleeping, where we don't actually return the handles.
             //There's no functional reason for that- it's just simpler to not have a conditional API, and it has no significant impact on performance. Might change later.)
-            solver.HandlePool.EnsureCapacity(solver.HandlePool.AvailableIds.Count + removedConstraintCount, intPool);
+            solver.HandlePool.EnsureCapacity(solver.HandlePool.AvailableIdCount + removedConstraintCount, intPool);
 
             //Ensure that the removal list is large enough to hold every single type batch in the worst case. This prevents the need to resize during execution.
             //That's valuable because every access to the main thread's buffer pool is a potential race condition when other tasks are also using it.
@@ -313,7 +312,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 typeBatchCount += activeSet.Batches[i].TypeBatches.Count;
             }
-            QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>>.Create(pool.SpecializeFor<TypeBatchIndex>(), typeBatchCount, out removedTypeBatches);
+            QuickList<TypeBatchIndex>.Create(pool, typeBatchCount, out removedTypeBatches);
             return batches.BatchCount;
         }
 
@@ -369,7 +368,7 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        QuickList<int, Buffer<int>> allocationIdsToFree;
+        QuickList<int> allocationIdsToFree;
         public void RemoveConstraintsFromFallbackBatch()
         {
             Debug.Assert(solver.ActiveSet.Batches.Count > solver.FallbackBatchThreshold);
@@ -391,7 +390,7 @@ namespace BepuPhysics.CollisionDetection
             solver.ActiveSet.Fallback.TryRemove(bodyIndex, ref allocationIdsToFree);
         }
 
-        QuickList<TypeBatchIndex, Buffer<TypeBatchIndex>> removedTypeBatches;
+        QuickList<TypeBatchIndex> removedTypeBatches;
         SpinLock removedTypeBatchLocker = new SpinLock();
         public void RemoveConstraintsFromTypeBatch(int index)
         {
@@ -445,11 +444,11 @@ namespace BepuPhysics.CollisionDetection
                     var batchIndices = removedTypeBatches[i];
                     ref var batch = ref activeSet.Batches[batchIndices.Batch];
                     ref var typeBatch = ref batch.TypeBatches[batchIndices.TypeBatch];
-                    batch.RemoveTypeBatchIfEmpty(ref typeBatch, batchIndices.TypeBatch, solver.bufferPool);
+                    batch.RemoveTypeBatchIfEmpty(ref typeBatch, batchIndices.TypeBatch, solver.pool);
                     solver.RemoveBatchIfEmpty(ref batch, batchIndices.Batch);
                 }
             }
-            removedTypeBatches.Dispose(pool.SpecializeFor<TypeBatchIndex>());
+            removedTypeBatches.Dispose(pool);
 
             if (allocationIdsToFree.Span.Allocated)
             {
@@ -457,7 +456,7 @@ namespace BepuPhysics.CollisionDetection
                 {
                     pool.ReturnUnsafely(allocationIdsToFree[i]);
                 }
-                allocationIdsToFree.Dispose(pool.SpecializeFor<int>());
+                allocationIdsToFree.Dispose(pool);
             }
             batches.Dispose(pool);
 

@@ -117,7 +117,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void UseContact(ref QuickList<Int2, Buffer<Int2>> remainingChildren, int index, ref Buffer<NonconvexReductionChild> children, NonconvexContactManifold* targetManifold)
+        unsafe static void UseContact(ref QuickList<Int2> remainingChildren, int index, ref Buffer<NonconvexReductionChild> children, NonconvexContactManifold* targetManifold)
         {
             ref var childIndex = ref remainingChildren[index];
             ref var child = ref children[childIndex.X];
@@ -169,7 +169,7 @@ namespace BepuPhysics.CollisionDetection
             var maximumDistance = (float)Math.Sqrt(maximumDistanceSquared);
             float initialBestScore = -float.MaxValue;
             int initialBestScoreIndex = 0;
-            QuickList<Int2, Buffer<Int2>>.Create(pool.SpecializeFor<Int2>(), ChildCount * 4, out var remainingChildren);
+            QuickList<Int2>.Create(pool, ChildCount * 4, out var remainingChildren);
             //To reliably break the tie between multiple contacts in the same location (which often happens on triangle meshes), add a little bit extra to later contacts.
             //Not enough to significantly change the outcome under any circumstance- just enough to avoid swapping between two numerically near-identical starting points over and over.
             var biasPerIndex = maximumDistance * 1e-5f;
@@ -265,7 +265,7 @@ namespace BepuPhysics.CollisionDetection
                 UseContact(ref remainingChildren, bestScoreIndex, ref Children, manifold);
             }
 
-            remainingChildren.Dispose(pool.SpecializeFor<Int2>());
+            remainingChildren.Dispose(pool);
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]

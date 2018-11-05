@@ -6,12 +6,12 @@ namespace BepuPhysics
 {
     public struct ConstraintSet
     {
-        public QuickList<ConstraintBatch, Buffer<ConstraintBatch>> Batches;
+        public QuickList<ConstraintBatch> Batches;
         public FallbackBatch Fallback;
 
         public ConstraintSet(BufferPool pool, int initialBatchCapacity)
         {
-            QuickList<ConstraintBatch, Buffer<ConstraintBatch>>.Create(pool.SpecializeFor<ConstraintBatch>(), initialBatchCapacity, out Batches);
+            QuickList<ConstraintBatch>.Create(pool, initialBatchCapacity, out Batches);
             Fallback = default;
         }
 
@@ -81,7 +81,7 @@ namespace BepuPhysics
                 Batches[i].Dispose(pool);
             }
             Fallback.Dispose(pool);
-            Batches.Dispose(pool.SpecializeFor<ConstraintBatch>());
+            Batches.Dispose(pool);
             this = new ConstraintSet();
         }
     }

@@ -95,13 +95,11 @@ namespace BepuPhysics
         }
 
 
-        private unsafe void BuildWorkBlocks(BufferPool bufferPool, int minimumBlockSizeInBundles, int targetBlocksPerBatch)
+        private unsafe void BuildWorkBlocks(BufferPool pool, int minimumBlockSizeInBundles, int targetBlocksPerBatch)
         {
-            var blockPool = bufferPool.SpecializeFor<WorkBlock>();
-
             ref var activeSet = ref ActiveSet;
-            QuickList<WorkBlock, Buffer<WorkBlock>>.Create(blockPool, targetBlocksPerBatch * activeSet.Batches.Count, out context.ConstraintBlocks.Blocks);
-            bufferPool.Take(activeSet.Batches.Count, out context.BatchBoundaries);
+            QuickList<WorkBlock>.Create(pool, targetBlocksPerBatch * activeSet.Batches.Count, out context.ConstraintBlocks.Blocks);
+            pool.Take(activeSet.Batches.Count, out context.BatchBoundaries);
             for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
                 ref var typeBatches = ref activeSet.Batches[batchIndex].TypeBatches;
@@ -122,7 +120,7 @@ namespace BepuPhysics
                     var remainder = typeBatch.BundleCount - baseBlockSizeInBundles * typeBatchBlockCount;
                     for (int newBlockIndex = 0; newBlockIndex < typeBatchBlockCount; ++newBlockIndex)
                     {
-                        ref var block = ref context.ConstraintBlocks.Blocks.Allocate(blockPool);
+                        ref var block = ref context.ConstraintBlocks.Blocks.Allocate(pool);
                         var blockBundleCount = newBlockIndex < remainder ? baseBlockSizeInBundles + 1 : baseBlockSizeInBundles;
                         block.BatchIndex = batchIndex;
                         block.TypeBatchIndex = typeBatchIndex;
@@ -139,7 +137,7 @@ namespace BepuPhysics
             {
                 //There is a fallback batch, so we need to create fallback work blocks for it.
                 var blockCount = Math.Min(targetBlocksPerBatch, ActiveSet.Fallback.BodyCount);
-                QuickList<FallbackScatterWorkBlock, Buffer<FallbackScatterWorkBlock>>.Create(bufferPool.SpecializeFor<FallbackScatterWorkBlock>(), blockCount, out context.FallbackBlocks.Blocks);
+                QuickList<FallbackScatterWorkBlock>.Create(pool, blockCount, out context.FallbackBlocks.Blocks);
                 var baseBodiesPerBlock = activeSet.Fallback.BodyCount / blockCount;
                 var remainder = activeSet.Fallback.BodyCount - baseBodiesPerBlock * blockCount;
                 int previousEnd = 0;
@@ -188,7 +186,7 @@ namespace BepuPhysics
         }
         struct WorkBlocks<T> where T : struct
         {
-            public QuickList<T, Buffer<T>> Blocks;
+            public QuickList<T> Blocks;
             public Buffer<int> Claims;
 
             public void CreateClaims(BufferPool pool)
@@ -198,7 +196,7 @@ namespace BepuPhysics
             }
             public void Dispose(BufferPool pool)
             {
-                Blocks.Dispose(pool.SpecializeFor<T>());
+                Blocks.Dispose(pool);
                 pool.Return(ref Claims);
             }
         }

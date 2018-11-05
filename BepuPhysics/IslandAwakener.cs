@@ -68,10 +68,10 @@ namespace BepuPhysics
             {
                 ValidateSleepingSetIndex(setIndex);
                 //TODO: Some fairly pointless work here- spans or other approaches could help with the API.
-                QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), 1, out var list);
+                QuickList<int>.Create(pool, 1, out var list);
                 list.AddUnsafely(setIndex);
                 AwakenSets(ref list);
-                list.Dispose(pool.SpecializeFor<int>());
+                list.Dispose(pool);
             }
         }
 
@@ -80,9 +80,9 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="setIndices">List of set indices to wake up.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use when waking the bodies. Pass null to run on a single thread.</param>
-        public void AwakenSets(ref QuickList<int, Buffer<int>> setIndices, IThreadDispatcher threadDispatcher = null)
+        public void AwakenSets(ref QuickList<int> setIndices, IThreadDispatcher threadDispatcher = null)
         {
-            QuickList<int, Buffer<int>>.Create(pool.SpecializeFor<int>(), setIndices.Count, out var uniqueSetIndices);
+            QuickList<int>.Create(pool, setIndices.Count, out var uniqueSetIndices);
             var uniqueSet = new IndexSet(pool, bodies.Sets.Length);
             AccumulateUniqueIndices(ref setIndices, ref uniqueSet, ref uniqueSetIndices);
             uniqueSet.Dispose(pool);
@@ -125,7 +125,7 @@ namespace BepuPhysics
 
             DisposeForCompletedAwakenings(ref uniqueSetIndices);
 
-            uniqueSetIndices.Dispose(pool.SpecializeFor<int>());
+            uniqueSetIndices.Dispose(pool);
         }
 
         //Note that the worker loop and its supporting fields are only used when the island awakener is used in isolation by an external call.
@@ -193,9 +193,9 @@ namespace BepuPhysics
         }
 
         bool resetActivityStates;
-        QuickList<int, Buffer<int>> uniqueSetIndices;
-        QuickList<PhaseOneJob, Buffer<PhaseOneJob>> phaseOneJobs;
-        QuickList<PhaseTwoJob, Buffer<PhaseTwoJob>> phaseTwoJobs;
+        QuickList<int> uniqueSetIndices;
+        QuickList<PhaseOneJob> phaseOneJobs;
+        QuickList<PhaseTwoJob> phaseTwoJobs;
         internal unsafe void ExecutePhaseOneJob(int index)
         {
             ref var job = ref phaseOneJobs[index];
@@ -380,7 +380,7 @@ namespace BepuPhysics
 
         }
 
-        internal void AccumulateUniqueIndices(ref QuickList<int, Buffer<int>> candidateSetIndices, ref IndexSet uniqueSet, ref QuickList<int, Buffer<int>> uniqueSetIndices)
+        internal void AccumulateUniqueIndices(ref QuickList<int> candidateSetIndices, ref IndexSet uniqueSet, ref QuickList<int> uniqueSetIndices)
         {
             for (int i = 0; i < candidateSetIndices.Count; ++i)
             {
@@ -400,7 +400,7 @@ namespace BepuPhysics
             Debug.Assert(bodies.Sets[setIndex].Allocated);
         }
         [Conditional("DEBUG")]
-        void ValidateUniqueSets(ref QuickList<int, Buffer<int>> setIndices)
+        void ValidateUniqueSets(ref QuickList<int> setIndices)
         {
             var set = new IndexSet(pool, bodies.Sets.Length);
             for (int i = 0; i < setIndices.Count; ++i)
@@ -446,7 +446,7 @@ namespace BepuPhysics
             }
         }
 
-        struct TypeAllocationSizes<T> where T : ITypeCount
+        struct TypeAllocationSizes<T> where T : struct, ITypeCount
         {
             public Buffer<T> TypeCounts;
             public int HighestOccupiedTypeIndex;
@@ -470,7 +470,7 @@ namespace BepuPhysics
         }
 
 
-        internal (int phaseOneJobCount, int phaseTwoJobCount) PrepareJobs(ref QuickList<int, Buffer<int>> setIndices, bool resetActivityStates, int threadCount)
+        internal (int phaseOneJobCount, int phaseTwoJobCount) PrepareJobs(ref QuickList<int> setIndices, bool resetActivityStates, int threadCount)
         {
             if (setIndices.Count == 0)
                 return (0, 0);
@@ -560,10 +560,10 @@ namespace BepuPhysics
             //broad phase, (technically overestimating, not every body has a collidable, but vast majority do and shrug)
             broadPhase.EnsureCapacity(broadPhase.ActiveTree.LeafCount + newBodyCount, broadPhase.StaticTree.LeafCount);
             //constraints,
-            solver.ActiveSet.Batches.EnsureCapacity(highestNewBatchCount, pool.SpecializeFor<ConstraintBatch>());
+            solver.ActiveSet.Batches.EnsureCapacity(highestNewBatchCount, pool);
             if (additionalRequiredFallbackCapacity > 0)
                 solver.ActiveSet.Fallback.EnsureCapacity(solver.ActiveSet.Fallback.BodyCount + additionalRequiredFallbackCapacity, pool);
-            solver.batchReferencedHandles.EnsureCapacity(Math.Min(solver.FallbackBatchThreshold, highestNewBatchCount), pool.SpecializeFor<IndexSet>());
+            solver.batchReferencedHandles.EnsureCapacity(Math.Min(solver.FallbackBatchThreshold, highestNewBatchCount), pool);
             for (int batchIndex = solver.ActiveSet.Batches.Count; batchIndex < highestNewBatchCount; ++batchIndex)
             {
                 solver.ActiveSet.Batches.AllocateUnsafely() = new ConstraintBatch(pool);
@@ -621,10 +621,8 @@ namespace BepuPhysics
             pairCache.Mapping.EnsureCapacity(pairCache.Mapping.Count + newPairCount,
                 pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
 
-            var phaseOneJobPool = pool.SpecializeFor<PhaseOneJob>();
-            var phaseTwoJobPool = pool.SpecializeFor<PhaseTwoJob>();
-            QuickList<PhaseOneJob, Buffer<PhaseOneJob>>.Create(phaseOneJobPool, Math.Max(32, highestNewBatchCount + 1), out phaseOneJobs);
-            QuickList<PhaseTwoJob, Buffer<PhaseTwoJob>>.Create(phaseTwoJobPool, 32, out phaseTwoJobs);
+            QuickList<PhaseOneJob>.Create(pool, Math.Max(32, highestNewBatchCount + 1), out phaseOneJobs);
+            QuickList<PhaseTwoJob>.Create(pool, 32, out phaseTwoJobs);
             //Finally, create actual jobs. Note that this involves actually allocating space in the bodies set and in type batches for the workers to fill in.
             //(Pair caches are currently handled in a locally sequential way and do not require preallocation.)
 
@@ -650,7 +648,7 @@ namespace BepuPhysics
                     var setJobCount = Math.Max(1, sourceSet.Count / bodyJobSize);
                     var baseBodiesPerJob = sourceSet.Count / setJobCount;
                     var remainder = sourceSet.Count - baseBodiesPerJob * setJobCount;
-                    phaseOneJobs.EnsureCapacity(phaseOneJobs.Count + setJobCount, phaseOneJobPool);
+                    phaseOneJobs.EnsureCapacity(phaseOneJobs.Count + setJobCount, pool);
                     var previousSourceEnd = 0;
                     for (int jobIndex = 0; jobIndex < setJobCount; ++jobIndex)
                     {
@@ -694,7 +692,7 @@ namespace BepuPhysics
                             var jobCount = Math.Max(1, sourceTypeBatch.ConstraintCount / constraintJobSize);
                             var baseConstraintsPerJob = sourceTypeBatch.ConstraintCount / jobCount;
                             var remainder = sourceTypeBatch.ConstraintCount - baseConstraintsPerJob * jobCount;
-                            phaseTwoJobs.EnsureCapacity(phaseTwoJobs.Count + jobCount, phaseTwoJobPool);
+                            phaseTwoJobs.EnsureCapacity(phaseTwoJobs.Count + jobCount, pool);
 
                             var previousSourceEnd = 0;
                             for (int jobIndex = 0; jobIndex < jobCount; ++jobIndex)
@@ -722,7 +720,7 @@ namespace BepuPhysics
         }
 
 
-        internal void DisposeForCompletedAwakenings(ref QuickList<int, Buffer<int>> setIndices)
+        internal void DisposeForCompletedAwakenings(ref QuickList<int> setIndices)
         {
             for (int i = 0; i < setIndices.Count; ++i)
             {
@@ -739,12 +737,12 @@ namespace BepuPhysics
                 }
                 if (pairCacheSet.Allocated)
                     pairCacheSet.Dispose(pool);
-                this.uniqueSetIndices = new QuickList<int, Buffer<int>>();
+                this.uniqueSetIndices = new QuickList<int>();
                 sleeper.ReturnSetId(setIndex);
 
             }
-            phaseOneJobs.Dispose(pool.SpecializeFor<PhaseOneJob>());
-            phaseTwoJobs.Dispose(pool.SpecializeFor<PhaseTwoJob>());
+            phaseOneJobs.Dispose(pool);
+            phaseTwoJobs.Dispose(pool);
         }
     }
 }

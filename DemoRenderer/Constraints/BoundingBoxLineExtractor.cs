@@ -15,7 +15,7 @@ namespace DemoRenderer.Constraints
     public class BoundingBoxLineExtractor
     {
         const int jobsPerThread = 4;
-        QuickList<ThreadJob, Buffer<ThreadJob>> jobs;
+        QuickList<ThreadJob> jobs;
         BroadPhase broadPhase;
         int masterLinesCount;
         Buffer<LineInstance> masterLinesSpan;
@@ -32,7 +32,7 @@ namespace DemoRenderer.Constraints
         public BoundingBoxLineExtractor(BufferPool pool)
         {
             this.pool = pool;
-            QuickList<ThreadJob, Buffer<ThreadJob>>.Create(pool.SpecializeFor<ThreadJob>(), Environment.ProcessorCount * jobsPerThread, out jobs);
+            QuickList<ThreadJob>.Create(pool, Environment.ProcessorCount * jobsPerThread, out jobs);
             workDelegate = Work;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -93,13 +93,13 @@ namespace DemoRenderer.Constraints
         }
 
 
-        void CreateJobsForTree(in Tree tree, bool active, ref QuickList<ThreadJob, Buffer<ThreadJob>> jobs)
+        void CreateJobsForTree(in Tree tree, bool active, ref QuickList<ThreadJob> jobs)
         {
             var maximumJobCount = jobsPerThread * Environment.ProcessorCount;
             var possibleLeavesPerJob = tree.LeafCount / maximumJobCount;
             var remainder = tree.LeafCount - possibleLeavesPerJob * maximumJobCount;
             int jobbedLeafCount = 0;
-            jobs.EnsureCapacity(jobs.Count + maximumJobCount, pool.SpecializeFor<ThreadJob>());
+            jobs.EnsureCapacity(jobs.Count + maximumJobCount, pool);
             for (int i = 0; i < maximumJobCount; ++i)
             {
                 var jobLeafCount = i < remainder ? possibleLeavesPerJob + 1 : possibleLeavesPerJob;
@@ -116,10 +116,10 @@ namespace DemoRenderer.Constraints
             }
         }
 
-        internal unsafe void AddInstances(BroadPhase broadPhase, ref QuickList<LineInstance, Buffer<LineInstance>> lines, ParallelLooper looper, BufferPool pool)
+        internal unsafe void AddInstances(BroadPhase broadPhase, ref QuickList<LineInstance> lines, ParallelLooper looper, BufferPool pool)
         {
             //For now, we only pull the bounding boxes of objects that are active.
-            lines.EnsureCapacity(lines.Count + 12 * (broadPhase.ActiveTree.LeafCount + broadPhase.StaticTree.LeafCount), pool.SpecializeFor<LineInstance>());
+            lines.EnsureCapacity(lines.Count + 12 * (broadPhase.ActiveTree.LeafCount + broadPhase.StaticTree.LeafCount), pool);
             CreateJobsForTree(broadPhase.ActiveTree, true, ref jobs);
             CreateJobsForTree(broadPhase.StaticTree, false, ref jobs);
             masterLinesSpan = lines.Span;
@@ -133,7 +133,7 @@ namespace DemoRenderer.Constraints
 
         public void Dispose()
         {
-            jobs.Dispose(pool.SpecializeFor<ThreadJob>());
+            jobs.Dispose(pool);
         }
     }
 }

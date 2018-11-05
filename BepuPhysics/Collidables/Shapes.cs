@@ -182,7 +182,7 @@ namespace BepuPhysics.Collidables
 
         public override void Resize(int shapeCapacity)
         {
-            shapeCapacity = BufferPool<TShape>.GetLowestContainingElementCount(Math.Max(idPool.HighestPossiblyClaimedId + 1, shapeCapacity));
+            shapeCapacity = BufferPool.GetCapacityForCount<TShape>(Math.Max(idPool.HighestPossiblyClaimedId + 1, shapeCapacity));
             if (shapeCapacity != shapes.Length)
             {
                 InternalResize(shapeCapacity, idPool.HighestPossiblyClaimedId + 1);

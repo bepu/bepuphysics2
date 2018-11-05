@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BepuUtilities.Collections;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
@@ -11,7 +12,7 @@ namespace BepuUtilities.Memory
     /// Unmanaged memory pool that creates pinned blocks of memory for use in spans.
     /// </summary>
     /// <remarks>This currently works by allocating large managed arrays and pinning them under the assumption that they'll end up in the large object heap.</remarks>
-    public class BufferPool
+    public class BufferPool : IUnmanagedMemoryPool
     {
         unsafe struct Block
         {
@@ -325,7 +326,7 @@ namespace BepuUtilities.Memory
         /// <param name="count">Number of instances to request from the pool.</param>
         /// <param name="buffer">Buffer large enough to contain the requested number of typed instances.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Take<T>(int count, out Buffer<T> buffer)
+        public void Take<T>(int count, out Buffer<T> buffer) where T : struct
         {
             //Avoid returning a zero length span because 1 byte / Unsafe.SizeOf<T>() happens to be zero.
             if (count == 0)
@@ -388,7 +389,7 @@ namespace BepuUtilities.Memory
         /// </summary>
         /// <param name="buffer">Buffer to return to the pool.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Return<T>(ref Buffer<T> buffer)
+        public unsafe void Return<T>(ref Buffer<T> buffer) where T : struct
         {
             ReturnUnsafely(buffer.Id);
             buffer = default;
@@ -441,11 +442,11 @@ namespace BepuUtilities.Memory
         /// <param name="targetSize">Number of elements to resize the buffer for.</param>
         /// <param name="copyCount">Number of elements to copy into the new buffer from the old buffer.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Resize<T>(ref Buffer<T> buffer, int targetSize, int copyCount)
+        public void Resize<T>(ref Buffer<T> buffer, int targetSize, int copyCount) where T : struct
         {
             //Only do anything if the new size is actually different from the current size.
             Debug.Assert(copyCount <= targetSize && copyCount <= buffer.Length, "Can't copy more elements than exist in the source or target buffers.");
-            targetSize = BufferPool<T>.GetLowestContainingElementCount(targetSize);
+            targetSize = GetCapacityForCount<T>(targetSize);
             if (buffer.Length != targetSize) //Note that we don't check for allocated status- for buffers, a length of 0 is the same as being unallocated.
             {
                 Take(targetSize, out Buffer<T> newBuffer);
@@ -470,7 +471,7 @@ namespace BepuUtilities.Memory
         /// <typeparam name="T">Type contained by the buffers returned by the specialized pool.</typeparam>
         /// <returns>Pool specialized to create typed buffers.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public BufferPool<T> SpecializeFor<T>()
+        public BufferPool<T> SpecializeFor<T>() where T : struct
         {
             ValidatePinnedState(true);
             return new BufferPool<T>(this);
@@ -571,6 +572,20 @@ namespace BepuUtilities.Memory
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetCapacityForCount<T>(int count)
+        {
+            if (count == 0)
+                count = 1;
+            return (1 << SpanHelper.GetContainingPowerOf2(count * Unsafe.SizeOf<T>())) / Unsafe.SizeOf<T>();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        int IUnmanagedMemoryPool.GetCapacityForCount<T>(int count)
+        {
+            return GetCapacityForCount<T>(count);
+        }
+
 #if DEBUG
         ~BufferPool()
         {
@@ -586,12 +601,11 @@ namespace BepuUtilities.Memory
 #endif
     }
 
-
     /// <summary>
-    /// Type specialized variants of the buffer pool are useful for use with quick collections and guaranteeing compile time type specialization.
+    /// Type specialized variants of the buffer pool.
     /// </summary>
-    /// <typeparam name="T">Type of element to retrieve from the pol.</typeparam>
-    public struct BufferPool<T> : IMemoryPool<T, Buffer<T>>
+    /// <typeparam name="T">Type of element to retrieve from the pool.</typeparam>
+    public struct BufferPool<T> : IMemoryPool<T, Buffer<T>> where T : struct
     {
         public readonly BufferPool Raw;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -599,15 +613,7 @@ namespace BepuUtilities.Memory
         {
             Raw = pool;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetLowestContainingElementCount(int count)
-        {
-            if (count == 0)
-                count = 1;
-            return (1 << SpanHelper.GetContainingPowerOf2(count * Unsafe.SizeOf<T>())) / Unsafe.SizeOf<T>();
-        }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Take(int count, out Buffer<T> span)
         {

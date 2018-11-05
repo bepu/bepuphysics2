@@ -129,7 +129,7 @@ namespace BepuPhysics
         //While we expose a compaction and resize, using it requires care. It would be a mistake to, for example, shrink beyond the current bodies indices size.
         public void Compact(int indexCapacity, BufferPool pool)
         {
-            var desiredBundleCount = BufferPool<ulong>.GetLowestContainingElementCount(GetBundleCapacity(indexCapacity));
+            var desiredBundleCount = BufferPool.GetCapacityForCount<ulong>(GetBundleCapacity(indexCapacity));
             if (flags.Length > desiredBundleCount)
             {
                 InternalResizeForBundleCount(pool, desiredBundleCount);
@@ -137,7 +137,7 @@ namespace BepuPhysics
         }
         public void Resize(int indexCapacity, BufferPool pool)
         {
-            var desiredBundleCount = BufferPool<ulong>.GetLowestContainingElementCount(GetBundleCapacity(indexCapacity));
+            var desiredBundleCount = BufferPool.GetCapacityForCount<ulong>(GetBundleCapacity(indexCapacity));
             if (flags.Length != desiredBundleCount)
             {
                 InternalResizeForBundleCount(pool, desiredBundleCount);

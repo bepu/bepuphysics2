@@ -148,9 +148,9 @@ namespace BepuPhysics.CollisionDetection
         void ResizeCapacity(ref Tree tree, ref Buffer<CollidableReference> leaves, int capacity)
         {
             capacity = Math.Max(capacity, tree.LeafCount);
-            if (tree.Leaves.Length != BufferPool<Leaf>.GetLowestContainingElementCount(capacity))
+            if (tree.Leaves.Length != BufferPool.GetCapacityForCount<Leaf>(capacity))
                 tree.Resize(Pool, capacity);
-            if (leaves.Length != BufferPool<CollidableReference>.GetLowestContainingElementCount(capacity))
+            if (leaves.Length != BufferPool.GetCapacityForCount<CollidableReference>(capacity))
                 Pool.Resize(ref leaves, capacity, tree.LeafCount);
         }
         void Dispose(ref Tree tree, ref Buffer<CollidableReference> leaves)

@@ -175,13 +175,13 @@ namespace Demos
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
             int raySourceCount = 3;
-            QuickList<QuickList<TestRay, Buffer<TestRay>>, Buffer<QuickList<TestRay, Buffer<TestRay>>>>.Create(BufferPool.SpecializeFor<QuickList<TestRay, Buffer<TestRay>>>(), raySourceCount, out raySources);
+            QuickList<QuickList<TestRay>>.Create(BufferPool, raySourceCount, out raySources);
             raySources.Count = raySourceCount;
 
             //Spew rays all over the place, starting inside the shape cube.
             int randomRayCount = 1 << 14;
             ref var randomRays = ref raySources[0];
-            QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), randomRayCount, out randomRays);
+            QuickList<TestRay>.Create(BufferPool, randomRayCount, out randomRays);
             for (int i = 0; i < randomRayCount; ++i)
             {
                 var direction = GetDirection(random);
@@ -204,7 +204,7 @@ namespace Demos
             var unitZSpacing = new Vector2(unitZScreenWidth / frustumRayWidth, unitZScreenHeight / frustumRayHeight);
             var unitZBase = (unitZSpacing - new Vector2(unitZScreenWidth, unitZScreenHeight)) * 0.5f;
             ref var frustumRays = ref raySources[1];
-            QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), frustumRayWidth * frustumRayHeight, out frustumRays);
+            QuickList<TestRay>.Create(BufferPool, frustumRayWidth * frustumRayHeight, out frustumRays);
             var frustumOrigin = new Vector3(0, 0, -50);
             for (int i = 0; i < frustumRayWidth; ++i)
             {
@@ -224,7 +224,7 @@ namespace Demos
             var wallSpacing = new Vector2(0.1f);
             var wallBase = 0.5f * (wallSpacing - wallSpacing * new Vector2(wallWidth, wallHeight));
             ref var wallRays = ref raySources[2];
-            QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), wallWidth * wallHeight, out wallRays);
+            QuickList<TestRay>.Create(BufferPool, wallWidth * wallHeight, out wallRays);
             for (int i = 0; i < wallWidth; ++i)
             {
                 for (int j = 0; j < wallHeight; ++j)
@@ -238,7 +238,7 @@ namespace Demos
                 }
             }
             var maxRayCount = Math.Max(randomRays.Count, Math.Max(frustumRays.Count, wallRays.Count));
-            QuickList<TestRay, Buffer<TestRay>>.Create(BufferPool.SpecializeFor<TestRay>(), maxRayCount, out testRays);
+            QuickList<TestRay>.Create(BufferPool, maxRayCount, out testRays);
             var timeSampleCount = 16;
             algorithms = new IntersectionAlgorithm[2];
             algorithms[0] = new IntersectionAlgorithm("Unbatched", UnbatchedWorker, BufferPool, maxRayCount, timeSampleCount);
@@ -267,8 +267,8 @@ namespace Demos
             public float MaximumT;
             public Vector3 Direction;
         }
-        QuickList<QuickList<TestRay, Buffer<TestRay>>, Buffer<QuickList<TestRay, Buffer<TestRay>>>> raySources;
-        QuickList<TestRay, Buffer<TestRay>> testRays;
+        QuickList<QuickList<TestRay>> raySources;
+        QuickList<TestRay> testRays;
 
 
         struct RayHit
@@ -305,7 +305,7 @@ namespace Demos
                 Interlocked.Add(ref IntersectionCount, intersectionCount);
             }
 
-            public void Execute(ref QuickList<TestRay, Buffer<TestRay>> rays, SimpleThreadDispatcher dispatcher)
+            public void Execute(ref QuickList<TestRay> rays, SimpleThreadDispatcher dispatcher)
             {
                 CacheBlaster.Blast();
                 for (int i = 0; i < rays.Count; ++i)
@@ -411,7 +411,7 @@ namespace Demos
         int raySourceIndex;
         int frameCount;
         float rotation;
-        void CopyAndRotate(ref QuickList<TestRay, Buffer<TestRay>> source)
+        void CopyAndRotate(ref QuickList<TestRay> source)
         {
             testRays.Count = source.Count;
             var transform = Matrix3x3.CreateFromAxisAngle(new Vector3(0, 1, 0), rotation);

@@ -143,12 +143,12 @@ namespace BepuPhysics.CollisionDetection
             struct SubstepManifolds
             {
                 //TODO: Only handles convexes for now; need to revisit later.
-                public QuickList<ConvexContactManifold, Buffer<ConvexContactManifold>> Manifolds;
+                public QuickList<ConvexContactManifold> Manifolds;
                 public Vector3 RelativeOffsetChange;
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public void Initialize(BufferPool pool, int capacity)
                 {
-                    QuickList<ConvexContactManifold, Buffer<ConvexContactManifold>>.Create(pool.SpecializeFor<ConvexContactManifold>(), capacity, out Manifolds);
+                    QuickList<ConvexContactManifold>.Create(pool, capacity, out Manifolds);
                 }
 
 
@@ -214,7 +214,7 @@ namespace BepuPhysics.CollisionDetection
             }
 
 
-            struct ContinuationCache<T>
+            struct ContinuationCache<T> where T : struct
             {
                 public IdPool<Buffer<int>> Ids;
                 public Buffer<T> Caches;
@@ -222,7 +222,7 @@ namespace BepuPhysics.CollisionDetection
                 public ContinuationCache(BufferPool pool)
                 {
                     IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 32, out Ids);
-                    pool.SpecializeFor<T>().Take(128, out Caches);
+                    pool.Take(128, out Caches);
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -231,7 +231,7 @@ namespace BepuPhysics.CollisionDetection
                     index = Ids.Take();
                     if (Caches.Length <= index)
                     {
-                        pool.SpecializeFor<T>().Resize(ref Caches, index + 1, Caches.Length);
+                        pool.Resize(ref Caches, index + 1, Caches.Length);
                     }
                     return ref Caches[index];
                 }

@@ -53,7 +53,7 @@ namespace BepuPhysics.Trees
 
             int NextNodePair;
             int leafThreshold;
-            private QuickList<Job, Buffer<Job>> jobs;
+            private QuickList<Job> jobs;
             public int JobCount => jobs.Count;
             public Tree Tree;
             public TOverlapHandler[] OverlapHandlers;
@@ -76,14 +76,14 @@ namespace BepuPhysics.Trees
                 if (tree.leafCount < 2)
                 {
                     //We clear it out to avoid keeping any old job counts. The count property is used for scheduling, so incorrect values could break the job scheduler.
-                    jobs = new QuickList<Job, Buffer<Job>>();
+                    jobs = new QuickList<Job>();
                     return;
                 }
                 Debug.Assert(overlapHandlers.Length >= threadCount);
                 const float jobMultiplier = 1.5f;
                 var targetJobCount = Math.Max(1, jobMultiplier * threadCount);
                 leafThreshold = (int)(tree.leafCount / targetJobCount);
-                QuickList<Job, Buffer<Job>>.Create(Pool.SpecializeFor<Job>(), (int)(targetJobCount * 2), out jobs);
+                QuickList<Job>.Create(Pool, (int)(targetJobCount * 2), out jobs);
                 NextNodePair = -1;
                 this.OverlapHandlers = overlapHandlers;
                 this.Tree = tree;
@@ -98,7 +98,7 @@ namespace BepuPhysics.Trees
             {
                 //Note that a tree with 0 or 1 entries won't have any jobs.
                 if (jobs.Span.Allocated)
-                    jobs.Dispose(Pool.SpecializeFor<Job>());
+                    jobs.Dispose(Pool);
             }
 
             public unsafe void ExecuteJob(int jobIndex, int workerIndex)
@@ -161,7 +161,7 @@ namespace BepuPhysics.Trees
                 else
                 {
                     if (nodeLeafCount <= leafThreshold)
-                        jobs.Add(new Job { A = Encode(leafIndex), B = nodeIndex }, Pool.SpecializeFor<Job>());
+                        jobs.Add(new Job { A = Encode(leafIndex), B = nodeIndex }, Pool);
                     else
                         TestLeafAgainstNode(leafIndex, ref leafMin, ref leafMax, nodeIndex, ref results);
                 }
@@ -198,7 +198,7 @@ namespace BepuPhysics.Trees
                     if (b.Index >= 0)
                     {
                         if (a.LeafCount + b.LeafCount <= leafThreshold)
-                            jobs.Add(new Job { A = a.Index, B = b.Index }, Pool.SpecializeFor<Job>());
+                            jobs.Add(new Job { A = a.Index, B = b.Index }, Pool);
                         else
                             GetJobsBetweenDifferentNodes(Tree.nodes + a.Index, Tree.nodes + b.Index, ref results);
 
@@ -257,7 +257,7 @@ namespace BepuPhysics.Trees
             {
                 if (leafCount <= leafThreshold)
                 {
-                    jobs.Add(new Job { A = nodeIndex, B = nodeIndex }, Pool.SpecializeFor<Job>());
+                    jobs.Add(new Job { A = nodeIndex, B = nodeIndex }, Pool);
                     return;
                 }
 

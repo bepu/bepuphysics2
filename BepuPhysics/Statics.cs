@@ -61,8 +61,8 @@ namespace BepuPhysics
         {
             Debug.Assert(targetCapacity > 0, "Resize is not meant to be used as Dispose. If you want to return everything to the pool, use Dispose instead.");
             //Note that we base the bundle capacities on the static capacity. This simplifies the conditions on allocation
-            targetCapacity = BufferPool<int>.GetLowestContainingElementCount(targetCapacity);
-            Debug.Assert(Poses.Length != BufferPool<RigidPoses>.GetLowestContainingElementCount(targetCapacity), "Should not try to use internal resize of the result won't change the size.");
+            targetCapacity = BufferPool.GetCapacityForCount<int>(targetCapacity);
+            Debug.Assert(Poses.Length != BufferPool.GetCapacityForCount<RigidPoses>(targetCapacity), "Should not try to use internal resize of the result won't change the size.");
             pool.SpecializeFor<RigidPose>().Resize(ref Poses, targetCapacity, Count);
             pool.SpecializeFor<int>().Resize(ref IndexToHandle, targetCapacity, Count);
             pool.SpecializeFor<int>().Resize(ref HandleToIndex, targetCapacity, Count);
@@ -85,21 +85,21 @@ namespace BepuPhysics
         struct InactiveBodyCollector : IBreakableForEach<int>
         {
             BroadPhase broadPhase;
-            BufferPool<int> pool;
-            public QuickList<int, Buffer<int>> InactiveBodyHandles;
+            BufferPool pool;
+            public QuickList<int> InactiveBodyHandles;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public InactiveBodyCollector(BroadPhase broadPhase, BufferPool pool)
             {
-                this.pool = pool.SpecializeFor<int>();
+                this.pool = pool;
                 this.broadPhase = broadPhase;
-                QuickList<int, Buffer<int>>.Create(this.pool, 32, out InactiveBodyHandles);
+                QuickList<int>.Create(pool, 32, out InactiveBodyHandles);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose()
             {
-                InactiveBodyHandles.Dispose(this.pool);
+                InactiveBodyHandles.Dispose(pool);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -304,7 +304,7 @@ namespace BepuPhysics
         /// <param name="capacity">Target static data capacity.</param>
         public void Resize(int capacity)
         {
-            var targetCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, Count));
+            var targetCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(capacity, Count));
             if (IndexToHandle.Length != targetCapacity)
             {
                 InternalResize(targetCapacity);

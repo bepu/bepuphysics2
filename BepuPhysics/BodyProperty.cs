@@ -82,7 +82,7 @@ namespace BepuPhysics
             Debug.Assert(bodies.HandleExists(bodyHandle), "The body handle should have been allocated in the bodies set before any attempt to create a property for it.");
             if (bodyHandle >= data.Length)
             {
-                var targetCount = BufferPool<T>.GetLowestContainingElementCount(bodies.HandlePool.HighestPossiblyClaimedId + 1);
+                var targetCount = BufferPool.GetCapacityForCount<T>(bodies.HandlePool.HighestPossiblyClaimedId + 1);
                 Debug.Assert(targetCount > data.Length, "Given what just happened, we must require a resize.");
                 pool.Resize(ref data, targetCount, Math.Min(bodies.HandlePool.HighestPossiblyClaimedId + 1, data.Length));
             }
@@ -95,7 +95,7 @@ namespace BepuPhysics
         /// <param name="capacity">Capacity to ensure.</param>
         public void EnsureCapacity(int capacity)
         {
-            var targetCount = BufferPool<T>.GetLowestContainingElementCount(Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, capacity));
+            var targetCount = BufferPool.GetCapacityForCount<T>(Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, capacity));
             if (targetCount > data.Length)
             {
                 pool.Resize(ref data, targetCount, Math.Min(data.Length, bodies.HandlePool.HighestPossiblyClaimedId + 1));
@@ -107,7 +107,7 @@ namespace BepuPhysics
         /// </summary>
         public void Compact()
         {
-            var targetCount = BufferPool<T>.GetLowestContainingElementCount(bodies.HandlePool.HighestPossiblyClaimedId + 1);
+            var targetCount = BufferPool.GetCapacityForCount<T>(bodies.HandlePool.HighestPossiblyClaimedId + 1);
             if (targetCount < data.Length)
             {
                 pool.Resize(ref data, targetCount, bodies.HandlePool.HighestPossiblyClaimedId + 1);

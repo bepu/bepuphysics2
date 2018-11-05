@@ -24,7 +24,7 @@ namespace BepuPhysics.Trees
 
             int NextNodePair;
             int leafThreshold;
-            private QuickList<Job, Buffer<Job>> jobs;
+            private QuickList<Job> jobs;
             public int JobCount => jobs.Count;
             public Tree TreeA;
             public Tree TreeB;
@@ -46,7 +46,7 @@ namespace BepuPhysics.Trees
                 {
                     //If either tree has zero leaves, no intertree test is required.
                     //Since this context has a count property for scheduling purposes that reads the jobs list, clear it to ensure no spurious jobs are executed. 
-                    jobs = new QuickList<Job, Buffer<Job>>();
+                    jobs = new QuickList<Job>();
                     return;
                 }
                 Debug.Assert(overlapHandlers.Length >= threadCount);
@@ -54,7 +54,7 @@ namespace BepuPhysics.Trees
                 var targetJobCount = Math.Max(1, jobMultiplier * threadCount);
                 //TODO: Not a lot of thought was put into this leaf threshold for intertree. Probably better options.
                 leafThreshold = (int)((treeA.leafCount + treeB.leafCount) / targetJobCount);
-                QuickList<Job, Buffer<Job>>.Create(Pool.SpecializeFor<Job>(), (int)(targetJobCount * 2), out jobs);
+                QuickList<Job>.Create(Pool, (int)(targetJobCount * 2), out jobs);
                 NextNodePair = -1;
                 this.OverlapHandlers = overlapHandlers;
                 this.TreeA = treeA;
@@ -115,7 +115,7 @@ namespace BepuPhysics.Trees
             {
                 //Note that we don't allocate a job list if there aren't any jobs.
                 if (jobs.Span.Allocated)
-                    jobs.Dispose(Pool.SpecializeFor<Job>());
+                    jobs.Dispose(Pool);
             }
 
             public unsafe void ExecuteJob(int jobIndex, int workerIndex)
@@ -180,9 +180,9 @@ namespace BepuPhysics.Trees
                     {
                         //Maintain the order of trees. Leaves from tree A should always be the first parameter.
                         if (Tree.Equals(nodeOwner, TreeA))
-                            jobs.Add(new Job { B = Encode(leafIndex), A = nodeIndex }, Pool.SpecializeFor<Job>());
+                            jobs.Add(new Job { B = Encode(leafIndex), A = nodeIndex }, Pool);
                         else
-                            jobs.Add(new Job { A = Encode(leafIndex), B = nodeIndex }, Pool.SpecializeFor<Job>());
+                            jobs.Add(new Job { A = Encode(leafIndex), B = nodeIndex }, Pool);
                     }
                     else
                         TestLeafAgainstNode(ref nodeOwner, leafIndex, ref leafMin, ref leafMax, nodeIndex, ref results);
@@ -220,7 +220,7 @@ namespace BepuPhysics.Trees
                     if (b.Index >= 0)
                     {
                         if (a.LeafCount + b.LeafCount <= leafThreshold)
-                            jobs.Add(new Job { A = a.Index, B = b.Index }, Pool.SpecializeFor<Job>());
+                            jobs.Add(new Job { A = a.Index, B = b.Index }, Pool);
                         else
                             GetJobsBetweenDifferentNodes(TreeA.nodes + a.Index, TreeB.nodes + b.Index, ref results);
 

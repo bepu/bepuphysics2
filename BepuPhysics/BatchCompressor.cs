@@ -90,10 +90,10 @@ namespace BepuPhysics
 
         //Note that these lists do not contain any valid information between frames- they only exist for the duration of the optimization.
         //Note that we allocate all of the contexts and their compressions on demand. It's all pointer backed, so there's no worries about GC reference tracing.
-        Buffer<QuickList<Compression, Buffer<Compression>>> workerCompressions;
+        Buffer<QuickList<Compression>> workerCompressions;
         IThreadDispatcher threadDispatcher;
         int analysisJobIndex;
-        QuickList<AnalysisRegion, Buffer<AnalysisRegion>> analysisJobs;
+        QuickList<AnalysisRegion> analysisJobs;
 
 
         Action<int> analysisWorkerDelegate;
@@ -148,7 +148,7 @@ namespace BepuPhysics
                     //The batch index will never be the fallback batch, since the fallback batch is the very last batch (if it exists at all). So uses batch referenced handles is safe.
                     if (Solver.batchReferencedHandles[batchIndex].CanFit(ref *bodyHandles, bodiesPerConstraint))
                     {
-                        compressions.Add(new Compression { ConstraintHandle = typeBatch.IndexToHandle[i], TargetBatch = batchIndex }, pool.SpecializeFor<Compression>());
+                        compressions.Add(new Compression { ConstraintHandle = typeBatch.IndexToHandle[i], TargetBatch = batchIndex }, pool);
                         break;
                     }
                 }
@@ -207,7 +207,7 @@ namespace BepuPhysics
         /// Incrementally finds and applies a set of compressions to apply to the constraints in the solver's batches.
         /// Constraints in higher index batches try to move to lower index batches whenever possible.
         /// </summary>
-        public void Compress(BufferPool rawPool, IThreadDispatcher threadDispatcher = null, bool deterministic = false)
+        public void Compress(BufferPool pool, IThreadDispatcher threadDispatcher = null, bool deterministic = false)
         {
             var workerCount = threadDispatcher != null ? threadDispatcher.ThreadCount : 1;
             var constraintCount = Solver.ActiveSet.ConstraintCount;
@@ -217,12 +217,12 @@ namespace BepuPhysics
             var maximumCompressionCount = (int)Math.Max(1, Math.Round(MaximumCompressionFraction * constraintCount));
             var targetCandidateCount = (int)Math.Max(1, Math.Round(TargetCandidateFraction * constraintCount));
 
-            rawPool.SpecializeFor<QuickList<Compression, Buffer<Compression>>>().Take(workerCount, out workerCompressions);
+            pool.SpecializeFor<QuickList<Compression>>().Take(workerCount, out workerCompressions);
             for (int i = 0; i < workerCount; ++i)
             {
                 //Be careful: the jobs may require resizes on the compression count list. That requires the use of per-worker pools.
-                QuickList<Compression, Buffer<Compression>>.Create(
-                    (threadDispatcher == null ? rawPool : threadDispatcher.GetThreadMemoryPool(i)).SpecializeFor<Compression>(),
+                QuickList<Compression>.Create(
+                    threadDispatcher == null ? pool : threadDispatcher.GetThreadMemoryPool(i),
                     Math.Max(8, maximumCompressionCount), out workerCompressions[i]);
             }
 
@@ -256,10 +256,9 @@ namespace BepuPhysics
 
             //Build the analysis regions.
             ref var batch = ref Solver.ActiveSet.Batches[nextBatchIndex];
-
-            var regionPool = rawPool.SpecializeFor<AnalysisRegion>();
+            
             //Just make a generous estimate as to the number of jobs we'll need. 512 is huge in context, but trivial in terms of ephemeral memory required.
-            QuickList<AnalysisRegion, Buffer<AnalysisRegion>>.Create(regionPool, 512, out analysisJobs);
+            QuickList<AnalysisRegion>.Create(pool, 512, out analysisJobs);
 
             //Jobs are created as subsets of type batches. Note that we never leave a type batch partially covered. This helps with determinism-
             //if we detect all compressions required within the entire type batch, the compressions list won't be sensitive to the order of constraints in memory within that type batch.
@@ -275,7 +274,7 @@ namespace BepuPhysics
                 var remainder = typeBatch.ConstraintCount - baseConstraintsPerJob * jobCount;
 
                 var previousEnd = 0;
-                analysisJobs.EnsureCapacity(analysisJobs.Count + jobCount, regionPool);
+                analysisJobs.EnsureCapacity(analysisJobs.Count + jobCount, pool);
                 for (int j = 0; j < jobCount; ++j)
                 {
                     var constraintsInJob = j < remainder ? baseConstraintsPerJob + 1 : baseConstraintsPerJob;
@@ -301,12 +300,12 @@ namespace BepuPhysics
             {
                 for (int i = 0; i < analysisJobs.Count; ++i)
                 {
-                    DoJob(ref analysisJobs[i], 0, rawPool);
+                    DoJob(ref analysisJobs[i], 0, pool);
                 }
             }
             //var analyzeEnd = Stopwatch.GetTimestamp();
 
-            analysisJobs.Dispose(regionPool);
+            analysisJobs.Dispose(pool);
 
             ref var sourceBatch = ref Solver.ActiveSet.Batches[nextBatchIndex];
             int compressionsApplied = 0;
@@ -317,7 +316,7 @@ namespace BepuPhysics
                 //In deterministic mode, we must first sort the compressions found by every thread.
                 //Sorting by constraint handle gives a unique order regardless of memory layout.
                 //When combined with the analysis covering all or none of a type batch, the batch compressor becomes insensitive to memory layouts and is deterministic.
-                var targetPool = rawPool.SpecializeFor<CompressionTarget>();
+                var targetPool = pool.SpecializeFor<CompressionTarget>();
                 var totalCompressionCount = 0;
                 for (int i = 0; i < workerCount; ++i)
                 {
@@ -325,7 +324,7 @@ namespace BepuPhysics
                 }
                 if (totalCompressionCount > 0)
                 {
-                    QuickList<CompressionTarget, Buffer<CompressionTarget>>.Create(targetPool, totalCompressionCount, out var compressionsToSort);
+                    QuickList<CompressionTarget>.Create(pool, totalCompressionCount, out var compressionsToSort);
 
                     for (int i = 0; i < workerCount; ++i)
                     {
@@ -353,7 +352,7 @@ namespace BepuPhysics
                         ApplyCompression(nextBatchIndex, ref sourceBatch, ref workerCompressions[target.WorkerIndex][target.Index]);
                     }
 
-                    compressionsToSort.Dispose(targetPool);
+                    compressionsToSort.Dispose(pool);
                 }
 
             }
@@ -383,9 +382,9 @@ namespace BepuPhysics
             for (int i = 0; i < workerCount; ++i)
             {
                 //Be careful: the jobs may require resizes on the compression count list. That requires the use of per-worker pools.
-                workerCompressions[i].Dispose((threadDispatcher == null ? rawPool : threadDispatcher.GetThreadMemoryPool(i)).SpecializeFor<Compression>());
+                workerCompressions[i].Dispose((threadDispatcher == null ? pool : threadDispatcher.GetThreadMemoryPool(i)));
             }
-            rawPool.SpecializeFor<QuickList<Compression, Buffer<Compression>>>().Return(ref workerCompressions);
+            pool.SpecializeFor<QuickList<Compression>>().Return(ref workerCompressions);
         }
 
 

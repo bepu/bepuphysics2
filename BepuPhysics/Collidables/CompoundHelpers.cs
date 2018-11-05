@@ -32,13 +32,13 @@ namespace BepuPhysics.Collidables
             public Symmetric3x3 Inertia;
         }
 
-        public QuickList<Child, Buffer<Child>> Children;
+        public QuickList<Child> Children;
 
         public CompoundBuilder(BufferPool pool, Shapes shapes, int builderCapacity)
         {
             Pool = pool;
             Shapes = shapes;
-            QuickList<Child, Buffer<Child>>.Create(Pool.SpecializeFor<Child>(), builderCapacity, out Children);
+            QuickList<Child>.Create(Pool, builderCapacity, out Children);
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace BepuPhysics.Collidables
         /// Otherwise, it is used for recentering.</param>
         public void Add<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : struct, IConvexShape
         {
-            ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
+            ref var child = ref Children.Allocate(Pool);
             child.LocalPose = localPose;
             child.ShapeIndex = Shapes.Add(shape);
             child.Weight = weight;
@@ -68,7 +68,7 @@ namespace BepuPhysics.Collidables
         /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass. Otherwise, it is used for recentering.</param>
         public void AddForKinematic<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : struct, IConvexShape
         {
-            ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
+            ref var child = ref Children.Allocate(Pool);
             child.LocalPose = localPose;
             child.ShapeIndex = Shapes.Add(shape);
             child.Weight = weight;
@@ -84,7 +84,7 @@ namespace BepuPhysics.Collidables
         /// <param name="inverseInertia">Inverse inertia tensor of the shape being added. This is assumed to already be scaled as desired by the weight.</param>
         public void Add(TypedIndex shape, in RigidPose localPose, in Symmetric3x3 inverseInertia, float weight)
         {
-            ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
+            ref var child = ref Children.Allocate(Pool);
             child.LocalPose = localPose;
             child.ShapeIndex = shape;
             child.Weight = weight;
@@ -104,7 +104,7 @@ namespace BepuPhysics.Collidables
         /// <param name="weight">Weight of the shape used for computing the center of rotation.</param>
         public void AddForKinematic(TypedIndex shape, ref RigidPose localPose, float weight)
         {
-            ref var child = ref Children.Allocate(Pool.SpecializeFor<Child>());
+            ref var child = ref Children.Allocate(Pool);
             child.LocalPose = localPose;
             child.ShapeIndex = shape;
             child.Weight = weight;
@@ -265,7 +265,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public void Dispose()
         {
-            Children.Dispose(Pool.SpecializeFor<Child>());
+            Children.Dispose(Pool);
         }
     }
 }

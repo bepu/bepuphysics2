@@ -170,7 +170,7 @@ namespace BepuPhysics
             [FieldOffset(8)]
             public int CompletedJobs;
             [FieldOffset(16)]
-            public QuickList<int, Buffer<int>> WorkerClaims;
+            public QuickList<int> WorkerClaims;
         }
         int remainingOptimizationAttemptCount;
         Buffer<Worker> workers;
@@ -186,7 +186,7 @@ namespace BepuPhysics
             /// <summary>
             /// The set of claims owned by the current worker.
             /// </summary>
-            public QuickList<int, Buffer<int>> WorkerClaims;
+            public QuickList<int> WorkerClaims;
             public int ClaimIdentity;
             public bool AllClaimsSucceededSoFar;
 

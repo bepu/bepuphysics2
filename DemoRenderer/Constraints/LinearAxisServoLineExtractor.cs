@@ -14,7 +14,7 @@ namespace DemoRenderer.Constraints
         public int LinesPerConstraint => 7;
 
         public unsafe void ExtractLines(ref LinearAxisServoPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
-            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance, Buffer<LineInstance>> lines)
+            Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];

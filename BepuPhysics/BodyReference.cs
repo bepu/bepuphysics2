@@ -142,7 +142,7 @@ namespace BepuPhysics
         /// <summary>
         /// Gets a reference to the list of the body's connected constraints.
         /// </summary>
-        public ref QuickList<BodyConstraintReference, Buffer<BodyConstraintReference>> Constraints
+        public ref QuickList<BodyConstraintReference> Constraints
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get

@@ -92,7 +92,7 @@ namespace BepuPhysics
         internal float dt;
 
         int minimumBatchIndex, maximumBatchIndex;
-        Buffer<QuickList<BoundingBoxInstance, Buffer<BoundingBoxInstance>>> batches;
+        Buffer<QuickList<BoundingBoxInstance>> batches;
 
         /// <summary>
         /// The number of bodies to accumulate per type before executing an AABB update. The more bodies per batch, the less virtual overhead and execution divergence.
@@ -107,7 +107,7 @@ namespace BepuPhysics
             this.broadPhase = broadPhase;
             this.pool = pool;
             this.dt = dt;
-            pool.SpecializeFor<QuickList<BoundingBoxInstance, Buffer<BoundingBoxInstance>>>().Take(shapes.RegisteredTypeSpan, out batches);
+            pool.SpecializeFor<QuickList<BoundingBoxInstance>>().Take(shapes.RegisteredTypeSpan, out batches);
             //Clearing is required ensure that we know when a batch needs to be created and when a batch needs to be disposed.
             batches.Clear(0, shapes.RegisteredTypeSpan);
             minimumBatchIndex = shapes.RegisteredTypeSpan;
@@ -230,7 +230,7 @@ namespace BepuPhysics
             if (!batchSlot.Span.Allocated)
             {
                 //No list exists for this type yet.
-                QuickList<BoundingBoxInstance, Buffer<BoundingBoxInstance>>.Create(pool.SpecializeFor<BoundingBoxInstance>(), CollidablesPerFlush, out batchSlot);
+                QuickList<BoundingBoxInstance>.Create(pool, CollidablesPerFlush, out batchSlot);
                 if (typeIndex < minimumBatchIndex)
                     minimumBatchIndex = typeIndex;
                 if (typeIndex > maximumBatchIndex)
@@ -296,7 +296,6 @@ namespace BepuPhysics
                 }
             }
 #endif
-            var instancePool = pool.SpecializeFor<BoundingBoxInstance>();
             //Note reverse iteration. Execute all compound batches first.
             for (int i = maximumBatchIndex; i >= minimumBatchIndex; --i)
             {
@@ -308,11 +307,10 @@ namespace BepuPhysics
                 //Dispose of the batch and any associated buffers; since the flush is one pass, we won't be needing this again.
                 if (batch.Span.Allocated)
                 {
-                    batch.Dispose(instancePool);
+                    batch.Dispose(pool);
                 }
             }
-            var listPool = pool.SpecializeFor<QuickList<BoundingBoxInstance, Buffer<BoundingBoxInstance>>>();
-            listPool.Return(ref batches);
+            pool.Return(ref batches);
         }
     }
 }

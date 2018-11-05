@@ -105,10 +105,10 @@ namespace BepuPhysics.CollisionDetection
             //As an added bonus, the access pattern during the initial pass is prefetchable, while a comparison-time lookup is not.
             public ulong SortKey;
         }
-        Buffer<QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>>> sortedConstraints;
+        Buffer<QuickList<SortConstraintTarget>> sortedConstraints;
 
         int preflushJobIndex;
-        QuickList<PreflushJob, Buffer<PreflushJob>> preflushJobs;
+        QuickList<PreflushJob> preflushJobs;
         Action<int> preflushWorkerLoop;
         SpinLock constraintAddLock = new SpinLock();
         void PreflushWorkerLoop(int workerIndex)
@@ -129,7 +129,7 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        unsafe void BuildSortingTargets(ref QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>> list, int typeIndex, int workerCount)
+        unsafe void BuildSortingTargets(ref QuickList<SortConstraintTarget> list, int typeIndex, int workerCount)
         {
             for (int i = 0; i < workerCount; ++i)
             {
@@ -225,7 +225,7 @@ namespace BepuPhysics.CollisionDetection
             PairCache.EnsureConstraintToPairMappingCapacity(Solver, targetConstraintCapacity);
             //Do the same for the main solver handle set. We make use of the Solver.HandleToLocation frequently; a resize would break stuff.
             Solver.EnsureSolverCapacities(1, targetConstraintCapacity);
-            QuickList<int, Buffer<int>>.Create(Pool.SpecializeFor<int>(), setsToAwakenCapacity, out var setsToAwaken);
+            QuickList<int>.Create(Pool, setsToAwakenCapacity, out var setsToAwaken);
             var uniqueAwakeningsSet = new IndexSet(Pool, Simulation.Bodies.Sets.Length);
             for (int i = 0; i < threadCount; ++i)
             {
@@ -234,7 +234,7 @@ namespace BepuPhysics.CollisionDetection
             uniqueAwakeningsSet.Dispose(Pool);
             for (int i = 0; i < threadCount; ++i)
             {
-                overlapWorkers[i].PendingSetAwakenings.Dispose(overlapWorkers[i].Batcher.Pool.SpecializeFor<int>());
+                overlapWorkers[i].PendingSetAwakenings.Dispose(overlapWorkers[i].Batcher.Pool);
             }
             (int awakenerPhaseOneJobCount, int awakenerPhaseTwoJobCount) = Simulation.Awakener.PrepareJobs(ref setsToAwaken, false, threadCount);
             if (threadCount > 1)
@@ -242,7 +242,7 @@ namespace BepuPhysics.CollisionDetection
                 //Given the sizes involved, a fixed guess of 128 should be just fine for essentially any simulation. Overkill, but not in a concerning way.
                 //Temporarily allocating 1KB of memory isn't a big deal, and we will only touch the necessary subset of it anyway.
                 //(There are pathological cases where resizes are still possible, but the constraint remover handles them by not adding unsafely.)
-                QuickList<PreflushJob, Buffer<PreflushJob>>.Create(Pool.SpecializeFor<PreflushJob>(), 128 + Math.Max(awakenerPhaseOneJobCount, awakenerPhaseTwoJobCount), out preflushJobs);
+                QuickList<PreflushJob>.Create(Pool, 128 + Math.Max(awakenerPhaseOneJobCount, awakenerPhaseTwoJobCount), out preflushJobs);
 
                 //FIRST PHASE: 
                 //1) If deterministic, sort each type batch.
@@ -260,17 +260,16 @@ namespace BepuPhysics.CollisionDetection
                 {
                     overlapWorkers[i].PendingConstraints.AllocateForSpeculativeSearch();
                 }
-                var preflushJobPool = Pool.SpecializeFor<PreflushJob>();
                 for (int i = 0; i < awakenerPhaseOneJobCount; ++i)
                 {
-                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.AwakenerPhaseOne, JobIndex = i }, preflushJobPool);
+                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.AwakenerPhaseOne, JobIndex = i }, Pool);
                 }
                 //Note that we create the sort jobs ahead of batch finder. 
                 //They tend to be individually much heftier than the constraint batch finder phase, and we'd like to be able to fill in the execution gaps.
                 //TODO: It would be nice to have all the jobs semi-sorted by heftiness- that would just split the awakener job creator loop. Only bother if profiling suggests it.
                 if (deterministic)
                 {
-                    Pool.SpecializeFor<QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>>>().Take(PairCache.CollisionConstraintTypeCount, out sortedConstraints);
+                    Pool.SpecializeFor<QuickList<SortConstraintTarget>>().Take(PairCache.CollisionConstraintTypeCount, out sortedConstraints);
                     sortedConstraints.Clear(0, PairCache.CollisionConstraintTypeCount);
                     for (int typeIndex = 0; typeIndex < PairCache.CollisionConstraintTypeCount; ++typeIndex)
                     {
@@ -282,8 +281,8 @@ namespace BepuPhysics.CollisionDetection
                         if (countInType > 0)
                         {
                             //Note that we don't actually add any constraint targets here- we let the actual worker threads do that. No reason not to, and it extracts a tiny bit of extra parallelism.
-                            QuickList<SortConstraintTarget, Buffer<SortConstraintTarget>>.Create(Pool.SpecializeFor<SortConstraintTarget>(), countInType, out sortedConstraints[typeIndex]);
-                            preflushJobs.Add(new PreflushJob { Type = PreflushJobType.SortContactConstraintType, TypeIndex = typeIndex, WorkerCount = threadCount }, preflushJobPool);
+                            QuickList<SortConstraintTarget>.Create(Pool, countInType, out sortedConstraints[typeIndex]);
+                            preflushJobs.Add(new PreflushJob { Type = PreflushJobType.SortContactConstraintType, TypeIndex = typeIndex, WorkerCount = threadCount }, Pool);
                         }
                     }
                 }
@@ -314,7 +313,7 @@ namespace BepuPhysics.CollisionDetection
                                     End = previousEnd,
                                     TypeIndex = typeIndex,
                                     WorkerIndex = workerIndex
-                                }, preflushJobPool);
+                                }, Pool);
                             }
                             Debug.Assert(previousEnd == count);
                         }
@@ -340,15 +339,15 @@ namespace BepuPhysics.CollisionDetection
                 preflushJobs.Clear(); //Note job clear. We're setting up new jobs.
                 if (deterministic)
                 {
-                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.DeterministicConstraintAdd }, preflushJobPool);
+                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.DeterministicConstraintAdd }, Pool);
                 }
                 else
                 {
-                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.NondeterministicConstraintAdd, WorkerCount = threadCount }, preflushJobPool);
+                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.NondeterministicConstraintAdd, WorkerCount = threadCount }, Pool);
                 }
                 for (int i = 0; i < awakenerPhaseTwoJobCount; ++i)
                 {
-                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.AwakenerPhaseTwo, JobIndex = i }, preflushJobPool);
+                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.AwakenerPhaseTwo, JobIndex = i }, Pool);
                 }
                 FreshnessChecker.CreateJobs(threadCount, ref preflushJobs, Pool, originalPairCacheMappingCount);
 
@@ -368,16 +367,15 @@ namespace BepuPhysics.CollisionDetection
                 }
                 if (deterministic)
                 {
-                    var targetPool = Pool.SpecializeFor<SortConstraintTarget>();
                     for (int i = 0; i < PairCache.CollisionConstraintTypeCount; ++i)
                     {
                         ref var typeList = ref sortedConstraints[i];
                         if (typeList.Span.Allocated)
-                            typeList.Dispose(targetPool);
+                            typeList.Dispose(Pool);
                     }
                     Pool.Return(ref sortedConstraints);
                 }
-                preflushJobs.Dispose(preflushJobPool);
+                preflushJobs.Dispose(Pool);
             }
             else
             {
@@ -402,7 +400,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 Simulation.Awakener.DisposeForCompletedAwakenings(ref setsToAwaken);
             }
-            setsToAwaken.Dispose(Pool.SpecializeFor<int>());
+            setsToAwaken.Dispose(Pool);
 
         }
     }

@@ -30,7 +30,7 @@ namespace BepuPhysics.CollisionDetection
         internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
         {
             Debug.Assert(setsCapacity >= potentiallyAllocatedCount && potentiallyAllocatedCount <= SleepingSets.Length);
-            setsCapacity = BufferPool<SleepingSet>.GetLowestContainingElementCount(setsCapacity);
+            setsCapacity = BufferPool.GetCapacityForCount<SleepingSet>(setsCapacity);
             if (SleepingSets.Length != setsCapacity)
             {
                 var oldCapacity = SleepingSets.Length;
@@ -132,12 +132,11 @@ namespace BepuPhysics.CollisionDetection
                 return ref workerCaches[0];
             //No caches exist yet; this must be an external call taking place before the first update. Lazily initialize one worker cache.
             workerCaches = new ArrayList<WorkerPairCache>(1);
-            var preallocationSizesPool = pool.SpecializeFor<WorkerPairCache.PreallocationSizes>();
-            QuickList<WorkerPairCache.PreallocationSizes, Buffer<WorkerPairCache.PreallocationSizes>>.Create(preallocationSizesPool, 1, out var constraints);
-            QuickList<WorkerPairCache.PreallocationSizes, Buffer<WorkerPairCache.PreallocationSizes>>.Create(preallocationSizesPool, 1, out var collisions);
+            QuickList<WorkerPairCache.PreallocationSizes>.Create(pool, 1, out var constraints);
+            QuickList<WorkerPairCache.PreallocationSizes>.Create(pool, 1, out var collisions);
             workerCaches.AllocateUnsafely() = new WorkerPairCache(0, pool, ref constraints, ref collisions, 0);
-            constraints.Dispose(preallocationSizesPool);
-            collisions.Dispose(preallocationSizesPool);
+            constraints.Dispose(pool);
+            collisions.Dispose(pool);
             return ref workerCaches[0];
         }
 

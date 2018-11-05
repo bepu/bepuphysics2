@@ -53,7 +53,7 @@ namespace DemoUtilities
         MouseButtonSet downedButtons;
         MouseButtonSet previousDownedButtons;
         BufferPool pool;
-        public QuickList<char, Buffer<char>> TypedCharacters;
+        public QuickList<char> TypedCharacters;
 
         /// <summary>
         /// Forces the mouse to stay at the center of the screen by recentering it on every flush.
@@ -126,12 +126,12 @@ namespace DemoUtilities
             KeySet.Create(keyPool, intPool, 3, 3, out anyDownedKeys);
             KeySet.Create(keyPool, intPool, 3, 3, out downedKeys);
             KeySet.Create(keyPool, intPool, 3, 3, out previousDownedKeys);
-            QuickList<char, Buffer<char>>.Create(pool.SpecializeFor<char>(), 32, out TypedCharacters);
+            QuickList<char>.Create(pool, 32, out TypedCharacters);
         }
 
         private void KeyPress(object sender, KeyPressEventArgs e)
         {
-            TypedCharacters.Add(e.KeyChar, pool.SpecializeFor<char>());
+            TypedCharacters.Add(e.KeyChar, pool);
         }
 
         private void MouseWheel(object sender, MouseWheelEventArgs e)
@@ -158,7 +158,7 @@ namespace DemoUtilities
             downedKeys.Add(e.Key, pool.SpecializeFor<Key>(), pool.SpecializeFor<int>());
             //Unfortunately, backspace isn't reported by keypress, so we do it manually.
             if (e.Key == Key.BackSpace)
-                TypedCharacters.Add('\b', pool.SpecializeFor<char>());
+                TypedCharacters.Add('\b', pool);
         }
         private void KeyUp(object sender, KeyboardKeyEventArgs e)
         {

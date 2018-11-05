@@ -107,7 +107,7 @@ namespace BepuPhysics.Constraints
             ref Buffer<int> indexToHandleCache, ref RawBuffer bodyReferencesCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache,
             ref Buffer<ConstraintLocation> handlesToConstraints);
 
-        internal unsafe abstract void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<int, Buffer<int>> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch);
+        internal unsafe abstract void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<int> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch);
 
         internal unsafe abstract void CopySleepingToActive(
             int sourceSet, int sourceBatchIndex, int sourceTypeBatchIndex, int targetBatchIndex, int targetTypeBatchIndex,
@@ -160,9 +160,8 @@ namespace BepuPhysics.Constraints
             Debug.Assert(sizeInBytes == Unsafe.SizeOf<TAccumulatedImpulse>(), "Your assumptions about memory layout and size are wrong for this type! Fix it!");
         }
 
-        static void IncreaseSize<T>(BufferPool rawPool, ref Buffer<T> buffer)
+        static void IncreaseSize<T>(BufferPool pool, ref Buffer<T> buffer) where T: struct
         {
-            var pool = rawPool.SpecializeFor<T>();
             var old = buffer;
             pool.Take(buffer.Length * 2, out buffer);
             old.CopyTo(0, ref buffer, 0, old.Length);
@@ -387,7 +386,7 @@ namespace BepuPhysics.Constraints
 
         public override void Resize(ref TypeBatch typeBatch, int desiredCapacity, BufferPool pool)
         {
-            var desiredConstraintCapacity = BufferPool<int>.GetLowestContainingElementCount(desiredCapacity);
+            var desiredConstraintCapacity = BufferPool.GetCapacityForCount<int>(desiredCapacity);
             if (desiredConstraintCapacity != typeBatch.IndexToHandle.Length)
             {
                 InternalResize(ref typeBatch, pool, desiredConstraintCapacity);
@@ -501,7 +500,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        internal unsafe sealed override void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<int, Buffer<int>> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch)
+        internal unsafe sealed override void GatherActiveConstraints(Bodies bodies, Solver solver, ref QuickList<int> sourceHandles, int startIndex, int endIndex, ref TypeBatch targetTypeBatch)
         {
             ref var activeConstraintSet = ref solver.ActiveSet;
             ref var activeBodySet = ref bodies.ActiveSet;

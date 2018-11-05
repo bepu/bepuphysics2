@@ -202,7 +202,7 @@ namespace BepuPhysics
             {
                 solver.Remove(constraints[i].ConnectingConstraintHandle);
             }
-            constraints.Dispose(Pool.SpecializeFor<BodyConstraintReference>());
+            constraints.Dispose(Pool);
 
             var handle = RemoveFromActiveSet(activeBodyIndex);
 
@@ -975,7 +975,7 @@ namespace BepuPhysics
         internal void ResizeSetsCapacity(int setsCapacity, int potentiallyAllocatedCount)
         {
             Debug.Assert(setsCapacity >= potentiallyAllocatedCount && potentiallyAllocatedCount <= Sets.Length);
-            setsCapacity = BufferPool<BodySet>.GetLowestContainingElementCount(setsCapacity);
+            setsCapacity = BufferPool.GetCapacityForCount<BodySet>(setsCapacity);
             if (Sets.Length != setsCapacity)
             {
                 var oldCapacity = Sets.Length;
@@ -1132,7 +1132,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void ResizeHandles(int newCapacity)
         {
-            newCapacity = BufferPool<BodyLocation>.GetLowestContainingElementCount(newCapacity);
+            newCapacity = BufferPool.GetCapacityForCount<BodyLocation>(newCapacity);
             if (newCapacity != HandleToLocation.Length)
             {
                 var oldCapacity = HandleToLocation.Length;
@@ -1152,7 +1152,7 @@ namespace BepuPhysics
         /// </summary>
         internal void ResizeInertias(int capacity)
         {
-            var targetCapacity = BufferPool<BodyInertia>.GetLowestContainingElementCount(Math.Max(capacity, ActiveSet.Count));
+            var targetCapacity = BufferPool.GetCapacityForCount<BodyInertia>(Math.Max(capacity, ActiveSet.Count));
             if (Inertias.Length != targetCapacity)
             {
                 Pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, targetCapacity, Math.Min(Inertias.Length, ActiveSet.Count));
@@ -1177,13 +1177,13 @@ namespace BepuPhysics
         /// <param name="capacity">Target body data capacity.</param>
         public void Resize(int capacity)
         {
-            var targetBodyCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, ActiveSet.Count));
+            var targetBodyCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(capacity, ActiveSet.Count));
             if (ActiveSet.IndexToHandle.Length != targetBodyCapacity)
             {
                 ActiveSet.InternalResize(targetBodyCapacity, Pool);
             }
             ResizeInertias(capacity);
-            var targetHandleCapacity = BufferPool<int>.GetLowestContainingElementCount(Math.Max(capacity, HandlePool.HighestPossiblyClaimedId + 1));
+            var targetHandleCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(capacity, HandlePool.HighestPossiblyClaimedId + 1));
             if (HandleToLocation.Length != targetHandleCapacity)
             {
                 ResizeHandles(targetHandleCapacity);
@@ -1196,13 +1196,12 @@ namespace BepuPhysics
         /// </summary>
         public void ResizeConstraintListCapacities()
         {
-            var bodyReferencePool = Pool.SpecializeFor<BodyConstraintReference>();
             for (int i = 0; i < ActiveSet.Count; ++i)
             {
                 ref var list = ref ActiveSet.Constraints[i];
-                var targetCapacity = BufferPool<BodyConstraintReference>.GetLowestContainingElementCount(list.Count > MinimumConstraintCapacityPerBody ? list.Count : MinimumConstraintCapacityPerBody);
+                var targetCapacity = BufferPool.GetCapacityForCount<BodyConstraintReference>(list.Count > MinimumConstraintCapacityPerBody ? list.Count : MinimumConstraintCapacityPerBody);
                 if (list.Span.Length != targetCapacity)
-                    list.Resize(targetCapacity, bodyReferencePool);
+                    list.Resize(targetCapacity, Pool);
             }
         }
 
@@ -1228,12 +1227,11 @@ namespace BepuPhysics
         /// </summary>
         public void EnsureConstraintListCapacities()
         {
-            var bodyReferencePool = Pool.SpecializeFor<BodyConstraintReference>();
             for (int i = 0; i < ActiveSet.Count; ++i)
             {
                 ref var list = ref ActiveSet.Constraints[i];
                 if (list.Span.Length < MinimumConstraintCapacityPerBody)
-                    list.Resize(MinimumConstraintCapacityPerBody, bodyReferencePool);
+                    list.Resize(MinimumConstraintCapacityPerBody, Pool);
             }
         }
 

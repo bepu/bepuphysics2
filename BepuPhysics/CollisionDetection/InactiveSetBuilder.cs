@@ -25,7 +25,7 @@ namespace BepuPhysics.CollisionDetection
 
         public Buffer<SleepingCache> ConstraintCaches;
         public Buffer<SleepingCache> CollisionCaches;
-        public QuickList<SleepingPair, Buffer<SleepingPair>> Pairs;
+        public QuickList<SleepingPair> Pairs;
 
         public void Dispose(BufferPool pool)
         {
@@ -54,7 +54,7 @@ namespace BepuPhysics.CollisionDetection
                 }
                 pool.SpecializeFor<SleepingCache>().Return(ref CollisionCaches);
             }
-            Pairs.Dispose(pool.SpecializeFor<SleepingPair>());
+            Pairs.Dispose(pool);
         }
     }
 
@@ -62,7 +62,7 @@ namespace BepuPhysics.CollisionDetection
     {
         public Buffer<UntypedList> ConstraintCaches;
         public Buffer<UntypedList> CollisionCaches;
-        public QuickList<SleepingPair, Buffer<SleepingPair>> Pairs;
+        public QuickList<SleepingPair> Pairs;
         public int InitialCapacityPerCache;
         public SleepingSetBuilder(BufferPool pool, int initialPairCapacity, int initialCapacityPerCache)
         {
@@ -72,7 +72,7 @@ namespace BepuPhysics.CollisionDetection
             //Original values are used to test for existence; have to clear to avoid undefined values.
             ConstraintCaches.Clear(0, ConstraintCaches.Length);
             CollisionCaches.Clear(0, CollisionCaches.Length);
-            QuickList<SleepingPair, Buffer<SleepingPair>>.Create(pool.SpecializeFor<SleepingPair>(), initialPairCapacity, out Pairs);
+            QuickList<SleepingPair>.Create(pool, initialPairCapacity, out Pairs);
             InitialCapacityPerCache = initialCapacityPerCache;
         }
 
@@ -89,7 +89,7 @@ namespace BepuPhysics.CollisionDetection
         public int Add(ref ArrayList<WorkerPairCache> pairCaches, BufferPool pool, ref CollidablePair pair, ref CollidablePairPointers sourcePointers)
         {
             var pairIndex = Pairs.Count;
-            Pairs.EnsureCapacity(Pairs.Count + 1, pool.SpecializeFor<SleepingPair>());
+            Pairs.EnsureCapacity(Pairs.Count + 1, pool);
             ref var entry = ref Pairs.AllocateUnsafely();
             entry.Pair = pair;
             Debug.Assert(sourcePointers.ConstraintCache.Exists);
@@ -170,7 +170,7 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(set.ConstraintCaches.Length > 0,
                     "While there may be no collision caches, pair mapping entries only exist for constraintful pairs.");
 
-                QuickList<SleepingPair, Buffer<SleepingPair>>.Create(pool.SpecializeFor<SleepingPair>(), Pairs.Count, out set.Pairs);
+                QuickList<SleepingPair>.Create(pool, Pairs.Count, out set.Pairs);
                 for (int i = 0; i < Pairs.Count; ++i)
                 {
                     ref var sourcePair = ref Pairs[i];
@@ -206,7 +206,7 @@ namespace BepuPhysics.CollisionDetection
                     pool.Return(ref CollisionCaches[i].Buffer);
             }
             pool.SpecializeFor<UntypedList>().Return(ref CollisionCaches);
-            Pairs.Dispose(pool.SpecializeFor<SleepingPair>());
+            Pairs.Dispose(pool);
         }
     }
 }

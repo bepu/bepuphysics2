@@ -137,7 +137,7 @@ namespace BepuPhysics
         }
 
 
-        internal unsafe void Remove(int bodyReference, int constraintHandle, ref QuickList<int, Buffer<int>> allocationIdsToFree)
+        internal unsafe void Remove(int bodyReference, int constraintHandle, ref QuickList<int> allocationIdsToFree)
         {
             var bodyPresent = bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex);
             Debug.Assert(bodyPresent, "If we've been asked to remove a constraint associated with a body, that body must be in this batch.");
@@ -175,7 +175,7 @@ namespace BepuPhysics
             var maximumAllocationIdsToFree = 3 + bodyCount * 2;
             var allocationIdsToRemoveMemory = stackalloc int[maximumAllocationIdsToFree];
             var initialSpan = new Buffer<int>(allocationIdsToRemoveMemory, maximumAllocationIdsToFree);
-            var allocationIdsToFree = new QuickList<int, Buffer<int>>(initialSpan);
+            var allocationIdsToFree = new QuickList<int>(initialSpan);
             typeProcessor.EnumerateConnectedBodyIndices(ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[typeId]], indexInTypeBatch, ref enumerator);
             for (int i = 0; i < bodyCount; ++i)
             {
@@ -187,7 +187,7 @@ namespace BepuPhysics
             }
         }
 
-        internal unsafe void TryRemove(int bodyReference, ref QuickList<int, Buffer<int>> allocationIdsToFree)
+        internal unsafe void TryRemove(int bodyReference, ref QuickList<int> allocationIdsToFree)
         {
             if (bodyConstraintReferences.Keys.Allocated && bodyConstraintReferences.GetTableIndices(ref bodyReference, out var tableIndex, out var bodyReferencesIndex))
             {
