@@ -193,7 +193,7 @@ namespace BepuPhysics
             var consideredBodies = new IndexSet(pool, bodies.ActiveSet.Count);
             var consideredConstraints = new IndexSet(pool, solver.HandlePool.HighestPossiblyClaimedId + 1);
             //The stack will store body indices.
-            QuickList<int>.Create(pool, initialBodyCapacity, out var visitationStack);
+            var visitationStack = new QuickList<int>(initialBodyCapacity, pool);
 
             //Start the traversal by pushing the initial body conditionally.
             if (!PushBody(startingActiveBodyIndex, ref consideredBodies, ref bodyIndices, ref visitationStack, pool, ref predicate))
@@ -205,7 +205,7 @@ namespace BepuPhysics
             }
             var enumerator = new ConstraintBodyEnumerator();
             enumerator.Pool = pool;
-            QuickList<int>.Create(pool, 4, out enumerator.ConstraintBodyIndices);
+            enumerator.ConstraintBodyIndices = new QuickList<int>(4, pool);
 
             bool disqualified = false;
             while (visitationStack.TryPop(out var nextIndexToVisit))
@@ -273,10 +273,10 @@ namespace BepuPhysics
         {
             Debug.Assert(workerTraversalResults.Allocated && workerTraversalResults.Length > workerIndex);
             ref var results = ref workerTraversalResults[workerIndex];
-            QuickList<IslandScaffold>.Create(threadPool, 64, out results.Islands);
+            results.Islands = new QuickList<IslandScaffold>(64, threadPool);
 
-            QuickList<int>.Create(threadPool, Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count), out var bodyIndices);
-            QuickList<int>.Create(threadPool, Math.Min(InitialIslandConstraintCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), out var constraintHandles);
+            var bodyIndices = new QuickList<int>(Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count), threadPool);
+            var constraintHandles = new QuickList<int>(Math.Min(InitialIslandConstraintCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), threadPool);
 
             TraversalTest<TPredicate> traversalTest;
             traversalTest.Predicate = predicate;
@@ -552,7 +552,7 @@ namespace BepuPhysics
             }
             Console.Write($"{constraintCount} constraint handles: ");
             ReferenceCollector bodyIndexEnumerator;
-            QuickSet<int, PrimitiveComparer<int>>.Create(pool, 8, 3, out var constraintReferencedBodyHandles);
+            var constraintReferencedBodyHandles = new QuickSet<int, PrimitiveComparer<int>>(8, pool);
             for (int batchIndex = 0; batchIndex < island.Protobatches.Count; ++batchIndex)
             {
                 ref var batch = ref island.Protobatches[batchIndex];
@@ -666,14 +666,12 @@ namespace BepuPhysics
             //Note that we only preallocate a fixed size. It will often be an overestimate, but that's fine. Resizes are more concerning.
             //(We could precompute the exact number of jobs, but it's not really necessary.) 
             var objectsPerGatherJob = 64;
-            QuickList<GatheringJob>.Create(pool, 512, out gatheringJobs);
+            gatheringJobs = new QuickList<GatheringJob>(512, pool);
             //We now create jobs only for the set of unique islands. While each worker avoided creating duplicates locally, threads did not communicate and so may have found the same islands.
             //Each worker output a set of their traversed bodies. Using it, we can efficiently check to see if a given island is a duplicate by checking all previous workers.
             //If a previous worker traversed a body, the later worker's island holding that body is considered a duplicate.
             //(Note that a body can only belong to one island. If two threads find the same body, it means they found the exact same island, just using different paths. They are fully redundant.)
-            var inactiveSetReferencePool = pool.SpecializeFor<InactiveSetReference>();
-            var broadPhaseDataPool = pool.SpecializeFor<CachedBroadPhaseData>();
-            QuickList<InactiveSetReference>.Create(pool, 32, out newInactiveSets);
+            newInactiveSets = new QuickList<InactiveSetReference>(32, pool);
             var sleptBodyCount = 0;
             for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
             {
@@ -701,7 +699,7 @@ namespace BepuPhysics
                         ref var newSetReference = ref newInactiveSets.AllocateUnsafely();
                         newSetReference.Index = setIndex;
                         //We allocate the broad phase data buffer here, but the data is gathered on the worker thread.
-                        broadPhaseDataPool.Take(island.BodyIndices.Count, out newSetReference.BroadPhaseData);
+                        pool.Take(island.BodyIndices.Count, out newSetReference.BroadPhaseData);
                         EnsureSetsCapacity(setIndex + 1);
                         bodies.Sets[setIndex] = new BodySet(island.BodyIndices.Count, pool);
                         bodies.Sets[setIndex].Count = island.BodyIndices.Count;
@@ -810,7 +808,7 @@ namespace BepuPhysics
             //Note that we create flush jobs before the third phase execution. This creates some necessary internal structures in the constraint remover that will be referenced.
             typeBatchConstraintRemovalJobCount = constraintRemover.CreateFlushJobs(deterministic);
 
-            QuickList<RemovalJob>.Create(pool, 4, out removalJobs);
+            removalJobs = new QuickList<RemovalJob>(4, pool);
             //The heavier locally sequential jobs are scheduled up front, leaving the smaller later tasks to fill gaps.
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.NotifyNarrowPhasePairCache };
             removalJobs.AllocateUnsafely() = new RemovalJob { Type = RemovalJobType.RemoveBodiesFromActiveSet };
@@ -888,7 +886,7 @@ namespace BepuPhysics
 
             for (int i = 0; i < newInactiveSets.Count; ++i)
             {
-                broadPhaseDataPool.Return(ref newInactiveSets[i].BroadPhaseData);
+                pool.Return(ref newInactiveSets[i].BroadPhaseData);
             }
             newInactiveSets.Dispose(pool);
             constraintRemover.Postflush();
@@ -915,7 +913,7 @@ namespace BepuPhysics
         public void Sleep(int bodyIndex)
         {
             //stackallocing a span would be much nicer here.
-            QuickList<int>.Create(pool, 1, out var list);
+            var list = new QuickList<int>(1, pool);
             list.AllocateUnsafely() = bodyIndex;
             Sleep(ref list, null);
             list.Dispose(pool);
@@ -928,7 +926,7 @@ namespace BepuPhysics
 
             int candidateCount = (int)Math.Max(1, bodies.ActiveSet.Count * TestedFractionPerFrame);
 
-            QuickList<int>.Create(pool, candidateCount, out var traversalStartBodyIndices);
+            var traversalStartBodyIndices = new QuickList<int>(candidateCount, pool);
 
             //Uniformly distribute targets across the active set. Each frame, the targets are pushed up by one slot.
             int spacing = bodies.ActiveSet.Count / candidateCount;

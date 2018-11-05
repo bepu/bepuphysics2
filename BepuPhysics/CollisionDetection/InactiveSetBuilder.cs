@@ -72,7 +72,7 @@ namespace BepuPhysics.CollisionDetection
             //Original values are used to test for existence; have to clear to avoid undefined values.
             ConstraintCaches.Clear(0, ConstraintCaches.Length);
             CollisionCaches.Clear(0, CollisionCaches.Length);
-            QuickList<SleepingPair>.Create(pool, initialPairCapacity, out Pairs);
+            Pairs = new QuickList<SleepingPair>(initialPairCapacity, pool);
             InitialCapacityPerCache = initialCapacityPerCache;
         }
 
@@ -170,7 +170,7 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(set.ConstraintCaches.Length > 0,
                     "While there may be no collision caches, pair mapping entries only exist for constraintful pairs.");
 
-                QuickList<SleepingPair>.Create(pool, Pairs.Count, out set.Pairs);
+                set.Pairs = new QuickList<SleepingPair>(Pairs.Count, pool);
                 for (int i = 0; i < Pairs.Count; ++i)
                 {
                     ref var sourcePair = ref Pairs[i];

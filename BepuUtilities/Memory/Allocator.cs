@@ -57,7 +57,7 @@ namespace BepuUtilities.Memory
         {
             this.pool = pool;
             this.Capacity = memoryPoolSize;
-            QuickDictionary<ulong, Allocation, PrimitiveComparer<ulong>>.Create(pool, allocationCountEstimate, 2, out allocations);
+            allocations = new QuickDictionary<ulong, Allocation, PrimitiveComparer<ulong>>(allocationCountEstimate, 2, pool);
         }
 
         /// <summary>

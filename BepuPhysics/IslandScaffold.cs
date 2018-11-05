@@ -24,7 +24,7 @@ namespace BepuPhysics
         public IslandScaffoldTypeBatch(BufferPool pool, int typeId, int initialTypeBatchSize)
         {
             TypeId = typeId;
-            QuickList<int>.Create(pool, initialTypeBatchSize, out Handles);
+            Handles = new QuickList<int>(initialTypeBatchSize, pool);
         }
     }
 
@@ -40,7 +40,7 @@ namespace BepuPhysics
         {
             pool.SpecializeFor<int>().Take(solver.TypeProcessors.Length, out TypeIdToIndex);
             Unsafe.InitBlockUnaligned(TypeIdToIndex.Memory, 0xFF, (uint)(TypeIdToIndex.Length * sizeof(int)));
-            QuickList<IslandScaffoldTypeBatch>.Create(pool, solver.TypeProcessors.Length, out TypeBatches);
+            TypeBatches = new QuickList<IslandScaffoldTypeBatch>(solver.TypeProcessors.Length, pool);
             ReferencedBodyIndices = batchIndex < solver.FallbackBatchThreshold ? new IndexSet(pool, solver.bodies.ActiveSet.Count) : default;
         }
 
@@ -142,10 +142,10 @@ namespace BepuPhysics
         {
             Debug.Assert(bodyIndices.Count > 0, "Don't be tryin' to create islands with no bodies in them! That don't make no sense.");
             //Create a copy of the body indices with just enough space to hold the island's indices. The original list will continue to be reused in the caller.
-            QuickList<int>.Create(pool, bodyIndices.Count, out BodyIndices);
+            BodyIndices = new QuickList<int>(bodyIndices.Count, pool);
             bodyIndices.Span.CopyTo(0, ref BodyIndices.Span, 0, bodyIndices.Count);
             BodyIndices.Count = bodyIndices.Count;
-            QuickList<IslandScaffoldConstraintBatch>.Create(pool, solver.ActiveSet.Batches.Count, out Protobatches);
+            Protobatches = new QuickList<IslandScaffoldConstraintBatch>(solver.ActiveSet.Batches.Count, pool);
             for (int i = 0; i < constraintHandles.Count; ++i)
             {
                 AddConstraint(constraintHandles[i], solver, pool);

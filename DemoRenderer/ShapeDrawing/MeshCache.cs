@@ -36,9 +36,9 @@ namespace DemoRenderer.ShapeDrawing
             TriangleBuffer = new StructuredBuffer<Vector3>(device, initialSizeInVertices, "Mesh Cache Vertex Buffer");
             allocator = new Allocator(pool, initialSizeInVertices);
 
-            QuickList<UploadRequest>.Create(pool, 128, out pendingUploads);
-            QuickList<ulong>.Create(pool, 128, out requestedIds);
-            QuickSet<ulong, PrimitiveComparer<ulong>>.Create(pool, 256, 2, out previouslyAllocatedIds);
+            pendingUploads = new QuickList<UploadRequest>(128, pool);
+            requestedIds = new QuickList<ulong>(128, pool);
+            previouslyAllocatedIds = new QuickSet<ulong, PrimitiveComparer<ulong>>(256, pool);
         }
 
         public unsafe bool Allocate(ulong id, int vertexCount, out int start, out Buffer<Vector3> vertices)

@@ -182,7 +182,7 @@ namespace BepuPhysics.CollisionDetection
         {
             OnPreflush(threadDispatcher, deterministic);
             //var start = Stopwatch.GetTimestamp();
-            QuickList<NarrowPhaseFlushJob>.Create(Pool, 128, out flushJobs);
+            flushJobs = new QuickList<NarrowPhaseFlushJob>(128, Pool);
             PairCache.PrepareFlushJobs(ref flushJobs);
             var removalBatchJobCount = ConstraintRemover.CreateFlushJobs(deterministic);
             //Note that we explicitly add the constraint remover jobs here. 
@@ -262,7 +262,7 @@ namespace BepuPhysics.CollisionDetection
                 Batcher = new CollisionBatcher<CollisionCallbacks>(pool, narrowPhase.Shapes, narrowPhase.CollisionTaskRegistry, narrowPhase.timestepDuration,
                     new CollisionCallbacks(workerIndex, pool, narrowPhase));
                 PendingConstraints = new PendingConstraintAddCache(pool);
-                QuickList<int>.Create(pool, 16, out PendingSetAwakenings);
+                PendingSetAwakenings = new QuickList<int>(16, pool);
             }
         }
 

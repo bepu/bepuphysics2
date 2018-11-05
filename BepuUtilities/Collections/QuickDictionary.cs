@@ -170,32 +170,43 @@ namespace BepuUtilities.Collections
         /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
         /// <param name="tableSizePower">Target capacity relative to the initial capacity in terms of a power of 2. The size of the initial table buffer will be at least 2^tableSizePower times larger than the initial capacity.</param>
         /// <param name="comparer">Comparer to use in the dictionary.</param>
-        /// <param name="dictionary">Created dictionary.</param>
         /// <param name="pool">Pool used for spans.</param>   
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create(IUnmanagedMemoryPool pool, int initialCapacity, int tableSizePower, TEqualityComparer comparer,
-            out QuickDictionary<TKey, TValue, TEqualityComparer> dictionary)
+        public QuickDictionary(int initialCapacity, int tableSizePower, IUnmanagedMemoryPool pool, TEqualityComparer comparer)
         {
             pool.Take<TKey>(initialCapacity, out var keySpan);
             pool.Take<TValue>(keySpan.Length, out var valueSpan);
             pool.Take<int>(keySpan.Length << tableSizePower, out var tableSpan);
             //No guarantee that the table is clean; clear it.
             tableSpan.Clear(0, tableSpan.Length);
-            dictionary = new QuickDictionary<TKey, TValue, TEqualityComparer>(ref keySpan, ref valueSpan, ref tableSpan, comparer, tableSizePower);
+            this = new QuickDictionary<TKey, TValue, TEqualityComparer>(ref keySpan, ref valueSpan, ref tableSpan, comparer, tableSizePower);
         }
+
         /// <summary>
         /// Creates a new dictionary with a default constructed comparer.
         /// </summary>
         /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
         /// <param name="tableSizePower">Target capacity relative to the initial capacity in terms of a power of 2. The size of the initial table buffer will be at least 2^tableSizePower times larger than the initial capacity.</param>
         /// <param name="comparer">Comparer to use in the dictionary.</param>
-        /// <param name="dictionary">Created dictionary.</param>
         /// <param name="pool">Pool used for spans.</param>   
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create(IUnmanagedMemoryPool pool, int initialCapacity, int tableSizePower, out QuickDictionary<TKey, TValue, TEqualityComparer> dictionary)
+        public QuickDictionary(int initialCapacity, int tableSizePower, IUnmanagedMemoryPool pool)
+            : this(initialCapacity, tableSizePower, pool, default)
         {
-            Create(pool, initialCapacity, tableSizePower, default, out dictionary);
         }
+
+        /// <summary>
+        /// Creates a new dictionary with a default constructed comparer.
+        /// </summary>
+        /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
+        /// <param name="comparer">Comparer to use in the dictionary.</param>
+        /// <param name="pool">Pool used for spans.</param>   
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public QuickDictionary(int initialCapacity, IUnmanagedMemoryPool pool)
+            : this(initialCapacity, 2, pool, default)
+        {
+        }
+
 
         /// <summary>
         /// Swaps out the dictionary's backing memory span for a new span.

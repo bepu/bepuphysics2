@@ -52,7 +52,7 @@ namespace DemoRenderer.ShapeDrawing
         public unsafe void Render(DeviceContext context, Camera camera, Int2 screenResolution, Span<MeshInstance> instances, int start, int count)
         {
             //Examine the set of instances and batch them into groups using the same mesh data.
-            QuickDictionary<ulong, QuickList<MeshInstance>, PrimitiveComparer<ulong>>.Create(meshCache.Pool, 16, 3, out var batches);
+            var batches = new QuickDictionary<ulong, QuickList<MeshInstance>, PrimitiveComparer<ulong>>(16, meshCache.Pool);
             var end = start + count;
             for (int i = start; i < end; ++i)
             {
@@ -76,7 +76,7 @@ namespace DemoRenderer.ShapeDrawing
                     }
                     batches.Keys[batches.Count] = id;
                     ref var listSlot = ref batches.Values[batches.Count];
-                    QuickList<MeshInstance>.Create(meshCache.Pool, 64, out listSlot);
+                    listSlot = new QuickList<MeshInstance>(64, meshCache.Pool);
                     listSlot.Add(ref instance, meshCache.Pool);
                     batches.Table[tableIndex] = newCount;
                     batches.Count = newCount;

@@ -175,13 +175,13 @@ namespace Demos
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
             int raySourceCount = 3;
-            QuickList<QuickList<TestRay>>.Create(BufferPool, raySourceCount, out raySources);
+            raySources = new QuickList<QuickList<TestRay>>(raySourceCount, BufferPool);
             raySources.Count = raySourceCount;
 
             //Spew rays all over the place, starting inside the shape cube.
             int randomRayCount = 1 << 14;
             ref var randomRays = ref raySources[0];
-            QuickList<TestRay>.Create(BufferPool, randomRayCount, out randomRays);
+            randomRays = new QuickList<TestRay>(randomRayCount, BufferPool);
             for (int i = 0; i < randomRayCount; ++i)
             {
                 var direction = GetDirection(random);
@@ -204,7 +204,7 @@ namespace Demos
             var unitZSpacing = new Vector2(unitZScreenWidth / frustumRayWidth, unitZScreenHeight / frustumRayHeight);
             var unitZBase = (unitZSpacing - new Vector2(unitZScreenWidth, unitZScreenHeight)) * 0.5f;
             ref var frustumRays = ref raySources[1];
-            QuickList<TestRay>.Create(BufferPool, frustumRayWidth * frustumRayHeight, out frustumRays);
+            frustumRays = new QuickList<TestRay>(frustumRayWidth * frustumRayHeight, BufferPool);
             var frustumOrigin = new Vector3(0, 0, -50);
             for (int i = 0; i < frustumRayWidth; ++i)
             {
@@ -224,7 +224,7 @@ namespace Demos
             var wallSpacing = new Vector2(0.1f);
             var wallBase = 0.5f * (wallSpacing - wallSpacing * new Vector2(wallWidth, wallHeight));
             ref var wallRays = ref raySources[2];
-            QuickList<TestRay>.Create(BufferPool, wallWidth * wallHeight, out wallRays);
+            wallRays = new QuickList<TestRay>(wallWidth * wallHeight, BufferPool);
             for (int i = 0; i < wallWidth; ++i)
             {
                 for (int j = 0; j < wallHeight; ++j)
@@ -238,7 +238,7 @@ namespace Demos
                 }
             }
             var maxRayCount = Math.Max(randomRays.Count, Math.Max(frustumRays.Count, wallRays.Count));
-            QuickList<TestRay>.Create(BufferPool, maxRayCount, out testRays);
+            testRays = new QuickList<TestRay>(maxRayCount, BufferPool);
             var timeSampleCount = 16;
             algorithms = new IntersectionAlgorithm[2];
             algorithms[0] = new IntersectionAlgorithm("Unbatched", UnbatchedWorker, BufferPool, maxRayCount, timeSampleCount);

@@ -90,8 +90,8 @@ namespace BepuPhysics.CollisionDetection
                     pool.Resize(ref RemovalsForTypeBatches, BatchCount, index);
                 TypeBatches[index] = typeBatchIndex;
                 ref var newSlot = ref RemovalsForTypeBatches[index];
-                QuickList<int>.Create(pool, Math.Max(constraintHandleCount, minimumCapacityPerBatch), out newSlot.ConstraintHandlesToRemove);
-                QuickList<PerBodyRemovalTarget>.Create(pool, Math.Max(perBodyRemovalCount, minimumCapacityPerBatch), out newSlot.PerBodyRemovalTargets);
+                newSlot.ConstraintHandlesToRemove = new QuickList<int>(Math.Max(constraintHandleCount, minimumCapacityPerBatch), pool);
+                newSlot.PerBodyRemovalTargets = new QuickList<PerBodyRemovalTarget>(Math.Max(perBodyRemovalCount, minimumCapacityPerBatch), pool);
                 return index;
             }
 
@@ -212,7 +212,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 //Ensure that the fallback deallocation list is also large enough. The fallback batch may result in 3 returned buffers for the primary dictionary, plus another two for each potentially
                 //removed body constraint references subset.
-                QuickList<int>.Create(pool, 3 + solver.ActiveSet.Fallback.BodyCount * 2, out allocationIdsToFree);
+                allocationIdsToFree = new QuickList<int>(3 + solver.ActiveSet.Fallback.BodyCount * 2, pool);
             }
         }
 
@@ -312,7 +312,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 typeBatchCount += activeSet.Batches[i].TypeBatches.Count;
             }
-            QuickList<TypeBatchIndex>.Create(pool, typeBatchCount, out removedTypeBatches);
+            removedTypeBatches = new QuickList<TypeBatchIndex>(typeBatchCount, pool);
             return batches.BatchCount;
         }
 

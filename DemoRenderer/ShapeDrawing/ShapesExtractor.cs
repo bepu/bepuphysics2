@@ -25,11 +25,11 @@ namespace DemoRenderer.ShapeDrawing
         ParallelLooper looper;
         public ShapesExtractor(Device device, ParallelLooper looper, BufferPool pool, int initialCapacityPerShapeType = 1024)
         {
-            QuickList<SphereInstance>.Create(pool, initialCapacityPerShapeType, out spheres);
-            QuickList<CapsuleInstance>.Create(pool, initialCapacityPerShapeType, out capsules);
-            QuickList<BoxInstance>.Create(pool, initialCapacityPerShapeType, out boxes);
-            QuickList<TriangleInstance>.Create(pool, initialCapacityPerShapeType, out triangles);
-            QuickList<MeshInstance>.Create(pool, initialCapacityPerShapeType, out meshes);
+            spheres = new QuickList<SphereInstance>(initialCapacityPerShapeType, pool);
+            capsules = new QuickList<CapsuleInstance>(initialCapacityPerShapeType, pool);
+            boxes = new QuickList<BoxInstance>(initialCapacityPerShapeType, pool);
+            triangles = new QuickList<TriangleInstance>(initialCapacityPerShapeType, pool);
+            meshes = new QuickList<MeshInstance>(initialCapacityPerShapeType, pool);
             this.MeshCache = new MeshCache(device, pool);
             this.pool = pool;
             this.looper = looper;

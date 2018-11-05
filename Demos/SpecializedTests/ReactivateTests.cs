@@ -82,16 +82,16 @@ namespace Demos
         {
             for (int iterationIndex = 0; iterationIndex < 100; ++iterationIndex)
             {
-                QuickList<int>.Create(BufferPool, Simulation.Bodies.ActiveSet.Count, out var bodyIndicestoDeactivate);
+                var bodyIndicesToDeactivate = new QuickList<int>(Simulation.Bodies.ActiveSet.Count, BufferPool);
                 for (int i = 0; i < Simulation.Bodies.ActiveSet.Count; ++i)
                 {
-                    bodyIndicestoDeactivate.AllocateUnsafely() = i;
+                    bodyIndicesToDeactivate.AllocateUnsafely() = i;
                 }
-                Simulation.Sleeper.Sleep(ref bodyIndicestoDeactivate);
+                Simulation.Sleeper.Sleep(ref bodyIndicesToDeactivate);
 
-                bodyIndicestoDeactivate.Dispose(BufferPool);
+                bodyIndicesToDeactivate.Dispose(BufferPool);
 
-                QuickList<int>.Create(BufferPool, Simulation.Bodies.Sets.Length, out var setsToActivate);
+                var setsToActivate = new QuickList<int>(Simulation.Bodies.Sets.Length, BufferPool);
                 for (int i = 1; i < Simulation.Bodies.Sets.Length; ++i)
                 {
                     if (Simulation.Bodies.Sets[i].Allocated)

@@ -38,7 +38,7 @@ namespace BepuPhysics.Collidables
         {
             Pool = pool;
             Shapes = shapes;
-            QuickList<Child>.Create(Pool, builderCapacity, out Children);
+            Children = new QuickList<Child>(builderCapacity, Pool);
         }
 
         /// <summary>

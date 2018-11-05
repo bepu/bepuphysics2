@@ -32,7 +32,7 @@ namespace DemoRenderer.Constraints
         public BoundingBoxLineExtractor(BufferPool pool)
         {
             this.pool = pool;
-            QuickList<ThreadJob>.Create(pool, Environment.ProcessorCount * jobsPerThread, out jobs);
+            jobs = new QuickList<ThreadJob>(Environment.ProcessorCount * jobsPerThread, pool);
             workDelegate = Work;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

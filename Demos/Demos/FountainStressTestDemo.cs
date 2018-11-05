@@ -105,8 +105,8 @@ namespace Demos.Demos
                 kinematicHandles[i] = Simulation.Bodies.Add(description);
             }
 
-            QuickQueue<int>.Create(BufferPool, 65536, out dynamicHandles);
-            QuickQueue<StaticDescription>.Create(BufferPool, 512, out removedStatics);
+            dynamicHandles = new QuickQueue<int>(65536, BufferPool);
+            removedStatics = new QuickQueue<StaticDescription>(512, BufferPool);
             random = new Random(5);
         }
 

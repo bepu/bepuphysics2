@@ -195,7 +195,7 @@ namespace BepuPhysics.Trees
             if (leafCount <= 2)
                 return;
             GetRefitAndMarkTuning(out int maximumSubtrees, out int estimatedRefinementCandidateCount, out int leafCountThreshold);
-            QuickList<int>.Create(pool, estimatedRefinementCandidateCount, out var refinementCandidates);
+            var refinementCandidates = new QuickList<int>(estimatedRefinementCandidateCount, pool);
 
             //Collect the refinement candidates.
             var costChange = RefitAndMark(leafCountThreshold, ref refinementCandidates, pool);
@@ -204,7 +204,7 @@ namespace BepuPhysics.Trees
             GetRefineTuning(frameIndex, refinementCandidates.Count, refineAggressivenessScale, costChange, out int targetRefinementCount, out int period, out int offset);
 
 
-            QuickList<int>.Create(pool, targetRefinementCount, out var refinementTargets);
+            var refinementTargets = new QuickList<int>(targetRefinementCount, pool);
 
             int index = offset;
             for (int i = 0; i < targetRefinementCount - 1; ++i)
@@ -225,8 +225,8 @@ namespace BepuPhysics.Trees
 
             //Refine all marked targets.
 
-            QuickList<int>.Create(pool, maximumSubtrees, out var subtreeReferences);
-            QuickList<int>.Create(pool, maximumSubtrees, out var treeletInternalNodes);
+            var subtreeReferences = new QuickList<int>(maximumSubtrees, pool);
+            var treeletInternalNodes = new QuickList<int>(maximumSubtrees, pool);
 
             CreateBinnedResources(pool, maximumSubtrees, out var buffer, out var resources);
 

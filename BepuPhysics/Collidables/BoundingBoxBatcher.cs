@@ -230,7 +230,7 @@ namespace BepuPhysics
             if (!batchSlot.Span.Allocated)
             {
                 //No list exists for this type yet.
-                QuickList<BoundingBoxInstance>.Create(pool, CollidablesPerFlush, out batchSlot);
+                batchSlot = new QuickList<BoundingBoxInstance>(CollidablesPerFlush, pool);
                 if (typeIndex < minimumBatchIndex)
                     minimumBatchIndex = typeIndex;
                 if (typeIndex > maximumBatchIndex)

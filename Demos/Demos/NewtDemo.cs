@@ -391,7 +391,7 @@ namespace Demos.Demos
             var buffer = new Vector3(cellSize);
             min -= buffer;
 
-            CellSet.Create(pool, triangles.Length, 3, out var cells);
+            var cells = new CellSet(triangles.Length, 2, pool);
             for (int i = 0; i < triangles.Length; ++i)
             {
                 ref var triangle = ref triangles[i];
@@ -411,8 +411,8 @@ namespace Demos.Demos
             bounds.Z = (int)(Math.Ceiling(inverseCellSize * size.Z));
             //Perform a flood fill on every surface vertex.
             //We can use the cells set directly, since it behaves like a regular list with regard to element placement (always at the end).
-            CellSet.Create(pool, 32, 3, out var floodFilledCells);
-            CellList.Create(pool, 32, out var cellsToVisit);
+            var floodFilledCells = new CellSet(32, 3, pool);
+            var cellsToVisit = new CellList(32, pool);
             for (int i = cells.Count - 1; i >= 0; --i)
             {
                 ref var cell = ref cells[i];
@@ -420,7 +420,7 @@ namespace Demos.Demos
             }
 
             //Build the vertex list and per-cell vertex index lists.
-            CellSet.Create(pool, cells.Count  * 4, 2, out vertexSpatialIndices);
+            vertexSpatialIndices = new CellSet(cells.Count * 4, 2, pool);
             int cellIndex = 0;
             pool.Take(cells.Count, out cellVertexIndices);
             cellVertexIndices = cellVertexIndices.Slice(0, cells.Count);
@@ -671,7 +671,7 @@ namespace Demos.Demos
         {
             BufferPool.Take<int>(vertices.Length, out var vertexEdgeCounts);
             vertexEdgeCounts.Clear(0, vertices.Length);
-            QuickSet<Edge, Edge>.Create(BufferPool, vertices.Length * 3, 2, out var edges);
+            var edges = new QuickSet<Edge, Edge>(vertices.Length * 3, 2, BufferPool);
             var edgeCountForInternalVertex = CreateHexahedralUniqueEdgesList(ref cellVertexIndices, ref vertexEdgeCounts, BufferPool, ref edges);
             //var edgeCountForInternalVertex = CreateTetrahedralUniqueEdgesList(ref tetrahedraVertexIndices, ref vertexEdgeCounts, ref cellEdgePool, ref intPool, ref edges);
 

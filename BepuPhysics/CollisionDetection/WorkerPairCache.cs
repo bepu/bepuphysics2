@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection
 {
-    
+
 
     /// <summary>
     /// The cached pair data created by a single worker during the last execution of narrow phase pair processing.
@@ -41,7 +41,7 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public QuickList<CollidablePair> PendingRemoves;
 
-        public WorkerPairCache(int workerIndex, BufferPool pool, 
+        public WorkerPairCache(int workerIndex, BufferPool pool,
             ref QuickList<PreallocationSizes> minimumSizesPerConstraintType,
             ref QuickList<PreallocationSizes> minimumSizesPerCollisionType,
             int pendingCapacity, int minimumPerTypeCapacity = 128)
@@ -73,8 +73,8 @@ namespace BepuPhysics.CollisionDetection
             //Clear out the remainder of slots to avoid invalid data.
             collisionCaches.Clear(minimumSizesPerCollisionType.Count, collisionCaches.Length - minimumSizesPerCollisionType.Count);
 
-            QuickList<PendingAdd>.Create(pool, pendingCapacity, out PendingAdds);
-            QuickList<CollidablePair>.Create(pool, pendingCapacity, out PendingRemoves);
+            PendingAdds = new QuickList<PendingAdd>(pendingCapacity, pool);
+            PendingRemoves = new QuickList<CollidablePair>(pendingCapacity, pool);
         }
 
 
@@ -101,7 +101,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         public void AccumulateMinimumSizes(
-            ref QuickList<PreallocationSizes> minimumSizesPerConstraintType, 
+            ref QuickList<PreallocationSizes> minimumSizesPerConstraintType,
             ref QuickList<PreallocationSizes> minimumSizesPerCollisionType)
         {
             //Note that the count is expanded only as a constraint or cache of a given type is encountered.

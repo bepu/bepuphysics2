@@ -169,7 +169,7 @@ namespace BepuPhysics.CollisionDetection
             var maximumDistance = (float)Math.Sqrt(maximumDistanceSquared);
             float initialBestScore = -float.MaxValue;
             int initialBestScoreIndex = 0;
-            QuickList<Int2>.Create(pool, ChildCount * 4, out var remainingChildren);
+            var remainingChildren = new QuickList<Int2>(ChildCount * 4, pool);
             //To reliably break the tie between multiple contacts in the same location (which often happens on triangle meshes), add a little bit extra to later contacts.
             //Not enough to significantly change the outcome under any circumstance- just enough to avoid swapping between two numerically near-identical starting points over and over.
             var biasPerIndex = maximumDistance * 1e-5f;

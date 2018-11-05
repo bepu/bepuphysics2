@@ -193,7 +193,7 @@ namespace BepuPhysics
             ResizeSetsCapacity(initialIslandCapacity + 1, 0);
             FallbackBatchThreshold = fallbackBatchThreshold;
             ActiveSet = new ConstraintSet(pool, fallbackBatchThreshold + 1);
-            QuickList<IndexSet>.Create(pool, fallbackBatchThreshold + 1, out batchReferencedHandles);
+            batchReferencedHandles = new QuickList<IndexSet>(fallbackBatchThreshold + 1, pool);
             pool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
             workDelegate = Work;
         }

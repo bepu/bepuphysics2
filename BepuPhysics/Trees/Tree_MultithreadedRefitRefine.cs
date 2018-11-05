@@ -61,11 +61,11 @@ namespace BepuPhysics.Trees
                 pool.Take(threadDispatcher.ThreadCount, out RefinementCandidates);
                 Tree.GetRefitAndMarkTuning(out MaximumSubtrees, out var estimatedRefinementCandidateCount, out RefinementLeafCountThreshold);
                 //Note that the number of refit nodes is not necessarily bound by MaximumSubtrees. It is just a heuristic estimate. Resizing has to be supported.
-                QuickList<int>.Create(pool, MaximumSubtrees, out RefitNodes);
+                RefitNodes = new QuickList<int>(MaximumSubtrees, pool);
                 //Note that we haven't rigorously guaranteed a refinement count maximum, so it's possible that the workers will need to resize the per-thread refinement candidate lists.
                 for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
                 {
-                    QuickList<int>.Create(threadDispatcher.GetThreadMemoryPool(i), estimatedRefinementCandidateCount, out RefinementCandidates[i]);
+                    RefinementCandidates[i] = new QuickList<int>(estimatedRefinementCandidateCount, threadDispatcher.GetThreadMemoryPool(i));
                 }
 
                 int multithreadingLeafCountThreshold = Tree.leafCount / (threadDispatcher.ThreadCount * 2);
@@ -84,7 +84,7 @@ namespace BepuPhysics.Trees
                 }
                 Tree.GetRefineTuning(frameIndex, refinementCandidatesCount, refineAggressivenessScale, RefitCostChange,
                     out var targetRefinementCount, out var period, out var offset);
-                QuickList<int>.Create(pool, targetRefinementCount, out RefinementTargets);
+                RefinementTargets = new QuickList<int>(targetRefinementCount, pool);
 
                 //Note that only a subset of all refinement *candidates* will become refinement *targets*.
                 //We start at a semirandom offset and then skip through the set to accumulate targets.
@@ -132,7 +132,7 @@ namespace BepuPhysics.Trees
                 var cacheOptimizationTasks = threadDispatcher.ThreadCount * 2;
                 PerWorkerCacheOptimizeCount = cacheOptimizeCount / cacheOptimizationTasks;
                 var startIndex = (int)(((long)frameIndex * PerWorkerCacheOptimizeCount) % Tree.nodeCount);
-                QuickList<int>.Create(pool, cacheOptimizationTasks, out CacheOptimizeStarts);
+                CacheOptimizeStarts = new QuickList<int>(cacheOptimizationTasks, pool);
                 CacheOptimizeStarts.AddUnsafely(startIndex);
 
                 var optimizationSpacing = Tree.nodeCount / threadDispatcher.ThreadCount;
@@ -336,8 +336,8 @@ namespace BepuPhysics.Trees
             {
                 var threadPool = threadDispatcher.GetThreadMemoryPool(workerIndex);
                 var subtreeCountEstimate = 1 << SpanHelper.GetContainingPowerOf2(MaximumSubtrees);
-                QuickList<int>.Create(threadPool, subtreeCountEstimate, out var subtreeReferences);
-                QuickList<int>.Create(threadPool, subtreeCountEstimate, out var treeletInternalNodes);
+                var subtreeReferences = new QuickList<int>(subtreeCountEstimate, threadPool);
+                var treeletInternalNodes = new QuickList<int>(subtreeCountEstimate, threadPool);
 
                 CreateBinnedResources(threadPool, MaximumSubtrees, out var buffer, out var resources);
 

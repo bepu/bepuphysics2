@@ -83,7 +83,7 @@ namespace BepuPhysics
                 if (!bodyAlreadyListed)
                 {
                     //The body is not already contained. Create a list for it.
-                    QuickSet<FallbackReference, FallbackReferenceComparer>.Create(pool, minimumReferenceCapacity, 2, out constraintReferences);
+                    constraintReferences = new QuickSet<FallbackReference, FallbackReferenceComparer>(minimumReferenceCapacity, pool);
                     bodyConstraintReferences.Keys[elementIndex] = bodyReference;
                     bodyConstraintReferences.Table[tableIndex] = elementIndex + 1;
                     ++bodyConstraintReferences.Count;
@@ -492,9 +492,7 @@ namespace BepuPhysics
             }
             else
             {
-                //bleuaghg
-                QuickDictionary<int, QuickSet<FallbackReference, FallbackReferenceComparer>, PrimitiveComparer<int>>.Create(
-                    pool, bodyCapacity, 2, out bodyConstraintReferences);
+                bodyConstraintReferences = new QuickDictionary<int, QuickSet<FallbackReference, FallbackReferenceComparer>, PrimitiveComparer<int>>(bodyCapacity, pool);
             }
 
         }

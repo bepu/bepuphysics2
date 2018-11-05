@@ -35,7 +35,7 @@ namespace Demos.SpecializedTests
             var lists = new QuickList<int>[listCount];
             for (int i = 0; i < 1000; ++i)
             {
-                QuickList<int>.Create(pool, 0 + random.Next(9), out lists[i]);
+                lists[i] = new QuickList<int>(0 + random.Next(9), pool);
                 ref var list = ref lists[i];
                 const int anchorSize = 128;
                 for (int j = 0; j < 1000; ++j)

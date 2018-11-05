@@ -17,7 +17,7 @@ namespace DemoRenderer.Constraints
         ParallelLooper looper;
         public LineExtractor(BufferPool pool, ParallelLooper looper, int initialLineCapacity = 8192)
         {
-            QuickList<LineInstance>.Create(pool, initialLineCapacity, out lines);
+            lines = new QuickList<LineInstance>(initialLineCapacity, pool);
             constraints = new ConstraintLineExtractor(pool);
             boundingBoxes = new BoundingBoxLineExtractor(pool);
             this.pool = pool;

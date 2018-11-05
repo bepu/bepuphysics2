@@ -148,7 +148,7 @@ namespace BepuPhysics.CollisionDetection
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public void Initialize(BufferPool pool, int capacity)
                 {
-                    QuickList<ConvexContactManifold>.Create(pool, capacity, out Manifolds);
+                    Manifolds = new QuickList<ConvexContactManifold>(capacity, pool);
                 }
 
 

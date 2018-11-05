@@ -74,7 +74,7 @@ namespace BepuPhysics
             ++Count;
             IndexToHandle[index] = handle;
             //Collidable's broad phase index is left unset. The Bodies collection is responsible for attaching that data.
-            QuickList<BodyConstraintReference>.Create(pool, minimumConstraintCapacity, out Constraints[index]);
+            Constraints[index] = new QuickList<BodyConstraintReference>(minimumConstraintCapacity, pool);
             ApplyDescriptionByIndex(index, bodyDescription);
             return index;
         }

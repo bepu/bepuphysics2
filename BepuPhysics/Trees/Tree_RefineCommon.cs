@@ -232,8 +232,8 @@ namespace BepuPhysics.Trees
         unsafe void ValidateStaging(Node* stagingNodes, ref QuickList<int> subtreeNodePointers, int treeletParent, int treeletIndexInParent, BufferPool pool)
         {
             var intPool = pool.SpecializeFor<int>();
-            QuickList<int>.Create(pool, subtreeNodePointers.Count, out var collectedSubtreeReferences);
-            QuickList<int>.Create(pool, subtreeNodePointers.Count, out var internalReferences);
+            var collectedSubtreeReferences = new QuickList<int>(subtreeNodePointers.Count, pool);
+            var internalReferences = new QuickList<int>(subtreeNodePointers.Count, pool);
             internalReferences.Add(0, pool);
             ValidateStaging(stagingNodes, 0, ref subtreeNodePointers, ref collectedSubtreeReferences, ref internalReferences, pool, out int foundSubtrees, out int foundLeafCount);
             if (treeletParent < -1 || treeletParent >= nodeCount)

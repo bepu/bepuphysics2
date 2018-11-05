@@ -93,7 +93,7 @@ namespace BepuPhysics
             {
                 this.pool = pool;
                 this.broadPhase = broadPhase;
-                QuickList<int>.Create(pool, 32, out InactiveBodyHandles);
+                InactiveBodyHandles = new QuickList<int>(32, pool);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

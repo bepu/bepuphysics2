@@ -225,7 +225,7 @@ namespace BepuPhysics.CollisionDetection
             PairCache.EnsureConstraintToPairMappingCapacity(Solver, targetConstraintCapacity);
             //Do the same for the main solver handle set. We make use of the Solver.HandleToLocation frequently; a resize would break stuff.
             Solver.EnsureSolverCapacities(1, targetConstraintCapacity);
-            QuickList<int>.Create(Pool, setsToAwakenCapacity, out var setsToAwaken);
+            var setsToAwaken = new QuickList<int>(setsToAwakenCapacity, Pool);
             var uniqueAwakeningsSet = new IndexSet(Pool, Simulation.Bodies.Sets.Length);
             for (int i = 0; i < threadCount; ++i)
             {
@@ -242,7 +242,7 @@ namespace BepuPhysics.CollisionDetection
                 //Given the sizes involved, a fixed guess of 128 should be just fine for essentially any simulation. Overkill, but not in a concerning way.
                 //Temporarily allocating 1KB of memory isn't a big deal, and we will only touch the necessary subset of it anyway.
                 //(There are pathological cases where resizes are still possible, but the constraint remover handles them by not adding unsafely.)
-                QuickList<PreflushJob>.Create(Pool, 128 + Math.Max(awakenerPhaseOneJobCount, awakenerPhaseTwoJobCount), out preflushJobs);
+                preflushJobs = new QuickList<PreflushJob>(128 + Math.Max(awakenerPhaseOneJobCount, awakenerPhaseTwoJobCount), Pool);
 
                 //FIRST PHASE: 
                 //1) If deterministic, sort each type batch.
@@ -281,7 +281,7 @@ namespace BepuPhysics.CollisionDetection
                         if (countInType > 0)
                         {
                             //Note that we don't actually add any constraint targets here- we let the actual worker threads do that. No reason not to, and it extracts a tiny bit of extra parallelism.
-                            QuickList<SortConstraintTarget>.Create(Pool, countInType, out sortedConstraints[typeIndex]);
+                            sortedConstraints[typeIndex] = new QuickList<SortConstraintTarget>(countInType, Pool);
                             preflushJobs.Add(new PreflushJob { Type = PreflushJobType.SortContactConstraintType, TypeIndex = typeIndex, WorkerCount = threadCount }, Pool);
                         }
                     }

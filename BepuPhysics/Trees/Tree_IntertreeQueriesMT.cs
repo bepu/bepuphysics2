@@ -54,7 +54,7 @@ namespace BepuPhysics.Trees
                 var targetJobCount = Math.Max(1, jobMultiplier * threadCount);
                 //TODO: Not a lot of thought was put into this leaf threshold for intertree. Probably better options.
                 leafThreshold = (int)((treeA.leafCount + treeB.leafCount) / targetJobCount);
-                QuickList<Job>.Create(Pool, (int)(targetJobCount * 2), out jobs);
+                jobs = new QuickList<Job>((int)(targetJobCount * 2), Pool);
                 NextNodePair = -1;
                 this.OverlapHandlers = overlapHandlers;
                 this.TreeA = treeA;

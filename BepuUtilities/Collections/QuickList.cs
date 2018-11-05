@@ -66,12 +66,11 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="pool">Pool to pull a span from.</param>
         /// <param name="minimumInitialCount">The minimum size of the region to be pulled from the pool. Actual span may be larger.</param>
-        /// <param name="list">Created list.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create(IUnmanagedMemoryPool pool, int minimumInitialCount, out QuickList<T> list)
+        public QuickList(int minimumInitialCount, IUnmanagedMemoryPool pool)
         {
-            pool.Take(minimumInitialCount, out list.Span);
-            list.Count = 0;
+            pool.Take(minimumInitialCount, out Span);
+            Count = 0;
         }
 
 

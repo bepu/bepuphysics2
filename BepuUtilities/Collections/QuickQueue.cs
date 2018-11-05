@@ -104,17 +104,15 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="pool">Pool to pull a span from.</param>
         /// <param name="minimumInitialCount">The minimum size of the region to be pulled from the pool. Actual span may be larger.</param>
-        /// <param name="queue">Created queue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create(IUnmanagedMemoryPool pool, int minimumInitialCount, out QuickQueue<T> queue) 
+        public QuickQueue(int minimumInitialCount, IUnmanagedMemoryPool pool) 
         {
-            pool.Take(minimumInitialCount, out queue.Span);
-            queue.Count = 0;
-            queue.CapacityMask = GetCapacityMask(queue.Span.Length);
-            queue.FirstIndex = 0;
-            queue.LastIndex = queue.CapacityMask;
-            ValidateSpanCapacity(ref queue.Span, queue.CapacityMask);
-
+            pool.Take(minimumInitialCount, out Span);
+            Count = 0;
+            CapacityMask = GetCapacityMask(Span.Length);
+            FirstIndex = 0;
+            LastIndex = CapacityMask;
+            ValidateSpanCapacity(ref Span, CapacityMask);
         }
 
 

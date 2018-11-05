@@ -221,9 +221,7 @@ namespace BepuPhysics
             for (int i = 0; i < workerCount; ++i)
             {
                 //Be careful: the jobs may require resizes on the compression count list. That requires the use of per-worker pools.
-                QuickList<Compression>.Create(
-                    threadDispatcher == null ? pool : threadDispatcher.GetThreadMemoryPool(i),
-                    Math.Max(8, maximumCompressionCount), out workerCompressions[i]);
+                workerCompressions[i] = new QuickList<Compression>(Math.Max(8, maximumCompressionCount), threadDispatcher == null ? pool : threadDispatcher.GetThreadMemoryPool(i));
             }
 
             //In any given compression attempt, we only optimize over one ConstraintBatch.
@@ -256,9 +254,9 @@ namespace BepuPhysics
 
             //Build the analysis regions.
             ref var batch = ref Solver.ActiveSet.Batches[nextBatchIndex];
-            
+
             //Just make a generous estimate as to the number of jobs we'll need. 512 is huge in context, but trivial in terms of ephemeral memory required.
-            QuickList<AnalysisRegion>.Create(pool, 512, out analysisJobs);
+            analysisJobs = new QuickList<AnalysisRegion>(512, pool);
 
             //Jobs are created as subsets of type batches. Note that we never leave a type batch partially covered. This helps with determinism-
             //if we detect all compressions required within the entire type batch, the compressions list won't be sensitive to the order of constraints in memory within that type batch.
@@ -324,7 +322,7 @@ namespace BepuPhysics
                 }
                 if (totalCompressionCount > 0)
                 {
-                    QuickList<CompressionTarget>.Create(pool, totalCompressionCount, out var compressionsToSort);
+                    var compressionsToSort = new QuickList<CompressionTarget>(totalCompressionCount, pool);
 
                     for (int i = 0; i < workerCount; ++i)
                     {

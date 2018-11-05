@@ -115,28 +115,37 @@ namespace BepuUtilities.Collections
         /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
         /// <param name="tableSizePower">Target capacity relative to the initial capacity in terms of a power of 2. The size of the initial table buffer will be at least 2^tableSizePower times larger than the initial capacity.</param>
         /// <param name="comparer">Comparer to use in the set.</param>
-        /// <param name="set">Created set.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create(IUnmanagedMemoryPool pool, int initialCapacity, int tableSizePower, TEqualityComparer comparer,
-            out QuickSet<T, TEqualityComparer> set)
+        public QuickSet(int initialCapacity, int tableSizePower, IUnmanagedMemoryPool pool, TEqualityComparer comparer)
         {
             pool.Take<T>(initialCapacity, out var span);
             pool.Take<int>(span.Length << tableSizePower, out var tableSpan);
             //No guarantee that the table is clean; clear it.
             tableSpan.Clear(0, tableSpan.Length);
-            set = new QuickSet<T, TEqualityComparer>(ref span, ref tableSpan, comparer, tableSizePower);
+            this = new QuickSet<T, TEqualityComparer>(ref span, ref tableSpan, comparer, tableSizePower);
         }
+
         /// <summary>
         /// Creates a new set with a default constructed comparer.
         /// </summary>
         /// <param name="pool">Pool to pull spans from.</param>   
         /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
         /// <param name="tableSizePower">Target capacity relative to the initial capacity in terms of a power of 2. The size of the initial table buffer will be at least 2^tableSizePower times larger than the initial capacity.</param>
-        /// <param name="set">Created set.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create(IUnmanagedMemoryPool pool, int initialCapacity, int tableSizePower, out QuickSet<T, TEqualityComparer> set)
+        public QuickSet(int initialCapacity, int tableSizePower, IUnmanagedMemoryPool pool)
+            : this(initialCapacity, tableSizePower, pool, default)
         {
-            Create(pool, initialCapacity, tableSizePower, default, out set);
+        }
+
+        /// <summary>
+        /// Creates a new set with a default constructed comparer.
+        /// </summary>
+        /// <param name="pool">Pool to pull spans from.</param>   
+        /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public QuickSet(int initialCapacity, IUnmanagedMemoryPool pool)
+            : this(initialCapacity, 2, pool, default)
+        {
         }
 
         /// <summary>
@@ -172,7 +181,7 @@ namespace BepuUtilities.Collections
             oldTableSpan = oldSet.Table;
 
         }
-        
+
         /// <summary>
         /// Resizes the set's backing array for the given size.
         /// If the new span is smaller, the set's count is truncated and the extra elements are dropped. 

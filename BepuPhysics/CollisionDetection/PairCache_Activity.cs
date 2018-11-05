@@ -132,8 +132,8 @@ namespace BepuPhysics.CollisionDetection
                 return ref workerCaches[0];
             //No caches exist yet; this must be an external call taking place before the first update. Lazily initialize one worker cache.
             workerCaches = new ArrayList<WorkerPairCache>(1);
-            QuickList<WorkerPairCache.PreallocationSizes>.Create(pool, 1, out var constraints);
-            QuickList<WorkerPairCache.PreallocationSizes>.Create(pool, 1, out var collisions);
+            var constraints = new QuickList<WorkerPairCache.PreallocationSizes>(1, pool);
+            var collisions = new QuickList<WorkerPairCache.PreallocationSizes>(1, pool);
             workerCaches.AllocateUnsafely() = new WorkerPairCache(0, pool, ref constraints, ref collisions, 0);
             constraints.Dispose(pool);
             collisions.Dispose(pool);

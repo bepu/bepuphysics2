@@ -11,7 +11,7 @@ namespace BepuPhysics
 
         public ConstraintSet(BufferPool pool, int initialBatchCapacity)
         {
-            QuickList<ConstraintBatch>.Create(pool, initialBatchCapacity, out Batches);
+            Batches = new QuickList<ConstraintBatch>(initialBatchCapacity, pool);
             Fallback = default;
         }
 

@@ -147,7 +147,7 @@ namespace Demos.SpecializedTests
             int boxCount = 16384;
             var randomMin = new Vector3(width, height, length) * spacing * -0.5f;
             var randomSpan = randomMin * -2;
-            QuickList<BoundingBox>.Create(BufferPool, boxCount, out queryBoxes);
+            queryBoxes = new QuickList<BoundingBox>(boxCount, BufferPool);
             for (int i = 0; i < boxCount; ++i)
             {
                 ref var box = ref queryBoxes.AllocateUnsafely();

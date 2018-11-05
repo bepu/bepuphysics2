@@ -98,7 +98,7 @@ namespace BepuPhysics
         private unsafe void BuildWorkBlocks(BufferPool pool, int minimumBlockSizeInBundles, int targetBlocksPerBatch)
         {
             ref var activeSet = ref ActiveSet;
-            QuickList<WorkBlock>.Create(pool, targetBlocksPerBatch * activeSet.Batches.Count, out context.ConstraintBlocks.Blocks);
+            context.ConstraintBlocks.Blocks = new QuickList<WorkBlock>(targetBlocksPerBatch * activeSet.Batches.Count, pool);
             pool.Take(activeSet.Batches.Count, out context.BatchBoundaries);
             for (int batchIndex = 0; batchIndex < activeSet.Batches.Count; ++batchIndex)
             {
@@ -108,7 +108,7 @@ namespace BepuPhysics
                 {
                     bundleCount += typeBatches[typeBatchIndex].BundleCount;
                 }
-                
+
                 for (int typeBatchIndex = 0; typeBatchIndex < typeBatches.Count; ++typeBatchIndex)
                 {
                     ref var typeBatch = ref typeBatches[typeBatchIndex];
@@ -137,7 +137,7 @@ namespace BepuPhysics
             {
                 //There is a fallback batch, so we need to create fallback work blocks for it.
                 var blockCount = Math.Min(targetBlocksPerBatch, ActiveSet.Fallback.BodyCount);
-                QuickList<FallbackScatterWorkBlock>.Create(pool, blockCount, out context.FallbackBlocks.Blocks);
+                context.FallbackBlocks.Blocks = new QuickList<FallbackScatterWorkBlock>(blockCount, pool);
                 var baseBodiesPerBlock = activeSet.Fallback.BodyCount / blockCount;
                 var remainder = activeSet.Fallback.BodyCount - baseBodiesPerBlock * blockCount;
                 int previousEnd = 0;

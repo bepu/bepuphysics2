@@ -45,7 +45,7 @@ namespace BepuPhysics
             : this()
         {
             ResizeTypeMap(pool, initialTypeCountEstimate);
-            QuickList<TypeBatch>.Create(pool, initialTypeCountEstimate, out TypeBatches);
+            TypeBatches = new QuickList<TypeBatch>(initialTypeCountEstimate, pool);
         }
 
         void ResizeTypeMap(BufferPool pool, int newSize)

@@ -68,7 +68,7 @@ namespace BepuPhysics
             {
                 ValidateSleepingSetIndex(setIndex);
                 //TODO: Some fairly pointless work here- spans or other approaches could help with the API.
-                QuickList<int>.Create(pool, 1, out var list);
+                var list = new QuickList<int>(1, pool);
                 list.AddUnsafely(setIndex);
                 AwakenSets(ref list);
                 list.Dispose(pool);
@@ -82,7 +82,7 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use when waking the bodies. Pass null to run on a single thread.</param>
         public void AwakenSets(ref QuickList<int> setIndices, IThreadDispatcher threadDispatcher = null)
         {
-            QuickList<int>.Create(pool, setIndices.Count, out var uniqueSetIndices);
+            var uniqueSetIndices = new QuickList<int>(setIndices.Count, pool);
             var uniqueSet = new IndexSet(pool, bodies.Sets.Length);
             AccumulateUniqueIndices(ref setIndices, ref uniqueSet, ref uniqueSetIndices);
             uniqueSet.Dispose(pool);
@@ -620,8 +620,8 @@ namespace BepuPhysics
             narrowPhaseCollisionCaches.Dispose(pool);
             pairCache.Mapping.EnsureCapacity(pairCache.Mapping.Count + newPairCount, pool);
 
-            QuickList<PhaseOneJob>.Create(pool, Math.Max(32, highestNewBatchCount + 1), out phaseOneJobs);
-            QuickList<PhaseTwoJob>.Create(pool, 32, out phaseTwoJobs);
+            phaseOneJobs = new QuickList<PhaseOneJob>(Math.Max(32, highestNewBatchCount + 1), pool);
+            phaseTwoJobs = new QuickList<PhaseTwoJob>(32, pool);
             //Finally, create actual jobs. Note that this involves actually allocating space in the bodies set and in type batches for the workers to fill in.
             //(Pair caches are currently handled in a locally sequential way and do not require preallocation.)
 

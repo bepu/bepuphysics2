@@ -123,7 +123,7 @@ namespace BepuPhysics.CollisionDetection
             this.minimumPendingSize = minimumPendingSize;
             this.minimumPerTypeCapacity = minimumPerTypeCapacity;
             this.pool = pool;
-            OverlapMapping.Create(pool, minimumMappingSize, 3, out Mapping);
+            Mapping = new OverlapMapping(minimumMappingSize, pool);
             ResizeSetsCapacity(initialSetCapacity, 0);
         }
 
@@ -138,8 +138,8 @@ namespace BepuPhysics.CollisionDetection
                 if (constraint > maximumConstraintTypeCount)
                     maximumConstraintTypeCount = constraint;
             }
-            QuickList<PreallocationSizes>.Create(pool, maximumConstraintTypeCount, out var minimumSizesPerConstraintType);
-            QuickList<PreallocationSizes>.Create(pool, maximumCollisionTypeCount, out var minimumSizesPerCollisionType);
+            var minimumSizesPerConstraintType = new QuickList<PreallocationSizes>(maximumConstraintTypeCount, pool);
+            var minimumSizesPerCollisionType = new QuickList<PreallocationSizes>(maximumCollisionTypeCount, pool);
             //Since the minimum size accumulation builds the minimum size incrementally, bad data within the array can corrupt the result- we must clear it.
             minimumSizesPerConstraintType.Span.Clear(0, minimumSizesPerConstraintType.Span.Length);
             minimumSizesPerCollisionType.Span.Clear(0, minimumSizesPerCollisionType.Span.Length);

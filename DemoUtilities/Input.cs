@@ -117,13 +117,13 @@ namespace DemoUtilities
             this.window.MouseWheel += MouseWheel;
             this.window.KeyPress += KeyPress;
             this.pool = pool;
-            MouseButtonSet.Create(pool, 8, 3, out anyDownedButtons);
-            MouseButtonSet.Create(pool, 8, 3, out downedButtons);
-            MouseButtonSet.Create(pool, 8, 3, out previousDownedButtons);
-            KeySet.Create(pool, 8, 3, out anyDownedKeys);
-            KeySet.Create(pool, 8, 3, out downedKeys);
-            KeySet.Create(pool, 8, 3, out previousDownedKeys);
-            QuickList<char>.Create(pool, 32, out TypedCharacters);
+            anyDownedButtons = new MouseButtonSet(8, pool);
+            downedButtons = new MouseButtonSet(8, pool);
+            previousDownedButtons = new MouseButtonSet(8, pool);
+            anyDownedKeys = new KeySet(8, pool);
+            downedKeys = new KeySet(8, pool);
+            previousDownedKeys = new KeySet(8, pool);
+            TypedCharacters = new QuickList<char>(32, pool);
         }
 
         private void KeyPress(object sender, KeyPressEventArgs e)

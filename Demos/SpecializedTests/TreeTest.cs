@@ -73,7 +73,7 @@ namespace Demos.SpecializedTests
             var selfTestContext = new Tree.MultithreadedSelfTest<OverlapHandler>(pool);
             var overlapHandlers = new OverlapHandler[threadDispatcher.ThreadCount];
             Action<int> pairTestAction = selfTestContext.PairTest;
-            QuickList<int>.Create(pool, leafCount, out var removedLeafHandles);
+            var removedLeafHandles = new QuickList<int>(leafCount, pool);
             for (int i = 0; i < iterations; ++i)
             {
                 var changeCount = random.Next(maximumChangesPerIteration);

@@ -31,7 +31,7 @@ namespace Demos
             if(maximumCapacity <= 0)
                 throw new ArgumentException("Capacity must be positive.");
             this.pool = pool;
-            QuickQueue<double>.Create(pool, maximumCapacity, out queue);
+            queue = new QuickQueue<double>(maximumCapacity, pool);
         }
 
         public void Add(double time)
