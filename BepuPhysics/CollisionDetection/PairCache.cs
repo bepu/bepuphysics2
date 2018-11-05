@@ -15,7 +15,7 @@ using static BepuPhysics.CollisionDetection.WorkerPairCache;
 namespace BepuPhysics.CollisionDetection
 {
     //would you care for some generics
-    using OverlapMapping = QuickDictionary<CollidablePair, CollidablePairPointers, Buffer<CollidablePair>, Buffer<CollidablePairPointers>, Buffer<int>, CollidablePairComparer>;
+    using OverlapMapping = QuickDictionary<CollidablePair, CollidablePairPointers, CollidablePairComparer>;
 
     [StructLayout(LayoutKind.Explicit, Size = 8)]
     public struct CollidablePair
@@ -70,7 +70,7 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         public PairCacheIndex CollisionDetectionCache;
     }
-    
+
     internal struct ArrayList<T>
     {
         public T[] Values;
@@ -123,9 +123,7 @@ namespace BepuPhysics.CollisionDetection
             this.minimumPendingSize = minimumPendingSize;
             this.minimumPerTypeCapacity = minimumPerTypeCapacity;
             this.pool = pool;
-            OverlapMapping.Create(
-                pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>(),
-                SpanHelper.GetContainingPowerOf2(minimumMappingSize), 3, out Mapping);
+            OverlapMapping.Create(pool, minimumMappingSize, 3, out Mapping);
             ResizeSetsCapacity(initialSetCapacity, 0);
         }
 
@@ -236,7 +234,7 @@ namespace BepuPhysics.CollisionDetection
                 if (newMappingSize > largestIntermediateSize)
                     largestIntermediateSize = newMappingSize;
             }
-            Mapping.EnsureCapacity(largestIntermediateSize, pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
+            Mapping.EnsureCapacity(largestIntermediateSize, pool);
 
             jobs.Add(new NarrowPhaseFlushJob { Type = NarrowPhaseFlushJobType.FlushPairCacheChanges }, pool);
         }
@@ -335,7 +333,7 @@ namespace BepuPhysics.CollisionDetection
                 }
             }
 #endif
-            Mapping.Dispose(pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
+            Mapping.Dispose(pool);
             for (int i = 1; i < SleepingSets.Length; ++i)
             {
                 ref var set = ref SleepingSets[i];

@@ -28,7 +28,7 @@ namespace Demos.Demos
             var boxShape = new Box(1, 1, 1);
             boxShape.ComputeInertia(1, out var boxInertia);
             var boxIndex = Simulation.Shapes.Add(boxShape);
-            const int pyramidCount = 4;
+            const int pyramidCount = 40;
             for (int pyramidIndex = 0; pyramidIndex < pyramidCount; ++pyramidIndex)
             {
                 const int rowCount = 20;

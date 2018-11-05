@@ -47,7 +47,7 @@ namespace BepuUtilities.Memory
             public ulong Next;
         }
 
-        private QuickDictionary<ulong, Allocation, Buffer<ulong>, Buffer<Allocation>, Buffer<int>, PrimitiveComparer<ulong>> allocations;
+        private QuickDictionary<ulong, Allocation, PrimitiveComparer<ulong>> allocations;
 
         /// <summary>
         /// Creates a new memory pool.
@@ -57,9 +57,7 @@ namespace BepuUtilities.Memory
         {
             this.pool = pool;
             this.Capacity = memoryPoolSize;
-            QuickDictionary<ulong, Allocation, Buffer<ulong>, Buffer<Allocation>, Buffer<int>, PrimitiveComparer<ulong>>.Create(
-                pool.SpecializeFor<ulong>(), pool.SpecializeFor<Allocation>(), pool.SpecializeFor<int>(),
-                SpanHelper.GetContainingPowerOf2(allocationCountEstimate), 3, out allocations);
+            QuickDictionary<ulong, Allocation, PrimitiveComparer<ulong>>.Create(pool, allocationCountEstimate, 2, out allocations);
         }
 
         /// <summary>
@@ -187,7 +185,7 @@ namespace BepuUtilities.Memory
             nextAllocation.Previous = id;
             //About to add a new allocation. We had space here this time, so there's a high chance we'll have some more space next time. Point the search to this index.
             searchStartIndex = allocations.Count;
-            allocations.Add(id, newAllocation, pool.SpecializeFor<ulong>(), pool.SpecializeFor<Allocation>(), pool.SpecializeFor<int>());
+            allocations.Add(id, newAllocation, pool);
         }
         /// <summary>
         /// Attempts to allocate a range of memory.
@@ -205,8 +203,7 @@ namespace BepuUtilities.Memory
                 if (size <= Capacity)
                 {
                     outputStart = 0;
-                    allocations.Add(id, new Allocation { Start = 0, End = size, Next = id, Previous = id },
-                        pool.SpecializeFor<ulong>(), pool.SpecializeFor<Allocation>(), pool.SpecializeFor<int>());
+                    allocations.Add(id, new Allocation { Start = 0, End = size, Next = id, Previous = id }, pool);
                     searchStartIndex = 0;
                     return true;
                 }
@@ -468,7 +465,7 @@ namespace BepuUtilities.Memory
 
         public void Dispose()
         {
-            allocations.Dispose(pool.SpecializeFor<ulong>(), pool.SpecializeFor<Allocation>(), pool.SpecializeFor<int>());
+            allocations.Dispose(pool);
         }
     }
 }

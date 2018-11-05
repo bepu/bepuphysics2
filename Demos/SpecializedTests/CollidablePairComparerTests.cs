@@ -54,8 +54,7 @@ namespace Demos.SpecializedTests
             }
 
             BufferPool pool = new BufferPool();
-            QuickDictionary<CollidablePair, int, Buffer<CollidablePair>, Buffer<int>, Buffer<int>, CollidablePairComparer>.Create(
-                pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<int>(), pool.SpecializeFor<int>(), SpanHelper.GetContainingPowerOf2(creationRemap.Length), 1,
+            QuickDictionary<CollidablePair, int, CollidablePairComparer>.Create(pool, creationRemap.Length, 1,
                 out var dictionary);
 
             var random = new Random(5);

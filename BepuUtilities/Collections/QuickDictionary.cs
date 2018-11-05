@@ -61,15 +61,8 @@ namespace BepuUtilities.Collections
     /// A generous table capacity is recommended; this trades some memory for simplicity and runtime performance.</para></remarks>
     /// <typeparam name="TKey">Type of key held by the container.</typeparam>
     /// <typeparam name="TValue">Type of value held by the container.</typeparam>
-    /// <typeparam name="TKeySpan">Type of the key holding span.</typeparam>
-    /// <typeparam name="TValueSpan">Type of the value holding span.</typeparam>
-    /// <typeparam name="TTableSpan">Type of the index table span.</typeparam>
     /// <typeparam name="TEqualityComparer">Type of the equality tester and hash calculator used.</typeparam>
-    public struct QuickDictionary<TKey, TValue, TKeySpan, TValueSpan, TTableSpan, TEqualityComparer> //i apologize
-        where TKeySpan : ISpan<TKey>
-        where TValueSpan : ISpan<TValue>
-        where TTableSpan : ISpan<int>
-        where TEqualityComparer : IEqualityComparerRef<TKey>
+    public struct QuickDictionary<TKey, TValue, TEqualityComparer> where TKey : struct where TValue : struct where TEqualityComparer : IEqualityComparerRef<TKey>
     {
         /// <summary>
         /// Gets the number of elements in the dictionary.
@@ -90,19 +83,19 @@ namespace BepuUtilities.Collections
         /// Backing memory of the dictionary's table. Values are distributed according to the EqualityComparer's hash function.
         /// Slots containing 0 are unused and point to nothing. Slots containing higher values are equal to one plus the index of an element in the Span.
         /// </summary>
-        public TTableSpan Table;
+        public Buffer<int> Table;
 
         /// <summary>
         /// Backing memory containing the keys of the dictionary.
         /// Indices from 0 to Count-1 hold actual data. All other data is undefined.
         /// </summary>
-        public TKeySpan Keys;
+        public Buffer<TKey> Keys;
 
         /// <summary>
         /// Backing memory containing the values of the dictionary.
         /// Indices from 0 to Count-1 hold actual data. All other data is undefined.
         /// </summary>
-        public TValueSpan Values;
+        public Buffer<TValue> Values;
 
         /// <summary>
         /// Equality comparer used to compare and hash keys.
@@ -143,7 +136,7 @@ namespace BepuUtilities.Collections
         /// <param name="comparer">Comparer to use for the dictionary.</param>
         /// <param name="tablePowerOffset">Target size of the table relative to the number of stored elements.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickDictionary(ref TKeySpan initialKeySpan, ref TValueSpan initialValueSpan, ref TTableSpan initialTableSpan, TEqualityComparer comparer, int tablePowerOffset = 2)
+        public QuickDictionary(ref Buffer<TKey> initialKeySpan, ref Buffer<TValue> initialValueSpan, ref Buffer<int> initialTableSpan, TEqualityComparer comparer, int tablePowerOffset = 2)
         {
             ValidateSpanCapacity(ref initialKeySpan, ref initialValueSpan, ref initialTableSpan);
             Keys = initialKeySpan;
@@ -166,59 +159,42 @@ namespace BepuUtilities.Collections
         /// <param name="comparer">Comparer to use for the dictionary.</param>
         /// <param name="tablePowerOffset">Target size of the table relative to the number of stored elements.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public QuickDictionary(ref TKeySpan initialKeySpan, ref TValueSpan initialValueSpan, ref TTableSpan initialTableSpan, int tablePowerOffset = 2)
-            : this(ref initialKeySpan, ref initialValueSpan, ref initialTableSpan, default(TEqualityComparer), tablePowerOffset)
+        public QuickDictionary(ref Buffer<TKey> initialKeySpan, ref Buffer<TValue> initialValueSpan, ref Buffer<int> initialTableSpan, int tablePowerOffset = 2)
+            : this(ref initialKeySpan, ref initialValueSpan, ref initialTableSpan, default, tablePowerOffset)
         {
         }
 
         /// <summary>
         /// Creates a new dictionary.
         /// </summary>
-        /// <param name="initialElementPoolIndex">Initial pool index to pull the object buffer from. The size of the initial buffer will be 2^initialElementPoolIndex.</param>
+        /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
         /// <param name="tableSizePower">Initial pool index to pull the object buffer from. The size of the initial table buffer will be 2^(initialElementPoolIndex + tableSizePower).</param>
         /// <param name="comparer">Comparer to use in the dictionary.</param>
         /// <param name="dictionary">Created dictionary.</param>
-        /// <param name="keyPool">Pool used for key spans.</param>   
-        /// <param name="valuePool">Pool used for value spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TKeyPool">Type of the pool used for key spans.</typeparam>
-        /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create<TKeyPool, TValuePool, TTablePool>(TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool, int initialElementPoolIndex, int tableSizePower, TEqualityComparer comparer,
-            out QuickDictionary<TKey, TValue, TKeySpan, TValueSpan, TTableSpan, TEqualityComparer> dictionary)
-            where TKeyPool : IMemoryPool<TKey, TKeySpan>
-            where TValuePool : IMemoryPool<TValue, TValueSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public static void Create(IUnmanagedMemoryPool pool, int initialCapacity, int tableSizePower, TEqualityComparer comparer,
+            out QuickDictionary<TKey, TValue, TEqualityComparer> dictionary)
         {
-            keyPool.TakeForPower(initialElementPoolIndex, out var keySpan);
-            valuePool.TakeForPower(initialElementPoolIndex, out var valueSpan);
-            tablePool.TakeForPower(initialElementPoolIndex + tableSizePower, out var tableSpan);
+            pool.Take<TKey>(1 << initialCapacity, out var keySpan);
+            pool.Take<TValue>(keySpan.Length, out var valueSpan);
+            pool.Take<int>(keySpan.Length << tableSizePower, out var tableSpan);
             //No guarantee that the table is clean; clear it.
             tableSpan.Clear(0, tableSpan.Length);
-            dictionary = new QuickDictionary<TKey, TValue, TKeySpan, TValueSpan, TTableSpan, TEqualityComparer>(ref keySpan, ref valueSpan, ref tableSpan, comparer, tableSizePower);
+            dictionary = new QuickDictionary<TKey, TValue, TEqualityComparer>(ref keySpan, ref valueSpan, ref tableSpan, comparer, tableSizePower);
         }
         /// <summary>
         /// Creates a new dictionary with a default constructed comparer.
         /// </summary>
-        /// <param name="initialElementPoolIndex">Initial pool index to pull the object buffer from. The size of the initial buffer will be 2^initialElementPoolIndex.</param>
+        /// <param name="initialCapacity">Initial target size of the key and value spans. The size of the initial buffer will be at least as large as the initialCapacity.</param>
         /// <param name="tableSizePower">Initial pool index to pull the object buffer from. The size of the initial table buffer will be 2^(initialElementPoolIndex + tableSizePower).</param>
         /// <param name="comparer">Comparer to use in the dictionary.</param>
         /// <param name="dictionary">Created dictionary.</param>
-        /// <param name="keyPool">Pool used for key spans.</param>   
-        /// <param name="valuePool">Pool used for value spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TKeyPool">Type of the pool used for key spans.</typeparam>
-        /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create<TKeyPool, TValuePool, TTablePool>(TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool, int initialElementPoolIndex, int tableSizePower,
-            out QuickDictionary<TKey, TValue, TKeySpan, TValueSpan, TTableSpan, TEqualityComparer> dictionary)
-            where TKeyPool : IMemoryPool<TKey, TKeySpan>
-            where TValuePool : IMemoryPool<TValue, TValueSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public static void Create(IUnmanagedMemoryPool pool, int initialCapacity, int tableSizePower, out QuickDictionary<TKey, TValue, TEqualityComparer> dictionary)
         {
-            Create(keyPool, valuePool, tablePool, initialElementPoolIndex, tableSizePower, default(TEqualityComparer), out dictionary);
+            Create(pool, initialCapacity, tableSizePower, default, out dictionary);
         }
 
         /// <summary>
@@ -232,8 +208,8 @@ namespace BepuUtilities.Collections
         /// <param name="oldKeySpan">Previous span used for keys.</param>
         /// <param name="oldValueSpan">Previous span used for values.</param>
         /// <param name="oldTableSpan">Previous span used for the table.</param>
-        public void Resize(ref TKeySpan newKeySpan, ref TValueSpan newValueSpan, ref TTableSpan newTableSpan,
-            out TKeySpan oldKeySpan, out TValueSpan oldValueSpan, out TTableSpan oldTableSpan)
+        public void Resize(ref Buffer<TKey> newKeySpan, ref Buffer<TValue> newValueSpan, ref Buffer<int> newTableSpan,
+            out Buffer<TKey> oldKeySpan, out Buffer<TValue> oldValueSpan, out Buffer<int> oldTableSpan)
         {
             ValidateSpanCapacity(ref newKeySpan, ref newValueSpan, ref newTableSpan);
             ValidateTableIsCleared(ref newTableSpan);
@@ -261,50 +237,22 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
-        /// Resizes the dictionary's backing array for the given size as a power of two.
-        /// If the new span is smaller, the dictionary's count is truncated and the extra elements are dropped. 
-        /// </summary>
-        /// <param name="newSizePower">Exponent of the size of the new memory block. New size will be 2^newSizePower.</param>
-        /// <param name="keyPool">Pool used for key spans.</param>   
-        /// <param name="valuePool">Pool used for value spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TKeyPool">Type of the pool used for key spans.</typeparam>
-        /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ResizeForPower<TKeyPool, TValuePool, TTablePool>(int newSizePower, TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool)
-            where TKeyPool : IMemoryPool<TKey, TKeySpan>
-            where TValuePool : IMemoryPool<TValue, TValueSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
-        {
-            keyPool.TakeForPower(newSizePower, out var newKeySpan);
-            valuePool.TakeForPower(newSizePower, out var newValueSpan);
-            tablePool.TakeForPower(newSizePower + TablePowerOffset, out var newTableSpan);
-            //There is no guarantee that the table retrieved from the pool is clean. Clear it!
-            newTableSpan.Clear(0, newTableSpan.Length);
-            var oldDictionary = this;
-            Resize(ref newKeySpan, ref newValueSpan, ref newTableSpan, out var oldKeySpan, out var oldValueSpan, out var oldTableSpan);
-            oldDictionary.Dispose(keyPool, valuePool, tablePool);
-        }
-
-        /// <summary>
         /// Resizes the dictionary's backing array for the given size.
         /// If the new span is smaller, the dictionary's count is truncated and the extra elements are dropped. 
         /// </summary>
         /// <param name="newSize">Minimum size of the new object memory block. Actual size may be larger.</param>
-        /// <param name="keyPool">Pool used for key spans.</param>   
-        /// <param name="valuePool">Pool used for value spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TKeyPool">Type of the pool used for key spans.</typeparam>
-        /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Resize<TKeyPool, TValuePool, TTablePool>(int newSize, TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool)
-            where TKeyPool : IMemoryPool<TKey, TKeySpan>
-            where TValuePool : IMemoryPool<TValue, TValueSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public void Resize(int newSize, IUnmanagedMemoryPool pool)
         {
-            ResizeForPower(SpanHelper.GetContainingPowerOf2(newSize), keyPool, valuePool, tablePool);
+            pool.Take<TKey>(newSize, out var newKeySpan);
+            pool.Take<TValue>(newKeySpan.Length, out var newValueSpan);
+            pool.Take<int>(newKeySpan.Length << TablePowerOffset, out var newTableSpan);
+            //There is no guarantee that the table retrieved from the pool is clean. Clear it!
+            newTableSpan.Clear(0, newTableSpan.Length);
+            var oldDictionary = this;
+            Resize(ref newKeySpan, ref newValueSpan, ref newTableSpan, out var oldKeySpan, out var oldValueSpan, out var oldTableSpan);
+            oldDictionary.Dispose(pool);
         }
 
         /// <summary>
@@ -317,59 +265,40 @@ namespace BepuUtilities.Collections
         /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
         /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose<TKeyPool, TValuePool, TTablePool>(TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool)
-             where TKeyPool : IMemoryPool<TKey, TKeySpan>
-             where TValuePool : IMemoryPool<TValue, TValueSpan>
-             where TTablePool : IMemoryPool<int, TTableSpan>
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
             Keys.ClearManagedReferences(0, Count);
             Values.ClearManagedReferences(0, Count);
-            keyPool.Return(ref Keys);
-            valuePool.Return(ref Values);
-            tablePool.Return(ref Table);
+            pool.Return(ref Keys);
+            pool.Return(ref Values);
+            pool.Return(ref Table);
         }
 
         /// <summary>
         /// Ensures that the dictionary has enough room to hold the specified number of elements.
         /// </summary>     
-        /// <param name="keyPool">Pool used for key spans.</param>   
-        /// <param name="valuePool">Pool used for value spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TKeyPool">Type of the pool used for key spans.</typeparam>
-        /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         /// <param name="count">Number of elements to hold.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnsureCapacity<TKeyPool, TValuePool, TTablePool>(int count, TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool)
-            where TKeyPool : IMemoryPool<TKey, TKeySpan>
-            where TValuePool : IMemoryPool<TValue, TValueSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public void EnsureCapacity(int count, IUnmanagedMemoryPool pool)
         {
             if (count > Keys.Length)
             {
-                Resize(count, keyPool, valuePool, tablePool);
+                Resize(count, pool);
             }
         }
 
         /// <summary>
         /// Shrinks the internal buffers to the smallest acceptable size and releases the old buffers to the pools.
         /// </summary>
-        /// <param name="keyPool">Pool used for key spans.</param>   
-        /// <param name="valuePool">Pool used for value spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TKeyPool">Type of the pool used for key spans.</typeparam>
-        /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         /// <param name="element">Element to add.</param>
-        public void Compact<TKeyPool, TValuePool, TTablePool>(TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool)
-            where TKeyPool : IMemoryPool<TKey, TKeySpan>
-            where TValuePool : IMemoryPool<TValue, TValueSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public void Compact(IUnmanagedMemoryPool pool)
         {
             Validate();
-            var minimumRequiredPoolIndex = SpanHelper.GetContainingPowerOf2(Count);
-            if ((1 << minimumRequiredPoolIndex) != Keys.Length)
-                Resize(Count, keyPool, valuePool, tablePool);
+            var targetKeyCapacity = pool.GetCapacityForCount<TKey>(Count);
+            if (targetKeyCapacity != Keys.Length)
+                Resize(Count, pool);
         }
 
 
@@ -465,7 +394,7 @@ namespace BepuUtilities.Collections
                 value = Values[elementIndex];
                 return true;
             }
-            value = default(TValue);
+            value = default;
             return false;
         }
 
@@ -483,7 +412,7 @@ namespace BepuUtilities.Collections
                 value = Values[elementIndex];
                 return true;
             }
-            value = default(TValue);
+            value = default;
             return false;
         }
 
@@ -572,24 +501,15 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="key">Key of the pair to add.</param>
         /// <param name="value">Value of the pair to add.</param>
-        /// <param name="keyPool">Pool used for key spans.</param>   
-        /// <param name="valuePool">Pool used for value spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TKeyPool">Type of the pool used for key spans.</typeparam>
-        /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the pair was added to the dictionary, false if the key was already present and its pair was replaced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddAndReplace<TKeyPool, TValuePool, TTablePool>(ref TKey key, ref TValue value,
-            TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool)
-            where TKeyPool : IMemoryPool<TKey, TKeySpan>
-            where TValuePool : IMemoryPool<TValue, TValueSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public bool AddAndReplace(ref TKey key, ref TValue value, IUnmanagedMemoryPool pool)
         {
             if (Count == Keys.Length)
             {
                 //There's no room left; resize.
-                Resize(Count * 2, keyPool, valuePool, tablePool);
+                Resize(Count * 2, pool);
 
                 //Note that this is tested before any indices are found.
                 //If we resized only after determining that it was going to be added,
@@ -604,21 +524,12 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="key">Key of the pair to add.</param>
         /// <param name="value">Value of the pair to add.</param>
-        /// <param name="keyPool">Pool used for key spans.</param>   
-        /// <param name="valuePool">Pool used for value spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TKeyPool">Type of the pool used for key spans.</typeparam>
-        /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the pair was added to the dictionary, false if the key was already present and its pair was replaced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddAndReplace<TKeyPool, TValuePool, TTablePool>(TKey key, TValue value,
-            TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool)
-            where TKeyPool : IMemoryPool<TKey, TKeySpan>
-            where TValuePool : IMemoryPool<TValue, TValueSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public bool AddAndReplace<TKeyPool, TValuePool, TTablePool>(TKey key, TValue value, IUnmanagedMemoryPool pool)
         {
-            return AddAndReplace(ref key, ref value, keyPool, valuePool, tablePool);
+            return AddAndReplace(ref key, ref value, pool);
         }
 
         /// <summary>
@@ -626,26 +537,18 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="key">Key of the pair to add.</param>
         /// <param name="value">Value of the pair to add.</param>
-        /// <param name="keyPool">Pool used for key spans.</param>   
-        /// <param name="valuePool">Pool used for value spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TKeyPool">Type of the pool used for key spans.</typeparam>
-        /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool used for spans.</param>   
+        /// <typeparam name="TPool">Type of the pool used for spans.</typeparam>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Add<TKeyPool, TValuePool, TTablePool>(ref TKey key, ref TValue value,
-            TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool)
-            where TKeyPool : IMemoryPool<TKey, TKeySpan>
-            where TValuePool : IMemoryPool<TValue, TValueSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public bool Add(ref TKey key, ref TValue value, IUnmanagedMemoryPool pool)
         {
             Validate();
 
             if (Count == Keys.Length)
             {
                 //There's no room left; resize.
-                Resize(Count * 2, keyPool, valuePool, tablePool);
+                Resize(Count * 2, pool);
 
                 //Note that this is tested before any indices are found.
                 //If we resized only after determining that it was going to be added,
@@ -659,21 +562,13 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="key">Key of the pair to add.</param>
         /// <param name="value">Value of the pair to add.</param>
-        /// <param name="keyPool">Pool used for key spans.</param>   
-        /// <param name="valuePool">Pool used for value spans.</param>   
-        /// <param name="tablePool">Pool used for table spans.</param>
-        /// <typeparam name="TKeyPool">Type of the pool used for key spans.</typeparam>
-        /// <typeparam name="TValuePool">Type of the pool used for value spans.</typeparam>
-        /// <typeparam name="TTablePool">Type of the pool used for table spans.</typeparam>
+        /// <param name="pool">Pool to pull resources from and to return resources to.</param>   
+        /// <typeparam name="TPool">Type of the pool to use.</typeparam>
         /// <returns>True if the pair was added to the dictionary, false if the key was already present.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Add<TKeyPool, TValuePool, TTablePool>(TKey key, TValue value,
-            TKeyPool keyPool, TValuePool valuePool, TTablePool tablePool)
-            where TKeyPool : IMemoryPool<TKey, TKeySpan>
-            where TValuePool : IMemoryPool<TValue, TValueSpan>
-            where TTablePool : IMemoryPool<int, TTableSpan>
+        public bool Add(TKey key, TValue value, IUnmanagedMemoryPool pool)
         {
-            return Add(ref key, ref value, keyPool, valuePool, tablePool);
+            return Add(ref key, ref value, pool);
         }
 
         //Note: the reason this is named "FastRemove" instead of just "Remove" despite it being the only remove present is that
@@ -793,12 +688,12 @@ namespace BepuUtilities.Collections
 
         public struct Enumerator : IEnumerator<KeyValuePair<TKey, TValue>>
         {
-            private readonly TKeySpan keys;
-            private readonly TValueSpan values;
+            private readonly Buffer<TKey> keys;
+            private readonly Buffer<TValue> values;
             private readonly int count;
             private int index;
 
-            public Enumerator(ref TKeySpan keys, ref TValueSpan values, int count)
+            public Enumerator(ref Buffer<TKey> keys, ref Buffer<TValue> values, int count)
             {
                 this.keys = keys;
                 this.values = values;
@@ -832,7 +727,7 @@ namespace BepuUtilities.Collections
             }
         }
         [Conditional("DEBUG")]
-        static void ValidateSpanCapacity(ref TKeySpan keySpan, ref TValueSpan valueSpan, ref TTableSpan tableSpan)
+        static void ValidateSpanCapacity(ref Buffer<TKey> keySpan, ref Buffer<TValue> valueSpan, ref Buffer<int> tableSpan)
         {
             Debug.Assert(tableSpan.Length >= keySpan.Length, "The table span must be at least as large as the key span.");
             Debug.Assert(valueSpan.Length >= keySpan.Length, "The value span must be at least as large as the key span.");
@@ -856,7 +751,7 @@ namespace BepuUtilities.Collections
 
 
         [Conditional("DEBUG")]
-        void ValidateTableIsCleared(ref TTableSpan span)
+        void ValidateTableIsCleared(ref Buffer<int> span)
         {
             for (int i = 0; i < span.Length; ++i)
             {

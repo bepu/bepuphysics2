@@ -618,8 +618,7 @@ namespace BepuPhysics
             EnsurePairCacheTypeCapacities(ref narrowPhaseCollisionCaches, ref targetPairCache.collisionCaches, targetPairCache.pool);
             narrowPhaseConstraintCaches.Dispose(pool);
             narrowPhaseCollisionCaches.Dispose(pool);
-            pairCache.Mapping.EnsureCapacity(pairCache.Mapping.Count + newPairCount,
-                pool.SpecializeFor<CollidablePair>(), pool.SpecializeFor<CollidablePairPointers>(), pool.SpecializeFor<int>());
+            pairCache.Mapping.EnsureCapacity(pairCache.Mapping.Count + newPairCount, pool);
 
             QuickList<PhaseOneJob>.Create(pool, Math.Max(32, highestNewBatchCount + 1), out phaseOneJobs);
             QuickList<PhaseTwoJob>.Create(pool, 32, out phaseTwoJobs);

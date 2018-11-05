@@ -47,8 +47,7 @@ namespace BepuPhysics
         //This is consistent with the body references stored by active/inactive constraints.
         //Note that this is a dictionary of *sets*. This is because fallback batches are expected to be used in pathological cases where there are many constraints associated with
         //a single body. There are likely to be too many constraints for list-based containment/removal to be faster than the set implementation.
-        internal QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>,
-              Buffer<int>, Buffer<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>, Buffer<int>, PrimitiveComparer<int>> bodyConstraintReferences;
+        internal QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>, PrimitiveComparer<int>> bodyConstraintReferences;
         //(but is this really ENOUGH generics?)
 
         internal struct FallbackReferenceComparer : IEqualityComparerRef<FallbackReference>
@@ -300,7 +299,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetJacobiScaleForBodies(ref FourBodyReferences references, int count, 
+        public void GetJacobiScaleForBodies(ref FourBodyReferences references, int count,
             out Vector<float> jacobiScaleA, out Vector<float> jacobiScaleB, out Vector<float> jacobiScaleC, out Vector<float> jacobiScaleD)
         {
             ref var startA = ref Unsafe.As<Vector<int>, int>(ref references.IndexA);
@@ -488,19 +487,17 @@ namespace BepuPhysics
 
         internal void EnsureCapacity(int bodyCapacity, BufferPool pool)
         {
-            var intPool = pool.SpecializeFor<int>();
             var referenceListPool = pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>();
             if (bodyConstraintReferences.Keys.Allocated)
             {
                 //This is conservative since there's no guarantee that we'll actually need to resize at all if these bodies are already present, but that's fine. 
-                bodyConstraintReferences.EnsureCapacity(bodyCapacity, intPool, referenceListPool, intPool);
+                bodyConstraintReferences.EnsureCapacity(bodyCapacity, pool);
             }
             else
             {
                 //bleuaghg
-                QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>,
-                      Buffer<int>, Buffer<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>, Buffer<int>, PrimitiveComparer<int>>.Create(
-                    intPool, referenceListPool, intPool, SpanHelper.GetContainingPowerOf2(bodyCapacity), 2, out bodyConstraintReferences);
+                QuickDictionary<int, QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>, PrimitiveComparer<int>>.Create(
+                    pool, bodyCapacity, 2, out bodyConstraintReferences);
             }
 
         }
@@ -511,7 +508,7 @@ namespace BepuPhysics
             {
                 var intPool = pool.SpecializeFor<int>();
                 var fallbackPool = pool.SpecializeFor<FallbackReference>();
-                bodyConstraintReferences.Compact(intPool, pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>(), intPool);
+                bodyConstraintReferences.Compact(pool);
                 for (int i = 0; i < bodyConstraintReferences.Count; ++i)
                 {
                     bodyConstraintReferences.Values[i].Compact(fallbackPool, intPool);
@@ -530,7 +527,7 @@ namespace BepuPhysics
                 {
                     bodyConstraintReferences.Values[i].Dispose(fallbackPool, intPool);
                 }
-                bodyConstraintReferences.Dispose(intPool, pool.SpecializeFor<QuickSet<FallbackReference, Buffer<FallbackReference>, Buffer<int>, FallbackReferenceComparer>>(), intPool);
+                bodyConstraintReferences.Dispose(pool);
             }
         }
 
