@@ -168,10 +168,14 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Resize(int newSize, IUnmanagedMemoryPool pool)
         {
-            var oldQueue = this;
-            pool.Take<T>(newSize, out var newSpan);
-            Resize(ref newSpan, out var oldSpan);
-            oldQueue.Dispose(pool);
+            var targetCapacity  = pool.GetCapacityForCount<T>(newSize);
+            if(targetCapacity != Span.Length)
+            {
+                var oldQueue = this;
+                pool.Take<T>(newSize, out var newSpan);
+                Resize(ref newSpan, out var oldSpan);
+                oldQueue.Dispose(pool);
+            }
         }
 
         /// <summary>

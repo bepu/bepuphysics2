@@ -245,14 +245,18 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Resize(int newSize, IUnmanagedMemoryPool pool)
         {
-            pool.Take<TKey>(newSize, out var newKeySpan);
-            pool.Take<TValue>(newKeySpan.Length, out var newValueSpan);
-            pool.Take<int>(newKeySpan.Length << TablePowerOffset, out var newTableSpan);
-            //There is no guarantee that the table retrieved from the pool is clean. Clear it!
-            newTableSpan.Clear(0, newTableSpan.Length);
-            var oldDictionary = this;
-            Resize(ref newKeySpan, ref newValueSpan, ref newTableSpan, out var oldKeySpan, out var oldValueSpan, out var oldTableSpan);
-            oldDictionary.Dispose(pool);
+            var targetKeyCapacity = pool.GetCapacityForCount<TKey>(newSize);
+            if (targetKeyCapacity != Keys.Length)
+            {
+                pool.Take<TKey>(newSize, out var newKeySpan);
+                pool.Take<TValue>(newKeySpan.Length, out var newValueSpan);
+                pool.Take<int>(newKeySpan.Length << TablePowerOffset, out var newTableSpan);
+                //There is no guarantee that the table retrieved from the pool is clean. Clear it!
+                newTableSpan.Clear(0, newTableSpan.Length);
+                var oldDictionary = this;
+                Resize(ref newKeySpan, ref newValueSpan, ref newTableSpan, out var oldKeySpan, out var oldValueSpan, out var oldTableSpan);
+                oldDictionary.Dispose(pool);
+            }
         }
 
         /// <summary>
@@ -672,7 +676,7 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
-        /// Removes all elements from the dictionary without modifying the contents of the keys or values arrays. Be careful about using this with reference types.
+        /// Removes all elements from the dictionary without modifying the contents of the keys or values arrays.
         /// </summary>
         public void FastClear()
         {

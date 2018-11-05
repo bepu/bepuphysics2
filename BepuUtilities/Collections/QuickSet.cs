@@ -182,14 +182,17 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Resize(int newSize, IUnmanagedMemoryPool pool)
         {
-            var oldSet = this;
-            pool.Take<T>(newSize, out var newSpan);
-            pool.Take<int>(newSpan.Length << TablePowerOffset, out var newTableSpan);
-            //There is no guarantee that the table retrieved from the pool is clean. Clear it!
-            newTableSpan.Clear(0, newTableSpan.Length);
-            Resize(ref newSpan, ref newTableSpan, out var oldSpan, out var oldTableSpan);
-
-            oldSet.Dispose(pool);
+            var targetCapacity = pool.GetCapacityForCount<T>(newSize);
+            if (targetCapacity != Span.Length)
+            {
+                var oldSet = this;
+                pool.Take<T>(newSize, out var newSpan);
+                pool.Take<int>(newSpan.Length << TablePowerOffset, out var newTableSpan);
+                //There is no guarantee that the table retrieved from the pool is clean. Clear it!
+                newTableSpan.Clear(0, newTableSpan.Length);
+                Resize(ref newSpan, ref newTableSpan, out var oldSpan, out var oldTableSpan);
+                oldSet.Dispose(pool);
+            }
         }
 
         /// <summary>
@@ -552,7 +555,7 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
-        /// Removes all elements from the set without modifying the contents of the elements array. Be careful about using this with reference types; it may leak references into the pool.
+        /// Removes all elements from the set without modifying the contents of the elements array.
         /// </summary>
         public void FastClear()
         {
