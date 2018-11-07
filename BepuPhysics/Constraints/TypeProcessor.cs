@@ -83,6 +83,7 @@ namespace BepuPhysics.Constraints
                 enumerator.LoopBody(*impulseAddress);
             }
         }
+        public abstract void ScaleAccumulatedImpulses(ref TypeBatch typeBatch, float scale);
         public abstract void UpdateForBodyMemoryMove(ref TypeBatch typeBatch, int indexInTypeBatch, int bodyIndexInConstraint, int newBodyLocation);
 
         public abstract void Scramble(ref TypeBatch typeBatch, Random random, ref Buffer<ConstraintLocation> handlesToConstraints);
@@ -160,7 +161,18 @@ namespace BepuPhysics.Constraints
             Debug.Assert(sizeInBytes == Unsafe.SizeOf<TAccumulatedImpulse>(), "Your assumptions about memory layout and size are wrong for this type! Fix it!");
         }
 
-        static void IncreaseSize<T>(BufferPool pool, ref Buffer<T> buffer) where T: struct
+        public override unsafe void ScaleAccumulatedImpulses(ref TypeBatch typeBatch, float scale)
+        {
+            var dofCount = Unsafe.SizeOf<TAccumulatedImpulse>() / Unsafe.SizeOf<Vector<float>>();
+            var broadcastedScale = new Vector<float>(scale);
+            ref var impulsesBase = ref Unsafe.AsRef<Vector<float>>(typeBatch.AccumulatedImpulses.Memory);
+            for (int i = 0; i < dofCount; ++i)
+            {
+                Unsafe.Add(ref impulsesBase, i) *= broadcastedScale;
+            }
+        }
+
+        static void IncreaseSize<T>(BufferPool pool, ref Buffer<T> buffer) where T : struct
         {
             var old = buffer;
             pool.Take(buffer.Length * 2, out buffer);

@@ -929,6 +929,52 @@ namespace BepuPhysics
             }
         }
 
+        //TODO: Using a non-fixed time step isn't ideal to begin with, but these scaling functions are worse than they need to be.
+        //Unfortunately, the faster alternative is quite a bit more complex- the accumulated impulses would need to be scaled alongside the warm start to minimize memory bandwidth.
+        //Plus, none of this uses multithreading.
+        //Inactive sets are more difficult- an option would be to store scale on a per-set basis and accumulate it, and then only handle the scaling when it becomes active.
+
+        /// <summary>
+        /// Scales the accumulated impulses associated with a constraint set by a given scale.
+        /// </summary>
+        /// <param name="set">Set to scale.</param>
+        /// <param name="scale">Scale to apply to accumulated impulses.</param>
+        public void ScaleAccumulatedImpulses(ref ConstraintSet set, float scale)
+        {
+            for (int batchIndex = 0; batchIndex < ActiveSet.Batches.Count; ++batchIndex)
+            {
+                ref var batch = ref ActiveSet.Batches[batchIndex];
+                for (int typeBatchIndex = 0; typeBatchIndex < batch.TypeBatches.Count; ++typeBatchIndex)
+                {
+                    ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+                    TypeProcessors[typeBatch.TypeId].ScaleAccumulatedImpulses(ref typeBatch, scale);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Scales all accumulated impulses in the active set.
+        /// </summary>
+        /// <param name="scale">Scale to apply to accumulated impulses.</param>
+        public void ScaleActiveAccumulatedImpulses(float scale)
+        {
+            ScaleAccumulatedImpulses(ref ActiveSet, scale);
+        }
+
+        /// <summary>
+        /// Scales all accumulated impulses in all constraint sets.
+        /// </summary>
+        /// <param name="scale">Scale to apply to accumulated impulses.</param>
+        public void ScaleAccumulatedImpulses(float scale)
+        {
+            for (int i = 0; i < Sets.Length; ++i)
+            {
+                ref var set = ref Sets[i];
+                if (set.Allocated)
+                    ScaleAccumulatedImpulses(ref set, scale);
+            }
+        }
+
         /// <summary>
         /// Enumerates the accumulated impulses associated with a constraint.
         /// </summary>
