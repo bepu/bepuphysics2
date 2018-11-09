@@ -87,6 +87,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="Constraints\Contact\ContactConvexTypes.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ContactConvexTypes.tt</DependentUpon>
+    </Compile>
     <Compile Update="Constraints\Contact\ContactNonconvexTypes.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -95,6 +100,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Constraints\Contact\ContactConvexTypes.tt">
+      <LastGenOutput>ContactConvexTypes.cs</LastGenOutput>
+      <Generator>TextTemplatingFileGenerator</Generator>
+    </None>
     <None Update="Constraints\Contact\ContactNonconvexTypes.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>ContactNonconvexTypes.cs</LastGenOutput>

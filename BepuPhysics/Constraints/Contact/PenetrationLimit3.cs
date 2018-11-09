@@ -27,18 +27,18 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal, ref Contact3PrestepData prestep, float dt, float inverseDt,
+        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Contact3PrestepData prestep, float dt, float inverseDt,
             out Projection projection)
         {
-            Vector3Wide.CrossWithoutOverlap(prestep.OffsetA0, normal, out projection.Penetration0.AngularA);
+            Vector3Wide.CrossWithoutOverlap(prestep.OffsetA0, prestep.Normal, out projection.Penetration0.AngularA);
             Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out var offsetB0);
-            Vector3Wide.CrossWithoutOverlap(normal, offsetB0, out projection.Penetration0.AngularB);
-            Vector3Wide.CrossWithoutOverlap(prestep.OffsetA1, normal, out projection.Penetration1.AngularA);
+            Vector3Wide.CrossWithoutOverlap(prestep.Normal, offsetB0, out projection.Penetration0.AngularB);
+            Vector3Wide.CrossWithoutOverlap(prestep.OffsetA1, prestep.Normal, out projection.Penetration1.AngularA);
             Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out var offsetB1);
-            Vector3Wide.CrossWithoutOverlap(normal, offsetB1, out projection.Penetration1.AngularB);
-            Vector3Wide.CrossWithoutOverlap(prestep.OffsetA2, normal, out projection.Penetration2.AngularA);
+            Vector3Wide.CrossWithoutOverlap(prestep.Normal, offsetB1, out projection.Penetration1.AngularB);
+            Vector3Wide.CrossWithoutOverlap(prestep.OffsetA2, prestep.Normal, out projection.Penetration2.AngularA);
             Vector3Wide.Subtract(prestep.OffsetA2, prestep.OffsetB, out var offsetB2);
-            Vector3Wide.CrossWithoutOverlap(normal, offsetB2, out projection.Penetration2.AngularB);
+            Vector3Wide.CrossWithoutOverlap(prestep.Normal, offsetB2, out projection.Penetration2.AngularB);
 
             //effective mass
             Symmetric3x3Wide.VectorSandwich(projection.Penetration0.AngularA, inertiaA.InverseInertiaTensor, out var angularA0);
