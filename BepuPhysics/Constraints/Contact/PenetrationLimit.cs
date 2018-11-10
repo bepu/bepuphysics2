@@ -6,26 +6,22 @@ using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Constraints.Contact
 {
-
-
-
-    /// <summary>
-    /// Four convex-sourced contact penetration limits solved together. Internally implemented using SI solver. 
-    /// Batching saves on redundant data.
-    /// </summary>
-    public static class PenetrationLimit2
+    public struct PenetrationLimitProjection
     {
-        public struct Projection
-        {
-            //Note that the data is interleaved to match the access order. We solve each constraint one at a time internally.
-            //Also, the normal and inertias are shared across all constraints.
-            public PenetrationLimitProjection Penetration0;
-            public Vector<float> SoftnessImpulseScale;
-            public PenetrationLimitProjection Penetration1;
-        }
+        //Note that these are just the raw jacobians, no precomputation with the JT*EffectiveMass.
+        public Vector3Wide AngularA;
+        public Vector3Wide AngularB;
+        public Vector<float> EffectiveMass;
+        public Vector<float> BiasVelocity;
+    }
+
+    public static class PenetrationLimit
+    {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Contact2PrestepData prestep, float dt, float inverseDt,
-            out Projection projection)
+        public static void Prestep(in BodyInertias inertiaA, in BodyInertias inertiaB,
+            in Vector3Wide contactOffsetA, in Vector3Wide contactOffsetB, in Vector3Wide normal, in Vector<float> depth,
+            in Vector<float> positionErrorToVelocity, in Vector<float> effectiveMassCFMScale, in Vector<float> maximumRecoveryVelocity,
+            float inverseDt, out PenetrationLimitProjection projection)
         {
             //We directly take the prestep data here since the jacobians and error don't undergo any processing.
 
@@ -56,32 +52,24 @@ namespace BepuPhysics.Constraints.Contact
             //linearB: -N
             //angularB: N x offsetB
             //Note that we leave the penetration depth as is, even when it's negative. Speculative contacts!
-            Vector3Wide.CrossWithoutOverlap(prestep.OffsetA0, prestep.Normal, out projection.Penetration0.AngularA);
-            Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out var offsetB0);
-            Vector3Wide.CrossWithoutOverlap(prestep.Normal, offsetB0, out projection.Penetration0.AngularB);
-            Vector3Wide.CrossWithoutOverlap(prestep.OffsetA1, prestep.Normal, out projection.Penetration1.AngularA);
-            Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out var offsetB1);
-            Vector3Wide.CrossWithoutOverlap(prestep.Normal, offsetB1, out projection.Penetration1.AngularB);
+            Vector3Wide.CrossWithoutOverlap(contactOffsetA, normal, out projection.AngularA);
+            Vector3Wide.CrossWithoutOverlap(normal, contactOffsetB, out projection.AngularB);
 
             //effective mass
-            Symmetric3x3Wide.VectorSandwich(projection.Penetration0.AngularA, inertiaA.InverseInertiaTensor, out var angularA0);
-            Symmetric3x3Wide.VectorSandwich(projection.Penetration0.AngularB, inertiaB.InverseInertiaTensor, out var angularB0);
-            Symmetric3x3Wide.VectorSandwich(projection.Penetration1.AngularA, inertiaA.InverseInertiaTensor, out var angularA1);
-            Symmetric3x3Wide.VectorSandwich(projection.Penetration1.AngularB, inertiaB.InverseInertiaTensor, out var angularB1);
+            Symmetric3x3Wide.VectorSandwich(projection.AngularA, inertiaA.InverseInertiaTensor, out var angularA0);
+            Symmetric3x3Wide.VectorSandwich(projection.AngularB, inertiaB.InverseInertiaTensor, out var angularB0);
 
             //Linear effective mass contribution notes:
             //1) The J * M^-1 * JT can be reordered to J * JT * M^-1 for the linear components, since M^-1 is a scalar and dot(n * scalar, n) = dot(n, n) * scalar.
             //2) dot(normal, normal) == 1, so the contribution from each body is just its inverse mass.
-            SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             var linear = inertiaA.InverseMass + inertiaB.InverseMass;
             //Note that we don't precompute the JT * effectiveMass term. Since the jacobians are shared, we have to do that multiply anyway.
-            projection.Penetration0.EffectiveMass = effectiveMassCFMScale / (linear + angularA0 + angularB0);
-            projection.Penetration1.EffectiveMass = effectiveMassCFMScale / (linear + angularA1 + angularB1);
+            projection.EffectiveMass = effectiveMassCFMScale / (linear + angularA0 + angularB0);
 
             //If depth is negative, the bias velocity will permit motion up until the depth hits zero. This works because positionErrorToVelocity * dt will always be <=1.
-            var inverseDtVector = new Vector<float>(inverseDt);
-            projection.Penetration0.BiasVelocity = Vector.Min(prestep.PenetrationDepth0 * inverseDtVector, Vector.Min(prestep.PenetrationDepth0 * positionErrorToVelocity, prestep.MaximumRecoveryVelocity));
-            projection.Penetration1.BiasVelocity = Vector.Min(prestep.PenetrationDepth1 * inverseDtVector, Vector.Min(prestep.PenetrationDepth1 * positionErrorToVelocity, prestep.MaximumRecoveryVelocity));
+            projection.BiasVelocity = Vector.Min(
+                depth * new Vector<float>(inverseDt),
+                Vector.Min(depth * positionErrorToVelocity, maximumRecoveryVelocity));
         }
 
 
@@ -89,8 +77,8 @@ namespace BepuPhysics.Constraints.Contact
         /// Transforms an impulse from constraint space to world space, uses it to modify the cached world space velocities of the bodies.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref PenetrationLimitProjection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal,
-            ref Vector<float> correctiveImpulse,
+        public static void ApplyImpulse(in PenetrationLimitProjection projection, in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide normal,
+            in Vector<float> correctiveImpulse,
             ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
             var linearVelocityChangeA = correctiveImpulse * inertiaA.InverseMass;
@@ -111,18 +99,16 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WarmStart(
-            ref Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal,
-            ref Vector<float> accumulatedImpulse0,
-            ref Vector<float> accumulatedImpulse1, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+            in PenetrationLimitProjection projection, in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide normal,
+            in Vector<float> accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
-            ApplyImpulse(ref projection.Penetration0, ref inertiaA, ref inertiaB, ref normal, ref accumulatedImpulse0, ref wsvA, ref wsvB);
-            ApplyImpulse(ref projection.Penetration1, ref inertiaA, ref inertiaB, ref normal, ref accumulatedImpulse1, ref wsvA, ref wsvB);
+            ApplyImpulse(projection, inertiaA, inertiaB, normal, accumulatedImpulse, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(ref BodyVelocities wsvA, ref BodyVelocities wsvB,
-            ref PenetrationLimitProjection projection,
-            ref Vector3Wide normal, ref Vector<float> softnessImpulseScale,
+        public static void ComputeCorrectiveImpulse(in BodyVelocities wsvA, in BodyVelocities wsvB,
+            in PenetrationLimitProjection projection,
+            in Vector3Wide normal, in Vector<float> softnessImpulseScale,
             ref Vector<float> accumulatedImpulse, out Vector<float> correctiveCSI)
         {
             //Note that we do NOT use pretransformed jacobians here; the linear jacobian sharing (normal) meant that we had the effective mass anyway.
@@ -141,14 +127,11 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref Projection projection, ref BodyInertias inertiaA, ref BodyInertias inertiaB, ref Vector3Wide normal,
-            ref Vector<float> accumulatedImpulse0,
-            ref Vector<float> accumulatedImpulse1, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
+        public static void Solve(in PenetrationLimitProjection projection, in BodyInertias inertiaA, in BodyInertias inertiaB, in Vector3Wide normal,
+            in Vector<float> softnessImpulseScale, ref Vector<float> accumulatedImpulse, ref BodyVelocities wsvA, ref BodyVelocities wsvB)
         {
-            ComputeCorrectiveImpulse(ref wsvA, ref wsvB, ref projection.Penetration0, ref normal, ref projection.SoftnessImpulseScale, ref accumulatedImpulse0, out var correctiveCSI0);
-            ApplyImpulse(ref projection.Penetration0, ref inertiaA, ref inertiaB, ref normal, ref correctiveCSI0, ref wsvA, ref wsvB);
-            ComputeCorrectiveImpulse(ref wsvA, ref wsvB, ref projection.Penetration1, ref normal, ref projection.SoftnessImpulseScale, ref accumulatedImpulse1, out var correctiveCSI1);
-            ApplyImpulse(ref projection.Penetration1, ref inertiaA, ref inertiaB, ref normal, ref correctiveCSI1, ref wsvA, ref wsvB);
+            ComputeCorrectiveImpulse(wsvA, wsvB, projection, normal, softnessImpulseScale, ref accumulatedImpulse, out var correctiveCSI);
+            ApplyImpulse(projection, inertiaA, inertiaB, normal, correctiveCSI, ref wsvA, ref wsvB);
         }
 
     }
