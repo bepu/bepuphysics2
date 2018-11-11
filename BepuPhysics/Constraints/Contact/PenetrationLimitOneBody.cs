@@ -6,6 +6,14 @@ using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Constraints.Contact
 {
+    public struct PenetrationLimitOneBodyProjection
+    {
+        //Note that these are just the raw jacobians, no precomputation with the JT*EffectiveMass.
+        public Vector3Wide AngularA;
+        public Vector<float> EffectiveMass;
+        public Vector<float> BiasVelocity;
+    }
+
     public static class PenetrationLimitOneBody
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
