@@ -53,7 +53,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact2NonconvexPrestepData : INonconvexTwoBodyContactPrestepWide<Contact2NonconvexPrestepData>
+    public struct Contact2NonconvexPrestepData : 
+		INonconvexTwoBodyContactPrestepWide<Contact2NonconvexPrestepData>,
+		IContactViewablePrestepData<Contact2NonconvexPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexTwoBodyContactPrestepCommon Common;
@@ -70,6 +72,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact2NonconvexPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(2, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -159,7 +171,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact2NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact2NonconvexOneBodyPrestepData>
+    public struct Contact2NonconvexOneBodyPrestepData : 
+		INonconvexOneBodyContactPrestepWide<Contact2NonconvexOneBodyPrestepData>, 	
+		IContactViewablePrestepData<Contact2NonconvexOneBodyPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexOneBodyContactPrestepCommon Common;
@@ -176,6 +190,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact2NonconvexOneBodyPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+		      
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(2, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -262,7 +286,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact3NonconvexPrestepData : INonconvexTwoBodyContactPrestepWide<Contact3NonconvexPrestepData>
+    public struct Contact3NonconvexPrestepData : 
+		INonconvexTwoBodyContactPrestepWide<Contact3NonconvexPrestepData>,
+		IContactViewablePrestepData<Contact3NonconvexPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexTwoBodyContactPrestepCommon Common;
@@ -280,6 +306,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact3NonconvexPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(3, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -372,7 +408,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact3NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact3NonconvexOneBodyPrestepData>
+    public struct Contact3NonconvexOneBodyPrestepData : 
+		INonconvexOneBodyContactPrestepWide<Contact3NonconvexOneBodyPrestepData>, 	
+		IContactViewablePrestepData<Contact3NonconvexOneBodyPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexOneBodyContactPrestepCommon Common;
@@ -390,6 +428,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact3NonconvexOneBodyPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+		      
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(3, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -478,7 +526,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact4NonconvexPrestepData : INonconvexTwoBodyContactPrestepWide<Contact4NonconvexPrestepData>
+    public struct Contact4NonconvexPrestepData : 
+		INonconvexTwoBodyContactPrestepWide<Contact4NonconvexPrestepData>,
+		IContactViewablePrestepData<Contact4NonconvexPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexTwoBodyContactPrestepCommon Common;
@@ -497,6 +547,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact4NonconvexPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(4, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -592,7 +652,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact4NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact4NonconvexOneBodyPrestepData>
+    public struct Contact4NonconvexOneBodyPrestepData : 
+		INonconvexOneBodyContactPrestepWide<Contact4NonconvexOneBodyPrestepData>, 	
+		IContactViewablePrestepData<Contact4NonconvexOneBodyPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexOneBodyContactPrestepCommon Common;
@@ -611,6 +673,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact4NonconvexOneBodyPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+		      
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(4, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -701,7 +773,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact5NonconvexPrestepData : INonconvexTwoBodyContactPrestepWide<Contact5NonconvexPrestepData>
+    public struct Contact5NonconvexPrestepData : 
+		INonconvexTwoBodyContactPrestepWide<Contact5NonconvexPrestepData>,
+		IContactViewablePrestepData<Contact5NonconvexPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexTwoBodyContactPrestepCommon Common;
@@ -721,6 +795,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact5NonconvexPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(5, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -819,7 +903,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact5NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact5NonconvexOneBodyPrestepData>
+    public struct Contact5NonconvexOneBodyPrestepData : 
+		INonconvexOneBodyContactPrestepWide<Contact5NonconvexOneBodyPrestepData>, 	
+		IContactViewablePrestepData<Contact5NonconvexOneBodyPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexOneBodyContactPrestepCommon Common;
@@ -839,6 +925,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact5NonconvexOneBodyPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+		      
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(5, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -931,7 +1027,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact6NonconvexPrestepData : INonconvexTwoBodyContactPrestepWide<Contact6NonconvexPrestepData>
+    public struct Contact6NonconvexPrestepData : 
+		INonconvexTwoBodyContactPrestepWide<Contact6NonconvexPrestepData>,
+		IContactViewablePrestepData<Contact6NonconvexPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexTwoBodyContactPrestepCommon Common;
@@ -952,6 +1050,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact6NonconvexPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(6, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -1053,7 +1161,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact6NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact6NonconvexOneBodyPrestepData>
+    public struct Contact6NonconvexOneBodyPrestepData : 
+		INonconvexOneBodyContactPrestepWide<Contact6NonconvexOneBodyPrestepData>, 	
+		IContactViewablePrestepData<Contact6NonconvexOneBodyPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexOneBodyContactPrestepCommon Common;
@@ -1074,6 +1184,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact6NonconvexOneBodyPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+		      
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(6, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -1168,7 +1288,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact7NonconvexPrestepData : INonconvexTwoBodyContactPrestepWide<Contact7NonconvexPrestepData>
+    public struct Contact7NonconvexPrestepData : 
+		INonconvexTwoBodyContactPrestepWide<Contact7NonconvexPrestepData>,
+		IContactViewablePrestepData<Contact7NonconvexPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexTwoBodyContactPrestepCommon Common;
@@ -1190,6 +1312,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact7NonconvexPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(7, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -1294,7 +1426,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact7NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact7NonconvexOneBodyPrestepData>
+    public struct Contact7NonconvexOneBodyPrestepData : 
+		INonconvexOneBodyContactPrestepWide<Contact7NonconvexOneBodyPrestepData>, 	
+		IContactViewablePrestepData<Contact7NonconvexOneBodyPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexOneBodyContactPrestepCommon Common;
@@ -1316,6 +1450,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact7NonconvexOneBodyPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+		      
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(7, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -1412,7 +1556,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact8NonconvexPrestepData : INonconvexTwoBodyContactPrestepWide<Contact8NonconvexPrestepData>
+    public struct Contact8NonconvexPrestepData : 
+		INonconvexTwoBodyContactPrestepWide<Contact8NonconvexPrestepData>,
+		IContactViewablePrestepData<Contact8NonconvexPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexTwoBodyContactPrestepCommon Common;
@@ -1435,6 +1581,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact8NonconvexPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(8, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 
@@ -1542,7 +1698,9 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact8NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact8NonconvexOneBodyPrestepData>
+    public struct Contact8NonconvexOneBodyPrestepData : 
+		INonconvexOneBodyContactPrestepWide<Contact8NonconvexOneBodyPrestepData>, 	
+		IContactViewablePrestepData<Contact8NonconvexOneBodyPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexOneBodyContactPrestepCommon Common;
@@ -1565,6 +1723,16 @@ namespace BepuPhysics.Constraints.Contact
         public ref NonconvexPrestepData GetFirstContact(ref Contact8NonconvexOneBodyPrestepData prestep)
         {
             return ref prestep.Contact0;
+        }
+		      
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(8, false, 
+				Unsafe.AsPointer(ref Common.FrictionCoefficient), 
+				Unsafe.AsPointer(ref Contact0.Offset), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Normal), Unsafe.SizeOf<NonconvexPrestepData>(),
+				Unsafe.AsPointer(ref Contact0.Depth));
         }
     }
 

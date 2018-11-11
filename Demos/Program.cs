@@ -26,5 +26,5 @@ namespace Demos
             loop.Dispose();
             window.Dispose();
         }
-    }
+    }    
 }

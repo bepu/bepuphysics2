@@ -182,7 +182,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact1OneBodyPrestepData
+    public struct Contact1OneBodyPrestepData : IContactViewablePrestepData<Contact1OneBodyPrestepData>
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -190,12 +190,23 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetA0;
         public Vector<float> PenetrationDepth0;
         public Vector3Wide OffsetB;
-        public Vector<float> FrictionCoefficient;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
+		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(1, true, 
+				Unsafe.AsPointer(ref FrictionCoefficient), 
+				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
+				Unsafe.AsPointer(ref Normal), 0,
+				Unsafe.AsPointer(ref PenetrationDepth0));
+        }
     }
 
     public unsafe struct Contact1OneBodyProjection
@@ -338,7 +349,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact2OneBodyPrestepData
+    public struct Contact2OneBodyPrestepData : IContactViewablePrestepData<Contact2OneBodyPrestepData>
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -348,12 +359,23 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetA1;
         public Vector<float> PenetrationDepth1;
         public Vector3Wide OffsetB;
-        public Vector<float> FrictionCoefficient;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
+		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(2, true, 
+				Unsafe.AsPointer(ref FrictionCoefficient), 
+				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
+				Unsafe.AsPointer(ref Normal), 0,
+				Unsafe.AsPointer(ref PenetrationDepth0));
+        }
     }
 
     public unsafe struct Contact2OneBodyProjection
@@ -510,7 +532,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact3OneBodyPrestepData
+    public struct Contact3OneBodyPrestepData : IContactViewablePrestepData<Contact3OneBodyPrestepData>
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -522,12 +544,23 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetA2;
         public Vector<float> PenetrationDepth2;
         public Vector3Wide OffsetB;
-        public Vector<float> FrictionCoefficient;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
+		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(3, true, 
+				Unsafe.AsPointer(ref FrictionCoefficient), 
+				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
+				Unsafe.AsPointer(ref Normal), 0,
+				Unsafe.AsPointer(ref PenetrationDepth0));
+        }
     }
 
     public unsafe struct Contact3OneBodyProjection
@@ -697,7 +730,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact4OneBodyPrestepData
+    public struct Contact4OneBodyPrestepData : IContactViewablePrestepData<Contact4OneBodyPrestepData>
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -711,12 +744,23 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetA3;
         public Vector<float> PenetrationDepth3;
         public Vector3Wide OffsetB;
-        public Vector<float> FrictionCoefficient;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
+		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(4, true, 
+				Unsafe.AsPointer(ref FrictionCoefficient), 
+				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
+				Unsafe.AsPointer(ref Normal), 0,
+				Unsafe.AsPointer(ref PenetrationDepth0));
+        }
     }
 
     public unsafe struct Contact4OneBodyProjection
@@ -880,7 +924,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact1PrestepData
+    public struct Contact1PrestepData : IContactViewablePrestepData<Contact1PrestepData>
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -888,12 +932,23 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetA0;
         public Vector<float> PenetrationDepth0;
         public Vector3Wide OffsetB;
-        public Vector<float> FrictionCoefficient;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
+		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(1, true, 
+				Unsafe.AsPointer(ref FrictionCoefficient), 
+				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
+				Unsafe.AsPointer(ref Normal), 0,
+				Unsafe.AsPointer(ref PenetrationDepth0));
+        }
     }
 
     public unsafe struct Contact1Projection
@@ -1039,7 +1094,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact2PrestepData
+    public struct Contact2PrestepData : IContactViewablePrestepData<Contact2PrestepData>
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -1049,12 +1104,23 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetA1;
         public Vector<float> PenetrationDepth1;
         public Vector3Wide OffsetB;
-        public Vector<float> FrictionCoefficient;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
+		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(2, true, 
+				Unsafe.AsPointer(ref FrictionCoefficient), 
+				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
+				Unsafe.AsPointer(ref Normal), 0,
+				Unsafe.AsPointer(ref PenetrationDepth0));
+        }
     }
 
     public unsafe struct Contact2Projection
@@ -1214,7 +1280,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact3PrestepData
+    public struct Contact3PrestepData : IContactViewablePrestepData<Contact3PrestepData>
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -1226,12 +1292,23 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetA2;
         public Vector<float> PenetrationDepth2;
         public Vector3Wide OffsetB;
-        public Vector<float> FrictionCoefficient;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
+		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(3, true, 
+				Unsafe.AsPointer(ref FrictionCoefficient), 
+				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
+				Unsafe.AsPointer(ref Normal), 0,
+				Unsafe.AsPointer(ref PenetrationDepth0));
+        }
     }
 
     public unsafe struct Contact3Projection
@@ -1404,7 +1481,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact4PrestepData
+    public struct Contact4PrestepData : IContactViewablePrestepData<Contact4PrestepData>
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -1418,12 +1495,23 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetA3;
         public Vector<float> PenetrationDepth3;
         public Vector3Wide OffsetB;
-        public Vector<float> FrictionCoefficient;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
+		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
+        {
+			viewer = new UnsafeManifoldViewer(4, true, 
+				Unsafe.AsPointer(ref FrictionCoefficient), 
+				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
+				Unsafe.AsPointer(ref Normal), 0,
+				Unsafe.AsPointer(ref PenetrationDepth0));
+        }
     }
 
     public unsafe struct Contact4Projection

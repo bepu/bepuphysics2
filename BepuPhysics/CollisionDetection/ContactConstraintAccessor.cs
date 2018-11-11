@@ -95,11 +95,19 @@ namespace BepuPhysics.CollisionDetection
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
             where TCallbacks : struct, INarrowPhaseCallbacks
             where TCollisionCache : IPairCacheEntry;
-
+        
+        public unsafe abstract void GetUnsafeManifoldViewer(Solver solver, in ConstraintLocation location, out UnsafeManifoldViewer viewer);
     }
 
+    public interface IContactViewablePrestepData<TPrestepData> where TPrestepData : IContactViewablePrestepData<TPrestepData>
+    {
+        void CreateViewer(out UnsafeManifoldViewer viewer);
+    }
+
+
     //Note that the vast majority of the 'work' done by these accessor implementations is just type definitions used to call back into some other functions that need that type knowledge.
-    public abstract class ContactConstraintAccessor<TConstraintDescription, TBodyHandles, TAccumulatedImpulses, TContactImpulses, TConstraintCache> : ContactConstraintAccessor
+    public abstract class ContactConstraintAccessor<TConstraintDescription, TBodyHandles, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> : ContactConstraintAccessor
+        where TPrestepData : struct, IContactViewablePrestepData<TPrestepData>
         where TConstraintDescription : IConstraintDescription<TConstraintDescription>
         where TConstraintCache : IPairCacheEntry
     {
@@ -211,9 +219,19 @@ namespace BepuPhysics.CollisionDetection
                 targetContact.PenetrationDepth = sourceContact.Depth;
             }
         }
+
+        public unsafe override void GetUnsafeManifoldViewer(Solver solver, in ConstraintLocation location, out UnsafeManifoldViewer viewer)
+        {
+            ref var batch = ref solver.Sets[location.SetIndex].Batches[location.BatchIndex];
+            ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[location.TypeId]];
+            BundleIndexing.GetBundleIndices(location.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
+            ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(typeBatch.PrestepData.Memory, bundleIndex), innerIndex);
+            prestep.CreateViewer(out viewer);  
+        }
     }
-    public class ConvexOneBodyAccessor<TConstraintDescription, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
-        ContactConstraintAccessor<TConstraintDescription, int, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+    public class ConvexOneBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
+        ContactConstraintAccessor<TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+        where TPrestepData : struct, IContactViewablePrestepData<TPrestepData>
         where TConstraintDescription : IConvexOneBodyContactConstraintDescription<TConstraintDescription>
         where TConstraintCache : IPairCacheEntry
     {
@@ -228,8 +246,9 @@ namespace BepuPhysics.CollisionDetection
         }
     }
 
-    public class ConvexTwoBodyAccessor<TConstraintDescription, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
-        ContactConstraintAccessor<TConstraintDescription, TwoBodyHandles, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+    public class ConvexTwoBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
+        ContactConstraintAccessor<TConstraintDescription, TwoBodyHandles, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+        where TPrestepData : struct, IContactViewablePrestepData<TPrestepData>
         where TConstraintDescription : IConvexTwoBodyContactConstraintDescription<TConstraintDescription>
         where TConstraintCache : IPairCacheEntry
     {
@@ -244,8 +263,9 @@ namespace BepuPhysics.CollisionDetection
         }
     }
 
-    public class NonconvexOneBodyAccessor<TConstraintDescription, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
-        ContactConstraintAccessor<TConstraintDescription, int, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+    public class NonconvexOneBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
+        ContactConstraintAccessor<TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+        where TPrestepData : struct, IContactViewablePrestepData<TPrestepData>
         where TConstraintDescription : INonconvexOneBodyContactConstraintDescription<TConstraintDescription>
         where TConstraintCache : IPairCacheEntry
     {
@@ -263,8 +283,9 @@ namespace BepuPhysics.CollisionDetection
         }
     }
 
-    public class NonconvexTwoBodyAccessor<TConstraintDescription, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
-        ContactConstraintAccessor<TConstraintDescription, TwoBodyHandles, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+    public class NonconvexTwoBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
+        ContactConstraintAccessor<TConstraintDescription, TwoBodyHandles, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
+        where TPrestepData : struct, IContactViewablePrestepData<TPrestepData>
         where TConstraintDescription : INonconvexTwoBodyContactConstraintDescription<TConstraintDescription>
         where TConstraintCache : IPairCacheEntry
     {

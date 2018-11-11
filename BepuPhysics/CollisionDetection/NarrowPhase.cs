@@ -125,6 +125,18 @@ namespace BepuPhysics.CollisionDetection
             flushWorkerLoop = FlushWorkerLoop;
         }
 
+        /// <summary>
+        /// Gets an unsafe pointer to the solver's prestep data representing a contact manifold.
+        /// </summary>
+        /// <param name="constraintHandle">Constraint handle of a contact manifold constraint to view.</param>
+        /// <param name="viewer">Unsafe manifold viewer for the requested pair.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetUnsafeManifoldViewer(int constraintHandle, out UnsafeManifoldViewer viewer)
+        {
+            ref var location = ref Solver.HandleToConstraint[constraintHandle];
+            contactConstraintAccessors[location.TypeId].GetUnsafeManifoldViewer(Solver, location, out viewer);
+        }
+
         public void Prepare(float dt, IThreadDispatcher threadDispatcher = null)
         {
             timestepDuration = dt;
@@ -137,8 +149,7 @@ namespace BepuPhysics.CollisionDetection
         protected abstract void OnPreflush(IThreadDispatcher threadDispatcher, bool deterministic);
         protected abstract void OnPostflush(IThreadDispatcher threadDispatcher);
 
-
-        bool deterministic;
+        
         int flushJobIndex;
         QuickList<NarrowPhaseFlushJob> flushJobs;
         IThreadDispatcher threadDispatcher;

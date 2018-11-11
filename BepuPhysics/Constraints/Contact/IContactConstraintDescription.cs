@@ -31,12 +31,14 @@ namespace BepuPhysics.Constraints.Contact
     public struct NonconvexTwoBodyManifoldConstraintProperties
     {
         public Vector3 OffsetB;
+        //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
         public float FrictionCoefficient;
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
     }
     public struct NonconvexOneBodyManifoldConstraintProperties
     {
+        //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
         public float FrictionCoefficient;
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
