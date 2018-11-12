@@ -182,7 +182,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact1OneBodyPrestepData : IContactViewablePrestepData<Contact1OneBodyPrestepData>
+    public struct Contact1OneBodyPrestepData
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -197,16 +197,6 @@ namespace BepuPhysics.Constraints.Contact
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
-        {
-			viewer = new UnsafeManifoldViewer(1, true, 
-				Unsafe.AsPointer(ref FrictionCoefficient), 
-				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
-				Unsafe.AsPointer(ref Normal), 0,
-				Unsafe.AsPointer(ref PenetrationDepth0));
-        }
     }
 
     public unsafe struct Contact1OneBodyProjection
@@ -349,7 +339,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact2OneBodyPrestepData : IContactViewablePrestepData<Contact2OneBodyPrestepData>
+    public struct Contact2OneBodyPrestepData
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -366,16 +356,6 @@ namespace BepuPhysics.Constraints.Contact
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
-        {
-			viewer = new UnsafeManifoldViewer(2, true, 
-				Unsafe.AsPointer(ref FrictionCoefficient), 
-				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
-				Unsafe.AsPointer(ref Normal), 0,
-				Unsafe.AsPointer(ref PenetrationDepth0));
-        }
     }
 
     public unsafe struct Contact2OneBodyProjection
@@ -532,7 +512,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact3OneBodyPrestepData : IContactViewablePrestepData<Contact3OneBodyPrestepData>
+    public struct Contact3OneBodyPrestepData
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -551,16 +531,6 @@ namespace BepuPhysics.Constraints.Contact
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
-        {
-			viewer = new UnsafeManifoldViewer(3, true, 
-				Unsafe.AsPointer(ref FrictionCoefficient), 
-				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
-				Unsafe.AsPointer(ref Normal), 0,
-				Unsafe.AsPointer(ref PenetrationDepth0));
-        }
     }
 
     public unsafe struct Contact3OneBodyProjection
@@ -730,7 +700,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact4OneBodyPrestepData : IContactViewablePrestepData<Contact4OneBodyPrestepData>
+    public struct Contact4OneBodyPrestepData
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -751,16 +721,6 @@ namespace BepuPhysics.Constraints.Contact
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
-        {
-			viewer = new UnsafeManifoldViewer(4, true, 
-				Unsafe.AsPointer(ref FrictionCoefficient), 
-				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
-				Unsafe.AsPointer(ref Normal), 0,
-				Unsafe.AsPointer(ref PenetrationDepth0));
-        }
     }
 
     public unsafe struct Contact4OneBodyProjection
@@ -924,7 +884,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact1PrestepData : IContactViewablePrestepData<Contact1PrestepData>
+    public struct Contact1PrestepData
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -939,16 +899,6 @@ namespace BepuPhysics.Constraints.Contact
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
-        {
-			viewer = new UnsafeManifoldViewer(1, true, 
-				Unsafe.AsPointer(ref FrictionCoefficient), 
-				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
-				Unsafe.AsPointer(ref Normal), 0,
-				Unsafe.AsPointer(ref PenetrationDepth0));
-        }
     }
 
     public unsafe struct Contact1Projection
@@ -1094,7 +1044,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact2PrestepData : IContactViewablePrestepData<Contact2PrestepData>
+    public struct Contact2PrestepData
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -1111,16 +1061,6 @@ namespace BepuPhysics.Constraints.Contact
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
-        {
-			viewer = new UnsafeManifoldViewer(2, true, 
-				Unsafe.AsPointer(ref FrictionCoefficient), 
-				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
-				Unsafe.AsPointer(ref Normal), 0,
-				Unsafe.AsPointer(ref PenetrationDepth0));
-        }
     }
 
     public unsafe struct Contact2Projection
@@ -1280,7 +1220,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact3PrestepData : IContactViewablePrestepData<Contact3PrestepData>
+    public struct Contact3PrestepData
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -1299,16 +1239,6 @@ namespace BepuPhysics.Constraints.Contact
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
-        {
-			viewer = new UnsafeManifoldViewer(3, true, 
-				Unsafe.AsPointer(ref FrictionCoefficient), 
-				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
-				Unsafe.AsPointer(ref Normal), 0,
-				Unsafe.AsPointer(ref PenetrationDepth0));
-        }
     }
 
     public unsafe struct Contact3Projection
@@ -1481,7 +1411,7 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact4PrestepData : IContactViewablePrestepData<Contact4PrestepData>
+    public struct Contact4PrestepData
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -1502,16 +1432,6 @@ namespace BepuPhysics.Constraints.Contact
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
-        {
-			viewer = new UnsafeManifoldViewer(4, true, 
-				Unsafe.AsPointer(ref FrictionCoefficient), 
-				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
-				Unsafe.AsPointer(ref Normal), 0,
-				Unsafe.AsPointer(ref PenetrationDepth0));
-        }
     }
 
     public unsafe struct Contact4Projection

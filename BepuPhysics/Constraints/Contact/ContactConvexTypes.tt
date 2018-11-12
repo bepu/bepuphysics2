@@ -147,7 +147,7 @@ for (int i = 0; i < contactCount; ++i)
 
     }
 
-    public struct Contact<#= contactCount #><#=suffix#>PrestepData : IContactViewablePrestepData<Contact<#= contactCount #><#=suffix#>PrestepData>
+    public struct Contact<#= contactCount #><#=suffix#>PrestepData
     {
         //NOTE: Prestep data memory layout is relied upon by the constraint description for marginally more efficient setting and getting.
         //If you modify this layout, be sure to update the associated ContactManifold4Constraint.
@@ -164,16 +164,6 @@ for (int i = 0; i < contactCount; ++i)
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
         public Vector<float> MaximumRecoveryVelocity;
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void CreateViewer(out UnsafeManifoldViewer viewer)
-        {
-			viewer = new UnsafeManifoldViewer(<#=contactCount#>, true, 
-				Unsafe.AsPointer(ref FrictionCoefficient), 
-				Unsafe.AsPointer(ref OffsetA0), Unsafe.SizeOf<Vector3Wide>() + Unsafe.SizeOf<Vector<float>>(),
-				Unsafe.AsPointer(ref Normal), 0,
-				Unsafe.AsPointer(ref PenetrationDepth0));
-        }
     }
 
     public unsafe struct Contact<#= contactCount #><#=suffix#>Projection

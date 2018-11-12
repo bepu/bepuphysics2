@@ -39,14 +39,7 @@ namespace Demos.Demos
             for (int i = 0; i < constraints.Count; ++i)
             {
                 ref var constraint = ref constraints[i];
-                if (Simulation.NarrowPhase.TryGetUnsafeManifoldViewer(constraint.ConnectingConstraintHandle, out var viewer))
-                {
-                    for (int j = 0; j < viewer.ContactCount; ++j)
-                    {
-                        var contact = viewer[j];
-                        var position = pose.Position + contact.OffsetA;
-                    }
-                }
+                
 
             }
             base.Render(renderer, camera, input, text, font);
