@@ -12,16 +12,16 @@ namespace DemoRenderer.Constraints
     {
         public int LinesPerConstraint => 4;
 
-        public unsafe void ExtractLines(ref HingePrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
+        public unsafe void ExtractLines(ref HingePrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
             ref var poseA = ref bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ref var poseB = ref bodies.Sets[setIndex].Poses[bodyIndices[1]];
-            Vector3Wide.ReadSlot(ref prestepBundle.LocalHingeAxisA, innerIndex, out var localHingeAxisA);
-            Vector3Wide.ReadSlot(ref prestepBundle.LocalOffsetA, innerIndex, out var localOffsetA);
-            Vector3Wide.ReadSlot(ref prestepBundle.LocalHingeAxisB, innerIndex, out var localHingeAxisB);
-            Vector3Wide.ReadSlot(ref prestepBundle.LocalOffsetB, innerIndex, out var localOffsetB);
+            Vector3Wide.ReadFirst(prestepBundle.LocalHingeAxisA, out var localHingeAxisA);
+            Vector3Wide.ReadFirst(prestepBundle.LocalOffsetA, out var localOffsetA);
+            Vector3Wide.ReadFirst(prestepBundle.LocalHingeAxisB, out var localHingeAxisB);
+            Vector3Wide.ReadFirst(prestepBundle.LocalOffsetB, out var localOffsetB);
             Quaternion.Transform(localOffsetA, poseA.Orientation, out var offsetA);
             Quaternion.Transform(localHingeAxisA, poseA.Orientation, out var hingeAxisA);
             Quaternion.Transform(localOffsetB, poseB.Orientation, out var offsetB);

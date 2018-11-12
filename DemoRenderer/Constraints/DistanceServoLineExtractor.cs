@@ -12,16 +12,15 @@ namespace DemoRenderer.Constraints
     {
         public int LinesPerConstraint => 4;
 
-        public unsafe void ExtractLines(ref DistanceServoPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
+        public unsafe void ExtractLines(ref DistanceServoPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             var poseB = bodies.Sets[setIndex].Poses[bodyIndices[1]];
-            ref var offsetBundle = ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex);
-            Vector3Wide.ReadFirst(offsetBundle.LocalOffsetA, out var localOffsetA);
-            Vector3Wide.ReadFirst(offsetBundle.LocalOffsetB, out var localOffsetB);
-            var targetDistance = GatherScatter.GetFirst(ref offsetBundle.TargetDistance);
+            Vector3Wide.ReadFirst(prestepBundle.LocalOffsetA, out var localOffsetA);
+            Vector3Wide.ReadFirst(prestepBundle.LocalOffsetB, out var localOffsetB);
+            var targetDistance = GatherScatter.GetFirst(ref prestepBundle.TargetDistance);
             Quaternion.Transform(localOffsetA, poseA.Orientation, out var worldOffsetA);
             Quaternion.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
             var endA = poseA.Position + worldOffsetA;

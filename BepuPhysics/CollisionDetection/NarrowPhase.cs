@@ -126,15 +126,33 @@ namespace BepuPhysics.CollisionDetection
         }
 
         /// <summary>
-        /// Gets an unsafe pointer to the solver's prestep data representing a contact manifold.
+        /// Gets whether a constraint type id maps to a contact constraint.
+        /// </summary>
+        /// <param name="constraintTypeId">Id of the constraint to check.</param>
+        /// <returns>True if the type id refers to a contact constraint. False otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsContactConstraintType(int constraintTypeId)
+        {
+            return constraintTypeId < PairCache.CollisionConstraintTypeCount;
+        }
+
+        /// <summary>
+        /// Attempts to get an unsafe pointer to the solver's prestep data representing a contact manifold. Constraint handle is assumed to exist.
         /// </summary>
         /// <param name="constraintHandle">Constraint handle of a contact manifold constraint to view.</param>
         /// <param name="viewer">Unsafe manifold viewer for the requested pair.</param>
+        /// <returns>True if the constraint handle is associated with a contact constraint, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetUnsafeManifoldViewer(int constraintHandle, out UnsafeManifoldViewer viewer)
+        public bool TryGetUnsafeManifoldViewer(int constraintHandle, out UnsafeManifoldViewer viewer)
         {
             ref var location = ref Solver.HandleToConstraint[constraintHandle];
-            contactConstraintAccessors[location.TypeId].GetUnsafeManifoldViewer(Solver, location, out viewer);
+            if (IsContactConstraintType(location.TypeId))
+            {
+                contactConstraintAccessors[location.TypeId].GetUnsafeManifoldViewer(Solver, location, out viewer);
+                return true;
+            }
+            viewer = default;
+            return false;
         }
 
         public void Prepare(float dt, IThreadDispatcher threadDispatcher = null)

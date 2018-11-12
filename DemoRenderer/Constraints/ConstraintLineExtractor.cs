@@ -17,7 +17,7 @@ namespace DemoRenderer.Constraints
     {
         int LinesPerConstraint { get; }
 
-        void ExtractLines(ref TPrestep prestepBundle, int innerIndex, int setIndex, int* bodyLocations, Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines);
+        void ExtractLines(ref TPrestep prestepBundle, int setIndex, int* bodyLocations, Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines);
     }
     abstract class TypeLineExtractor
     {
@@ -26,6 +26,7 @@ namespace DemoRenderer.Constraints
     }
 
     class TypeLineExtractor<T, TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses> : TypeLineExtractor
+        where TPrestep : struct
         where T : struct, IConstraintLineExtractor<TPrestep>
     {
         public override int LinesPerConstraint => default(T).LinesPerConstraint;
@@ -56,7 +57,7 @@ namespace DemoRenderer.Constraints
                         //Active set constraint body references refer directly to the body index.
                         bodyIndices[j] = GatherScatter.Get(ref Unsafe.Add(ref firstReference, j), innerIndex);
                     }
-                    extractor.ExtractLines(ref prestepBundle, innerIndex, setIndex, bodyIndices, bodies, ref tint, ref lines);
+                    extractor.ExtractLines(ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex), setIndex, bodyIndices, bodies, ref tint, ref lines);
                 }
             }
             else
@@ -75,7 +76,7 @@ namespace DemoRenderer.Constraints
                         Debug.Assert(bodies.HandleToLocation[bodyHandle].SetIndex == setIndex);
                         bodyIndices[j] = bodies.HandleToLocation[bodyHandle].Index;
                     }
-                    extractor.ExtractLines(ref prestepBundle, innerIndex, setIndex, bodyIndices, bodies, ref tint, ref lines);
+                    extractor.ExtractLines(ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex), setIndex, bodyIndices, bodies, ref tint, ref lines);
                 }
             }
         }
@@ -186,7 +187,7 @@ namespace DemoRenderer.Constraints
                             if (typeBatch.TypeId >= lineExtractors.Length)
                                 continue; //No registered extractor for this type, clearly.
                             var extractor = lineExtractors[typeBatch.TypeId];
-                            var isContactBatch = PairCache.IsContactBatch(typeBatch.TypeId);
+                            var isContactBatch = NarrowPhase.IsContactConstraintType(typeBatch.TypeId);
                             if (extractor != null && ((isContactBatch && showContacts) || (!isContactBatch && showConstraints)))
                             {
                                 jobs.Add(new ThreadJob

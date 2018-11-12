@@ -12,17 +12,16 @@ namespace DemoRenderer.Constraints
     {
         public int LinesPerConstraint => 5;
 
-        public unsafe void ExtractLines(ref DistanceLimitPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
+        public unsafe void ExtractLines(ref DistanceLimitPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             var poseB = bodies.Sets[setIndex].Poses[bodyIndices[1]];
-            ref var offsetBundle = ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex);
-            Vector3Wide.ReadFirst(offsetBundle.LocalOffsetA, out var localOffsetA);
-            Vector3Wide.ReadFirst(offsetBundle.LocalOffsetB, out var localOffsetB);
-            var minimumDistance = GatherScatter.GetFirst(ref offsetBundle.MinimumDistance);
-            var maximumDistance = GatherScatter.GetFirst(ref offsetBundle.MaximumDistance);
+            Vector3Wide.ReadFirst(prestepBundle.LocalOffsetA, out var localOffsetA);
+            Vector3Wide.ReadFirst(prestepBundle.LocalOffsetB, out var localOffsetB);
+            var minimumDistance = GatherScatter.GetFirst(ref prestepBundle.MinimumDistance);
+            var maximumDistance = GatherScatter.GetFirst(ref prestepBundle.MaximumDistance);
             Quaternion.Transform(localOffsetA, poseA.Orientation, out var worldOffsetA);
             Quaternion.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
             var endA = poseA.Position + worldOffsetA;

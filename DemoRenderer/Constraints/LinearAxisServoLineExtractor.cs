@@ -13,17 +13,16 @@ namespace DemoRenderer.Constraints
     {
         public int LinesPerConstraint => 7;
 
-        public unsafe void ExtractLines(ref LinearAxisServoPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
+        public unsafe void ExtractLines(ref LinearAxisServoPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             var poseB = bodies.Sets[setIndex].Poses[bodyIndices[1]];
-            ref var offsetBundle = ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex);
-            Vector3Wide.ReadFirst(offsetBundle.LocalOffsetA, out var localOffsetA);
-            Vector3Wide.ReadFirst(offsetBundle.LocalOffsetB, out var localOffsetB);
-            Vector3Wide.ReadFirst(offsetBundle.LocalPlaneNormal, out var localPlaneNormal);
-            var targetOffset = GatherScatter.GetFirst(ref offsetBundle.TargetOffset);
+            Vector3Wide.ReadFirst(prestepBundle.LocalOffsetA, out var localOffsetA);
+            Vector3Wide.ReadFirst(prestepBundle.LocalOffsetB, out var localOffsetB);
+            Vector3Wide.ReadFirst(prestepBundle.LocalPlaneNormal, out var localPlaneNormal);
+            var targetOffset = GatherScatter.GetFirst(ref prestepBundle.TargetOffset);
             Matrix3x3.CreateFromQuaternion(poseA.Orientation, out var orientationA);
             Matrix3x3.Transform(localOffsetA, orientationA, out var worldOffsetA);
             Matrix3x3.Transform(localPlaneNormal, orientationA, out var worldPlaneNormal);

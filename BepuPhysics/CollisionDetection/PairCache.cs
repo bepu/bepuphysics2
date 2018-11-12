@@ -380,18 +380,7 @@ namespace BepuPhysics.CollisionDetection
             PairFreshness[pairIndex] = 0xFF;
             NextWorkerCaches[workerIndex].Update(ref pointers, ref collisionCache, ref constraintCache);
         }
-
-        /// <summary>
-        /// Gets whether a constraint type id maps to a contact constraint.
-        /// </summary>
-        /// <param name="constraintTypeId">Id of the constraint to check.</param>
-        /// <returns>True if the type id refers to a contact constraint. False otherwise.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsContactBatch(int constraintTypeId)
-        {
-            return constraintTypeId < CollisionConstraintTypeCount;
-        }
-
+        
         //4 convex one body, 4 convex two body, 7 nonconvex one body, 7 convex two body.
         public const int CollisionConstraintTypeCount = 22;
         public const int CollisionTypeCount = 16;

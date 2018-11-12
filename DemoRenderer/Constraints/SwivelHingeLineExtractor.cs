@@ -12,16 +12,16 @@ namespace DemoRenderer.Constraints
     {
         public int LinesPerConstraint => 5;
 
-        public unsafe void ExtractLines(ref SwivelHingePrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
+        public unsafe void ExtractLines(ref SwivelHingePrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
             ref var poseA = ref bodies.Sets[setIndex].Poses[bodyIndices[0]];
             ref var poseB = ref bodies.Sets[setIndex].Poses[bodyIndices[1]];
-            Vector3Wide.ReadSlot(ref prestepBundle.LocalSwivelAxisA, innerIndex, out var localSwivelAxisA);
-            Vector3Wide.ReadSlot(ref prestepBundle.LocalOffsetA, innerIndex, out var localOffsetA);
-            Vector3Wide.ReadSlot(ref prestepBundle.LocalHingeAxisB, innerIndex, out var localHingeAxisB);
-            Vector3Wide.ReadSlot(ref prestepBundle.LocalOffsetB, innerIndex, out var localOffsetB);
+            Vector3Wide.ReadFirst(prestepBundle.LocalSwivelAxisA, out var localSwivelAxisA);
+            Vector3Wide.ReadFirst(prestepBundle.LocalOffsetA, out var localOffsetA);
+            Vector3Wide.ReadFirst(prestepBundle.LocalHingeAxisB, out var localHingeAxisB);
+            Vector3Wide.ReadFirst(prestepBundle.LocalOffsetB, out var localOffsetB);
             Quaternion.Transform(localOffsetA, poseA.Orientation, out var offsetA);
             Quaternion.Transform(localSwivelAxisA, poseA.Orientation, out var swivelAxis);
             Quaternion.Transform(localOffsetB, poseB.Orientation, out var offsetB);

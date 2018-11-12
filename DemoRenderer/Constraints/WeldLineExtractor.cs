@@ -12,13 +12,13 @@ namespace DemoRenderer.Constraints
     {
         public int LinesPerConstraint => 2;
 
-        public unsafe void ExtractLines(ref WeldPrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
+        public unsafe void ExtractLines(ref WeldPrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             var poseB = bodies.Sets[setIndex].Poses[bodyIndices[1]];
-            Vector3Wide.ReadSlot(ref prestepBundle.LocalOffset, innerIndex, out var localOffset);
+            Vector3Wide.ReadFirst(prestepBundle.LocalOffset, out var localOffset);
             Quaternion.Transform(localOffset, poseA.Orientation, out var worldOffset);
             var bTarget = poseA.Position + worldOffset;
             var color = new Vector3(0.2f, 0.2f, 1f) * tint;

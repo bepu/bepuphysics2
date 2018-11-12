@@ -95,7 +95,7 @@ namespace BepuPhysics.CollisionDetection
                 {
                     ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
                     Debug.Assert(typeBatch.ConstraintCount > 0, "If a type batch exists, it should contain constraints.");
-                    if (IsContactBatch(typeBatch.TypeId))
+                    if (NarrowPhase.IsContactConstraintType(typeBatch.TypeId))
                     {
                         for (int indexInTypeBatch = 0; indexInTypeBatch < typeBatch.ConstraintCount; ++indexInTypeBatch)
                         {
@@ -181,7 +181,7 @@ namespace BepuPhysics.CollisionDetection
 
         internal void RemoveReferenceIfContactConstraint(int handle, int typeId)
         {
-            if (IsContactBatch(typeId))
+            if (NarrowPhase.IsContactConstraintType(typeId))
             {
                 var removed = Mapping.FastRemove(ref ConstraintHandleToPair[handle].Pair);
                 Debug.Assert(removed, "If a contact constraint is being directly removed, it must exist within the pair mapping- " +

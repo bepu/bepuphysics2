@@ -39,7 +39,7 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<ConstraintTestDemo>();
+            AddOption<ContactEnumerationDemo>();
             AddOption<PyramidDemo>();
             AddOption<RagdollDemo>();
             AddOption<CompoundTestDemo>();
@@ -53,6 +53,7 @@ namespace Demos
             AddOption<ShapePileDemo>();
             AddOption<FountainStressTestDemo>();
             AddOption<SolverBatchTestDemo>();
+            AddOption<ConstraintTestDemo>();
         }
 
         public int Count { get { return options.Count; } }

@@ -12,14 +12,13 @@ namespace DemoRenderer.Constraints
     {
         public int LinesPerConstraint => 2;
 
-        public unsafe void ExtractLines(ref CenterDistancePrestepData prestepBundle, int innerIndex, int setIndex, int* bodyIndices,
+        public unsafe void ExtractLines(ref CenterDistancePrestepData prestepBundle, int setIndex, int* bodyIndices,
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             //Could do bundles of constraints at a time, but eh.
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             var poseB = bodies.Sets[setIndex].Poses[bodyIndices[1]];
-            ref var offsetBundle = ref GatherScatter.GetOffsetInstance(ref prestepBundle, innerIndex);
-            var targetDistance = GatherScatter.GetFirst(ref offsetBundle.TargetDistance);
+            var targetDistance = GatherScatter.GetFirst(ref prestepBundle.TargetDistance);
             var color = new Vector3(0.2f, 0.2f, 1f) * tint;
             var packedColor = Helpers.PackColor(color);
             var backgroundColor = new Vector3(0f, 0f, 1f) * tint;
