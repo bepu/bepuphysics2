@@ -120,7 +120,6 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose(IUnmanagedMemoryPool pool)
         {
-            Span.ClearManagedReferences(0, Count);
             pool.Return(ref Span);
         }
 

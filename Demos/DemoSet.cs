@@ -39,7 +39,7 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<ContactEnumerationDemo>();
+            AddOption<ContactEventsDemo>();
             AddOption<PyramidDemo>();
             AddOption<RagdollDemo>();
             AddOption<CompoundTestDemo>();

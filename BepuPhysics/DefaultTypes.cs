@@ -67,30 +67,30 @@ namespace BepuPhysics
             solver.Register<Contact7Nonconvex>();
             solver.Register<Contact8Nonconvex>();
 
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact8Nonconvex, Contact8NonconvexPrestepData, Contact8NonconvexAccumulatedImpulses, ContactImpulses8, ConstraintCache8>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact7Nonconvex, Contact7NonconvexPrestepData, Contact7NonconvexAccumulatedImpulses, ContactImpulses7, ConstraintCache7>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact6Nonconvex, Contact6NonconvexPrestepData, Contact6NonconvexAccumulatedImpulses, ContactImpulses6, ConstraintCache6>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact5Nonconvex, Contact5NonconvexPrestepData, Contact5NonconvexAccumulatedImpulses, ContactImpulses5, ConstraintCache5>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact4Nonconvex, Contact4NonconvexPrestepData, Contact4NonconvexAccumulatedImpulses, ContactImpulses4, ConstraintCache4>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact3Nonconvex, Contact3NonconvexPrestepData, Contact3NonconvexAccumulatedImpulses, ContactImpulses3, ConstraintCache3>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact2Nonconvex, Contact2NonconvexPrestepData, Contact2NonconvexAccumulatedImpulses, ContactImpulses2, ConstraintCache2>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact8Nonconvex, Contact8NonconvexAccumulatedImpulses, ContactImpulses8, ConstraintCache8>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact7Nonconvex, Contact7NonconvexAccumulatedImpulses, ContactImpulses7, ConstraintCache7>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact6Nonconvex, Contact6NonconvexAccumulatedImpulses, ContactImpulses6, ConstraintCache6>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact5Nonconvex, Contact5NonconvexAccumulatedImpulses, ContactImpulses5, ConstraintCache5>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact4Nonconvex, Contact4NonconvexAccumulatedImpulses, ContactImpulses4, ConstraintCache4>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact3Nonconvex, Contact3NonconvexAccumulatedImpulses, ContactImpulses3, ConstraintCache3>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexTwoBodyAccessor<Contact2Nonconvex, Contact2NonconvexAccumulatedImpulses, ContactImpulses2, ConstraintCache2>());
 
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact8NonconvexOneBody, Contact8NonconvexOneBodyPrestepData, Contact8NonconvexAccumulatedImpulses, ContactImpulses8, ConstraintCache8>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact7NonconvexOneBody, Contact7NonconvexOneBodyPrestepData, Contact7NonconvexAccumulatedImpulses, ContactImpulses7, ConstraintCache7>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact6NonconvexOneBody, Contact6NonconvexOneBodyPrestepData, Contact6NonconvexAccumulatedImpulses, ContactImpulses6, ConstraintCache6>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact5NonconvexOneBody, Contact5NonconvexOneBodyPrestepData, Contact5NonconvexAccumulatedImpulses, ContactImpulses5, ConstraintCache5>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact4NonconvexOneBody, Contact4NonconvexOneBodyPrestepData, Contact4NonconvexAccumulatedImpulses, ContactImpulses4, ConstraintCache4>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact3NonconvexOneBody, Contact3NonconvexOneBodyPrestepData, Contact3NonconvexAccumulatedImpulses, ContactImpulses3, ConstraintCache3>());
-            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact2NonconvexOneBody, Contact2NonconvexOneBodyPrestepData, Contact2NonconvexAccumulatedImpulses, ContactImpulses2, ConstraintCache2>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact8NonconvexOneBody, Contact8NonconvexAccumulatedImpulses, ContactImpulses8, ConstraintCache8>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact7NonconvexOneBody, Contact7NonconvexAccumulatedImpulses, ContactImpulses7, ConstraintCache7>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact6NonconvexOneBody, Contact6NonconvexAccumulatedImpulses, ContactImpulses6, ConstraintCache6>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact5NonconvexOneBody, Contact5NonconvexAccumulatedImpulses, ContactImpulses5, ConstraintCache5>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact4NonconvexOneBody, Contact4NonconvexAccumulatedImpulses, ContactImpulses4, ConstraintCache4>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact3NonconvexOneBody, Contact3NonconvexAccumulatedImpulses, ContactImpulses3, ConstraintCache3>());
+            narrowPhase.RegisterContactConstraintAccessor(new NonconvexOneBodyAccessor<Contact2NonconvexOneBody, Contact2NonconvexAccumulatedImpulses, ContactImpulses2, ConstraintCache2>());
 
-            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact4, Contact4PrestepData, Contact4AccumulatedImpulses, ContactImpulses4, ConstraintCache4>());
-            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact3, Contact3PrestepData, Contact3AccumulatedImpulses, ContactImpulses3, ConstraintCache3>());
-            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact2, Contact2PrestepData, Contact2AccumulatedImpulses, ContactImpulses2, ConstraintCache2>());
-            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact1, Contact1PrestepData, Contact1AccumulatedImpulses, ContactImpulses1, ConstraintCache1>());
-            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact4OneBody, Contact4OneBodyPrestepData, Contact4AccumulatedImpulses, ContactImpulses4, ConstraintCache4>());
-            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact3OneBody, Contact3OneBodyPrestepData, Contact3AccumulatedImpulses, ContactImpulses3, ConstraintCache3>());
-            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact2OneBody, Contact2OneBodyPrestepData, Contact2AccumulatedImpulses, ContactImpulses2, ConstraintCache2>());
-            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact1OneBody, Contact1OneBodyPrestepData, Contact1AccumulatedImpulses, ContactImpulses1, ConstraintCache1>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact4, Contact4AccumulatedImpulses, ContactImpulses4, ConstraintCache4>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact3, Contact3AccumulatedImpulses, ContactImpulses3, ConstraintCache3>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact2, Contact2AccumulatedImpulses, ContactImpulses2, ConstraintCache2>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexTwoBodyAccessor<Contact1, Contact1AccumulatedImpulses, ContactImpulses1, ConstraintCache1>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact4OneBody, Contact4AccumulatedImpulses, ContactImpulses4, ConstraintCache4>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact3OneBody, Contact3AccumulatedImpulses, ContactImpulses3, ConstraintCache3>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact2OneBody, Contact2AccumulatedImpulses, ContactImpulses2, ConstraintCache2>());
+            narrowPhase.RegisterContactConstraintAccessor(new ConvexOneBodyAccessor<Contact1OneBody, Contact1AccumulatedImpulses, ContactImpulses1, ConstraintCache1>());
 
         }
 

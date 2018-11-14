@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using BepuUtilities.Collections;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Collidables
@@ -49,5 +50,26 @@ namespace BepuPhysics.Collidables
             Debug.Assert(collidableHandle >= 0 && collidableHandle < 1 << 30, "Do you actually have more than 2^30 collidables? That seems unlikely.");
             Packed = ((uint)mobility << 30) | (uint)collidableHandle;
         }
+
+        public override string ToString()
+        {
+            return $"{Mobility}: {Handle}";
+        }
     }
+
+    public struct CollidableReferenceComparer : IEqualityComparerRef<CollidableReference>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(ref CollidableReference a, ref CollidableReference b)
+        {
+            return a.Packed == b.Packed;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Hash(ref CollidableReference item)
+        {
+            return (int)item.Packed;
+        }
+    }
+
 }

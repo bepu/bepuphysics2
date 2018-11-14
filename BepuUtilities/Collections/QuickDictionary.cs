@@ -271,7 +271,7 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
-        /// Returns the resources associated with the dictionary to pools. Any managed references still contained within the dictionary are cleared (and some unmanaged resources may also be cleared).
+        /// Returns the resources associated with the dictionary to pools.
         /// </summary>
         /// <param name="keyPool">Pool used for key spans.</param>   
         /// <param name="valuePool">Pool used for value spans.</param>   
@@ -282,8 +282,6 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose(IUnmanagedMemoryPool pool)
         {
-            Keys.ClearManagedReferences(0, Count);
-            Values.ClearManagedReferences(0, Count);
             pool.Return(ref Keys);
             pool.Return(ref Values);
             pool.Return(ref Table);
