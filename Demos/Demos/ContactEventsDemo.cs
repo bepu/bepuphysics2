@@ -15,6 +15,7 @@ using BepuUtilities.Memory;
 using System.Runtime.CompilerServices;
 using BepuPhysics.Constraints;
 using System.Diagnostics;
+using System.Threading;
 
 namespace Demos.Demos
 {
@@ -40,7 +41,7 @@ namespace Demos.Demos
 
     public interface IContactEventHandler
     {
-        void OnContactAdded<TManifold>(CollidableReference eventSource, CollidableReference other, ref TManifold contactManifold,
+        void OnContactAdded<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold,
             in Vector3 contactOffset, in Vector3 contactNormal, float depth, int featureId, int contactIndex, int workerIndex) where TManifold : IContactManifold;
     }
 
@@ -58,7 +59,7 @@ namespace Demos.Demos
         }
 
         Bodies bodies;
-        TEventHandler eventHandler;
+        public TEventHandler EventHandler;
         BufferPool pool;
         IThreadDispatcher threadDispatcher;
 
@@ -77,7 +78,7 @@ namespace Demos.Demos
 
         public ContactEvents(TEventHandler eventHandler, BufferPool pool, IThreadDispatcher threadDispatcher, int initialListenerCapacity = 32)
         {
-            this.eventHandler = eventHandler;
+            this.EventHandler = eventHandler;
             this.pool = pool;
             this.threadDispatcher = threadDispatcher;
             pendingWorkerAdds = new QuickList<PendingNewEntry>[threadDispatcher == null ? 1 : threadDispatcher.ThreadCount];
@@ -96,6 +97,18 @@ namespace Demos.Demos
         public void RegisterListener(CollidableReference collidable)
         {
             listeners.Add(collidable, default, pool);
+        }
+
+        /// <summary>
+        /// Stops listening for events related to the given collidable.
+        /// </summary>
+        /// <param name="collidable">Collidable to stop listening for.</param>
+        public void UnregisterListener(CollidableReference collidable)
+        {
+            var exists = listeners.GetTableIndices(ref collidable, out var tableIndex, out var elementIndex);
+            Debug.Assert(exists, "Should only try to unregister listeners that actually exist.");
+            listeners.Values[elementIndex].Dispose(pool);
+            listeners.FastRemove(tableIndex, elementIndex);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -122,9 +135,9 @@ namespace Demos.Demos
             collision.Fresh = true;
         }
 
-        void HandleManifoldForCollidable<TManifold>(int workerIndex, CollidableReference a, CollidableReference b, ref TManifold manifold) where TManifold : IContactManifold
+        void HandleManifoldForCollidable<TManifold>(int workerIndex, CollidableReference source, CollidableReference other, CollidablePair pair, ref TManifold manifold) where TManifold : IContactManifold
         {
-            if (listeners.GetTableIndices(ref a, out var tableIndex, out var listenerIndex))
+            if (listeners.GetTableIndices(ref source, out var tableIndex, out var listenerIndex))
             {
                 //This collidable is registered. Is the opposing collidable present?
                 ref var previousCollisions = ref listeners.Values[listenerIndex];
@@ -132,7 +145,7 @@ namespace Demos.Demos
                 for (int i = 0; i < previousCollisions.Count; ++i)
                 {
                     ref var collision = ref previousCollisions[i];
-                    if (collision.Collidable.Packed == b.Packed)
+                    if (collision.Collidable.Packed == other.Packed)
                     {
                         previousCollisionIndex = i;
                         //This manifold is associated with an existing collision.
@@ -151,7 +164,7 @@ namespace Demos.Demos
                             if (!featureIdIsOld)
                             {
                                 manifold.GetContact(contactIndex, out var offset, out var normal, out var depth, out _);
-                                eventHandler.OnContactAdded(a, b, ref manifold, offset, normal, depth, featureId, contactIndex, workerIndex);
+                                EventHandler.OnContactAdded(source, pair, ref manifold, offset, normal, depth, featureId, contactIndex, workerIndex);
                             }
                         }
                         UpdatePreviousCollision(ref collision, ref manifold);
@@ -166,13 +179,13 @@ namespace Demos.Demos
                     addsforWorker.EnsureCapacity(Math.Max(addsforWorker.Count + 1, 64), threadDispatcher != null ? threadDispatcher.GetThreadMemoryPool(workerIndex) : pool);
                     ref var pendingAdd = ref addsforWorker.AllocateUnsafely();
                     pendingAdd.ListenerIndex = listenerIndex;
-                    pendingAdd.Collision.Collidable = b;
+                    pendingAdd.Collision.Collidable = other;
                     UpdatePreviousCollision(ref pendingAdd.Collision, ref manifold);
                     //Dispatch events for all contacts in this new manifold.
                     for (int i = 0; i < manifold.Count; ++i)
                     {
                         manifold.GetContact(i, out var offset, out var normal, out var depth, out var featureId);
-                        eventHandler.OnContactAdded(a, b, ref manifold, offset, normal, depth, featureId, i, workerIndex);
+                        EventHandler.OnContactAdded(source, pair, ref manifold, offset, normal, depth, featureId, i, workerIndex);
                     }
                 }
             }
@@ -181,15 +194,15 @@ namespace Demos.Demos
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void HandleManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold)
         {
-            HandleManifoldForCollidable(workerIndex, pair.A, pair.B, ref *manifold);
-            HandleManifoldForCollidable(workerIndex, pair.B, pair.A, ref *manifold);
+            HandleManifoldForCollidable(workerIndex, pair.A, pair.B, pair, ref *manifold);
+            HandleManifoldForCollidable(workerIndex, pair.B, pair.A, pair, ref *manifold);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void HandleManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold)
         {
-            HandleManifoldForCollidable(workerIndex, pair.A, pair.B, ref *manifold);
-            HandleManifoldForCollidable(workerIndex, pair.B, pair.A, ref *manifold);
+            HandleManifoldForCollidable(workerIndex, pair.A, pair.B, pair, ref *manifold);
+            HandleManifoldForCollidable(workerIndex, pair.B, pair.A, pair, ref *manifold);
         }
 
         public void Flush()
@@ -323,17 +336,41 @@ namespace Demos.Demos
     /// </summary>
     public class ContactEventsDemo : Demo
     {
+        struct ContactResponseParticle
+        {
+            public Vector3 Position;
+            public float Age;
+            public Vector3 Normal;
+        }
+
         struct EventHandler : IContactEventHandler
         {
-            public void OnContactAdded<TManifold>(CollidableReference eventSource, CollidableReference other, ref TManifold contactManifold,
+            public Simulation Simulation;
+            public QuickList<ContactResponseParticle> Particles;
+
+            public void OnContactAdded<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold,
                 in Vector3 contactOffset, in Vector3 contactNormal, float depth, int featureId, int contactIndex, int workerIndex) where TManifold : IContactManifold
             {
-                Console.WriteLine($"Added contact: ({eventSource}, {other}): {featureId}");
+                //var other = pair.A.Packed == eventSource.Packed ? pair.B : pair.A;
+                //Console.WriteLine($"Added contact: ({eventSource}, {other}): {featureId}");
+                //Simply ignore any particles beyond the allocated space.
+                var index = Interlocked.Increment(ref Particles.Count) - 1;
+                if (index < Particles.Span.Length)
+                {
+                    ref var particle = ref Particles[index];
+
+                    //Contact data is calibrated according to the order of the pair, so using A's position is important.
+                    particle.Position = contactOffset + (pair.A.Mobility == CollidableMobility.Static ?
+                        new StaticReference(pair.A.Handle, Simulation.Statics).Pose.Position :
+                        new BodyReference(pair.A.Handle, Simulation.Bodies).Pose.Position);
+                    particle.Age = 0;
+                    particle.Normal = contactNormal;
+                }
             }
         }
 
         ContactEvents<EventHandler> events;
-        
+
         public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 8, -20);
@@ -341,24 +378,56 @@ namespace Demos.Demos
 
             events = new ContactEvents<EventHandler>(new EventHandler(), BufferPool, ThreadDispatcher);
             Simulation = Simulation.Create(BufferPool, new ContactEventCallbacks<EventHandler>(events));
+            events.EventHandler.Particles = new QuickList<ContactResponseParticle>(128, BufferPool);
+            events.EventHandler.Simulation = Simulation;
             Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
-            var bodyToListenFor = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 5, 0), 1, Simulation.Shapes, new Box(1, 2, 3)));
-            events.RegisterListener(new CollidableReference(CollidableMobility.Dynamic, bodyToListenFor));
+            var listenedBody1 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 5, 0), 1, Simulation.Shapes, new Box(1, 2, 3)));
+            events.RegisterListener(new CollidableReference(CollidableMobility.Dynamic, listenedBody1));
 
-            Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 10, 0), 1, Simulation.Shapes, new Box(1, 1, 1)));
+            var listenedBody2 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 10, 0), 1, Simulation.Shapes, new Capsule(1, 1)));
+            events.RegisterListener(new CollidableReference(CollidableMobility.Dynamic, listenedBody2));
+            
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 1, 30)), 0.04f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 3, 15), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 5, 1)), 0.04f)));
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(1, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 1, 30)), 0.04f)));
         }
 
         public override void Update(Input input, float dt)
         {
             base.Update(input, dt);
             events.Flush();
+
+            ref var particles = ref events.EventHandler.Particles;
+            //The count was incremented across multiple threads; it may have gone beyond the buffer size. Ignore the extra.
+            if (particles.Count > particles.Span.Length)
+                particles.Count = particles.Span.Length;
+            for (int i = particles.Count - 1; i >= 0; --i)
+            {
+                ref var particle = ref particles[i];
+                particle.Age += dt;
+                if (particle.Age > 0.7325f)
+                {
+                    particles.FastRemoveAt(i);
+                }
+                else
+                {
+                    particle.Position += particle.Normal * (2 * dt);
+                }
+
+            }
         }
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
+            ref var particles = ref events.EventHandler.Particles;
+            for (int i = particles.Count - 1; i >= 0; --i)
+            {
+                ref var particle = ref particles[i];
+                var radius = particle.Age * (particle.Age * (0.135f - 2.7f * particle.Age) + 1.35f);
+                var pose = new RigidPose(particle.Position);
+                renderer.Shapes.AddShape(new Sphere(radius), Simulation.Shapes, ref pose, new Vector3(0, 1, 0));
+            }
             base.Render(renderer, camera, input, text, font);
         }
     }
