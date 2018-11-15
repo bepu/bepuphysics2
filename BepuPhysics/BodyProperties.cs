@@ -55,6 +55,13 @@ namespace BepuPhysics
         public Vector3 Angular;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public BodyVelocity(in Vector3 linear)
+        {
+            Linear = linear;
+            Angular = default;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public BodyVelocity(in Vector3 linear, in Vector3 angular)
         {
             Linear = linear;

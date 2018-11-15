@@ -124,6 +124,21 @@ namespace Demos
                 body.Activity.TimestepsUnderThresholdCount = 0;
             }
         }
-        const float MaximumLength = 3;
+
+        public void Draw(LineExtractor lines, Camera camera, bool mouseLocked, bool shouldGrab, in Vector2 normalizedMousePosition)
+        {
+            if (shouldGrab && !active && mouseLocked)
+            {
+                //Draw a crosshair if there is no mouse cursor.
+                var center = camera.Position + camera.Forward * (camera.NearClip * 10);
+                var crosshairLength = 0.1f * camera.NearClip * MathF.Tan(camera.FieldOfView * 0.5f);
+                var rightOffset = camera.Right * crosshairLength;
+                var upOffset = camera.Up * crosshairLength;
+                lines.Allocate() = new LineInstance(center - rightOffset, center + rightOffset, new Vector3(1, 0, 0), new Vector3());
+                lines.Allocate() = new LineInstance(center - upOffset, center + upOffset, new Vector3(1, 0, 0), new Vector3());
+            }
+        }
     }
+
+
 }
