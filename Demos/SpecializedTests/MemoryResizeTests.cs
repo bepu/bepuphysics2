@@ -62,7 +62,7 @@ namespace Demos.SpecializedTests
         }
         public static void Test()
         {
-            var simulation = Simulation.Create(new BufferPool(), new TestCallbacks());
+            var simulation = Simulation.Create(new BufferPool(), new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
             var sphere = new Sphere(0.5f);
             var shapeIndex = simulation.Shapes.Add(sphere);
 
@@ -100,8 +100,7 @@ namespace Demos.SpecializedTests
             SimulationScrambling.ScrambleBodyConstraintLists(simulation);
             SimulationScrambling.AddRemoveChurn<BallSocket>(simulation, 1000, bodyHandles, constraintHandles);
 
-
-            simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            
             ref var location = ref simulation.Bodies.HandleToLocation[bodyHandles[width]];
             Debug.Assert(location.SetIndex == 0, "Nothing above should result in inactive objects.");
             simulation.Bodies.ActiveSet.Velocities[location.Index].Linear = new Vector3(0.1f, 0, 0.1f);

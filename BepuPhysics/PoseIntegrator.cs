@@ -14,36 +14,38 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics
 {
+    public interface IPoseIntegrator
+    {
+        void Update(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
+    }
 
     /// <summary>
-    /// Integrates the velocity of mobile bodies over time into changes in position and orientation. Also applies gravitational acceleration to dynamic bodies.
+    /// Defines a type that handles callbacks for body pose integration.
     /// </summary>
-    /// <remarks>
-    /// This variant of the integrator uses a single global gravity. Other integrators that provide per-entity gravity could exist later.
-    /// This integrator also assumes that the bodies positions are stored in terms of single precision floats. Later on, we will likely modify the Bodies
-    /// storage to allow different representations for larger simulations. That will require changes in this integrator, the relative position calculation of collision detection,
-    /// the bounding box calculation, and potentially even in the broadphase in extreme cases (64 bit per component positions).
-    /// </remarks>
-    public class PoseIntegrator
+    public interface IPoseIntegratorCallbacks
     {
-        Bodies bodies;
-        Shapes shapes;
-        BroadPhase broadPhase;
+        /// <summary>
+        /// Called prior to integrating the simulation's active bodies.
+        /// </summary>
+        /// <param name="dt">Current time step duration used by the simulation.</param>
+        void PrepareForIntegration(float dt);
 
         /// <summary>
-        /// Acceleration of gravity to apply to all dynamic bodies in the simulation.
+        /// Callback called for each active body within the PoseIntegrator. Called after the pose has been integrated for the current velocity.
         /// </summary>
-        public Vector3 Gravity;
+        /// <param name="bodyIndex">Index of the body being visited.</param>
+        /// <param name="pose">Reference to the body's current pose.</param>
+        /// <param name="velocity">Reference to the body's current velocity.</param>
+        /// <param name="inertia">Reference to the body's current inertia.</param>
+        /// <param name="workerIndex">Index of the worker thread processing this body.</param>
+        void IntegrateVelocity(int bodyIndex, ref RigidPose pose, ref BodyVelocity velocity, ref BodyInertia inertia, int workerIndex);
+    }
 
-        Action<int> workerDelegate;
-        public PoseIntegrator(Bodies bodies, Shapes shapes, BroadPhase broadPhase)
-        {
-            this.bodies = bodies;
-            this.shapes = shapes;
-            this.broadPhase = broadPhase;
-            workerDelegate = Worker;
-        }
-
+    /// <summary>
+    /// Provides helper functions for integrating body poses.
+    /// </summary>
+    public static class PoseIntegration
+    {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void RotateInverseInertia(ref Symmetric3x3 localInverseInertiaTensor, ref Quaternion orientation, out Symmetric3x3 rotatedInverseInertiaTensor)
         {
@@ -53,7 +55,7 @@ namespace BepuPhysics
             //This would be totally fine for all the primitive types which happen to have diagonal inertias, but for more complex shapes (convex hulls, meshes), 
             //there would need to be a reorientation step. That could be confusing, and it's probably not worth it.
             Symmetric3x3.RotationSandwich(orientationMatrix, localInverseInertiaTensor, out rotatedInverseInertiaTensor);
-        }      
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Integrate(in Vector3 position, in Vector3 linearVelocity, float dt, out Vector3 integratedPosition)
@@ -113,8 +115,37 @@ namespace BepuPhysics
             Integrate(pose.Position, velocity.Linear, dt, out integratedPose.Position);
             Integrate(pose.Orientation, velocity.Angular, dt, out integratedPose.Orientation);
         }
+    }
 
-        unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher)
+
+    /// <summary>
+    /// Integrates the velocity of mobile bodies over time into changes in position and orientation. Also applies gravitational acceleration to dynamic bodies.
+    /// </summary>
+    /// <remarks>
+    /// This variant of the integrator uses a single global gravity. Other integrators that provide per-entity gravity could exist later.
+    /// This integrator also assumes that the bodies positions are stored in terms of single precision floats. Later on, we will likely modify the Bodies
+    /// storage to allow different representations for larger simulations. That will require changes in this integrator, the relative position calculation of collision detection,
+    /// the bounding box calculation, and potentially even in the broadphase in extreme cases (64 bit per component positions).
+    /// </remarks>
+    public class PoseIntegrator<TCallbacks> : IPoseIntegrator where TCallbacks : IPoseIntegratorCallbacks
+    {
+        Bodies bodies;
+        Shapes shapes;
+        BroadPhase broadPhase;
+
+        TCallbacks callbacks;
+
+        Action<int> workerDelegate;
+        public PoseIntegrator(Bodies bodies, Shapes shapes, BroadPhase broadPhase, TCallbacks callback)
+        {
+            this.bodies = bodies;
+            this.shapes = shapes;
+            this.broadPhase = broadPhase;
+            this.callbacks = callback;
+            workerDelegate = Worker;
+        }               
+
+        unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
             ref var basePoses = ref bodies.ActiveSet.Poses[0];
             ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
@@ -127,7 +158,7 @@ namespace BepuPhysics
                 ref var pose = ref Unsafe.Add(ref basePoses, i);
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
 
-                Integrate(pose, velocity, dt, out pose);
+                PoseIntegration.Integrate(pose, velocity, dt, out pose);
 
                 //Update sleep candidacy. Note that this comes before velocity integration. That means an object can go inactive with gravity-induced velocity.
                 //That is actually intended: when the narrowphase wakes up an island, the accumulated impulses in the island will be ready for gravity's influence.
@@ -156,7 +187,7 @@ namespace BepuPhysics
                 //This would require a scan through all pose memory to support, but if you do it at the same time as AABB update, that's fine- that stage uses the pose too.
                 ref var localInertias = ref Unsafe.Add(ref baseLocalInertias, i);
                 ref var inertias = ref Unsafe.Add(ref baseInertias, i);
-                RotateInverseInertia(ref localInertias.InverseInertiaTensor, ref pose.Orientation, out inertias.InverseInertiaTensor);
+                PoseIntegration.RotateInverseInertia(ref localInertias.InverseInertiaTensor, ref pose.Orientation, out inertias.InverseInertiaTensor);
                 //While it's a bit goofy just to copy over the inverse mass every frame even if it doesn't change,
                 //it's virtually always gathered together with the inertia tensor and it really isn't worth a whole extra external system to copy inverse masses only on demand.
                 inertias.InverseMass = localInertias.InverseMass;
@@ -178,14 +209,7 @@ namespace BepuPhysics
                 //This isn't an unsolvable problem- making it easy to handle velocity modifications mid-update by exposing a callback of some sort would work. But that's one step more
                 //than the v1 'just set the velocity' style.                
 
-                //Note that we avoid accelerating kinematics. Kinematics are any body with an inverse mass of zero (so a mass of ~infinity). No force can move them.
-                if (localInertias.InverseMass > 0)
-                    velocity.Linear += gravityDt;
-                //Implementation sidenote: Why aren't kinematics all bundled together separately from dynamics to avoid this condition?
-                //Because kinematics can have a velocity- that is what distinguishes them from a static object. The solver must read velocities of all bodies involved in a constraint.
-                //Under ideal conditions, those bodies will be near in memory to increase the chances of a cache hit. If kinematics are separately bundled, the the number of cache
-                //misses necessarily increases. Slowing down the solver in order to speed up the pose integrator is a really, really bad trade, especially when the benefit is a few ALU ops.
-
+                callbacks.IntegrateVelocity(i, ref pose, ref velocity, ref inertias, workerIndex);
 
                 //Bounding boxes are accumulated in a scalar fashion, but the actual bounding box calculations are deferred until a sufficient number of collidables are accumulated to make
                 //executing a bundle worthwhile. This does two things: 
@@ -207,7 +231,6 @@ namespace BepuPhysics
         }
 
         float cachedDt;
-        Vector3 gravityDt;
         int bodiesPerJob;
         IThreadDispatcher threadDispatcher;
 
@@ -231,12 +254,13 @@ namespace BepuPhysics
                     exclusiveEnd = bodyCount;
                 Debug.Assert(exclusiveEnd > start, "Jobs that would involve bundles beyond the body count should not be created.");
 
-                IntegrateBodies(start, exclusiveEnd, cachedDt, ref boundingBoxUpdater);
+                IntegrateBodies(start, exclusiveEnd, cachedDt, ref boundingBoxUpdater, workerIndex);
 
             }
             boundingBoxUpdater.Flush();
 
         }
+
         public void Update(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
             //For now, the pose integrator (as the first stage that references them in any way) is responsible for ensuring that the bodies have a reasonable size inertias buffer.
@@ -244,7 +268,8 @@ namespace BepuPhysics
             bodies.EnsureInertiasCapacity(bodies.ActiveSet.Count);
 
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
-            gravityDt = Gravity * dt;
+
+            callbacks.PrepareForIntegration(dt);
             if (threadDispatcher != null)
             {
                 //While we do technically support multithreading here, scaling is going to be really, really bad if the simulation gets kicked out of L3 cache in between frames.
@@ -272,7 +297,7 @@ namespace BepuPhysics
             else
             {
                 var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, pool, dt);
-                IntegrateBodies(0, bodies.ActiveSet.Count, dt, ref boundingBoxUpdater);
+                IntegrateBodies(0, bodies.ActiveSet.Count, dt, ref boundingBoxUpdater, 0);
                 boundingBoxUpdater.Flush();
             }
 

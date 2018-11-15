@@ -28,10 +28,9 @@ namespace Demos.SpecializedTests
         {
             camera.Position = new Vector3(25, 4, 40);
             camera.Yaw = 0;
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
-
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
-
+            Simulation = Simulation.Create(BufferPool,
+                new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
+            
             var shapeA = new Box(.75f, 1, .5f);
             var shapeIndexA = Simulation.Shapes.Add(shapeA);
             var collidableA = new CollidableDescription(shapeIndexA, 0.1f);

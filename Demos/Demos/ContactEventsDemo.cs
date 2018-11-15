@@ -377,15 +377,14 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi;
 
             events = new ContactEvents<EventHandler>(new EventHandler(), BufferPool, ThreadDispatcher);
-            Simulation = Simulation.Create(BufferPool, new ContactEventCallbacks<EventHandler>(events));
+            Simulation = Simulation.Create(BufferPool, new ContactEventCallbacks<EventHandler>(events), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
             events.EventHandler.Particles = new QuickList<ContactResponseParticle>(128, BufferPool);
             events.EventHandler.Simulation = Simulation;
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
 
             var listenedBody1 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 5, 0), 1, Simulation.Shapes, new Box(1, 2, 3)));
             events.RegisterListener(new CollidableReference(CollidableMobility.Dynamic, listenedBody1));
 
-            var listenedBody2 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 10, 0), 1, Simulation.Shapes, new Capsule(1, 1)));
+            var listenedBody2 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0.5f, 10, 0), 1, Simulation.Shapes, new Capsule(0.25f, 0.7f)));
             events.RegisterListener(new CollidableReference(CollidableMobility.Dynamic, listenedBody2));
             
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 1, 30)), 0.04f)));

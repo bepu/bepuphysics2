@@ -30,7 +30,7 @@ namespace Demos.SpecializedTests
         }
         public static void Test<T>(BufferPool pool, Random random, int constraintTypeBodyCount) where T : struct, IConstraintDescription<T>
         {
-            var simulation = Simulation.Create(pool, new TestCallbacks());
+            var simulation = Simulation.Create(pool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks());
 
 
             const int bodyCount = 2048;

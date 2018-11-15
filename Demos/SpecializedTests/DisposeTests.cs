@@ -11,7 +11,7 @@ namespace Demos.SpecializedTests
         static void CreateAndRunSimulation(BufferPool bufferPool)
         {
             //TODO: As more features get added, you'll probably want to revisit this and lengthen the per-execution duration.
-            var simulation = Simulation.Create(bufferPool, new TestCallbacks());
+            var simulation = Simulation.Create(bufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
             var sphere = new Sphere(0.5f);
             var shapeIndex = simulation.Shapes.Add(sphere);
 
@@ -21,8 +21,7 @@ namespace Demos.SpecializedTests
             const int height = 3;
             const int length = 3;
             SimulationSetup.BuildLattice(bodyBuilder, constraintBuilder, width, height, length, simulation, out var bodyHandles, out var constraintHandles);
-
-            simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            
             simulation.Bodies.ActiveSet.Velocities[width].Linear = new Vector3(0.1f, 0, 0.1f);
 
             for (int i = 0; i < 16; ++i)

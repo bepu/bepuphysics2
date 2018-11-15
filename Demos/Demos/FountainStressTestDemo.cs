@@ -23,7 +23,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
             //Using minimum sized allocations forces as many resizes as possible.
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks(), initialAllocationSizes:
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) }, initialAllocationSizes:
             new SimulationAllocationSizes
             {
                 Bodies = 1,
@@ -34,8 +34,7 @@ namespace Demos.Demos
                 ShapesPerType = 1,
                 Statics = 1
             });
-
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            
             Simulation.Deterministic = false;
 
             const int planeWidth = 8;

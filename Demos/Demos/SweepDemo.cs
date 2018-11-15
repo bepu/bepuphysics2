@@ -29,8 +29,7 @@ namespace Demos.Demos
             camera.Position = new Vector3(0, 10, 40);
             camera.Yaw = 0;
             camera.Pitch = 0;
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
 
             var box = new Box(2f, 2f, 2f);
             var capsule = new Capsule(1f, 1f);
@@ -147,7 +146,7 @@ namespace Demos.Demos
                 {
                     var stepProgression = i * inverse;
                     var stepT = stepProgression * t;
-                    PoseIntegrator.Integrate(pose, velocity, stepT, out var stepPose);
+                    PoseIntegration.Integrate(pose, velocity, stepT, out var stepPose);
                     var stepColor = color * (0.2f + 0.8f * stepProgression);
                     DrawShape(ref shape, ref stepPose, stepColor, Simulation.Shapes, renderer);
                 }

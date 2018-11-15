@@ -89,8 +89,7 @@ namespace Demos.Demos
                 camera.Position = new Vector3(0, 3, 10);
                 camera.Yaw = 0;
 
-                Simulation = Simulation.Create(BufferPool, new TestCallbacks());
-                Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+                Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
 
                 var triangleDescription = new StaticDescription
                 {

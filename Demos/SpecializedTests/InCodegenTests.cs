@@ -128,7 +128,7 @@ namespace Demos.SpecializedTests
             InstanceMethodRefTest1(ref opTest, out inTest.X);
             InstanceMethodRefTest2(ref opTest, out inTest.X);
 
-            var simulation = Simulation.Create(new BepuUtilities.Memory.BufferPool(), new TestCallbacks());
+            var simulation = Simulation.Create(new BepuUtilities.Memory.BufferPool(), new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks());
             var bodyHandle = simulation.Bodies.Add(new BodyDescription());
             var grabber = new OneBodyLinearServo();
             simulation.Solver.Add(0, ref grabber);

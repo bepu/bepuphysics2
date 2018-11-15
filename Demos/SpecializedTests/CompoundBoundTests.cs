@@ -22,8 +22,7 @@ namespace Demos.Demos
         {
             camera.Position = new Vector3(-10, 0, -10);
             camera.Yaw = MathHelper.Pi * 3f / 4;
-            Simulation = Simulation.Create(BufferPool, new TestCallbacks());
-            Simulation.PoseIntegrator.Gravity = new Vector3(0, -10, 0);
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
 
 
         }
@@ -167,8 +166,8 @@ namespace Demos.Demos
                 var t = (dt * i) / (pathPointCount - 1);
                 //local point = (aPosition + aLinear * t - bPosition - bLinear * t + localOffsetA * (orientationA * rotate(angularA * t)) * inverse(orientationB * rotate(angularB * t))
 
-                PoseIntegrator.Integrate(orientationA, velocityA.Angular, t, out var integratedA);
-                PoseIntegrator.Integrate(orientationB, velocityB.Angular, t, out var integratedB);
+                PoseIntegration.Integrate(orientationA, velocityA.Angular, t, out var integratedA);
+                PoseIntegration.Integrate(orientationB, velocityB.Angular, t, out var integratedB);
                 var worldRotatedPoint = velocityA.Linear * t - velocityB.Linear * t - offsetB + Quaternion.Transform(localPoseA.Position, integratedA);
                 localPathPoints[i] = Quaternion.Transform(worldRotatedPoint, Quaternion.Conjugate(integratedB));
             }
