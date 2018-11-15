@@ -377,7 +377,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi;
 
             events = new ContactEvents<EventHandler>(new EventHandler(), BufferPool, ThreadDispatcher);
-            Simulation = Simulation.Create(BufferPool, new ContactEventCallbacks<EventHandler>(events), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
+            Simulation = Simulation.Create(BufferPool, new ContactEventCallbacks<EventHandler>(events), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
             events.EventHandler.Particles = new QuickList<ContactResponseParticle>(128, BufferPool);
             events.EventHandler.Simulation = Simulation;
 

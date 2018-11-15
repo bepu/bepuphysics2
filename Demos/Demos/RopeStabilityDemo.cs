@@ -83,7 +83,7 @@ namespace Demos.Demos
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
             rolloverInfo = new RolloverInfo();
             var smallWreckingBall = new Sphere(1);
             smallWreckingBall.ComputeInertia(5, out var smallWreckingBallInertia);

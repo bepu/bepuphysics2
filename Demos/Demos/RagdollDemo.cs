@@ -468,7 +468,7 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
             var masks = new BodyProperty<ulong>();
-            Simulation = Simulation.Create(BufferPool, new RagdollCallbacks { Masks = masks }, new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
+            Simulation = Simulation.Create(BufferPool, new RagdollCallbacks { Masks = masks }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             int ragdollIndex = 0;
             var spacing = new Vector3(2f, 3, 1);

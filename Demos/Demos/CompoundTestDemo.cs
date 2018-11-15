@@ -21,7 +21,7 @@ namespace Demos.Demos
             camera.Position = new Vector3(-13f, 6, -13f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             using (var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 8))
             {

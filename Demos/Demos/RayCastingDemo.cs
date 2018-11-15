@@ -73,7 +73,7 @@ namespace Demos
             camera.Position = new Vector3(-20f, 13, -20f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
-            Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
+            Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var box = new Box(0.5f, 1.5f, 1f);
             var capsule = new Capsule(0, 0.5f);

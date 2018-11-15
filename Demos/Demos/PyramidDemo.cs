@@ -22,7 +22,7 @@ namespace Demos.Demos
             camera.Position = new Vector3(-30, 8, -110);
             camera.Yaw = MathHelper.Pi * 3f / 4;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) });
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var boxShape = new Box(1, 1, 1);
             boxShape.ComputeInertia(1, out var boxInertia);
@@ -36,21 +36,13 @@ namespace Demos.Demos
                     int columnCount = rowCount - rowIndex;
                     for (int columnIndex = 0; columnIndex < columnCount; ++columnIndex)
                     {
-                        var bodyDescription = new BodyDescription
-                        {
-                            LocalInertia = boxInertia,
-                            Pose = new RigidPose
-                            {
-                                Position = new Vector3(
-                                    (-columnCount * 0.5f + columnIndex) * boxShape.Width,
-                                    (rowIndex + 0.5f) * boxShape.Height,
-                                    (pyramidIndex - pyramidCount * 0.5f) * (boxShape.Length + 4)),
-                                Orientation = BepuUtilities.Quaternion.Identity
-                            },
-                            Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = .01f },
-                            Collidable = new CollidableDescription { Shape = boxIndex, SpeculativeMargin = .1f }
-                        };
-                        Simulation.Bodies.Add(bodyDescription);
+                        Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(
+                            (-columnCount * 0.5f + columnIndex) * boxShape.Width,
+                            (rowIndex + 0.5f) * boxShape.Height,
+                            (pyramidIndex - pyramidCount * 0.5f) * (boxShape.Length + 4)),
+                            boxInertia,
+                            new CollidableDescription(boxIndex, 0.1f),
+                            new BodyActivityDescription(0.01f)));
                     }
                 }
             }
@@ -58,21 +50,7 @@ namespace Demos.Demos
             var staticShape = new Box(1500, 1, 1500);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
 
-            var staticDescription = new StaticDescription
-            {
-                Collidable = new CollidableDescription
-                {
-                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                    Shape = staticShapeIndex,
-                    SpeculativeMargin = 0.1f
-                },
-                Pose = new RigidPose
-                {
-                    Position = new Vector3(1, -0.5f, 1),
-                    Orientation = BepuUtilities.Quaternion.Identity
-                }
-            };
-            Simulation.Statics.Add(staticDescription);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(staticShapeIndex, 0.1f)));
 
         }
 
@@ -80,32 +58,23 @@ namespace Demos.Demos
         Random random = new Random(5);
         public override void Update(Input input, float dt)
         {
-            if (input.WasPushed(OpenTK.Input.Key.Q))
+            if (input != null && input.WasPushed(OpenTK.Input.Key.Q))
             {
                 //Create the shape that we'll launch at the pyramids when the user presses a button.
                 var bulletShape = new Sphere(0.5f + 5 * (float)random.NextDouble());
-                //Note that this can produce some pretty serious mass ratios. Observe what happens when a large ball sits on top of a few boxes with a fraction of the mass-
+                //Note that the use of radius^3 for mass can produce some pretty serious mass ratios. 
+                //Observe what happens when a large ball sits on top of a few boxes with a fraction of the mass-
                 //the collision appears much squishier and less stable. For most games, if you want to maintain rigidity, you'll want to use some combination of:
                 //1) Limit the ratio of heavy object masses to light object masses when those heavy objects depend on the light objects.
-                //2) Use a greater number of solver iterations.
-                //3) Use a shorter timestep duration and update more frequently.
+                //2) Use a shorter timestep duration and update more frequently.
+                //3) Use a greater number of solver iterations.
                 //#2 and #3 can become very expensive. In pathological cases, it can end up slower than using a quality-focused solver for the same simulation.
                 //Unfortunately, at the moment, bepuphysics v2 does not contain any alternative solvers, so if you can't afford to brute force the the problem away,
                 //the best solution is to cheat as much as possible to avoid the corner cases.
                 bulletShape.ComputeInertia(bulletShape.Radius * bulletShape.Radius * bulletShape.Radius, out var bulletInertia);
                 var bulletShapeIndex = Simulation.Shapes.Add(bulletShape);
-                var bodyDescription = new BodyDescription
-                {
-                    LocalInertia = bulletInertia,
-                    Pose = new RigidPose
-                    {
-                        Position = new Vector3(0, 8, -130),
-                        Orientation = BepuUtilities.Quaternion.Identity
-                    },
-                    Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = .01f },
-                    Collidable = new CollidableDescription { Shape = bulletShapeIndex, SpeculativeMargin = .1f },
-                    Velocity = new BodyVelocity { Linear = new Vector3(0, 0, 150) }
-                };
+                var bodyDescription = BodyDescription.CreateConvexDynamic(
+                    new Vector3(0, 8, -130), new BodyVelocity(new Vector3(0, 0, 150)), bulletShape.Radius * bulletShape.Radius * bulletShape.Radius, Simulation.Shapes, bulletShape);
                 Simulation.Bodies.Add(bodyDescription);
             }
             base.Update(input, dt);

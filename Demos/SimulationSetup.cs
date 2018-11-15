@@ -144,7 +144,7 @@ namespace Demos
             var bodyCount = width * height * length;
             simulation = Simulation.Create(
                 new BufferPool(),
-                new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks() { Gravity = new Vector3(0, -10, 0) },
+                new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)),
                 initialAllocationSizes: new SimulationAllocationSizes
                 {
                     Bodies = bodyCount,
