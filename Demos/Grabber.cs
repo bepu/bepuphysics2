@@ -21,6 +21,7 @@ namespace Demos
         BodyReference body;
         float t;
         Vector3 localGrabPoint;
+        Quaternion targetOrientation;
         int linearMotorHandle;
         int angularMotorHandle;
 
@@ -65,27 +66,24 @@ namespace Demos
             return rayDirection;
         }
 
-        void CreateMotorDescription(in Vector3 target, float inverseMass, out OneBodyLinearServo linearDescription, out OneBodyAngularMotor angularDescription)
+        void CreateMotorDescription(in Vector3 target, float inverseMass, out OneBodyLinearServo linearDescription, out OneBodyAngularServo angularDescription)
         {
             linearDescription = new OneBodyLinearServo
             {
                 LocalOffset = localGrabPoint,
                 Target = target,
-                ServoSettings = new ServoSettings
-                {
-                    MaximumSpeed = float.MaxValue,
-                    MaximumForce = 240f / inverseMass
-                },
-                SpringSettings = new SpringSettings(10, 2),
+                ServoSettings = new ServoSettings(float.MaxValue, 0, 360 / inverseMass),
+                SpringSettings = new SpringSettings(5, 2),
             };
-            angularDescription = new OneBodyAngularMotor
+            angularDescription = new OneBodyAngularServo
             {
-                TargetVelocity = default,
-                Settings = new MotorSettings(240f / inverseMass, 1e-5f)
+                TargetOrientation = targetOrientation,
+                ServoSettings = new ServoSettings(float.MaxValue, 0, 360 / inverseMass),
+                SpringSettings = new SpringSettings(5, 2),
             };
         }
 
-        public void Update(Simulation simulation, Camera camera, bool mouseLocked, bool shouldGrab, in Vector2 normalizedMousePosition)
+        public void Update(Simulation simulation, Camera camera, bool mouseLocked, bool shouldGrab, in Quaternion rotation, in Vector2 normalizedMousePosition)
         {
             var bodyExists = body.Exists;
             if (active && (!shouldGrab || !bodyExists))
@@ -114,6 +112,7 @@ namespace Demos
                     body = new BodyReference(hitHandler.HitCollidable.Handle, simulation.Bodies);
                     var hitLocation = camera.Position + rayDirection * t;
                     RigidPose.TransformByInverse(hitLocation, body.Pose, out localGrabPoint);
+                    targetOrientation = body.Pose.Orientation;
                     active = true;
                     CreateMotorDescription(hitLocation, body.LocalInertia.InverseMass, out var linearDescription, out var angularDescription);
                     linearMotorHandle = simulation.Solver.Add(body.Handle, ref linearDescription);
@@ -128,6 +127,7 @@ namespace Demos
 
                 var rayDirection = GetRayDirection(camera, mouseLocked, normalizedMousePosition);
                 var targetPoint = camera.Position + rayDirection * t;
+                targetOrientation = Quaternion.Concatenate(targetOrientation, rotation);
 
                 CreateMotorDescription(targetPoint, body.LocalInertia.InverseMass, out var linearDescription, out var angularDescription);
                 simulation.Solver.ApplyDescription(linearMotorHandle, ref linearDescription);

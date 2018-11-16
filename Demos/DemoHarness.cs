@@ -7,6 +7,7 @@ using Demos.UI;
 using DemoUtilities;
 using System;
 using System.Numerics;
+using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos
 {
@@ -62,10 +63,10 @@ namespace Demos
             timeSamples = new SimulationTimeSamples(512, loop.Pool);
             if (controls == null)
                 this.controls = Controls.Default;
-            
+
             var fontContent = content.Load<FontContent>(@"Content\Carlito-Regular.ttf");
             font = new Font(loop.Surface.Device, loop.Surface.Context, fontContent);
-            
+
             timingGraph = new Graph(new GraphDescription
             {
                 BodyLineColor = new Vector3(1, 1, 1),
@@ -154,6 +155,7 @@ namespace Demos
             Fast
         }
         CameraMoveSpeedState cameraSpeedState;
+        Int2? grabberCachedMousePosition;
 
         public void Update(float dt)
         {
@@ -226,13 +228,20 @@ namespace Demos
                 else
                     cameraOffset = new Vector3();
                 camera.Position += cameraOffset;
-                if (input.MouseLocked)
+
+                var grabRotationIsActive = controls.Grab.IsDown(input) && controls.GrabRotate.IsDown(input);
+
+                //Don't turn the camera while rotating a grabbed object.
+                if (!grabRotationIsActive)
                 {
-                    var delta = input.MouseDelta;
-                    if (delta.X != 0 || delta.Y != 0)
+                    if (input.MouseLocked)
                     {
-                        camera.Yaw += delta.X * controls.MouseSensitivity;
-                        camera.Pitch += delta.Y * controls.MouseSensitivity;
+                        var delta = input.MouseDelta;
+                        if (delta.X != 0 || delta.Y != 0)
+                        {
+                            camera.Yaw += delta.X * controls.MouseSensitivity;
+                            camera.Pitch += delta.Y * controls.MouseSensitivity;
+                        }
                     }
                 }
                 if (controls.LockMouse.WasTriggered(input))
@@ -240,7 +249,27 @@ namespace Demos
                     input.MouseLocked = !input.MouseLocked;
                 }
 
-                grabber.Update(demo.Simulation, camera, input.MouseLocked, controls.Grab.IsDown(input), GetNormalizedMousePosition());
+                Quaternion incrementalGrabRotation;
+                if (grabRotationIsActive)
+                {
+                    if (grabberCachedMousePosition == null)
+                        grabberCachedMousePosition = input.MousePosition;
+                    var delta = input.MouseDelta;
+                    var yaw = delta.X * controls.MouseSensitivity;
+                    var pitch = delta.Y * controls.MouseSensitivity;
+                    incrementalGrabRotation = Quaternion.Concatenate(Quaternion.CreateFromAxisAngle(camera.Right, pitch), Quaternion.CreateFromAxisAngle(camera.Up, yaw));
+                    if (!input.MouseLocked)
+                    {
+                        //Undo the mouse movement if we're in freemouse mode.
+                        input.MousePosition = grabberCachedMousePosition.Value;
+                    }
+                }
+                else
+                {
+                    incrementalGrabRotation = Quaternion.Identity;
+                    grabberCachedMousePosition = null;
+                }
+                grabber.Update(demo.Simulation, camera, input.MouseLocked, controls.Grab.IsDown(input), incrementalGrabRotation, GetNormalizedMousePosition());
 
 
 
@@ -307,7 +336,7 @@ namespace Demos
             if (showControls)
             {
                 var penPosition = new Vector2(window.Resolution.X - textHeight * 6 - 25, window.Resolution.Y - 25);
-                penPosition.Y -= 18 * lineSpacing;
+                penPosition.Y -= 19 * lineSpacing;
                 uiText.Clear().Append("Controls: ");
                 var headerHeight = textHeight * 1.2f;
                 renderer.TextBatcher.Write(uiText, penPosition - new Vector2(0.5f * GlyphBatch.MeasureLength(uiText, font, headerHeight), 0), headerHeight, textColor, font);
@@ -330,6 +359,7 @@ namespace Demos
                 //Conveniently, enum strings are cached. Every (Key).ToString() returns the same reference for the same key, so no garbage worries.
                 WriteName(nameof(controls.LockMouse), controls.LockMouse.ToString());
                 WriteName(nameof(controls.Grab), controls.Grab.ToString());
+                WriteName(nameof(controls.GrabRotate), controls.GrabRotate.ToString());
                 WriteName(nameof(controls.MoveForward), controls.MoveForward.ToString());
                 WriteName(nameof(controls.MoveBackward), controls.MoveBackward.ToString());
                 WriteName(nameof(controls.MoveLeft), controls.MoveLeft.ToString());

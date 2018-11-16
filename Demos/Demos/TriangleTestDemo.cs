@@ -104,7 +104,7 @@ namespace Demos.Demos
                             new Vector3(-3, -0.5f, -3),
                             new Vector3(3, 0, -3),
                             new Vector3(-3, 0, 3))),
-                        SpeculativeMargin = 0.1f
+                        SpeculativeMargin = 10.1f
                     }
                 };
                 Simulation.Statics.Add(triangleDescription);
