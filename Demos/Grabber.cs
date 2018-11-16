@@ -21,7 +21,8 @@ namespace Demos
         BodyReference body;
         float t;
         Vector3 localGrabPoint;
-        int motorHandle;
+        int linearMotorHandle;
+        int angularMotorHandle;
 
         struct RayHitHandler : IRayHitHandler
         {
@@ -64,9 +65,9 @@ namespace Demos
             return rayDirection;
         }
 
-        void CreateMotorDescription(in Vector3 target, float inverseMass, out OneBodyLinearServo description)
+        void CreateMotorDescription(in Vector3 target, float inverseMass, out OneBodyLinearServo linearDescription, out OneBodyAngularMotor angularDescription)
         {
-            description = new OneBodyLinearServo
+            linearDescription = new OneBodyLinearServo
             {
                 LocalOffset = localGrabPoint,
                 Target = target,
@@ -76,6 +77,11 @@ namespace Demos
                     MaximumForce = 240f / inverseMass
                 },
                 SpringSettings = new SpringSettings(10, 2),
+            };
+            angularDescription = new OneBodyAngularMotor
+            {
+                TargetVelocity = default,
+                Settings = new MotorSettings(240f / inverseMass, 1e-5f)
             };
         }
 
@@ -89,7 +95,9 @@ namespace Demos
                 {
                     //If the body wasn't removed, then the constraint should be removed.
                     //(Body removal forces connected constraints to removed, so in that case we wouldn't have to worry about it.)
-                    simulation.Solver.Remove(motorHandle);
+                    simulation.Solver.Remove(linearMotorHandle);
+                    if (!Bodies.HasLockedInertia(body.LocalInertia.InverseInertiaTensor))
+                        simulation.Solver.Remove(angularMotorHandle);
                 }
                 body = new BodyReference();
             }
@@ -107,8 +115,10 @@ namespace Demos
                     var hitLocation = camera.Position + rayDirection * t;
                     RigidPose.TransformByInverse(hitLocation, body.Pose, out localGrabPoint);
                     active = true;
-                    CreateMotorDescription(hitLocation, body.LocalInertia.InverseMass, out var motorDescription);
-                    motorHandle = simulation.Solver.Add(body.Handle, ref motorDescription);
+                    CreateMotorDescription(hitLocation, body.LocalInertia.InverseMass, out var linearDescription, out var angularDescription);
+                    linearMotorHandle = simulation.Solver.Add(body.Handle, ref linearDescription);
+                    if (!Bodies.HasLockedInertia(body.LocalInertia.InverseInertiaTensor))
+                        angularMotorHandle = simulation.Solver.Add(body.Handle, ref angularDescription);
                 }
             }
             else if (active)
@@ -118,9 +128,11 @@ namespace Demos
 
                 var rayDirection = GetRayDirection(camera, mouseLocked, normalizedMousePosition);
                 var targetPoint = camera.Position + rayDirection * t;
-                
-                CreateMotorDescription(targetPoint, body.LocalInertia.InverseMass, out var motorDescription);
-                simulation.Solver.ApplyDescription(motorHandle, ref motorDescription);
+
+                CreateMotorDescription(targetPoint, body.LocalInertia.InverseMass, out var linearDescription, out var angularDescription);
+                simulation.Solver.ApplyDescription(linearMotorHandle, ref linearDescription);
+                if (!Bodies.HasLockedInertia(body.LocalInertia.InverseInertiaTensor))
+                    simulation.Solver.ApplyDescription(angularMotorHandle, ref angularDescription);
                 body.Activity.TimestepsUnderThresholdCount = 0;
             }
         }

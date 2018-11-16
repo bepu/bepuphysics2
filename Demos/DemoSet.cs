@@ -39,8 +39,6 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<PlanetDemo>();
-            AddOption<ContactEventsDemo>();
             AddOption<PyramidDemo>();
             AddOption<RagdollDemo>();
             AddOption<CompoundTestDemo>();
@@ -48,10 +46,12 @@ namespace Demos
             AddOption<ClothDemo>();
             AddOption<NewtDemo>();
             AddOption<RopeStabilityDemo>();
+            AddOption<PlanetDemo>();
             AddOption<BlockChainDemo>();
             AddOption<RayCastingDemo>();
             AddOption<SweepDemo>();
             AddOption<ShapePileDemo>();
+            AddOption<ContactEventsDemo>();
             AddOption<FountainStressTestDemo>();
             AddOption<SolverBatchTestDemo>();
             AddOption<ConstraintTestDemo>();

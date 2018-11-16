@@ -250,15 +250,26 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="inertia">Body inertia to analyze.</param>
         /// <returns>True if all components of inverse mass and inertia are zero, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsKinematic(in BodyInertia inertia)
         {
-            return inertia.InverseMass == 0 &&
-                   inertia.InverseInertiaTensor.XX == 0 &&
-                   inertia.InverseInertiaTensor.YX == 0 &&
-                   inertia.InverseInertiaTensor.YY == 0 &&
-                   inertia.InverseInertiaTensor.ZX == 0 &&
-                   inertia.InverseInertiaTensor.ZY == 0 &&
-                   inertia.InverseInertiaTensor.ZZ == 0;
+            return inertia.InverseMass == 0 && HasLockedInertia(inertia.InverseInertiaTensor);
+        }
+
+        /// <summary>
+        /// Gets whether the angular inertia matches that of a kinematic body (that is, all inverse inertia tensor components are zero).
+        /// </summary>
+        /// <param name="inertia">Body inertia to analyze.</param>
+        /// <returns>True if all components of inverse mass and inertia are zero, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool HasLockedInertia(in Symmetric3x3 inertia)
+        {
+            return inertia.XX == 0 &&
+                   inertia.YX == 0 &&
+                   inertia.YY == 0 &&
+                   inertia.ZX == 0 &&
+                   inertia.ZY == 0 &&
+                   inertia.ZZ == 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -747,9 +758,9 @@ namespace BepuPhysics
             ref var poses = ref ActiveSet.Poses;
             for (int i = 0; i < count; ++i)
             {
-                Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexA, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionA, i));                
-                Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexB, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionB, i));                
-                Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexC, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionC, i));                
+                Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexA, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionA, i));
+                Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexB, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionB, i));
+                Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexC, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionC, i));
                 Vector3Wide.WriteFirst(poses[Unsafe.Add(ref baseIndexD, i)].Position, ref GatherScatter.GetOffsetInstance(ref positionD, i));
             }
             //Same as two body case; this is sensitive to changes in the representation of body position. In high precision modes, this'll need to change.
