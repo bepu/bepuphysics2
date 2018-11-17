@@ -267,7 +267,7 @@ namespace Demos.Demos
                         Shape = groundShapeIndex,
                         SpeculativeMargin = 0.1f,
                     },
-                    Pose = new RigidPose { Position = new Vector3(0, 0, 0), Orientation = BepuUtilities.Quaternion.Identity }
+                    Pose = new RigidPose { Position = new Vector3(0, 0, 0), Orientation = Quaternion.Identity }
                 };
                 Simulation.Statics.Add(groundDescription);
             }

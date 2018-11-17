@@ -14,12 +14,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         CollisionContinuationType CollisionContinuationType { get; }
 
-        ref TContinuation CreateContinuation<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, BufferPool pool, in BoundsTestedPair pair, out int continuationIndex)
+        ref TContinuation CreateContinuation<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, out int continuationIndex)
             where TCallbacks : struct, ICollisionCallbacks;
 
         void ConfigureContinuationChild<TCallbacks>(
             ref CollisionBatcher<TCallbacks> collisionBatcher, ref TContinuation continuation, int continuationChildIndex, in BoundsTestedPair pair, int childIndex,
-            out int compoundChildType, out void* compoundChildShapeData, out Vector3 convexToChild, out Quaternion childOrientation)
+            out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
             where TCallbacks : struct, ICollisionCallbacks;
     }
 
@@ -54,7 +54,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 {
                     ref var pair = ref pairs[i];
                     ref var compound = ref Unsafe.AsRef<TCompound>(pair.B);
-                    ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, pairOverlaps.Count, batcher.Pool, pair, out var continuationIndex);
+                    ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, pairOverlaps.Count, pair, out var continuationIndex);
 
                     int nextContinuationChildIndex = 0;
                     for (int j = 0; j < pairOverlaps.Count; ++j)
@@ -79,18 +79,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
                         {
                             continuationHandler.ConfigureContinuationChild(ref batcher, ref continuation, continuationChildIndex, pair, childIndex,
-                                out var compoundChildType, out var compoundChildShapeData, out var convexToChild, out var childOrientation);
+                                out var compoundChildPose, out var compoundChildType, out var compoundChildShapeData);
 
+                            var convexToChild = compoundChildPose.Position + pair.OffsetB;
                             if (pair.FlipMask < 0)
                             {
                                 //By reversing the order of the parameters, the manifold orientation is flipped. This compensates for the flip induced by order requirements on this task.                          
                                 batcher.AddDirectly(compoundChildType, ShapeTypeIndexA, compoundChildShapeData, pair.A,
-                                    -convexToChild, childOrientation, pair.OrientationA, pair.SpeculativeMargin, subpairContinuation);
+                                    -convexToChild, compoundChildPose.Orientation, pair.OrientationA, pair.SpeculativeMargin, subpairContinuation);
                             }
                             else
                             {
                                 batcher.AddDirectly(ShapeTypeIndexA, compoundChildType, pair.A, compoundChildShapeData,
-                                    convexToChild, pair.OrientationA, childOrientation, pair.SpeculativeMargin, subpairContinuation);
+                                    convexToChild, pair.OrientationA, compoundChildPose.Orientation, pair.SpeculativeMargin, subpairContinuation);
                             }
                         }
                         else

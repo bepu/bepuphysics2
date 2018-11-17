@@ -5,15 +5,37 @@ using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public class CompoundPairCollisionTask<TCompoundA, TCompoundB, TOverlapFinder> : CollisionTask
-        where TCompoundA : struct, ICompoundShape
-        where TCompoundB : struct, ICompoundShape
+    public interface ICompoundPairOverlapFinder
+    {
+        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps);
+    }
+
+    public unsafe interface ICompoundPairContinuationHandler<TContinuation> where TContinuation : struct, ICollisionTestContinuation
+    {
+        CollisionContinuationType CollisionContinuationType { get; }
+
+        ref TContinuation CreateContinuation<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, ref Buffer<ChildOverlapsCollection> pairOverlaps, in BoundsTestedPair pair, out int continuationIndex)
+            where TCallbacks : struct, ICollisionCallbacks;
+
+        void GetChildAData<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, in BoundsTestedPair pair, int childIndexA, out RigidPose childPoseA, out int childTypeA, out void* childShapeDataA)
+            where TCallbacks : struct, ICollisionCallbacks;
+
+        void ConfigureContinuationChild<TCallbacks>(
+            ref CollisionBatcher<TCallbacks> collisionBatcher, ref TContinuation continuation, int continuationChildIndex, in BoundsTestedPair pair, int childIndexA, int childIndexB,
+            in RigidPose childPoseA, out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
+            where TCallbacks : struct, ICollisionCallbacks;
+    }
+
+    public class CompoundPairCollisionTask<TCompoundA, TCompoundB, TOverlapFinder, TContinuationHandler, TContinuation> : CollisionTask
+        where TCompoundA : struct, IShape, IBoundsQueryableCompound
+        where TCompoundB : struct, IShape, IBoundsQueryableCompound
         where TOverlapFinder : struct, ICompoundPairOverlapFinder
+        where TContinuationHandler : ICompoundPairContinuationHandler<TContinuation>
+        where TContinuation : struct, ICollisionTestContinuation
     {
         public CompoundPairCollisionTask()
         {
@@ -28,6 +50,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             var pairs = batch.Buffer.As<BoundsTestedPair>();
             TOverlapFinder overlapFinder = default;
+            TContinuationHandler continuationHandler = default;
 
             //We perform all necessary bounding box computations and lookups up front. This helps avoid some instruction pipeline pressure at the cost of some extra data cache requirements.
             //Because of this, you need to be careful with the batch size on this collision task.
@@ -43,9 +66,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 if (totalOverlapCountForPair > 0)
                 {
                     ref var pair = ref pairs[pairIndex];
-                    ref var compoundA = ref Unsafe.AsRef<TCompoundA>(pair.A);
-                    ref var compoundB = ref Unsafe.AsRef<TCompoundB>(pair.B);
-                    ref var continuation = ref batcher.NonconvexReductions.CreateContinuation(totalOverlapCountForPair, batcher.Pool, out var continuationIndex);
+                    ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, totalOverlapCountForPair, ref pairOverlaps, pair, out var continuationIndex);
 
                     var nextContinuationChildIndex = 0;
                     for (int j = 0; j < pairOverlaps.Length; ++j)
@@ -53,10 +74,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         ref var childOverlaps = ref pairOverlaps[j];
                         if (childOverlaps.Count == 0)
                             continue;
-                        ref var compoundChildA = ref compoundA.GetChild(childOverlaps.ChildIndex);
-                        Compound.GetRotatedChildPose(compoundChildA.LocalPose, pair.OrientationA, out var rotatedChildPoseA);
-                        var childTypeA = compoundChildA.ShapeIndex.Type;
-                        batcher.Shapes[childTypeA].GetShapeData(compoundChildA.ShapeIndex.Index, out var compoundChildShapeDataA, out _);
+                        continuationHandler.GetChildAData(ref batcher, pair, childOverlaps.ChildIndex, out var childPoseA, out var childTypeA, out var childShapeDataA);
                         //Note that we defer the region assignment until after the loop rather than using the triangleCount as the region count.
                         //That's because the user callback could cull some of the subpairs.
                         for (int k = 0; k < childOverlaps.Count; ++k)
@@ -77,33 +95,23 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             }
                             var continuationChildIndex = nextContinuationChildIndex++;
                             var subpairContinuation = new PairContinuation(pair.Continuation.PairId, childA, childB,
-                                CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
+                                continuationHandler.CollisionContinuationType, continuationIndex, continuationChildIndex);
                             if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
                             {
-                                ref var continuationChild = ref continuation.Children[continuationChildIndex];
-                                continuationChild.ChildIndexA = childA;
-                                continuationChild.ChildIndexB = childB;
+                                continuationHandler.ConfigureContinuationChild(ref batcher, ref continuation, continuationChildIndex, pair, childOverlaps.ChildIndex, originalChildIndexB,
+                                    childPoseA, out var childPoseB, out var childTypeB, out var childShapeDataB);
 
-                                ref var compoundChildB = ref compoundB.GetChild(originalChildIndexB);
-                                var childTypeB = compoundChildB.ShapeIndex.Type;
-                                batcher.Shapes[childTypeB].GetShapeData(compoundChildB.ShapeIndex.Index, out var compoundChildShapeDataB, out _);
-
-                                Compound.GetRotatedChildPose(compoundChildB.LocalPose, pair.OrientationB, out var rotatedChildPoseB);
-                                var childAToChildB = pair.OffsetB + rotatedChildPoseB.Position - rotatedChildPoseA.Position; 
+                                var childAToChildB = pair.OffsetB + childPoseB.Position - childPoseA.Position;
                                 if (pair.FlipMask < 0)
                                 {
-                                    continuationChild.OffsetA = rotatedChildPoseB.Position;
-                                    continuationChild.OffsetB = rotatedChildPoseA.Position;
                                     //By reversing the order of the parameters, the manifold orientation is flipped. This compensates for the flip induced by order requirements on this task.                          
-                                    batcher.AddDirectly(childTypeB, childTypeA, compoundChildShapeDataB, compoundChildShapeDataA,
-                                        -childAToChildB, rotatedChildPoseB.Orientation, rotatedChildPoseA.Orientation, pair.SpeculativeMargin, subpairContinuation);
+                                    batcher.AddDirectly(childTypeB, childTypeA, childShapeDataB, childShapeDataA,
+                                        -childAToChildB, childPoseB.Orientation, childPoseA.Orientation, pair.SpeculativeMargin, subpairContinuation);
                                 }
                                 else
                                 {
-                                    continuationChild.OffsetA = rotatedChildPoseA.Position;
-                                    continuationChild.OffsetB = rotatedChildPoseB.Position;
-                                    batcher.AddDirectly(childTypeA, childTypeB, compoundChildShapeDataA, compoundChildShapeDataB,
-                                        childAToChildB, rotatedChildPoseA.Orientation, rotatedChildPoseB.Orientation, pair.SpeculativeMargin, subpairContinuation);
+                                    batcher.AddDirectly(childTypeA, childTypeB, childShapeDataA, childShapeDataB,
+                                        childAToChildB, childPoseA.Orientation, childPoseB.Orientation, pair.SpeculativeMargin, subpairContinuation);
                                 }
                             }
                             else
@@ -113,6 +121,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         }
                     }
                 }
+
+
             }
             overlaps.Dispose(batcher.Pool);
             //Note that the triangle lists are not disposed here. Those are handed off to the continuations for further analysis.

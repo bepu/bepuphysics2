@@ -12,30 +12,28 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref NonconvexReduction CreateContinuation<TCallbacks>(
-            ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, BufferPool pool, in BoundsTestedPair pair, out int continuationIndex)
+            ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, out int continuationIndex)
             where TCallbacks : struct, ICollisionCallbacks
         {
-            return ref collisionBatcher.NonconvexReductions.CreateContinuation(childCount, pool, out continuationIndex);
+            return ref collisionBatcher.NonconvexReductions.CreateContinuation(childCount, collisionBatcher.Pool, out continuationIndex);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ConfigureContinuationChild<TCallbacks>(
             ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReduction continuation, int continuationChildIndex, in BoundsTestedPair pair, int childIndex,
-            out int compoundChildType, out void* compoundChildShapeData, out Vector3 convexToChild, out Quaternion childOrientation)
+            out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
             where TCallbacks : struct, ICollisionCallbacks
         {
             ref var compoundChild = ref Unsafe.AsRef<TCompound>(pair.B).GetChild(childIndex);
             ref var continuationChild = ref continuation.Children[continuationChildIndex];
-            Compound.GetRotatedChildPose(compoundChild.LocalPose, pair.OrientationB, out var rotatedChildPose);
-            compoundChildType = compoundChild.ShapeIndex.Type;
-            collisionBatcher.Shapes[compoundChildType].GetShapeData(compoundChild.ShapeIndex.Index, out compoundChildShapeData, out _);
-            convexToChild = pair.OffsetB + rotatedChildPose.Position;
-            childOrientation = rotatedChildPose.Orientation;
+            Compound.GetRotatedChildPose(compoundChild.LocalPose, pair.OrientationB, out childPoseB);
+            childTypeB = compoundChild.ShapeIndex.Type;
+            collisionBatcher.Shapes[childTypeB].GetShapeData(compoundChild.ShapeIndex.Index, out childShapeDataB, out _);
             if (pair.FlipMask < 0)
             {
                 continuationChild.ChildIndexA = childIndex;
                 continuationChild.ChildIndexB = 0;
-                continuationChild.OffsetA = rotatedChildPose.Position;
+                continuationChild.OffsetA = childPoseB.Position;
                 continuationChild.OffsetB = default;
             }
             else
@@ -43,7 +41,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 continuationChild.ChildIndexA = 0;
                 continuationChild.ChildIndexB = childIndex;
                 continuationChild.OffsetA = default;
-                continuationChild.OffsetB = rotatedChildPose.Position;
+                continuationChild.OffsetB = childPoseB.Position;
             }
         }
 
