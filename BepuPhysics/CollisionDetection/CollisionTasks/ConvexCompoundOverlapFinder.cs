@@ -28,6 +28,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             where TOverlaps : ICollisionTaskSubpairOverlaps;
     }
 
+    public interface IConvexCompoundOverlapFinder
+    {
+        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps);
+    }
 
     public struct ConvexCompoundOverlapFinder<TConvex, TConvexWide, TCompound> : IConvexCompoundOverlapFinder
         where TConvex : struct, IConvexShape

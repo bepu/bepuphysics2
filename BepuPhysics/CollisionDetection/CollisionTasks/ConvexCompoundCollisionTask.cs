@@ -10,10 +10,25 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public class ConvexCompoundCollisionTask<TConvex, TCompound, TOverlapFinder> : CollisionTask
+    public unsafe interface IConvexCompoundContinuationHandler<TContinuation> where TContinuation : struct, ICollisionTestContinuation
+    {
+        CollisionContinuationType CollisionContinuationType { get; }
+
+        ref TContinuation CreateContinuation<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, BufferPool pool, in BoundsTestedPair pair, out int continuationIndex)
+            where TCallbacks : struct, ICollisionCallbacks;
+
+        void ConfigureContinuationChild<TCallbacks>(
+            ref CollisionBatcher<TCallbacks> collisionBatcher, ref TContinuation continuation, int continuationChildIndex, in BoundsTestedPair pair, int childIndex,
+            out int compoundChildType, out void* compoundChildShapeData, out Vector3 convexToChild, out Quaternion childOrientation)
+            where TCallbacks : struct, ICollisionCallbacks;
+    }
+
+    public class ConvexCompoundCollisionTask<TConvex, TCompound, TOverlapFinder, TContinuationHandler, TContinuation> : CollisionTask
         where TConvex : struct, IConvexShape
-        where TCompound : struct, ICompoundShape
+        where TCompound : struct, IShape, IBoundsQueryableCompound
         where TOverlapFinder : IConvexCompoundOverlapFinder
+        where TContinuationHandler : IConvexCompoundContinuationHandler<TContinuation>
+        where TContinuation : struct, ICollisionTestContinuation
     {
         public ConvexCompoundCollisionTask()
         {
@@ -28,7 +43,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             var pairs = batch.Buffer.As<BoundsTestedPair>();
             TOverlapFinder overlapFinder = default;
-
+            TContinuationHandler continuationHandler = default;
             //We perform all necessary bounding box computations and lookups up front. This helps avoid some instruction pipeline pressure at the cost of some extra data cache requirements.
             //Because of this, you need to be careful with the batch size on this collision task.
             overlapFinder.FindLocalOverlaps(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out var overlaps);
@@ -39,7 +54,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 {
                     ref var pair = ref pairs[i];
                     ref var compound = ref Unsafe.AsRef<TCompound>(pair.B);
-                    ref var continuation = ref batcher.NonconvexReductions.CreateContinuation(pairOverlaps.Count, batcher.Pool, out var continuationIndex);
+                    ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, pairOverlaps.Count, batcher.Pool, pair, out var continuationIndex);
 
                     int nextContinuationChildIndex = 0;
                     for (int j = 0; j < pairOverlaps.Count; ++j)
@@ -60,32 +75,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         }
                         var continuationChildIndex = nextContinuationChildIndex++;
                         var subpairContinuation = new PairContinuation(pair.Continuation.PairId, childA, childB,
-                            CollisionContinuationType.NonconvexReduction, continuationIndex, continuationChildIndex);
+                            continuationHandler.CollisionContinuationType, continuationIndex, continuationChildIndex);
                         if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
                         {
-                            ref var compoundChild = ref compound.GetChild(childIndex);
-                            ref var continuationChild = ref continuation.Children[continuationChildIndex];
-                            Compound.GetRotatedChildPose(compoundChild.LocalPose, pair.OrientationB, out var rotatedChildPose);
-                            var compoundChildType = compoundChild.ShapeIndex.Type;
-                            batcher.Shapes[compoundChildType].GetShapeData(compoundChild.ShapeIndex.Index, out var compoundChildShapeData, out _);
-                            continuationChild.ChildIndexA = childA;
-                            continuationChild.ChildIndexB = childB;
+                            continuationHandler.ConfigureContinuationChild(ref batcher, ref continuation, continuationChildIndex, pair, childIndex,
+                                out var compoundChildType, out var compoundChildShapeData, out var convexToChild, out var childOrientation);
 
-                            var convexToChild = pair.OffsetB + rotatedChildPose.Position; 
                             if (pair.FlipMask < 0)
                             {
-                                continuationChild.OffsetA = rotatedChildPose.Position;
-                                continuationChild.OffsetB = default;
                                 //By reversing the order of the parameters, the manifold orientation is flipped. This compensates for the flip induced by order requirements on this task.                          
                                 batcher.AddDirectly(compoundChildType, ShapeTypeIndexA, compoundChildShapeData, pair.A,
-                                    -convexToChild, rotatedChildPose.Orientation, pair.OrientationA, pair.SpeculativeMargin, subpairContinuation);
+                                    -convexToChild, childOrientation, pair.OrientationA, pair.SpeculativeMargin, subpairContinuation);
                             }
                             else
                             {
-                                continuationChild.OffsetA = default;
-                                continuationChild.OffsetB = rotatedChildPose.Position;
                                 batcher.AddDirectly(ShapeTypeIndexA, compoundChildType, pair.A, compoundChildShapeData,
-                                    convexToChild, pair.OrientationA, rotatedChildPose.Orientation, pair.SpeculativeMargin, subpairContinuation);
+                                    convexToChild, pair.OrientationA, childOrientation, pair.SpeculativeMargin, subpairContinuation);
                             }
                         }
                         else
