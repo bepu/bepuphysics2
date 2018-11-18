@@ -129,7 +129,6 @@ namespace BepuPhysics
                     ref var leaf = ref leaves[collidable.BroadPhaseIndex];
                     Debug.Assert(leaf.Handle == bodySet.IndexToHandle[i]);
                     Debug.Assert(leaf.Mobility == CollidableMobility.Dynamic || leaf.Mobility == CollidableMobility.Kinematic);
-                    Debug.Assert((leaf.Mobility == CollidableMobility.Kinematic) == Bodies.ActiveSet.Activity[i].Kinematic);
                     ++shapefulBodyCount;
                 }
             }

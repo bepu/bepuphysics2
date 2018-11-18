@@ -275,13 +275,10 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void UpdateBroadPhaseKinematicState(int handle, ref BodyLocation location, ref BodySet set)
         {
-            Debug.Assert(set.Activity[location.Index].Kinematic == IsKinematic(set.LocalInertias[location.Index]),
-                "Activity's kinematic state should be updated prior to the broad phase update call. This function simply shares its determination.");
             ref var collidable = ref set.Collidables[location.Index];
-            var kinematic = set.Activity[location.Index].Kinematic;
             if (collidable.Shape.Exists)
             {
-                var mobility = kinematic ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
+                var mobility = IsKinematic(set.LocalInertias[location.Index]) ? CollidableMobility.Kinematic : CollidableMobility.Dynamic;
                 if (location.SetIndex == 0)
                 {
                     broadPhase.activeLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
@@ -313,7 +310,6 @@ namespace BepuPhysics
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
             set.LocalInertias[location.Index] = inertia;
-            set.Activity[location.Index].Kinematic = IsKinematic(inertia);
             UpdateBroadPhaseKinematicState(handle, ref location, ref set);
         }
 
