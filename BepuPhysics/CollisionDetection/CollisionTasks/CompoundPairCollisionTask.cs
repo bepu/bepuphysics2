@@ -21,7 +21,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         ref TContinuation CreateContinuation<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, ref Buffer<ChildOverlapsCollection> pairOverlaps, in BoundsTestedPair pair, out int continuationIndex)
             where TCallbacks : struct, ICollisionCallbacks;
 
-        void GetChildAData<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, in BoundsTestedPair pair, int childIndexA, out RigidPose childPoseA, out int childTypeA, out void* childShapeDataA)
+        void GetChildAData<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, ref TContinuation continuation, in BoundsTestedPair pair, int childIndexA, out RigidPose childPoseA, out int childTypeA, out void* childShapeDataA)
             where TCallbacks : struct, ICollisionCallbacks;
 
         void ConfigureContinuationChild<TCallbacks>(
@@ -74,7 +74,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         ref var childOverlaps = ref pairOverlaps[j];
                         if (childOverlaps.Count == 0)
                             continue;
-                        continuationHandler.GetChildAData(ref batcher, pair, childOverlaps.ChildIndex, out var childPoseA, out var childTypeA, out var childShapeDataA);
+                        continuationHandler.GetChildAData(ref batcher, ref continuation, pair, childOverlaps.ChildIndex, out var childPoseA, out var childTypeA, out var childShapeDataA);
                         //Note that we defer the region assignment until after the loop rather than using the triangleCount as the region count.
                         //That's because the user callback could cull some of the subpairs.
                         for (int k = 0; k < childOverlaps.Count; ++k)

@@ -25,7 +25,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public int TypeId { get; protected set; }
         /// <summary>
-        /// Gets whether this shape batch's contained type potentially contains children of different types.
+        /// Gets whether this shape batch's contained type potentially contains children that require other shape batches.
         /// </summary>
         public bool Compound { get; protected set; }
         
@@ -257,6 +257,7 @@ namespace BepuPhysics.Collidables
     {
         public MeshShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
         {
+            Compound = true;
         }
 
         protected override void Dispose(int index, BufferPool pool)

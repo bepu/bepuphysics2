@@ -4,11 +4,13 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public unsafe struct CompoundMeshContinuations<TCompound, TMesh> : ICompoundPairContinuationHandler<CompoundMeshReduction>
-        where TCompound : ICompoundShape
-        where TMesh : IMeshShape
+    public unsafe struct MeshPairContinuations<TMeshA, TMeshB> : ICompoundPairContinuationHandler<CompoundMeshReduction>
+        where TMeshA : IMeshShape
+        where TMeshB : IMeshShape
     {
         public CollisionContinuationType CollisionContinuationType => CollisionContinuationType.CompoundMeshReduction;
+
+        int triangleAStartIndex;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref CompoundMeshReduction CreateContinuation<TCallbacks>(
@@ -17,7 +19,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             ref var continuation = ref collisionBatcher.CompoundMeshReductions.CreateContinuation(totalChildCount, collisionBatcher.Pool, out continuationIndex);
             //Pass ownership of the triangle and region buffers to the continuation. It'll dispose of the buffer.
-            collisionBatcher.Pool.Take(totalChildCount, out continuation.Triangles);
+            //Note that this expands the triangles set by pairOverlaps.Length- we're going to store the triangles of mesh A in the surplus space. A bit of a hack, but simple and cheap.
+            triangleAStartIndex = totalChildCount;
+            collisionBatcher.Pool.Take(totalChildCount + pairOverlaps.Length, out continuation.Triangles);
             collisionBatcher.Pool.Take(pairOverlaps.Length, out continuation.ChildManifoldRegions);
             continuation.RegionCount = pairOverlaps.Length;
             continuation.MeshOrientation = pair.OrientationB;
@@ -41,11 +45,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             out RigidPose childPoseA, out int childTypeA, out void* childShapeDataA)
             where TCallbacks : struct, ICollisionCallbacks
         {
-            ref var compound = ref Unsafe.AsRef<TCompound>(pair.A);
-            ref var compoundChild = ref compound.GetChild(childIndexA);
-            Compound.GetRotatedChildPose(compoundChild.LocalPose, pair.OrientationA, out childPoseA);
-            childTypeA = compoundChild.ShapeIndex.Type;
-            collisionBatcher.Shapes[childTypeA].GetShapeData(compoundChild.ShapeIndex.Index, out childShapeDataA, out _);
+            ref var triangle = ref continuation.Triangles[triangleAStartIndex++];
+            childShapeDataA = Unsafe.AsPointer(ref triangle);
+            childTypeA = triangle.TypeId;
+            Unsafe.AsRef<TMeshA>(pair.A).GetLocalTriangle(childIndexA, out triangle);
+            childPoseA = new RigidPose(default, pair.OrientationA);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -59,23 +63,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref var triangle = ref continuation.Triangles[continuationChildIndex];
             childShapeDataB = Unsafe.AsPointer(ref triangle);
             childTypeB = triangle.TypeId;
-            Unsafe.AsRef<TMesh>(pair.B).GetLocalTriangle(childIndexB, out continuation.Triangles[continuationChildIndex]);
+            Unsafe.AsRef<TMeshB>(pair.B).GetLocalTriangle(childIndexB, out continuation.Triangles[continuationChildIndex]);
             ref var continuationChild = ref continuation.Inner.Children[continuationChildIndex];
             //In meshes, the triangle's vertices already contain the offset, so there is no additional offset.                                 
             childPoseB = new RigidPose(default, pair.OrientationB);
+            continuationChild.OffsetA = default;
+            continuationChild.OffsetB = default;
             if (pair.FlipMask < 0)
             {
                 continuationChild.ChildIndexA = childIndexB;
                 continuationChild.ChildIndexB = childIndexA;
-                continuationChild.OffsetA = childPoseB.Position;
-                continuationChild.OffsetB = childPoseA.Position;
             }
             else
             {
                 continuationChild.ChildIndexA = childIndexA;
                 continuationChild.ChildIndexB = childIndexB;
-                continuationChild.OffsetA = childPoseA.Position;
-                continuationChild.OffsetB = childPoseB.Position;
             }
         }
 

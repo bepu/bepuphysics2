@@ -64,42 +64,43 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void TryAddTriangleBVertex(in Vector3Wide vertex, in Vector<int> vertexId,
-            in Vector3Wide tangentBX, in Vector3Wide tangentBY, in Vector3Wide triangleCenterB, in Vector3Wide contactNormal, in Vector3Wide triangleCenterA, in Vector3Wide faceNormalA,
-            in Vector3Wide edgeABPlaneNormalA, in Vector3Wide edgeBCPlaneNormalA, in Vector3Wide edgeCAPlaneNormalA, in Vector3Wide aA, in Vector3Wide aB,
-            in Vector<int> contactNormalDotFaceNormalAIsValid, in Vector<float> inverseContactNormalDotFaceNormalA,
+        private static void TryAddTriangleAVertex(in Vector3Wide vertex, in Vector<int> vertexId,
+            in Vector3Wide tangentBX, in Vector3Wide tangentBY, in Vector3Wide triangleCenterB, in Vector3Wide contactNormal,in Vector3Wide faceNormalB,
+            in Vector3Wide edgeABPlaneNormalB, in Vector3Wide edgeBCPlaneNormalB, in Vector3Wide edgeCAPlaneNormalB, in Vector3Wide bA, in Vector3Wide bB,
+            in Vector<int> contactNormalDotFaceNormalBIsValid, in Vector<float> inverseContactNormalDotFaceNormalB,
             ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
         {
-            //Cast a ray from triangle B's vertex along the contact normal down to the plane of triangle A and check for containment.
-            //We use the contact normal rather than the face normal of B to reduce contact generation dependency on pair ordering.
-            //(There are other ways to implement the combined ray cast->containment test; we're just going with the simple way.)
-            //(contactNormal * t - vertexOnB + triangleCenterA) * faceNormalA = 0
-            //(contactNormal * t + (triangleCenterA - vertexOnB) * faceNormalA = 0
-            //(contactNormal * faceNormalA) * t = (triangleCenterA - vertexOnB) * faceNormalA
-            //t = (triangleCenterA - vertexOnB) * faceNormalA / (contactNormal * faceNormalA)
-            Vector3Wide.Subtract(triangleCenterA, vertex, out var offset);
-            Vector3Wide.Dot(offset, faceNormalA, out var distance);
-            var t = distance * inverseContactNormalDotFaceNormalA;
-            Vector3Wide.Scale(contactNormal, t, out var unprojectedVertex);
-            Vector3Wide.Add(unprojectedVertex, vertex, out unprojectedVertex);
-
-            //Test edge edge plane sign for all three edges of A.
-            Vector3Wide.Subtract(unprojectedVertex, aA, out var bAToVertex);
-            Vector3Wide.Subtract(unprojectedVertex, aB, out var bBToVertex);
-            Vector3Wide.Dot(bAToVertex, edgeABPlaneNormalA, out var abDot);
-            Vector3Wide.Dot(bBToVertex, edgeBCPlaneNormalA, out var bcDot);
-            Vector3Wide.Dot(bAToVertex, edgeCAPlaneNormalA, out var caDot);
+            //Test edge edge plane sign for all three edges of B. We can test the vertex directly rather than the unprojected vertex because the ray cast follows the contact normal,
+            //and all of these plane normals are perpendicular to the contact normal.
+            Vector3Wide.Subtract(vertex, bA, out var bAToVertex);
+            Vector3Wide.Subtract(vertex, bB, out var bBToVertex);
+            Vector3Wide.Dot(bAToVertex, edgeABPlaneNormalB, out var abDot);
+            Vector3Wide.Dot(bBToVertex, edgeBCPlaneNormalB, out var bcDot);
+            Vector3Wide.Dot(bAToVertex, edgeCAPlaneNormalB, out var caDot);
             var abContained = Vector.GreaterThan(abDot, Vector<float>.Zero);
             var bcContained = Vector.GreaterThan(bcDot, Vector<float>.Zero);
             var caContained = Vector.GreaterThan(caDot, Vector<float>.Zero);
             var contained = Vector.BitwiseAnd(abContained, Vector.BitwiseAnd(bcContained, caContained));
 
+            //Cast a ray from triangle A's vertex along the contact normal up to the plane of triangle B and check for containment.
+            //We use the contact normal rather than the face normal to reduce contact generation dependency on pair ordering.
+            //(There are other ways to implement the combined ray cast->containment test; we're just going with the simple way.)
+            //(-contactNormal * t - vertexOnA + triangleCenterB) * faceNormalB = 0
+            //(-contactNormal * t + (triangleCenterB - vertexOnA) * faceNormalB = 0
+            //(-contactNormal * faceNormalB) * t = (triangleCenterB - vertexOnA) * faceNormalB
+            //t = (vertexOnA - triangleCenterB) * faceNormalB / (contactNormal * faceNormalB)
+            Vector3Wide.Subtract(triangleCenterB, vertex, out var offset);
+            Vector3Wide.Dot(offset, faceNormalB, out var distance);
+            var t = distance * inverseContactNormalDotFaceNormalB;
+            Vector3Wide.Scale(contactNormal, t, out var unprojectedVertex);
+            Vector3Wide.Add(unprojectedVertex, vertex, out unprojectedVertex);
+
             ManifoldCandidate candidate;
-            Vector3Wide.Subtract(vertex, triangleCenterB, out var offsetOnB);
+            Vector3Wide.Subtract(unprojectedVertex, triangleCenterB, out var offsetOnB);
             Vector3Wide.Dot(offsetOnB, tangentBX, out candidate.X);
             Vector3Wide.Dot(offsetOnB, tangentBY, out candidate.Y);
             candidate.FeatureId = vertexId;
-            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, Vector.BitwiseAnd(contactNormalDotFaceNormalAIsValid, contained), pairCount);
+            ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate, Vector.BitwiseAnd(contactNormalDotFaceNormalBIsValid, contained), pairCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -118,10 +119,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ClipAEdgeAgainstBBounds(
-             in Vector3Wide edgeABPlaneNormalB, in Vector3Wide edgeBCPlaneNormalB, in Vector3Wide edgeCAPlaneNormalB,
+        private static void ClipBEdgeAgainstABounds(
+             in Vector3Wide edgeABPlaneNormalA, in Vector3Wide edgeBCPlaneNormalA, in Vector3Wide edgeCAPlaneNormalA,
              in Vector3Wide aA, in Vector3Wide aB,
-             in Vector3Wide edgeDirectionA, in Vector3Wide edgeStartA, in Vector<int> entryId, in Vector<int> exitIdOffset,
+             in Vector3Wide edgeDirectionB, in Vector3Wide edgeStartB, in Vector<int> entryId, in Vector<int> exitIdOffset,
              in Vector3Wide triangleCenterB, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
              in Vector<float> epsilon, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
         {
@@ -131,9 +132,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //We have three edge planes created by the edges of triangle A.
             //We want to test the triangle B edge against all three of the edges.
-            ClipEdge(edgeStartA, edgeDirectionA, aA, edgeABPlaneNormalB, out var entryAB, out var exitAB);
-            ClipEdge(edgeStartA, edgeDirectionA, aB, edgeBCPlaneNormalB, out var entryBC, out var exitBC);
-            ClipEdge(edgeStartA, edgeDirectionA, aA, edgeCAPlaneNormalB, out var entryCA, out var exitCA);
+            ClipEdge(edgeStartB, edgeDirectionB, aA, edgeABPlaneNormalA, out var entryAB, out var exitAB);
+            ClipEdge(edgeStartB, edgeDirectionB, aB, edgeBCPlaneNormalA, out var entryBC, out var exitBC);
+            ClipEdge(edgeStartB, edgeDirectionB, aA, edgeCAPlaneNormalA, out var entryCA, out var exitCA);
             var entry = Vector.Max(Vector.Max(Vector<float>.Zero, entryAB), Vector.Max(entryBC, entryCA));
             var exit = Vector.Min(Vector.Min(Vector<float>.One, exitAB), Vector.Min(exitBC, exitCA));
 
@@ -141,11 +142,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //entryY = dot(entry * edgeDirectionA + edgeStartA - triangleCenterB, tangentBY)
             //exitX = dot(exit * edgeDirectionA + edgeStartA - triangleCenterB, tangentBX)
             //exitY = dot(exit * edgeDirectionA + edgeStartA - triangleCenterB, tangentBY)
-            Vector3Wide.Subtract(edgeStartA, triangleCenterB, out var offset);
+            Vector3Wide.Subtract(edgeStartB, triangleCenterB, out var offset);
             Vector3Wide.Dot(offset, tangentBX, out var offsetX);
             Vector3Wide.Dot(offset, tangentBY, out var offsetY);
-            Vector3Wide.Dot(tangentBX, edgeDirectionA, out var edgeDirectionX);
-            Vector3Wide.Dot(tangentBY, edgeDirectionA, out var edgeDirectionY);
+            Vector3Wide.Dot(tangentBX, edgeDirectionB, out var edgeDirectionX);
+            Vector3Wide.Dot(tangentBY, edgeDirectionB, out var edgeDirectionY);
 
             ManifoldCandidate candidate;
             var six = new Vector<int>(6);
@@ -274,15 +275,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Add them independently.
             //(Adding these first allows us to simply skip capacity tests, since there can only be a total of three bVertex-aFace contacts.)
 
-            Vector3Wide.Dot(faceNormalA, localNormal, out var contactNormalDotFaceNormalA);
-            var inverseContactNormalDotFaceNormalA = Vector<float>.One / contactNormalDotFaceNormalA;
-            var contactNormalDotFaceNormalAIsValid = Vector.GreaterThan(Vector.Abs(contactNormalDotFaceNormalA), new Vector<float>(1e-10f));
-            Vector3Wide.CrossWithoutOverlap(abA, faceNormalA, out var edgeABPlaneNormalA);
-            Vector3Wide.CrossWithoutOverlap(bcA, faceNormalA, out var edgeBCPlaneNormalA);
-            Vector3Wide.CrossWithoutOverlap(caA, faceNormalA, out var edgeCAPlaneNormalA);
-            TryAddTriangleBVertex(bA, Vector<int>.Zero, tangentBX, tangentBY, localTriangleCenterB, localNormal, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, contactNormalDotFaceNormalAIsValid, inverseContactNormalDotFaceNormalA, ref candidates, ref candidateCount, pairCount);
-            TryAddTriangleBVertex(bB, Vector<int>.One, tangentBX, tangentBY, localTriangleCenterB, localNormal, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, contactNormalDotFaceNormalAIsValid, inverseContactNormalDotFaceNormalA, ref candidates, ref candidateCount, pairCount);
-            TryAddTriangleBVertex(bC, new Vector<int>(2), tangentBX, tangentBY, localTriangleCenterB, localNormal, localTriangleCenterA, faceNormalA, edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, contactNormalDotFaceNormalAIsValid, inverseContactNormalDotFaceNormalA, ref candidates, ref candidateCount, pairCount);
+            Vector3Wide.Dot(faceNormalB, localNormal, out var contactNormalDotFaceNormalB);
+            var inverseContactNormalDotFaceNormalB = Vector<float>.One / contactNormalDotFaceNormalB;
+            var contactNormalDotFaceNormalBIsValid = Vector.GreaterThan(Vector.Abs(contactNormalDotFaceNormalB), new Vector<float>(1e-10f));
+            Vector3Wide.CrossWithoutOverlap(abB, localNormal, out var edgeABPlaneNormalB);
+            Vector3Wide.CrossWithoutOverlap(bcB, localNormal, out var edgeBCPlaneNormalB);
+            Vector3Wide.CrossWithoutOverlap(caB, localNormal, out var edgeCAPlaneNormalB);
+            TryAddTriangleAVertex(a.A, Vector<int>.Zero, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, contactNormalDotFaceNormalBIsValid, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
+            TryAddTriangleAVertex(a.B, Vector<int>.One, tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, contactNormalDotFaceNormalBIsValid, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
+            TryAddTriangleAVertex(a.C, new Vector<int>(2), tangentBX, tangentBY, localTriangleCenterB, localNormal, faceNormalB, edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, contactNormalDotFaceNormalBIsValid, inverseContactNormalDotFaceNormalB, ref candidates, ref candidateCount, pairCount);
 
             //Note that edge cases will also add triangle A vertices that are within triangle B's bounds, so no A vertex case is required.
             //Note that each of these calls can generate 4 contacts, so we have to start checking capacities.
@@ -296,15 +297,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector.Max(abBLengthSquared, caBLengthSquared)));
             var edgeEpsilon = new Vector<float>(1e-5f) * epsilonScale;
             var exitIdOffset = new Vector<int>(3);
-            //Note the use of localNormal here, NOT faceNormalB. Why? Just like in the vertexB case, we're not creating contacts in triangle B's face voronoi region.
-            //Instead, the test region is skewed along the contact normal. These planes intersect B's edges and have the contact normal as a tangent.
+            //Note the use of localNormal here, NOT faceNormalA. Why? Just like in the vertexA case, we're not creating contacts in triangle A's face voronoi region.
+            //Instead, the test region is skewed along the contact normal. These planes intersect A's edges and have the contact normal as a tangent.
             //This avoids dependency on pair order (consider what happens when A and B swap) and produces nicer contacts in corner cases (consider two near perpendicular triangles).
-            Vector3Wide.CrossWithoutOverlap(abB, localNormal, out var edgeABPlaneNormalB);
-            Vector3Wide.CrossWithoutOverlap(bcB, localNormal, out var edgeBCPlaneNormalB);
-            Vector3Wide.CrossWithoutOverlap(caB, localNormal, out var edgeCAPlaneNormalB);
-            ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, abA, a.A, new Vector<int>(3), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount, pairCount);
-            ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, bcA, a.B, new Vector<int>(4), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount, pairCount);
-            ClipAEdgeAgainstBBounds(edgeABPlaneNormalB, edgeBCPlaneNormalB, edgeCAPlaneNormalB, bA, bB, caA, a.C, new Vector<int>(5), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount, pairCount);
+            Vector3Wide.CrossWithoutOverlap(localNormal, abA, out var edgeABPlaneNormalA);
+            Vector3Wide.CrossWithoutOverlap(localNormal, bcA, out var edgeBCPlaneNormalA);
+            Vector3Wide.CrossWithoutOverlap(localNormal, caA, out var edgeCAPlaneNormalA);
+            ClipBEdgeAgainstABounds(edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, abB, bA, new Vector<int>(3), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount, pairCount);
+            ClipBEdgeAgainstABounds(edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, bcB, bB, new Vector<int>(4), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount, pairCount);
+            ClipBEdgeAgainstABounds(edgeABPlaneNormalA, edgeBCPlaneNormalA, edgeCAPlaneNormalA, a.A, a.B, caB, bC, new Vector<int>(5), exitIdOffset, localTriangleCenterB, tangentBX, tangentBY, edgeEpsilon, ref candidates, ref candidateCount, pairCount);
 
             Vector3Wide.Subtract(localTriangleCenterA, localTriangleCenterB, out var faceCenterBToFaceCenterA);
             ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, faceNormalA, localNormal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin, pairCount,

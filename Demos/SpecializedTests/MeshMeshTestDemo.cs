@@ -26,11 +26,25 @@ namespace Demos.SpecializedTests
             MeshDemo.LoadModel(content, BufferPool, @"Content\newt.obj", Vector3.One, out var mesh);
             new Box(2.5f, 1, 4).ComputeInertia(1, out var approximateInertia);
             var meshShapeIndex = Simulation.Shapes.Add(mesh);
-            for (int newtIndex = 0; newtIndex < 3; ++newtIndex)
+            for (int meshIndex = 0; meshIndex < 3; ++meshIndex)
             {
                 Simulation.Bodies.Add(
-                    BodyDescription.CreateDynamic(new Vector3(0, 2 + newtIndex * 2, 0), approximateInertia,
+                    BodyDescription.CreateDynamic(new Vector3(0, 2 + meshIndex * 2, 0), approximateInertia,
                     new CollidableDescription(meshShapeIndex, 0.1f), new BodyActivityDescription(0.01f)));
+            }
+
+            var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 12);
+            for (int i = 0; i < mesh.Triangles.Length; ++i)
+            {
+                compoundBuilder.Add(mesh.Triangles[i], RigidPose.Identity, 1);
+            }
+            compoundBuilder.BuildDynamicCompound(out var children, out var compoundInertia);
+            var compound = new BigCompound(children, Simulation.Shapes, BufferPool);
+            var compoundShapeIndex = Simulation.Shapes.Add(compound);
+            compoundBuilder.Dispose();
+            for (int i = 0; i < 3; ++i)
+            {
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(5, 2 + i * 2, 0), compoundInertia, new CollidableDescription(compoundShapeIndex, 0.1f), new BodyActivityDescription(0.01f)));
             }
 
             var staticShape = new Box(1500, 1, 1500);

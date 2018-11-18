@@ -148,7 +148,7 @@ namespace BepuPhysics.CollisionDetection
                 {
                     ref var position = ref Unsafe.Add(ref child.Manifold.Contact0, j).Offset;
                     var extent = Vector3.Dot(position, extentAxis);
-                    if(extent < minimumExtent)
+                    if (extent < minimumExtent)
                     {
                         minimumExtent = extent;
                         minimumExtentPosition = position;

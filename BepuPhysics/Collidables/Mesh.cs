@@ -54,6 +54,8 @@ namespace BepuPhysics.Collidables
             Scale = scale;
         }
 
+        public int TriangleCount => Triangles.Length;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GetLocalTriangle(int triangleIndex, out Triangle target)
         {
@@ -61,6 +63,15 @@ namespace BepuPhysics.Collidables
             target.A = scale * source.A;
             target.B = scale * source.B;
             target.C = scale * source.C;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void GetLocalTriangle(int triangleIndex, ref TriangleWide target)
+        {
+            //This inserts a triangle into the first slot of the given wide instance.
+            ref var source = ref Triangles[triangleIndex];
+            Vector3Wide.WriteFirst(source.A, ref target.A);
+            Vector3Wide.WriteFirst(source.B, ref target.B);
+            Vector3Wide.WriteFirst(source.C, ref target.C);
         }
 
         public void ComputeBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max)

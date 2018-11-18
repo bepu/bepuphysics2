@@ -133,8 +133,8 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new CompoundPairCollisionTask<BigCompound, BigCompound, CompoundPairOverlapFinder<BigCompound, BigCompound>, CompoundPairContinuations<BigCompound, BigCompound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new CompoundPairCollisionTask<BigCompound, Mesh, CompoundPairOverlapFinder<BigCompound, Mesh>, CompoundMeshContinuations<BigCompound, Mesh>, CompoundMeshReduction>());
 
-            //defaultTaskRegistry.Register(new CompoundMeshCollisionTask<Mesh, Mesh, CompoundPairOverlapFinder<Mesh, Mesh>>());
-            
+            defaultTaskRegistry.Register(new CompoundPairCollisionTask<Mesh, Mesh, MeshPairOverlapFinder<Mesh, Mesh>, MeshPairContinuations<Mesh, Mesh>, CompoundMeshReduction>());
+
             return defaultTaskRegistry;
         }
 

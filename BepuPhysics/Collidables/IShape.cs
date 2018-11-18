@@ -66,7 +66,9 @@ namespace BepuPhysics.Collidables
         bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal);
         void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler;
 
+        int TriangleCount { get; }
         void GetLocalTriangle(int triangleIndex, out Triangle triangle);
+        void GetLocalTriangle(int triangleIndex, ref TriangleWide triangle);
         void Dispose(BufferPool pool);
     }
 

@@ -109,7 +109,7 @@ namespace Demos.Demos
                 };
                 Simulation.Statics.Add(triangleDescription);
 
-                var shape = new Triangle(new Vector3(0, 0, 1), new Vector3(0, 0, 0), new Vector3(-1, 1, 0));
+                var shape = new Triangle(new Vector3(0, 0, 3), new Vector3(0, 0, 0), new Vector3(-3, 3, 0));
                 var bodyDescription = new BodyDescription
                 {
                     Collidable = new CollidableDescription { Shape = Simulation.Shapes.Add(shape), SpeculativeMargin = 0.1f },
