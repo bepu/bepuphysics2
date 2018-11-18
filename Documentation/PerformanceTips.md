@@ -10,7 +10,7 @@
 
 -If you *really, _definitely_* need a mobile mesh, especially one that needs to collide with other meshes, spend a while confirming that you *really*, **definitely**, ***seriously*** need it and there is no other option, and then use a compound of simple shapes instead.
 
--Okay, so maybe you actually truly really seriously need an actual mobile mesh. Keep the number of triangles to the minimum necessary to approximate the desired shape, and try to keep the triangles fairly uniform in size. Long sliver-like triangles can end up with large and inefficient bounding boxes. Static meshes follow the same optimization guidelines.
+-Okay, so maybe you actually truly really seriously need an actual mobile mesh. Keep the number of triangles to the minimum necessary to approximate the desired shape, and try to keep the triangles fairly uniform in size. Long sliver-like triangles can end up with large and inefficient bounding boxes. Static meshes follow the same optimization guidelines. Don't be surprised when you run into behavioral issues associated with infinitely thin one sided triangles not colliding with each other and relatively crappy performance.
 
 -Reuse shapes when convenient. In particular, avoid creating tons of duplicate convex hulls. They are much larger than the other types. Both the required memory bandwidth and cache size can become a bottleneck during the narrow phase.
 
@@ -19,5 +19,3 @@
 
 ## Solver Optimization
 -Try using the minimum number of iterations sufficient to retain stability. The cost of the solver stage is linear with the number of iterations, and some simulations can get by with very few.
-
--Watch out when there are a large number of constraints associated with a single body. The solver cannot solve multiple constraints affecting the same body at the same time, potentially limiting both SIMD and multicore parallelism. 300 characters on a spaceship represented as a single body may cause a sequentialization bottleneck. If this appears to be a dominant cost, consider splitting the offending body into multiple pieces. (This tip should become unnecessary once the jacobi fallback solver is available.)

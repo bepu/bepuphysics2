@@ -4,7 +4,7 @@
 
 ## Solver Stabilization
 
--Whenever constraints are behaving oddly, try increasing the solver's iteration count to an extreme value (100+). If the problems go away, it is likely that the constraints or the bodies connected to them are configured in a way that is making the constraint system very hard to solve. If behavior doesn't improve, then the problem may not be related to constraints.
+-Whenever constraints are behaving oddly, try increasing the solver's iteration count to an extreme value (100+). If the problems go away, it is likely that the constraints or the bodies connected to them are configured in a way that is making the constraint system very hard to solve. If behavior doesn't improve, then the problem might not be related to constraints.
 
 -While many simple simulations can work fine with only 1 solver iteration, using a minimum of 2 is recommended for most simulations. Simulations with greater degrees of complexity- articulated robots, ragdolls, stacks- will often need more.
 
@@ -16,15 +16,17 @@
 
 -Use the minimum number of constraints necessary to express the desired design. Less constraints means better performance and fewer opportunities for constraints to conflict.
 
--When trying to build rope-like constraint systems, it's likely that the solver will suffer from both mass ratios and the difficulty of propagating impulses through a long chain of bodies. In this situation, you can give the solver a little help by adding 'skip' constraints. That is, rather than creating distance limits only between adjacent bodies in a rope, try also connecting the first body to the last body (with an appropriately increased distance limit). In extreme cases, you could also create more skip constraints- connecting every other body or every third body, for example.
+-When trying to build rope-like constraint systems, it's likely that the solver will suffer from both mass ratios and the difficulty of propagating impulses through a long chain of bodies. In this situation, you can give the solver a little help by adding 'skip' constraints. That is, rather than creating distance limits only between adjacent bodies in a rope, try also connecting the first body to the last body (with an appropriately increased distance limit). In extreme cases, you could also create more skip constraints- connecting every other body or every third body, for example. Check the RopeStabilityDemo in the Demos project for examples.
 
 -When tuning the SpringSettings.Frequency of constraints, prefer values smaller than 0.5 / timeStepDuration. Higher values increase the risk of instability.
 
--Once bugs and misconfiguration are ruled out and things are still behaving poorly, try decreasing the time step duration and updating the simulation more frequently to compensate. This is the single most powerful way to stabilize simulations, but also one of the most expensive.
+-Once bugs and misconfiguration are ruled out and things are still behaving poorly, try decreasing the time step duration and updating the simulation more frequently to compensate. This is the single most powerful way to stabilize simulations.
+
+-Sometimes, if a simulation requires very large numbers of iterations, using a higher update rate and many fewer solver iterations can be both faster and higher quality. This is especially true when dealing with a bunch of interacting stiff constraints.
 
 ## Contact Generation
 
--While nonzero speculative margins are required for stable contact, overly large margins can sometimes cause 'ghost' contacts when objects are moving quickly relative to each other. It might look like one object is bouncing off the air a foot away from the other shape. To avoid this, use a smaller speculative margin and, if continuous collision detection is desired, consider using one of the explicitly continuous modes.
+-While nonzero speculative margins are required for stable contact, overly large margins can sometimes cause 'ghost' contacts when objects are moving quickly relative to each other. It might look like one object is bouncing off the air a foot away from the other shape. To avoid this, use a smaller speculative margin and consider explicitly enabling continuous collision detection for the shape.
 
 -Prefer simpler shapes. In particular, avoid highly complex convex hulls with a bunch of faces separated by only a few degrees. The solver likes temporally coherent contacts, and excess complexity can cause the set of generated contacts to vary significantly with small rotations. Also, complicated hulls are slow!
 
