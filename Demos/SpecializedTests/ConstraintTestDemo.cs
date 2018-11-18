@@ -304,14 +304,13 @@ namespace Demos.SpecializedTests
             }
             {
                 var x = GetNextPosition(ref nextX);
-                var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity));
+                var a = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(x, 3, 0), collidableA, activity));
                 var b = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 5, 0), inertiaB, collidableB, activity));
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
-                Simulation.Solver.Add(a, b, new AngularAxisMotor
+                Simulation.Solver.Add(b, a, new AngularAxisMotor
                 {
                     LocalAxisA = new Vector3(0, 1, 0),
-                    LocalAxisB = new Vector3(0, 1, 0),
-                    TargetVelocity = MathHelper.Pi * 2,
+                    TargetVelocity = MathHelper.Pi * 5,
                     Settings = new MotorSettings(float.MaxValue, 0.1f)
                 });
             }
