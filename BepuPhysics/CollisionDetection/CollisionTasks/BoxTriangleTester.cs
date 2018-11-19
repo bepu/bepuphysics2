@@ -205,7 +205,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.CrossWithoutOverlap(boxTangentX, contactNormal, out var edgePlaneNormalY);
 
             //Edge feature ids:
-            //4 + [0, 1, 2], depending on which traingle edge is used.
+            //4 + [0, 1, 2], depending on which triangle edge is used.
             //The extra 4 distinguishes it from box vertex contacts.
             //For contacts created from the max endpoint of an edge interval, we'll add an extra 8 to distinguish it from the min endpoint.
 
