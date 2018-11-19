@@ -454,69 +454,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             normalB.X = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.X, normalB.X);
             normalB.Y = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Y, normalB.Y);
             normalB.Z = Vector.ConditionalSelect(shouldNegateNormalB, -normalB.Z, normalB.Z);
-
-            //Clip edges of B against the face bounds of A to collect all edge-bound contacts.       
-            Vector3Wide.Scale(normalB, halfSpanBZ, out var faceCenterB);
-            Vector3Wide.Add(faceCenterB, offsetB, out faceCenterB);
-            //Vector3Wide.Scale(tangentBY, halfSpanBY, out var edgeOffsetBX);
-            //Vector3Wide.Scale(tangentBX, halfSpanBX, out var edgeOffsetBY);
-            //Vector3Wide.Dot(tangentAX, tangentBX, out var axbx);
-            //Vector3Wide.Dot(tangentAY, tangentBX, out var aybx);
-            //Vector3Wide.Dot(tangentAX, tangentBY, out var axby);
-            //Vector3Wide.Dot(tangentAY, tangentBY, out var ayby);
-            //GetEdgeVersusFaceBoundsIntervals(ref tangentAX, ref tangentAY, ref halfSpanAX, ref halfSpanAY, ref axbx, ref aybx, ref faceCenterB, ref halfSpanBX, ref edgeOffsetBX,
-            //    out var bX0Min, out var bX0Max, out var bX1Min, out var bX1Max);
-            //GetEdgeVersusFaceBoundsIntervals(ref tangentAX, ref tangentAY, ref halfSpanAX, ref halfSpanAY, ref axby, ref ayby, ref faceCenterB, ref halfSpanBY, ref edgeOffsetBY,
-            //    out var bY0Min, out var bY0Max, out var bY1Min, out var bY1Max);
-
-            ////Note that we only allocate up to 8 candidates. It is not possible for this process to generate more than 8 (unless there are numerical problems, which we guard against).
-            //int byteCount = Unsafe.SizeOf<ManifoldCandidate>() * 8;
-            //var buffer = stackalloc byte[byteCount];
-            //ref var candidates = ref Unsafe.As<byte, ManifoldCandidate>(ref *buffer);
-
-            ////Note that using a raw absolute epsilon would have a varying effect based on the scale of the involved boxes.
-            ////The minimum across the maxes is intended to avoid cases like a huge box being used as a plane, causing a massive size disparity.
-            ////Using its sizes as a threshold would tend to kill off perfectly valid contacts.
-            //var epsilonScale = Vector.Min(Vector.Max(halfSpanAX, Vector.Max(halfSpanAY, halfSpanAZ)), Vector.Max(halfSpanBX, Vector.Max(halfSpanBY, halfSpanBZ)));
-
-            //var negativeHalfSpanBY = -halfSpanBY;
-            //var rawContactCount = Vector<int>.Zero;
-            //var three = new Vector<int>(3);
-            //var twiceAxisIdBX = axisIdBX * new Vector<int>(2);
-            //var axisZEdgeIdContribution = axisIdBZ * three;
-            ////Edge BX, -y offset
-            //var edgeIdBX0 = twiceAxisIdBX + axisIdBY + axisZEdgeIdContribution;
-            //AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref epsilonScale, ref bX0Min, ref bX0Max,
-            //    ref bX0Min, ref negativeHalfSpanBY, ref bX0Max, ref negativeHalfSpanBY, ref edgeIdBX0, pairCount);
-            ////Edge BX, +y offset
-            ////Note that the interval is flipped. This makes the edge intervals wound clockwise, 
-            ////so creating contacts when the interval max is at the halfSpan will put contacts at each of the 4 corners rather than 2 in the same spot.
-            //var flippedBX1Min = -bX1Max;
-            //var flippedBX1Max = -bX1Min;
-            //var edgeIdBX1 = twiceAxisIdBX + axisIdBY * three + axisZEdgeIdContribution;
-            //AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBX, ref epsilonScale, ref flippedBX1Min, ref flippedBX1Max,
-            //    ref bX1Max, ref halfSpanBY, ref bX1Min, ref halfSpanBY, ref edgeIdBX1, pairCount);
-
-            //var negativeHalfSpanBX = -halfSpanBX;
-            //var twiceAxisIdBY = axisIdBY * new Vector<int>(2);
-            ////Edge BY, -x offset
-            ////Note that the interval is flipped for winding.
-            //var flippedBY0Min = -bY0Max;
-            //var flippedBY0Max = -bY0Min;
-            //var edgeIdBY0 = axisIdBX + twiceAxisIdBY + axisZEdgeIdContribution;
-            //AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBY, ref epsilonScale, ref flippedBY0Min, ref flippedBY0Max,
-            //    ref negativeHalfSpanBX, ref bY0Max, ref negativeHalfSpanBX, ref bY0Min, ref edgeIdBY0, pairCount);
-            ////Edge BY, +x offset
-            //var edgeIdBY1 = axisIdBX * three + twiceAxisIdBY + axisZEdgeIdContribution;
-            //AddEdgeContacts(ref candidates, ref rawContactCount, ref halfSpanBY, ref epsilonScale, ref bY1Min, ref bY1Max,
-            //    ref halfSpanBX, ref bY1Min, ref halfSpanBX, ref bY1Max, ref edgeIdBY1, pairCount);
-
+ 
             //Note that we only allocate up to 8 candidates. It is not possible for this process to generate more than 8 (unless there are numerical problems, which we guard against).
             int byteCount = Unsafe.SizeOf<ManifoldCandidate>() * 8;
             var buffer = stackalloc byte[byteCount];
             ref var candidates = ref Unsafe.As<byte, ManifoldCandidate>(ref *buffer);
+
             //Face B edges against face A bound planes
             Vector3Wide.Scale(normalA, halfSpanAZ, out var faceCenterA);
+            Vector3Wide.Scale(normalB, halfSpanBZ, out var faceCenterB);
+            Vector3Wide.Add(faceCenterB, offsetB, out faceCenterB);
             Vector3Wide.Subtract(faceCenterA, faceCenterB, out var faceCenterBToFaceCenterA);
             Vector3Wide.Scale(tangentAY, halfSpanAY, out var edgeOffsetAX);
             Vector3Wide.Scale(tangentAX, halfSpanAX, out var edgeOffsetAY);
@@ -550,51 +497,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var vertexId11 = -(axisIdAZ + axisIdAX + axisIdAY);
             AddBoxAVertices(faceCenterB, tangentBX, tangentBY, halfSpanBX, halfSpanBY, normalB, manifold.Normal,
                 vertexA00, vertexA01, vertexA10, vertexA11, vertexId00, vertexId01, vertexId10, vertexId11, ref candidates, ref candidateCount, pairCount);
-
-            ////Vertex A -x, -y
-            //Vector3Wide.Subtract(faceCenterBToFaceCenterA, edgeOffsetAX, out var vertexA);
-            //Vector3Wide.Subtract(vertexA, edgeOffsetAY, out vertexA);
-            ////Vertex ids only have two states per axis, so scale id by 0 or 1 before adding. Equivalent to conditional or.          
-            ////Note that the feature id is negated. This disambiguates between edge-edge contacts and vertex contacts.
-            //var vertexId = -axisIdAZ;
-
-            //AddFaceVertexContact(ref vertexA, ref vertexId,
-            //    ref tangentBX, ref tangentBY, ref halfSpanBX, ref halfSpanBY,
-            //    ref candidates, ref rawContactCount, pairCount);
-
-            ////Vertex A -x, +y
-            //Vector3Wide.Subtract(faceCenterBToFaceCenterA, edgeOffsetAX, out vertexA);
-            //Vector3Wide.Add(vertexA, edgeOffsetAY, out vertexA);
-            ////Vertex ids only have two states per axis, so scale id by 0 or 1 before adding. Equivalent to conditional or.          
-            ////Note that the feature id is negated. This disambiguates between edge-edge contacts and vertex contacts.
-            //vertexId = -(axisIdAZ + axisIdAY);
-
-            //AddFaceVertexContact(ref vertexA, ref vertexId,
-            //    ref tangentBX, ref tangentBY, ref halfSpanBX, ref halfSpanBY,
-            //    ref candidates, ref rawContactCount, pairCount);
-
-            ////Vertex A +x, -y
-            //Vector3Wide.Add(faceCenterBToFaceCenterA, edgeOffsetAX, out vertexA);
-            //Vector3Wide.Subtract(vertexA, edgeOffsetAY, out vertexA);
-            ////Vertex ids only have two states per axis, so scale id by 0 or 1 before adding. Equivalent to conditional or.          
-            ////Note that the feature id is negated. This disambiguates between edge-edge contacts and vertex contacts.
-            //vertexId = -(axisIdAZ + axisIdAX);
-
-            //AddFaceVertexContact(ref vertexA, ref vertexId,
-            //    ref tangentBX, ref tangentBY, ref halfSpanBX, ref halfSpanBY,
-            //    ref candidates, ref rawContactCount, pairCount);
-
-            ////Vertex A +x, +y
-            //Vector3Wide.Add(faceCenterBToFaceCenterA, edgeOffsetAX, out vertexA);
-            //Vector3Wide.Add(vertexA, edgeOffsetAY, out vertexA);
-            ////Vertex ids only have two states per axis, so scale id by 0 or 1 before adding. Equivalent to conditional or.          
-            ////Note that the feature id is negated. This disambiguates between edge-edge contacts and vertex contacts.
-            //vertexId = -(axisIdAZ + axisIdAX + axisIdAY);
-
-            //AddFaceVertexContact(ref vertexA, ref vertexId,
-            //    ref tangentBX, ref tangentBY, ref halfSpanBX, ref halfSpanBY,
-            //    ref candidates, ref rawContactCount, pairCount);
-
+                 
             ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 8, normalA, manifold.Normal, faceCenterBToFaceCenterA, tangentBX, tangentBY, epsilonScale, -speculativeMargin, pairCount,
               out var contact0, out var contact1, out var contact2, out var contact3,
               out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
@@ -618,116 +521,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifoldDepth = rawContact.Depth;
             manifoldFeatureId = rawContact.FeatureId;
         }
-
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //private static void AddFaceVertexContact(ref Vector3Wide faceCenterBToVertexA, ref Vector<int> vertexId,
-        //    ref Vector3Wide tangentBX, ref Vector3Wide tangentBY, ref Vector<float> halfSpanBX, ref Vector<float> halfSpanBY,
-        //    ref ManifoldCandidate candidates, ref Vector<int> rawContactCount, int pairCount)
-        //{
-        //    //Get the closest point on face B to vertex A.
-        //    //Note that contacts outside of face B are not added; that could generate contacts outside of either representative face, which can cause some poor contact choices.
-        //    ManifoldCandidate candidate;
-        //    candidate.FeatureId = vertexId;
-        //    Vector3Wide.Dot(faceCenterBToVertexA, tangentBX, out candidate.X);
-        //    Vector3Wide.Dot(faceCenterBToVertexA, tangentBY, out candidate.Y);
-        //    var containedInFaceB = Vector.BitwiseAnd(
-        //        Vector.BitwiseAnd(Vector.GreaterThanOrEqual(candidate.X, -halfSpanBX), Vector.LessThanOrEqual(candidate.X, halfSpanBX)),
-        //        Vector.BitwiseAnd(Vector.GreaterThanOrEqual(candidate.Y, -halfSpanBY), Vector.LessThanOrEqual(candidate.Y, halfSpanBY)));
-        //    //candidate.X = Vector.Min(Vector.Max(candidate.X, -halfSpanBX), halfSpanBX);
-        //    //candidate.Y = Vector.Min(Vector.Max(candidate.Y, -halfSpanBY), halfSpanBY);
-        //    //While we explicitly used an epsilon during edge contact generation, there is a risk of buffer overrun during the face vertex phase.
-        //    //Rather than assuming our numerical epsilon is guaranteed to always work, explicitly clamp the count. This should essentially never be needed,
-        //    //but it is very cheap and guarantees no memory stomping with a pretty reasonable fallback.
-        //    var belowBufferCapacity = Vector.LessThan(rawContactCount, new Vector<int>(8));
-        //    var contactExists = Vector.BitwiseAnd(containedInFaceB, belowBufferCapacity);
-        //    ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, contactExists, pairCount);
-        //}
-
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //private static void AddEdgeContacts(
-        //    ref ManifoldCandidate candidates, ref Vector<int> rawContactCount,
-        //    ref Vector<float> halfSpanB, ref Vector<float> epsilonScale,
-        //    ref Vector<float> tMin, ref Vector<float> tMax,
-        //    ref Vector<float> candidateMinX, ref Vector<float> candidateMinY,
-        //    ref Vector<float> candidateMaxX, ref Vector<float> candidateMaxY,
-        //    ref Vector<int> edgeIdB, int pairCount)
-        //{
-        //    //If -halfSpan<min<halfSpan && max>min for an edge, use the min intersection as a contact.
-        //    //If -halfSpan<max<=halfSpan && (max-min)>epsilon, use the max intersection as a contact.
-        //    //Note the comparisons: if the max lies on a face vertex, it is used, but if the min lies on a face vertex, it is not. This avoids redundant entries.
-
-        //    //Note that the candidates are stored in terms of locations on the face of B along the tangentBX and tangentBY.
-        //    ManifoldCandidate candidate;
-        //    candidate.X = candidateMinX;
-        //    candidate.Y = candidateMinY;
-        //    //Note that we use only the edge id of B, regardless of which face bounds contributed to the contact. This is a little permissive, since changes to the 
-        //    //contributors from A won't affect accumulated impulse reuse. I suspect it won't cause any serious issues.
-        //    candidate.FeatureId = edgeIdB;
-        //    var minContactExists = Vector.BitwiseAnd(Vector.BitwiseAnd(
-        //        Vector.GreaterThanOrEqual(tMax, tMin),
-        //        Vector.GreaterThan(tMin, -halfSpanB)),
-        //        Vector.LessThan(tMin, halfSpanB));
-        //    ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, minContactExists, pairCount);
-        //    candidate.X = candidateMaxX;
-        //    candidate.Y = candidateMaxY;
-        //    candidate.FeatureId = edgeIdB + new Vector<int>(64);
-        //    var maxContactExists = Vector.BitwiseAnd(Vector.BitwiseAnd(
-        //        Vector.GreaterThan(tMax, -halfSpanB),
-        //        Vector.LessThanOrEqual(tMax, halfSpanB)),
-        //        Vector.GreaterThan(tMax - tMin, new Vector<float>(1e-5f) * epsilonScale));
-        //    ManifoldCandidateHelper.AddCandidate(ref candidates, ref rawContactCount, candidate, maxContactExists, pairCount);
-        //}
-
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //private static unsafe void GetEdgeVersusBoundsIntersections(ref Vector3Wide tangentA, ref Vector<float> halfSpanA,
-        //  ref Vector<float> tangentDotBoundsNormal, ref Vector3Wide faceCenterB, ref Vector3Wide edgeOffsetB,
-        //  out Vector<float> t0Min, out Vector<float> t0Max, out Vector<float> t1Min, out Vector<float> t1Max)
-        //{
-        //    //Intersect both tangentB edges against the planes with normal equal to tangentA.
-        //    //By protecting against division by zero while maintaining sign, the resulting intervals will still be usable.
-        //    Vector3Wide.Subtract(faceCenterB, edgeOffsetB, out var edgeCenter0);
-        //    Vector3Wide.Add(faceCenterB, edgeOffsetB, out var edgeCenter1);
-        //    Vector3Wide.Dot(edgeCenter0, tangentA, out var taEdgeCenter0);
-        //    Vector3Wide.Dot(edgeCenter1, tangentA, out var taEdgeCenter1);
-        //    var inverseTangentBoundsNormal = Vector.ConditionalSelect(Vector.LessThan(tangentDotBoundsNormal, Vector<float>.Zero), -Vector<float>.One, Vector<float>.One) /
-        //        Vector.Max(new Vector<float>(1e-15f), Vector.Abs(tangentDotBoundsNormal));
-        //    var axbxScaledHalfSpanAX = halfSpanA * inverseTangentBoundsNormal;
-        //    var axbxScaledAXEdgeCenterX0 = -taEdgeCenter0 * inverseTangentBoundsNormal;
-        //    var axbxScaledAXEdgeCenterX1 = -taEdgeCenter1 * inverseTangentBoundsNormal;
-        //    //These are the t values for intersection between tangentB edges and the tangentA bounding planes.
-        //    //01 refers to the negative offset edge on B, and the positive offset bounding plane on A.
-        //    //Note that they are left unclamped against the edge's extents. We defer that until later to avoid duplicate work.
-        //    var t00 = axbxScaledAXEdgeCenterX0 - axbxScaledHalfSpanAX;
-        //    var t01 = axbxScaledAXEdgeCenterX0 + axbxScaledHalfSpanAX;
-        //    var t10 = axbxScaledAXEdgeCenterX1 - axbxScaledHalfSpanAX;
-        //    var t11 = axbxScaledAXEdgeCenterX1 + axbxScaledHalfSpanAX;
-        //    t0Min = Vector.Min(t00, t01);
-        //    t0Max = Vector.Max(t00, t01);
-        //    t1Min = Vector.Min(t10, t11);
-        //    t1Max = Vector.Max(t10, t11);
-        //}
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //private static unsafe void GetEdgeVersusFaceBoundsIntervals(ref Vector3Wide tangentAX, ref Vector3Wide tangentAY, ref Vector<float> halfSpanAX, ref Vector<float> halfSpanAY,
-        //    ref Vector<float> axb, ref Vector<float> ayb, ref Vector3Wide faceCenterB, ref Vector<float> halfSpanB, ref Vector3Wide edgeOffsetB,
-        //    out Vector<float> b0Min, out Vector<float> b0Max, out Vector<float> b1Min, out Vector<float> b1Max)
-        //{
-        //    GetEdgeVersusBoundsIntersections(ref tangentAX, ref halfSpanAX, ref axb, ref faceCenterB, ref edgeOffsetB,
-        //        out var tAX0Min, out var tAX0Max, out var tAX1Min, out var tAX1Max);
-        //    GetEdgeVersusBoundsIntersections(ref tangentAY, ref halfSpanAY, ref ayb, ref faceCenterB, ref edgeOffsetB,
-        //        out var tAY0Min, out var tAY0Max, out var tAY1Min, out var tAY1Max);
-        //    var negativeHalfSpanB = -halfSpanB;
-        //    //Note that we are computing the intersection of the two intervals.
-        //    //If they overlap, then the minimum is the greater of the two minimums, and the maximum is the lesser of the two maximums.
-        //    //After applying those filters, if the min is greater than the max, then the interval has no actual overlap.
-        //    //Note that we explicitly do not clamp both sides of the interval. We want to preserve any interval where the max is below -halfSpanB, or the min is above halfSpanB.
-        //    //Such cases correspond to no contacts.
-        //    //(Note that we do clamp the maximum to the halfSpan. If an interval maximum reaches the end of the interval, it is used to create a contact representing the associated B vertex.
-        //    //The minimums are also clamped, because two of the edges flip their intervals during contact generation to ensure winding. The minimum becomes the maximum in that case.)
-        //    b0Min = Vector.Max(negativeHalfSpanB, Vector.Max(tAX0Min, tAY0Min));
-        //    b0Max = Vector.Min(halfSpanB, Vector.Min(tAX0Max, tAY0Max));
-        //    b1Min = Vector.Max(negativeHalfSpanB, Vector.Max(tAX1Min, tAY1Min));
-        //    b1Max = Vector.Min(halfSpanB, Vector.Min(tAX1Max, tAY1Max));
-        //}
 
         public void Test(ref BoxWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
