@@ -238,6 +238,19 @@ namespace BepuUtilities
         }
 
         /// <summary>
+        /// Multiplies the components of one vector with another.
+        /// </summary>
+        /// <param name="a">First vector to multiply.</param>
+        /// <param name="b">Second vector to multiply.</param>
+        /// <param name="result">Result of the multiplication.</param>
+        public static void Multiply(in Vector3Wide a, in Vector3Wide b, out Vector3Wide result)
+        {
+            result.X = a.X * b.X;
+            result.Y = a.Y * b.Y;
+            result.Z = a.Z * b.Z;
+        }
+
+        /// <summary>
         /// Pulls one lane out of the wide representation.
         /// </summary>
         /// <param name="source">Source of the lane.</param>

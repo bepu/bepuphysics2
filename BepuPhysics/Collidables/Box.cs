@@ -156,7 +156,7 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Type id of box shapes.
         /// </summary>
-        public const int Id = 2;
+        public const int Id = 3;
         public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
@@ -202,7 +202,7 @@ namespace BepuPhysics.Collidables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return 2;
+                return 3;
             }
         }
 
