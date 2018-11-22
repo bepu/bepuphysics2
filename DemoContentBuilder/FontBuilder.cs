@@ -128,7 +128,6 @@ namespace DemoContentBuilder
                     var atlasData = atlas.Pin();
                     var preciseData = (float*)preciseAtlas.Pin();
                     var alphaData = rasterizedAlphas.Pin();
-                    var pool = new PassthroughArrayPool<Int2>();
                     //for (int i = 0; i < sortedCharacterData.Length; ++i)
                     Parallel.For(0, sortedCharacterData.Length, i =>
                     {

@@ -15,7 +15,7 @@ cbuffer VertexConstants : register(b0)
 	float3 CameraBackward;
 };
 
-struct CapsuleInstance
+struct CylinderInstance
 {
 	nointerpolation float3 Position : Position;
 	nointerpolation float Radius : Radius;
@@ -24,13 +24,13 @@ struct CapsuleInstance
 	nointerpolation uint PackedColor : PackedColor;
 };
 
-StructuredBuffer<CapsuleInstance> Instances : register(t0);
+StructuredBuffer<CylinderInstance> Instances : register(t0);
 
 struct PSInput
 {
 	float4 Position : SV_Position;
 	float3 ToAABB : RayDirection;
-	CapsuleInstance Instance;
+	CylinderInstance Instance;
 };
 PSInput VSMain(uint vertexId : SV_VertexId)
 {
@@ -56,7 +56,8 @@ PSInput VSMain(uint vertexId : SV_VertexId)
 	float4 orientation = UnpackOrientation(output.Instance.PackedOrientation);
 	float3x3 orientationMatrix = ConvertToRotationMatrix(orientation);
 	float3x3 viewSpaceInstanceOrientation = mul(orientationMatrix, worldToViewRotation);
-	float3 viewMaxOffset = output.Instance.HalfLength * abs(viewSpaceInstanceOrientation[1]) + output.Instance.Radius;
+	float3 positiveDiscBoundOffsets = sqrt(saturate(1.0 - viewSpaceInstanceOrientation[1] * viewSpaceInstanceOrientation[1])) * output.Instance.Radius;
+	float3 viewMaxOffset = abs(output.Instance.HalfLength * viewSpaceInstanceOrientation[1]) + positiveDiscBoundOffsets;
 
 	float3 vertexViewPosition = viewPosition + viewMaxOffset * aabbCoordinates;
 	if (aabbCoordinates.z > 0)
@@ -88,134 +89,131 @@ cbuffer PixelConstants : register(b1)
 	float2 PixelSizeAtUnitPlane;
 };
 
-//Like the cylinder, this is just using the scalar version of the intersection routine. It's not very GPU friendly, but thaaaat's okay.
-bool RayCastCapsule(float3 rayDirection, float3 capsulePosition, float4 capsuleOrientation, float radius, float halfLength,
+//Like the capsule, this is just using the scalar version of the intersection routine. It's not very GPU friendly, but thaaaat's okay.
+bool RayCastCylinder(float3 rayDirection, float3 cylinderPosition, float4 cylinderOrientation, float radius, float halfLength,
 	out float t, out float3 hitLocation, out float3 hitNormal)
 {
 	//It's convenient to work in local space, so pull the ray into the capsule's local space.
-	float3x3 orientationMatrix = ConvertToRotationMatrix(capsuleOrientation);
-	float3 o = mul(-capsulePosition, transpose(orientationMatrix));
+	float3x3 orientationMatrix = ConvertToRotationMatrix(cylinderOrientation);
+	float3 o = mul(-cylinderPosition, transpose(orientationMatrix));
 	float3 d = mul(rayDirection, transpose(orientationMatrix));
 
 	//Note that we assume the ray direction is unit length. That helps with some numerical issues and simplifies some things.
-
-	//Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
-	float tOffset = 0;// max(0, -dot(o, d) - (halfLength + radius));
-	o += d * tOffset;
 	float2 oh = float2(o.x, o.z);
 	float2 dh = float2(d.x, d.z);
 	float a = dot(dh, dh);
 	float b = dot(oh, dh);
 	float radiusSquared = radius * radius;
 	float c = dot(oh, oh) - radiusSquared;
+
+	hitLocation = hitNormal = t = 0;
 	if (b > 0 && c > 0)
 	{
 		//Ray is outside and pointing away, no hit.
-		hitLocation = hitNormal = t = 0;
 		return false;
 	}
 
-	float sphereY;
-	if (a > 1.0e-8)
+	float discY;
+	if (a > 1e-8f)
 	{
 		float discriminant = b * b - a * c;
 		if (discriminant < 0)
 		{
-			//The infinite cylinder isn't hit, so the capsule can't be hit.
-			hitLocation = hitNormal = t = 0;
+			//The infinite cylinder isn't hit, so the finite cylinder can't be hit.
 			return false;
 		}
-		t = max(-tOffset, (-b - sqrt(discriminant)) / a);
-		float3 cylinderHitLocation = o + d * t;
-		if (cylinderHitLocation.y < -halfLength)
+		t = (-b - sqrt(discriminant)) / a;
+		t = max(t, 0);
+		hitLocation.y = o.y + d.y * t;
+		if (hitLocation.y < -halfLength)
 		{
-			sphereY = -halfLength;
+			discY = -halfLength;
 		}
-		else if (cylinderHitLocation.y > halfLength)
+		else if (hitLocation.y > halfLength)
 		{
-			sphereY = halfLength;
+			discY = halfLength;
 		}
 		else
 		{
-			//The hit is on the cylindrical portion of the capsule.
-			hitNormal = mul(float3(cylinderHitLocation.x, 0, cylinderHitLocation.z) / radius, orientationMatrix);
-			t = t + tOffset;
-			hitLocation = rayDirection * t;
+			//The hit is on the side of the cylinder.
+			hitLocation.xz = o.xz + d.xz * t;
+			hitNormal.xz = hitLocation.xz / radius;
+			hitNormal.y = 0;
+			hitNormal = mul(hitNormal, orientationMatrix);
+			hitLocation = mul(hitLocation, orientationMatrix) + cylinderPosition;
 			return true;
 		}
 	}
 	else
 	{
-		//The ray is parallel to the axis; the impact is on a spherical cap or nothing.
-		sphereY = d.y > 0 ? -halfLength : halfLength;
-	}
-	float3 os = float3(o.x, o.y - sphereY, o.z);
-	float capB = dot(os, d);
-	float capC = dot(os, os) - radiusSquared;
-
-	if (capB > 0 && capC > 0)
-	{
-		//Ray is outside and pointing away, no hit.
-		hitLocation = hitNormal = t = 0;
-		return false;
+		//The ray is parallel to the axis; the impact is on a disc or nothing.
+		discY = d.y > 0 ? -halfLength : halfLength;
 	}
 
-	float capDiscriminant = capB * capB - capC;
-	if (capDiscriminant < 0)
+	//Intersect the ray with the plane anchored at discY with normal equal to (0,1,0).
+	//t = dot(rayOrigin - (0,discY,0), (0,1,0)) / dot(rayDirection, (0,1,0)
+	if (o.y * d.y >= 0)
 	{
-		//Ray misses, no hit.
-		hitLocation = hitNormal = t = 0;
+		//The ray can only hit the disc if the direction points toward the cylinder.
 		return false;
 	}
-	t = max(-tOffset, -capB - sqrt(capDiscriminant));
-	hitNormal = mul((os + d * t) / radius, orientationMatrix);
-	t = t + tOffset;
-	hitLocation = rayDirection * t;
+	t = (discY - o.y) / d.y;
+	hitLocation.xz = o.xz + d.xz * t;
+	if ((hitLocation.x * hitLocation.x + hitLocation.z * hitLocation.z) > radiusSquared)
+	{
+		//The hit missed the cap.
+		return false;
+	}
+	hitLocation.y = discY;
+	hitLocation = mul(hitLocation, orientationMatrix) + cylinderPosition;
+	hitNormal = d.y < 0 ? orientationMatrix[1] : -orientationMatrix[1];
 	return true;
-}
-
-float GetSignedDistance(float3 direction, float3 position, float4 orientation, float radius, float halfLength, out float3 closestPointOnRay)
-{
-	//Compute closest points between the infinite eye ray and the capsule's internal line segment.
-	//Note that direction is assumed to be unit length.
-
-	//Compute the closest points between the infinite eye ray and internal line segment. No clamping to begin with.
-	//We want to minimize distance = ||(a + da * ta) - (b + db * tb)||.
-	//Taking the derivative with respect to ta and doing some algebra (taking into account ||da|| == ||db|| == 1) to solve for ta yields:
-	//ta = (da * (b - a) + (db * (a - b)) * (da * db)) / (1 - ((da * db) * (da * db))    
-	//Treat the capsule's internal segment as 'a', and the eye ray as 'b'.
-	float3 da = TransformUnitY(orientation);
-	float daOffsetB = -dot(da, position);
-	float dbOffsetB = -dot(direction, position);
-	float dadb = dot(da, direction);
-	//Note potential division by zero when the axes are parallel. Arbitrarily clamp; near zero values will instead produce extreme values which get clamped to reasonable results.
-	float ta = clamp((daOffsetB - dbOffsetB * dadb) / max(1e-15, 1.0 - dadb * dadb), -halfLength, halfLength);
-	//tb = ta * (da * db) - db * (b - a)
-	float tb = ta * dadb - dbOffsetB;
-	closestPointOnRay = tb * direction;
-	float3 segmentLocation = position + da * ta;
-	float3 offset = closestPointOnRay - segmentLocation;
-	float internalDistance = length(offset);
-	return internalDistance - radius;
 }
 
 PSOutput PSMain(PSInput input)
 {
 	PSOutput output;
-	float t;
-	float3 hitLocation, hitNormal;
+	float t = 0;
+	float3 hitLocation = 0, hitNormal = 0;
 	float4 orientation = UnpackOrientation(input.Instance.PackedOrientation);
-	float3 direction = normalize(input.ToAABB);
-	if (RayCastCapsule(direction, input.Instance.Position, orientation, input.Instance.Radius, input.Instance.HalfLength, t, hitLocation, hitNormal))
+	//While we could create a signed distance without terrible difficulty here, cylinders have normal discontinuities that make coverage insufficient for full antialiasing.
+	//It would also be possible to modify the ray cast to create a pixel-sensitive 'bevel' to reduce the edge's frequency.
+	//Instead of any of that, we apologize to low end graphics cards and brute force multiple ray cast samples.
+	//This still won't be quite as good as performing multiple shading samples, but...
+	float3 directionDDX = ddx(input.ToAABB);
+	float3 directionDDY = ddy(input.ToAABB);
+	const int sampleCount = 4;
+	float3 directions[sampleCount];
+	directions[0] = normalize(input.ToAABB + directionDDX * -0.125 + directionDDY * -0.375);
+	directions[1] = normalize(input.ToAABB + directionDDX * 0.375 + directionDDY * -0.125);
+	directions[2] = normalize(input.ToAABB + directionDDX * -0.375 + directionDDY * 0.125);
+	directions[3] = normalize(input.ToAABB + directionDDX * 0.125 + directionDDY * 0.375);
+	float hitCount = 0;
+	for (int i = 0; i < sampleCount; ++i)
 	{
+		float ti;
+		float3 hitLocationi, hitNormali;
+		if (RayCastCylinder(directions[i], input.Instance.Position, orientation, input.Instance.Radius, input.Instance.HalfLength, ti, hitLocationi, hitNormali))
+		{
+			t += ti;
+			hitLocation += hitLocationi;
+			hitNormal += hitNormali;
+			hitCount++;
+		}
+	}
+	if (hitCount > 0)
+	{
+		float inverseHitCount = 1.0 / hitCount;
+		t *= inverseHitCount;
+		hitLocation *= inverseHitCount;
+		hitNormal = normalize(hitNormal);
+
 		float3 dpdx, dpdy;
 		GetScreenspaceDerivatives(hitLocation, hitNormal, input.ToAABB, CameraRightPS, CameraUpPS, CameraBackwardPS, PixelSizeAtUnitPlane, dpdx, dpdy);
 		float3 color = ShadeSurface(
 			hitLocation, hitNormal, UnpackR11G11B10_UNorm(input.Instance.PackedColor), dpdx, dpdy,
 			input.Instance.Position, orientation);
-		float3 closestPointOnRay;
-		float signedDistance = GetSignedDistance(direction, input.Instance.Position, orientation, input.Instance.Radius, input.Instance.HalfLength, closestPointOnRay);
-		output.Color = float4(color, GetCoverage(signedDistance, PixelSizeAtUnitPlane, -dot(closestPointOnRay, CameraBackwardPS)));
+		output.Color = float4(color, hitCount / float(sampleCount));
 		output.Depth = GetProjectedDepth(-dot(CameraBackwardPS, hitLocation), Near, Far);
 	}
 	else

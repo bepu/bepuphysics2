@@ -64,7 +64,7 @@ namespace BepuPhysics.Collidables
             //We want to compute 3 different sample directions: (1,0,0), (0,1,0), and (0,0,1). This is equivalent to simply accessing the component X Y or Z out of the axis.
             //Using this fact, we can compute all three directions together:
             Quaternion.TransformUnitY(orientation, out var y);
-            var positiveDiscBoundOffsets = Vector3.SquareRoot(Vector3.One - y * y) * Radius;
+            var positiveDiscBoundOffsets = Vector3.SquareRoot(Vector3.Max(Vector3.Zero, Vector3.One - y * y)) * Radius;
             max = Vector3.Abs(HalfLength * y) + positiveDiscBoundOffsets;
             //Cylinders are symmetric.
             min = -max;
@@ -212,9 +212,9 @@ namespace BepuPhysics.Collidables
             QuaternionWide.TransformUnitY(orientations, out var y);
             Vector3Wide.Multiply(y, y, out var yy);
             Vector3Wide.Subtract(Vector<float>.One, yy, out var squared);
-            max.X = Vector.Abs(HalfLength * y.X) + Vector.SquareRoot(squared.X) * Radius;
-            max.Y = Vector.Abs(HalfLength * y.Y) + Vector.SquareRoot(squared.Y) * Radius;
-            max.Z = Vector.Abs(HalfLength * y.Z) + Vector.SquareRoot(squared.Z) * Radius;
+            max.X = Vector.Abs(HalfLength * y.X) + Vector.SquareRoot(Vector.Max(Vector<float>.Zero, squared.X)) * Radius;
+            max.Y = Vector.Abs(HalfLength * y.Y) + Vector.SquareRoot(Vector.Max(Vector<float>.Zero, squared.Y)) * Radius;
+            max.Z = Vector.Abs(HalfLength * y.Z) + Vector.SquareRoot(Vector.Max(Vector<float>.Zero, squared.Z)) * Radius;
             //Cylinders are symmetric.
             Vector3Wide.Negate(max, out min);
         }

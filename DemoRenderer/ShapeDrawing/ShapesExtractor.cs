@@ -15,6 +15,7 @@ namespace DemoRenderer.ShapeDrawing
         //For now, we only have spheres. Later, once other shapes exist, this will be responsible for bucketing the different shape types and when necessary caching shape models.
         internal QuickList<SphereInstance> spheres;
         internal QuickList<CapsuleInstance> capsules;
+        internal QuickList<CylinderInstance> cylinders;
         internal QuickList<BoxInstance> boxes;
         internal QuickList<TriangleInstance> triangles;
         internal QuickList<MeshInstance> meshes;
@@ -27,6 +28,7 @@ namespace DemoRenderer.ShapeDrawing
         {
             spheres = new QuickList<SphereInstance>(initialCapacityPerShapeType, pool);
             capsules = new QuickList<CapsuleInstance>(initialCapacityPerShapeType, pool);
+            cylinders = new QuickList<CylinderInstance>(initialCapacityPerShapeType, pool);
             boxes = new QuickList<BoxInstance>(initialCapacityPerShapeType, pool);
             triangles = new QuickList<TriangleInstance>(initialCapacityPerShapeType, pool);
             meshes = new QuickList<MeshInstance>(initialCapacityPerShapeType, pool);
@@ -39,6 +41,7 @@ namespace DemoRenderer.ShapeDrawing
         {
             spheres.Count = 0;
             capsules.Count = 0;
+            cylinders.Count = 0;
             boxes.Count = 0;
             triangles.Count = 0;
             meshes.Count = 0;
@@ -81,6 +84,18 @@ namespace DemoRenderer.ShapeDrawing
                         instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
                         instance.PackedColor = Helpers.PackColor(color);
                         capsules.Add(instance, pool);
+                    }
+                    break;
+                case Cylinder.Id:
+                    {
+                        CylinderInstance instance;
+                        instance.Position = pose.Position;
+                        ref var cylinder = ref Unsafe.AsRef<Cylinder>(shapeData);
+                        instance.Radius = cylinder.Radius;
+                        instance.HalfLength = cylinder.HalfLength;
+                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
+                        instance.PackedColor = Helpers.PackColor(color);
+                        cylinders.Add(instance, pool);
                     }
                     break;
                 case Box.Id:
@@ -247,6 +262,7 @@ namespace DemoRenderer.ShapeDrawing
             MeshCache.Dispose();
             spheres.Dispose(pool);
             capsules.Dispose(pool);
+            cylinders.Dispose(pool);
             boxes.Dispose(pool);
             triangles.Dispose(pool);
             meshes.Dispose(pool);

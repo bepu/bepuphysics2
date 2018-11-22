@@ -1,5 +1,6 @@
 ﻿ShapeDrawing\RenderSpheres.hlsl
 ShapeDrawing\RenderCapsules.hlsl
+ShapeDrawing\RenderCylinders.hlsl
 ShapeDrawing\RenderBoxes.hlsl
 ShapeDrawing\RenderTriangles.hlsl
 ShapeDrawing\RenderMeshes.hlsl

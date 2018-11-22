@@ -47,8 +47,6 @@ namespace BepuPhysics
             
         }
 
-
-
         public static void SwapBodyLocation(Bodies bodies, Solver solver, int a, int b)
         {
             Debug.Assert(a != b, "Swapping a body with itself isn't meaningful. Whaddeyer doin?");
@@ -134,106 +132,5 @@ namespace BepuPhysics
             }
 
         }
-
-
-
-        //TODO: Note that there are a few ways we can do multithreading. The naive way is to just apply locks on all the nodes affected by an optimization candidate.
-        //This is roughly what we do below and it does work reasonably well, but a major fraction of the total execution time will be tied up in intercore communication.
-        //It does not scale particularly well; something around 2.5x on an 8 core ryzen and a 4 core 3770K.
-        //For now, we aren't too concerned- even if we could speed it up by a factor of infinity, we're talking about a stage that takes <100us for a simulation with 30k+ bodies.
-
-        //Some future possibilities:
-        //1) At the cost of convergence speed, you can instead choose to optimize region by region. 
-        //An optimizing thread can be given a subset of all bodies with guaranteed exclusive access by scheduling.
-        //While that thread can't necessarily swap bodies to where the locking version would, it can make progress toward the goal over time.
-        //Rather than 'pulling', it would 'push'- find a parent to the left, and go as far to the left towards it as possible.
-        //You'd have to be a bit tricky to ensure that all bodies will move towards it (rather than just one that continually gets swapped around), and the end behavior
-        //could be a little different, but it might end up being faster overall due to the lack of contention.
-        //The same concept could apply to the broad phase optimizer too, though it's a little easier there (and the naive locking requirements are more complex per swap, too).
-
-        //2) Another parallel-across regions approach: rephrase the optimization as a sort. Compute the target location of every body in a region in a multithreaded prepass.
-        //Then, sort the bodies in the region by the target location. There's a high probability that some bodies targets will be invalidated during the movement,
-        //but so long as it eventually converges, that's totally fine.
-
-        //Note that external systems which have to respond to body movements will generally be okay without their own synchronization in multithreaded cache optimization.
-        //For example, the constraint handle, type batch index, index in type batch, and body index in constraint do not change. If we properly synchronize
-        //the body accesses, then the changes to constraint bodies will be synchronized too.
-
-        //Avoid a little pointless false sharing with padding.
-        [StructLayout(LayoutKind.Explicit, Size = 128)]
-        struct Worker
-        {
-            [FieldOffset(0)]
-            public int Index;
-            [FieldOffset(4)]
-            public int HighestNeededClaimCount;
-            [FieldOffset(8)]
-            public int CompletedJobs;
-            [FieldOffset(16)]
-            public QuickList<int> WorkerClaims;
-        }
-        int remainingOptimizationAttemptCount;
-        Buffer<Worker> workers;
-
-        struct ClaimConnectedBodiesEnumerator : IForEach<int>
-        {
-            public Bodies Bodies;
-            public Solver Solver;
-            /// <summary>
-            /// The claim states for every body in the simulation.
-            /// </summary>
-            public Buffer<int> ClaimStates;
-            /// <summary>
-            /// The set of claims owned by the current worker.
-            /// </summary>
-            public QuickList<int> WorkerClaims;
-            public int ClaimIdentity;
-            public bool AllClaimsSucceededSoFar;
-
-            public bool TryClaim(int index)
-            {
-                var preclaimValue = Interlocked.CompareExchange(ref ClaimStates[index], ClaimIdentity, 0);
-                if (preclaimValue == 0)
-                {
-                    Debug.Assert(WorkerClaims.Count < WorkerClaims.Span.Length,
-                        "The claim enumerator should never be invoked if the worker claims buffer is too small to hold all the bodies.");
-                    WorkerClaims.AddUnsafely(index);
-                }
-                else if (preclaimValue != ClaimIdentity)
-                {
-                    //Note that it only fails when it's both nonzero AND not equal to the claim identity. It means it's claimed by a different worker.
-                    return false;
-                }
-                return true;
-            }
-            /// <summary>
-            /// Because new claims are appended, and a failed claim always results in the removal of a contiguous set of trailing indices, it acts like a stack.
-            /// This pops off a number of the most recent claim indices.
-            /// </summary>
-            /// <param name="workerClaimsToPop">Number of claims to remove from the end of the worker claims list.</param>
-            public void Unclaim(int workerClaimsToPop)
-            {
-                Debug.Assert(workerClaimsToPop <= WorkerClaims.Count, "The pop request should never exceed the accumulated claims.");
-                for (int i = 0; i < workerClaimsToPop; ++i)
-                {
-                    WorkerClaims.Pop(out var poppedIndex);
-                    //We don't need to do anything special here, provided a reasonably strong memory model. Just release the slot.
-                    ClaimStates[poppedIndex] = 0;
-                }
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void LoopBody(int connectedBodyIndex)
-            {
-                //TODO: If you end up going with this approach, you should probably use a IBreakableForEach instead to avoid unnecessary traversals.
-                if (AllClaimsSucceededSoFar)
-                {
-                    if (!TryClaim(connectedBodyIndex))
-                        AllClaimsSucceededSoFar = false;
-                }
-            }
-
-        }
-
     }
 }

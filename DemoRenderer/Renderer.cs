@@ -21,6 +21,7 @@ namespace DemoRenderer
         //They'll likely be stored in an array indexed by a shape type rather than just being a swarm of properties.
         public RayTracedRenderer<SphereInstance> SphereRenderer { get; private set; }
         public RayTracedRenderer<CapsuleInstance> CapsuleRenderer { get; private set; }
+        public RayTracedRenderer<CylinderInstance> CylinderRenderer { get; private set; }
         public BoxRenderer BoxRenderer { get; private set; }
         public TriangleRenderer TriangleRenderer { get; private set; }
         public MeshRenderer MeshRenderer { get; private set; }
@@ -69,6 +70,7 @@ namespace DemoRenderer
             Shapes = new ShapesExtractor(Surface.Device, looper, pool);
             SphereRenderer = new RayTracedRenderer<SphereInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderSpheres.hlsl");
             CapsuleRenderer = new RayTracedRenderer<CapsuleInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderCapsules.hlsl");
+            CylinderRenderer = new RayTracedRenderer<CylinderInstance>(surface.Device, ShaderCache, @"ShapeDrawing\RenderCylinders.hlsl");
             BoxRenderer = new BoxRenderer(surface.Device, ShaderCache);
             TriangleRenderer = new TriangleRenderer(surface.Device, ShaderCache);
             MeshRenderer = new MeshRenderer(surface.Device, Shapes.MeshCache, ShaderCache);
@@ -228,6 +230,7 @@ namespace DemoRenderer
             context.OutputMerger.SetBlendState(a2cBlendState);
             SphereRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.spheres.Span), 0, Shapes.spheres.Count);
             CapsuleRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.capsules.Span), 0, Shapes.capsules.Count);
+            CylinderRenderer.Render(context, camera, Surface.Resolution, SpanConverter.AsSpan(Shapes.cylinders.Span), 0, Shapes.cylinders.Count);
 
             //Non-raytraced shapes just use regular opaque rendering.
             context.OutputMerger.SetBlendState(opaqueBlendState);
@@ -270,6 +273,7 @@ namespace DemoRenderer
 
                 SphereRenderer.Dispose();
                 CapsuleRenderer.Dispose();
+                CylinderRenderer.Dispose();
                 BoxRenderer.Dispose();
                 TriangleRenderer.Dispose();
                 MeshRenderer.Dispose();
