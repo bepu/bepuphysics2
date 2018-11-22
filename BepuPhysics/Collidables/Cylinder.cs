@@ -10,7 +10,6 @@ using BepuUtilities;
 
 namespace BepuPhysics.Collidables
 {
-
     /// <summary>
     /// Collision shape representing a cylinder.
     /// </summary>
@@ -150,7 +149,7 @@ namespace BepuPhysics.Collidables
                 normal = new Vector3();
                 return false;
             }
-            t = (o.Y - discY) / d.Y;
+            t = (discY - o.Y) / d.Y;
             var hitLocation = o + d * t;
             if (hitLocation.X * hitLocation.X + hitLocation.Z * hitLocation.Z > radiusSquared)
             {
@@ -167,30 +166,19 @@ namespace BepuPhysics.Collidables
         public void ComputeInertia(float mass, out BodyInertia inertia)
         {
             inertia.InverseMass = 1f / mass;
-            var r2 = Radius * Radius;
-            var h2 = HalfLength * HalfLength;
-            var cylinderVolume = 2 * HalfLength * r2 * MathHelper.Pi;
-            var sphereVolume = (4f / 3f) * r2 * Radius * MathHelper.Pi;
-            var inverseTotal = 1f / (cylinderVolume + sphereVolume);
-            //Volume is in units of the capsule's whole volume.
-            cylinderVolume *= inverseTotal;
-            sphereVolume *= inverseTotal;
-            inertia.InverseInertiaTensor.XX = inertia.InverseMass / (
-                cylinderVolume * ((3f / 12f) * r2 + (4f / 12f) * h2) +
-                sphereVolume * ((2f / 5f) * r2 + (6f / 8f) * Radius * HalfLength + h2));
+            float diagValue = inertia.InverseMass / ((4 * .0833333333f) * HalfLength * HalfLength + .25f * Radius * Radius);
+            inertia.InverseInertiaTensor.XX = diagValue;
             inertia.InverseInertiaTensor.YX = 0;
-            inertia.InverseInertiaTensor.YY = inertia.InverseMass / (cylinderVolume * (1f / 2f) * r2 + sphereVolume * (2f / 5f) * r2);
+            inertia.InverseInertiaTensor.YY = 2f * inertia.InverseMass / (Radius * Radius);
             inertia.InverseInertiaTensor.ZX = 0;
             inertia.InverseInertiaTensor.ZY = 0;
-            inertia.InverseInertiaTensor.ZZ = inertia.InverseInertiaTensor.XX;
+            inertia.InverseInertiaTensor.ZZ = diagValue;
         }
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
-            return new ConvexShapeBatch<Capsule, CapsuleWide>(pool, initialCapacity);
+            return new ConvexShapeBatch<Cylinder, CylinderWide>(pool, initialCapacity);
         }
-
-
 
         /// <summary>
         /// Type id of capsule shapes.
@@ -289,22 +277,21 @@ namespace BepuPhysics.Collidables
             //The ray can only hit the disc if the direction points toward the cylinder.
             var rayPointsTowardDisc = Vector.LessThan(o.Y * d.Y, Vector<float>.Zero);
 
-            var capT = (o.Y - discY) / d.Y;
-            capT = (t + tOffset) * inverseDLength;
+            var capT = (discY - o.Y) / d.Y;
 
-            var hitLocationX = o.X + d.X * t;
-            var hitLocationZ = o.Z + d.Z * t;
+            var hitLocationX = o.X + d.X * capT;
+            var hitLocationZ = o.Z + d.Z * capT;
             var capHitWithinRadius = Vector.LessThanOrEqual(hitLocationX * hitLocationX + hitLocationZ * hitLocationZ, radiusSquared);
             var hitCap = Vector.BitwiseAnd(rayPointsTowardDisc, capHitWithinRadius);
 
-            t = Vector.ConditionalSelect(useCylinder, cylinderT, Vector.ConditionalSelect(hitCap, capT, Vector<float>.Zero));
+            t = (tOffset + Vector.ConditionalSelect(useCylinder, cylinderT, Vector.ConditionalSelect(hitCap, capT, Vector<float>.Zero))) * inverseDLength;
             var capUsesUpwardFacingNormal = Vector.LessThan(d.Y, Vector<float>.Zero);
             Vector3Wide localNormal;
             localNormal.X = Vector.ConditionalSelect(useCylinder, cylinderNormalX, Vector<float>.Zero);
             localNormal.Y = Vector.ConditionalSelect(useCylinder, Vector<float>.Zero, Vector.ConditionalSelect(capUsesUpwardFacingNormal, Vector<float>.One, new Vector<float>(-1)));
             localNormal.Z = Vector.ConditionalSelect(useCylinder, cylinderNormalZ, Vector<float>.Zero);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, orientation, out normal);
-            intersected = Vector.BitwiseOr(useCylinder, hitCap);
+            intersected = Vector.ConditionalSelect(useCylinder, cylinderIntersected, hitCap);
         }
     }
 }

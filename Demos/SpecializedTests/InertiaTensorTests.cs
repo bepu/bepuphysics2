@@ -56,6 +56,27 @@ namespace Demos.SpecializedTests
             return (point - projectedPoint).LengthSquared() <= Capsule.Radius * Capsule.Radius;
         }
     }
+
+    public struct CylinderInertiaTester : IInertiaTester
+    {
+        public Cylinder Cylinder;
+
+        public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
+        {
+            Cylinder.ComputeInertia(mass, out inertia);
+        }
+        public void ComputeBounds(out Vector3 min, out Vector3 max)
+        {
+            Cylinder.ComputeBounds(Quaternion.Identity, out min, out max);
+        }
+
+        public bool PointIsContained(ref Vector3 sampleSpacing, ref Vector3 point)
+        {
+            var horizontalDistanceSquared = point.X * point.X + point.Z * point.Z;
+            return MathF.Abs(point.Y) < Cylinder.HalfLength && horizontalDistanceSquared < Cylinder.Radius * Cylinder.Radius;
+        }
+    }
+
     public struct BoxInertiaTester : IInertiaTester
     {
         public Box Box;
@@ -115,7 +136,7 @@ namespace Demos.SpecializedTests
         {
             tester.ComputeBounds(out var min, out var max);
             var span = max - min;
-            const int axisSampleCount = 64;
+            const int axisSampleCount = 128;
             var sampleSpacing = span / axisSampleCount;
             var sampleMin = min + sampleSpacing * 0.5f;
             //This constant value isn't meaningful- it's just here to capture mass scaling bugs in implementations.
@@ -163,7 +184,7 @@ namespace Demos.SpecializedTests
         {
             var ratio = a / b;
             const float ratioThreshold = 0.15f;
-            return MathF.Abs(a - b) < 1e-2f || (ratio < (1 + ratioThreshold) && ratio > 1f / (1 + ratioThreshold));
+            return MathF.Abs(a - b) < 3e-2f || (ratio < (1 + ratioThreshold) && ratio > 1f / (1 + ratioThreshold));
         }
 
         public static void Test()
@@ -182,6 +203,11 @@ namespace Demos.SpecializedTests
             }
             for (int i = 0; i < shapeTrials; ++i)
             {
+                var tester = new CylinderInertiaTester { Cylinder = new Cylinder(0.01f + (float)random.NextDouble() * 10, 0.01f + (float)random.NextDouble() * 10) };
+                CheckInertia(ref tester);
+            }
+            for (int i = 0; i < shapeTrials; ++i)
+            {
                 var tester = new BoxInertiaTester { Box = new Box(0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble()) };
                 CheckInertia(ref tester);
             }
@@ -190,9 +216,9 @@ namespace Demos.SpecializedTests
                 var tester = new TriangleInertiaTester
                 {
                     Triangle = new Triangle(
-                        new Vector3(-5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble()),
-                        new Vector3(-5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble()),
-                        new Vector3(-5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble())),
+                        new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble()),
+                        new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble()),
+                        new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble())),
                 };
                 CheckInertia(ref tester);
             }
