@@ -9,6 +9,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public interface ISupportFinder<TShape, TShapeWide> where TShape : IConvexShape where TShapeWide : IShapeWide<TShape>
     {
+        bool HasMargin { get; }
+        void GetMargin(ref TShapeWide shape, out Vector<float> margin);
         void ComputeSupport(ref TShapeWide shape, ref Matrix3x3Wide orientation, ref Vector3Wide direction, out Vector3Wide support);
     }
 
@@ -30,12 +32,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             ref TShapeWideB b, ref Matrix3x3Wide rB, ref TSupportFinderB supportFinderB, ref Vector3Wide offsetB, ref Vector3Wide direction,
             out Vector3Wide supportA, out Vector3Wide support)
         {
-            supportFinderA.ComputeSupport(ref a, ref rA, ref direction, out supportA);
+            supportFinderA.ComputeSupport(ref a, ref rA, ref direction, out supportA);        
             Vector3Wide.Negate(direction, out var negatedDirection);
             supportFinderB.ComputeSupport(ref b, ref rB, ref negatedDirection, out var supportB);
             Vector3Wide.Add(supportB, offsetB, out supportB);
             Vector3Wide.Subtract(supportA, supportB, out support);
-
         }
 
         struct Simplex
@@ -193,7 +194,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.Add(cContribution, closestCandidate, out closestCandidate);
             Vector3Wide.Add(aOnAContribution, bOnAContribution, out var closestACandidate);
             Vector3Wide.Add(cOnAContribution, closestACandidate, out closestACandidate);
-            Vector3Wide.LengthSquared(closestCandidate, out var distanceSquaredCandidate);          
+            Vector3Wide.LengthSquared(closestCandidate, out var distanceSquaredCandidate);
             var combinedMask = Vector.BitwiseAnd(mask, projectionInTriangle);
             Select(ref combinedMask,
                 ref distanceSquared, ref closest, ref closestA, ref featureId,
@@ -353,6 +354,23 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //Note that we use hardcoded defaults if this is default constructed.
             var epsilon = new Vector<float>(TerminationEpsilon > 0 ? TerminationEpsilon : TerminationEpsilonDefault);
             var containmentEpsilon = new Vector<float>(ContainmentEpsilon > 0 ? ContainmentEpsilon : ContainmentEpsilonDefault);
+            //Use the JIT's ability to optimize away branches with generic type knowledge to set appropriate containment epsilons for shapes that have actual margins.
+            if(supportFinderA.HasMargin && supportFinderB.HasMargin)
+            {
+                supportFinderA.GetMargin(ref a, out var marginA);
+                supportFinderB.GetMargin(ref b, out var marginB);
+                containmentEpsilon = Vector.Max(containmentEpsilon, marginA + marginB);
+            }
+            else if (supportFinderA.HasMargin)
+            {
+                supportFinderA.GetMargin(ref a, out var marginA);
+                containmentEpsilon = Vector.Max(containmentEpsilon, marginA);
+            }
+            else if (supportFinderB.HasMargin)
+            {
+                supportFinderB.GetMargin(ref b, out var marginB);
+                containmentEpsilon = Vector.Max(containmentEpsilon, marginB);
+            }
             var containmentEpsilonSquared = containmentEpsilon * containmentEpsilon;
             Vector<float> distanceSquared = new Vector<float>(float.MaxValue);
             while (true)
@@ -369,7 +387,6 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 terminatedMask = Vector.BitwiseOr(terminatedMask, simplexContainsOrigin);
                 if (Vector.EqualsAll(terminatedMask, -Vector<int>.One))
                     break;
-
 
                 //This is similar to the v vs simplexClosest test later, except this termination condition is immune to cycles.
                 //It's used in conjunction with the later test because it is less aggressive- typically, the epsilon test will save an iteration.
@@ -419,9 +436,13 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var inverseDistance = Vector<float>.One / distance;
             //The containment epsilon acts as a margin around shapes that guarantees that normals remain numerically valid.
             //To avoid a case where the distance goes from near epsilon to intersecting in sub-epsilon motion, we report the distance as be adjusted by the containment epsilon. 
-            //In other words, the shapes are spherically expanded a little. Not ideal, but not horrible.
+            //In other words, the shapes are spherically expanded a little. Not ideal for shapes that don't actually have margins, but not horrible.
             distance -= containmentEpsilon;
             Vector3Wide.Scale(normal, inverseDistance, out normal);
+
+            //For shapes with substantial margins, it's important to compensate for the margin.
+            Vector3Wide.Scale(normal, -containmentEpsilon, out var closestAMarginOffset);
+            Vector3Wide.Add(closestAMarginOffset, closestA, out closestA);
         }
     }
 }

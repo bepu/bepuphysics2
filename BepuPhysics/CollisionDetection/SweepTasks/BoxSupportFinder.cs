@@ -10,6 +10,18 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public struct BoxSupportFinder : ISupportFinder<Box, BoxWide>
     {
+        public bool HasMargin
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return false; }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetMargin(ref BoxWide shape, out Vector<float> margin)
+        {
+            margin = default;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeSupport(ref BoxWide shape, ref Matrix3x3Wide orientation, ref Vector3Wide direction, out Vector3Wide support)
         {

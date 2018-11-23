@@ -16,26 +16,36 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Test(ref SphereWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public static void ComputeSphereToClosest(in CylinderWide b, in Vector3Wide offsetB, in Matrix3x3Wide orientationMatrixB,
+            out Vector3Wide cylinderLocalOffsetA, out Vector<int> horizontalClampRequired, out Vector<float> horizontalOffsetLength, out Vector<float> inverseHorizontalOffsetLength, 
+            out Vector3Wide sphereToClosestLocalB, out Vector3Wide sphereToClosest)
         {
             //Clamp the sphere position to the cylinder's volume.
-            Matrix3x3Wide.CreateFromQuaternion(orientationB, out var orientationMatrixB);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, orientationMatrixB, out var cylinderLocalOffsetB);
-            Vector3Wide.Negate(cylinderLocalOffsetB, out var cylinderLocalOffsetA);
-            var horizontalOffsetLength = Vector.SquareRoot(cylinderLocalOffsetA.X * cylinderLocalOffsetA.X + cylinderLocalOffsetA.Z * cylinderLocalOffsetA.Z);
-            var inverseHorizontalOffsetLength = Vector<float>.One / horizontalOffsetLength;
+            Vector3Wide.Negate(cylinderLocalOffsetB, out cylinderLocalOffsetA);
+            horizontalOffsetLength = Vector.SquareRoot(cylinderLocalOffsetA.X * cylinderLocalOffsetA.X + cylinderLocalOffsetA.Z * cylinderLocalOffsetA.Z);
+            inverseHorizontalOffsetLength = Vector<float>.One / horizontalOffsetLength;
             var horizontalClampMultiplier = b.Radius * inverseHorizontalOffsetLength;
-            var horizontalClampRequired = Vector.GreaterThan(horizontalOffsetLength, b.Radius);
+            horizontalClampRequired = Vector.GreaterThan(horizontalOffsetLength, b.Radius);
             Vector3Wide clampedSpherePositionLocalB;
             clampedSpherePositionLocalB.X = Vector.ConditionalSelect(horizontalClampRequired, cylinderLocalOffsetA.X * horizontalClampMultiplier, cylinderLocalOffsetA.X);
             clampedSpherePositionLocalB.Y = Vector.Min(b.HalfLength, Vector.Max(-b.HalfLength, cylinderLocalOffsetA.Y));
             clampedSpherePositionLocalB.Z = Vector.ConditionalSelect(horizontalClampRequired, cylinderLocalOffsetA.Z * horizontalClampMultiplier, cylinderLocalOffsetA.Z);
 
-            Vector3Wide.Add(clampedSpherePositionLocalB, cylinderLocalOffsetB, out var sphereToContactLocalB);
-            Matrix3x3Wide.TransformWithoutOverlap(sphereToContactLocalB, orientationMatrixB, out manifold.OffsetA);
+            Vector3Wide.Add(clampedSpherePositionLocalB, cylinderLocalOffsetB, out sphereToClosestLocalB);
+            Matrix3x3Wide.TransformWithoutOverlap(sphereToClosestLocalB, orientationMatrixB, out sphereToClosest);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Test(ref SphereWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
+        {
+            Matrix3x3Wide.CreateFromQuaternion(orientationB, out var orientationMatrixB);
+            ComputeSphereToClosest(b, offsetB, orientationMatrixB, 
+                out var cylinderLocalOffsetA, out var horizontalClampRequired, out var horizontalOffsetLength, out var inverseHorizontalOffsetLength, 
+                out var sphereToContactLocalB, out manifold.OffsetA);
 
             //If the sphere center is inside the cylinder, then we must compute the fastest way out of the cylinder.
-            var absY = Vector.Abs(cylinderLocalOffsetB.Y);
+            var absY = Vector.Abs(cylinderLocalOffsetA.Y);
             var useInternal = Vector.AndNot(Vector.LessThanOrEqual(absY, b.HalfLength), horizontalClampRequired);
             var depthY = b.HalfLength - absY;
             var horizontalDepth = b.Radius - horizontalOffsetLength;
