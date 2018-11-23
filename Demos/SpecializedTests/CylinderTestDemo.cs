@@ -19,10 +19,13 @@ namespace Demos.SpecializedTests
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)));
 
-            //Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new Vector3(), Simulation.Shapes, new Cylinder(3, 4)));
-            for (int i = 0; i < 4; ++i)
-                for (int j = 0; j < 4; ++j)
-                    Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(i * 11, (i + j) / 100f, j * 11), 1, Simulation.Shapes, new Cylinder(5, 1)));
+            Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(), 1f, Simulation.Shapes, new Cylinder(3, 4)));
+            Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new Vector3(0, 0, 0), Simulation.Shapes, new Sphere(2)));
+
+            //for (int i = 0; i < 4; ++i)
+            //    for (int j = 0; j < 4; ++j)
+            //        Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(i * 11, (i + j) / 100f, j * 11), 1, Simulation.Shapes, new Cylinder(5, 1)));
+
 
 
             //Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), new CollidableDescription(Simulation.Shapes.Add(new Cylinder(5, 1)), 0.1f)));
