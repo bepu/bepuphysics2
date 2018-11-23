@@ -217,6 +217,9 @@ namespace BepuPhysics.Collidables
             max.Z = Vector.Abs(HalfLength * y.Z) + Vector.SquareRoot(Vector.Max(Vector<float>.Zero, squared.Z)) * Radius;
             //Cylinders are symmetric.
             Vector3Wide.Negate(max, out min);
+
+            maximumRadius = Vector.SquareRoot(HalfLength * HalfLength + Radius * Radius);
+            maximumAngularExpansion = maximumRadius - Vector.Min(HalfLength, Radius);
         }
 
         public int MinimumWideRayCount

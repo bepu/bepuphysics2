@@ -356,7 +356,7 @@ namespace BepuPhysics.Trees
                 }
 
             }
-
+           
 
             int* bestBinSubtreeCounts;
             int* bestSubtreeBinIndices;
