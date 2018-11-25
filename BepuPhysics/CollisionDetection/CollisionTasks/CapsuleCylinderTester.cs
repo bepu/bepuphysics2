@@ -31,16 +31,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             min = -halfLength;
             max = halfLength;
-            //TODO: could use a better initial guess.
             t = Vector<float>.Zero;
             var radiusSquared = b.Radius * b.Radius;
             var negativeCylinderHalfLength = -b.HalfLength;
             Vector3Wide.Dot(lineDirection, lineOrigin, out var originDot);
-            for (int i = 0; i < 10; ++i)
+            for (int i = 0; i < 8; ++i)
             {
                 Bounce(lineOrigin, lineDirection, t, b, radiusSquared, out _, out var clamped);
                 Vector3Wide.Dot(clamped, lineDirection, out var conservativeNewT);
-                conservativeNewT -= originDot;
+                conservativeNewT = Vector.Max(min, Vector.Min(max, conservativeNewT - originDot));
                 var change = conservativeNewT - t;
 
                 //The bounced projection can be thought of as conservative advancement. The sign of the change tells us which way the advancement moved; we can use that to update the bounds.
@@ -49,7 +48,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 max = Vector.ConditionalSelect(movedUp, max, conservativeNewT);
 
                 //Rather than being fully conservative, we move the next test location forward aggressively by scaling the change.
-                t += change * 2;
+                t += change * 8;
                 //If the new target exited the interval, then back off and bisect the remaining space between the conservative T and violated bound instead.
                 t = Vector.ConditionalSelect(Vector.GreaterThan(t, max), 0.5f * (conservativeNewT + max), t);
                 t = Vector.ConditionalSelect(Vector.LessThan(t, min), 0.5f * (conservativeNewT + min), t);
