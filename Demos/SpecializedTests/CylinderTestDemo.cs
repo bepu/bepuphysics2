@@ -98,6 +98,7 @@ namespace Demos.SpecializedTests
                 Vector3Wide.Broadcast(direction, out var capsuleY);
 
                 CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<float>(capsule.HalfLength), cylinderWide, out var t, out var min, out var max, out var offsetFromCylindertoLineSegment, out var iterationsRequired);
+                //CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<float>(capsule.HalfLength), cylinderWide, out var t, out var offsetFromCylindertoLineSegment);
                 Vector3Wide.LengthSquared(offsetFromCylindertoLineSegment, out var distanceSquaredWide);
                 var distanceSquared = distanceSquaredWide[0];
 
@@ -164,12 +165,12 @@ namespace Demos.SpecializedTests
             //Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), new CollidableDescription(Simulation.Shapes.Add(new Cylinder(5, 1)), 0.1f)));
 
             {
-                Vector3Wide.Broadcast(new Vector3(2, 0, 0), out var capsuleOrigin);
-                Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1, 0, 1)), out var capsuleDirection);
-                var cylinder = new Cylinder(1, 1);
-                CylinderWide cylinderWide = default;
-                cylinderWide.Broadcast(cylinder);
-                CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleDirection, new Vector<float>(2), cylinderWide, out var t, out var min, out var max, out var offsetFromCylindertoLineSegment, out var iterationsRequired);
+                //Vector3Wide.Broadcast(new Vector3(2, 0, 0), out var capsuleOrigin);
+                //Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1, 0, 1)), out var capsuleDirection);
+                //var cylinder = new Cylinder(1, 1);
+                //CylinderWide cylinderWide = default;
+                //cylinderWide.Broadcast(cylinder);
+                //CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleDirection, new Vector<float>(2), cylinderWide, out var t, out var offsetFromCylindertoLineSegment);
             }
             TestSegmentCylinder();
         }

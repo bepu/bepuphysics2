@@ -37,6 +37,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(lineDirection, lineOrigin, out var originDot);
             var epsilon = halfLength * 1e-7f;
             var laneDeactivated = Vector<int>.Zero;
+            iterationsRequired = Vector<int>.Zero;
             for (int i = 0; i < 12; ++i)
             {
                 Bounce(lineOrigin, lineDirection, t, b, radiusSquared, out _, out var clamped);
@@ -49,11 +50,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 min = Vector.ConditionalSelect(movedUp, conservativeNewT, min);
                 max = Vector.ConditionalSelect(movedUp, max, conservativeNewT);
 
-                //Rather than being fully conservative, we move the next test location forward aggressively by scaling the change.
-                var newT = t + change * 2;
-                //If the new target exited the interval, then back off and bisect the remaining space between the conservative T and violated bound instead.
-                newT = Vector.ConditionalSelect(Vector.GreaterThan(newT, max), 0.5f * (conservativeNewT + max), newT);
-                newT = Vector.ConditionalSelect(Vector.LessThan(newT, min), 0.5f * (conservativeNewT + min), newT);
+                //Bisect the remaining interval.
+                var newT = 0.5f * (min + max);
 
                 //Check for deactivated lanes and see if we can exit early.
                 var laneShouldDeactivate = Vector.LessThan(Vector.Abs(change), epsilon);
