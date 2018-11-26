@@ -8,6 +8,7 @@ using DemoRenderer;
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection.CollisionTasks;
+using System.Diagnostics;
 
 namespace Demos.SpecializedTests
 {
@@ -55,8 +56,8 @@ namespace Demos.SpecializedTests
             CylinderWide cylinderWide = default;
             cylinderWide.Broadcast(cylinder);
             Random random = new Random(5);
-            double totalIntervalError = 0;
-            double sumOfSquaredIntervalError = 0;
+            //double totalIntervalError = 0;
+            //double sumOfSquaredIntervalError = 0;
 
             double totalBruteError = 0;
             double sumOfSquaredBruteError = 0;
@@ -64,10 +65,14 @@ namespace Demos.SpecializedTests
             double totalBruteDistanceError = 0;
             double sumOfSquaredBruteDistanceError = 0;
 
-            long iterationsSum = 0;
-            long iterationsSquaredSum = 0;
+            //long iterationsSum = 0;
+            //long iterationsSquaredSum = 0;
             var capsuleTests = 1000;
-            for (int i = 0; i < capsuleTests; ++i)
+
+            int warmupCount = 32;
+            int innerIterations = 128;
+            long testTicks = 0;
+            for (int i = 0; i < warmupCount + capsuleTests; ++i)
             {
                 Vector3 randomPointNearCylinder;
                 var capsule = new Capsule(0.2f + .8f * (float)random.NextDouble(), 0.2f + 0.8f * (float)random.NextDouble());
@@ -97,13 +102,26 @@ namespace Demos.SpecializedTests
                 Vector3Wide.Broadcast(randomPointNearCylinder, out var capsuleOrigin);
                 Vector3Wide.Broadcast(direction, out var capsuleY);
 
-                CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<float>(capsule.HalfLength), cylinderWide, out var t, out var min, out var max, out var offsetFromCylindertoLineSegment, out var iterationsRequired);
+                //CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<float>(capsule.HalfLength), cylinderWide, out var t, out var min, out var max, out var offsetFromCylindertoLineSegment, out var iterationsRequired);
+
                 //CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<float>(capsule.HalfLength), cylinderWide, out var t, out var offsetFromCylindertoLineSegment);
-                Vector3Wide.LengthSquared(offsetFromCylindertoLineSegment, out var distanceSquaredWide);
+                Vector<float> t = default;
+                Vector3Wide offsetFromCylinderToLineSegment = default;
+                var innerStart = Stopwatch.GetTimestamp();
+                for (int j = 0; j < innerIterations; ++j)
+                {
+                    CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<float>(capsule.HalfLength), cylinderWide, out t, out offsetFromCylinderToLineSegment);
+                }
+                var innerStop = Stopwatch.GetTimestamp();
+                if (i > warmupCount)
+                {
+                    testTicks += innerStop - innerStart;
+                }
+                Vector3Wide.LengthSquared(offsetFromCylinderToLineSegment, out var distanceSquaredWide);
                 var distanceSquared = distanceSquaredWide[0];
 
-                iterationsSum += iterationsRequired[0];
-                iterationsSquaredSum += iterationsRequired[0] * iterationsRequired[0];
+                //iterationsSum += iterationsRequired[0];
+                //iterationsSquaredSum += iterationsRequired[0] * iterationsRequired[0];
 
                 BruteForceSearch(randomPointNearCylinder, direction, capsule.HalfLength, cylinder, out var bruteT, out var bruteDistanceSquared, out var errorMargin);
                 var errorRelativeToBrute = MathF.Max(MathF.Abs(bruteT - t[0]), errorMargin) - errorMargin;
@@ -119,16 +137,18 @@ namespace Demos.SpecializedTests
                 sumOfSquaredBruteDistanceError += bruteDistanceError * bruteDistanceError;
                 totalBruteDistanceError += bruteDistanceError;
 
-                var intervalSpan = Vector.Abs(max - min)[0];
-                sumOfSquaredIntervalError += intervalSpan * intervalSpan;
-                totalIntervalError += intervalSpan;
+                //var intervalSpan = Vector.Abs(max - min)[0];
+                //sumOfSquaredIntervalError += intervalSpan * intervalSpan;
+                //totalIntervalError += intervalSpan;
 
 
             }
-            var averageIntervalSpan = totalIntervalError / capsuleTests;
-            var averageIntervalSquaredSpan = sumOfSquaredIntervalError / capsuleTests;
-            var intervalStandardDeviation = Math.Sqrt(Math.Max(0, averageIntervalSquaredSpan - averageIntervalSpan * averageIntervalSpan));
-            Console.WriteLine($"Average interval span: {averageIntervalSpan}, stddev {intervalStandardDeviation}");
+            Console.WriteLine($"Average time per test (ns): {1e9 * testTicks / (innerIterations * capsuleTests * Stopwatch.Frequency)}");
+
+            //var averageIntervalSpan = totalIntervalError / capsuleTests;
+            //var averageIntervalSquaredSpan = sumOfSquaredIntervalError / capsuleTests;
+            //var intervalStandardDeviation = Math.Sqrt(Math.Max(0, averageIntervalSquaredSpan - averageIntervalSpan * averageIntervalSpan));
+            //Console.WriteLine($"Average interval span: {averageIntervalSpan}, stddev {intervalStandardDeviation}");
 
             var averageBruteError = totalBruteError / capsuleTests;
             var averageBruteSquaredError = sumOfSquaredBruteError / capsuleTests;
@@ -140,10 +160,10 @@ namespace Demos.SpecializedTests
             var bruteDistanceStandardDeviation = Math.Sqrt(Math.Max(0, averageBruteSquaredError - averageBruteError * averageBruteError));
             Console.WriteLine($"Average brute distance error: {averageBruteDistanceError}, stddev {bruteDistanceStandardDeviation}");
 
-            var averageIterations = (double)iterationsSum / capsuleTests;
-            var averageIterationSquared = (double)iterationsSquaredSum / capsuleTests;
-            var iterationStandardDeviation = Math.Sqrt(Math.Max(0, averageIterationSquared - averageIterations * averageIterations));
-            Console.WriteLine($"Average iteration count: {averageIterations}, stddev {iterationStandardDeviation}");
+            //var averageIterations = (double)iterationsSum / capsuleTests;
+            //var averageIterationSquared = (double)iterationsSquaredSum / capsuleTests;
+            //var iterationStandardDeviation = Math.Sqrt(Math.Max(0, averageIterationSquared - averageIterations * averageIterations));
+            //Console.WriteLine($"Average iteration count: {averageIterations}, stddev {iterationStandardDeviation}");
         }
 
         public override void Initialize(ContentArchive content, Camera camera)

@@ -27,17 +27,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetClosestPointBetweenLineSegmentAndCylinder(in Vector3Wide lineOrigin, in Vector3Wide lineDirection, in Vector<float> halfLength, in CylinderWide b,
-            out Vector<float> t, out Vector<float> min, out Vector<float> max, out Vector3Wide offsetFromCylinderToLineSegment, out Vector<int> iterationsRequired)
+            out Vector<float> t, out Vector3Wide offsetFromCylinderToLineSegment)
         {
-            min = -halfLength;
-            max = halfLength;
+            var min = -halfLength;
+            var max = halfLength;
             t = Vector<float>.Zero;
             var radiusSquared = b.Radius * b.Radius;
             var negativeCylinderHalfLength = -b.HalfLength;
             Vector3Wide.Dot(lineDirection, lineOrigin, out var originDot);
             var epsilon = halfLength * 1e-7f;
             var laneDeactivated = Vector<int>.Zero;
-            iterationsRequired = Vector<int>.Zero;
             for (int i = 0; i < 12; ++i)
             {
                 Bounce(lineOrigin, lineDirection, t, b, radiusSquared, out _, out var clamped);
@@ -58,7 +57,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 laneDeactivated = Vector.BitwiseOr(laneDeactivated, laneShouldDeactivate);
                 //Deactivated lanes should not be updated; if iteration counts are sensitive to the behavior of a bundle, it creates a dependency on bundle order and kills determinism.
                 t = Vector.ConditionalSelect(laneDeactivated, t, newT);
-                iterationsRequired = Vector.ConditionalSelect(laneDeactivated, iterationsRequired, new Vector<int>(i));
                 if (Vector.LessThanAll(laneDeactivated, Vector<int>.Zero))
                 {
                     //All lanes are done; early out.
@@ -97,7 +95,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, worldRB, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
             //Note that the localNormal contains a not-yet normalized offset. We defer normalization until all potential normals have been examined.
-            GetClosestPointBetweenLineSegmentAndCylinder(localOffsetA, rA.Y, a.HalfLength, b, out var t, out _, out _, out var localNormal, out _);
+            GetClosestPointBetweenLineSegmentAndCylinder(localOffsetA, rA.Y, a.HalfLength, b, out var t, out var localNormal);
             Vector3Wide.LengthSquared(localNormal, out var distanceFromCylinderToLineSegmentSquared);
             var internalLineSegmentIntersected = Vector.LessThan(distanceFromCylinderToLineSegmentSquared, new Vector<float>(1e-12f));
             var distanceFromCylinderToLineSegment = Vector.SquareRoot(distanceFromCylinderToLineSegmentSquared);
