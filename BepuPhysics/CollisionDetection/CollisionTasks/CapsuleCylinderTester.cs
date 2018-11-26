@@ -70,7 +70,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void GetClosestPointsBetweenSegments(in Vector3Wide da, in Vector3Wide localOffsetB, in Vector<float> aHalfLength, in Vector<float> bHalfLength, 
+        static void GetClosestPointsBetweenSegments(in Vector3Wide da, in Vector3Wide localOffsetB, in Vector<float> aHalfLength, in Vector<float> bHalfLength,
             out Vector<float> ta, out Vector<float> taMin, out Vector<float> taMax, out Vector<float> tb, out Vector<float> tbMin, out Vector<float> tbMax)
         {
             //This is similar to the capsule pair execution, but we make use of the fact that we're working in the cylinder's local space where db = (0,1,0).
@@ -149,7 +149,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Normal calibrated to point from B to A.
                 localNormal.Y = Vector.ConditionalSelect(useEndpointCapDepth, Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f)), localNormal.Y);
                 localNormal.Z = Vector.ConditionalSelect(useEndpointCapDepth, Vector<float>.Zero, localNormal.Z);
-                
+
                 GetClosestPointsBetweenSegments(capsuleAxis, localOffsetB, a.HalfLength, b.HalfLength, out var ta, out _, out _, out var tb, out _, out _);
 
                 //offset = da * ta - (db * tb + offsetB)
@@ -311,7 +311,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //A is a capsule, but we can treat it as having a faceNormalA = (localNormal x capsuleAxis) x capsuleAxis.
             //The full computation is: 
             //t = dot(localOffsetA - contact, faceNormalA) / dot(faceNormalA, localNormal)
-            //depth = dot(contact + t * localNormal, localNormal) = dot(contact, localNormal) + t
+            //depth = -dot(t * localNormal, localNormal) = -t
             Vector3Wide.CrossWithoutOverlap(localNormal, capsuleAxis, out var capsuleTangent);
             Vector3Wide.CrossWithoutOverlap(capsuleTangent, capsuleAxis, out var faceNormalA);
             Vector3Wide.Dot(faceNormalA, localNormal, out var faceNormalADotLocalNormal);
@@ -324,10 +324,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(offset1, faceNormalA, out var t1);
             t0 *= inverseFaceNormalADotLocalNormal;
             t1 *= inverseFaceNormalADotLocalNormal;
-            Vector3Wide.Dot(contact0, localNormal, out var dot0);
-            Vector3Wide.Dot(contact1, localNormal, out var dot1);
-            manifold.Depth0 = dot0 + t0 + a.Radius;
-            manifold.Depth1 = dot1 + t1 + a.Radius;
+            manifold.Depth0 = a.Radius - t0;
+            manifold.Depth1 = a.Radius - t1;
 
             //If the capsule axis is parallel with the normal, then the contacts collapse to one point and we can use the initially computed depth.
             //In this case, both contact positions should be extremely close together anyway.

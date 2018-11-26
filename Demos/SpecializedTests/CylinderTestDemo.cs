@@ -9,6 +9,7 @@ using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 using System.Diagnostics;
+using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.SpecializedTests
 {
@@ -176,23 +177,18 @@ namespace Demos.SpecializedTests
             Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(), 1f, Simulation.Shapes, new Cylinder(3, 4)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new Vector3(0, 0, 0), Simulation.Shapes, new Sphere(2)));
 
-            //for (int i = 0; i < 4; ++i)
-            //    for (int j = 0; j < 4; ++j)
-            //        Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(i * 11, (i + j) / 100f, j * 11), 1, Simulation.Shapes, new Cylinder(5, 1)));
-
-
-
-            //Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), new CollidableDescription(Simulation.Shapes.Add(new Cylinder(5, 1)), 0.1f)));
-
-            {
-                //Vector3Wide.Broadcast(new Vector3(2, 0, 0), out var capsuleOrigin);
-                //Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1, 0, 1)), out var capsuleDirection);
-                //var cylinder = new Cylinder(1, 1);
-                //CylinderWide cylinderWide = default;
-                //cylinderWide.Broadcast(cylinder);
-                //CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleDirection, new Vector<float>(2), cylinderWide, out var t, out var offsetFromCylindertoLineSegment);
-            }
-            TestSegmentCylinder();
+            CapsuleCylinderTester tester = default;
+            CapsuleWide a = default;
+            a.Broadcast(new Capsule(0.5f, 1));
+            CylinderWide b = default;
+            b.Broadcast(new Cylinder(0.5f, 1));
+            var speculativeMargin = new Vector<float>(2f);
+            Vector3Wide.Broadcast(new Vector3(-2, 0, 0), out var offsetB);
+            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var orientationA);
+            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var orientationB);
+            tester.Test(ref a, ref b, ref speculativeMargin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
+  
+            //TestSegmentCylinder();
         }
     }
 }
