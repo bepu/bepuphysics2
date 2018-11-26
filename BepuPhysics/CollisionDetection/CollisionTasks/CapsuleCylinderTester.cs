@@ -68,6 +68,53 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void GetClosestPointsBetweenSegments(in Vector3Wide da, in Vector3Wide localOffsetB, in Vector<float> aHalfLength, in Vector<float> bHalfLength, out Vector3Wide normal)
+        {
+            //This is similar to the capsule pair execution, but we make use of the fact that we're working in the cylinder's local space where db = (0,1,0).
+
+            //Compute the closest points between the two line segments. No clamping to begin with.
+            //We want to minimize distance = ||(a + da * ta) - (b + db * tb)||.
+            //Taking the derivative with respect to ta and doing some algebra (taking into account ||da|| == ||db|| == 1) to solve for ta yields:
+            //ta = (da * (b - a) + (db * (a - b)) * (da * db)) / (1 - ((da * db) * (da * db))
+            Vector3Wide.Dot(da, localOffsetB, out var daOffsetB);
+            var dbOffsetB = localOffsetB.Y;
+            var dadb = da.Y;
+            //Note potential division by zero when the axes are parallel. Arbitrarily clamp; near zero values will instead produce extreme values which get clamped to reasonable results.
+            var ta = (daOffsetB - dbOffsetB * dadb) / Vector.Max(new Vector<float>(1e-15f), Vector<float>.One - dadb * dadb);
+            //tb = ta * (da * db) - db * (b - a)
+            var tb = ta * dadb - dbOffsetB;
+
+            //We cannot simply clamp the ta and tb values to the capsule line segments. Instead, project each line segment onto the other line segment, clamping against the target's interval.
+            //That new clamped projected interval is the valid solution space on that line segment. We can clamp the t value by that interval to get the correctly bounded solution.
+            //The projected intervals are:
+            //B onto A: +-BHalfLength * (da * db) + da * offsetB
+            //A onto B: +-AHalfLength * (da * db) - db * offsetB
+            var absdadb = Vector.Abs(dadb);
+            var bOntoAOffset = bHalfLength * absdadb;
+            var aOntoBOffset = aHalfLength * absdadb;
+            var aMin = Vector.Max(-aHalfLength, Vector.Min(aHalfLength, daOffsetB - bOntoAOffset));
+            var aMax = Vector.Min(aHalfLength, Vector.Max(-aHalfLength, daOffsetB + bOntoAOffset));
+            var bMin = Vector.Max(-bHalfLength, Vector.Min(bHalfLength, -aOntoBOffset - dbOffsetB));
+            var bMax = Vector.Min(bHalfLength, Vector.Max(-bHalfLength, aOntoBOffset - dbOffsetB));
+            ta = Vector.Min(Vector.Max(ta, aMin), aMax);
+            tb = Vector.Min(Vector.Max(tb, bMin), bMax);
+
+            //offset = da * ta - (db * tb + offsetB)
+            Vector3Wide.Scale(da, ta, out var closestA);
+            Vector3Wide.Subtract(closestA, localOffsetB, out normal);
+            normal.Y -= tb;
+            
+            Vector3Wide.Length(normal, out var distance);
+            var inverseDistance = Vector<float>.One / distance;
+            Vector3Wide.Scale(normal, inverseDistance, out normal);
+            var useFallback = Vector.LessThan(distance, new Vector<float>(1e-7f));
+            normal.X = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, normal.X);
+            normal.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, normal.Y);
+            normal.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, normal.Z);
+
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(ref CapsuleWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)
         {
             //Potential normal generators:
@@ -92,20 +139,58 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var worldRB);
             //Work in the cylinder's local space.
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(worldRA, worldRB, out var rA);
+            ref var capsuleAxis = ref rA.Y;
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, worldRB, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
-            //Note that the localNormal contains a not-yet normalized offset. We defer normalization until all potential normals have been examined.
-            GetClosestPointBetweenLineSegmentAndCylinder(localOffsetA, rA.Y, a.HalfLength, b, out var t, out var localNormal);
+
+            GetClosestPointBetweenLineSegmentAndCylinder(localOffsetA, capsuleAxis, a.HalfLength, b, out var t, out var localNormal);
             Vector3Wide.LengthSquared(localNormal, out var distanceFromCylinderToLineSegmentSquared);
             var internalLineSegmentIntersected = Vector.LessThan(distanceFromCylinderToLineSegmentSquared, new Vector<float>(1e-12f));
             var distanceFromCylinderToLineSegment = Vector.SquareRoot(distanceFromCylinderToLineSegmentSquared);
-            var depth = Vector.ConditionalSelect(internalLineSegmentIntersected, new Vector<float>(float.MaxValue), distanceFromCylinderToLineSegment - a.Radius);
+            //Division by zero is protected by the depth selection- if distance is zero, the depth is set to infinity and this normal won't be selected.
+            Vector3Wide.Scale(localNormal, Vector<float>.One / distanceFromCylinderToLineSegment, out localNormal);
+            var depth = Vector.ConditionalSelect(internalLineSegmentIntersected, new Vector<float>(float.MaxValue), distanceFromCylinderToLineSegment);
 
             if (Vector.EqualsAny(internalLineSegmentIntersected, new Vector<int>(-1)))
             {
                 //At least one lane is intersecting deeply, so we need to examine the other possible normals.
+                var endpointVsCapDepth = b.HalfLength - Vector.Abs(localOffsetA.Y) - Vector.Abs(capsuleAxis.Y * a.HalfLength);
+                var useEndpointCapDepth = Vector.LessThan(endpointVsCapDepth, depth);
+                depth = Vector.Min(endpointVsCapDepth, depth);
+                localNormal.X = Vector.ConditionalSelect(useEndpointCapDepth, Vector<float>.Zero, localNormal.X);
+                //Normal calibrated to point from B to A.
+                localNormal.Y = Vector.ConditionalSelect(useEndpointCapDepth, Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f)), localNormal.Y);
+                localNormal.Z = Vector.ConditionalSelect(useEndpointCapDepth, Vector<float>.Zero, localNormal.Z);
 
                 //TODO: Consider using segment-segment to offer a little bit of cover for the deep intersection edge case. The clamps don't take much more than the segment-line variant.
+                GetClosestPointsBetweenSegments(capsuleAxis, localOffsetB, a.HalfLength, b.HalfLength, out var internalEdgeNormal);
+
+                //Compute the depth along the internal edge normal.
+                var horizontalLengthSquared = internalEdgeNormal.X * internalEdgeNormal.X + internalEdgeNormal.Z * internalEdgeNormal.Z;
+                var scale = Vector.ConditionalSelect(Vector.LessThan(horizontalLengthSquared, new Vector<float>(1e-12f)), Vector<float>.Zero, b.Radius / Vector.SquareRoot(horizontalLengthSquared));
+                Vector3Wide extremeOnCylinder;
+                extremeOnCylinder.X = scale * internalEdgeNormal.X;
+                extremeOnCylinder.Y = Vector.ConditionalSelect(Vector.GreaterThan(internalEdgeNormal.Y, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1));
+                extremeOnCylinder.Z = scale * internalEdgeNormal.Z;
+                Vector3Wide.Dot(internalEdgeNormal, capsuleAxis, out var axisDot);
+                var capsuleExtremeT = Vector.ConditionalSelect(Vector.GreaterThan(axisDot, Vector<float>.Zero), -a.HalfLength, a.HalfLength);
+                Vector3Wide.Scale(capsuleAxis, capsuleExtremeT, out var extremeOnCapsule);
+                Vector3Wide.Add(localOffsetA, extremeOnCapsule, out extremeOnCapsule);
+                Vector3Wide.Subtract(extremeOnCylinder, extremeOnCapsule, out var extremeOffset);
+                Vector3Wide.Dot(extremeOffset, internalEdgeNormal, out var internalEdgeDepth);
+
+                var useInternalEdgeDepth = Vector.LessThan(internalEdgeDepth, depth);
+                depth = Vector.Min(internalEdgeDepth, depth);
+                Vector3Wide.ConditionalSelect(useInternalEdgeDepth, internalEdgeNormal, localNormal, out localNormal);
+            }
+            //All of the above excluded any consideration of the capsule's radius. Include it now.
+            depth -= a.Radius;
+            if(Vector.LessThanAll(depth, -speculativeMargin))
+            {
+                //All lanes have a depth which cannot create any contacts due to the speculative margin. We can early out.
+                //This is determinism-safe; even if execution continued, there would be no contacts created and the manifold would be equivalent for all lanes.
+                manifold = default;
+                return;
             }
             manifold = default;
         }
