@@ -29,6 +29,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public static void GetClosestPointBetweenLineSegmentAndCylinder(in Vector3Wide lineOrigin, in Vector3Wide lineDirection, in Vector<float> halfLength, in CylinderWide b,
             out Vector<float> t, out Vector3Wide offsetFromCylinderToLineSegment)
         {
+            //TODO: At the moment, capsule-cylinder distance tester uses GJK. You could use something like this instead- pretty sure it'd beat GJK easily. 
+            //(worth testing- if our GJK implementation somehow outperforms this at the same level of accuracy, we could use GJK here instead!)
             var min = -halfLength;
             var max = halfLength;
             t = Vector<float>.Zero;
@@ -68,7 +70,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void GetClosestPointsBetweenSegments(in Vector3Wide da, in Vector3Wide localOffsetB, in Vector<float> aHalfLength, in Vector<float> bHalfLength, out Vector3Wide normal)
+        static void GetClosestPointsBetweenSegments(in Vector3Wide da, in Vector3Wide localOffsetB, in Vector<float> aHalfLength, in Vector<float> bHalfLength, 
+            out Vector<float> ta, out Vector<float> taMin, out Vector<float> taMax, out Vector<float> tb, out Vector<float> tbMin, out Vector<float> tbMax)
         {
             //This is similar to the capsule pair execution, but we make use of the fact that we're working in the cylinder's local space where db = (0,1,0).
 
@@ -80,9 +83,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var dbOffsetB = localOffsetB.Y;
             var dadb = da.Y;
             //Note potential division by zero when the axes are parallel. Arbitrarily clamp; near zero values will instead produce extreme values which get clamped to reasonable results.
-            var ta = (daOffsetB - dbOffsetB * dadb) / Vector.Max(new Vector<float>(1e-15f), Vector<float>.One - dadb * dadb);
+            ta = (daOffsetB - dbOffsetB * dadb) / Vector.Max(new Vector<float>(1e-15f), Vector<float>.One - dadb * dadb);
             //tb = ta * (da * db) - db * (b - a)
-            var tb = ta * dadb - dbOffsetB;
+            tb = ta * dadb - dbOffsetB;
 
             //We cannot simply clamp the ta and tb values to the capsule line segments. Instead, project each line segment onto the other line segment, clamping against the target's interval.
             //That new clamped projected interval is the valid solution space on that line segment. We can clamp the t value by that interval to get the correctly bounded solution.
@@ -92,26 +95,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var absdadb = Vector.Abs(dadb);
             var bOntoAOffset = bHalfLength * absdadb;
             var aOntoBOffset = aHalfLength * absdadb;
-            var aMin = Vector.Max(-aHalfLength, Vector.Min(aHalfLength, daOffsetB - bOntoAOffset));
-            var aMax = Vector.Min(aHalfLength, Vector.Max(-aHalfLength, daOffsetB + bOntoAOffset));
-            var bMin = Vector.Max(-bHalfLength, Vector.Min(bHalfLength, -aOntoBOffset - dbOffsetB));
-            var bMax = Vector.Min(bHalfLength, Vector.Max(-bHalfLength, aOntoBOffset - dbOffsetB));
-            ta = Vector.Min(Vector.Max(ta, aMin), aMax);
-            tb = Vector.Min(Vector.Max(tb, bMin), bMax);
-
-            //offset = da * ta - (db * tb + offsetB)
-            Vector3Wide.Scale(da, ta, out var closestA);
-            Vector3Wide.Subtract(closestA, localOffsetB, out normal);
-            normal.Y -= tb;
-
-            Vector3Wide.Length(normal, out var distance);
-            var inverseDistance = Vector<float>.One / distance;
-            Vector3Wide.Scale(normal, inverseDistance, out normal);
-            var useFallback = Vector.LessThan(distance, new Vector<float>(1e-7f));
-            normal.X = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, normal.X);
-            normal.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, normal.Y);
-            normal.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, normal.Z);
-
+            taMin = Vector.Max(-aHalfLength, Vector.Min(aHalfLength, daOffsetB - bOntoAOffset));
+            taMax = Vector.Min(aHalfLength, Vector.Max(-aHalfLength, daOffsetB + bOntoAOffset));
+            tbMin = Vector.Max(-bHalfLength, Vector.Min(bHalfLength, -aOntoBOffset - dbOffsetB));
+            tbMax = Vector.Min(bHalfLength, Vector.Max(-bHalfLength, aOntoBOffset - dbOffsetB));
+            ta = Vector.Min(Vector.Max(ta, taMin), taMax);
+            tb = Vector.Min(Vector.Max(tb, tbMin), tbMax);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -130,7 +119,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Instead, use a numerical solver that seeks the minimum distance between the cylinder and line segment.
             //This captures every shallow-only normal candidate, so there's no need to do capsule endpoint vs cylinder cap edge.
             //This is a bit of a cheat- the solver can't handle the segment-cylinder intersecting case, so we're missing out on some edge normals in deep collision.
-            //TODO: May want to include a cylinder center->capsule line normal to sorta-kinda cover that case. Not going to be a common issue, though.
             //So, the current normal generators are:
             //Capsule segment  vs cylinder           : numerically solved
             //Capsule endpoint vs cylinder cap plane : only needed if any lane failed the shallow distance test
@@ -161,9 +149,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Normal calibrated to point from B to A.
                 localNormal.Y = Vector.ConditionalSelect(useEndpointCapDepth, Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f)), localNormal.Y);
                 localNormal.Z = Vector.ConditionalSelect(useEndpointCapDepth, Vector<float>.Zero, localNormal.Z);
+                
+                GetClosestPointsBetweenSegments(capsuleAxis, localOffsetB, a.HalfLength, b.HalfLength, out var ta, out _, out _, out var tb, out _, out _);
 
-                //TODO: Consider using segment-segment to offer a little bit of cover for the deep intersection edge case. The clamps don't take much more than the segment-line variant.
-                GetClosestPointsBetweenSegments(capsuleAxis, localOffsetB, a.HalfLength, b.HalfLength, out var internalEdgeNormal);
+                //offset = da * ta - (db * tb + offsetB)
+                Vector3Wide.Scale(capsuleAxis, ta, out var closestA);
+                Vector3Wide.Subtract(closestA, localOffsetB, out var offset);
+                offset.Y -= tb;
+
+                Vector3Wide.Length(offset, out var distance);
+                var inverseDistance = Vector<float>.One / distance;
+                Vector3Wide.Scale(offset, inverseDistance, out var internalEdgeNormal);
+                var useFallback = Vector.LessThan(distance, new Vector<float>(1e-7f));
+                internalEdgeNormal.X = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, internalEdgeNormal.X);
+                internalEdgeNormal.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, internalEdgeNormal.Y);
+                internalEdgeNormal.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, internalEdgeNormal.Z);
 
                 //Compute the depth along the internal edge normal.
                 var horizontalLengthSquared = internalEdgeNormal.X * internalEdgeNormal.X + internalEdgeNormal.Z * internalEdgeNormal.Z;
@@ -206,6 +206,50 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             if (Vector.EqualsAny(useCapContacts, Vector<int>.Zero))
             {
                 //At least one lane requires a non-cap contact.
+                //Phrase the problem as a segment-segment test.
+                //For any lane that needs side contacts, we know the projected normal will be nonzero length based on the condition above.
+                var inverseHorizontalNormalLengthSquared = Vector<float>.One / (localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
+                var scale = b.Radius * inverseHorizontalNormalLengthSquared;
+                var cylinderSegmentOffsetX = localNormal.X * scale;
+                var cylinderSegmentOffsetZ = localNormal.Z * scale;
+                Vector3Wide aToSideSegmentCenter;
+                aToSideSegmentCenter.X = offsetB.X + cylinderSegmentOffsetX;
+                aToSideSegmentCenter.Y = offsetB.Y;
+                aToSideSegmentCenter.Z = offsetB.Z + cylinderSegmentOffsetZ;
+                GetClosestPointsBetweenSegments(capsuleAxis, aToSideSegmentCenter, a.HalfLength, b.HalfLength, out var ta, out var taMin, out var taMax, out var tb, out var tbMin, out var tbMax);
+
+                //In the event that the two capsule axes are coplanar, we accept the whole interval as a source of contact.
+                //As the axes drift away from coplanarity, the accepted interval rapidly narrows to zero length, centered on ta and tb.
+                //We rate the degree of coplanarity based on the angle between the capsule axis and the plane defined by the side and contact normal:
+                //sin(angle) = dot(da, (db x normal)/||db x normal||)
+                //Finally, note that we are dealing with extremely small angles, and for small angles sin(angle) ~= angle,
+                //and also that fade behavior is completely arbitrary, so we can directly use squared angle without any concern.
+                //angle^2 ~= dot(da, (db x normal))^2 / ||db x normal||^2
+                //Note that db x normal is just (normal.Z, -normal.X) since db is (0,1,0).
+                var dot = (capsuleAxis.X * localNormal.Z - capsuleAxis.Z * localNormal.X);
+                var squaredAngle = dot * dot * inverseHorizontalNormalLengthSquared;
+
+                //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
+                const float lowerThresholdAngle = 0.01f;
+                const float upperThresholdAngle = 0.05f;
+                const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
+                const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
+                var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));
+                //If the line segments intersect, even if they're coplanar, we would ideally stick to using a single point. Would be easy enough,
+                //but we don't bother because it's such a weird and extremely temporary corner case. Not really worth handling.
+                var weightedTb = tb - tb * intervalWeight;
+                var contactTMin = intervalWeight * tbMin + weightedTb;
+                var contactTMax = intervalWeight * tbMax + weightedTb;
+
+                contact0.X = cylinderSegmentOffsetX;
+                contact0.Y = contactTMin;
+                contact0.Z = cylinderSegmentOffsetZ;
+                contact1.X = cylinderSegmentOffsetX;
+                contact1.Y = contactTMax;
+                contact1.Z = cylinderSegmentOffsetZ;
+
+                contactCount = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(contactTMax - contactTMin), b.HalfLength * new Vector<float>(1e-5f)), Vector<int>.One, new Vector<int>(2));
+
             }
             if (Vector.LessThanAny(useCapContacts, Vector<int>.Zero))
             {
