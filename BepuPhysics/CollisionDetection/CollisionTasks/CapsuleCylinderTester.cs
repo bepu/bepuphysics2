@@ -103,7 +103,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(da, ta, out var closestA);
             Vector3Wide.Subtract(closestA, localOffsetB, out normal);
             normal.Y -= tb;
-            
+
             Vector3Wide.Length(normal, out var distance);
             var inverseDistance = Vector<float>.One / distance;
             Vector3Wide.Scale(normal, inverseDistance, out normal);
@@ -149,7 +149,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var distanceFromCylinderToLineSegment = Vector.SquareRoot(distanceFromCylinderToLineSegmentSquared);
             //Division by zero is protected by the depth selection- if distance is zero, the depth is set to infinity and this normal won't be selected.
             Vector3Wide.Scale(localNormal, Vector<float>.One / distanceFromCylinderToLineSegment, out localNormal);
-            var depth = Vector.ConditionalSelect(internalLineSegmentIntersected, new Vector<float>(float.MaxValue), distanceFromCylinderToLineSegment);
+            var depth = Vector.ConditionalSelect(internalLineSegmentIntersected, new Vector<float>(float.MaxValue), -distanceFromCylinderToLineSegment);
 
             if (Vector.EqualsAny(internalLineSegmentIntersected, new Vector<int>(-1)))
             {
@@ -184,15 +184,124 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(useInternalEdgeDepth, internalEdgeNormal, localNormal, out localNormal);
             }
             //All of the above excluded any consideration of the capsule's radius. Include it now.
-            depth -= a.Radius;
-            if(Vector.LessThanAll(depth, -speculativeMargin))
+            depth += a.Radius;
+            if (Vector.LessThanAll(depth, -speculativeMargin))
             {
                 //All lanes have a depth which cannot create any contacts due to the speculative margin. We can early out.
                 //This is determinism-safe; even if execution continued, there would be no contacts created and the manifold would be equivalent for all lanes.
                 manifold = default;
                 return;
             }
-            manifold = default;
+            //We now have depth and a collision normal. Use it to identify representative features on each shape.
+            //Note that we exclude edges as representatives; only features with area are used so that contact generation can produce better speculative contacts.
+            //Potential features pairs are:
+            //Capsule segment vs cylinder side
+            //Capsule segment vs cylinder cap
+            //Segment-side case is handled in the same way as capsule-capsule- create an interval by projecting the segment onto the cylinder segment and then narrow the interval in response to noncoplanarity.
+            //Segment-cap is easy too; project the segment down onto the cap plane. Clip it against the cap circle (solve a quadratic).
+
+            Vector3Wide contact0 = default, contact1 = default;
+            Vector<int> contactCount = default;
+            var useCapContacts = Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f));
+            if (Vector.EqualsAny(useCapContacts, Vector<int>.Zero))
+            {
+                //At least one lane requires a non-cap contact.
+            }
+            if (Vector.LessThanAny(useCapContacts, Vector<int>.Zero))
+            {
+                //At least one lane requires a cap contact.
+                //An important note: for highest quality, all clipping takes place on the *normal plane*. So segment-cap doesn't merely set the y component to zero (projecting along B's Y axis).
+                //Instead, the endpoints are casted along the normal to the cap plane.            
+                //t = dot(capsuleOrigin +- capsuleDirection * a.HalfLength - (0, normal.Y > 0 ? b.HalfLength : a.HalfLength, 0), cylinderY) / dot(normal, cylinderY)
+                //t = (capsuleOrigin.Y +- capsuleDirection.Y * a.HalfLength - (normal.Y > 0 ? b.HalfLength : a.HalfLength)) / normal.Y
+                //Note that the cap will only be chosen as a representative if normal.Y dominates the horizontal direction, so there is no need to test for division by zero.
+                var capHeight = Vector.ConditionalSelect(Vector.GreaterThan(localNormal.Y, Vector<float>.Zero), b.HalfLength, -b.HalfLength);
+                var inverseNormalY = Vector<float>.One / localNormal.Y;
+                Vector3Wide.Scale(capsuleAxis, a.HalfLength, out var endpointOffset);
+                Vector3Wide positive, negative;
+                positive.X = localOffsetA.X + endpointOffset.X;
+                positive.Y = localOffsetA.Y + endpointOffset.Y - capHeight;
+                positive.Z = localOffsetA.Z + endpointOffset.Z;
+                negative.X = localOffsetA.X - endpointOffset.X;
+                negative.Y = localOffsetA.Y - endpointOffset.Y - capHeight;
+                negative.Z = localOffsetA.Z - endpointOffset.Z;
+                var centerOffsetAlongY = localOffsetA.Y - capHeight;
+                var endpointOffsetAlongY = capsuleAxis.Y * a.HalfLength;
+                var tNegative = negative.Y * inverseNormalY;
+                var tPositive = positive.Y * inverseNormalY;
+                Vector2Wide projectedPositive, projectedNegative;
+                projectedNegative.X = localNormal.X * tNegative + negative.X;
+                projectedNegative.Y = localNormal.Z * tNegative + negative.Z;
+                projectedPositive.X = localNormal.X * tPositive + positive.X;
+                projectedPositive.Y = localNormal.Z * tPositive + positive.Z;
+
+                //Intersect the line segment (projectedNegative, projectedPositive) with the circle with radius b.Radius positioned at (0,0).
+                Vector2Wide.Subtract(projectedPositive, projectedNegative, out var projectedOffset);
+                //||a + ab * t|| = radius
+                //dot(a + ab * t, a + ab * t) = radius * radius
+                //dot(a,a) - radius * radius + t * 2 * dot(a, ab) + t^2 * dot(ab, ab) = 0
+                Vector2Wide.Dot(projectedNegative, projectedNegative, out var coefficientC);
+                coefficientC -= b.Radius * b.Radius;
+                Vector2Wide.Dot(projectedNegative, projectedOffset, out var coefficientB);
+                Vector2Wide.Dot(projectedOffset, projectedOffset, out var coefficientA);
+                var inverseA = Vector<float>.One / coefficientA;
+                var tOffset = Vector.SquareRoot(Vector.Max(Vector<float>.Zero, coefficientB * coefficientB - coefficientA * coefficientC)) * inverseA;
+                var tBase = -coefficientB * inverseA;
+                var tMin = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, tBase - tOffset));
+                var tMax = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, tBase + tOffset));
+                Vector3Wide capContact0, capContact1;
+                capContact0.X = tMin * projectedOffset.X + projectedNegative.X;
+                capContact0.Y = capHeight;
+                capContact0.Z = tMin * projectedOffset.Y + projectedNegative.Y;
+                capContact1.X = tMax * projectedOffset.X + projectedPositive.X;
+                capContact1.Y = capHeight;
+                capContact1.Z = tMax * projectedOffset.Y + projectedPositive.Y;
+                //Fixed epsilon- the t value scales an offset that is generally proportional to object sizes.
+                var capContactCount = Vector.ConditionalSelect(Vector.GreaterThan(tMax - tMin, new Vector<float>(1e-5f)), new Vector<int>(2), Vector<int>.One);
+                contactCount = Vector.ConditionalSelect(useCapContacts, capContactCount, contactCount);
+                Vector3Wide.ConditionalSelect(useCapContacts, capContact0, contact0, out contact0);
+                Vector3Wide.ConditionalSelect(useCapContacts, capContact1, contact1, out contact1);
+            }
+            //While we have computed a global depth, each contact has its own depth.
+            //Project the contact on B along the contact normal to the 'face' of A.
+            //A is a capsule, but we can treat it as having a faceNormalA = (localNormal x capsuleAxis) x capsuleAxis.
+            //The full computation is: 
+            //t = dot(localOffsetA - contact, faceNormalA) / dot(faceNormalA, localNormal)
+            //depth = dot(contact + t * localNormal, localNormal) = dot(contact, localNormal) + t
+            Vector3Wide.CrossWithoutOverlap(localNormal, capsuleAxis, out var capsuleTangent);
+            Vector3Wide.CrossWithoutOverlap(capsuleTangent, capsuleAxis, out var faceNormalA);
+            Vector3Wide.Dot(faceNormalA, localNormal, out var faceNormalADotLocalNormal);
+            //Don't have to perform any calibration on the faceNormalA; it appears in both the numerator and denominator so the sign and magnitudes cancel.
+            var inverseFaceNormalADotLocalNormal = Vector<float>.One / faceNormalADotLocalNormal;
+            Vector3Wide.Scale(faceNormalA, faceNormalADotLocalNormal, out var scaledFaceNormalA);
+            Vector3Wide.Subtract(localOffsetA, contact0, out var offset0);
+            Vector3Wide.Subtract(localOffsetA, contact1, out var offset1);
+            Vector3Wide.Dot(offset0, faceNormalA, out var t0);
+            Vector3Wide.Dot(offset1, faceNormalA, out var t1);
+            t0 *= inverseFaceNormalADotLocalNormal;
+            t1 *= inverseFaceNormalADotLocalNormal;
+            Vector3Wide.Dot(contact0, localNormal, out var dot0);
+            Vector3Wide.Dot(contact1, localNormal, out var dot1);
+            manifold.Depth0 = dot0 + t0 + a.Radius;
+            manifold.Depth1 = dot1 + t1 + a.Radius;
+
+            //If the capsule axis is parallel with the normal, then the contacts collapse to one point and we can use the initially computed depth.
+            //In this case, both contact positions should be extremely close together anyway.
+            var collapse = Vector.LessThan(Vector.Abs(faceNormalADotLocalNormal), new Vector<float>(1e-14f));
+            manifold.Depth0 = Vector.ConditionalSelect(collapse, depth, manifold.Depth0);
+            var negativeMargin = -speculativeMargin;
+            manifold.Contact0Exists = Vector.GreaterThan(manifold.Depth0, negativeMargin);
+            manifold.Contact1Exists = Vector.BitwiseAnd(Vector.AndNot(Vector.Equals(contactCount, new Vector<int>(2)), collapse), Vector.GreaterThan(manifold.Depth1, negativeMargin));
+
+            //Push the contacts into world space.
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, worldRB, out manifold.Normal);
+            Matrix3x3Wide.TransformWithoutOverlap(contact0, worldRB, out manifold.OffsetA0);
+            Matrix3x3Wide.TransformWithoutOverlap(contact1, worldRB, out manifold.OffsetA1);
+            Vector3Wide.Add(manifold.OffsetA0, offsetB, out manifold.OffsetA0);
+            Vector3Wide.Add(manifold.OffsetA1, offsetB, out manifold.OffsetA1);
+
+            manifold.FeatureId0 = Vector<int>.Zero;
+            manifold.FeatureId1 = Vector<int>.One;
         }
 
         public void Test(ref CapsuleWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)
