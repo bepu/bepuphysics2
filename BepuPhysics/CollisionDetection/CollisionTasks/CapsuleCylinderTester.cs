@@ -142,7 +142,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             if (Vector.EqualsAny(internalLineSegmentIntersected, new Vector<int>(-1)))
             {
                 //At least one lane is intersecting deeply, so we need to examine the other possible normals.
-                var endpointVsCapDepth = b.HalfLength - Vector.Abs(localOffsetA.Y) - Vector.Abs(capsuleAxis.Y * a.HalfLength);
+                var endpointVsCapDepth = b.HalfLength + Vector.Abs(capsuleAxis.Y * a.HalfLength) - Vector.Abs(localOffsetA.Y);
                 var useEndpointCapDepth = Vector.LessThan(endpointVsCapDepth, depth);
                 depth = Vector.Min(endpointVsCapDepth, depth);
                 localNormal.X = Vector.ConditionalSelect(useEndpointCapDepth, Vector<float>.Zero, localNormal.X);
@@ -161,7 +161,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var inverseDistance = Vector<float>.One / distance;
                 Vector3Wide.Scale(offset, inverseDistance, out var internalEdgeNormal);
                 var useFallback = Vector.LessThan(distance, new Vector<float>(1e-7f));
-                internalEdgeNormal.X = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, internalEdgeNormal.X);
+                internalEdgeNormal.X = Vector.ConditionalSelect(useFallback, Vector<float>.One, internalEdgeNormal.X);
                 internalEdgeNormal.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, internalEdgeNormal.Y);
                 internalEdgeNormal.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, internalEdgeNormal.Z);
 
@@ -209,13 +209,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Phrase the problem as a segment-segment test.
                 //For any lane that needs side contacts, we know the projected normal will be nonzero length based on the condition above.
                 var inverseHorizontalNormalLengthSquared = Vector<float>.One / (localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
-                var scale = b.Radius * inverseHorizontalNormalLengthSquared;
+                var scale = b.Radius * Vector.SquareRoot(inverseHorizontalNormalLengthSquared);
                 var cylinderSegmentOffsetX = localNormal.X * scale;
                 var cylinderSegmentOffsetZ = localNormal.Z * scale;
                 Vector3Wide aToSideSegmentCenter;
-                aToSideSegmentCenter.X = offsetB.X + cylinderSegmentOffsetX;
-                aToSideSegmentCenter.Y = offsetB.Y;
-                aToSideSegmentCenter.Z = offsetB.Z + cylinderSegmentOffsetZ;
+                aToSideSegmentCenter.X = localOffsetB.X + cylinderSegmentOffsetX;
+                aToSideSegmentCenter.Y = localOffsetB.Y;
+                aToSideSegmentCenter.Z = localOffsetB.Z + cylinderSegmentOffsetZ;
                 GetClosestPointsBetweenSegments(capsuleAxis, aToSideSegmentCenter, a.HalfLength, b.HalfLength, out var ta, out var taMin, out var taMax, out var tb, out var tbMin, out var tbMax);
 
                 //In the event that the two capsule axes are coplanar, we accept the whole interval as a source of contact.
@@ -274,10 +274,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var tNegative = negative.Y * inverseNormalY;
                 var tPositive = positive.Y * inverseNormalY;
                 Vector2Wide projectedPositive, projectedNegative;
-                projectedNegative.X = localNormal.X * tNegative + negative.X;
-                projectedNegative.Y = localNormal.Z * tNegative + negative.Z;
-                projectedPositive.X = localNormal.X * tPositive + positive.X;
-                projectedPositive.Y = localNormal.Z * tPositive + positive.Z;
+                projectedNegative.X = negative.X - localNormal.X * tNegative;
+                projectedNegative.Y = negative.Z - localNormal.Z * tNegative;
+                projectedPositive.X = positive.X - localNormal.X * tPositive;
+                projectedPositive.Y = positive.Z - localNormal.Z * tPositive;
 
                 //Intersect the line segment (projectedNegative, projectedPositive) with the circle with radius b.Radius positioned at (0,0).
                 Vector2Wide.Subtract(projectedPositive, projectedNegative, out var projectedOffset);
@@ -293,13 +293,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var tBase = -coefficientB * inverseA;
                 var tMin = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, tBase - tOffset));
                 var tMax = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, tBase + tOffset));
+                //If the projected length is zero, just treat both points as being in the same location (at tNegative).
+                var useFallback = Vector.LessThan(Vector.Abs(coefficientA), new Vector<float>(1e-12f));
+                tMin = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, tMin);
+                tMax = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, tMax);
                 Vector3Wide capContact0, capContact1;
                 capContact0.X = tMin * projectedOffset.X + projectedNegative.X;
                 capContact0.Y = capHeight;
                 capContact0.Z = tMin * projectedOffset.Y + projectedNegative.Y;
-                capContact1.X = tMax * projectedOffset.X + projectedPositive.X;
+                capContact1.X = tMax * projectedOffset.X + projectedNegative.X;
                 capContact1.Y = capHeight;
-                capContact1.Z = tMax * projectedOffset.Y + projectedPositive.Y;
+                capContact1.Z = tMax * projectedOffset.Y + projectedNegative.Y;
                 //Fixed epsilon- the t value scales an offset that is generally proportional to object sizes.
                 var capContactCount = Vector.ConditionalSelect(Vector.GreaterThan(tMax - tMin, new Vector<float>(1e-5f)), new Vector<int>(2), Vector<int>.One);
                 contactCount = Vector.ConditionalSelect(useCapContacts, capContactCount, contactCount);
@@ -310,22 +314,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Project the contact on B along the contact normal to the 'face' of A.
             //A is a capsule, but we can treat it as having a faceNormalA = (localNormal x capsuleAxis) x capsuleAxis.
             //The full computation is: 
-            //t = dot(localOffsetA - contact, faceNormalA) / dot(faceNormalA, localNormal)
-            //depth = -dot(t * localNormal, localNormal) = -t
+            //t = dot(contact + localOffsetB, faceNormalA) / dot(faceNormalA, localNormal)
+            //depth = dot(t * localNormal, localNormal) = t
             Vector3Wide.CrossWithoutOverlap(localNormal, capsuleAxis, out var capsuleTangent);
             Vector3Wide.CrossWithoutOverlap(capsuleTangent, capsuleAxis, out var faceNormalA);
             Vector3Wide.Dot(faceNormalA, localNormal, out var faceNormalADotLocalNormal);
             //Don't have to perform any calibration on the faceNormalA; it appears in both the numerator and denominator so the sign and magnitudes cancel.
             var inverseFaceNormalADotLocalNormal = Vector<float>.One / faceNormalADotLocalNormal;
             Vector3Wide.Scale(faceNormalA, faceNormalADotLocalNormal, out var scaledFaceNormalA);
-            Vector3Wide.Subtract(localOffsetA, contact0, out var offset0);
-            Vector3Wide.Subtract(localOffsetA, contact1, out var offset1);
+            Vector3Wide.Add(localOffsetB, contact0, out var offset0);
+            Vector3Wide.Add(localOffsetB, contact1, out var offset1);
             Vector3Wide.Dot(offset0, faceNormalA, out var t0);
             Vector3Wide.Dot(offset1, faceNormalA, out var t1);
             t0 *= inverseFaceNormalADotLocalNormal;
             t1 *= inverseFaceNormalADotLocalNormal;
-            manifold.Depth0 = a.Radius - t0;
-            manifold.Depth1 = a.Radius - t1;
+            manifold.Depth0 = a.Radius + t0;
+            manifold.Depth1 = a.Radius + t1;
 
             //If the capsule axis is parallel with the normal, then the contacts collapse to one point and we can use the initially computed depth.
             //In this case, both contact positions should be extremely close together anyway.
