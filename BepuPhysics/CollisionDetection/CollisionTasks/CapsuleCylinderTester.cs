@@ -165,18 +165,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 internalEdgeNormal.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, internalEdgeNormal.Z);
 
                 //Compute the depth along the internal edge normal.
-                var horizontalLengthSquared = internalEdgeNormal.X * internalEdgeNormal.X + internalEdgeNormal.Z * internalEdgeNormal.Z;
-                var scale = Vector.ConditionalSelect(Vector.LessThan(horizontalLengthSquared, new Vector<float>(1e-12f)), Vector<float>.Zero, b.Radius / Vector.SquareRoot(horizontalLengthSquared));
-                Vector3Wide extremeOnCylinder;
-                extremeOnCylinder.X = scale * internalEdgeNormal.X;
-                extremeOnCylinder.Y = Vector.ConditionalSelect(Vector.GreaterThan(internalEdgeNormal.Y, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1));
-                extremeOnCylinder.Z = scale * internalEdgeNormal.Z;
-                Vector3Wide.Dot(internalEdgeNormal, capsuleAxis, out var axisDot);
-                var capsuleExtremeT = Vector.ConditionalSelect(Vector.GreaterThan(axisDot, Vector<float>.Zero), -a.HalfLength, a.HalfLength);
-                Vector3Wide.Scale(capsuleAxis, capsuleExtremeT, out var extremeOnCapsule);
-                Vector3Wide.Add(localOffsetA, extremeOnCapsule, out extremeOnCapsule);
-                Vector3Wide.Subtract(extremeOnCylinder, extremeOnCapsule, out var extremeOffset);
-                Vector3Wide.Dot(extremeOffset, internalEdgeNormal, out var internalEdgeDepth);
+                Vector3Wide.Dot(localOffsetA, internalEdgeNormal, out var centerSeparationAlongNormal);
+                var cylinderContribution = Vector.Abs(b.HalfLength * internalEdgeNormal.Y) + b.Radius * Vector.SquareRoot(Vector.Max(Vector<float>.Zero, Vector<float>.One - internalEdgeNormal.Y * internalEdgeNormal.Y));
+                Vector3Wide.Dot(capsuleAxis, internalEdgeNormal, out var capsuleAxisDotNormal);
+                var capsuleContribution = Vector.Abs(capsuleAxisDotNormal) * a.HalfLength;
+                var internalEdgeDepth = cylinderContribution + capsuleContribution - centerSeparationAlongNormal;
 
                 var useInternalEdgeDepth = Vector.LessThan(internalEdgeDepth, depth);
                 depth = Vector.Min(internalEdgeDepth, depth);
