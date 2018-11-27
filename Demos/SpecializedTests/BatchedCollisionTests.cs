@@ -143,13 +143,14 @@ namespace Demos.SpecializedTests
             var registry = DefaultTypes.CreateDefaultCollisionTaskRegistry();
             var sphere = new Sphere(1);
             var capsule = new Capsule(0.5f, 1f);
+            var cylinder = new Cylinder(0.5f, 1f);
             var box = new Box(1f, 1f, 1f);
             var triangle = new Triangle(new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1));
             var poseA = new RigidPose { Position = new Vector3(0, 0, 0), Orientation = BepuUtilities.Quaternion.Identity };
             var poseB = new RigidPose { Position = new Vector3(0, 1, 0), Orientation = BepuUtilities.Quaternion.Identity };
             Shapes shapes = new Shapes(pool, 32);
 
-            int iterationCount = 1 << 25;
+            int iterationCount = 1 << 23;
             pool.Take<RigidPose>(iterationCount, out var posesA);
             pool.Take<RigidPose>(iterationCount, out var posesB);
             var random = new Random(5);
@@ -162,9 +163,11 @@ namespace Demos.SpecializedTests
 
             Test(ref sphere, ref sphere, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref sphere, ref capsule, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref sphere, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref sphere, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref sphere, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref capsule, ref capsule, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref capsule, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref capsule, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref capsule, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             Test(ref box, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
@@ -174,11 +177,16 @@ namespace Demos.SpecializedTests
 
             Test<Sphere, SphereWide, Sphere, SphereWide, SpherePairDistanceTester>(sphere, sphere, ref posesA, ref posesB, iterationCount);
             Test<Sphere, SphereWide, Capsule, CapsuleWide, SphereCapsuleDistanceTester>(sphere, capsule, ref posesA, ref posesB, iterationCount);
+            Test<Sphere, SphereWide, Cylinder, CylinderWide, SphereCylinderDistanceTester>(sphere, cylinder, ref posesA, ref posesB, iterationCount);
             Test<Sphere, SphereWide, Box, BoxWide, SphereBoxDistanceTester>(sphere, box, ref posesA, ref posesB, iterationCount);
             Test<Sphere, SphereWide, Triangle, TriangleWide, SphereTriangleDistanceTester>(sphere, triangle, ref posesA, ref posesB, iterationCount);
             Test<Capsule, CapsuleWide, Capsule, CapsuleWide, CapsulePairDistanceTester>(capsule, capsule, ref posesA, ref posesB, iterationCount);
+            Test<Capsule, CapsuleWide, Cylinder, CylinderWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>>(capsule, cylinder, ref posesA, ref posesB, iterationCount);
             Test<Capsule, CapsuleWide, Box, BoxWide, CapsuleBoxDistanceTester>(capsule, box, ref posesA, ref posesB, iterationCount);
             Test<Capsule, CapsuleWide, Triangle, TriangleWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(capsule, triangle, ref posesA, ref posesB, iterationCount);
+            Test<Cylinder, CylinderWide, Cylinder, CylinderWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>>(cylinder, cylinder, ref posesA, ref posesB, iterationCount);
+            Test<Cylinder, CylinderWide, Box, BoxWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Box, BoxWide, BoxSupportFinder>>(cylinder, box, ref posesA, ref posesB, iterationCount);
+            Test<Cylinder, CylinderWide, Triangle, TriangleWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(cylinder, triangle, ref posesA, ref posesB, iterationCount);
             Test<Box, BoxWide, Box, BoxWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>>(box, box, ref posesA, ref posesB, iterationCount);
             Test<Box, BoxWide, Triangle, TriangleWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(box, triangle, ref posesA, ref posesB, iterationCount);
             Test<Triangle, TriangleWide, Triangle, TriangleWide, GJKDistanceTester<Triangle, TriangleWide, TriangleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>(triangle, triangle, ref posesA, ref posesB, iterationCount);

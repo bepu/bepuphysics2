@@ -1,4 +1,5 @@
 ﻿using BepuPhysics.Collidables;
+using BepuPhysics.CollisionDetection.SweepTasks;
 using BepuUtilities;
 using System;
 using System.Numerics;
@@ -29,8 +30,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public static void GetClosestPointBetweenLineSegmentAndCylinder(in Vector3Wide lineOrigin, in Vector3Wide lineDirection, in Vector<float> halfLength, in CylinderWide b,
             out Vector<float> t, out Vector3Wide offsetFromCylinderToLineSegment)
         {
-            //TODO: At the moment, capsule-cylinder distance tester uses GJK. You could use something like this instead- pretty sure it'd beat GJK easily. 
-            //(worth testing- if our GJK implementation somehow outperforms this at the same level of accuracy, we could use GJK here instead!)
             var min = -halfLength;
             var max = halfLength;
             t = Vector<float>.Zero;
