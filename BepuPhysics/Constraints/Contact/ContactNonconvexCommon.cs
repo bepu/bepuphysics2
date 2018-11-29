@@ -242,7 +242,7 @@ namespace BepuPhysics.Constraints.Contact
                 ref var prestepContact = ref Unsafe.Add(ref prestepContactStart, i);
                 ref var projectionContact = ref Unsafe.Add(ref projectionContactStart, i);
                 projectionContact.Normal = prestepContact.Normal;
-                Helpers.BuildOrthnormalBasis(ref prestepContact.Normal, out var x, out var z);
+                Helpers.BuildOrthnormalBasis(prestepContact.Normal, out var x, out var z);
                 TangentFrictionOneBody.Prestep(ref x, ref z, ref prestepContact.Offset, ref projectionCommon.InertiaA, out projectionContact.Tangent);
                 PenetrationLimitOneBody.Prestep(projectionCommon.InertiaA,
                     prestepContact.Offset, prestepContact.Normal, prestepContact.Depth,
@@ -263,7 +263,7 @@ namespace BepuPhysics.Constraints.Contact
             {
                 ref var contact = ref Unsafe.Add(ref contactStart, i);
                 ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
-                Helpers.BuildOrthnormalBasis(ref contact.Normal, out var x, out var z);
+                Helpers.BuildOrthnormalBasis(contact.Normal, out var x, out var z);
                 TangentFrictionOneBody.WarmStart(ref x, ref z, ref contact.Tangent, ref common.InertiaA, ref contactImpulse.Tangent, ref wsvA);
                 PenetrationLimitOneBody.WarmStart(contact.Penetration, common.InertiaA, contact.Normal, contactImpulse.Penetration, ref wsvA);
             }
@@ -281,7 +281,7 @@ namespace BepuPhysics.Constraints.Contact
             {
                 ref var contact = ref Unsafe.Add(ref contactStart, i);
                 ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
-                Helpers.BuildOrthnormalBasis(ref contact.Normal, out var x, out var z);
+                Helpers.BuildOrthnormalBasis(contact.Normal, out var x, out var z);
                 var maximumTangentImpulse = common.FrictionCoefficient * contactImpulse.Penetration;
                 TangentFrictionOneBody.Solve(ref x, ref z, ref contact.Tangent, ref common.InertiaA, ref maximumTangentImpulse, ref contactImpulse.Tangent, ref wsvA);
                 PenetrationLimitOneBody.Solve(contact.Penetration, common.InertiaA, contact.Normal, common.SoftnessImpulseScale,
@@ -318,7 +318,7 @@ namespace BepuPhysics.Constraints.Contact
                 ref var prestepContact = ref Unsafe.Add(ref prestepContactStart, i);
                 ref var projectionContact = ref Unsafe.Add(ref projectionContactStart, i);
                 projectionContact.Normal = prestepContact.Normal;
-                Helpers.BuildOrthnormalBasis(ref prestepContact.Normal, out var x, out var z);
+                Helpers.BuildOrthnormalBasis(prestepContact.Normal, out var x, out var z);
                 Vector3Wide.Subtract(prestepContact.Offset, prestepCommon.OffsetB, out var contactOffsetB);
                 TangentFriction.Prestep(ref x, ref z, ref prestepContact.Offset, ref contactOffsetB, ref projectionCommon.InertiaA, ref projectionCommon.InertiaB, out projectionContact.Tangent);
                 PenetrationLimit.Prestep(projectionCommon.InertiaA, projectionCommon.InertiaB,
@@ -341,7 +341,7 @@ namespace BepuPhysics.Constraints.Contact
             {
                 ref var contact = ref Unsafe.Add(ref contactStart, i);
                 ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
-                Helpers.BuildOrthnormalBasis(ref contact.Normal, out var x, out var z);
+                Helpers.BuildOrthnormalBasis(contact.Normal, out var x, out var z);
                 TangentFriction.WarmStart(ref x, ref z, ref contact.Tangent, ref common.InertiaA, ref common.InertiaB, ref contactImpulse.Tangent, ref wsvA, ref wsvB);
                 PenetrationLimit.WarmStart(contact.Penetration, common.InertiaA, common.InertiaB, contact.Normal, contactImpulse.Penetration, ref wsvA, ref wsvB);
             }
@@ -359,7 +359,7 @@ namespace BepuPhysics.Constraints.Contact
             {
                 ref var contact = ref Unsafe.Add(ref contactStart, i);
                 ref var contactImpulse = ref Unsafe.Add(ref accumulatedImpulsesStart, i);
-                Helpers.BuildOrthnormalBasis(ref contact.Normal, out var x, out var z);
+                Helpers.BuildOrthnormalBasis(contact.Normal, out var x, out var z);
                 var maximumTangentImpulse = common.FrictionCoefficient * contactImpulse.Penetration;
                 TangentFriction.Solve(ref x, ref z, ref contact.Tangent, ref common.InertiaA, ref common.InertiaB, ref maximumTangentImpulse, ref contactImpulse.Tangent, ref wsvA, ref wsvB);
                 PenetrationLimit.Solve(contact.Penetration, common.InertiaA, common.InertiaB, contact.Normal, common.SoftnessImpulseScale, ref contactImpulse.Penetration, ref wsvA, ref wsvB);

@@ -89,7 +89,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.CrossWithoutOverlap(swivelAxis, hingeAxis, out var jacobianA);
             //In the event that the axes are parallel, there is no unique jacobian. Arbitrarily pick one.
             //Note that this causes a discontinuity in jacobian length at the poles. We just don't worry about it.
-            Helpers.FindPerpendicular(ref swivelAxis, out var fallbackJacobian);
+            Helpers.FindPerpendicular(swivelAxis, out var fallbackJacobian);
             Vector3Wide.Dot(jacobianA, jacobianA, out var jacobianLengthSquared);
             var useFallback = Vector.LessThan(jacobianLengthSquared, new Vector<float>(1e-7f));
             Vector3Wide.ConditionalSelect(useFallback, fallbackJacobian, jacobianA, out jacobianA);

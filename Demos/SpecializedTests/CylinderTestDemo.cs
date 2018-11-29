@@ -180,18 +180,88 @@ namespace Demos.SpecializedTests
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(0, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Sphere(2)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(5, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Capsule(0.5f, 1f)));
 
-            CapsuleCylinderTester tester = default;
-            CapsuleWide a = default;
-            a.Broadcast(new Capsule(0.5f, 1));
+            {
+                CapsuleCylinderTester tester = default;
+                CapsuleWide a = default;
+                a.Broadcast(new Capsule(0.5f, 1));
+                CylinderWide b = default;
+                b.Broadcast(new Cylinder(0.5f, 1));
+                var speculativeMargin = new Vector<float>(2f);
+                Vector3Wide.Broadcast(new Vector3(0, -0.4f, 0), out var offsetB);
+                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2), out var orientationA);
+                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var orientationB);
+                tester.Test(ref a, ref b, ref speculativeMargin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
+            }
+            {
+                CylinderWide a = default;
+                a.Broadcast(new Cylinder(0.5f, 1));
+                CylinderWide b = default;
+                b.Broadcast(new Cylinder(0.5f, 1));
+                Vector3Wide.Broadcast(new Vector3(0, -3f, 0), out var localOffsetB);
+                Vector3Wide.Broadcast(new Vector3(0, 1f, 0), out var localAxisYA);
+                Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(.2f, 1, 0)), out var localNormal);
+                //CylinderPairTester.GradientDescent(localAxisYA, localOffsetB, a, b, ref localNormal);
+                //CylinderPairTester.GetDepth(localAxisYA, localOffsetB, localNormal, a, b, out var depth);
+                CylinderPairTester.GradientDescent3(localAxisYA, localOffsetB, a, b, ref localNormal, out var depth);
+                TimeGradientDescent1(32);
+                TimeGradientDescent1(1000000);
+                TimeGradientDescent2(32);
+                TimeGradientDescent2(1000000);
+                TimeGradientDescent3(32);
+                TimeGradientDescent3(1000000);
+            }
+        }
+        void TimeGradientDescent1(int iterationCount)
+        {
+            CylinderWide a = default;
+            a.Broadcast(new Cylinder(0.5f, 1));
             CylinderWide b = default;
             b.Broadcast(new Cylinder(0.5f, 1));
-            var speculativeMargin = new Vector<float>(2f);
-            Vector3Wide.Broadcast(new Vector3(0, -0.4f, 0), out var offsetB);
-            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2), out var orientationA);
-            QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var orientationB);
-            tester.Test(ref a, ref b, ref speculativeMargin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
+            Vector3Wide.Broadcast(new Vector3(0, -3f, 0), out var localOffsetB);
+            Vector3Wide.Broadcast(new Vector3(0, 1f, 0), out var localAxisYA);
+            Vector3Wide.Broadcast(new Vector3(1, 0, 0), out var localNormal);
+            var start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < iterationCount; ++i)
+            {
+                CylinderPairTester.GradientDescent(localAxisYA, localOffsetB, a, b, ref localNormal);
+            }
+            var end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Time (ns) per iteration (iteration count {iterationCount}): {1e9 * (end - start) / (iterationCount * (double)Stopwatch.Frequency)}");
+        }
 
-            //TestSegmentCylinder();
+        void TimeGradientDescent2(int iterationCount)
+        {
+            CylinderWide a = default;
+            a.Broadcast(new Cylinder(0.5f, 1));
+            CylinderWide b = default;
+            b.Broadcast(new Cylinder(0.5f, 1));
+            Vector3Wide.Broadcast(new Vector3(0, -3f, 0), out var localOffsetB);
+            Vector3Wide.Broadcast(new Vector3(0, 1f, 0), out var localAxisYA);
+            Vector3Wide.Broadcast(new Vector3(1, 0, 0), out var localNormal);
+            var start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < iterationCount; ++i)
+            {
+                CylinderPairTester.GradientDescent2(localAxisYA, localOffsetB, a, b, ref localNormal, out var depth);
+            }
+            var end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Time (ns) per iteration (iteration count {iterationCount}): {1e9 * (end - start) / (iterationCount * (double)Stopwatch.Frequency)}");
+        }
+        void TimeGradientDescent3(int iterationCount)
+        {
+            CylinderWide a = default;
+            a.Broadcast(new Cylinder(0.5f, 1));
+            CylinderWide b = default;
+            b.Broadcast(new Cylinder(0.5f, 1));
+            Vector3Wide.Broadcast(new Vector3(0, -3f, 0), out var localOffsetB);
+            Vector3Wide.Broadcast(new Vector3(0, 1f, 0), out var localAxisYA);
+            Vector3Wide.Broadcast(new Vector3(1, 0, 0), out var localNormal);
+            var start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < iterationCount; ++i)
+            {
+                CylinderPairTester.GradientDescent3(localAxisYA, localOffsetB, a, b, ref localNormal, out var depth);
+            }
+            var end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Time (ns) per iteration (iteration count {iterationCount}): {1e9 * (end - start) / (iterationCount * (double)Stopwatch.Frequency)}");
         }
     }
 }

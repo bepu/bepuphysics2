@@ -54,6 +54,7 @@ namespace BepuUtilities
             result.Y = a.Y - b.Y;
             result.Z = a.Z - b.Z;
         }
+
         /// <summary>
         /// Finds the result of subtracting a scalar from every component of a vector.
         /// </summary>
