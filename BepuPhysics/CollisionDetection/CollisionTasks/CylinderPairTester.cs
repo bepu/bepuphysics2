@@ -1,4 +1,5 @@
 ﻿using BepuPhysics.Collidables;
+using BepuPhysics.CollisionDetection.SweepTasks;
 using BepuUtilities;
 using System;
 using System.Numerics;
@@ -138,6 +139,277 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 GetDepth(localAxisYA, localOffsetB, localNormal, a, b, out depth);
             }
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GradientDescent4(in Vector3Wide localAxisYA, in Vector3Wide localOffsetB, in CylinderWide a, in CylinderWide b, ref Vector3Wide localNormal)
+        {
+            //Cylinder-cylinder's depth calculation is analytically differentiable.
+            //depth(N) = cylinderContribution(A, N) + cylinderContribution(B, N) - offsetSeparation(N)
+            //cylinderContribution(a, B) = a.HalfLength * abs(dot(N, a.AxisY) + a.Radius * sqrt(1 - dot(N, a.AxisY)^2)
+            //dN/dTX(cylinderContribution(a, B)) = a.HalfLength * sign(dot(N, a.AxisY)) * dN/dTX(dot(N, a.AxisY)) - a.Radius * dN/dTX(dot(N, a.AxisY)) * dot(N, a.AxisY) / sqrt(1 - dot(N, a.AxisY)^2)
+            //dN/dTX(dot(N, a.AxisY)) = dot(TX, a.AxisY)
+            //dN/dTX(cylinderContribution(a, B)) = dot(TX, a.AxisY) * (a.HalfLength * sign(dot(N, a.AxisY)) - a.Radius * dot(N, a.AxisY) / sqrt(1 - dot(N, a.AxisY)^2))
+            //Note that the dot(TX, aAxis.Y) scale is always going to be no larger than sqrt(1 - dot(N, a.AxisY)^2), so this doesn't actually grow to infinity. The discontinuity at dot(N, a.AxisY)^2 == 1 must be handled, though.
+
+            //Extrapolating that to the other tangent TY and the other cylinder is simple; for the offset:
+            //offsetSeparation(N) = abs(dot(offsetB, N))
+            //dN/dTX(offsetSeparation(N)) = sign(dot(offsetB, N)) * dN/dTX(dot(offsetB, N)) = sign(dot(offsetB, N)) * dot(offsetB, TX)
+            var gradientScale = new Vector<float>(0.3f);
+            var divisorEpsilon = new Vector<float>(1e-10f);
+            Vector3Wide previousGradient = default;
+            for (int i = 0; i < 10; ++i)
+            {
+                Vector3Wide.Dot(localAxisYA, localNormal, out var dotNAY);
+                var scaleA = Vector.ConditionalSelect(Vector.LessThan(dotNAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength) - a.Radius * dotNAY / Vector.SquareRoot(Vector.Max(divisorEpsilon, Vector<float>.One - dotNAY * dotNAY));
+                //Working in B's local space, so no need for an axis dot.
+                var scaleB = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength) - b.Radius * localNormal.Y / Vector.SquareRoot(Vector.Max(divisorEpsilon, Vector<float>.One - localNormal.Y * localNormal.Y));
+
+                Vector3Wide.Dot(localOffsetB, localNormal, out var dotOffsetN);
+                var useNegatedOffset = Vector.LessThan(dotOffsetN, Vector<float>.Zero);
+                Helpers.BuildOrthnormalBasis(localNormal, out var x, out var y);
+                Vector3Wide.Dot(x, localAxisYA, out var aYDotTX);
+                Vector3Wide.Dot(x, localOffsetB, out var offsetBDotTX);
+                Vector3Wide.Dot(y, localAxisYA, out var aYDotTY);
+                Vector3Wide.Dot(y, localOffsetB, out var offsetBDotTY);
+                Vector2Wide gradient;
+                gradient.X = aYDotTX * scaleA + x.Y * scaleB - Vector.ConditionalSelect(useNegatedOffset, -offsetBDotTX, offsetBDotTX);
+                gradient.Y = aYDotTY * scaleA + y.Y * scaleB - Vector.ConditionalSelect(useNegatedOffset, -offsetBDotTY, offsetBDotTY);
+                Vector3Wide transformedGradient;
+                transformedGradient.X = gradient.X * x.X + gradient.Y * y.X;
+                transformedGradient.Y = gradient.X * x.Y + gradient.Y * y.Y;
+                transformedGradient.Z = gradient.X * x.Z + gradient.Y * y.Z;
+                if (i > 0)
+                {
+                    Vector3Wide.Dot(transformedGradient, previousGradient, out var gradientDot);
+                    gradientScale = gradientScale * Vector.ConditionalSelect(Vector.LessThan(gradientDot, Vector<float>.Zero), new Vector<float>(0.3f), new Vector<float>(0.7f));
+                }
+                previousGradient = transformedGradient;
+
+                Vector3Wide newNormal;
+                newNormal.X = localNormal.X - transformedGradient.X * gradientScale;
+                newNormal.Y = localNormal.Y - transformedGradient.Y * gradientScale;
+                newNormal.Z = localNormal.Z - transformedGradient.Z * gradientScale;
+                Vector3Wide.Length(newNormal, out var newNormalLength);
+                Vector3Wide.Scale(newNormal, Vector<float>.One / newNormalLength, out localNormal);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GradientDescent5(in Vector3Wide localAxisYA, in Vector3Wide localOffsetB, in CylinderWide a, in CylinderWide b, ref Vector3Wide localNormal)
+        {
+            //Cylinder-cylinder's depth calculation is analytically differentiable.
+            //depth(N) = cylinderContribution(A, N) + cylinderContribution(B, N) - offsetSeparation(N)
+            //cylinderContribution(a, B) = a.HalfLength * abs(dot(N, a.AxisY) + a.Radius * sqrt(1 - dot(N, a.AxisY)^2)
+            //dN/dTX(cylinderContribution(a, B)) = a.HalfLength * sign(dot(N, a.AxisY)) * dN/dTX(dot(N, a.AxisY)) - a.Radius * dN/dTX(dot(N, a.AxisY)) * dot(N, a.AxisY) / sqrt(1 - dot(N, a.AxisY)^2)
+            //dN/dTX(dot(N, a.AxisY)) = dot(TX, a.AxisY)
+            //dN/dTX(cylinderContribution(a, B)) = dot(TX, a.AxisY) * (a.HalfLength * sign(dot(N, a.AxisY)) - a.Radius * dot(N, a.AxisY) / sqrt(1 - dot(N, a.AxisY)^2))
+            //Note that the dot(TX, aAxis.Y) scale is always going to be no larger than sqrt(1 - dot(N, a.AxisY)^2), so this doesn't actually grow to infinity. The discontinuity at dot(N, a.AxisY)^2 == 1 must be handled, though.
+
+            //Extrapolating that to the other tangent TY and the other cylinder is simple; for the offset:
+            //offsetSeparation(N) = abs(dot(offsetB, N))
+            //dN/dTX(offsetSeparation(N)) = sign(dot(offsetB, N)) * dN/dTX(dot(offsetB, N)) = sign(dot(offsetB, N)) * dot(offsetB, TX)
+            var gradientScale = new Vector<float>(0.6f);
+            var divisorEpsilon = new Vector<float>(1e-10f);
+            Vector3Wide previousGradient = default;
+            for (int i = 0; i < 10; ++i)
+            {
+                Vector3Wide.Dot(localAxisYA, localNormal, out var dotNAY);
+                var scaleA = Vector.ConditionalSelect(Vector.LessThan(dotNAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength) - a.Radius * dotNAY / Vector.SquareRoot(Vector.Max(divisorEpsilon, Vector<float>.One - dotNAY * dotNAY));
+                //Working in B's local space, so no need for an axis dot.
+                var scaleB = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength) - b.Radius * localNormal.Y / Vector.SquareRoot(Vector.Max(divisorEpsilon, Vector<float>.One - localNormal.Y * localNormal.Y));
+
+                Vector3Wide.Dot(localOffsetB, localNormal, out var dotOffsetN);
+                var useNegatedOffset = Vector.LessThan(dotOffsetN, Vector<float>.Zero);
+                Helpers.BuildOrthnormalBasis(localNormal, out var x, out var y);
+                Vector3Wide.Dot(x, localAxisYA, out var aYDotTX);
+                Vector3Wide.Dot(x, localOffsetB, out var offsetBDotTX);
+                Vector3Wide.Dot(y, localAxisYA, out var aYDotTY);
+                Vector3Wide.Dot(y, localOffsetB, out var offsetBDotTY);
+                Vector2Wide rawGradient;
+                rawGradient.X = aYDotTX * scaleA + x.Y * scaleB - Vector.ConditionalSelect(useNegatedOffset, -offsetBDotTX, offsetBDotTX);
+                rawGradient.Y = aYDotTY * scaleA + y.Y * scaleB - Vector.ConditionalSelect(useNegatedOffset, -offsetBDotTY, offsetBDotTY);
+                Vector2Wide.Length(rawGradient, out var gradientLength);
+                Vector2Wide.Scale(rawGradient, Vector.Min(Vector<float>.One, Vector<float>.One / gradientLength), out var gradient);
+                Vector3Wide transformedGradient;
+                transformedGradient.X = gradient.X * x.X + gradient.Y * y.X;
+                transformedGradient.Y = gradient.X * x.Y + gradient.Y * y.Y;
+                transformedGradient.Z = gradient.X * x.Z + gradient.Y * y.Z;
+                if (i > 0)
+                {
+                    Vector3Wide.Dot(transformedGradient, previousGradient, out var gradientDot);
+                    const float baseline = 0.25f;
+                    var downScale = new Vector<float>(baseline) + (1f - baseline) * Vector.Max(Vector<float>.Zero, gradientDot);
+                    gradientScale *= downScale;
+                }
+                previousGradient = transformedGradient;
+
+                Vector3Wide newNormal;
+                newNormal.X = localNormal.X - transformedGradient.X * gradientScale;
+                newNormal.Y = localNormal.Y - transformedGradient.Y * gradientScale;
+                newNormal.Z = localNormal.Z - transformedGradient.Z * gradientScale;
+                Vector3Wide.Length(newNormal, out var newNormalLength);
+                Vector3Wide.Scale(newNormal, Vector<float>.One / newNormalLength, out localNormal);
+            }
+        }
+
+
+        public static void GradientDescent6<TAScalar, TA, TSupportFinderA, TBScalar, TB, TSupportFinderB>(in TA a, in TB b, in Matrix3x3Wide localOrientationB, in Vector3Wide localOffsetB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
+            in Vector3Wide initialGuess, out Vector3Wide localNormal)
+            where TAScalar : IConvexShape
+            where TA : IShapeWide<TAScalar>
+            where TSupportFinderA : ISupportFinder<TAScalar, TA>
+            where TBScalar : IConvexShape
+            where TB : IShapeWide<TBScalar>
+            where TSupportFinderB : ISupportFinder<TBScalar, TB>
+        {
+            //1) any convex shape can be represented by a point cloud of arbitrary density
+            //2) the 'extreme' for a normal N is the point in a shape which has the highest value for dot(point, N), or in other words extreme(N, shapeA) = max(dot(N, shapeA[0], dot(N, shapeA[1]), ...dot(N, shapeA[i]))
+            //3) take a function that computes 'depth'(i.e.interval overlap) along a normal N pointing from shape B to shape A, depth(N) = extreme(N, shapeB) - extreme(-N, shapeA))
+
+            //4) let's apply gradient descent to minimizing the depth function by stepping the normal- parameterize the normal step in terms of tangents TX and TY (two arbitrary tangent vectors perpendicular to the normal and each other)
+            //5) the gradient is (dN/dTX(depth(N)), dN/dTY(depth(N))
+            //6) zooming in on just the dN/dTX component: dN/dTX(depth(N)) = dN/dTX(extreme(N, shapeB)) - dN/dTX(extreme(-N, shapeA))
+            //7) derivative of max(a, b, c...) is just 'select the max element and take the derivative of it, so dN/dTX(extreme(N, shapeB) = dN/dTX(dot(N, shapeB[extremeIndex])) = dot(TX, shapeB[extremeIndex])
+            //8) dN/dTX(depth(N)) = dot(TX, shapeB[extremeIndex]) - dot(TX, shapeA[extremeIndex])
+            //9) gradient(depth(N)) = (dot(TX, shapeB[extremeIndex]) - dot(TX, shapeA[extremeIndex]), dot(TY, shapeB[extremeIndex]) - dot(TY, shapeA[extremeIndex]))
+
+            //so, the step for minimizing depth for any pair of convex shapes is:
+            //(dot(TX, shapeB[extremeIndex]) + dot(TX, shapeA[extremeIndex]), dot(TY, shapeB[extremeIndex]) + dot(TY, shapeA[extremeIndex])) * stepScale
+            //Obviously taking some liberties here with the fact that the normal is being renormalized, but does it converge *well enough*?
+
+            localNormal = initialGuess;
+            var stepScale = new Vector<float>(-0.4f);
+            //Vector3Wide previousChange;
+            for (int i = 0; i < 10; ++i)
+            {
+                //Normals are always calibrated to point from B to A.
+                supportFinderB.ComputeSupport(b, localOrientationB, localNormal, out var extremeB);
+                Vector3Wide.Add(extremeB, localOffsetB, out extremeB);
+                Vector3Wide.Negate(localNormal, out var negatedNormal);
+                supportFinderA.ComputeLocalSupport(a, negatedNormal, out var extremeA);
+
+                Vector3Wide.Subtract(extremeB, extremeA, out var debugExtremeOffset);
+                Vector3Wide.Dot(debugExtremeOffset, localNormal, out var debugIterationDepth);
+
+                Helpers.BuildOrthnormalBasis(localNormal, out var x, out var y);
+                Vector3Wide.Dot(x, extremeA, out var xDotA);
+                Vector3Wide.Dot(y, extremeA, out var yDotA);
+                Vector3Wide.Dot(x, extremeB, out var xDotB);
+                Vector3Wide.Dot(y, extremeB, out var yDotB);
+
+                Vector2Wide changeAlongTangents;
+                changeAlongTangents.X = (xDotB - xDotA) * stepScale;
+                changeAlongTangents.Y = (yDotB - yDotA) * stepScale;
+
+                Vector3Wide newNormal;
+                newNormal.X = localNormal.X + changeAlongTangents.X * x.X + changeAlongTangents.Y * y.X;
+                newNormal.Y = localNormal.Y + changeAlongTangents.X * x.Y + changeAlongTangents.Y * y.Y;
+                newNormal.Z = localNormal.Z + changeAlongTangents.X * x.Z + changeAlongTangents.Y * y.Z;
+
+                //changeAlongTangents.X = (xDotB - xDotA);
+                //changeAlongTangents.Y = (yDotB - yDotA);
+
+                //Vector2Wide.Length(changeAlongTangents, out var length);
+                //Vector2Wide.Scale(changeAlongTangents, Vector<float>.One / Vector.Max(new Vector<float>(1e-10f), length), out changeAlongTangents);
+
+                //Vector3Wide normalChange;
+                //normalChange.X = changeAlongTangents.X * x.X + changeAlongTangents.Y * y.X;
+                //normalChange.Y = changeAlongTangents.X * x.Y + changeAlongTangents.Y * y.Y;
+                //normalChange.Z = changeAlongTangents.X * x.Z + changeAlongTangents.Y * y.Z;
+                //Vector3Wide.Dot(previousChange, normalChange, out var changeDot);
+                //previousChange = normalChange;
+                //stepScale *= Vector.ConditionalSelect(Vector.LessThan(changeDot, Vector<float>.Zero), new Vector<float>(0.35f), new Vector<float>(0.9f));
+                //Vector3Wide.Scale(normalChange, stepScale, out normalChange);
+
+                //Vector3Wide newNormal;
+                //newNormal.X = localNormal.X + normalChange.X;
+                //newNormal.Y = localNormal.Y + normalChange.Y;
+                //newNormal.Z = localNormal.Z + normalChange.Z;
+
+                Vector3Wide.Length(newNormal, out var normalLength);
+                Vector3Wide.Scale(newNormal, Vector<float>.One / normalLength, out localNormal);
+            }
+        }
+
+        public static void Newton<TAScalar, TA, TSupportFinderA, TBScalar, TB, TSupportFinderB>(in TA a, in TB b, in Matrix3x3Wide localOrientationB, in Vector3Wide localOffsetB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
+            in Vector3Wide initialGuess, out Vector3Wide localNormal)
+            where TAScalar : IConvexShape
+            where TA : IShapeWide<TAScalar>
+            where TSupportFinderA : ISupportFinder<TAScalar, TA>
+            where TBScalar : IConvexShape
+            where TB : IShapeWide<TBScalar>
+            where TSupportFinderB : ISupportFinder<TBScalar, TB>
+        {
+            //a1) any convex shape can be represented by a point cloud of arbitrary density
+            //a2) the 'extreme' for a normal N is the point in a shape which has the highest value for dot(point, N), or in other words extreme(N, shapeA) = max(dot(N, shapeA[0], dot(N, shapeA[1]), ...dot(N, shapeA[i]))
+            //a3) take a function that computes 'depth'(i.e.interval overlap) along a normal N pointing from shape B to shape A, depth(N) = extreme(N, shapeB) - extreme(-N, shapeA))
+
+            //b0) we can use root finders / optimizers for computing locally minimal depth if the depth function can be differentiated
+            //b1) newton's method for finding roots is x1 = x0 - f(x0) / f'(x0) iterated
+            //b2) newton's method can be used for optimization by finding a 0 in the first derivative, so you do the same thing one step down, x1 = x0 - f'(x0) / f''(x0) iterated
+            //b3) this generalizes to multivariate functions, so for a vector x: x1 = x0 - H ^ -1(x0) * gradient(x0)
+            //b4) H^-1(x0) is the inverse hessian matrix of the function at x0, gradient is the gradient of the function at x0
+            //b5) a hessian matrix is a multivariable generalization of the second derivative; for a 2d function f(x), the hessian matrix is a 2x2 matrix with each component representing a partial derivative along one of the two axes, 
+            //followed by another partial derivative along one of the two axes- so H[0][0] would be df/dx(df/dx(f(x))), H[0][1] would be df/dx(df/dy(f(x)), and so on
+
+            //c1) let's apply newton's method to minimizing the depth function by stepping the normal- parameterize the normal step in terms of tangents TX and TY(two arbitrary tangent vectors perpendicular to the normal and each other)
+            //c2) going back to newton's method, we need the gradient and inverse hessian matrix: the gradient is (dN/dTX(depth(N)), dN/dTY(depth(N))
+            //c3) zooming in on just the dN/dTX component: dN/dTX(depth(N)) = dN/dTX(extreme(N, shapeB)) - dN/dTX(extreme(-N, shapeA))
+            //c4) derivative of max(a, b, c...) is just 'select the max element and take the derivative of it, so dN/dTX(extreme(N, shapeB) = dN/dTX(dot(N, shapeB[extremeIndex])) = dot(TX, shapeB[extremeIndex])
+            //c5) dN/dTX(depth(N)) = dot(TX, shapeB[extremeIndex]) - dot(TX, shapeA[extremeIndex])
+            //c6) gradient(depth(N)) = (dot(TX, shapeB[extremeIndex]) - dot(TX, shapeA[extremeIndex]), dot(TY, shapeB[extremeIndex]) - dot(TY, shapeA[extremeIndex]))
+            //c7) For the hessian, derive each gradient component by both tangents again.
+            //c8) dN/dTX(gradient.X) = dN/dTX(dot(TX, shapeB[extremeIndex])) - dN/dTX(dot(TX, shapeA[extremeIndex]) = dot(1, shapeB[extremeIndex]) - dot(1, shapeA[extremeIndex])
+            //c9) dN/dTY(gradient.X) = dN/dTY(dot(TX, shapeB[extremeIndex])) - dN/dTY(dot(TX, shapeA[extremeIndex]) = 0
+            //c10) dN/dTX(gradient.Y) = dN/dTX(dot(TY, shapeB[extremeIndex])) - dN/dTX(dot(TY, shapeA[extremeIndex]) = 0
+            //c11) dN/dTY(gradient.Y) = dN/dTY(dot(TY, shapeB[extremeIndex])) - dN/dTY(dot(TY, shapeA[extremeIndex]) = dot(1, shapeB[extremeIndex]) - dot(1, shapeA[extremeIndex])
+            //c12) the hessian is a uniform scaling matrix; the inverse hessian is equivalent to just 1/(dot(1, shapeB[extremeIndex]) + dot(1, shapeA[extremeIndex]))
+
+            //TODO: THIS HESSIAN IS NONSENSE, dN/dTX(TX) != 1
+            //TX is, however, linked to the change in N by virtue of being derived from it. May be able to efficiently rescue this.
+            //There's also the option of just using quasinewton methods instead.
+
+            //result: the newton step for minimizing depth for any pair of convex shapes is:
+            //N1 = N0 - (dot(TX, shapeB[extremeIndex]) + dot(TX, shapeA[extremeIndex]), dot(TY, shapeB[extremeIndex]) + dot(TY, shapeA[extremeIndex])) / (dot(1, shapeB[extremeIndex]) + dot(1, shapeA[extremeIndex]))
+            //Obviously taking some liberties here with the fact that the normal is being renormalized, but does it converge *well enough*?
+
+            localNormal = initialGuess;
+            for (int i = 0; i < 10; ++i)
+            {
+                //Normals are always calibrated to point from B to A.
+                supportFinderB.ComputeSupport(b, localOrientationB, localNormal, out var extremeB);
+                Vector3Wide.Add(extremeB, localOffsetB, out extremeB);
+                Vector3Wide.Negate(localNormal, out var negatedNormal);
+                supportFinderA.ComputeLocalSupport(a, negatedNormal, out var extremeA);
+
+                Vector3Wide.Subtract(extremeB, extremeA, out var debugExtremeOffset);
+                Vector3Wide.Dot(debugExtremeOffset, localNormal, out var debugIterationDepth);
+
+                Helpers.BuildOrthnormalBasis(localNormal, out var x, out var y);
+                Vector3Wide.Dot(x, extremeA, out var xDotA);
+                Vector3Wide.Dot(y, extremeA, out var yDotA);
+                Vector3Wide.Dot(x, extremeB, out var xDotB);
+                Vector3Wide.Dot(y, extremeB, out var yDotB);
+
+                var hessian = extremeB.X + extremeB.Y + extremeB.Z - extremeA.X - extremeA.Y - extremeA.Z;
+                //Protect against potential division by zero by clamping to a large finite value. Preserve sign.
+                var inverseHessian = Vector.ConditionalSelect(Vector.LessThan(hessian, Vector<float>.Zero), new Vector<float>(-1f), Vector<float>.One) /
+                    Vector.Max(new Vector<float>(1e-10f), Vector.Abs(hessian));
+                inverseHessian = new Vector<float>(-0.2f);
+                Vector2Wide changeAlongTangents;
+                changeAlongTangents.X = (xDotB - xDotA) * inverseHessian;
+                changeAlongTangents.Y = (yDotB - yDotA) * inverseHessian;
+
+                Vector3Wide newNormal;
+                newNormal.X = localNormal.X + changeAlongTangents.X * x.X + changeAlongTangents.Y * y.X;
+                newNormal.Y = localNormal.Y + changeAlongTangents.X * x.Y + changeAlongTangents.Y * y.Y;
+                newNormal.Z = localNormal.Z + changeAlongTangents.X * x.Z + changeAlongTangents.Y * y.Z;
+
+                Vector3Wide.Length(newNormal, out var normalLength);
+                Vector3Wide.Scale(newNormal, Vector<float>.One / normalLength, out localNormal);
+            }
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(

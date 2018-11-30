@@ -17,24 +17,28 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetMargin(ref CylinderWide shape, out Vector<float> margin)
+        public void GetMargin(in CylinderWide shape, out Vector<float> margin)
         {
             margin = default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeSupport(ref CylinderWide shape, ref Matrix3x3Wide orientation, ref Vector3Wide direction, out Vector3Wide support)
+        public void ComputeSupport(in CylinderWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, out Vector3Wide support)
         {
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(direction, orientation, out var localDirection);
+            ComputeLocalSupport(shape, localDirection, out var localSupport);
+            Matrix3x3Wide.TransformWithoutOverlap(localSupport, orientation, out support);
+        }
 
-            Vector3Wide localSupport;
-            localSupport.Y = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.Y, Vector<float>.Zero), shape.HalfLength, -shape.HalfLength);
-            var horizontalLength = Vector.SquareRoot(localDirection.X * localDirection.X + localDirection.Z * localDirection.Z);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ComputeLocalSupport(in CylinderWide shape, in Vector3Wide direction, out Vector3Wide support)
+        {
+            support.Y = Vector.ConditionalSelect(Vector.GreaterThan(direction.Y, Vector<float>.Zero), shape.HalfLength, -shape.HalfLength);
+            var horizontalLength = Vector.SquareRoot(direction.X * direction.X + direction.Z * direction.Z);
             var normalizeScale = shape.Radius / horizontalLength;
             var useHorizontal = Vector.GreaterThan(horizontalLength, new Vector<float>(1e-8f));
-            localSupport.X = Vector.ConditionalSelect(useHorizontal, localDirection.X * normalizeScale, Vector<float>.Zero);
-            localSupport.Z = Vector.ConditionalSelect(useHorizontal, localDirection.Z * normalizeScale, Vector<float>.Zero);
-            Matrix3x3Wide.TransformWithoutOverlap(localSupport, orientation, out support);
+            support.X = Vector.ConditionalSelect(useHorizontal, direction.X * normalizeScale, Vector<float>.Zero);
+            support.Z = Vector.ConditionalSelect(useHorizontal, direction.Z * normalizeScale, Vector<float>.Zero);
         }
     }
 }

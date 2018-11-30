@@ -10,8 +10,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     public interface ISupportFinder<TShape, TShapeWide> where TShape : IConvexShape where TShapeWide : IShapeWide<TShape>
     {
         bool HasMargin { get; }
-        void GetMargin(ref TShapeWide shape, out Vector<float> margin);
-        void ComputeSupport(ref TShapeWide shape, ref Matrix3x3Wide orientation, ref Vector3Wide direction, out Vector3Wide support);
+        void GetMargin(in TShapeWide shape, out Vector<float> margin);
+        void ComputeLocalSupport(in TShapeWide shape, in Vector3Wide direction, out Vector3Wide support);
+        void ComputeSupport(in TShapeWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, out Vector3Wide support);
     }
 
     public struct GJKDistanceTester<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB> : IPairDistanceTester<TShapeWideA, TShapeWideB>
@@ -32,9 +33,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             ref TShapeWideB b, ref Matrix3x3Wide rB, ref TSupportFinderB supportFinderB, ref Vector3Wide offsetB, ref Vector3Wide direction,
             out Vector3Wide supportA, out Vector3Wide support)
         {
-            supportFinderA.ComputeSupport(ref a, ref rA, ref direction, out supportA);        
+            supportFinderA.ComputeSupport(a, rA, direction, out supportA);
             Vector3Wide.Negate(direction, out var negatedDirection);
-            supportFinderB.ComputeSupport(ref b, ref rB, ref negatedDirection, out var supportB);
+            supportFinderB.ComputeSupport(b, rB, negatedDirection, out var supportB);
             Vector3Wide.Add(supportB, offsetB, out supportB);
             Vector3Wide.Subtract(supportA, supportB, out support);
         }
@@ -355,20 +356,20 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var epsilon = new Vector<float>(TerminationEpsilon > 0 ? TerminationEpsilon : TerminationEpsilonDefault);
             var containmentEpsilon = new Vector<float>(ContainmentEpsilon > 0 ? ContainmentEpsilon : ContainmentEpsilonDefault);
             //Use the JIT's ability to optimize away branches with generic type knowledge to set appropriate containment epsilons for shapes that have actual margins.
-            if(supportFinderA.HasMargin && supportFinderB.HasMargin)
+            if (supportFinderA.HasMargin && supportFinderB.HasMargin)
             {
-                supportFinderA.GetMargin(ref a, out var marginA);
-                supportFinderB.GetMargin(ref b, out var marginB);
+                supportFinderA.GetMargin(a, out var marginA);
+                supportFinderB.GetMargin(b, out var marginB);
                 containmentEpsilon = Vector.Max(containmentEpsilon, marginA + marginB);
             }
             else if (supportFinderA.HasMargin)
             {
-                supportFinderA.GetMargin(ref a, out var marginA);
+                supportFinderA.GetMargin(a, out var marginA);
                 containmentEpsilon = Vector.Max(containmentEpsilon, marginA);
             }
             else if (supportFinderB.HasMargin)
             {
-                supportFinderB.GetMargin(ref b, out var marginB);
+                supportFinderB.GetMargin(b, out var marginB);
                 containmentEpsilon = Vector.Max(containmentEpsilon, marginB);
             }
             var containmentEpsilonSquared = containmentEpsilon * containmentEpsilon;
