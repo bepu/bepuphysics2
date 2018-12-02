@@ -198,7 +198,25 @@ namespace Demos.SpecializedTests
                 a.Broadcast(new Cylinder(0.5f, 1));
                 CylinderWide b = default;
                 b.Broadcast(new Cylinder(0.5f, 1));
-                Vector3Wide.Broadcast(new Vector3(-3f, 5f, -3f), out var localOffsetB);
+                Vector3Wide.Broadcast(new Vector3(-0.8f, -5, -0.8f), out var localOffsetB);
+                Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
+                var supportFinderA = default(CylinderSupportFinder);
+                var supportFinderB = default(CylinderSupportFinder);
+                Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(0, 1, 0)), out var initialGuess);
+                GradientRefine<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialGuess, 0.1f* Vector<float>.One, out var localNormal);
+                GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
+                QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);
+                QuaternionWide.CreateFromRotationMatrix(localOrientationB, out var localOrientationQuaternionB);
+                gjk.Test(ref a, ref b, ref localOffsetB, ref localOrientationQuaternionA, ref localOrientationQuaternionB, out var intersected, out var distance, out var closestA, out var gjkNormal);
+                TimeGradientRefine(32);
+                TimeGradientRefine(1000000);
+            }
+            {
+                CylinderWide a = default;
+                a.Broadcast(new Cylinder(0.5f, 1));
+                CylinderWide b = default;
+                b.Broadcast(new Cylinder(0.5f, 1));
+                Vector3Wide.Broadcast(new Vector3(-0.8f, 0, -0.8f), out var localOffsetB);
                 Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
                 var supportFinderA = default(CylinderSupportFinder);
                 var supportFinderB = default(CylinderSupportFinder);
@@ -216,12 +234,12 @@ namespace Demos.SpecializedTests
                 a.Broadcast(new Cylinder(0.5f, 1));
                 CylinderWide b = default;
                 b.Broadcast(new Cylinder(0.5f, 1));
-                Vector3Wide.Broadcast(new Vector3(-0.8f, 0f, -0.8f), out var localOffsetB);
+                Vector3Wide.Broadcast(new Vector3(-0.8f, 0.1f, -0.8f), out var localOffsetB);
                 Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
                 var supportFinderA = default(CylinderSupportFinder);
                 var supportFinderB = default(CylinderSupportFinder);
-                Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1.3f, 1, 1)), out var initialGuess);
-                CylinderPairTester.GradientDescent6<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>(a, b, localOrientationB, localOffsetB, ref supportFinderA, ref supportFinderB, initialGuess, out var localNormal);
+                Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1.3f, 0, 1)), out var initialGuess);
+                CylinderPairTester.GradientDescent7<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>(a, b, localOrientationB, localOffsetB, ref supportFinderA, ref supportFinderB, initialGuess, out var localNormal);
                 GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
                 QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);
                 QuaternionWide.CreateFromRotationMatrix(localOrientationB, out var localOrientationQuaternionB);
@@ -240,6 +258,28 @@ namespace Demos.SpecializedTests
                 TimeGradientDescent6(1000000);
             }
         }
+
+        void TimeGradientRefine(int iterationCount)
+        {
+            CylinderWide a = default;
+            a.Broadcast(new Cylinder(0.5f, 1));
+            CylinderWide b = default;
+            b.Broadcast(new Cylinder(0.5f, 1));
+            Vector3Wide.Broadcast(new Vector3(-3f, -2f, 0), out var localOffsetB);
+            Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
+            var supportFinderA = default(CylinderSupportFinder);
+            var supportFinderB = default(CylinderSupportFinder);
+            Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(2, 1, 0)), out var initialGuess);
+            var start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < iterationCount; ++i)
+            {
+                GradientRefine<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialGuess, new Vector<float>(1), out var localNormal);
+            }
+            var end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"GradientRefine time (ns) per iteration (iteration count {iterationCount}): {1e9 * (end - start) / (iterationCount * (double)Stopwatch.Frequency)}");
+        }
+
+
         void TimeNewton(int iterationCount)
         {
             CylinderWide a = default;
