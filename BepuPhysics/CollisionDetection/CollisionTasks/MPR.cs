@@ -69,7 +69,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public static void Test(
             in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB,
-            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector<float> surfaceEpsilon, in Vector<int> inactiveLanes, out Vector3Wide localNormal, out Vector<float> depth)
+            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector<float> surfaceEpsilon, in Vector<int> inactiveLanes, out Vector3Wide localNormal)
         {
             //We'll be using a minkowski difference support(N, B) - support(-N, A).
             //So, the starting point for the origin ray is simply localOffsetB.
@@ -133,9 +133,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Subtract(v3, v2, out var v2v3);
                 Vector3Wide.Subtract(v1, v2, out var v2v1);
                 Vector3Wide.CrossWithoutOverlap(v2v3, v2v1, out n);
+                Vector3Wide.Dot(n, v1, out var exitDot);
+                var intersecting = Vector.GreaterThan(exitDot, Vector<float>.Zero);
                 FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var v4);
                 Vector3Wide.Subtract(v4, localOffsetB, out var rayDirectionTest);
-                VerifySimplex(localOffsetB, v1, v2, v3, rayDirectionTest, inactiveLanes);
 
                 //Compare the latest support sample with the triangle. Are we close to the surface?
                 Vector3Wide.Subtract(v4, v1, out var v1v4);
@@ -148,10 +149,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.LengthSquared(n, out nLengthSquared);
                 if (Vector.LessThanAll(Vector.BitwiseOr(inactiveLanes, Vector.LessThanOrEqual(squaredDifference, squaredSurfaceEpsilon * nLengthSquared)), Vector<int>.Zero))
                 {
-                    var scale = Vector<float>.One / Vector.SquareRoot(nLengthSquared);
-                    Vector3Wide.Scale(n, scale, out localNormal);
-                    Vector3Wide.Dot(v4, n, out var v4DotN);
-                    depth = v4DotN * scale;
+                    Vector3Wide.LengthSquared(localOffsetB, out var fallbackLengthSquared);
+                    var useNormalFallback = Vector.LessThan(nLengthSquared, normalLengthEpsilon);
+                    var useNormalFallbackAgain = Vector.BitwiseAnd(useNormalFallback, Vector.LessThan(fallbackLengthSquared, normalLengthEpsilon));
+                    var finalNormalLengthSquared = Vector.ConditionalSelect(useNormalFallback, fallbackLengthSquared, nLengthSquared);
+                    var inverseLength = Vector<float>.One / Vector.SquareRoot(finalNormalLengthSquared);
+                    localNormal.X = Vector.ConditionalSelect(useNormalFallbackAgain, Vector<float>.Zero, Vector.ConditionalSelect(useNormalFallback, -localOffsetB.X, n.X) * inverseLength);
+                    localNormal.Y = Vector.ConditionalSelect(useNormalFallbackAgain, Vector<float>.Zero, Vector.ConditionalSelect(useNormalFallback, -localOffsetB.Y, n.Y) * inverseLength);
+                    localNormal.Z = Vector.ConditionalSelect(useNormalFallbackAgain, Vector<float>.Zero, Vector.ConditionalSelect(useNormalFallback, -localOffsetB.Z, n.Z) * inverseLength);
                     return;
                 }
                 //Note that, if not all lanes are done, we just let all of them keep going.
@@ -175,8 +180,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(eliminateV1, v4, v1, out v1);
                 Vector3Wide.ConditionalSelect(eliminateV2, v4, v2, out v2);
                 Vector3Wide.ConditionalSelect(eliminateV3, v4, v3, out v3);
-
-                VerifySimplex(localOffsetB, v1, v2, v3, inactiveLanes);
             }
         }
     }
