@@ -212,15 +212,15 @@ namespace Demos.SpecializedTests
                 b.Broadcast(new Cylinder(0.5f, 1f));
                 var supportFinderA = new CylinderSupportFinder();
                 var supportFinderB = new CylinderSupportFinder();
-                Vector3Wide.Broadcast(new Vector3(2, 0, 2), out var localOffsetB);
+                Vector3Wide.Broadcast(new Vector3(0.7f, 0.499f, 0.7f), out var localOffsetB);
                 Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
-                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<float>(1e-3f), Vector<int>.Zero, out var localNormal);
+                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<float>(1e-3f), Vector<int>.Zero, out var intersecting, out var localNormal);
                 //GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
                 //QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);
                 //QuaternionWide.CreateFromRotationMatrix(localOrientationB, out var localOrientationQuaternionB);
                 //gjk.Test(ref a, ref b, ref localOffsetB, ref localOrientationQuaternionA, ref localOrientationQuaternionB, out var intersected, out var distance, out var closestA, out var gjkNormal);
-                //TimeMPR(32);
-                //TimeMPR(1000000);
+                TimeMPR(32);
+                TimeMPR(1000000);
             }
 
         }
@@ -239,7 +239,7 @@ namespace Demos.SpecializedTests
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < iterationCount; ++i)
             {
-                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<float>(1e-3f), Vector<int>.Zero, out var localNormal);
+                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<float>(1e-3f), Vector<int>.Zero, out var intersecting, out var localNormal);
             }
             var end = Stopwatch.GetTimestamp();
             Console.WriteLine($"GradientRefine time (ns) per iteration (iteration count {iterationCount}): {1e9 * (end - start) / (iterationCount * (double)Stopwatch.Frequency)}");
