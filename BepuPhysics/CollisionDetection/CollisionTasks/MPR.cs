@@ -71,7 +71,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public static void Test(
             in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB,
-            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector<float> surfaceEpsilon, in Vector<int> inactiveLanes, out Vector<int> intersecting, out Vector3Wide localNormal)
+            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector<float> surfaceEpsilon, in Vector<int> inactiveLanes, out Vector<int> intersecting, out Vector3Wide localNormal, int maximumIterations = 15)
         {
             //We'll be using a minkowski difference support(N, A) - support(-N, B).
             //So, the starting point for the origin ray is simply -localOffsetB.
@@ -151,7 +151,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //Initial portal created; refine it.
             var squaredSurfaceEpsilon = surfaceEpsilon * surfaceEpsilon;
-            while (true)
+            for (int i = 0; i < maximumIterations; ++i)
             {
                 Vector3Wide.Subtract(v2, v1, out var v1v2);
                 Vector3Wide.Subtract(v3, v1, out var v1v3);
@@ -208,6 +208,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(eliminateV2, v4, v2, out v2);
                 Vector3Wide.ConditionalSelect(eliminateV3, v4, v3, out v3);
             }
+            //Exited due to iteration limit. Use a default for any incomplete lanes.
+            Vector3Wide.ConditionalSelect(laneComplete, localNormal, n, out localNormal);
         }
     }
 }
