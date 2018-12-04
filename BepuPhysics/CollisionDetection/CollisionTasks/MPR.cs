@@ -251,7 +251,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //It's possible that v1 and v2 were constructed in such a way that 'n' is not properly calibrated
             //relative to the direction vector. If it's not properly calibrated, flip the winding (and the previously calculated normal).
             Vector3Wide.Dot(n, direction, out var nDotDirection);
-            var flipWinding = Vector.GreaterThan(nDotDirection, Vector<float>.Zero);
+            var flipWinding = Vector.LessThan(nDotDirection, Vector<float>.Zero);
             Vector3Wide.ConditionallyNegate(flipWinding, ref n);
             var swapTemp = v1;
             Vector3Wide.ConditionalSelect(flipWinding, v2, v1, out swapTemp);
@@ -261,7 +261,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide v3;
             var count = 0;
             var preloopComplete = completedLanes;
-            VerifySimplex(default, v1, v2, v3, direction, completedLanes);
             while (true)
             {
                 if (count > maximumIterations)
@@ -283,18 +282,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //If the direction is outside the plane defined by v1,v0,v3, then the portal is invalid.
                 Vector3Wide.CrossWithoutOverlap(v1, v3, out var v1xv3);
                 Vector3Wide.Dot(v1xv3, direction, out var v1xv3DotDirection);
-                var shouldReplaceV2 = Vector.AndNot(Vector.LessThan(v1xv3DotDirection, Vector<float>.Zero), preloopComplete);
+                var shouldReplaceV2 = Vector.AndNot(Vector.GreaterThan(v1xv3DotDirection, Vector<float>.Zero), preloopComplete);
                 //Replace the point that was on the inside of the plane (v2) with the new extreme point.
                 Vector3Wide.ConditionalSelect(shouldReplaceV2, v3, v2, out v2);
                 Vector3Wide.ConditionalSelect(shouldReplaceV2, v1xv3, n, out n);
 
                 //If the direction is outside the plane defined by v3,v0,v2, then the portal is invalid.
-                Vector3Wide.CrossWithoutOverlap(v2, v3, out var v2xv3);
-                Vector3Wide.Dot(v2xv3, direction, out var v2xv3DotDirection);
-                var shouldReplaceV1 = Vector.AndNot(Vector.AndNot(Vector.GreaterThan(v2xv3DotDirection, Vector<float>.Zero), shouldReplaceV2), preloopComplete);
+                Vector3Wide.CrossWithoutOverlap(v3, v2, out var v3xv2);
+                Vector3Wide.Dot(v3xv2, direction, out var v3xv2DotDirection);
+                var shouldReplaceV1 = Vector.AndNot(Vector.AndNot(Vector.GreaterThan(v3xv2DotDirection, Vector<float>.Zero), shouldReplaceV2), preloopComplete);
                 //Replace the point that was on the inside of the plane (v1) with the new extreme point.
                 Vector3Wide.ConditionalSelect(shouldReplaceV1, v3, v1, out v1);
-                Vector3Wide.ConditionalSelect(shouldReplaceV1, v2xv3, n, out n);
+                Vector3Wide.ConditionalSelect(shouldReplaceV1, v3xv2, n, out n);
 
                 preloopComplete = Vector.BitwiseOr(Vector.AndNot(Vector.OnesComplement(shouldReplaceV1), shouldReplaceV2), preloopComplete);
                 if (Vector.LessThanAll(preloopComplete, Vector<int>.Zero))
@@ -357,13 +356,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 //This v4 x direction is just a minor reordering of a scalar triple product: (v1 x v4) * direction.
                 //It eliminates the need for extra cross products for the inner if.
-                Vector3Wide.CrossWithoutOverlap(v4, direction, out var v4xDirection);
+                Vector3Wide.CrossWithoutOverlap(direction, v4, out var v4xDirection);
                 Vector3Wide.Dot(v1, v4xDirection, out var v1PlaneDot);
                 Vector3Wide.Dot(v2, v4xDirection, out var v2PlaneDot);
                 Vector3Wide.Dot(v3, v4xDirection, out var v3PlaneDot);
-                var insideV1 = Vector.GreaterThanOrEqual(v1PlaneDot, Vector<float>.Zero);
-                var insideV2 = Vector.GreaterThanOrEqual(v2PlaneDot, Vector<float>.Zero);
-                var insideV3 = Vector.GreaterThanOrEqual(v3PlaneDot, Vector<float>.Zero);
+                var insideV1 = Vector.LessThanOrEqual(v1PlaneDot, Vector<float>.Zero);
+                var insideV2 = Vector.LessThanOrEqual(v2PlaneDot, Vector<float>.Zero);
+                var insideV3 = Vector.LessThanOrEqual(v3PlaneDot, Vector<float>.Zero);
                 //Inside v1 && inside v2 ==> eliminate v1
                 //Outside v1 && outside v3 ==> eliminate v1
                 //Outside v1 && inside v3 ==> eliminate v2
