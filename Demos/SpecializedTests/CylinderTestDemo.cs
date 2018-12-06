@@ -200,11 +200,27 @@ namespace Demos.SpecializedTests
                 b.Broadcast(new Cylinder(0.5f, 1f));
                 var supportFinderA = new CylinderSupportFinder();
                 var supportFinderB = new CylinderSupportFinder();
-                Vector3Wide.Broadcast(new Vector3(0.7f, 0.5f, 0.7f), out var localOffsetB);
-                Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1, 0, 0)), out var localCastDirection);
+                Vector3Wide.Broadcast(new Vector3(-0.5f, 5.1f, 0.5f), out var localOffsetB);
                 Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
-                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localCastDirection, new Vector<float>(1e-3f), Vector<int>.Zero,
-                    out var t, out var localNormal);
+                Vector3Wide.Normalize(localOffsetB, out var initialGuess);
+                GradientDescent<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialGuess, new Vector<float>(1e-5f), Vector<int>.Zero, out var localNormal);
+            }
+            {
+                CylinderWide a = default;
+                a.Broadcast(new Cylinder(0.5f, 1f));
+                CylinderWide b = default;
+                b.Broadcast(new Cylinder(0.5f, 1f));
+                var supportFinderA = new CylinderSupportFinder();
+                var supportFinderB = new CylinderSupportFinder();
+                Vector3Wide.Broadcast(new Vector3(0.5f, 0.5f, 0.5f), out var localOffsetB);
+                Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1, 0, 1)), out var localCastDirection);
+                Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
+                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<float>(1e-5f), Vector<int>.Zero, out var intersecting, out var localNormal);
+                for (int i = 0; i < 5; ++i)
+                {
+                    MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localNormal, new Vector<float>(1e-3f), Vector<int>.Zero,
+                        out var t, out localNormal);
+                }
                 Vector3Wide.Normalize(localNormal, out var test);
 
                 GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
@@ -262,13 +278,13 @@ namespace Demos.SpecializedTests
             b.Broadcast(new Cylinder(0.5f, 1f));
             var supportFinderA = new CylinderSupportFinder();
             var supportFinderB = new CylinderSupportFinder();
-            Vector3Wide.Broadcast(new Vector3(.7f, 0.5f, 0.7f), out var localOffsetB);
-            Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1, 0, 0)), out var localCastDirection);
+            Vector3Wide.Broadcast(new Vector3(.5f, 0.5f, 0.5f), out var localOffsetB);
+            Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1, 0.7f, 1)), out var localCastDirection);
             Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < iterationCount; ++i)
             {
-                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localCastDirection, new Vector<float>(1e-3f), Vector<int>.Zero,
+                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localCastDirection, new Vector<float>(1e-2f), Vector<int>.Zero,
                     out var t, out var localNormal);
             }
             var end = Stopwatch.GetTimestamp();
