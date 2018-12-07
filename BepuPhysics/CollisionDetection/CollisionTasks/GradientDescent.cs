@@ -31,7 +31,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void SampleDepth(in Vector3Wide normal, in Vector3Wide support,
+        static void SampleDepth(in Vector3Wide normal, in Vector3Wide support, in Vector<int> ignoreSample,
             ref Vector3Wide minimumSupport, ref Vector3Wide minimumNormal, ref Vector<float> minimumDepthNumerator, ref Vector<float> minimumNormalLengthSquared, out Vector<int> usedNewSample)
         {
             Vector3Wide.Dot(normal, support, out var dot);
@@ -45,7 +45,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //To compare two depths, just cross multiply:
             //sign(dot(N1, extremePoint1)) * dot(N1, extremePoint1) * ||N2||^2 <= sign(dot(N2, extremePoint2)) * dot(N2, extremePoint2) * ||N1||^2
             //(If we had a fast hardware rsqrt exposed by intrinsics, this could be avoided.)
-            usedNewSample = Vector.LessThan(depthNumerator * minimumNormalLengthSquared, minimumDepthNumerator * normalLengthSquared);
+            usedNewSample = Vector.AndNot(Vector.LessThan(depthNumerator * minimumNormalLengthSquared, minimumDepthNumerator * normalLengthSquared), ignoreSample);
             Vector3Wide.ConditionalSelect(usedNewSample, normal, minimumNormal, out minimumNormal);
             Vector3Wide.ConditionalSelect(usedNewSample, support, minimumSupport, out minimumSupport);
             minimumDepthNumerator = Vector.ConditionalSelect(usedNewSample, depthNumerator, minimumDepthNumerator);
@@ -58,11 +58,35 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return Vector.ConditionalSelect(Vector.LessThan(numerator, Vector<float>.Zero), -depth, depth);
         }
 
+        /// <summary>
+        /// Refines an initial guess normal toward the nearest local minimum.
+        /// </summary>
+        /// <param name="a">First shape in the pair.</param>
+        /// <param name="b">Second shape in the pair.</param>
+        /// <param name="localOffsetB">Offset from shape A to shape B in the local space of shape A.</param>
+        /// <param name="localOrientationB">Orientation of shape B in the local space of shape A.</param>
+        /// <param name="supportFinderA">Support finder to sample shape A with.</param>
+        /// <param name="supportFinderB">Support finder to sample shape B with.</param>
+        /// <param name="initialGuess">Best guess at a depth minimum.</param>
+        /// <param name="minimumDepthThreshold">Early out depth threshold. If a normal is found with a depth lower than this, the refinement will stop.</param>
+        /// <param name="terminationEpsilon">Once the normal has converged to a local minimum within this epsilon, the refinement is allowed to terminate.</param>
+        /// <param name="maximumIterations">Maximum number of refinement iterations to execute.</param>
+        /// <param name="inactiveLanes">Mask of lanes which don't contain real data.</param>
+        /// <param name="localNormal">Refined normal of minimum depth.</param>
+        /// <param name="depthBelowThreshold">Mask of lanes which exited early due to the minimum depth threshold.</param>
         public static void Refine(
             in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB,
-            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide initialGuess, in Vector<float> terminationEpsilon, in Vector<int> inactiveLanes, out Vector3Wide localNormal, int maximumIterations = 15)
+            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide initialGuess,
+            in Vector<float> minimumDepthThreshold, in Vector<float> terminationEpsilon, int maximumIterations, in Vector<int> inactiveLanes, out Vector3Wide localNormal, out Vector<int> depthBelowThreshold)
         {
             localNormal = initialGuess;
+#if DEBUG
+            Vector3Wide.Length(initialGuess, out var debugLength);
+            for (int i = 0; i < Vector<int>.Count; ++i)
+            {
+                Debug.Assert(inactiveLanes[0] < 0 || Math.Abs(debugLength[i] - 1) < 1e-6f, "The initial guess provided to the gradient descent refiner should be unit length.");
+            }
+#endif
 
             //Despite not having any access to the underlying support function, we can treat it as max(p0, p1, p2... ) over all points in the convex shape.
             //So:
@@ -86,19 +110,23 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //depth(N)^2 = dot(N, extremePoint) / ||N||^2
             //sign(dot(N, extremePoint) * depth(N)^2 = sign(dot(N, extremePoint)) * dot(N, extremePoint) / ||N||^2
             //So the squared normal length and the signed squared unnormalized depth are both tracked. 
-            Vector3Wide.Dot(localNormal, minimumSupport, out var dot);
-            var dotSquared = dot * dot;
-            var minimumDepthNumerator = Vector.ConditionalSelect(Vector.LessThan(dot, Vector<float>.Zero), -dotSquared, dotSquared);
+            Vector3Wide.Dot(localNormal, minimumSupport, out var initialDepth);
+            var dotSquared = initialDepth * initialDepth;
+            var minimumDepthNumerator = Vector.ConditionalSelect(Vector.LessThan(initialDepth, Vector<float>.Zero), -dotSquared, dotSquared);
             //It is assumed that the initial guess is normalized- that's required by the basis calculation.
             Vector<float> minimumNormalLengthSquared = Vector<float>.One;
 
             //We want to pick a reasonable progression speed. The initial gradient magnitude can help us make that choice, and it allows us to detect the (unlikely) case that we already found the origin.
             Vector2Wide.Length(gradient, out var initialGradientMagnitude);
-            var earlyOut = Vector.LessThan(initialGradientMagnitude, terminationEpsilon);
-            if (Vector.LessThanAll(Vector.BitwiseOr(inactiveLanes, earlyOut), Vector<int>.Zero))
+            depthBelowThreshold = Vector.LessThan(initialDepth, minimumDepthThreshold);
+            var earlyOut = Vector.BitwiseOr(depthBelowThreshold, Vector.LessThan(initialGradientMagnitude, terminationEpsilon));
+            var completedLanes = Vector.BitwiseOr(inactiveLanes, earlyOut);
+            if (Vector.LessThanAll(completedLanes, Vector<int>.Zero))
                 return;
             var gradientScale = 0.25f * Vector.ConditionalSelect(earlyOut, Vector<float>.One, Vector<float>.One / initialGradientMagnitude);
 
+            var minimumDepthThresholdNumerator = minimumDepthThreshold * minimumDepthThreshold;
+            minimumDepthThresholdNumerator = Vector.ConditionalSelect(Vector.LessThan(minimumDepthThreshold, Vector<float>.Zero), -minimumDepthThresholdNumerator, minimumDepthThresholdNumerator);
             var terminationEpsilonSquared = terminationEpsilon * terminationEpsilon;
             for (int i = 0; i < maximumIterations; ++i)
             {
@@ -108,31 +136,43 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 normalForward.X = localNormal.X - gradient.X * x.X - gradient.Y * y.X;
                 normalForward.Y = localNormal.Y - gradient.X * x.Y - gradient.Y * y.Y;
                 normalForward.Z = localNormal.Z - gradient.X * x.Z - gradient.Y * y.Z;
-                Vector3Wide sideOffset;
-                sideOffset.X = gradient.X * y.X - gradient.Y * x.X;
-                sideOffset.Y = gradient.X * y.Y - gradient.Y * x.Y;
-                sideOffset.Z = gradient.X * y.Z - gradient.Y * x.Z;
-                Vector3Wide.Subtract(localNormal, sideOffset, out var normalSide0);
-                Vector3Wide.Add(localNormal, sideOffset, out var normalSide1);
+                //Vector3Wide sideOffset;
+                //sideOffset.X = gradient.X * y.X - gradient.Y * x.X;
+                //sideOffset.Y = gradient.X * y.Y - gradient.Y * x.Y;
+                //sideOffset.Z = gradient.X * y.Z - gradient.Y * x.Z;
+                //Vector3Wide.Subtract(normalForward, sideOffset, out var normalSide0);
+                //Vector3Wide.Add(normalForward, sideOffset, out var normalSide1);
+                //To ensure determinism, any lane which has completed cannot be refined further.
+                //To do otherwise would be to make the result sensitive to the lane neighbors which aren't guaranteed to be deterministic.
+                var ignoreSamples = completedLanes;
                 FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalForward, out var supportForward);
-                SampleDepth(normalForward, supportForward, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSampleForward);
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide0, out var supportSide0);
-                SampleDepth(normalSide0, supportSide0, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSampleSide0);
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide1, out var supportSide1);
-                SampleDepth(normalSide1, supportSide1, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSampleSide1);
+                Vector<int> usedNewSampleForward, usedNewSampleSide0 = default, usedNewSampleSide1 = default;
+                SampleDepth(normalForward, supportForward, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out usedNewSampleForward);
+                //if (Vector.LessThanAny(Vector.BitwiseOr(usedNewSampleForward, completedLanes), Vector<int>.Zero))
+                //{
+                //    FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide0, out var supportSide0);
+                //    SampleDepth(normalSide0, supportSide0, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out usedNewSampleSide0);
+                //    if (Vector.LessThanAny(Vector.BitwiseOr(usedNewSampleSide0, completedLanes), Vector<int>.Zero))
+                //    {
+                //        FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide1, out var supportSide1);
+                //        SampleDepth(normalSide1, supportSide1, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out usedNewSampleSide1);
+                //    }
+                //}
+                //var usedNewSampleSide0 = new Vector<int>();
+                //var usedNewSampleSide1 = new Vector<int>();
                 Vector3Wide.Dot(minimumSupport, x, out gradient.X);
                 Vector3Wide.Dot(minimumSupport, y, out gradient.Y);
 
-
                 //If any sample made progress for depth, then keep going with the current convergence speed. Otherwise, drop the scale heavily.
                 var usedNewSample = Vector.BitwiseOr(usedNewSampleForward, Vector.BitwiseOr(usedNewSampleSide0, usedNewSampleSide1));
-                gradientScale = Vector.ConditionalSelect(usedNewSample, gradientScale, gradientScale * 0.25f);
+                gradientScale = Vector.ConditionalSelect(usedNewSample, gradientScale * 1.3f, gradientScale * 0.25f);
                 gradient.X *= gradientScale;
                 gradient.Y *= gradientScale;
-                //If the remaining movement is small enough, just exit.
+                //If the remaining movement is small enough or the depth has gone below the threshold, just exit.
+                depthBelowThreshold = Vector.BitwiseOr(depthBelowThreshold, Vector.LessThan(minimumDepthNumerator, minimumDepthThresholdNumerator * minimumNormalLengthSquared));
                 Vector2Wide.Dot(gradient, gradient, out var gradientLengthSquared);
-                var exit = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(gradientLengthSquared, terminationEpsilonSquared));
-                if (Vector.LessThanAll(exit, Vector<int>.Zero))
+                completedLanes = Vector.BitwiseOr(completedLanes, Vector.BitwiseOr(depthBelowThreshold, Vector.LessThan(gradientLengthSquared, terminationEpsilonSquared)));
+                if (Vector.LessThanAll(completedLanes, Vector<int>.Zero))
                 {
                     break;
                 }
@@ -141,6 +181,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var inverseNormalLength = Vector<float>.One / Vector.SquareRoot(minimumNormalLengthSquared);
 
             Vector3Wide.Scale(localNormal, inverseNormalLength, out localNormal);
+            //var depth = Vector.SquareRoot(Vector.Abs(minimumDepthNumerator)) * inverseNormalLength;
+            //depth = Vector.ConditionalSelect(Vector.LessThan(minimumDepthNumerator, Vector<float>.Zero), -depth, depth);
 
         }
 

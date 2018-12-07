@@ -34,6 +34,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         public void ComputeLocalSupport(in CylinderWide shape, in Vector3Wide direction, out Vector3Wide support)
         {
             support.Y = Vector.ConditionalSelect(Vector.GreaterThan(direction.Y, Vector<float>.Zero), shape.HalfLength, -shape.HalfLength);
+            //TODO: Using a hardware accelerated reciprocal sqrt approximation would be hugely beneficial here.
+            //It would actually be meaningful to full frame time in simulations that rely on cylinders.
             var horizontalLength = Vector.SquareRoot(direction.X * direction.X + direction.Z * direction.Z);
             var normalizeScale = shape.Radius / horizontalLength;
             var useHorizontal = Vector.GreaterThan(horizontalLength, new Vector<float>(1e-8f));

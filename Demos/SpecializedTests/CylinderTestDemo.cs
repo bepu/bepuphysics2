@@ -200,10 +200,19 @@ namespace Demos.SpecializedTests
                 b.Broadcast(new Cylinder(0.5f, 1f));
                 var supportFinderA = new CylinderSupportFinder();
                 var supportFinderB = new CylinderSupportFinder();
-                Vector3Wide.Broadcast(new Vector3(-0.5f, 5.1f, 0.5f), out var localOffsetB);
-                Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
+                Vector3Wide.Broadcast(new Vector3(-0.8f, 0.01f, 0.71f), out var localOffsetB);
+                Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0.1f), out var localOrientationB);
                 Vector3Wide.Normalize(localOffsetB, out var initialGuess);
-                GradientDescent<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialGuess, new Vector<float>(1e-5f), Vector<int>.Zero, out var localNormal);
+
+                GradientDescent<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(a, b, localOffsetB, localOrientationB,
+                    ref supportFinderA, ref supportFinderB, initialGuess, new Vector<float>(-0.1f), new Vector<float>(1e-4f), 1500, Vector<int>.Zero, out var localNormal, out var depthBelowThreshold);
+
+                GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
+                QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);
+                QuaternionWide.CreateFromRotationMatrix(localOrientationB, out var localOrientationQuaternionB);
+                gjk.Test(ref a, ref b, ref localOffsetB, ref localOrientationQuaternionA, ref localOrientationQuaternionB, out var intersected, out var distance, out var closestA, out var gjkNormal);
+                TimeGradientDescent(32);
+                TimeGradientDescent(1000000);
             }
             {
                 CylinderWide a = default;
@@ -249,6 +258,29 @@ namespace Demos.SpecializedTests
                 TimeMPR(1000000);
             }
 
+        }
+
+        void TimeGradientDescent(int iterationCount)
+        {
+            CylinderWide a = default;
+            a.Broadcast(new Cylinder(0.5f, 1f));
+            CylinderWide b = default;
+            b.Broadcast(new Cylinder(0.5f, 1f));
+            var supportFinderA = new CylinderSupportFinder();
+            var supportFinderB = new CylinderSupportFinder();
+            Vector3Wide.Broadcast(new Vector3(0, 0, 0), out var localOffsetB);
+            Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 1, 1), 2.0f), out var localOrientationB);
+            Vector3Wide.Normalize(localOffsetB, out var initialGuess);
+            initialGuess = default;
+
+            var start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < iterationCount; ++i)
+            {
+                GradientDescent<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(a, b, localOffsetB, localOrientationB,
+                    ref supportFinderA, ref supportFinderB, initialGuess, new Vector<float>(-0.1f), new Vector<float>(1e-4f), 1500, Vector<int>.Zero, out var localNormal, out var depthBelowThreshold);
+            }
+            var end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Gradient descent time (ns) per iteration (iteration count {iterationCount}): {1e9 * (end - start) / (iterationCount * (double)Stopwatch.Frequency)}");
         }
 
         void TimeMPR(int iterationCount)
