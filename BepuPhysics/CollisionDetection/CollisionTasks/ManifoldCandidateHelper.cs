@@ -19,6 +19,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     public static class ManifoldCandidateHelper
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CreateInactiveMask(int pairCount, out Vector<int> inactiveLanes)
+        {
+            inactiveLanes = Vector<int>.Zero;
+            ref var laneMasks = ref Unsafe.As<Vector<int>, int>(ref inactiveLanes);
+            for (int i = Vector<int>.Count - 1; i >= pairCount; --i)
+            {
+                Unsafe.Add(ref laneMasks, i) = -1; 
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void AddCandidate(ref ManifoldCandidate candidates, ref Vector<int> count, in ManifoldCandidate candidate, in Vector<int> newContactExists, int pairCount)
         {
             //Incrementally maintaining a list is unfortunately a very poor fit for wide vectorization.
@@ -68,7 +79,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             exists = Vector.BitwiseAnd(Vector.GreaterThan(candidate.Depth, minimumDepth), Vector.LessThan(new Vector<int>(i), rawContactCount));
         }
 
-        
         public static void Reduce(ref ManifoldCandidate candidates, in Vector<int> rawContactCount, int maxCandidateCount,
             in Vector3Wide faceNormalA, in Vector3Wide normal, in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
             in Vector<float> epsilonScale, in Vector<float> minimumDepth, int pairCount,

@@ -268,10 +268,9 @@ namespace Demos.SpecializedTests
             b.Broadcast(new Cylinder(0.5f, 1f));
             var supportFinderA = new CylinderSupportFinder();
             var supportFinderB = new CylinderSupportFinder();
-            Vector3Wide.Broadcast(new Vector3(0, 0, 0), out var localOffsetB);
+            Vector3Wide.Broadcast(new Vector3(1, 0, 0), out var localOffsetB);
             Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 1, 1), 2.0f), out var localOrientationB);
             Vector3Wide.Normalize(localOffsetB, out var initialGuess);
-            initialGuess = default;
 
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < iterationCount; ++i)
