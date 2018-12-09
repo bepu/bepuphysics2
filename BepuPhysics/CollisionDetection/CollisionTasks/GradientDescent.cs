@@ -132,39 +132,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             {
                 //Create three sample locations from the previous location and the gradient. 
                 //We'll sample in the direction of the (negative) gradient and two locations rotated 90 degrees away to capture cases where the gradient is stuck in a valley and bouncing off the walls.
-                Vector3Wide normalForward;
-                normalForward.X = localNormal.X - gradient.X * x.X - gradient.Y * y.X;
-                normalForward.Y = localNormal.Y - gradient.X * x.Y - gradient.Y * y.Y;
-                normalForward.Z = localNormal.Z - gradient.X * x.Z - gradient.Y * y.Z;
-                //Vector3Wide sideOffset;
-                //sideOffset.X = gradient.X * y.X - gradient.Y * x.X;
-                //sideOffset.Y = gradient.X * y.Y - gradient.Y * x.Y;
-                //sideOffset.Z = gradient.X * y.Z - gradient.Y * x.Z;
-                //Vector3Wide.Subtract(normalForward, sideOffset, out var normalSide0);
-                //Vector3Wide.Add(normalForward, sideOffset, out var normalSide1);
+                Vector3Wide newNormal;
+                newNormal.X = localNormal.X - gradient.X * x.X - gradient.Y * y.X;
+                newNormal.Y = localNormal.Y - gradient.X * x.Y - gradient.Y * y.Y;
+                newNormal.Z = localNormal.Z - gradient.X * x.Z - gradient.Y * y.Z;
                 //To ensure determinism, any lane which has completed cannot be refined further.
                 //To do otherwise would be to make the result sensitive to the lane neighbors which aren't guaranteed to be deterministic.
                 var ignoreSamples = completedLanes;
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalForward, out var supportForward);
-                Vector<int> usedNewSampleForward, usedNewSampleSide0 = default, usedNewSampleSide1 = default;
-                SampleDepth(normalForward, supportForward, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out usedNewSampleForward);
-                //if (Vector.LessThanAny(Vector.BitwiseOr(usedNewSampleForward, completedLanes), Vector<int>.Zero))
-                //{
-                //    FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide0, out var supportSide0);
-                //    SampleDepth(normalSide0, supportSide0, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out usedNewSampleSide0);
-                //    if (Vector.LessThanAny(Vector.BitwiseOr(usedNewSampleSide0, completedLanes), Vector<int>.Zero))
-                //    {
-                //        FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide1, out var supportSide1);
-                //        SampleDepth(normalSide1, supportSide1, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out usedNewSampleSide1);
-                //    }
-                //}
-                //var usedNewSampleSide0 = new Vector<int>();
-                //var usedNewSampleSide1 = new Vector<int>();
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, newNormal, out var supportForward);
+                SampleDepth(newNormal, supportForward, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSample);
                 Vector3Wide.Dot(minimumSupport, x, out gradient.X);
                 Vector3Wide.Dot(minimumSupport, y, out gradient.Y);
 
                 //If any sample made progress for depth, then keep going with the current convergence speed. Otherwise, drop the scale heavily.
-                var usedNewSample = Vector.BitwiseOr(usedNewSampleForward, Vector.BitwiseOr(usedNewSampleSide0, usedNewSampleSide1));
                 gradientScale = Vector.ConditionalSelect(usedNewSample, gradientScale * 1.3f, gradientScale * 0.25f);
                 gradient.X *= gradientScale;
                 gradient.Y *= gradientScale;

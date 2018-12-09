@@ -135,17 +135,138 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             CylinderSupportFinder supportFinder = default;
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
             GradientDescent<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(
-                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, -speculativeMargin, new Vector<float>(1e-4f), 1500, inactiveLanes,
+                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, -speculativeMargin, new Vector<float>(1e-4f), 25, inactiveLanes,
                 out localNormal, out var depthBelowThreshold);
             inactiveLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
 
-            if(Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
+            if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //All lanes are either inactive or were found to have a depth lower than the speculative margin, so we can just quit early.
                 manifold = default;
                 return;
             }
 
+            //We generate contacts according to the dominant features along the collision normal.
+            //The possible pairs are:
+            //Cap A-Cap B
+            //Cap A-Side B
+            //Side A-Cap B
+            //Side A-Side B
+            Vector3Wide.Dot(rA.Y, localNormal, out var nDotAY);
+            var capThreshold = new Vector<float>(0.70710678118f);
+            var useCapA = Vector.GreaterThan(Vector.Abs(nDotAY), capThreshold);
+            var useCapB = Vector.GreaterThan(Vector.Abs(localNormal.Y), capThreshold);
+            if (Vector.LessThanAny(Vector.AndNot(Vector.BitwiseAnd(useCapA, useCapB), inactiveLanes), Vector<int>.Zero))
+            {
+                //At least one active lane needs cap-cap contacts.
+                //While the obvious approach is to intersect the cylinder caps, doing so on the contact plane involves intersecting two ellipses.
+                //That involves solving a fourth degree polynomial. Doable, but not super duper cheap. Further, when the caps are not parallel, 
+                //intersecting the caps doesn't necessarily produce 'better' contacts. It's just a heuristic.
+
+                //Instead, compute the extreme point of both caps along the contact normal. 
+                //One or both of the extreme points should lie within the opposing cap when projected along the contact normal if the cylinders aren't parallel.
+                //The offset from the center of the source cap to the extreme point on that cap, projected onto the contact plane, gives us a line to test against the opposing cap.
+                //Then, take a perpendicular line positioned on the midpoint of first intersection interval and compute another two intersections.
+
+                //In the event that the caps are parallel, we can't rely on the extreme point since there is no unique extreme point. 
+                //Instead, pick a point along the offset from cap center A to cap center B that should be contained by both projected cylinders if they are parallel.
+                //That's easy enough- just use a weighted point along the offset based on the cylinder radii.
+
+               
+                Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.LessThan(nDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var capCenterA);
+                Vector3Wide.Add(capCenterA, localOffsetA, out capCenterA);
+
+                Vector3Wide.Dot(rA.X, localNormal, out var ax);
+                Vector3Wide.Dot(rA.Z, localNormal, out var az);
+                var horizontalNormalLengthA = Vector.SquareRoot(ax * ax + az * az);
+                var normalizeScaleA = a.Radius / horizontalNormalLengthA;
+                var horizontalNormalLengthValidA = Vector.GreaterThan(horizontalNormalLengthA, new Vector<float>(1e-7f));
+                Vector3Wide.Scale(rA.X, Vector.ConditionalSelect(horizontalNormalLengthValidA, ax * normalizeScaleA, Vector<float>.Zero), out var extremeAX);
+                Vector3Wide.Scale(rA.Z, Vector.ConditionalSelect(horizontalNormalLengthValidA, az * normalizeScaleA, Vector<float>.Zero), out var extremeAZ);
+                Vector3Wide.Add(extremeAX, capCenterA, out var extremeA);
+                Vector3Wide.Add(extremeAZ, extremeA, out extremeA);
+
+                var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+
+                var horizontalNormalLengthB = Vector.SquareRoot(localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
+                var normalizeScaleB = b.Radius / horizontalNormalLengthB;
+                var horizontalNormalLengthValidB = Vector.GreaterThan(horizontalNormalLengthB, new Vector<float>(1e-7f));
+                Vector3Wide extremeB;
+                extremeB.X = Vector.ConditionalSelect(horizontalNormalLengthValidA, localNormal.X * normalizeScaleB, Vector<float>.Zero);
+                extremeB.Y = capCenterBY;
+                extremeB.Z = Vector.ConditionalSelect(horizontalNormalLengthValidA, localNormal.Z * normalizeScaleB, Vector<float>.Zero);
+
+                //Test extremeA projected along the normal against cap B.
+                //radiusB^2 >= ||extremeA - localNormal * dot(capNormalB, extremeA - capCenterB) / dot(capNormalB, localNormal) - capCenterB||^2
+                var inverseLocalNormalY = Vector<float>.One / localNormal.Y;
+                var tAOnB = (extremeA.Y - capCenterBY) * inverseLocalNormalY;
+                Vector3Wide.Scale(localNormal, tAOnB, out var projectionOffsetA);
+                Vector2Wide projectedExtremeAInLocalB;
+                projectedExtremeAInLocalB.X = extremeA.X - localNormal.X * tAOnB;
+                projectedExtremeAInLocalB.Y = extremeA.Z - localNormal.Z * tAOnB;
+                Vector2Wide.LengthSquared(projectedExtremeAInLocalB, out var projectedDistanceSquaredA);
+                var bCapIsParallel = Vector.LessThan(Vector.Abs(localNormal.Y), new Vector<float>(1e-7f));
+                var signedRadiusDifferenceSquaredA = Vector.ConditionalSelect(bCapIsParallel, new Vector<float>(float.MaxValue), b.Radius - projectedDistanceSquaredA);
+
+                Vector3Wide capCenterBToCapCenterA;
+                capCenterBToCapCenterA.X = capCenterA.X;
+                capCenterBToCapCenterA.Y = capCenterA.Y - capCenterBY;
+                capCenterBToCapCenterA.Z = capCenterA.Z;
+                Vector3Wide.Dot(rA.Y, capCenterBToCapCenterA, out var tCapCenterDistanceA);
+                var tACapCenterOnB = tCapCenterDistanceA * inverseLocalNormalY;
+                Vector2Wide projectedCapCenterAInLocalB;
+                projectedCapCenterAInLocalB.X = capCenterA.X + localNormal.X * tACapCenterOnB;
+                projectedCapCenterAInLocalB.Y = capCenterA.Z + localNormal.Z * tACapCenterOnB;
+
+                //Test extremeB projected along the normal against cap A.
+                //radiusA^2 >= ||extremeB + localNormal * dot(capNormalA, extremeB - capCenterA) / dot(capNormalA, localNormal) - capCenterA||^2
+                Vector3Wide.Subtract(extremeB, capCenterA, out var capCenterAToExtremeB);
+                Vector3Wide.Dot(rA.Y, capCenterAToExtremeB, out var tDistanceB);
+                var inverseNDotAY = Vector<float>.One / nDotAY;
+                var tBOnA = tDistanceB * inverseNDotAY;
+                Vector3Wide.Scale(localNormal, tBOnA, out var projectionOffsetB);
+                Vector3Wide.Add(extremeB, projectionOffsetB, out var projectedExtremeB);
+                Vector3Wide.Subtract(projectedExtremeB, capCenterA, out var capCenterAToProjectedExtremeB);
+                Vector2Wide projectedExtremeBInLocalA;
+                Vector3Wide.Dot(capCenterAToProjectedExtremeB, rA.X, out projectedExtremeBInLocalA.X);
+                Vector3Wide.Dot(capCenterAToProjectedExtremeB, rA.Z, out projectedExtremeBInLocalA.Y);
+                Vector2Wide.LengthSquared(projectedExtremeBInLocalA, out var projectedDistanceSquaredB);
+                var aCapIsParallel = Vector.LessThan(Vector.Abs(nDotAY), new Vector<float>(1e-7f));
+                var signedRadiusDifferenceSquaredB = Vector.ConditionalSelect(aCapIsParallel, new Vector<float>(float.MaxValue), a.Radius - projectedDistanceSquaredB);
+
+                Vector3Wide.Dot(rA.Y, capCenterBToCapCenterA, out var tCapCenterDistanceB);
+                var tBCapCenterOnA = tCapCenterDistanceB * inverseNDotAY;
+                Vector3Wide.Scale(localNormal, tBCapCenterOnA, out var projectedCapCenterB);
+                projectedCapCenterB.Y += capCenterBY;
+                Vector3Wide.Subtract(projectedCapCenterB, capCenterA, out var capCenterAToProjectedCapCenterB);
+                Vector2Wide projectedCapCenterBInLocalA;
+                Vector3Wide.Dot(capCenterAToProjectedCapCenterB, rA.X, out projectedCapCenterBInLocalA.X);
+                Vector3Wide.Dot(capCenterAToProjectedCapCenterB, rA.Z, out projectedCapCenterBInLocalA.Y);
+
+                //Choose which interval axis to use and which cap to test it against.
+                //If extremeA is the most contained, project extremeA and capCenterA down onto capB's plane along the local normal. The connecting line is the interval axis. 
+                //Similar for extremeB.
+                var useExtremeA = Vector.LessThan(signedRadiusDifferenceSquaredA, signedRadiusDifferenceSquaredB);
+
+                Vector2Wide.ConditionalSelect(useExtremeA, projectedCapCenterAInLocalB, projectedCapCenterBInLocalA, out var line0Start);
+                Vector2Wide.ConditionalSelect(useExtremeA, projectedExtremeAInLocalB, projectedExtremeBInLocalA, out var line0End);
+                var radius = Vector.ConditionalSelect(useExtremeA, b.Radius, a.Radius);
+
+                Vector2Wide.Subtract(line0End, line0Start, out var direction0);
+
+                //Note that there is a risk of feature id inconsistency as the caps approach a parallel state. The 'deepest' point will jump violently between frames when near parallel
+                //and it's not guaranteed to be contained in the opposing cap.
+                //To compensate, we have fallbacks.
+                //1) Preferentially use the offset between caps as the first interval direction. If it is zero length, then
+                //2) Use the local X axis as the first interval direction.
+                //Note that we use blending rather than instantaneous transitions for fallbacks. This is just another attempt to avoid single frame feature id freakouts.
+                const float parallelEpsilonMin = 0.99f;
+                const float parallelEpsilonMax = 0.999f;
+                const float epsilonScale = 1f / (parallelEpsilonMax - parallelEpsilonMin);
+                var parallelWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, Vector.Abs(rA.Y.Y) * epsilonScale - new Vector<float>(parallelEpsilonMin * epsilonScale)));
+                var horizontalCapDistanceSquared = capCenterBToCapCenterA.X * capCenterBToCapCenterA.X + capCenterBToCapCenterA.Z * capCenterBToCapCenterA.Z;
+
+            }
 
             manifold = default;
 

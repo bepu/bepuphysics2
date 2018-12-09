@@ -44,6 +44,19 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ConditionalSelect(in Vector<int> condition, in Vector2Wide left, in Vector2Wide right, out Vector2Wide result)
+        {
+            result.X = Vector.ConditionalSelect(condition, left.X, right.X);
+            result.Y = Vector.ConditionalSelect(condition, left.Y, right.Y);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void LengthSquared(in Vector2Wide v, out Vector<float> lengthSquared)
+        {
+            lengthSquared = v.X * v.X + v.Y * v.Y;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Length(in Vector2Wide v, out Vector<float> length)
         {
             length = Vector.SquareRoot(v.X * v.X + v.Y * v.Y);
@@ -54,5 +67,7 @@ namespace BepuUtilities
         {
             return $"<{X}, {Y}>";
         }
+
+
     }
 }
