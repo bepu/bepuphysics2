@@ -170,93 +170,95 @@ namespace Demos.SpecializedTests
 
         public override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(0, 4, -6);
-            camera.Yaw = MathHelper.Pi;
+            camera.Position = new Vector3(10, 0, 6);
+            camera.Pitch = 0;
+            camera.Yaw = 0;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)));
 
-            var cylinder = BodyDescription.CreateConvexDynamic(new Vector3(5f, -3, 0), 1f, Simulation.Shapes, new Cylinder(1, 2));
+            var cylinder = BodyDescription.CreateConvexDynamic(new Vector3(10f, 3, 0), 1f, Simulation.Shapes, new Cylinder(1, 2));
             cylinder.Collidable.SpeculativeMargin = float.MaxValue;
             Simulation.Bodies.Add(cylinder);
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(0, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Sphere(2)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(5, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Capsule(0.5f, 1f)));
+            Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(10, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Cylinder(0.5f, 1f)));
 
-            {
-                CapsuleCylinderTester tester = default;
-                CapsuleWide a = default;
-                a.Broadcast(new Capsule(0.5f, 1));
-                CylinderWide b = default;
-                b.Broadcast(new Cylinder(0.5f, 1));
-                var speculativeMargin = new Vector<float>(2f);
-                Vector3Wide.Broadcast(new Vector3(0, -0.4f, 0), out var offsetB);
-                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2), out var orientationA);
-                QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var orientationB);
-                tester.Test(ref a, ref b, ref speculativeMargin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
-            }
-            {
-                CylinderWide a = default;
-                a.Broadcast(new Cylinder(0.5f, 1f));
-                CylinderWide b = default;
-                b.Broadcast(new Cylinder(0.5f, 1f));
-                var supportFinderA = new CylinderSupportFinder();
-                var supportFinderB = new CylinderSupportFinder();
-                Vector3Wide.Broadcast(new Vector3(-0.8f, 0.01f, 0.71f), out var localOffsetB);
-                Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0.1f), out var localOrientationB);
-                Vector3Wide.Normalize(localOffsetB, out var initialGuess);
+            //{
+            //    CapsuleCylinderTester tester = default;
+            //    CapsuleWide a = default;
+            //    a.Broadcast(new Capsule(0.5f, 1));
+            //    CylinderWide b = default;
+            //    b.Broadcast(new Cylinder(0.5f, 1));
+            //    var speculativeMargin = new Vector<float>(2f);
+            //    Vector3Wide.Broadcast(new Vector3(0, -0.4f, 0), out var offsetB);
+            //    QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2), out var orientationA);
+            //    QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var orientationB);
+            //    tester.Test(ref a, ref b, ref speculativeMargin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
+            //}
+            //{
+            //    CylinderWide a = default;
+            //    a.Broadcast(new Cylinder(0.5f, 1f));
+            //    CylinderWide b = default;
+            //    b.Broadcast(new Cylinder(0.5f, 1f));
+            //    var supportFinderA = new CylinderSupportFinder();
+            //    var supportFinderB = new CylinderSupportFinder();
+            //    Vector3Wide.Broadcast(new Vector3(-0.8f, 0.01f, 0.71f), out var localOffsetB);
+            //    Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0.1f), out var localOrientationB);
+            //    Vector3Wide.Normalize(localOffsetB, out var initialGuess);
 
-                GradientDescent<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(a, b, localOffsetB, localOrientationB,
-                    ref supportFinderA, ref supportFinderB, initialGuess, new Vector<float>(-0.1f), new Vector<float>(1e-4f), 1500, Vector<int>.Zero, out var localNormal, out var depthBelowThreshold);
+            //    GradientDescent<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(a, b, localOffsetB, localOrientationB,
+            //        ref supportFinderA, ref supportFinderB, initialGuess, new Vector<float>(-0.1f), new Vector<float>(1e-4f), 1500, Vector<int>.Zero, out var localNormal, out var depthBelowThreshold);
 
-                GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
-                QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);
-                QuaternionWide.CreateFromRotationMatrix(localOrientationB, out var localOrientationQuaternionB);
-                gjk.Test(ref a, ref b, ref localOffsetB, ref localOrientationQuaternionA, ref localOrientationQuaternionB, out var intersected, out var distance, out var closestA, out var gjkNormal);
-                TimeGradientDescent(32);
-                TimeGradientDescent(1000000);
-            }
-            {
-                CylinderWide a = default;
-                a.Broadcast(new Cylinder(0.5f, 1f));
-                CylinderWide b = default;
-                b.Broadcast(new Cylinder(0.5f, 1f));
-                var supportFinderA = new CylinderSupportFinder();
-                var supportFinderB = new CylinderSupportFinder();
-                Vector3Wide.Broadcast(new Vector3(0.5f, 0.5f, 0.5f), out var localOffsetB);
-                Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1, 0, 1)), out var localCastDirection);
-                Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
-                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<float>(1e-5f), Vector<int>.Zero, out var intersecting, out var localNormal);
-                for (int i = 0; i < 5; ++i)
-                {
-                    MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localNormal, new Vector<float>(1e-3f), Vector<int>.Zero,
-                        out var t, out localNormal);
-                }
-                Vector3Wide.Normalize(localNormal, out var test);
+            //    GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
+            //    QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);
+            //    QuaternionWide.CreateFromRotationMatrix(localOrientationB, out var localOrientationQuaternionB);
+            //    gjk.Test(ref a, ref b, ref localOffsetB, ref localOrientationQuaternionA, ref localOrientationQuaternionB, out var intersected, out var distance, out var closestA, out var gjkNormal);
+            //    //TimeGradientDescent(32);
+            //    //TimeGradientDescent(1000000);
+            //}
+            //{
+            //    CylinderWide a = default;
+            //    a.Broadcast(new Cylinder(0.5f, 1f));
+            //    CylinderWide b = default;
+            //    b.Broadcast(new Cylinder(0.5f, 1f));
+            //    var supportFinderA = new CylinderSupportFinder();
+            //    var supportFinderB = new CylinderSupportFinder();
+            //    Vector3Wide.Broadcast(new Vector3(0.5f, 0.5f, 0.5f), out var localOffsetB);
+            //    Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1, 0, 1)), out var localCastDirection);
+            //    Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
+            //    MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<float>(1e-5f), Vector<int>.Zero, out var intersecting, out var localNormal);
+            //    for (int i = 0; i < 5; ++i)
+            //    {
+            //        MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localNormal, new Vector<float>(1e-3f), Vector<int>.Zero,
+            //            out var t, out localNormal);
+            //    }
+            //    Vector3Wide.Normalize(localNormal, out var test);
 
-                GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
-                QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);
-                QuaternionWide.CreateFromRotationMatrix(localOrientationB, out var localOrientationQuaternionB);
-                gjk.Test(ref a, ref b, ref localOffsetB, ref localOrientationQuaternionA, ref localOrientationQuaternionB, out var intersected, out var distance, out var closestA, out var gjkNormal);
-                TimeMPRSurfaceCast(32);
-                TimeMPRSurfaceCast(1000000);
-            }
-            {
-                CylinderWide a = default;
-                a.Broadcast(new Cylinder(0.5f, 1f));
-                CylinderWide b = default;
-                b.Broadcast(new Cylinder(0.5f, 1f));
-                var supportFinderA = new CylinderSupportFinder();
-                var supportFinderB = new CylinderSupportFinder();
-                Vector3Wide.Broadcast(new Vector3(-0.335f, -0.0f, 1.207f), out var localOffsetB);
-                Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 10.0f), out var localOrientationB);
-                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<float>(1e-5f), Vector<int>.Zero, out var intersecting, out var localNormal);
-                Vector3Wide.Normalize(localNormal, out var test);
-                GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
-                QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);
-                QuaternionWide.CreateFromRotationMatrix(localOrientationB, out var localOrientationQuaternionB);
-                gjk.Test(ref a, ref b, ref localOffsetB, ref localOrientationQuaternionA, ref localOrientationQuaternionB, out var intersected, out var distance, out var closestA, out var gjkNormal);
-                TimeMPR(32);
-                TimeMPR(1000000);
-            }
+            //    GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
+            //    QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);
+            //    QuaternionWide.CreateFromRotationMatrix(localOrientationB, out var localOrientationQuaternionB);
+            //    gjk.Test(ref a, ref b, ref localOffsetB, ref localOrientationQuaternionA, ref localOrientationQuaternionB, out var intersected, out var distance, out var closestA, out var gjkNormal);
+            //    //TimeMPRSurfaceCast(32);
+            //    //TimeMPRSurfaceCast(1000000);
+            //}
+            //{
+            //    CylinderWide a = default;
+            //    a.Broadcast(new Cylinder(0.5f, 1f));
+            //    CylinderWide b = default;
+            //    b.Broadcast(new Cylinder(0.5f, 1f));
+            //    var supportFinderA = new CylinderSupportFinder();
+            //    var supportFinderB = new CylinderSupportFinder();
+            //    Vector3Wide.Broadcast(new Vector3(-0.335f, -0.0f, 1.207f), out var localOffsetB);
+            //    Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 10.0f), out var localOrientationB);
+            //    MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<float>(1e-5f), Vector<int>.Zero, out var intersecting, out var localNormal);
+            //    Vector3Wide.Normalize(localNormal, out var test);
+            //    GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
+            //    QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);
+            //    QuaternionWide.CreateFromRotationMatrix(localOrientationB, out var localOrientationQuaternionB);
+            //    gjk.Test(ref a, ref b, ref localOffsetB, ref localOrientationQuaternionA, ref localOrientationQuaternionB, out var intersected, out var distance, out var closestA, out var gjkNormal);
+            //    //TimeMPR(32);
+            //    //TimeMPR(1000000);
+            //}
 
         }
 
