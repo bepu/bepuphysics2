@@ -69,7 +69,36 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void GetClosestPointsBetweenSegments(in Vector3Wide da, in Vector3Wide localOffsetB, in Vector<float> aHalfLength, in Vector<float> bHalfLength,
+        public static void GetContactIntervalBetweenSegments(in Vector<float> aHalfLength, in Vector<float> bHalfLength, in Vector3Wide axisA, in Vector3Wide localNormal,
+            in Vector<float> inverseHorizontalNormalLengthSquaredB, in Vector3Wide offsetB, out Vector<float> contactTMin, out Vector<float> contactTMax)
+        {
+            GetClosestPointsBetweenSegments(axisA, offsetB, aHalfLength, bHalfLength, out var ta, out var taMin, out var taMax, out var tb, out var tbMin, out var tbMax);
+
+            //In the event that the two axes are coplanar, we accept the whole interval as a source of contact.
+            //As the axes drift away from coplanarity, the accepted interval rapidly narrows to zero length, centered on ta and tb.
+            //We rate the degree of coplanarity based on the angle between the capsule axis and the plane defined by the side and contact normal:
+            //sin(angle) = dot(da, (db x normal)/||db x normal||)
+            //Finally, note that we are dealing with extremely small angles, and for small angles sin(angle) ~= angle,
+            //and also that fade behavior is completely arbitrary, so we can directly use squared angle without any concern.
+            //angle^2 ~= dot(da, (db x normal))^2 / ||db x normal||^2
+            //Note that db x normal is just (normal.Z, -normal.X) since db is (0,1,0).
+            var dot = (axisA.X * localNormal.Z - axisA.Z * localNormal.X);
+            var squaredAngle = dot * dot * inverseHorizontalNormalLengthSquaredB;
+
+            //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
+            const float lowerThresholdAngle = 0.01f;
+            const float upperThresholdAngle = 0.05f;
+            const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
+            const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
+            var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));
+            //If the line segments intersect, even if they're coplanar, we would ideally stick to using a single point. Would be easy enough,
+            //but we don't bother because it's such a weird and extremely temporary corner case. Not really worth handling.
+            var weightedTb = tb - tb * intervalWeight;
+            contactTMin = intervalWeight * tbMin + weightedTb;
+            contactTMax = intervalWeight * tbMax + weightedTb;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void GetClosestPointsBetweenSegments(in Vector3Wide da, in Vector3Wide localOffsetB, in Vector<float> aHalfLength, in Vector<float> bHalfLength,
             out Vector<float> ta, out Vector<float> taMin, out Vector<float> taMax, out Vector<float> tb, out Vector<float> tbMin, out Vector<float> tbMax)
         {
             //This is similar to the capsule pair execution, but we make use of the fact that we're working in the cylinder's local space where db = (0,1,0).
@@ -208,30 +237,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 aToSideSegmentCenter.X = localOffsetB.X + cylinderSegmentOffsetX;
                 aToSideSegmentCenter.Y = localOffsetB.Y;
                 aToSideSegmentCenter.Z = localOffsetB.Z + cylinderSegmentOffsetZ;
-                GetClosestPointsBetweenSegments(capsuleAxis, aToSideSegmentCenter, a.HalfLength, b.HalfLength, out var ta, out var taMin, out var taMax, out var tb, out var tbMin, out var tbMax);
-
-                //In the event that the two capsule axes are coplanar, we accept the whole interval as a source of contact.
-                //As the axes drift away from coplanarity, the accepted interval rapidly narrows to zero length, centered on ta and tb.
-                //We rate the degree of coplanarity based on the angle between the capsule axis and the plane defined by the side and contact normal:
-                //sin(angle) = dot(da, (db x normal)/||db x normal||)
-                //Finally, note that we are dealing with extremely small angles, and for small angles sin(angle) ~= angle,
-                //and also that fade behavior is completely arbitrary, so we can directly use squared angle without any concern.
-                //angle^2 ~= dot(da, (db x normal))^2 / ||db x normal||^2
-                //Note that db x normal is just (normal.Z, -normal.X) since db is (0,1,0).
-                var dot = (capsuleAxis.X * localNormal.Z - capsuleAxis.Z * localNormal.X);
-                var squaredAngle = dot * dot * inverseHorizontalNormalLengthSquared;
-
-                //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
-                const float lowerThresholdAngle = 0.01f;
-                const float upperThresholdAngle = 0.05f;
-                const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
-                const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
-                var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));
-                //If the line segments intersect, even if they're coplanar, we would ideally stick to using a single point. Would be easy enough,
-                //but we don't bother because it's such a weird and extremely temporary corner case. Not really worth handling.
-                var weightedTb = tb - tb * intervalWeight;
-                var contactTMin = intervalWeight * tbMin + weightedTb;
-                var contactTMax = intervalWeight * tbMax + weightedTb;
+                GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, capsuleAxis, localNormal, inverseHorizontalNormalLengthSquared, aToSideSegmentCenter, out var contactTMin, out var contactTMax);
 
                 contact0.X = cylinderSegmentOffsetX;
                 contact0.Y = contactTMin;
@@ -341,6 +347,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.FeatureId0 = Vector<int>.Zero;
             manifold.FeatureId1 = Vector<int>.One;
         }
+
 
         public void Test(ref CapsuleWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)
         {

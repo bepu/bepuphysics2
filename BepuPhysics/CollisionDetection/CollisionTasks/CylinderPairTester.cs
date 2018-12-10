@@ -32,6 +32,91 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             depth = contributionA + contributionB - Vector.Abs(dotOffsetN);
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void ProjectOntoCapA(in Vector<float> capCenterBY, in Vector3Wide capCenterA, in Matrix3x3Wide rA, in Vector<float> inverseNDotAY, in Vector3Wide localNormal, in Vector2Wide point, out Vector2Wide projected)
+        {
+            Vector3Wide point3D;
+            point3D.X = point.X;
+            point3D.Y = capCenterBY;
+            point3D.Z = point.Y;
+            ProjectOntoCapA(capCenterA, rA, inverseNDotAY, localNormal, point3D, out projected);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void ProjectOntoCapA(in Vector3Wide capCenterA, in Matrix3x3Wide rA, in Vector<float> inverseNDotAY, in Vector3Wide localNormal, in Vector3Wide point, out Vector2Wide projected)
+        {
+            Vector3Wide.Subtract(capCenterA, point, out var pointToCapCenterA);
+            Vector3Wide.Dot(pointToCapCenterA, rA.Y, out var tDistance);
+            var tBOnA = tDistance * inverseNDotAY;
+            Vector3Wide.Scale(localNormal, tBOnA, out var projectionOffsetB);
+            Vector3Wide.Add(point, projectionOffsetB, out var projectedPoint);
+            Vector3Wide.Subtract(projectedPoint, capCenterA, out var capCenterAToProjectedPoint);
+            Vector3Wide.Dot(capCenterAToProjectedPoint, rA.X, out projected.X);
+            Vector3Wide.Dot(capCenterAToProjectedPoint, rA.Z, out projected.Y);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void ProjectOntoCapB(in Vector<float> capCenterBY, in Vector<float> inverseLocalNormalY, in Vector3Wide localNormal, in Vector3Wide point, out Vector2Wide projected)
+        {
+            var tAOnB = (point.Y - capCenterBY) * inverseLocalNormalY;
+            Vector3Wide.Scale(localNormal, tAOnB, out var projectionOffsetA);
+            Vector2Wide projectedExtremeAInLocalB;
+            projectedExtremeAInLocalB.X = point.X - localNormal.X * tAOnB;
+            projectedExtremeAInLocalB.Y = point.Z - localNormal.Z * tAOnB;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void IntersectLineCircle(in Vector2Wide linePosition, in Vector2Wide lineDirection, in Vector<float> radius, out Vector<float> tMin, out Vector<float> tMax)
+        {
+            //||linePosition + lineDirection * t|| = radius
+            //dot(linePosition + lineDirection * t, linePosition + lineDirection * t) = radius * radius
+            //dot(linePosition, linePosition) - radius * radius + t * 2 * dot(linePosition, lineDirection) + t^2 * dot(lineDirection, lineDirection) = 0
+            Vector2Wide.Dot(linePosition, linePosition, out var coefficientC);
+            coefficientC -= radius * radius;
+            Vector2Wide.Dot(linePosition, lineDirection, out var coefficientB);
+            Vector2Wide.Dot(lineDirection, lineDirection, out var coefficientA);
+            var inverseA = Vector<float>.One / coefficientA;
+            var tOffset = Vector.SquareRoot(Vector.Max(Vector<float>.Zero, coefficientB * coefficientB - coefficientA * coefficientC)) * inverseA;
+            var tBase = -coefficientB * inverseA;
+            tMin = tBase - tOffset;
+            tMax = tBase + tOffset;
+            //If the projected length is zero, just treat both points as being in the same location (at tNegative).
+            var useFallback = Vector.LessThan(Vector.Abs(coefficientA), new Vector<float>(1e-12f));
+            tMin = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, tMin);
+            tMax = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, tMax);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void FromCapBTo3D(in Vector2Wide contact, in Vector<float> capCenterBY, out Vector3Wide localContact3D)
+        {
+            localContact3D.X = contact.X;
+            localContact3D.Y = capCenterBY;
+            localContact3D.Z = contact.Y;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void TransformContact(
+            in Vector3Wide contact, in Vector3Wide localNormal, in Vector3Wide localFeatureNormalA, in Vector<float> inverseFeatureNormalADotLocalNormal,
+            in Vector3Wide localOffsetB, in Matrix3x3Wide orientationB, Vector<float> negativeSpeculativeMargin,
+            out Vector3Wide aToContact, out Vector<float> depth, ref Vector<int> contactExists)
+        {
+            //While we have computed a global depth, each contact has its own depth.
+            //Project the contact on B along the contact normal to the 'face' of A.
+            //The full computation is: 
+            //t = dot(contact + localOffsetB, featureNormalA) / dot(featureNormalA, localNormal)
+            //depth = dot(t * localNormal, localNormal) = t
+            Vector3Wide.Dot(localFeatureNormalA, localNormal, out var featureNormalADotLocalNormal);
+            //Don't have to perform any calibration on the faceNormalA; it appears in both the numerator and denominator so the sign and magnitudes cancel.
+            Vector3Wide.Scale(localFeatureNormalA, featureNormalADotLocalNormal, out var scaledFaceNormalA);
+            Vector3Wide.Add(localOffsetB, contact, out var offset);
+            Vector3Wide.Dot(offset, localFeatureNormalA, out var t);
+            depth = t * inverseFeatureNormalADotLocalNormal;
+            Vector3Wide.Add(contact, localOffsetB, out var localAToContact);
+            Matrix3x3Wide.TransformWithoutOverlap(localAToContact, orientationB, out aToContact);
+            contactExists = Vector.BitwiseAnd(contactExists, Vector.GreaterThanOrEqual(depth, negativeSpeculativeMargin));
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(
             ref CylinderWide a, ref CylinderWide b, ref Vector<float> speculativeMargin,
@@ -153,6 +238,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Side A-Cap B
             //Side A-Side B
             Vector3Wide.Dot(rA.Y, localNormal, out var nDotAY);
+            var inverseNDotAY = Vector<float>.One / nDotAY;
+            var inverseLocalNormalY = Vector<float>.One / localNormal.Y;
             var capThreshold = new Vector<float>(0.70710678118f);
             var useCapA = Vector.GreaterThan(Vector.Abs(nDotAY), capThreshold);
             var useCapB = Vector.GreaterThan(Vector.Abs(localNormal.Y), capThreshold);
@@ -162,7 +249,41 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.Contact2Exists = default;
             manifold.Contact3Exists = default;
             var useCapCap = Vector.AndNot(Vector.BitwiseAnd(useCapA, useCapB), inactiveLanes);
-            Vector3Wide featureNormalA = default;
+
+
+            //The extreme points along the contact normal are shared between multiple contact generator paths, so we just do them up front.
+            Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.LessThan(nDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var capCenterA);
+            Vector3Wide.Add(capCenterA, localOffsetA, out capCenterA);
+
+            Vector3Wide.Dot(rA.X, localNormal, out var ax);
+            Vector3Wide.Dot(rA.Z, localNormal, out var az);
+            var horizontalNormalLengthA = Vector.SquareRoot(ax * ax + az * az);
+            var inverseHorizontalNormalLengthA = Vector<float>.One / horizontalNormalLengthA;
+            //No division by zero guard; we only use cap-cap for a lane if the local normal is well beyond perpendicular with the local cap normal.
+            var normalizeScaleA = a.Radius * inverseHorizontalNormalLengthA;
+            var horizontalNormalLengthValidA = Vector.GreaterThan(horizontalNormalLengthA, new Vector<float>(1e-7f));
+            Vector3Wide.Scale(rA.X, Vector.ConditionalSelect(horizontalNormalLengthValidA, ax * normalizeScaleA, Vector<float>.Zero), out var extremeAX);
+            Vector3Wide.Scale(rA.Z, Vector.ConditionalSelect(horizontalNormalLengthValidA, az * normalizeScaleA, Vector<float>.Zero), out var extremeAZ);
+            Vector3Wide.Add(extremeAX, extremeAZ, out var extremeAOffset);
+            Vector3Wide.Add(extremeAOffset, capCenterA, out var extremeA);
+
+            var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+            var horizontalNormalLengthSquaredB = localNormal.X * localNormal.X + localNormal.Z * localNormal.Z;
+            var inverseHorizontalNormalLengthSquaredB = Vector<float>.One / horizontalNormalLengthSquaredB;
+            var normalizeScaleB = b.Radius * Vector.SquareRoot(inverseHorizontalNormalLengthSquaredB);
+            var horizontalNormalLengthValidB = Vector.GreaterThan(horizontalNormalLengthSquaredB, new Vector<float>(1e-10f));
+            Vector2Wide extremeB;
+            extremeB.X = Vector.ConditionalSelect(horizontalNormalLengthValidB, localNormal.X * normalizeScaleB, Vector<float>.Zero);
+            extremeB.Y = Vector.ConditionalSelect(horizontalNormalLengthValidB, localNormal.Z * normalizeScaleB, Vector<float>.Zero);
+            
+            var useNegative = Vector.LessThan(nDotAY, Vector<float>.Zero);
+            Vector3Wide capFeatureNormalA;
+            capFeatureNormalA.X = Vector.ConditionalSelect(useNegative, -rA.Y.X, rA.Y.X);
+            capFeatureNormalA.Y = Vector.ConditionalSelect(useNegative, -rA.Y.Y, rA.Y.Y);
+            capFeatureNormalA.Z = Vector.ConditionalSelect(useNegative, -rA.Y.Z, rA.Y.Z);
+            //We'll just assume every lane is cap-cap to start with; initialize the feature normal accordingly.
+            var featureNormalA = capFeatureNormalA;
+
             if (Vector.LessThanAny(useCapCap, Vector<int>.Zero))
             {
                 //At least one active lane needs cap-cap contacts.
@@ -178,37 +299,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var aCapNotParallel = Vector.GreaterThan(Vector.Abs(nDotAY), new Vector<float>(1e-7f));
                 var bCapNotParallel = Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(1e-7f));
 
-                Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.LessThan(nDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var capCenterA);
-                Vector3Wide.Add(capCenterA, localOffsetA, out capCenterA);
-
-                Vector3Wide.Dot(rA.X, localNormal, out var ax);
-                Vector3Wide.Dot(rA.Z, localNormal, out var az);
-                var horizontalNormalLengthA = Vector.SquareRoot(ax * ax + az * az);
-                //No division by zero guard; we only use cap-cap for a lane if the local normal is well beyond perpendicular with the local cap normal.
-                var normalizeScaleA = a.Radius / horizontalNormalLengthA;
-                var horizontalNormalLengthValidA = Vector.GreaterThan(horizontalNormalLengthA, new Vector<float>(1e-7f));
-                Vector3Wide.Scale(rA.X, Vector.ConditionalSelect(horizontalNormalLengthValidA, ax * normalizeScaleA, Vector<float>.Zero), out var extremeAX);
-                Vector3Wide.Scale(rA.Z, Vector.ConditionalSelect(horizontalNormalLengthValidA, az * normalizeScaleA, Vector<float>.Zero), out var extremeAZ);
-                Vector3Wide.Add(extremeAX, extremeAZ, out var extremeAOffset);
-                Vector3Wide.Add(extremeAOffset, capCenterA, out var extremeA);
                 Vector3Wide.Subtract(capCenterA, extremeAOffset, out var negativeExtremeA);
 
                 //Project extreme A down onto capB.
-                var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
                 //No division by zero guard; we only use cap-cap for a lane if the local normal is well beyond perpendicular with the local cap normal.
-                var inverseLocalNormalY = Vector<float>.One / localNormal.Y;
                 ProjectOntoCapB(capCenterBY, inverseLocalNormalY, localNormal, extremeA, out var capContact0);
                 ProjectOntoCapB(capCenterBY, inverseLocalNormalY, localNormal, negativeExtremeA, out var contact1LineEndpoint);
 
-
                 //2) capNormalB is NOT parallel with localNormal and capNormalA IS parallel with localNormal; use the extreme point on B along localNormal.
-                var horizontalNormalLengthB = Vector.SquareRoot(localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
-                var normalizeScaleB = b.Radius / horizontalNormalLengthB;
-                var horizontalNormalLengthValidB = Vector.GreaterThan(horizontalNormalLengthB, new Vector<float>(1e-7f));
-                Vector2Wide extremeB;
-                extremeB.X = Vector.ConditionalSelect(horizontalNormalLengthValidB, localNormal.X * normalizeScaleB, Vector<float>.Zero);
-                extremeB.Y = Vector.ConditionalSelect(horizontalNormalLengthValidB, localNormal.Z * normalizeScaleB, Vector<float>.Zero);
-
                 var useExtremeB = Vector.AndNot(bCapNotParallel, aCapNotParallel);
                 Vector2Wide.ConditionalSelect(useExtremeB, extremeB, capContact0, out capContact0);
                 contact1LineEndpoint.X = Vector.ConditionalSelect(useExtremeB, -extremeB.X, contact1LineEndpoint.X);
@@ -231,7 +329,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //The above created a line stating at contact0 and pointing to the other side of the cap that contact0 was generated from.
                 //That is, if the extreme point from A was used, then the line direction is localNormal projected on capA.
                 //Since we generated contact0 to be on capB, we only need to test the line against capA.
-                var inverseNDotAY = Vector<float>.One / nDotAY;
                 Vector3Wide capCenterBToCapCenterA;
                 capCenterBToCapCenterA.X = -capCenterA.X;
                 capCenterBToCapCenterA.Y = capCenterBY - capCenterA.Y;
@@ -277,14 +374,96 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //If 0 and 1 are in the same spot, there aren't going to be any useful additional contacts.
                 manifold.Contact2Exists = manifold.Contact1Exists;
                 manifold.Contact3Exists = Vector.BitwiseAnd(manifold.Contact1Exists, Vector.GreaterThan(secondLineTMax, secondLineTMin));
+            }
+            var useCapSide = Vector.BitwiseOr(Vector.AndNot(useCapA, useCapB), Vector.AndNot(useCapB, useCapA));
+            //The side normal is used in both of the following contact generator cases.
+            var xScale = ax * inverseHorizontalNormalLengthA;
+            var zScale = az * inverseHorizontalNormalLengthA;
+            Vector3Wide.Scale(rA.X, xScale, out var sideFeatureNormalAX);
+            Vector3Wide.Scale(rA.Z, zScale, out var sideFeatureNormalAZ);
+            Vector3Wide.Add(sideFeatureNormalAX, sideFeatureNormalAZ, out var sideFeatureNormalA);
+            Vector3Wide sideCenterA, sideCenterB;
+            sideCenterA.X = extremeAOffset.X + localOffsetA.X;
+            sideCenterA.Y = localOffsetA.Y;
+            sideCenterA.Z = extremeAOffset.Y + localOffsetA.Z;
+            sideCenterB.X = extremeB.X;
+            sideCenterB.Y = Vector<float>.Zero;
+            sideCenterB.Z = extremeB.Y;
+            if (Vector.LessThanAny(useCapSide, Vector<int>.Zero))
+            {
+                //At least one lane needs cap-side contact generation.
+                //This is relatively simple:
+                //Pick a line on the side of the cylinder in the direction of the extreme point.
+                //Pick the cap on the other cylinder in the direction of the extreme point.
+                //Intersect the line with the cap in the cap's local space (by projecting the line along the contact normal into the cap's local space).
+                
+                //Compute both lines and choose which one to use.
+                Vector3Wide.Add(sideCenterA, rA.Y, out var sideLineEndA);
+                Vector3Wide sideLineEndB;
+                sideLineEndB.X = sideCenterB.X;
+                sideLineEndB.Y = Vector<float>.One;
+                sideLineEndB.Z = sideCenterB.Z;
+                ProjectOntoCapA(capCenterA, rA, inverseNDotAY, localNormal, sideCenterB, out var projectedLineStartBOnA);
+                ProjectOntoCapB(capCenterBY, inverseLocalNormalY, localNormal, sideCenterA, out var projectedLineStartAOnB);
+                ProjectOntoCapA(capCenterA, rA, inverseNDotAY, localNormal, sideLineEndB, out var projectedLineEndBOnA);
+                ProjectOntoCapB(capCenterBY, inverseLocalNormalY, localNormal, sideLineEndA, out var projectedLineEndAOnB);
 
-                var useNegative = Vector.LessThan(nDotAY, Vector<float>.Zero);
-                featureNormalA.X = Vector.ConditionalSelect(useNegative, -rA.Y.X, rA.Y.X);
-                featureNormalA.Y = Vector.ConditionalSelect(useNegative, -rA.Y.Y, rA.Y.Y);
-                featureNormalA.Z = Vector.ConditionalSelect(useNegative, -rA.Y.Z, rA.Y.Z);
+                Vector2Wide.ConditionalSelect(useCapA, projectedLineStartBOnA, projectedLineStartAOnB, out var projectedLineStart);
+                Vector2Wide.ConditionalSelect(useCapA, projectedLineEndBOnA, projectedLineEndAOnB, out var projectedLineEnd);
+                var radius = Vector.ConditionalSelect(useCapA, a.Radius, b.Radius);
+                Vector2Wide.Subtract(projectedLineEnd, projectedLineStart, out var projectedLineDirection);
+                IntersectLineCircle(projectedLineStart, projectedLineDirection, radius, out var tMin, out var tMax);
+
+                //To be consistent with the other contact generation cases, we want contacts to be on cylinder B. So:
+                //If the cap was on A, that means the side was B and we should scale the sideLineB to get our contacts.
+                //If the cap was on B, that means the side was on A and we should use the *projected* sideLineA to get our contacts.
+                Vector3Wide contact0ForCapA;
+                contact0ForCapA.X = sideCenterB.X;
+                contact0ForCapA.Y = tMin;
+                contact0ForCapA.Z = sideCenterB.Z;
+                Vector3Wide contact1ForCapA;
+                contact1ForCapA.X = sideCenterB.X;
+                contact1ForCapA.Y = tMax;
+                contact1ForCapA.Z = sideCenterB.Z;
+                //Note that we're using the post-conditionalselect projectedLineStart and direction here.
+                //That's fine; we only use these results if that choice is actually correct anyway.
+                Vector3Wide contact0ForCapB;
+                contact0ForCapB.X = projectedLineStart.X + tMin * projectedLineDirection.X;
+                contact0ForCapB.Y = capCenterBY;
+                contact0ForCapB.Z = projectedLineStart.Y + tMin * projectedLineDirection.Y;
+                Vector3Wide contact1ForCapB;
+                contact1ForCapB.X = projectedLineStart.X + tMax * projectedLineDirection.X;
+                contact1ForCapB.Y = capCenterBY;
+                contact1ForCapB.Z = projectedLineStart.Y + tMax * projectedLineDirection.Y;
+                Vector3Wide.ConditionalSelect(useCapA, contact0ForCapA, contact0ForCapB, out var capSideContact0);
+                Vector3Wide.ConditionalSelect(useCapA, contact1ForCapA, contact1ForCapB, out var capSideContact1);
+                Vector3Wide.ConditionalSelect(useCapSide, capSideContact0, contact0, out contact0);
+                Vector3Wide.ConditionalSelect(useCapSide, capSideContact1, contact1, out contact1);
+                manifold.Contact0Exists = Vector.ConditionalSelect(useCapSide, new Vector<int>(-1), manifold.Contact0Exists);
+                manifold.Contact1Exists = Vector.ConditionalSelect(useCapSide, Vector.GreaterThan(tMax, tMin), manifold.Contact1Exists);
+
+                Vector3Wide.ConditionalSelect(useCapA, capFeatureNormalA, sideFeatureNormalA, out var capSideFeatureNormalA);
+                Vector3Wide.ConditionalSelect(useCapSide, capSideFeatureNormalA, featureNormalA, out featureNormalA);
 
             }
+            var useSideSide = Vector.AndNot(Vector.OnesComplement(useCapA), useCapB);
+            if (Vector.LessThanAny(useSideSide, Vector<int>.Zero))
+            {
+                //At least one lane needs side-side contacts.
+                //This is similar to capsule-capsule; we have two line segments and we want a contact interval on B.
+                Vector3Wide.Subtract(sideCenterB, sideCenterA, out var sideCenterAToSideCenterB);
+                CapsuleCylinderTester.GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, capsuleAxis, localNormal, inverseHorizontalNormalLengthSquaredB, sideCenterAToSideCenterB, out var contactTMin, out var contactTMax);
 
+                contact0.X = Vector.ConditionalSelect(useSideSide, extremeB.X, contact0.X);
+                contact0.Y = contactTMin;
+                contact0.Z = Vector.ConditionalSelect(useSideSide, extremeB.Y, contact0.Z);
+                contact1.X = Vector.ConditionalSelect(useSideSide, extremeB.X, contact1.X);
+                contact1.Y = contactTMax;
+                contact1.Z = Vector.ConditionalSelect(useSideSide, extremeB.Y, contact1.Z);
+                manifold.Contact0Exists = Vector.ConditionalSelect(useSideSide, new Vector<int>(-1), manifold.Contact0Exists);
+                manifold.Contact1Exists = Vector.ConditionalSelect(useSideSide, Vector.GreaterThan(contactTMax, contactTMin), manifold.Contact0Exists);
+                Vector3Wide.ConditionalSelect(useSideSide, sideFeatureNormalA, featureNormalA, out featureNormalA);
+            }
 
             Vector3Wide.Dot(featureNormalA, localNormal, out var featureNormalADotLocalNormal);
             //No division guard; the feature normal we picked is never more than 45 degrees away from the local normal.
@@ -302,84 +481,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.FeatureId3 = new Vector<int>(3);
 
 
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void TransformContact(
-            in Vector3Wide contact, in Vector3Wide localNormal, in Vector3Wide localFeatureNormalA, in Vector<float> inverseFeatureNormalADotLocalNormal, 
-            in Vector3Wide localOffsetB, in Matrix3x3Wide orientationB, Vector<float> negativeSpeculativeMargin,
-            out Vector3Wide aToContact, out Vector<float> depth, ref Vector<int> contactExists)
-        {
-            //While we have computed a global depth, each contact has its own depth.
-            //Project the contact on B along the contact normal to the 'face' of A.
-            //The full computation is: 
-            //t = dot(contact + localOffsetB, featureNormalA) / dot(featureNormalA, localNormal)
-            //depth = dot(t * localNormal, localNormal) = t
-            Vector3Wide.Dot(localFeatureNormalA, localNormal, out var featureNormalADotLocalNormal);
-            //Don't have to perform any calibration on the faceNormalA; it appears in both the numerator and denominator so the sign and magnitudes cancel.
-            Vector3Wide.Scale(localFeatureNormalA, featureNormalADotLocalNormal, out var scaledFaceNormalA);
-            Vector3Wide.Add(localOffsetB, contact, out var offset);
-            Vector3Wide.Dot(offset, localFeatureNormalA, out var t);
-            depth = t * inverseFeatureNormalADotLocalNormal;
-            Vector3Wide.Add(contact, localOffsetB, out var localAToContact);
-            Matrix3x3Wide.TransformWithoutOverlap(localAToContact, orientationB, out aToContact);
-            contactExists = Vector.BitwiseAnd(contactExists, Vector.GreaterThanOrEqual(depth, negativeSpeculativeMargin));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void FromCapBTo3D(in Vector2Wide contact, in Vector<float> capCenterBY, out Vector3Wide localContact3D)
-        {
-            localContact3D.X = contact.X;
-            localContact3D.Y = capCenterBY;
-            localContact3D.Z = contact.Y;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ProjectOntoCapA(in Vector<float> capCenterBY, in Vector3Wide capCenterA, in Matrix3x3Wide rA, in Vector<float> inverseNDotAY, in Vector3Wide localNormal, in Vector2Wide point, out Vector2Wide projected)
-        {
-            Vector3Wide point3D;
-            point3D.X = point.X;
-            point3D.Y = capCenterBY;
-            point3D.Z = point.Y;
-            Vector3Wide.Subtract(capCenterA, point3D, out var pointToCapCenterA);
-            Vector3Wide.Dot(pointToCapCenterA, rA.Y, out var tDistance);
-            var tBOnA = tDistance * inverseNDotAY;
-            Vector3Wide.Scale(localNormal, tBOnA, out var projectionOffsetB);
-            Vector3Wide.Add(point3D, projectionOffsetB, out var projectedPoint);
-            Vector3Wide.Subtract(projectedPoint, capCenterA, out var capCenterAToProjectedPoint);
-            Vector3Wide.Dot(capCenterAToProjectedPoint, rA.X, out projected.X);
-            Vector3Wide.Dot(capCenterAToProjectedPoint, rA.Z, out projected.Y);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ProjectOntoCapB(in Vector<float> capCenterBY, in Vector<float> inverseLocalNormalY, in Vector3Wide localNormal, in Vector3Wide point, out Vector2Wide projected)
-        {
-            var tAOnB = (point.Y - capCenterBY) * inverseLocalNormalY;
-            Vector3Wide.Scale(localNormal, tAOnB, out var projectionOffsetA);
-            Vector2Wide projectedExtremeAInLocalB;
-            projectedExtremeAInLocalB.X = point.X - localNormal.X * tAOnB;
-            projectedExtremeAInLocalB.Y = point.Z - localNormal.Z * tAOnB;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void IntersectLineCircle(in Vector2Wide linePosition, in Vector2Wide lineDirection, in Vector<float> radius, out Vector<float> tMin, out Vector<float> tMax)
-        {
-            //||linePosition + lineDirection * t|| = radius
-            //dot(linePosition + lineDirection * t, linePosition + lineDirection * t) = radius * radius
-            //dot(linePosition, linePosition) - radius * radius + t * 2 * dot(linePosition, lineDirection) + t^2 * dot(lineDirection, lineDirection) = 0
-            Vector2Wide.Dot(linePosition, linePosition, out var coefficientC);
-            coefficientC -= radius * radius;
-            Vector2Wide.Dot(linePosition, lineDirection, out var coefficientB);
-            Vector2Wide.Dot(lineDirection, lineDirection, out var coefficientA);
-            var inverseA = Vector<float>.One / coefficientA;
-            var tOffset = Vector.SquareRoot(Vector.Max(Vector<float>.Zero, coefficientB * coefficientB - coefficientA * coefficientC)) * inverseA;
-            var tBase = -coefficientB * inverseA;
-            tMin = tBase - tOffset;
-            tMax = tBase + tOffset;
-            //If the projected length is zero, just treat both points as being in the same location (at tNegative).
-            var useFallback = Vector.LessThan(Vector.Abs(coefficientA), new Vector<float>(1e-12f));
-            tMin = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, tMin);
-            tMax = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, tMax);
         }
 
         public void Test(ref CylinderWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
