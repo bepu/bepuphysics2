@@ -122,7 +122,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var worldRB);
             //Work in b's local space.
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(worldRA, worldRB, out var rA);
-            ref var capsuleAxis = ref rA.Y;
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, worldRB, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
 
@@ -247,7 +246,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
 
             //The extreme points along the contact normal are shared between multiple contact generator paths, so we just do them up front.
-            Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.LessThan(nDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var capCenterA);
+            Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.GreaterThan(nDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var capCenterA);
             Vector3Wide.Add(capCenterA, localOffsetA, out capCenterA);
 
             Vector3Wide.Dot(rA.X, localNormal, out var ax);
@@ -255,7 +254,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var horizontalNormalLengthA = Vector.SquareRoot(ax * ax + az * az);
             var inverseHorizontalNormalLengthA = Vector<float>.One / horizontalNormalLengthA;
             //No division by zero guard; we only use cap-cap for a lane if the local normal is well beyond perpendicular with the local cap normal.
-            var normalizeScaleA = a.Radius * inverseHorizontalNormalLengthA;
+            var normalizeScaleA = -a.Radius * inverseHorizontalNormalLengthA;
             var horizontalNormalLengthValidA = Vector.GreaterThan(horizontalNormalLengthA, new Vector<float>(1e-7f));
             Vector3Wide.Scale(rA.X, Vector.ConditionalSelect(horizontalNormalLengthValidA, ax * normalizeScaleA, Vector<float>.Zero), out var extremeAX);
             Vector3Wide.Scale(rA.Z, Vector.ConditionalSelect(horizontalNormalLengthValidA, az * normalizeScaleA, Vector<float>.Zero), out var extremeAZ);
@@ -381,8 +380,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(sideFeatureNormalAX, sideFeatureNormalAZ, out var sideFeatureNormalA);
             Vector3Wide sideCenterA, sideCenterB;
             sideCenterA.X = extremeAOffset.X + localOffsetA.X;
-            sideCenterA.Y = localOffsetA.Y;
-            sideCenterA.Z = extremeAOffset.Y + localOffsetA.Z;
+            sideCenterA.Y = extremeAOffset.Y + localOffsetA.Y;
+            sideCenterA.Z = extremeAOffset.Z + localOffsetA.Z;
             sideCenterB.X = extremeB.X;
             sideCenterB.Y = Vector<float>.Zero;
             sideCenterB.Z = extremeB.Y;
@@ -408,8 +407,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector2Wide.ConditionalSelect(useCapA, projectedLineStartBOnA, projectedLineStartAOnB, out var projectedLineStart);
                 Vector2Wide.ConditionalSelect(useCapA, projectedLineEndBOnA, projectedLineEndAOnB, out var projectedLineEnd);
                 var radius = Vector.ConditionalSelect(useCapA, a.Radius, b.Radius);
+                var sideHalfLength = Vector.ConditionalSelect(useCapA, b.HalfLength, a.HalfLength);
                 Vector2Wide.Subtract(projectedLineEnd, projectedLineStart, out var projectedLineDirection);
                 IntersectLineCircle(projectedLineStart, projectedLineDirection, radius, out var tMin, out var tMax);
+                tMin = Vector.Max(-sideHalfLength, tMin);
+                tMax = Vector.Min(sideHalfLength, tMax);
 
                 //To be consistent with the other contact generation cases, we want contacts to be on cylinder B. So:
                 //If the cap was on A, that means the side was B and we should scale the sideLineB to get our contacts.
@@ -453,7 +455,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //At least one lane needs side-side contacts.
                 //This is similar to capsule-capsule; we have two line segments and we want a contact interval on B.
                 Vector3Wide.Subtract(sideCenterB, sideCenterA, out var sideCenterAToSideCenterB);
-                CapsuleCylinderTester.GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, capsuleAxis, localNormal, inverseHorizontalNormalLengthSquaredB, sideCenterAToSideCenterB, out var contactTMin, out var contactTMax);
+                CapsuleCylinderTester.GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, rA.Y, localNormal, inverseHorizontalNormalLengthSquaredB, sideCenterAToSideCenterB, out var contactTMin, out var contactTMax);
 
                 contact0.X = Vector.ConditionalSelect(useSideSide, extremeB.X, contact0.X);
                 contact0.Y = contactTMin;
@@ -475,6 +477,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             TransformContact(contact1, featurePositionA, featureNormalA, inverseFeatureNormalADotLocalNormal, localOffsetB, worldRB, negativeSpeculativeMargin, out manifold.OffsetA1, out manifold.Depth1, ref manifold.Contact1Exists);
             TransformContact(contact2, featurePositionA, featureNormalA, inverseFeatureNormalADotLocalNormal, localOffsetB, worldRB, negativeSpeculativeMargin, out manifold.OffsetA2, out manifold.Depth2, ref manifold.Contact2Exists);
             TransformContact(contact3, featurePositionA, featureNormalA, inverseFeatureNormalADotLocalNormal, localOffsetB, worldRB, negativeSpeculativeMargin, out manifold.OffsetA3, out manifold.Depth3, ref manifold.Contact3Exists);
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, worldRB, out manifold.Normal);
             //Contact generators all obey a reasonably solid order, so we can use a trivial feature description.
             //Note that this will conflate different contact generator cases, but that's okay- we tend to keep the most important contact in the first slot, for example, and that is the contact that is most likely to persist across feature pair changes.
             manifold.FeatureId0 = Vector<int>.Zero;
