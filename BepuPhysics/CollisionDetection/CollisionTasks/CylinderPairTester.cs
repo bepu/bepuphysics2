@@ -446,16 +446,55 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 Vector3Wide.ConditionalSelect(useCapA, capCenterA, sideCenterA, out var capSideFeaturePositionA);
                 Vector3Wide.ConditionalSelect(useCapSide, capSideFeaturePositionA, featurePositionA, out featurePositionA);
-
-
             }
             var useSideSide = Vector.AndNot(Vector.AndNot(Vector.OnesComplement(useCapA), useCapB), inactiveLanes);
             if (Vector.LessThanAny(useSideSide, Vector<int>.Zero))
             {
                 //At least one lane needs side-side contacts.
-                //This is similar to capsule-capsule; we have two line segments and we want a contact interval on B.
-                Vector3Wide.Subtract(sideCenterB, sideCenterA, out var sideCenterAToSideCenterB);
-                CapsuleCylinderTester.GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, rA.Y, localNormal, inverseHorizontalNormalLengthSquaredB, sideCenterAToSideCenterB, out var contactTMin, out var contactTMax);
+                //Project A's line onto B's line along the contact normal.
+                //lineEndpointAProjectedOntoBPlaneAlongNormal = lineEndpointA - localNormal * dot(lineEndpointA - sideCenterB, sideNormalB) / dot(localNormal, sideNormalB)
+                //tAOnB = dot(lineDirectionB, lineEndpointAProjectedOntoBPlaneAlongNormal)
+                //tAOnB = dot(lineDirectionB, lineEndpointA - localNormal * dot(lineEndpointA - sideCenterB, sideNormalB) / dot(localNormal, sideNormalB))
+                //tAOnB = lineEndpointA.Y - localNormal.Y * dot(lineEndpointA - sideCenterB, sideNormalB) / dot(localNormal, sideNormalB))
+                //No division guard; any lane that uses this path will have a local normal that has some component along the horizontal direction.
+                //var inverseLocalNormalDotSideNormalB = Vector<float>.One / (localNormal.X * extremeB.X + localNormal.Z * extremeB.Y);
+                //Vector3Wide.Scale(rA.Y, a.HalfLength, out var lineEndpointOffsetA);
+                //Vector3Wide.Subtract(sideCenterA, sideCenterB, out var sideCenterBToSideCenterA);
+                //Vector3Wide.Subtract(sideCenterBToSideCenterA, lineEndpointOffsetA, out var minEndpointA);
+                //Vector3Wide.Add(sideCenterBToSideCenterA, lineEndpointOffsetA, out var maxEndpointA);
+                //var tMin = (extremeB.X * minEndpointA.X + extremeB.Y * minEndpointA.Z) * inverseLocalNormalDotSideNormalB;
+                //var tMax = (extremeB.X * maxEndpointA.X + extremeB.Y * maxEndpointA.Z) * inverseLocalNormalDotSideNormalB;
+                //Vector3Wide.Scale(localNormal, tMin, out var minOffset);
+                //Vector3Wide.Scale(localNormal, tMax, out var maxOffset);
+                //Vector3Wide.Subtract(minEndpointA, minOffset, out var projectedMinA);
+                //Vector3Wide.Subtract(maxEndpointA, maxOffset, out var projectedMaxA);
+                //Vector3Wide.Subtract(projectedMaxA, projectedMinA, out var minToMax);
+                ////This could be simplified a bit. We're just doing the naive direct computation.
+                //Vector3Wide.Length(minToMax, out var projectedLineDirectionLength);
+                //Vector3Wide.Scale(minToMax, Vector<float>.One / projectedLineDirectionLength, out var projectedLineDirection);
+                //Vector3Wide.Add(projectedMinA, projectedMaxA, out var projectedLineCenter);
+
+                //Vector3Wide.Scale(projectedLineCenter, new Vector<float>(0.5f), out var projectedLineAToLineB);
+                //projectedLineAToLineB.X = extremeB.X - projectedLineAToLineB.X;
+                //projectedLineAToLineB.Y = -projectedLineAToLineB.Y;
+                //projectedLineAToLineB.Z = extremeB.Y - projectedLineAToLineB.Z;
+                //CapsuleCylinderTester.GetContactIntervalBetweenSegments(projectedLineDirectionLength * 0.5f, b.HalfLength, projectedLineDirection, localNormal, inverseHorizontalNormalLengthSquaredB, projectedLineAToLineB, out var contactTMin, out var contactTMax);
+
+                //Vector3Wide.Scale(projectedLineCenter, new Vector<float>(0.5f), out var projectedLineAToLineB);
+                //projectedLineAToLineB.X = -projectedLineAToLineB.X;
+                //projectedLineAToLineB.Y = -projectedLineAToLineB.Y;
+                //projectedLineAToLineB.Z = -projectedLineAToLineB.Z;
+                //CapsuleCylinderTester.GetContactIntervalBetweenSegments(projectedLineDirectionLength * 0.5f, b.HalfLength, projectedLineDirection, localNormal, inverseHorizontalNormalLengthSquaredB, projectedLineAToLineB, out var contactTMin, out var contactTMax);
+
+                //var contactTMin = Vector.Max(-b.HalfLength, Vector.Min(projectedMinA.Y, projectedMaxA.Y));
+                //var contactTMax = Vector.Min(b.HalfLength, Vector.Max(projectedMinA.Y, projectedMaxA.Y));
+
+                //Vector3Wide.Subtract(sideCenterB, sideCenterA, out var sideCenterAToSideCenterB);
+                //Note that we test the line on the side of A against the line *in the center of* B. We then use its interval on the side of B.
+                //(Using the side of B to detect the interval can result in issues in medium-depth penetration where the deepest point is ignored in favor of the closest point between the side lines.)
+                Vector3Wide.Negate(sideCenterA, out var sideCenterAToLineB);
+                CapsuleCylinderTester.GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, rA.Y, localNormal, inverseHorizontalNormalLengthSquaredB, sideCenterAToLineB, out var contactTMin, out var contactTMax);
+
 
                 contact0.X = Vector.ConditionalSelect(useSideSide, extremeB.X, contact0.X);
                 contact0.Y = contactTMin;
