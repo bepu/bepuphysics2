@@ -29,8 +29,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void SampleMinkowskiDifference(
-            ref TShapeWideA a, ref Matrix3x3Wide rA, ref TSupportFinderA supportFinderA,
-            ref TShapeWideB b, ref Matrix3x3Wide rB, ref TSupportFinderB supportFinderB, ref Vector3Wide offsetB, ref Vector3Wide direction,
+            in TShapeWideA a, in Matrix3x3Wide rA, ref TSupportFinderA supportFinderA,
+            in TShapeWideB b, in Matrix3x3Wide rB, ref TSupportFinderB supportFinderB, in Vector3Wide offsetB, in Vector3Wide direction,
             out Vector3Wide supportA, out Vector3Wide support)
         {
             supportFinderA.ComputeSupport(a, rA, direction, out supportA);
@@ -334,7 +334,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
 
-        public void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+        public void Test(in TShapeWideA a, in TShapeWideB b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var rA);
@@ -343,13 +343,13 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var supportFinderB = default(TSupportFinderB);
             Simplex simplex;
             //TODO: It would be pretty easy to initialize to a triangle or tetrahedron. Might be worth it.
-            SampleMinkowskiDifference(ref a, ref rA, ref supportFinderA, ref b, ref rB, ref supportFinderB, ref offsetB, ref offsetB, out simplex.AOnA, out simplex.A);
+            SampleMinkowskiDifference(a, rA, ref supportFinderA, b, rB, ref supportFinderB, offsetB, offsetB, out simplex.AOnA, out simplex.A);
             simplex.Count = new Vector<int>(1);
 
             //GJK is a pretty branchy algorithm that doesn't map perfectly to widely vectorized implementations. We'll be using an SPMD model- if any SIMD lane needs to continue 
             //working, all lanes continue to work, and the unnecessary lane results are discarded.
             //In the context of the engine, distance tests are often quite coherent (by virtue of being used with sweeps), so we shouldn't often see pathologically low occupancy.
-            var terminatedMask = Vector<int>.Zero;
+            var terminatedMask = inactiveLanes;
             intersected = Vector<int>.Zero;
             int iterationCount = 0;
             //Note that we use hardcoded defaults if this is default constructed.
@@ -402,7 +402,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     break;
 
                 Vector3Wide.Negate(simplexClosest, out var sampleDirection);
-                SampleMinkowskiDifference(ref a, ref rA, ref supportFinderA, ref b, ref rB, ref supportFinderB, ref offsetB, ref sampleDirection, out var vA, out var v);
+                SampleMinkowskiDifference(a, rA, ref supportFinderA, b, rB, ref supportFinderB, offsetB, sampleDirection, out var vA, out var v);
 
                 //If the newly sampled is no better than the simplex-identified closest point, the lane is done.
                 Vector3Wide.Subtract(v, simplexClosest, out var progressOffset);

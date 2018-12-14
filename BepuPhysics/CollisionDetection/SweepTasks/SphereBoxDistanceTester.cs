@@ -6,7 +6,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public struct SphereBoxDistanceTester : IPairDistanceTester<SphereWide, BoxWide>
     {
-        public void Test(ref SphereWide a, ref BoxWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+        public void Test(in SphereWide a, in BoxWide b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             //Clamp the position of the sphere to the box.

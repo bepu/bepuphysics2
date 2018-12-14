@@ -11,9 +11,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TestBoxEdge(
-            ref Vector<float> offsetAX, ref Vector<float> offsetAY, ref Vector<float> offsetAZ,
-            ref Vector<float> capsuleAxisX, ref Vector<float> capsuleAxisY, ref Vector<float> capsuleAxisZ,
-            ref Vector<float> boxHalfWidth, ref Vector<float> boxHalfHeight, ref Vector<float> boxHalfLength,
+            in Vector<float> offsetAX, in Vector<float> offsetAY, in Vector<float> offsetAZ,
+            in Vector<float> capsuleAxisX, in Vector<float> capsuleAxisY, in Vector<float> capsuleAxisZ,
+            in Vector<float> boxHalfWidth, in Vector<float> boxHalfHeight, in Vector<float> boxHalfLength,
             out Vector<float> depth, out Vector<float> nX, out Vector<float> nY, out Vector<float> nZ)
         {
             //Assume edge Z is being tested. Input will be swizzled to match.
@@ -29,9 +29,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void GetEdgeClosestPoint(ref Vector3Wide normal, ref Vector<int> edgeDirectionIndex,
-            ref BoxWide box,
-            ref Vector3Wide offsetA, ref Vector3Wide capsuleAxis, ref Vector<float> capsuleHalfLength, out Vector3Wide closestPointFromEdge)
+        static void GetEdgeClosestPoint(ref Vector3Wide normal, in Vector<int> edgeDirectionIndex,
+            in BoxWide box,
+            in Vector3Wide offsetA, in Vector3Wide capsuleAxis, in Vector<float> capsuleHalfLength, out Vector3Wide closestPointFromEdge)
         {
             Vector3Wide.Dot(normal, offsetA, out var calibrationDot);
             var flipNormal = Vector.LessThan(calibrationDot, Vector<float>.Zero);
@@ -80,8 +80,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void TestEndpointNormal(ref Vector3Wide offsetA, ref Vector3Wide capsuleAxis, ref Vector<float> capsuleHalfLength, ref Vector3Wide endpoint,
-            ref BoxWide box, out Vector<float> depth, out Vector3Wide normal)
+        static void TestEndpointNormal(in Vector3Wide offsetA, in Vector3Wide capsuleAxis, in Vector<float> capsuleHalfLength, in Vector3Wide endpoint,
+            in BoxWide box, out Vector<float> depth, out Vector3Wide normal)
         {
             Vector3Wide clamped;
             clamped.X = Vector.Min(box.HalfWidth, Vector.Max(-box.HalfWidth, endpoint.X));
@@ -106,7 +106,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void TestVertexAxis(ref BoxWide box, ref Vector3Wide offsetA, ref Vector3Wide capsuleAxis, ref Vector<float> capsuleHalfLength,
+        static void TestVertexAxis(in BoxWide box, in Vector3Wide offsetA, in Vector3Wide capsuleAxis, in Vector<float> capsuleHalfLength,
             out Vector<float> depth, out Vector3Wide normal, out Vector3Wide closestA)
         {
             //The available feature pairs between the capsule axis and box are:
@@ -182,7 +182,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.ConditionalSelect(useCandidate, localNormalCandidate, localNormal, out localNormal);
         }
 
-        public void Test(ref CapsuleWide a, ref BoxWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+        public void Test(in CapsuleWide a, in BoxWide b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             //Bring the capsule into the box's local space.
@@ -194,9 +194,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
             Vector3Wide.Scale(localCapsuleAxis, a.HalfLength, out var endpointOffset);
             Vector3Wide.Subtract(localOffsetA, endpointOffset, out var endpoint0);
-            TestEndpointNormal(ref localOffsetA, ref localCapsuleAxis, ref a.HalfLength, ref endpoint0, ref b, out var depth, out var localNormal);
+            TestEndpointNormal(localOffsetA, localCapsuleAxis, a.HalfLength, endpoint0, b, out var depth, out var localNormal);
             Vector3Wide.Add(localOffsetA, endpointOffset, out var endpoint1);
-            TestEndpointNormal(ref localOffsetA, ref localCapsuleAxis, ref a.HalfLength, ref endpoint1, ref b, out var depthCandidate, out var localNormalCandidate);
+            TestEndpointNormal(localOffsetA, localCapsuleAxis, a.HalfLength, endpoint1, b, out var depthCandidate, out var localNormalCandidate);
             Select(ref depth, ref localNormal, ref depthCandidate, ref localNormalCandidate);
             //Note that we did not yet pick a closest point for endpoint cases. That's because each case only generates a normal and interval test, not a minimal distance test.
             //The choice of which endpoint is actually closer is deferred until now.
@@ -205,32 +205,32 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
             Vector3Wide edgeLocalNormal, edgeLocalNormalCandidate;
             //Swizzle XYZ -> YZX
-            TestBoxEdge(ref localOffsetA.Y, ref localOffsetA.Z, ref localOffsetA.X,
-                ref localCapsuleAxis.Y, ref localCapsuleAxis.Z, ref localCapsuleAxis.X,
-                ref b.HalfHeight, ref b.HalfLength, ref b.HalfWidth,
+            TestBoxEdge(localOffsetA.Y, localOffsetA.Z, localOffsetA.X,
+                localCapsuleAxis.Y, localCapsuleAxis.Z, localCapsuleAxis.X,
+                b.HalfHeight, b.HalfLength, b.HalfWidth,
                 out var edgeDepth, out edgeLocalNormal.Y, out edgeLocalNormal.Z, out edgeLocalNormal.X);
             var edgeDirectionIndex = Vector<int>.Zero;
             //Swizzle XYZ -> ZXY
-            TestBoxEdge(ref localOffsetA.Z, ref localOffsetA.X, ref localOffsetA.Y,
-                ref localCapsuleAxis.Z, ref localCapsuleAxis.X, ref localCapsuleAxis.Y,
-                ref b.HalfLength, ref b.HalfWidth, ref b.HalfHeight,
+            TestBoxEdge(localOffsetA.Z, localOffsetA.X, localOffsetA.Y,
+                localCapsuleAxis.Z, localCapsuleAxis.X, localCapsuleAxis.Y,
+                b.HalfLength, b.HalfWidth, b.HalfHeight,
                 out var edgeDepthCandidate, out edgeLocalNormalCandidate.Z, out edgeLocalNormalCandidate.X, out edgeLocalNormalCandidate.Y);
             SelectForEdge(ref edgeDepth, ref edgeLocalNormal, ref edgeDirectionIndex, ref edgeDepthCandidate, ref edgeLocalNormalCandidate, Vector<int>.One);
             //Swizzle XYZ -> XYZ
-            TestBoxEdge(ref localOffsetA.X, ref localOffsetA.Y, ref localOffsetA.Z,
-                ref localCapsuleAxis.X, ref localCapsuleAxis.Y, ref localCapsuleAxis.Z,
-                ref b.HalfWidth, ref b.HalfHeight, ref b.HalfLength,
+            TestBoxEdge(localOffsetA.X, localOffsetA.Y, localOffsetA.Z,
+                localCapsuleAxis.X, localCapsuleAxis.Y, localCapsuleAxis.Z,
+                b.HalfWidth, b.HalfHeight, b.HalfLength,
                 out edgeDepthCandidate, out edgeLocalNormalCandidate.X, out edgeLocalNormalCandidate.Y, out edgeLocalNormalCandidate.Z);
             SelectForEdge(ref edgeDepth, ref edgeLocalNormal, ref edgeDirectionIndex, ref edgeDepthCandidate, ref edgeLocalNormalCandidate, new Vector<int>(2));
 
             //We can skip the edge finalization if they aren't ever used.
             if (Vector.LessThanAny(edgeDepth, depth))
             {
-                GetEdgeClosestPoint(ref edgeLocalNormal, ref edgeDirectionIndex, ref b, ref localOffsetA, ref localCapsuleAxis, ref a.HalfLength, out var edgeLocalClosest);
+                GetEdgeClosestPoint(ref edgeLocalNormal, edgeDirectionIndex, b, localOffsetA, localCapsuleAxis, a.HalfLength, out var edgeLocalClosest);
                 Select(ref depth, ref localNormal, ref localClosest, ref edgeDepth, ref edgeLocalNormal, ref edgeLocalClosest);
             }
 
-            TestVertexAxis(ref b, ref localOffsetA, ref localCapsuleAxis, ref a.HalfLength, out depthCandidate, out localNormalCandidate, out var localClosestCandidate);
+            TestVertexAxis(b, localOffsetA, localCapsuleAxis, a.HalfLength, out depthCandidate, out localNormalCandidate, out var localClosestCandidate);
             Select(ref depth, ref localNormal, ref localClosest, ref depthCandidate, ref localNormalCandidate, ref localClosestCandidate);
 
             //Transform normal and closest point back into world space.

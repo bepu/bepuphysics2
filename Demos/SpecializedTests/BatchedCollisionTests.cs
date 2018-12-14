@@ -88,7 +88,7 @@ namespace Demos.SpecializedTests
                 Vector3Wide.Broadcast(poseB.Position - poseA.Position, out var offsetB);
                 QuaternionWide.Broadcast(poseA.Orientation, out var orientationA);
                 QuaternionWide.Broadcast(poseB.Orientation, out var orientationB);
-                tester.Test(ref a, ref b, ref offsetB, ref orientationA, ref orientationB, out var intersected, out var distance, out var closestA, out var normal);
+                tester.Test(a, b, offsetB, orientationA, orientationB, Vector<int>.Zero, out var intersected, out var distance, out var closestA, out var normal);
                 distanceSum += distance;
             }
             return distanceSum[0];

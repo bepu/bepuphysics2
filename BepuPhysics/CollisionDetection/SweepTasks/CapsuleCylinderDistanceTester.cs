@@ -9,7 +9,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     //Using GJK in the contact generating tester is an option, but it's a bit awkward and the performance difference doesn't seem large enough to worry about in context.
     internal struct CapsuleCylinderDistanceTester : IPairDistanceTester<CapsuleWide, CylinderWide>
     {
-        public void Test(ref CapsuleWide a, ref CylinderWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+        public void Test(in CapsuleWide a, in CylinderWide b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             QuaternionWide.Conjugate(orientationB, out var inverseOrientationB);

@@ -6,7 +6,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public struct CapsulePairDistanceTester : IPairDistanceTester<CapsuleWide, CapsuleWide>
     {
-        public void Test(ref CapsuleWide a, ref CapsuleWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+        public void Test(in CapsuleWide a, in CapsuleWide b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             //Compute the closest points between the two line segments. No clamping to begin with.

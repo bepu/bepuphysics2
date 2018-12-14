@@ -11,7 +11,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public interface IPairDistanceTester<TShapeWideA, TShapeWideB>
     {
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+        void Test(in TShapeWideA a, in TShapeWideB b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal);
     }
 
@@ -369,7 +369,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             int iterationIndex = 0;
             while (true)
             {
-                pairTester.Test(ref wideA, ref wideB, ref sampleOffsetB, ref sampleOrientationA, ref sampleOrientationB,
+                pairTester.Test(wideA, wideB, sampleOffsetB, sampleOrientationA, sampleOrientationB, Vector<int>.Zero,
                     out intersections, out distances, out closestA, out normals);
 
                 Vector3Wide.Dot(normals, wideLinearVelocityB, out var linearVelocityAlongNormal);

@@ -136,11 +136,24 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 newNormal.X = localNormal.X - gradient.X * x.X - gradient.Y * y.X;
                 newNormal.Y = localNormal.Y - gradient.X * x.Y - gradient.Y * y.Y;
                 newNormal.Z = localNormal.Z - gradient.X * x.Z - gradient.Y * y.Z;
+                Vector3Wide sideOffset;
+                sideOffset.X = gradient.X * y.X - gradient.Y * x.X;
+                sideOffset.Y = gradient.X * y.Y - gradient.Y * x.Y;
+                sideOffset.Z = gradient.X * y.Z - gradient.Y * x.Z;
+                Vector3Wide.Subtract(localNormal, sideOffset, out var normalSide0);
+                Vector3Wide.Add(localNormal, sideOffset, out var normalSide1);
                 //To ensure determinism, any lane which has completed cannot be refined further.
                 //To do otherwise would be to make the result sensitive to the lane neighbors which aren't guaranteed to be deterministic.
                 var ignoreSamples = completedLanes;
                 FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, newNormal, out var supportForward);
-                SampleDepth(newNormal, supportForward, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSample);
+                SampleDepth(newNormal, supportForward, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSampleForward);
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide0, out var supportSide0);
+                SampleDepth(normalSide0, supportSide0, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSampleSide0);
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide1, out var supportSide1);
+                SampleDepth(normalSide1, supportSide1, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSampleSide1);
+                var usedNewSample = Vector.BitwiseOr(usedNewSampleForward, Vector.BitwiseOr(usedNewSampleSide0, usedNewSampleSide1));
+                //FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, newNormal, out var supportForward);
+                //SampleDepth(newNormal, supportForward, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSample);
                 Vector3Wide.Dot(minimumSupport, x, out gradient.X);
                 Vector3Wide.Dot(minimumSupport, y, out gradient.Y);
 

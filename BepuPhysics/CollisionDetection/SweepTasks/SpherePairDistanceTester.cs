@@ -10,7 +10,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public struct SpherePairDistanceTester : IPairDistanceTester<SphereWide, SphereWide>
     {
-        public void Test(ref SphereWide a, ref SphereWide b, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+        public void Test(in SphereWide a, in SphereWide b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
             out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             Vector3Wide.Length(offsetB, out var centerDistance);
