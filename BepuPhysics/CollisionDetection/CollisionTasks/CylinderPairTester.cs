@@ -32,6 +32,117 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             depth = contributionA + contributionB - Vector.Abs(dotOffsetN);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void FindCapCapNormal(in Vector<float> radiusA, in Vector<float> radiusB, in Matrix3x3Wide localOrientationA, in Vector3Wide capCenterBToCapCenterA, in Vector3Wide initialGuess, in Vector<int> inactiveLanes, out Vector3Wide normal)
+        {
+            //Cap-cap involves finding the minimal root of an 8th degree polynomial. We're going to fudge things a little and throw a newton root finder with a guess which seems to be reasonably close to the root we want.
+            //With luck, that'll almost always be a decent root.
+            //The depth function we'd like to minimize is:
+            //depth(N) = dot(N, capExtremeA - capExtremeB - offsetB)
+            //Which, for two circles embedded in 3d space, simplifies to:
+            //depth(N) = radiusA * sqrt(dot(N, a.X)^2 + dot(N, a.Y)^2) + radiusB * sqrt(dot(-N, b.X)^2 + dot(-N, b.Y)^2) - dot(N, offsetB)
+            //Each step of the search computes a gradient and the 2x2 hessian matrix. Note that we're working on a tangent basis rather than three dimensions
+            //to cut down on the number of partial derivatives being evaluated for hessian. This makes roots pointing away from the initial guess unfindable, but that's okay- the guess will never be that wrong.
+            //The gradient with respect to the tangent TX of the current normal:
+            //horizontalNormalLengthSquaredA = dot(N, a.X)^2 + dot(N, a.Y)^2
+            //horizontalNormalLengthSquaredB = dot(N, b.X)^2 + dot(N, b.Y)^2
+            //inverseHorizontalNormalLengthA = 1 / sqrt(horizontalNormalLengthSquaredA) (note that the negative N has been simplified out; the sign doesn't matter)
+            //inverseHorizontalNormalLengthB = 1 / sqrt(horizontalNormalLengthSquaredB)
+            //d/dtx(depth(N)) = 
+            //radiusA * (dot(N, a.X) * dot(tx, a.X) + dot(N, a.Y) * dot(tx, a.Y)) * inverseHorizontalNormalLengthA + 
+            //radiusB * (dot(N, b.X) * dot(tx, b.X) + dot(N, b.Y) * dot(tx, b.Y)) * inverseHorizontalNormalLengthB - dot(tx, offsetB)
+            //d/dty(depth(N)) = 
+            //radiusA * (dot(N, a.X) * dot(ty, a.X) + dot(N, a.Y) * dot(ty, a.Y)) * inverseHorizontalNormalLengthA + 
+            //radiusB * (dot(N, b.X) * dot(ty, b.X) + dot(N, b.Y) * dot(ty, b.Y)) * inverseHorizontalNormalLengthB - dot(ty, offsetB)
+            //For newton, we also need the second derivative.
+            //d/dtx(d/dtx(depth(N))) = 
+            //(horizontalNormalLengthSquaredA * (radiusA * (dot(tx, ax) * dot(tx, ax) + dot(tx, ay) * dot(tx, ay))) - (radiusA * (dot(n, ax) * dot(tx, ax) + dot(n, ay) * dot(tx, ay))) * (dot(n, ax) * dot(tx, ax) + dot(n, ay) * dot(tx, ay))) * inverseHorizontalNormalLengthA^3 + 
+            //(horizontalNormalLengthSquaredB * (radiusB * (dot(tx, bx) * dot(tx, bx) + dot(tx, by) * dot(tx, by))) - (radiusB * (dot(n, bx) * dot(tx, bx) + dot(n, by) * dot(tx, by))) * (dot(n, bx) * dot(tx, bx) + dot(n, by) * dot(tx, by))) * inverseHorizontalNormalLengthB^3
+            //d/dty(d/dtx(depth(N))) = 
+            //(horizontalNormalLengthSquaredA * (radiusA * (dot(tx, ax) * dot(ty, ax) + dot(tx, ay) * dot(ty, ay))) - (radiusA * (dot(n, ax) * dot(tx, ax) + dot(n, ay) * dot(tx, ay))) * (dot(n, ax) * dot(ty, ax) + dot(n, ay) * dot(ty, ay))) * inverseHorizontalNormalLengthA^3 + 
+            //(horizontalNormalLengthSquaredB * (radiusB * (dot(tx, bx) * dot(ty, bx) + dot(tx, by) * dot(ty, by))) - (radiusB * (dot(n, bx) * dot(tx, bx) + dot(n, by) * dot(tx, by))) * (dot(n, bx) * dot(ty, bx) + dot(n, by) * dot(ty, by))) * inverseHorizontalNormalLengthB^3
+            //d/dty(d/dty(depth(N))) = 
+            //(horizontalNormalLengthSquaredA * (radiusA * (dot(ty, ax) * dot(ty, ax) + dot(ty, ay) * dot(ty, ay))) - (radiusA * (dot(n, ax) * dot(ty, ax) + dot(n, ay) * dot(ty, ay))) * (dot(n, ax) * dot(ty, ax) + dot(n, ay) * dot(ty, ay))) * inverseHorizontalNormalLengthA^3 + 
+            //(horizontalNormalLengthSquaredB * (radiusB * (dot(ty, bx) * dot(ty, bx) + dot(ty, by) * dot(ty, by))) - (radiusB * (dot(n, bx) * dot(ty, bx) + dot(n, by) * dot(ty, by))) * (dot(n, bx) * dot(ty, bx) + dot(n, by) * dot(ty, by))) * inverseHorizontalNormalLengthB^3
+            //d/dty(d/dtx(depth(N)) == d/dtx(d/dty(depthN)); the hessian is symmetric.
+
+
+            normal = initialGuess;
+
+            var terminatedLanes = inactiveLanes;
+            var terminationEpsilonSquared = new Vector<float>(1e-8f);
+            var stepSize = new Vector<float>(0.1f);
+
+            var divisionGuard = new Vector<float>(1e-7f);
+
+            for (int i = 0; i < 100; ++i)
+            {
+                Helpers.BuildOrthnormalBasis(normal, out var x, out var y);
+
+                Vector3Wide.Dot(localOrientationA.X, normal, out var axDotN);
+                Vector3Wide.Dot(localOrientationA.Z, normal, out var azDotN);
+                var horizontalNormalLengthSquaredA = axDotN * axDotN + azDotN * azDotN;
+                var horizontalNormalLengthSquaredB = normal.X * normal.X + normal.Z * normal.Z;
+                //Fast hardware rsqrt would be nice!
+                var horizontalNormalLengthA = Vector.SquareRoot(horizontalNormalLengthSquaredA);
+                var horizontalNormalLengthB = Vector.SquareRoot(horizontalNormalLengthSquaredB);
+                var inverseHorizontalNormalLengthA = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(horizontalNormalLengthA), divisionGuard), Vector<float>.One / horizontalNormalLengthA, Vector<float>.Zero);
+                var inverseHorizontalNormalLengthB = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(horizontalNormalLengthB), divisionGuard), Vector<float>.One / horizontalNormalLengthB, Vector<float>.Zero);
+                Vector3Wide.Dot(localOrientationA.X, x, out var axDotX);
+                Vector3Wide.Dot(localOrientationA.Z, x, out var azDotX);
+                Vector3Wide.Dot(capCenterBToCapCenterA, x, out var offsetDotX);
+                Vector2Wide gradient;
+                var gxa = axDotN * axDotX + azDotN * azDotX;
+                var gxb = normal.X * x.X + normal.Z * x.Z;
+                gradient.X = radiusA * gxa * inverseHorizontalNormalLengthA + radiusB * gxb * inverseHorizontalNormalLengthB - offsetDotX;
+                Vector3Wide.Dot(localOrientationA.X, y, out var axDotY);
+                Vector3Wide.Dot(localOrientationA.Z, y, out var azDotY);
+                Vector3Wide.Dot(capCenterBToCapCenterA, y, out var offsetDotY);
+                var gya = axDotN * axDotY + azDotN * azDotY;
+                var gyb = normal.X * y.X + normal.Z * y.Z;
+                gradient.Y = radiusA * gya * inverseHorizontalNormalLengthA + radiusB * gyb * inverseHorizontalNormalLengthB - offsetDotY;
+
+                //var step = gradient;
+
+
+                Symmetric2x2Wide hessian;
+                var scaleA = radiusA * inverseHorizontalNormalLengthA * inverseHorizontalNormalLengthA * inverseHorizontalNormalLengthA;
+                var scaleB = radiusB * inverseHorizontalNormalLengthB * inverseHorizontalNormalLengthB * inverseHorizontalNormalLengthB;
+
+                hessian.XX =
+                    (horizontalNormalLengthSquaredA * (axDotX * axDotX + azDotX * azDotX) - gxa * gxa) * scaleA +
+                    (horizontalNormalLengthSquaredB * (x.X * x.X + x.Z * x.Z) - gxb * gxb) * scaleB;
+                hessian.YX =
+                    (horizontalNormalLengthSquaredA * (axDotY * axDotX + azDotY * azDotX) - gxa * gya) * scaleA +
+                    (horizontalNormalLengthSquaredB * (y.X * x.X + y.Z * x.Z) - gyb * gxb) * scaleB;
+                hessian.YY =
+                    (horizontalNormalLengthSquaredA * (axDotY * axDotY + azDotY * azDotY) - gya * gya) * scaleA +
+                    (horizontalNormalLengthSquaredB * (y.X * y.X + y.Z * y.Z) - gyb * gyb) * scaleB;
+
+                Symmetric2x2Wide.InvertWithoutOverlap(hessian, out var inverseHessian);
+                Symmetric2x2Wide.TransformWithoutOverlap(gradient, inverseHessian, out var step);
+
+                Vector3Wide.Dot(capCenterBToCapCenterA, normal, out var offsetDotN);
+                var depth = radiusA * horizontalNormalLengthA + radiusB * horizontalNormalLengthB - offsetDotN;
+                stepSize *= 0.95f;
+                step.X *= stepSize;
+                step.Y *= stepSize;
+                Vector3Wide.Scale(x, step.X, out var stepX);
+                Vector3Wide.Scale(y, step.Y, out var stepY);
+
+                var oldNormla = normal;
+                Vector3Wide.Subtract(normal, stepX, out var newNormal);
+                Vector3Wide.Subtract(newNormal, stepY, out newNormal);
+                Vector3Wide.Normalize(newNormal, out newNormal);
+                Vector2Wide.LengthSquared(step, out var stepLengthSquared);
+                var shouldTerminate = Vector.LessThan(stepLengthSquared, terminationEpsilonSquared);
+                Vector3Wide.ConditionalSelect(terminatedLanes, normal, newNormal, out normal);
+                terminatedLanes = Vector.BitwiseOr(shouldTerminate, terminatedLanes);
+                //Early out if all lanes have converged.
+                if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
+                    break;
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ProjectOntoCapA(in Vector<float> capCenterBY, in Vector3Wide capCenterA, in Matrix3x3Wide rA, in Vector<float> inverseNDotAY, in Vector3Wide localNormal, in Vector2Wide point, out Vector2Wide projected)
@@ -213,10 +324,28 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //We now have a decent estimate for the local normal. Refine it to a local minimum.
             CylinderSupportFinder supportFinder = default;
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
-            GradientDescent<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(
-                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, -speculativeMargin, new Vector<float>(1e-4f), 25, inactiveLanes,
-                out localNormal, out var depthBelowThreshold);
-            inactiveLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
+            //GradientDescent<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(
+            //    b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, -speculativeMargin, new Vector<float>(1e-4f), 25, inactiveLanes,
+            //    out localNormal, out var depthBelowThreshold);
+            //inactiveLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
+
+            //The extreme points along the contact normal are shared between multiple contact generator paths, so we just do them up front.
+            Vector3Wide.Dot(rA.Y, localNormal, out var nDotAY);
+            var inverseNDotAY = Vector<float>.One / nDotAY;
+            var inverseLocalNormalY = Vector<float>.One / localNormal.Y;
+            Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.GreaterThan(nDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var capCenterA);
+            Vector3Wide.Add(capCenterA, localOffsetA, out capCenterA);
+            var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+            Vector3Wide capCenterBToCapCenterA;
+            capCenterBToCapCenterA.X = capCenterA.X;
+            capCenterBToCapCenterA.Y = capCenterA.Y - capCenterBY;
+            capCenterBToCapCenterA.Z = capCenterA.Z;
+            FindCapCapNormal(a.Radius, b.Radius, rA, capCenterBToCapCenterA, localNormal, inactiveLanes, out var newNormal);
+            Vector3Wide.Normalize(newNormal, out newNormal);
+            GetDepth(rA.Y, localOffsetB, newNormal, a, b, out var capCapDepth);
+            var useCapCapDepth = Vector.LessThan(capCapDepth, depth);
+            depth = Vector.ConditionalSelect(useCapCapDepth, capCapDepth, depth);
+            Vector3Wide.ConditionalSelect(useCapCapDepth, newNormal, localNormal, out localNormal);
 
             //QuaternionWide.Broadcast(BepuUtilities.Quaternion.Identity, out var identity);
             //QuaternionWide.CreateFromRotationMatrix(rA, out var rAQuaternion);
@@ -244,9 +373,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Cap A-Side B
             //Side A-Cap B
             //Side A-Side B
-            Vector3Wide.Dot(rA.Y, localNormal, out var nDotAY);
-            var inverseNDotAY = Vector<float>.One / nDotAY;
-            var inverseLocalNormalY = Vector<float>.One / localNormal.Y;
             var capThreshold = new Vector<float>(0.70710678118f);
             var useCapA = Vector.GreaterThan(Vector.Abs(nDotAY), capThreshold);
             var useCapB = Vector.GreaterThan(Vector.Abs(localNormal.Y), capThreshold);
@@ -256,11 +382,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.Contact2Exists = default;
             manifold.Contact3Exists = default;
             var useCapCap = Vector.AndNot(Vector.BitwiseAnd(useCapA, useCapB), inactiveLanes);
-
-
-            //The extreme points along the contact normal are shared between multiple contact generator paths, so we just do them up front.
-            Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.GreaterThan(nDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var capCenterA);
-            Vector3Wide.Add(capCenterA, localOffsetA, out capCenterA);
 
             Vector3Wide.Dot(rA.X, localNormal, out var ax);
             Vector3Wide.Dot(rA.Z, localNormal, out var az);
@@ -274,7 +395,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(extremeAX, extremeAZ, out var extremeAOffset);
             Vector3Wide.Add(extremeAOffset, capCenterA, out var extremeA);
 
-            var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
             var horizontalNormalLengthSquaredB = localNormal.X * localNormal.X + localNormal.Z * localNormal.Z;
             var inverseHorizontalNormalLengthSquaredB = Vector<float>.One / horizontalNormalLengthSquaredB;
             var normalizeScaleB = b.Radius * Vector.SquareRoot(inverseHorizontalNormalLengthSquaredB);
@@ -336,10 +456,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 //The above created a line stating at contact0 and pointing to the other side of the cap that contact0 was generated from.
                 //That is, if the extreme point from A was used, then the line direction is localNormal projected on capA.
-                Vector3Wide capCenterBToCapCenterA;
-                capCenterBToCapCenterA.X = -capCenterA.X;
-                capCenterBToCapCenterA.Y = capCenterBY - capCenterA.Y;
-                capCenterBToCapCenterA.Z = -capCenterA.Z;
                 ProjectOntoCapA(capCenterBY, capCenterA, rA, inverseNDotAY, localNormal, capContact0, out var lineStartOnA);
                 ProjectOntoCapA(capCenterBY, capCenterA, rA, inverseNDotAY, localNormal, contact1LineEndpoint, out var lineEndOnA);
                 Vector2Wide.Subtract(lineEndOnA, lineStartOnA, out var lineDirectionOnA);
@@ -469,7 +585,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //(Using the side of B to detect the interval can result in issues in medium-depth penetration where the deepest point is ignored in favor of the closest point between the side lines.)
                 Vector3Wide.Negate(sideCenterA, out var sideCenterAToLineB);
                 CapsuleCylinderTester.GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, rA.Y, localNormal, inverseHorizontalNormalLengthSquaredB, sideCenterAToLineB, out var contactTMin, out var contactTMax);
-                
+
                 contact0.X = Vector.ConditionalSelect(useSideSide, extremeB.X, contact0.X);
                 contact0.Y = contactTMin;
                 contact0.Z = Vector.ConditionalSelect(useSideSide, extremeB.Y, contact0.Z);
