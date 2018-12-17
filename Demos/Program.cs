@@ -21,7 +21,7 @@ namespace Demos
             {
                 content = ContentArchive.Load(stream);
             }
-            //BatchedCollisionTests.Test();
+            BatchedCollisionTests.Test();
             var demo = new DemoHarness(loop, content);
             loop.Run(demo);
             loop.Dispose();

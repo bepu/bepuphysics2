@@ -71,21 +71,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             var terminatedLanes = inactiveLanes;
             var terminationEpsilonSquared = new Vector<float>(1e-8f);
-            var stepSize = new Vector<float>(0.1f);
+            var stepSize = new Vector<float>(1f);
 
-            var divisionGuard = new Vector<float>(1e-7f);
+            var divisionGuard = new Vector<float>(1e-10f);
+            Helpers.BuildOrthnormalBasis(normal, out var x, out var y);
 
-            for (int i = 0; i < 100; ++i)
+            Vector3Wide.Dot(localOrientationA.X, normal, out var axDotN);
+            Vector3Wide.Dot(localOrientationA.Z, normal, out var azDotN);
+            var horizontalNormalLengthSquaredA = axDotN * axDotN + azDotN * azDotN;
+            var horizontalNormalLengthSquaredB = normal.X * normal.X + normal.Z * normal.Z;
+            var horizontalNormalLengthA = Vector.SquareRoot(horizontalNormalLengthSquaredA);
+            var horizontalNormalLengthB = Vector.SquareRoot(horizontalNormalLengthSquaredB);
+            Vector3Wide.Dot(capCenterBToCapCenterA, normal, out var offsetDotN);
+            var depth = radiusA * horizontalNormalLengthA + radiusB * horizontalNormalLengthB - offsetDotN;
+
+            for (int i = 0; i < 15; ++i)
             {
-                Helpers.BuildOrthnormalBasis(normal, out var x, out var y);
-
-                Vector3Wide.Dot(localOrientationA.X, normal, out var axDotN);
-                Vector3Wide.Dot(localOrientationA.Z, normal, out var azDotN);
-                var horizontalNormalLengthSquaredA = axDotN * axDotN + azDotN * azDotN;
-                var horizontalNormalLengthSquaredB = normal.X * normal.X + normal.Z * normal.Z;
-                //Fast hardware rsqrt would be nice!
-                var horizontalNormalLengthA = Vector.SquareRoot(horizontalNormalLengthSquaredA);
-                var horizontalNormalLengthB = Vector.SquareRoot(horizontalNormalLengthSquaredB);
                 var inverseHorizontalNormalLengthA = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(horizontalNormalLengthA), divisionGuard), Vector<float>.One / horizontalNormalLengthA, Vector<float>.Zero);
                 var inverseHorizontalNormalLengthB = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(horizontalNormalLengthB), divisionGuard), Vector<float>.One / horizontalNormalLengthB, Vector<float>.Zero);
                 Vector3Wide.Dot(localOrientationA.X, x, out var axDotX);
@@ -101,9 +102,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var gya = axDotN * axDotY + azDotN * azDotY;
                 var gyb = normal.X * y.X + normal.Z * y.Z;
                 gradient.Y = radiusA * gya * inverseHorizontalNormalLengthA + radiusB * gyb * inverseHorizontalNormalLengthB - offsetDotY;
-
-                //var step = gradient;
-
 
                 Symmetric2x2Wide hessian;
                 var scaleA = radiusA * inverseHorizontalNormalLengthA * inverseHorizontalNormalLengthA * inverseHorizontalNormalLengthA;
@@ -122,22 +120,43 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Symmetric2x2Wide.InvertWithoutOverlap(hessian, out var inverseHessian);
                 Symmetric2x2Wide.TransformWithoutOverlap(gradient, inverseHessian, out var step);
 
-                Vector3Wide.Dot(capCenterBToCapCenterA, normal, out var offsetDotN);
-                var depth = radiusA * horizontalNormalLengthA + radiusB * horizontalNormalLengthB - offsetDotN;
-                stepSize *= 0.95f;
                 step.X *= stepSize;
                 step.Y *= stepSize;
                 Vector3Wide.Scale(x, step.X, out var stepX);
                 Vector3Wide.Scale(y, step.Y, out var stepY);
 
-                var oldNormla = normal;
+
                 Vector3Wide.Subtract(normal, stepX, out var newNormal);
                 Vector3Wide.Subtract(newNormal, stepY, out newNormal);
                 Vector3Wide.Normalize(newNormal, out newNormal);
+
                 Vector2Wide.LengthSquared(step, out var stepLengthSquared);
                 var shouldTerminate = Vector.LessThan(stepLengthSquared, terminationEpsilonSquared);
-                Vector3Wide.ConditionalSelect(terminatedLanes, normal, newNormal, out normal);
                 terminatedLanes = Vector.BitwiseOr(shouldTerminate, terminatedLanes);
+
+
+                Vector3Wide.Dot(localOrientationA.X, newNormal, out var newAxDotN);
+                Vector3Wide.Dot(localOrientationA.Z, newNormal, out var newAzDotN);
+                var newHorizontalNormalLengthSquaredA = newAxDotN * newAxDotN + newAzDotN * newAzDotN;
+                var newHorizontalNormalLengthSquaredB = newNormal.X * newNormal.X + newNormal.Z * newNormal.Z;
+                var newHorizontalNormalLengthA = Vector.SquareRoot(newHorizontalNormalLengthSquaredA);
+                var newHorizontalNormalLengthB = Vector.SquareRoot(newHorizontalNormalLengthSquaredB);
+                Vector3Wide.Dot(capCenterBToCapCenterA, newNormal, out offsetDotN);
+                var newDepth = radiusA * newHorizontalNormalLengthA + radiusB * newHorizontalNormalLengthB - offsetDotN;
+
+                Vector2Wide.Dot(step, gradient, out var expectedChangeInDepth);
+                //If the new sample hasn't made progress approaching the gradient's expectation, then shrink the search and try again.
+                var useNewSample = Vector.LessThan(newDepth - depth, Vector.Min(Vector<float>.Zero, expectedChangeInDepth * 0.5f));
+                stepSize = Vector.ConditionalSelect(useNewSample, stepSize * (4f / 3f), stepSize * 0.125f);
+                Vector3Wide.ConditionalSelect(Vector.AndNot(useNewSample, terminatedLanes), newNormal, normal, out normal);
+                axDotN = Vector.ConditionalSelect(useNewSample, newAxDotN, axDotN);
+                azDotN = Vector.ConditionalSelect(useNewSample, newAzDotN, azDotN);
+                horizontalNormalLengthSquaredA = Vector.ConditionalSelect(useNewSample, newHorizontalNormalLengthSquaredA, horizontalNormalLengthSquaredA);
+                horizontalNormalLengthSquaredB = Vector.ConditionalSelect(useNewSample, newHorizontalNormalLengthSquaredB, horizontalNormalLengthSquaredB);
+                horizontalNormalLengthA = Vector.ConditionalSelect(useNewSample, newHorizontalNormalLengthA, horizontalNormalLengthA);
+                horizontalNormalLengthB = Vector.ConditionalSelect(useNewSample, newHorizontalNormalLengthB, horizontalNormalLengthB);
+                depth = Vector.ConditionalSelect(useNewSample, newDepth, depth);
+
                 //Early out if all lanes have converged.
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
@@ -329,17 +348,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //    out localNormal, out var depthBelowThreshold);
             //inactiveLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
 
-            //The extreme points along the contact normal are shared between multiple contact generator paths, so we just do them up front.
-            Vector3Wide.Dot(rA.Y, localNormal, out var nDotAY);
-            var inverseNDotAY = Vector<float>.One / nDotAY;
-            var inverseLocalNormalY = Vector<float>.One / localNormal.Y;
-            Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.GreaterThan(nDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var capCenterA);
-            Vector3Wide.Add(capCenterA, localOffsetA, out capCenterA);
-            var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+            Vector3Wide.Dot(rA.Y, localNormal, out var earlyNDotAY);
+            Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.GreaterThan(earlyNDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var earlyCapCenterA);
+            Vector3Wide.Add(earlyCapCenterA, localOffsetA, out earlyCapCenterA);
+            var earlyCapCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
             Vector3Wide capCenterBToCapCenterA;
-            capCenterBToCapCenterA.X = capCenterA.X;
-            capCenterBToCapCenterA.Y = capCenterA.Y - capCenterBY;
-            capCenterBToCapCenterA.Z = capCenterA.Z;
+            capCenterBToCapCenterA.X = earlyCapCenterA.X;
+            capCenterBToCapCenterA.Y = earlyCapCenterA.Y - earlyCapCenterBY;
+            capCenterBToCapCenterA.Z = earlyCapCenterA.Z;
             FindCapCapNormal(a.Radius, b.Radius, rA, capCenterBToCapCenterA, localNormal, inactiveLanes, out var newNormal);
             Vector3Wide.Normalize(newNormal, out newNormal);
             GetDepth(rA.Y, localOffsetB, newNormal, a, b, out var capCapDepth);
@@ -373,6 +389,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Cap A-Side B
             //Side A-Cap B
             //Side A-Side B
+            Vector3Wide.Dot(rA.Y, localNormal, out var nDotAY);
+            var inverseNDotAY = Vector<float>.One / nDotAY;
+            var inverseLocalNormalY = Vector<float>.One / localNormal.Y;
+            Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.GreaterThan(nDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var capCenterA);
+            Vector3Wide.Add(capCenterA, localOffsetA, out capCenterA);
+            var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+
             var capThreshold = new Vector<float>(0.70710678118f);
             var useCapA = Vector.GreaterThan(Vector.Abs(nDotAY), capThreshold);
             var useCapB = Vector.GreaterThan(Vector.Abs(localNormal.Y), capThreshold);
@@ -383,6 +406,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.Contact3Exists = default;
             var useCapCap = Vector.AndNot(Vector.BitwiseAnd(useCapA, useCapB), inactiveLanes);
 
+            //The extreme points along the contact normal are shared between multiple contact generator paths, so we just do them up front.
             Vector3Wide.Dot(rA.X, localNormal, out var ax);
             Vector3Wide.Dot(rA.Z, localNormal, out var az);
             var horizontalNormalLengthA = Vector.SquareRoot(ax * ax + az * az);
@@ -539,7 +563,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var sideHalfLength = Vector.ConditionalSelect(useCapA, b.HalfLength, a.HalfLength);
                 Vector2Wide.Subtract(projectedLineEnd, projectedLineStart, out var projectedLineDirection);
                 IntersectLineCircle(projectedLineStart, projectedLineDirection, radius, out var tMin, out var tMax);
-                tMin = Vector.Max(-sideHalfLength, tMin);
+                tMin = Vector.Min(sideHalfLength, Vector.Max(-sideHalfLength, tMin));
                 tMax = Vector.Min(sideHalfLength, tMax);
 
                 //To be consistent with the other contact generation cases, we want contacts to be on cylinder B. So:
@@ -613,6 +637,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.FeatureId1 = Vector<int>.One;
             manifold.FeatureId2 = new Vector<int>(2);
             manifold.FeatureId3 = new Vector<int>(3);
+
+            var badDepth0 = Vector.GreaterThan(Vector.Abs(manifold.Depth0), new Vector<float>(1e9f));
+            var badDepth1 = Vector.GreaterThan(Vector.Abs(manifold.Depth1), new Vector<float>(1e9f));
+            var badDepth2 = Vector.GreaterThan(Vector.Abs(manifold.Depth2), new Vector<float>(1e9f));
+            var badDepth3 = Vector.GreaterThan(Vector.Abs(manifold.Depth3), new Vector<float>(1e9f));
+
+            if (Vector.LessThanAny(Vector.AndNot(Vector.BitwiseAnd(badDepth0, manifold.Contact0Exists), inactiveLanes), Vector<int>.Zero) ||
+                Vector.LessThanAny(Vector.AndNot(Vector.BitwiseAnd(badDepth1, manifold.Contact1Exists), inactiveLanes), Vector<int>.Zero) ||
+                Vector.LessThanAny(Vector.AndNot(Vector.BitwiseAnd(badDepth2, manifold.Contact2Exists), inactiveLanes), Vector<int>.Zero) ||
+                Vector.LessThanAny(Vector.AndNot(Vector.BitwiseAnd(badDepth3, manifold.Contact3Exists), inactiveLanes), Vector<int>.Zero))
+            {
+                Console.WriteLine($"hmm");
+            }
 
 
         }
