@@ -6,27 +6,10 @@ using BepuUtilities;
 namespace BepuPhysics
 {
     /// <summary>
-    /// Updates the simulation in the order of: sleeper -> body position, velocity and bounding boxes -> collision detection -> solver -> data structure optimization.
+    /// Updates the simulation in the order of: sleeper -> body bounding boxes -> collision detection -> solver -> data structure optimization.
     /// </summary>
-    public class PositionFirstTimestepper : ITimestepper
+    public class PositionFirstWithSubsteppingTimestepper : ITimestepper
     {
-        /// <summary>
-        /// Fires after the sleeper completes and before bodies are integrated.
-        /// </summary>
-        public event Action Slept;
-        /// <summary>
-        /// Fires after bodies have had their position, velocity, and bounding boxes updated, but before collision detection begins.
-        /// </summary>
-        public event Action BodiesUpdated;
-        /// <summary>
-        /// Fires after all collisions have been identified, but before constraints are solved.
-        /// </summary>
-        public event Action CollisionsDetected;
-        /// <summary>
-        /// Fires after the solver executes and before data structures are incrementally optimized.
-        /// </summary>
-        public event Action ConstraintsSolved;
-
         public void Timestep(Simulation simulation, float dt, IThreadDispatcher threadDispatcher = null)
         {
             //Note that there is a reason to put the sleep *after* velocity integration. That sounds a little weird, but there's a good reason:
@@ -37,7 +20,6 @@ namespace BepuPhysics
 
             //Sleep at the start, on the other hand, stops some forms of unintuitive behavior when using direct awakenings. Just a matter of preference.
             simulation.Sleep(threadDispatcher);
-            Slept?.Invoke();
 
             //Note that pose integrator comes before collision detection and solving. This is a shift from v1, where collision detection went first.
             //This is a tradeoff:
@@ -57,13 +39,10 @@ namespace BepuPhysics
             //1) complicated on demand updates of world inertia when objects are added or local inertias are changed or 
             //2) local->world inertia calculation before the solver.
             simulation.IntegrateBodiesAndUpdateBoundingBoxes(dt, threadDispatcher);
-            BodiesUpdated?.Invoke();
 
             simulation.CollisionDetection(dt, threadDispatcher);
-            CollisionsDetected?.Invoke();
 
             simulation.Solve(dt, threadDispatcher);
-            ConstraintsSolved?.Invoke();
 
             simulation.IncrementallyOptimizeDataStructures(threadDispatcher);
         }
