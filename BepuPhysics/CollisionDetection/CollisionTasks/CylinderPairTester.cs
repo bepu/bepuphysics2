@@ -7,6 +7,27 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
+    public struct CylinderPairDepthTester : IDepthTester<Cylinder, CylinderWide, Cylinder, CylinderWide>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Test(in CylinderWide a, in CylinderWide b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, in Vector3Wide normal, out Vector<float> scaledDepth)
+        {
+            //dot(extremeA - extremeB, N) for a potentially non-unit N.
+            //extremeA = (N.X, 0, N.Z) * radiusA / sqrt(N.X^2 + N.Z^2) + (0, N.Y > 0 ? a.HalfLength : -a.HalfLength, 0)
+            //extremeB = localOffsetB + (dot(-N, B.X) * B.X + dot(-N, B.Z) * B.Z) * radiusA / sqrt(dot(-N, B.X)^2 + dot(-N, B.Z)^2) + B.Y * (dot(-N, B.Y) > 0 ? b.HalfLength : -b.HalfLength)
+            //dot(N, extremeA) = horizontalNormalLengthA * radiusA + N.Y * (N.Y > 0 ? a.HalfLength : -a.HalfLength)
+            //dot(N, extremeB) = dot(localOffsetB, N) + horizontalNormalLengthB * radiusB + dot(-N, B.Y) * (dot(-N, B.Y) > 0 ? b.HalfLength : -b.HalfLength)
+            var horizontalNormalLengthA = Vector.SquareRoot(normal.X * normal.X + normal.Z * normal.Z);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(normal, localOrientationB, out var localNormalB);
+            Vector3Wide.Negate(localNormalB, out localNormalB);
+            var horizontalNormalLengthB = Vector.SquareRoot(localNormalB.X * localNormalB.X + localNormalB.Z * localNormalB.Z);
+            var contributionA = horizontalNormalLengthA * a.Radius + normal.Y * Vector.ConditionalSelect(Vector.LessThan(normal.Y, Vector<float>.Zero), -a.HalfLength, a.HalfLength);
+            Vector3Wide.Dot(localOffsetB, normal, out var offsetDotN);
+            var contributionB = horizontalNormalLengthB * b.Radius + localNormalB.Y * Vector.ConditionalSelect(Vector.LessThan(localNormalB.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength) + offsetDotN;
+            scaledDepth = contributionA - contributionB;
+        }
+    }
+
     public struct CylinderPairTester : IPairTester<CylinderWide, CylinderWide, Convex4ContactManifoldWide>
     {
         public int BatchSize => 32;
@@ -341,27 +362,31 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionallyNegate(Vector.LessThan(normalDotLocalOffsetB, Vector<float>.Zero), ref localNormal);
 
             //We now have a decent estimate for the local normal. Refine it to a local minimum.
-            CylinderSupportFinder supportFinder = default;
+            //CylinderSupportFinder supportFinder = default;
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
             //GradientDescent<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(
             //    b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, -speculativeMargin, new Vector<float>(1e-4f), 25, inactiveLanes,
             //    out localNormal, out var depthBelowThreshold);
             //inactiveLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
+            NelderMead<Cylinder, CylinderWide, Cylinder, CylinderWide, CylinderPairDepthTester>.Refine(
+                b, a, localOffsetA, rA, localNormal, depth, inactiveLanes, new Vector<float>(1e-4f), -speculativeMargin, out var newLocalNormal, out var newDepth);
+            localNormal = newLocalNormal;
+            depth = newDepth;
 
-            Vector3Wide.Dot(rA.Y, localNormal, out var earlyNDotAY);
-            Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.GreaterThan(earlyNDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var earlyCapCenterA);
-            Vector3Wide.Add(earlyCapCenterA, localOffsetA, out earlyCapCenterA);
-            var earlyCapCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
-            Vector3Wide capCenterBToCapCenterA;
-            capCenterBToCapCenterA.X = earlyCapCenterA.X;
-            capCenterBToCapCenterA.Y = earlyCapCenterA.Y - earlyCapCenterBY;
-            capCenterBToCapCenterA.Z = earlyCapCenterA.Z;
-            FindCapCapNormal(a.Radius, b.Radius, rA, capCenterBToCapCenterA, localNormal, inactiveLanes, out var newNormal);
-            Vector3Wide.Normalize(newNormal, out newNormal);
-            GetDepth(rA.Y, localOffsetB, newNormal, a, b, out var capCapDepth);
-            var useCapCapDepth = Vector.LessThan(capCapDepth, depth);
-            depth = Vector.ConditionalSelect(useCapCapDepth, capCapDepth, depth);
-            Vector3Wide.ConditionalSelect(useCapCapDepth, newNormal, localNormal, out localNormal);
+            //Vector3Wide.Dot(rA.Y, localNormal, out var earlyNDotAY);
+            //Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.GreaterThan(earlyNDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var earlyCapCenterA);
+            //Vector3Wide.Add(earlyCapCenterA, localOffsetA, out earlyCapCenterA);
+            //var earlyCapCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+            //Vector3Wide capCenterBToCapCenterA;
+            //capCenterBToCapCenterA.X = earlyCapCenterA.X;
+            //capCenterBToCapCenterA.Y = earlyCapCenterA.Y - earlyCapCenterBY;
+            //capCenterBToCapCenterA.Z = earlyCapCenterA.Z;
+            //FindCapCapNormal(a.Radius, b.Radius, rA, capCenterBToCapCenterA, localNormal, inactiveLanes, out var newNormal);
+            //Vector3Wide.Normalize(newNormal, out newNormal);
+            //GetDepth(rA.Y, localOffsetB, newNormal, a, b, out var capCapDepth);
+            //var useCapCapDepth = Vector.LessThan(capCapDepth, depth);
+            //depth = Vector.ConditionalSelect(useCapCapDepth, capCapDepth, depth);
+            //Vector3Wide.ConditionalSelect(useCapCapDepth, newNormal, localNormal, out localNormal);
 
             //QuaternionWide.Broadcast(BepuUtilities.Quaternion.Identity, out var identity);
             //QuaternionWide.CreateFromRotationMatrix(rA, out var rAQuaternion);
