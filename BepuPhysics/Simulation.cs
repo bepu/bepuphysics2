@@ -39,12 +39,17 @@ namespace BepuPhysics
         public BufferPool BufferPool { get; private set; }
 
         /// <summary>
+        /// Gets the timestepper used to update the simulation state.
+        /// </summary>
+        public ITimestepper Timestepper { get; private set; }
+
+        /// <summary>
         /// Gets or sets whether to use a deterministic time step when using multithreading. When set to true, additional time is spent sorting constraint additions and transfers.
         /// Note that this can only affect determinism locally- different processor architectures may implement instructions differently.
         /// </summary>
         public bool Deterministic { get; set; }
 
-        protected Simulation(BufferPool bufferPool, SimulationAllocationSizes initialAllocationSizes, int solverIterationCount, int solverFallbackBatchThreshold)
+        protected Simulation(BufferPool bufferPool, SimulationAllocationSizes initialAllocationSizes, int solverIterationCount, int solverFallbackBatchThreshold, ITimestepper timestepper)
         {
             BufferPool = bufferPool;
             Shapes = new Shapes(bufferPool, initialAllocationSizes.ShapesPerType);
@@ -68,6 +73,7 @@ namespace BepuPhysics
             SolverBatchCompressor = new BatchCompressor(Solver, Bodies);
             BodyLayoutOptimizer = new BodyLayoutOptimizer(Bodies, BroadPhase, Solver, bufferPool);
             ConstraintLayoutOptimizer = new ConstraintLayoutOptimizer(Bodies, Solver);
+            Timestepper = timestepper;
 
         }
 
@@ -77,12 +83,13 @@ namespace BepuPhysics
         /// <param name="bufferPool">Buffer pool used to fill persistent structures and main thread ephemeral resources across the engine.</param>
         /// <param name="narrowPhaseCallbacks">Callbacks to use in the narrow phase.</param>
         /// <param name="poseIntegratorCallbacks">Callbacks to use in the pose integrator.</param>
+        /// <param name="timestepper">Timestepper that defines how the simulation state should be updated. If null, defaults to PositionFirstTimestepper.</param>
         /// <param name="solverIterationCount">Number of iterations the solver should use.</param>
         /// <param name="solverFallbackBatchThreshold">Number of synchronized batches the solver should maintain before falling back to a lower quality jacobi hybrid solver.</param>
         /// <param name="initialAllocationSizes">Allocation sizes to initialize the simulation with. If left null, default values are chosen.</param>
         /// <returns>New simulation.</returns>
         public static Simulation Create<TNarrowPhaseCallbacks, TPoseIntegratorCallbacks>(
-            BufferPool bufferPool, TNarrowPhaseCallbacks narrowPhaseCallbacks, TPoseIntegratorCallbacks poseIntegratorCallbacks,
+            BufferPool bufferPool, TNarrowPhaseCallbacks narrowPhaseCallbacks, TPoseIntegratorCallbacks poseIntegratorCallbacks, ITimestepper timestepper = null,
             int solverIterationCount = 8, int solverFallbackBatchThreshold = 32, SimulationAllocationSizes? initialAllocationSizes = null)
             where TNarrowPhaseCallbacks : struct, INarrowPhaseCallbacks
             where TPoseIntegratorCallbacks : struct, IPoseIntegratorCallbacks
@@ -100,7 +107,7 @@ namespace BepuPhysics
                 };
             }
 
-            var simulation = new Simulation(bufferPool, initialAllocationSizes.Value, solverIterationCount, solverFallbackBatchThreshold);
+            var simulation = new Simulation(bufferPool, initialAllocationSizes.Value, solverIterationCount, solverFallbackBatchThreshold, timestepper == null ? new PositionFirstTimestepper() : timestepper);
             simulation.PoseIntegrator = new PoseIntegrator<TPoseIntegratorCallbacks>(simulation.Bodies, simulation.Shapes, simulation.BroadPhase, poseIntegratorCallbacks);
             var narrowPhase = new NarrowPhase<TNarrowPhaseCallbacks>(simulation,
                 DefaultTypes.CreateDefaultCollisionTaskRegistry(), DefaultTypes.CreateDefaultSweepTaskRegistry(),
@@ -176,70 +183,71 @@ namespace BepuPhysics
 
         }
 
-        //TODO: I wonder if people will abuse the dt-as-parameter to the point where we should make it a field instead, like it effectively was in v1.
+        //These functions act as convenience wrappers around common execution patterns. They can be mixed and matched in custom timesteps, or for certain advanced use cases, called directly.
         /// <summary>
-        /// Performs one timestep of the given length.
+        /// Executes the sleep stage, moving candidate
         /// </summary>
-        /// <remarks>
-        /// Be wary of variable timesteps. They can harm stability. Whenever possible, keep the timestep the same across multiple frames unless you have a specific reason not to.
-        /// </remarks>
-        /// <param name="dt">Duration of the time step in time.</param>
-        public void Timestep(float dt, IThreadDispatcher threadDispatcher = null)
+        /// <param name="threadDispatcher">Thread dispatcher to use for the sleeper execution, if any.</param>
+        public void Sleep(IThreadDispatcher threadDispatcher = null)
         {
-            ProfilerClear();
-            ProfilerStart(this);
-            //Note that there is a reason to put the sleep *after* velocity integration. That sounds a little weird, but there's a good reason:
-            //When the narrow phase activates a bunch of objects in a pile, their accumulated impulses will represent all forces acting on them at the time of sleep.
-            //That includes gravity. If we sleep objects *before* gravity is applied in a given frame, then when those bodies are awakened, the accumulated impulses
-            //will be less accurate because they assume that gravity has already been applied. This can cause a small bump.
-            //So instead, velocity integration (and deactivation candidacy management) comes before sleep.
-            
-            //Sleep at the start, on the other hand, stops some forms of unintuitive behavior when using direct awakenings. Just a matter of preference.
             ProfilerStart(Sleeper);
             Sleeper.Update(threadDispatcher, Deterministic);
             ProfilerEnd(Sleeper);
-            
-            //Note that pose integrator comes before collision detection and solving. This is a shift from v1, where collision detection went first.
-            //This is a tradeoff:
-            //1) Any externally set velocities will be integrated without input from the solver. The v1-style external velocity control won't work as well-
-            //the user would instead have to change velocities after the pose integrator runs. This isn't perfect either, since the pose integrator is also responsible
-            //for updating the bounding boxes used for collision detection.
-            //2) By bundling bounding box calculation with pose integration, you avoid redundant pose and velocity memory accesses.
-            //3) Generated contact positions are in sync with the integrated poses. 
-            //That's often helpful for gameplay purposes- you don't have to reinterpret contact data when creating graphical effects or positioning sound sources.
+        }
 
-            //TODO: This is something that is possibly worth external customization. Users could just choose the order arbitrarily.
-            //#1 is a difficult problem, though. There is no fully 'correct' place to change velocities. We might just have to bite the bullet and create a
-            //inertia tensor/bounding box update separate from pose integration. If the cache gets evicted in between (virtually guaranteed unless no stages run),
-            //this basically means an extra 100-200 microseconds per frame on a processor with ~20GBps bandwidth simulating 32768 bodies.
-
-            //Note that the reason why the pose integrator comes first instead of, say, the solver, is that the solver relies on world space inertias calculated by the pose integration.
-            //If the pose integrator doesn't run first, we either need 
-            //1) complicated on demand updates of world inertia when objects are added or local inertias are changed or 
-            //2) local->world inertia calculation before the solver.
+        /// <summary>
+        /// Updates the position, velocity, and bounding boxes of active bodies. Also keeps track of deactivation candidates.
+        /// </summary>
+        /// <param name="dt">Duration of the time step.</param>
+        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
+        public void IntegrateBodiesAndUpdateBoundingBoxes(float dt, IThreadDispatcher threadDispatcher = null)
+        {
             ProfilerStart(PoseIntegrator);
             PoseIntegrator.Update(dt, BufferPool, threadDispatcher);
             ProfilerEnd(PoseIntegrator);
+        }
 
+        /// <summary>
+        /// Updates the broad phase structure for the current body bounding boxes, finds potentially colliding pairs, and then executes the narrow phase for all such pairs. Generates contact constraints for the solver.
+        /// </summary>
+        /// <param name="dt">Duration of the time step.</param>
+        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
+        public void CollisionDetection(float dt, IThreadDispatcher threadDispatcher = null)
+        {
             ProfilerStart(BroadPhase);
             BroadPhase.Update(threadDispatcher);
             ProfilerEnd(BroadPhase);
-            
+
             ProfilerStart(BroadPhaseOverlapFinder);
             BroadPhaseOverlapFinder.DispatchOverlaps(dt, threadDispatcher);
             ProfilerEnd(BroadPhaseOverlapFinder);
-            
-            ProfilerStart(NarrowPhase);
-            NarrowPhase.Flush(threadDispatcher, threadDispatcher != null && Deterministic);
-            ProfilerEnd(NarrowPhase);
 
+            ProfilerStart(NarrowPhase);
+            NarrowPhase.Flush(threadDispatcher);
+            ProfilerEnd(NarrowPhase);
+        }
+
+        /// <summary>
+        /// Solves all active constraints in the simulation.
+        /// </summary>
+        /// <param name="dt">Duration of the time step.</param>
+        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
+        public void Solve(float dt, IThreadDispatcher threadDispatcher = null)
+        {
             ProfilerStart(Solver);
             if (threadDispatcher == null)
                 Solver.Update(dt);
             else
                 Solver.MultithreadedUpdate(threadDispatcher, BufferPool, dt);
             ProfilerEnd(Solver);
+        }
 
+        /// <summary>
+        /// Incrementally improves body and constraint storage for better performance.
+        /// </summary>
+        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
+        public void IncrementallyOptimizeDataStructures(IThreadDispatcher threadDispatcher = null)
+        {
             //Note that constraint optimization should be performed after body optimization, since body optimization moves the bodies - and so affects the optimal constraint position.
             //TODO: The order of these optimizer stages is performance relevant, even though they don't have any effect on correctness.
             //You may want to try them in different locations to see how they impact cache residency.
@@ -254,7 +262,24 @@ namespace BepuPhysics
             ProfilerStart(SolverBatchCompressor);
             SolverBatchCompressor.Compress(BufferPool, threadDispatcher, threadDispatcher != null && Deterministic);
             ProfilerEnd(SolverBatchCompressor);
-            
+        }
+
+        //TODO: I wonder if people will abuse the dt-as-parameter to the point where we should make it a field instead, like it effectively was in v1.
+        /// <summary>
+        /// Performs one timestep of the given length.
+        /// </summary>
+        /// <remarks>
+        /// Be wary of variable timesteps. They can harm stability. Whenever possible, keep the timestep the same across multiple frames unless you have a specific reason not to.
+        /// </remarks>
+        /// <param name="dt">Duration of the time step.</param>
+        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
+        public void Timestep(float dt, IThreadDispatcher threadDispatcher = null)
+        {
+            ProfilerClear();
+            ProfilerStart(this);
+
+            Timestepper.Timestep(this, dt, threadDispatcher);
+
             ProfilerEnd(this);
         }
 

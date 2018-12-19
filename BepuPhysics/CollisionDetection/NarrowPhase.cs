@@ -188,8 +188,9 @@ namespace BepuPhysics.CollisionDetection
 
         }
 
-        public void Flush(IThreadDispatcher threadDispatcher = null, bool deterministic = false)
+        public void Flush(IThreadDispatcher threadDispatcher = null)
         {
+            var deterministic = threadDispatcher != null && Simulation.Deterministic;
             OnPreflush(threadDispatcher, deterministic);
             //var start = Stopwatch.GetTimestamp();
             flushJobs = new QuickList<NarrowPhaseFlushJob>(128, Pool);
