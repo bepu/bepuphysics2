@@ -18,7 +18,8 @@ namespace BepuPhysics
     {
         void IntegrateBodiesAndUpdateBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
         void PredictBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
-        void IntegrateBodies(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
+        void IntegrateVelocitiesAndUpdateInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
+        void IntegratePoses(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
     }
 
     /// <summary>
@@ -139,7 +140,8 @@ namespace BepuPhysics
 
         Action<int> integrateBodiesAndUpdateBoundingBoxesWorker;
         Action<int> predictBoundingBoxesWorker;
-        Action<int> integrateBodiesWorker;
+        Action<int> integrateVelocitiesWorker;
+        Action<int> integratePosesWorker;
         public PoseIntegrator(Bodies bodies, Shapes shapes, BroadPhase broadPhase, TCallbacks callback)
         {
             this.bodies = bodies;
@@ -148,7 +150,8 @@ namespace BepuPhysics
             this.callbacks = callback;
             integrateBodiesAndUpdateBoundingBoxesWorker = IntegrateBodiesAndUpdateBoundingBoxesWorker;
             predictBoundingBoxesWorker = PredictBoundingBoxesWorker;
-            integrateBodiesWorker = IntegrateBodiesWorker;
+            integrateVelocitiesWorker = IntegrateVelocitiesWorker;
+            integratePosesWorker = IntegratePosesWorker;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -198,14 +201,14 @@ namespace BepuPhysics
                 //has to get is inertia tensors calculated elsewhere. Either they would need to be computed on addition or something- which is a bit gross, but doable-
                 //or we would need to move this calculation to the beginning of the frame to guarantee that all inertias are up to date. 
                 //This would require a scan through all pose memory to support, but if you do it at the same time as AABB update, that's fine- that stage uses the pose too.
-                ref var localInertias = ref Unsafe.Add(ref baseLocalInertia, i);
-                ref var inertias = ref Unsafe.Add(ref baseInertias, i);
-                PoseIntegration.RotateInverseInertia(ref localInertias.InverseInertiaTensor, ref pose.Orientation, out inertias.InverseInertiaTensor);
+                ref var localInertia = ref Unsafe.Add(ref baseLocalInertia, i);
+                ref var inertia = ref Unsafe.Add(ref baseInertias, i);
+                PoseIntegration.RotateInverseInertia(ref localInertia.InverseInertiaTensor, ref pose.Orientation, out inertia.InverseInertiaTensor);
                 //While it's a bit goofy just to copy over the inverse mass every frame even if it doesn't change,
                 //it's virtually always gathered together with the inertia tensor and it really isn't worth a whole extra external system to copy inverse masses only on demand.
-                inertias.InverseMass = localInertias.InverseMass;
+                inertia.InverseMass = localInertia.InverseMass;
                 
-                callbacks.IntegrateVelocity(i, pose, localInertias, workerIndex, ref velocity);
+                callbacks.IntegrateVelocity(i, pose, localInertia, workerIndex, ref velocity);
 
                 //Bounding boxes are accumulated in a scalar fashion, but the actual bounding box calculations are deferred until a sufficient number of collidables are accumulated to make
                 //executing a bundle worthwhile. This does two things: 
@@ -231,6 +234,7 @@ namespace BepuPhysics
             ref var basePoses = ref bodies.ActiveSet.Poses[0];
             ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
             ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
+            ref var baseInertia = ref bodies.Inertias[0];
             ref var baseActivity = ref bodies.ActiveSet.Activity[0];
             ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)
@@ -249,7 +253,31 @@ namespace BepuPhysics
             }
         }
 
-        unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, int workerIndex)
+        unsafe void IntegrateVelocities(int startIndex, int endIndex, float dt, int workerIndex)
+        {
+            ref var basePoses = ref bodies.ActiveSet.Poses[0];
+            ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
+            ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
+            ref var baseInertias = ref bodies.Inertias[0];
+            ref var baseActivity = ref bodies.ActiveSet.Activity[0];
+            for (int i = startIndex; i < endIndex; ++i)
+            {
+                //Integrate position with the latest linear velocity. Note that gravity is integrated afterwards.
+                ref var pose = ref Unsafe.Add(ref basePoses, i);
+                ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
+                
+                ref var localInertia = ref Unsafe.Add(ref baseLocalInertia, i);
+                ref var inertia = ref Unsafe.Add(ref baseInertias, i);
+                PoseIntegration.RotateInverseInertia(ref localInertia.InverseInertiaTensor, ref pose.Orientation, out inertia.InverseInertiaTensor);
+                //While it's a bit goofy just to copy over the inverse mass every frame even if it doesn't change,
+                //it's virtually always gathered together with the inertia tensor and it really isn't worth a whole extra external system to copy inverse masses only on demand.
+                inertia.InverseMass = localInertia.InverseMass;
+
+                callbacks.IntegrateVelocity(i, pose, localInertia, workerIndex, ref velocity);
+            }
+        }
+
+        unsafe void IntegratePoses(int startIndex, int endIndex, float dt, int workerIndex)
         {
             ref var basePoses = ref bodies.ActiveSet.Poses[0];
             ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
@@ -263,20 +291,6 @@ namespace BepuPhysics
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
 
                 PoseIntegration.Integrate(pose, velocity, dt, out pose);
-
-                //Update the inertia tensors for the new orientation.
-                //TODO: If the pose integrator is positioned at the end of an update, the first frame after any out-of-timestep orientation change or local inertia change
-                //has to get is inertia tensors calculated elsewhere. Either they would need to be computed on addition or something- which is a bit gross, but doable-
-                //or we would need to move this calculation to the beginning of the frame to guarantee that all inertias are up to date. 
-                //This would require a scan through all pose memory to support, but if you do it at the same time as AABB update, that's fine- that stage uses the pose too.
-                ref var localInertias = ref Unsafe.Add(ref baseLocalInertia, i);
-                ref var inertias = ref Unsafe.Add(ref baseInertias, i);
-                PoseIntegration.RotateInverseInertia(ref localInertias.InverseInertiaTensor, ref pose.Orientation, out inertias.InverseInertiaTensor);
-                //While it's a bit goofy just to copy over the inverse mass every frame even if it doesn't change,
-                //it's virtually always gathered together with the inertia tensor and it really isn't worth a whole extra external system to copy inverse masses only on demand.
-                inertias.InverseMass = localInertias.InverseMass;
-
-                callbacks.IntegrateVelocity(i, pose, localInertias, workerIndex, ref velocity);
             }
         }
 
@@ -330,12 +344,21 @@ namespace BepuPhysics
             boundingBoxUpdater.Flush();
         }
 
-        void IntegrateBodiesWorker(int workerIndex)
+        void IntegrateVelocitiesWorker(int workerIndex)
         {
             var bodyCount = bodies.ActiveSet.Count;
             while (TryGetJob(bodyCount, out var start, out var exclusiveEnd))
             {
-                IntegrateBodies(start, exclusiveEnd, cachedDt, workerIndex);
+                IntegrateVelocities(start, exclusiveEnd, cachedDt, workerIndex);
+            }
+        }
+
+        void IntegratePosesWorker(int workerIndex)
+        {
+            var bodyCount = bodies.ActiveSet.Count;
+            while (TryGetJob(bodyCount, out var start, out var exclusiveEnd))
+            {
+                IntegratePoses(start, exclusiveEnd, cachedDt, workerIndex);
             }
         }
 
@@ -355,8 +378,7 @@ namespace BepuPhysics
 
         public void IntegrateBodiesAndUpdateBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
-            //For now, the pose integrator (as the first stage that references them in any way) is responsible for ensuring that the bodies have a reasonable size inertias buffer.
-            //Note that ownership (for purposes of final disposal) still belongs to the Bodies set.
+            //Users of this codepath are expecting all integration related work to be done at once, so we need to update inertias.
             bodies.EnsureInertiasCapacity(bodies.ActiveSet.Count);
 
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
@@ -408,10 +430,9 @@ namespace BepuPhysics
 
         }
 
-        public void IntegrateBodies(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
+        public void IntegrateVelocitiesAndUpdateInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
-            //For now, the pose integrator (as the first stage that references them in any way) is responsible for ensuring that the bodies have a reasonable size inertias buffer.
-            //Note that ownership (for purposes of final disposal) still belongs to the Bodies set.
+            //Isolated velocity integration is used by substeppers that also expect an inertia update.
             bodies.EnsureInertiasCapacity(bodies.ActiveSet.Count);
 
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
@@ -421,12 +442,31 @@ namespace BepuPhysics
             {
                 PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
                 this.threadDispatcher = threadDispatcher;
-                threadDispatcher.DispatchWorkers(integrateBodiesWorker);
+                threadDispatcher.DispatchWorkers(integrateVelocitiesWorker);
                 this.threadDispatcher = null;
             }
             else
             {
-                IntegrateBodies(0, bodies.ActiveSet.Count, dt, 0);
+                IntegrateVelocities(0, bodies.ActiveSet.Count, dt, 0);
+            }
+        }
+               
+        public void IntegratePoses(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
+        {
+            //This path is used with some other velocity/bounding box integration that handles world inertia calculation, so we don't need to worry about it.
+            var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
+
+            callbacks.PrepareForIntegration(dt);
+            if (threadDispatcher != null)
+            {
+                PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
+                this.threadDispatcher = threadDispatcher;
+                threadDispatcher.DispatchWorkers(integratePosesWorker);
+                this.threadDispatcher = null;
+            }
+            else
+            {
+                IntegratePoses(0, bodies.ActiveSet.Count, dt, 0);
             }
         }
     }

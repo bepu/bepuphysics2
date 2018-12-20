@@ -196,7 +196,7 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Updates the position, velocity, and bounding boxes of active bodies. Also keeps track of deactivation candidates.
+        /// Updates the position, velocity, world inertia, deactivation candidacy and bounding boxes of active bodies.
         /// </summary>
         /// <param name="dt">Duration of the time step.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
@@ -208,7 +208,7 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Predicts the bounding boxes of active bodies by speculatively integrating velocity. Does not actually modify body velocities. Keeps track of deactivation candidates.
+        /// Predicts the bounding boxes of active bodies by speculatively integrating velocity. Does not actually modify body velocities. Updates deactivation candidacy.
         /// </summary>
         /// <param name="dt">Duration of the time step.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
@@ -220,14 +220,26 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Updates the position and velocity of active bodies. Does not track deactivation candidacy.
+        /// Updates the velocity and world space inertias of active bodies.
         /// </summary>
         /// <param name="dt">Duration of the time step.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        public void IntegrateBodies(float dt, IThreadDispatcher threadDispatcher = null)
+        public void IntegrateVelocitiesAndUpdateInertias(float dt, IThreadDispatcher threadDispatcher = null)
         {
             ProfilerStart(PoseIntegrator);
-            PoseIntegrator.IntegrateBodies(dt, BufferPool, threadDispatcher);
+            PoseIntegrator.IntegrateVelocitiesAndUpdateInertias(dt, BufferPool, threadDispatcher);
+            ProfilerEnd(PoseIntegrator);
+        }
+
+        /// <summary>
+        /// Updates the poses of active bodies.
+        /// </summary>
+        /// <param name="dt">Duration of the time step.</param>
+        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
+        public void IntegratePoses(float dt, IThreadDispatcher threadDispatcher = null)
+        {
+            ProfilerStart(PoseIntegrator);
+            PoseIntegrator.IntegratePoses(dt, BufferPool, threadDispatcher);
             ProfilerEnd(PoseIntegrator);
         }
 

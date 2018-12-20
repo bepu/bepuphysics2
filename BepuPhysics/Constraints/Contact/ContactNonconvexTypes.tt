@@ -87,6 +87,8 @@ for (int i = 0; i < contactCount; ++i)
         {
             return ref prestep.Contact0;
         }
+		
+        public int ContactCount => <#= contactCount #>;
     }
 
     public struct Contact<#= contactCount #>NonconvexAccumulatedImpulses
@@ -126,7 +128,7 @@ for (int i = 0; i < contactCount ; ++i)
     /// Handles the solve iterations of a bunch of <#= contactCount #>-contact nonconvex two body manifold constraints.
     /// </summary>
     public class Contact<#= contactCount #>NonconvexTypeProcessor :
-        TwoBodyTypeProcessor<Contact<#= contactCount #>NonconvexPrestepData, Contact<#= contactCount #>NonconvexProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses,
+        TwoBodyContactTypeProcessor<Contact<#= contactCount #>NonconvexPrestepData, Contact<#= contactCount #>NonconvexProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses,
             ContactNonconvexTwoBodyFunctions<Contact<#= contactCount #>NonconvexPrestepData, Contact<#= contactCount #>NonconvexProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -205,6 +207,8 @@ for (int i = 0; i < contactCount ; ++i)
         {
             return ref prestep.Contact0;
         }
+				
+        public int ContactCount => <#= contactCount #>;
     }
 
     public unsafe struct Contact<#= contactCount #>NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact<#= contactCount #>NonconvexOneBodyProjection>
@@ -235,7 +239,7 @@ for (int i = 0; i < contactCount ; ++i)
     /// Handles the solve iterations of a bunch of <#= contactCount #>-contact nonconvex one body manifold constraints.
     /// </summary>
     public class Contact<#= contactCount #>NonconvexOneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact<#= contactCount #>NonconvexOneBodyPrestepData, Contact<#= contactCount #>NonconvexOneBodyProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses,
+        OneBodyContactTypeProcessor<Contact<#= contactCount #>NonconvexOneBodyPrestepData, Contact<#= contactCount #>NonconvexOneBodyProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses,
             ContactNonconvexOneBodyFunctions<Contact<#= contactCount #>NonconvexOneBodyPrestepData, Contact<#= contactCount #>NonconvexOneBodyProjection, Contact<#= contactCount #>NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.

@@ -31,11 +31,13 @@ namespace BepuPhysics.Constraints.Contact
     }
     public interface INonconvexTwoBodyContactPrestepWide<TPrestep> where TPrestep : struct, INonconvexTwoBodyContactPrestepWide<TPrestep>
     {
+        int ContactCount { get; }
         ref NonconvexTwoBodyContactPrestepCommon GetCommonProperties(ref TPrestep prestep);
         ref NonconvexPrestepData GetFirstContact(ref TPrestep prestep);
     }
     public interface INonconvexOneBodyContactPrestepWide<TPrestep> where TPrestep : struct, INonconvexOneBodyContactPrestepWide<TPrestep>
     {
+        int ContactCount { get; }
         ref NonconvexOneBodyContactPrestepCommon GetCommonProperties(ref TPrestep prestep);
         ref NonconvexPrestepData GetFirstContact(ref TPrestep prestep);
     }
@@ -217,7 +219,7 @@ namespace BepuPhysics.Constraints.Contact
     }
 
     public struct ContactNonconvexOneBodyFunctions<TPrestep, TProjection, TAccumulatedImpulses> :
-        IOneBodyConstraintFunctions<TPrestep, TProjection, TAccumulatedImpulses>
+        IOneBodyContactConstraintFunctions<TPrestep, TProjection, TAccumulatedImpulses>
         where TPrestep : struct, INonconvexOneBodyContactPrestepWide<TPrestep>
         where TProjection : struct, INonconvexOneBodyProjection<TProjection>
         where TAccumulatedImpulses : struct
@@ -289,10 +291,21 @@ namespace BepuPhysics.Constraints.Contact
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocity, ref TPrestep prestep)
+        {
+            ref var prestepCommon = ref prestep.GetCommonProperties(ref prestep);
+            ref var prestepContactStart = ref prestep.GetFirstContact(ref prestep);
+            for (int i = 0; i < prestep.ContactCount; ++i)
+            {
+                ref var prestepContact = ref Unsafe.Add(ref prestepContactStart, i);
+                PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestepContact.Offset, prestepContact.Normal, velocity, ref prestepContact.Depth);
+            }
+        }
     }
 
     public struct ContactNonconvexTwoBodyFunctions<TPrestep, TProjection, TAccumulatedImpulses> :
-        IConstraintFunctions<TPrestep, TProjection, TAccumulatedImpulses>
+        IContactConstraintFunctions<TPrestep, TProjection, TAccumulatedImpulses>
         where TPrestep : struct, INonconvexTwoBodyContactPrestepWide<TPrestep>
         where TProjection : struct, INonconvexTwoBodyProjection<TProjection>
         where TAccumulatedImpulses : struct
@@ -325,7 +338,6 @@ namespace BepuPhysics.Constraints.Contact
                     prestepContact.Offset, contactOffsetB, prestepContact.Normal, prestepContact.Depth, 
                     positionErrorToVelocity, effectiveMassCFMScale, prestepCommon.MaximumRecoveryVelocity, inverseDt,
                     out projectionContact.Penetration);
-
             }
         }
 
@@ -366,5 +378,16 @@ namespace BepuPhysics.Constraints.Contact
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref TPrestep prestep)
+        {
+            ref var prestepCommon = ref prestep.GetCommonProperties(ref prestep);
+            ref var prestepContactStart = ref prestep.GetFirstContact(ref prestep);
+            for (int i = 0; i < prestep.ContactCount; ++i)
+            {
+                ref var prestepContact = ref Unsafe.Add(ref prestepContactStart, i);
+                PenetrationLimit.UpdatePenetrationDepth(dt, prestepContact.Offset, prestepCommon.OffsetB, prestepContact.Normal, velocityA, velocityB, ref prestepContact.Depth);
+            }
+        }
     }
 }

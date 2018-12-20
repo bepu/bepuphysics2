@@ -71,6 +71,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+		
+        public int ContactCount => 2;
     }
 
     public struct Contact2NonconvexAccumulatedImpulses
@@ -104,7 +106,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 2-contact nonconvex two body manifold constraints.
     /// </summary>
     public class Contact2NonconvexTypeProcessor :
-        TwoBodyTypeProcessor<Contact2NonconvexPrestepData, Contact2NonconvexProjection, Contact2NonconvexAccumulatedImpulses,
+        TwoBodyContactTypeProcessor<Contact2NonconvexPrestepData, Contact2NonconvexProjection, Contact2NonconvexAccumulatedImpulses,
             ContactNonconvexTwoBodyFunctions<Contact2NonconvexPrestepData, Contact2NonconvexProjection, Contact2NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -177,6 +179,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+				
+        public int ContactCount => 2;
     }
 
     public unsafe struct Contact2NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact2NonconvexOneBodyProjection>
@@ -204,7 +208,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 2-contact nonconvex one body manifold constraints.
     /// </summary>
     public class Contact2NonconvexOneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact2NonconvexOneBodyPrestepData, Contact2NonconvexOneBodyProjection, Contact2NonconvexAccumulatedImpulses,
+        OneBodyContactTypeProcessor<Contact2NonconvexOneBodyPrestepData, Contact2NonconvexOneBodyProjection, Contact2NonconvexAccumulatedImpulses,
             ContactNonconvexOneBodyFunctions<Contact2NonconvexOneBodyPrestepData, Contact2NonconvexOneBodyProjection, Contact2NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -281,6 +285,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+		
+        public int ContactCount => 3;
     }
 
     public struct Contact3NonconvexAccumulatedImpulses
@@ -316,7 +322,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 3-contact nonconvex two body manifold constraints.
     /// </summary>
     public class Contact3NonconvexTypeProcessor :
-        TwoBodyTypeProcessor<Contact3NonconvexPrestepData, Contact3NonconvexProjection, Contact3NonconvexAccumulatedImpulses,
+        TwoBodyContactTypeProcessor<Contact3NonconvexPrestepData, Contact3NonconvexProjection, Contact3NonconvexAccumulatedImpulses,
             ContactNonconvexTwoBodyFunctions<Contact3NonconvexPrestepData, Contact3NonconvexProjection, Contact3NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -391,6 +397,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+				
+        public int ContactCount => 3;
     }
 
     public unsafe struct Contact3NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact3NonconvexOneBodyProjection>
@@ -419,7 +427,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 3-contact nonconvex one body manifold constraints.
     /// </summary>
     public class Contact3NonconvexOneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact3NonconvexOneBodyPrestepData, Contact3NonconvexOneBodyProjection, Contact3NonconvexAccumulatedImpulses,
+        OneBodyContactTypeProcessor<Contact3NonconvexOneBodyPrestepData, Contact3NonconvexOneBodyProjection, Contact3NonconvexAccumulatedImpulses,
             ContactNonconvexOneBodyFunctions<Contact3NonconvexOneBodyPrestepData, Contact3NonconvexOneBodyProjection, Contact3NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -498,6 +506,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+		
+        public int ContactCount => 4;
     }
 
     public struct Contact4NonconvexAccumulatedImpulses
@@ -535,7 +545,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 4-contact nonconvex two body manifold constraints.
     /// </summary>
     public class Contact4NonconvexTypeProcessor :
-        TwoBodyTypeProcessor<Contact4NonconvexPrestepData, Contact4NonconvexProjection, Contact4NonconvexAccumulatedImpulses,
+        TwoBodyContactTypeProcessor<Contact4NonconvexPrestepData, Contact4NonconvexProjection, Contact4NonconvexAccumulatedImpulses,
             ContactNonconvexTwoBodyFunctions<Contact4NonconvexPrestepData, Contact4NonconvexProjection, Contact4NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -612,6 +622,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+				
+        public int ContactCount => 4;
     }
 
     public unsafe struct Contact4NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact4NonconvexOneBodyProjection>
@@ -641,7 +653,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 4-contact nonconvex one body manifold constraints.
     /// </summary>
     public class Contact4NonconvexOneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact4NonconvexOneBodyPrestepData, Contact4NonconvexOneBodyProjection, Contact4NonconvexAccumulatedImpulses,
+        OneBodyContactTypeProcessor<Contact4NonconvexOneBodyPrestepData, Contact4NonconvexOneBodyProjection, Contact4NonconvexAccumulatedImpulses,
             ContactNonconvexOneBodyFunctions<Contact4NonconvexOneBodyPrestepData, Contact4NonconvexOneBodyProjection, Contact4NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -722,6 +734,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+		
+        public int ContactCount => 5;
     }
 
     public struct Contact5NonconvexAccumulatedImpulses
@@ -761,7 +775,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 5-contact nonconvex two body manifold constraints.
     /// </summary>
     public class Contact5NonconvexTypeProcessor :
-        TwoBodyTypeProcessor<Contact5NonconvexPrestepData, Contact5NonconvexProjection, Contact5NonconvexAccumulatedImpulses,
+        TwoBodyContactTypeProcessor<Contact5NonconvexPrestepData, Contact5NonconvexProjection, Contact5NonconvexAccumulatedImpulses,
             ContactNonconvexTwoBodyFunctions<Contact5NonconvexPrestepData, Contact5NonconvexProjection, Contact5NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -840,6 +854,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+				
+        public int ContactCount => 5;
     }
 
     public unsafe struct Contact5NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact5NonconvexOneBodyProjection>
@@ -870,7 +886,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 5-contact nonconvex one body manifold constraints.
     /// </summary>
     public class Contact5NonconvexOneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact5NonconvexOneBodyPrestepData, Contact5NonconvexOneBodyProjection, Contact5NonconvexAccumulatedImpulses,
+        OneBodyContactTypeProcessor<Contact5NonconvexOneBodyPrestepData, Contact5NonconvexOneBodyProjection, Contact5NonconvexAccumulatedImpulses,
             ContactNonconvexOneBodyFunctions<Contact5NonconvexOneBodyPrestepData, Contact5NonconvexOneBodyProjection, Contact5NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -953,6 +969,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+		
+        public int ContactCount => 6;
     }
 
     public struct Contact6NonconvexAccumulatedImpulses
@@ -994,7 +1012,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 6-contact nonconvex two body manifold constraints.
     /// </summary>
     public class Contact6NonconvexTypeProcessor :
-        TwoBodyTypeProcessor<Contact6NonconvexPrestepData, Contact6NonconvexProjection, Contact6NonconvexAccumulatedImpulses,
+        TwoBodyContactTypeProcessor<Contact6NonconvexPrestepData, Contact6NonconvexProjection, Contact6NonconvexAccumulatedImpulses,
             ContactNonconvexTwoBodyFunctions<Contact6NonconvexPrestepData, Contact6NonconvexProjection, Contact6NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -1075,6 +1093,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+				
+        public int ContactCount => 6;
     }
 
     public unsafe struct Contact6NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact6NonconvexOneBodyProjection>
@@ -1106,7 +1126,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 6-contact nonconvex one body manifold constraints.
     /// </summary>
     public class Contact6NonconvexOneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact6NonconvexOneBodyPrestepData, Contact6NonconvexOneBodyProjection, Contact6NonconvexAccumulatedImpulses,
+        OneBodyContactTypeProcessor<Contact6NonconvexOneBodyPrestepData, Contact6NonconvexOneBodyProjection, Contact6NonconvexAccumulatedImpulses,
             ContactNonconvexOneBodyFunctions<Contact6NonconvexOneBodyPrestepData, Contact6NonconvexOneBodyProjection, Contact6NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -1191,6 +1211,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+		
+        public int ContactCount => 7;
     }
 
     public struct Contact7NonconvexAccumulatedImpulses
@@ -1234,7 +1256,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 7-contact nonconvex two body manifold constraints.
     /// </summary>
     public class Contact7NonconvexTypeProcessor :
-        TwoBodyTypeProcessor<Contact7NonconvexPrestepData, Contact7NonconvexProjection, Contact7NonconvexAccumulatedImpulses,
+        TwoBodyContactTypeProcessor<Contact7NonconvexPrestepData, Contact7NonconvexProjection, Contact7NonconvexAccumulatedImpulses,
             ContactNonconvexTwoBodyFunctions<Contact7NonconvexPrestepData, Contact7NonconvexProjection, Contact7NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -1317,6 +1339,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+				
+        public int ContactCount => 7;
     }
 
     public unsafe struct Contact7NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact7NonconvexOneBodyProjection>
@@ -1349,7 +1373,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 7-contact nonconvex one body manifold constraints.
     /// </summary>
     public class Contact7NonconvexOneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact7NonconvexOneBodyPrestepData, Contact7NonconvexOneBodyProjection, Contact7NonconvexAccumulatedImpulses,
+        OneBodyContactTypeProcessor<Contact7NonconvexOneBodyPrestepData, Contact7NonconvexOneBodyProjection, Contact7NonconvexAccumulatedImpulses,
             ContactNonconvexOneBodyFunctions<Contact7NonconvexOneBodyPrestepData, Contact7NonconvexOneBodyProjection, Contact7NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -1436,6 +1460,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+		
+        public int ContactCount => 8;
     }
 
     public struct Contact8NonconvexAccumulatedImpulses
@@ -1481,7 +1507,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 8-contact nonconvex two body manifold constraints.
     /// </summary>
     public class Contact8NonconvexTypeProcessor :
-        TwoBodyTypeProcessor<Contact8NonconvexPrestepData, Contact8NonconvexProjection, Contact8NonconvexAccumulatedImpulses,
+        TwoBodyContactTypeProcessor<Contact8NonconvexPrestepData, Contact8NonconvexProjection, Contact8NonconvexAccumulatedImpulses,
             ContactNonconvexTwoBodyFunctions<Contact8NonconvexPrestepData, Contact8NonconvexProjection, Contact8NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
@@ -1566,6 +1592,8 @@ namespace BepuPhysics.Constraints.Contact
         {
             return ref prestep.Contact0;
         }
+				
+        public int ContactCount => 8;
     }
 
     public unsafe struct Contact8NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact8NonconvexOneBodyProjection>
@@ -1599,7 +1627,7 @@ namespace BepuPhysics.Constraints.Contact
     /// Handles the solve iterations of a bunch of 8-contact nonconvex one body manifold constraints.
     /// </summary>
     public class Contact8NonconvexOneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact8NonconvexOneBodyPrestepData, Contact8NonconvexOneBodyProjection, Contact8NonconvexAccumulatedImpulses,
+        OneBodyContactTypeProcessor<Contact8NonconvexOneBodyPrestepData, Contact8NonconvexOneBodyProjection, Contact8NonconvexAccumulatedImpulses,
             ContactNonconvexOneBodyFunctions<Contact8NonconvexOneBodyPrestepData, Contact8NonconvexOneBodyProjection, Contact8NonconvexAccumulatedImpulses>>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.

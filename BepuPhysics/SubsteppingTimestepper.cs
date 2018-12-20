@@ -7,18 +7,18 @@ using BepuUtilities;
 namespace BepuPhysics
 {
     /// <summary>
-    /// Updates the simulation in the order of: sleeper -> body bounding boxes -> collision detection -> LOOP { contact data update (if on iteration > 0) -> integrate body position and velocity -> solver } -> data structure optimization.
+    /// Updates the simulation in the order of: sleeper -> body bounding boxes -> collision detection -> LOOP { contact data update (if on iteration > 0) -> solver -> integrate body position and velocity } -> data structure optimization.
     /// Each inner loop execution simulates a sub-timestep of length dt/substepCount.
     /// Useful for simulations with difficult to solve constraint systems that need shorter timestep durations but which don't require high frequency collision detection.
     /// </summary>
-    public class PositionFirstSubsteppingTimestepper : ITimestepper
+    public class SubsteppingTimestepper : ITimestepper
     {
         /// <summary>
         /// Gets or sets the number of substeps to execute during each timestep.
         /// </summary>
         public int SubstepCount { get; set; }
-        
-        public PositionFirstSubsteppingTimestepper(int substepCount)
+
+        public SubsteppingTimestepper(int substepCount)
         {
             SubstepCount = substepCount;
         }
@@ -43,9 +43,9 @@ namespace BepuPhysics
                     //Note that we do not run this on the first iteration- the actual collision detection above takes care of it.
                     simulation.IncrementallyUpdateContactConstraints(substepDt, threadDispatcher);
                 }
-                simulation.IntegrateBodies(substepDt, threadDispatcher);
+                simulation.IntegrateVelocitiesAndUpdateInertias(substepDt, threadDispatcher);
                 simulation.Solve(substepDt, threadDispatcher);
-
+                simulation.IntegratePoses(substepDt, threadDispatcher);
             }
 
             simulation.IncrementallyOptimizeDataStructures(threadDispatcher);
