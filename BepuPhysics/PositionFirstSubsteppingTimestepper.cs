@@ -41,7 +41,7 @@ namespace BepuPhysics
                     //This takes the place of collision detection for the substeps. It uses the current velocity to update pentration depths.
                     //It's definitely an approximation, but it's important for avoiding some obviously weird behavior.
                     //Note that we do not run this on the first iteration- the actual collision detection above takes care of it.
-                    //simulation.IncrementallyUpdateContactData(substepDt, threadDispatcher);
+                    simulation.IncrementallyUpdateContactConstraints(substepDt, threadDispatcher);
                 }
                 simulation.IntegrateBodies(substepDt, threadDispatcher);
                 simulation.Solve(substepDt, threadDispatcher);

@@ -179,7 +179,8 @@ namespace BepuPhysics
         }
 
 
-        Action<int> workDelegate;
+        Action<int> solveWorker;
+        Action<int> incrementalContactUpdateWorker;
         public Solver(Bodies bodies, BufferPool pool, int iterationCount, int fallbackBatchThreshold,
             int initialCapacity,
             int initialIslandCapacity,
@@ -195,7 +196,8 @@ namespace BepuPhysics
             ActiveSet = new ConstraintSet(pool, fallbackBatchThreshold + 1);
             batchReferencedHandles = new QuickList<IndexSet>(fallbackBatchThreshold + 1, pool);
             pool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
-            workDelegate = Work;
+            solveWorker = SolveWorker;
+            incrementalContactUpdateWorker = IncrementalContactUpdateWorker;
         }
 
         public void Register<TDescription>() where TDescription : struct, IConstraintDescription<TDescription>
@@ -1040,80 +1042,6 @@ namespace BepuPhysics
             fallbackExists = ActiveSet.Batches.Count > FallbackBatchThreshold;
             Debug.Assert(ActiveSet.Batches.Count <= FallbackBatchThreshold + 1,
                 "There cannot be more than FallbackBatchThreshold + 1 constraint batches because that +1 is the fallback batch which contains all remaining constraints.");
-        }
-
-        public void Update(float dt)
-        {
-            var inverseDt = 1f / dt;
-            ref var activeSet = ref ActiveSet;
-            GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
-            for (int i = 0; i < synchronizedBatchCount; ++i)
-            {
-                ref var batch = ref activeSet.Batches[i];
-                for (int j = 0; j < batch.TypeBatches.Count; ++j)
-                {
-                    ref var typeBatch = ref batch.TypeBatches[j];
-                    TypeProcessors[typeBatch.TypeId].Prestep(ref typeBatch, bodies, dt, inverseDt, 0, typeBatch.BundleCount);
-                }
-            }
-            if (fallbackExists)
-            {
-                ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
-                for (int j = 0; j < batch.TypeBatches.Count; ++j)
-                {
-                    ref var typeBatch = ref batch.TypeBatches[j];
-                    TypeProcessors[typeBatch.TypeId].JacobiPrestep(ref typeBatch, bodies, ref activeSet.Fallback, dt, inverseDt, 0, typeBatch.BundleCount);
-                }
-            }
-            //TODO: May want to consider executing warmstart immediately following the prestep. Multithreading can't do that, so there could be some bitwise differences introduced.
-            //On the upside, it would make use of cached data.
-            for (int i = 0; i < synchronizedBatchCount; ++i)
-            {
-                ref var batch = ref activeSet.Batches[i];
-                for (int j = 0; j < batch.TypeBatches.Count; ++j)
-                {
-                    ref var typeBatch = ref batch.TypeBatches[j];
-                    TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, 0, typeBatch.BundleCount);
-                }
-            }
-            Buffer<FallbackTypeBatchResults> fallbackResults = default;
-            if (fallbackExists)
-            {
-                ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
-                FallbackBatch.AllocateResults(this, pool, ref batch, out fallbackResults);
-                for (int j = 0; j < batch.TypeBatches.Count; ++j)
-                {
-                    ref var typeBatch = ref batch.TypeBatches[j];
-                    TypeProcessors[typeBatch.TypeId].JacobiWarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
-                }
-                activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
-            }
-            for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
-            {
-                for (int i = 0; i < synchronizedBatchCount; ++i)
-                {
-                    ref var batch = ref activeSet.Batches[i];
-                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
-                    {
-                        ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, 0, typeBatch.BundleCount);
-                    }
-                }
-                if (fallbackExists)
-                {
-                    ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
-                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
-                    {
-                        ref var typeBatch = ref batch.TypeBatches[j];
-                        TypeProcessors[typeBatch.TypeId].JacobiSolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
-                    }
-                    activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
-                }
-            }
-            if (fallbackExists)
-            {
-                FallbackBatch.DisposeResults(this, pool, ref activeSet.Batches[FallbackBatchThreshold], ref fallbackResults);
-            }
         }
 
         //Note that none of these affect the constraint batch estimates or type batch estimates. The assumption is that those are too small to bother with.

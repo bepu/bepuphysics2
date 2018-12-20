@@ -252,6 +252,18 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Uses the current body velocities to incrementally update all active contact constraint penetration depths.
+        /// </summary>
+        /// <param name="dt">Duration of the time step.</param>
+        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
+        public void IncrementallyUpdateContactConstraints(float dt, IThreadDispatcher threadDispatcher = null)
+        {
+            ProfilerStart(Solver);
+            Solver.IncrementallyUpdateContactConstraints(dt, threadDispatcher);
+            ProfilerEnd(Solver);
+        }
+
+        /// <summary>
         /// Solves all active constraints in the simulation.
         /// </summary>
         /// <param name="dt">Duration of the time step.</param>
@@ -259,10 +271,7 @@ namespace BepuPhysics
         public void Solve(float dt, IThreadDispatcher threadDispatcher = null)
         {
             ProfilerStart(Solver);
-            if (threadDispatcher == null)
-                Solver.Update(dt);
-            else
-                Solver.MultithreadedUpdate(threadDispatcher, BufferPool, dt);
+            Solver.Solve(dt, threadDispatcher);
             ProfilerEnd(Solver);
         }
 

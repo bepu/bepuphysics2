@@ -94,8 +94,31 @@ namespace BepuPhysics
             public int End;
         }
 
+        interface ITypeBatchSolveFilter
+        {
+            bool AllowFallback { get; }
+            bool AllowType(int typeId);
+        }
 
-        private unsafe void BuildWorkBlocks(BufferPool pool, int minimumBlockSizeInBundles, int targetBlocksPerBatch)
+        struct MainSolveFilter : ITypeBatchSolveFilter
+        {
+            public bool AllowFallback
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get
+                {
+                    return true;
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool AllowType(int typeId)
+            {
+                return true;
+            }
+        }
+
+        private unsafe void BuildWorkBlocks<TTypeBatchFilter>(BufferPool pool, int minimumBlockSizeInBundles, int targetBlocksPerBatch, ref TTypeBatchFilter typeBatchFilter) where TTypeBatchFilter : ITypeBatchSolveFilter
         {
             ref var activeSet = ref ActiveSet;
             context.ConstraintBlocks.Blocks = new QuickList<WorkBlock>(targetBlocksPerBatch * activeSet.Batches.Count, pool);
@@ -106,12 +129,19 @@ namespace BepuPhysics
                 var bundleCount = 0;
                 for (int typeBatchIndex = 0; typeBatchIndex < typeBatches.Count; ++typeBatchIndex)
                 {
-                    bundleCount += typeBatches[typeBatchIndex].BundleCount;
+                    if (typeBatchFilter.AllowType(typeBatches[typeBatchIndex].TypeId))
+                    {
+                        bundleCount += typeBatches[typeBatchIndex].BundleCount;
+                    }
                 }
 
                 for (int typeBatchIndex = 0; typeBatchIndex < typeBatches.Count; ++typeBatchIndex)
                 {
                     ref var typeBatch = ref typeBatches[typeBatchIndex];
+                    if (!typeBatchFilter.AllowType(typeBatch.TypeId))
+                    {
+                        continue;
+                    }
                     var typeBatchSizeFraction = typeBatch.BundleCount / (float)bundleCount;
                     var typeBatchMaximumBlockCount = typeBatch.BundleCount / (float)minimumBlockSizeInBundles;
                     var typeBatchBlockCount = Math.Max(1, (int)Math.Min(typeBatchMaximumBlockCount, targetBlocksPerBatch * typeBatchSizeFraction));
@@ -133,7 +163,7 @@ namespace BepuPhysics
                 }
                 context.BatchBoundaries[batchIndex] = context.ConstraintBlocks.Blocks.Count;
             }
-            if (activeSet.Batches.Count > FallbackBatchThreshold)
+            if (typeBatchFilter.AllowFallback && activeSet.Batches.Count > FallbackBatchThreshold)
             {
                 //There is a fallback batch, so we need to create fallback work blocks for it.
                 var blockCount = Math.Min(targetBlocksPerBatch, ActiveSet.Fallback.BodyCount);
@@ -552,7 +582,7 @@ namespace BepuPhysics
             return offset + blocksPerWorker * workerIndex + Math.Min(remainder, workerIndex);
         }
 
-        void Work(int workerIndex)
+        void SolveWorker(int workerIndex)
         {
             int prestepStart = GetUniformlyDistributedStart(workerIndex, context.ConstraintBlocks.Blocks.Count, context.WorkerCount, 0);
             int fallbackStart = GetUniformlyDistributedStart(workerIndex, context.FallbackBlocks.Blocks.Count, context.WorkerCount, 0);
@@ -676,10 +706,11 @@ namespace BepuPhysics
             }
 
         }
-
-        public void MultithreadedUpdate(IThreadDispatcher threadPool, BufferPool bufferPool, float dt)
+        
+        void ExecuteMultithreaded<TTypeBatchSolveFilter>(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate) where TTypeBatchSolveFilter : ITypeBatchSolveFilter
         {
-            var workerCount = context.WorkerCount = threadPool.ThreadCount;
+            var filter = default(TTypeBatchSolveFilter);
+            var workerCount = context.WorkerCount = threadDispatcher.ThreadCount;
             context.WorkerCompletedCount = 0;
             context.Dt = dt;
             //First build a set of work blocks.
@@ -691,19 +722,19 @@ namespace BepuPhysics
             const int minimumBlockSizeInBundles = 3;
 
             var targetBlocksPerBatch = workerCount * targetBlocksPerBatchPerWorker;
-            BuildWorkBlocks(bufferPool, minimumBlockSizeInBundles, targetBlocksPerBatch);
+            BuildWorkBlocks(pool, minimumBlockSizeInBundles, targetBlocksPerBatch, ref filter);
             ValidateWorkBlocks();
 
             //Note the clear; the block claims must be initialized to 0 so that the first worker stage knows that the data is available to claim.
-            context.ConstraintBlocks.CreateClaims(bufferPool);
-            if (ActiveSet.Batches.Count > FallbackBatchThreshold)
+            context.ConstraintBlocks.CreateClaims(pool);
+            if (filter.AllowFallback && ActiveSet.Batches.Count > FallbackBatchThreshold)
             {
                 Debug.Assert(context.FallbackBlocks.Blocks.Count > 0);
-                FallbackBatch.AllocateResults(this, bufferPool, ref ActiveSet.Batches[FallbackBatchThreshold], out context.FallbackResults);
-                context.FallbackBlocks.CreateClaims(bufferPool);
+                FallbackBatch.AllocateResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], out context.FallbackResults);
+                context.FallbackBlocks.CreateClaims(pool);
             }
-            bufferPool.SpecializeFor<WorkerBounds>().Take(workerCount, out context.WorkerBoundsA);
-            bufferPool.SpecializeFor<WorkerBounds>().Take(workerCount, out context.WorkerBoundsB);
+            pool.SpecializeFor<WorkerBounds>().Take(workerCount, out context.WorkerBoundsA);
+            pool.SpecializeFor<WorkerBounds>().Take(workerCount, out context.WorkerBoundsB);
             //The worker bounds front buffer should be initialized to avoid trash interval data from messing up the workstealing.
             //The worker bounds back buffer will be cleared by the worker before moving on to the next stage.
             for (int i = 0; i < workerCount; ++i)
@@ -713,19 +744,100 @@ namespace BepuPhysics
 
             //While we could be a little more aggressive about culling work with this condition, it doesn't matter much. Have to do it for correctness; worker relies on it.
             if (ActiveSet.Batches.Count > 0)
-                threadPool.DispatchWorkers(workDelegate);
+                threadDispatcher.DispatchWorkers(workDelegate);
 
-            context.ConstraintBlocks.Dispose(bufferPool);
-            if (ActiveSet.Batches.Count > FallbackBatchThreshold)
+            context.ConstraintBlocks.Dispose(pool);
+            if (filter.AllowFallback && ActiveSet.Batches.Count > FallbackBatchThreshold)
             {
-                FallbackBatch.DisposeResults(this, bufferPool, ref ActiveSet.Batches[FallbackBatchThreshold], ref context.FallbackResults);
-                context.FallbackBlocks.Dispose(bufferPool);
+                FallbackBatch.DisposeResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], ref context.FallbackResults);
+                context.FallbackBlocks.Dispose(pool);
             }
-            bufferPool.Return(ref context.BatchBoundaries);
-            bufferPool.Return(ref context.WorkerBoundsA);
-            bufferPool.Return(ref context.WorkerBoundsB);
+            pool.Return(ref context.BatchBoundaries);
+            pool.Return(ref context.WorkerBoundsA);
+            pool.Return(ref context.WorkerBoundsB);
         }
 
+
+        public void Solve(float dt, IThreadDispatcher threadDispatcher = null)
+        {
+            if (threadDispatcher == null)
+            {
+                var inverseDt = 1f / dt;
+                ref var activeSet = ref ActiveSet;
+                GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
+                for (int i = 0; i < synchronizedBatchCount; ++i)
+                {
+                    ref var batch = ref activeSet.Batches[i];
+                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                    {
+                        ref var typeBatch = ref batch.TypeBatches[j];
+                        TypeProcessors[typeBatch.TypeId].Prestep(ref typeBatch, bodies, dt, inverseDt, 0, typeBatch.BundleCount);
+                    }
+                }
+                if (fallbackExists)
+                {
+                    ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                    {
+                        ref var typeBatch = ref batch.TypeBatches[j];
+                        TypeProcessors[typeBatch.TypeId].JacobiPrestep(ref typeBatch, bodies, ref activeSet.Fallback, dt, inverseDt, 0, typeBatch.BundleCount);
+                    }
+                }
+                //TODO: May want to consider executing warmstart immediately following the prestep. Multithreading can't do that, so there could be some bitwise differences introduced.
+                //On the upside, it would make use of cached data.
+                for (int i = 0; i < synchronizedBatchCount; ++i)
+                {
+                    ref var batch = ref activeSet.Batches[i];
+                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                    {
+                        ref var typeBatch = ref batch.TypeBatches[j];
+                        TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, 0, typeBatch.BundleCount);
+                    }
+                }
+                Buffer<FallbackTypeBatchResults> fallbackResults = default;
+                if (fallbackExists)
+                {
+                    ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                    FallbackBatch.AllocateResults(this, pool, ref batch, out fallbackResults);
+                    for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                    {
+                        ref var typeBatch = ref batch.TypeBatches[j];
+                        TypeProcessors[typeBatch.TypeId].JacobiWarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
+                    }
+                    activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
+                }
+                for (int iterationIndex = 0; iterationIndex < iterationCount; ++iterationIndex)
+                {
+                    for (int i = 0; i < synchronizedBatchCount; ++i)
+                    {
+                        ref var batch = ref activeSet.Batches[i];
+                        for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                        {
+                            ref var typeBatch = ref batch.TypeBatches[j];
+                            TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, 0, typeBatch.BundleCount);
+                        }
+                    }
+                    if (fallbackExists)
+                    {
+                        ref var batch = ref activeSet.Batches[FallbackBatchThreshold];
+                        for (int j = 0; j < batch.TypeBatches.Count; ++j)
+                        {
+                            ref var typeBatch = ref batch.TypeBatches[j];
+                            TypeProcessors[typeBatch.TypeId].JacobiSolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, ref fallbackResults[j], 0, typeBatch.BundleCount);
+                        }
+                        activeSet.Fallback.ScatterVelocities(bodies, this, ref fallbackResults, 0, activeSet.Fallback.BodyCount);
+                    }
+                }
+                if (fallbackExists)
+                {
+                    FallbackBatch.DisposeResults(this, pool, ref activeSet.Batches[FallbackBatchThreshold], ref fallbackResults);
+                }
+            }
+            else
+            {
+                ExecuteMultithreaded<MainSolveFilter>(dt, threadDispatcher, solveWorker);
+            }
+        }
 
     }
 }
