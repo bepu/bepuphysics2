@@ -16,7 +16,9 @@ namespace BepuPhysics
 {
     public interface IPoseIntegrator
     {
-        void Update(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
+        void IntegrateBodiesAndUpdateBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
+        void PredictBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
+        void IntegrateBodies(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
     }
 
     /// <summary>
@@ -25,20 +27,20 @@ namespace BepuPhysics
     public interface IPoseIntegratorCallbacks
     {
         /// <summary>
-        /// Called prior to integrating the simulation's active bodies.
+        /// Called prior to integrating the simulation's active bodies. When used with a substepping timestepper, this could be called multiple times per frame with different time step values.
         /// </summary>
-        /// <param name="dt">Current time step duration used by the simulation.</param>
+        /// <param name="dt">Current time step duration.</param>
         void PrepareForIntegration(float dt);
 
         /// <summary>
-        /// Callback called for each active body within the PoseIntegrator. Called after the pose has been integrated for the current velocity.
+        /// Callback called for each active body within the simulation during body integration.
         /// </summary>
         /// <param name="bodyIndex">Index of the body being visited.</param>
-        /// <param name="pose">Reference to the body's current pose.</param>
-        /// <param name="velocity">Reference to the body's current velocity.</param>
-        /// <param name="inertia">Reference to the body's current inertia.</param>
+        /// <param name="pose">Body's current pose.</param>
+        /// <param name="localInertia">Body's current local inertia.</param>
         /// <param name="workerIndex">Index of the worker thread processing this body.</param>
-        void IntegrateVelocity(int bodyIndex, ref RigidPose pose, ref BodyVelocity velocity, ref BodyInertia inertia, int workerIndex);
+        /// <param name="velocity">Reference to the body's current velocity to integrate.</param>
+        void IntegrateVelocity(int bodyIndex, in RigidPose pose, in BodyInertia localInertia, int workerIndex, ref BodyVelocity velocity);
     }
 
     /// <summary>
@@ -135,23 +137,48 @@ namespace BepuPhysics
 
         TCallbacks callbacks;
 
-        Action<int> workerDelegate;
+        Action<int> integrateBodiesAndUpdateBoundingBoxesWorker;
+        Action<int> predictBoundingBoxesWorker;
+        Action<int> integrateBodiesWorker;
         public PoseIntegrator(Bodies bodies, Shapes shapes, BroadPhase broadPhase, TCallbacks callback)
         {
             this.bodies = bodies;
             this.shapes = shapes;
             this.broadPhase = broadPhase;
             this.callbacks = callback;
-            workerDelegate = Worker;
-        }               
+            integrateBodiesAndUpdateBoundingBoxesWorker = IntegrateBodiesAndUpdateBoundingBoxesWorker;
+            predictBoundingBoxesWorker = PredictBoundingBoxesWorker;
+            integrateBodiesWorker = IntegrateBodiesWorker;
+        }
 
-        unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void UpdateSleepCandidacy(ref BodyVelocity velocity, ref BodyActivity activity)
+        {
+            var velocityHeuristic = velocity.Linear.LengthSquared() + velocity.Angular.LengthSquared();
+            if (velocityHeuristic > activity.SleepThreshold)
+            {
+                activity.TimestepsUnderThresholdCount = 0;
+                activity.SleepCandidate = false;
+            }
+            else
+            {
+                ++activity.TimestepsUnderThresholdCount;
+                if (activity.TimestepsUnderThresholdCount >= activity.MinimumTimestepsUnderThreshold)
+                {
+                    activity.SleepCandidate = true;
+                }
+            }
+
+        }
+
+        unsafe void IntegrateBodiesAndUpdateBoundingBoxes(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
             ref var basePoses = ref bodies.ActiveSet.Poses[0];
             ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
-            ref var baseLocalInertias = ref bodies.ActiveSet.LocalInertias[0];
+            ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
             ref var baseInertias = ref bodies.Inertias[0];
             ref var baseActivity = ref bodies.ActiveSet.Activity[0];
+            ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
                 //Integrate position with the latest linear velocity. Note that gravity is integrated afterwards.
@@ -160,56 +187,25 @@ namespace BepuPhysics
 
                 PoseIntegration.Integrate(pose, velocity, dt, out pose);
 
-                //Update sleep candidacy. Note that this comes before velocity integration. That means an object can go inactive with gravity-induced velocity.
+                //Note that this generally is used before velocity integration. That means an object can go inactive with gravity-induced velocity.
                 //That is actually intended: when the narrowphase wakes up an island, the accumulated impulses in the island will be ready for gravity's influence.
                 //To do otherwise would hurt the solver's guess, reducing the quality of the solve and possibly causing a little bump.
                 //This is only relevant when the update order actually puts the sleeper after gravity. For ease of use, this fact may be ignored by the simulation update order.
-                ref var activity = ref Unsafe.Add(ref baseActivity, i);
-                var velocityHeuristic = velocity.Linear.LengthSquared() + velocity.Angular.LengthSquared();
-                if (velocityHeuristic > activity.SleepThreshold)
-                {
-                    activity.TimestepsUnderThresholdCount = 0;
-                    activity.SleepCandidate = false;
-                }
-                else
-                {
-                    ++activity.TimestepsUnderThresholdCount;
-                    if (activity.TimestepsUnderThresholdCount >= activity.MinimumTimestepsUnderThreshold)
-                    {
-                        activity.SleepCandidate = true;
-                    }
-                }
+                UpdateSleepCandidacy(ref velocity, ref Unsafe.Add(ref baseActivity, i));
 
                 //Update the inertia tensors for the new orientation.
                 //TODO: If the pose integrator is positioned at the end of an update, the first frame after any out-of-timestep orientation change or local inertia change
                 //has to get is inertia tensors calculated elsewhere. Either they would need to be computed on addition or something- which is a bit gross, but doable-
                 //or we would need to move this calculation to the beginning of the frame to guarantee that all inertias are up to date. 
                 //This would require a scan through all pose memory to support, but if you do it at the same time as AABB update, that's fine- that stage uses the pose too.
-                ref var localInertias = ref Unsafe.Add(ref baseLocalInertias, i);
+                ref var localInertias = ref Unsafe.Add(ref baseLocalInertia, i);
                 ref var inertias = ref Unsafe.Add(ref baseInertias, i);
                 PoseIntegration.RotateInverseInertia(ref localInertias.InverseInertiaTensor, ref pose.Orientation, out inertias.InverseInertiaTensor);
                 //While it's a bit goofy just to copy over the inverse mass every frame even if it doesn't change,
                 //it's virtually always gathered together with the inertia tensor and it really isn't worth a whole extra external system to copy inverse masses only on demand.
                 inertias.InverseMass = localInertias.InverseMass;
-
-                //Note that we apply gravity during this phase. That means, if the integrator is put at the end of the frame, the velocity will be nonzero.
-                //For now, we're assuming that the integrator runs at the beginning of the frame. This is a tradeoff, with some pros:
-                //1) Contacts generated in a given frame will match the position. You could draw effects at the contact points without worrying about them being one frame offset.
-                //However, if we detect contacts from a predicted transform, this mostly goes out the window.
-                //2) There is no need for a second 'force application' stage before the AABB update. Realistically, the force application would be bundled into the AABB update.
-                //3) Advanced users are free to trivially intervene in the velocity modifications caused by constraints before they are integrated. (A callback would be just as good.)
-                //4) PoseIntegrator->AABBUpdate allows the pose/velocity information required by pose integration to remain in LLC for use by AABB update.
-                //Having collision detection and the solver in between would likely evict pose and velocity on larger simulations. Given that we assume that the cache is evicted
-                //in between frames, the AABB->coldet->solve->poseintegrate could end up paying the cost of pose/velocity loads twice. It's not THAT bad, but it's not free- 
-                //about 0.15-0.25ms on a simulation with 32768 bodies.
-                //And one big con:
-                //If you modify velocity outside of the update, it will be directly used to integrate position during the next frame, ignoring all constraints.
-                //This WILL be a problem, especially since BEPUphysics v1 trained people to use velocity modifications to control motion.
-
-                //This isn't an unsolvable problem- making it easy to handle velocity modifications mid-update by exposing a callback of some sort would work. But that's one step more
-                //than the v1 'just set the velocity' style.                
-
-                callbacks.IntegrateVelocity(i, ref pose, ref velocity, ref inertias, workerIndex);
+                
+                callbacks.IntegrateVelocity(i, pose, localInertias, workerIndex, ref velocity);
 
                 //Bounding boxes are accumulated in a scalar fashion, but the actual bounding box calculations are deferred until a sufficient number of collidables are accumulated to make
                 //executing a bundle worthwhile. This does two things: 
@@ -221,7 +217,7 @@ namespace BepuPhysics
 
                 //Note that any collidable that lacks a collidable, or any reference that is beyond the set of collidables, will have a specially formed index.
                 //The accumulator will detect that and not try to add a nonexistent collidable.
-                boundingBoxBatcher.Add(i);
+                boundingBoxBatcher.Add(i, pose, velocity, Unsafe.Add(ref baseCollidable, i));
 
                 //It's helpful to do the bounding box update here in the pose integrator because they share information. If the phases were split, there could be a penalty
                 //associated with loading all the body poses and velocities from memory again. Even if the L3 cache persisted, it would still be worse than looking into L1 or L2.
@@ -229,6 +225,61 @@ namespace BepuPhysics
                 //work into the mix, we can hopefully fill some execution gaps.
             }
         }
+
+        unsafe void PredictBoundingBoxes(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
+        {
+            ref var basePoses = ref bodies.ActiveSet.Poses[0];
+            ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
+            ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
+            ref var baseActivity = ref bodies.ActiveSet.Activity[0];
+            ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
+            for (int i = startIndex; i < endIndex; ++i)
+            {
+                //Integrate position with the latest linear velocity. Note that gravity is integrated afterwards.
+                ref var pose = ref Unsafe.Add(ref basePoses, i);
+                ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
+
+                UpdateSleepCandidacy(ref velocity, ref Unsafe.Add(ref baseActivity, i));
+
+                //Bounding box prediction does not need to update inertia tensors.                
+                var integratedVelocity = velocity;
+                callbacks.IntegrateVelocity(i, pose, Unsafe.Add(ref baseLocalInertia, i), workerIndex, ref integratedVelocity);
+
+                boundingBoxBatcher.Add(i, pose, integratedVelocity, Unsafe.Add(ref baseCollidable, i));
+            }
+        }
+
+        unsafe void IntegrateBodies(int startIndex, int endIndex, float dt, int workerIndex)
+        {
+            ref var basePoses = ref bodies.ActiveSet.Poses[0];
+            ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
+            ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
+            ref var baseInertias = ref bodies.Inertias[0];
+            ref var baseActivity = ref bodies.ActiveSet.Activity[0];
+            for (int i = startIndex; i < endIndex; ++i)
+            {
+                //Integrate position with the latest linear velocity. Note that gravity is integrated afterwards.
+                ref var pose = ref Unsafe.Add(ref basePoses, i);
+                ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
+
+                PoseIntegration.Integrate(pose, velocity, dt, out pose);
+
+                //Update the inertia tensors for the new orientation.
+                //TODO: If the pose integrator is positioned at the end of an update, the first frame after any out-of-timestep orientation change or local inertia change
+                //has to get is inertia tensors calculated elsewhere. Either they would need to be computed on addition or something- which is a bit gross, but doable-
+                //or we would need to move this calculation to the beginning of the frame to guarantee that all inertias are up to date. 
+                //This would require a scan through all pose memory to support, but if you do it at the same time as AABB update, that's fine- that stage uses the pose too.
+                ref var localInertias = ref Unsafe.Add(ref baseLocalInertia, i);
+                ref var inertias = ref Unsafe.Add(ref baseInertias, i);
+                PoseIntegration.RotateInverseInertia(ref localInertias.InverseInertiaTensor, ref pose.Orientation, out inertias.InverseInertiaTensor);
+                //While it's a bit goofy just to copy over the inverse mass every frame even if it doesn't change,
+                //it's virtually always gathered together with the inertia tensor and it really isn't worth a whole extra external system to copy inverse masses only on demand.
+                inertias.InverseMass = localInertias.InverseMass;
+
+                callbacks.IntegrateVelocity(i, pose, localInertias, workerIndex, ref velocity);
+            }
+        }
+
 
         float cachedDt;
         int bodiesPerJob;
@@ -239,29 +290,70 @@ namespace BepuPhysics
         //If this turns out to be false, this could be swapped over to a system similar to the solver-
         //preschedule offset regions for each worker to allow each one to consume a contiguous region before workstealing.
         int availableJobCount;
-        void Worker(int workerIndex)
+        bool TryGetJob(int bodyCount, out int start, out int exclusiveEnd)
+        {
+            var jobIndex = Interlocked.Decrement(ref availableJobCount);
+            if (jobIndex < 0)
+            {
+                start = 0;
+                exclusiveEnd = 0;
+                return false;
+            }
+            start = jobIndex * bodiesPerJob;
+            exclusiveEnd = start + bodiesPerJob;
+            if (exclusiveEnd > bodyCount)
+                exclusiveEnd = bodyCount;
+            Debug.Assert(exclusiveEnd > start, "Jobs that would involve bundles beyond the body count should not be created.");
+            return true;
+        }
+
+        void IntegrateBodiesAndUpdateBoundingBoxesWorker(int workerIndex)
         {
             var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, threadDispatcher.GetThreadMemoryPool(workerIndex), cachedDt);
             var bodyCount = bodies.ActiveSet.Count;
-            while (true)
+            while (TryGetJob(bodyCount, out var start, out var exclusiveEnd))
             {
-                var jobIndex = Interlocked.Decrement(ref availableJobCount);
-                if (jobIndex < 0)
-                    break;
-                var start = jobIndex * bodiesPerJob;
-                var exclusiveEnd = start + bodiesPerJob;
-                if (exclusiveEnd > bodyCount)
-                    exclusiveEnd = bodyCount;
-                Debug.Assert(exclusiveEnd > start, "Jobs that would involve bundles beyond the body count should not be created.");
-
-                IntegrateBodies(start, exclusiveEnd, cachedDt, ref boundingBoxUpdater, workerIndex);
-
+                IntegrateBodiesAndUpdateBoundingBoxes(start, exclusiveEnd, cachedDt, ref boundingBoxUpdater, workerIndex);
             }
             boundingBoxUpdater.Flush();
 
         }
 
-        public void Update(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
+        void PredictBoundingBoxesWorker(int workerIndex)
+        {
+            var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, threadDispatcher.GetThreadMemoryPool(workerIndex), cachedDt);
+            var bodyCount = bodies.ActiveSet.Count;
+            while (TryGetJob(bodyCount, out var start, out var exclusiveEnd))
+            {
+                PredictBoundingBoxes(start, exclusiveEnd, cachedDt, ref boundingBoxUpdater, workerIndex);
+            }
+            boundingBoxUpdater.Flush();
+        }
+
+        void IntegrateBodiesWorker(int workerIndex)
+        {
+            var bodyCount = bodies.ActiveSet.Count;
+            while (TryGetJob(bodyCount, out var start, out var exclusiveEnd))
+            {
+                IntegrateBodies(start, exclusiveEnd, cachedDt, workerIndex);
+            }
+        }
+
+        void PrepareForMultithreadedExecution(float dt, int workerCount)
+        {
+            cachedDt = dt;
+            const int jobsPerWorker = 4;
+            var targetJobCount = workerCount * jobsPerWorker;
+            bodiesPerJob = bodies.ActiveSet.Count / targetJobCount;
+            if (bodiesPerJob == 0)
+                bodiesPerJob = 1;
+            availableJobCount = bodies.ActiveSet.Count / bodiesPerJob;
+            if (bodiesPerJob * availableJobCount < bodies.ActiveSet.Count)
+                ++availableJobCount;
+        }
+
+
+        public void IntegrateBodiesAndUpdateBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
             //For now, the pose integrator (as the first stage that references them in any way) is responsible for ensuring that the bodies have a reasonable size inertias buffer.
             //Note that ownership (for purposes of final disposal) still belongs to the Bodies set.
@@ -281,26 +373,61 @@ namespace BepuPhysics
 
                 //Note that this bottleneck means the fact that we're working through bodies in a nonvectorized fashion (in favor of optimizing storage for solver access) is not a problem.
 
-                cachedDt = dt;
-                const int jobsPerWorker = 4;
-                var targetJobCount = workerCount * jobsPerWorker;
-                bodiesPerJob = bodies.ActiveSet.Count / targetJobCount;
-                if (bodiesPerJob == 0)
-                    bodiesPerJob = 1;
-                availableJobCount = bodies.ActiveSet.Count / bodiesPerJob;
-                if (bodiesPerJob * availableJobCount < bodies.ActiveSet.Count)
-                    ++availableJobCount;
+                PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
                 this.threadDispatcher = threadDispatcher;
-                threadDispatcher.DispatchWorkers(workerDelegate);
+                threadDispatcher.DispatchWorkers(integrateBodiesAndUpdateBoundingBoxesWorker);
                 this.threadDispatcher = null;
             }
             else
             {
                 var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, pool, dt);
-                IntegrateBodies(0, bodies.ActiveSet.Count, dt, ref boundingBoxUpdater, 0);
+                IntegrateBodiesAndUpdateBoundingBoxes(0, bodies.ActiveSet.Count, dt, ref boundingBoxUpdater, 0);
+                boundingBoxUpdater.Flush();
+            }
+        }
+
+        public void PredictBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
+        {
+            //No need to ensure inertias capacity here; world inertias are not computed during bounding box prediction.
+            var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
+
+            callbacks.PrepareForIntegration(dt);
+            if (threadDispatcher != null)
+            {
+                PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
+                this.threadDispatcher = threadDispatcher;
+                threadDispatcher.DispatchWorkers(predictBoundingBoxesWorker);
+                this.threadDispatcher = null;
+            }
+            else
+            {
+                var boundingBoxUpdater = new BoundingBoxBatcher(bodies, shapes, broadPhase, pool, dt);
+                PredictBoundingBoxes(0, bodies.ActiveSet.Count, dt, ref boundingBoxUpdater, 0);
                 boundingBoxUpdater.Flush();
             }
 
+        }
+
+        public void IntegrateBodies(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
+        {
+            //For now, the pose integrator (as the first stage that references them in any way) is responsible for ensuring that the bodies have a reasonable size inertias buffer.
+            //Note that ownership (for purposes of final disposal) still belongs to the Bodies set.
+            bodies.EnsureInertiasCapacity(bodies.ActiveSet.Count);
+
+            var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
+
+            callbacks.PrepareForIntegration(dt);
+            if (threadDispatcher != null)
+            {
+                PrepareForMultithreadedExecution(dt, threadDispatcher.ThreadCount);
+                this.threadDispatcher = threadDispatcher;
+                threadDispatcher.DispatchWorkers(integrateBodiesWorker);
+                this.threadDispatcher = null;
+            }
+            else
+            {
+                IntegrateBodies(0, bodies.ActiveSet.Count, dt, 0);
+            }
         }
     }
 }

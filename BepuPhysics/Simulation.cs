@@ -203,7 +203,31 @@ namespace BepuPhysics
         public void IntegrateBodiesAndUpdateBoundingBoxes(float dt, IThreadDispatcher threadDispatcher = null)
         {
             ProfilerStart(PoseIntegrator);
-            PoseIntegrator.Update(dt, BufferPool, threadDispatcher);
+            PoseIntegrator.IntegrateBodiesAndUpdateBoundingBoxes(dt, BufferPool, threadDispatcher);
+            ProfilerEnd(PoseIntegrator);
+        }
+
+        /// <summary>
+        /// Predicts the bounding boxes of active bodies by speculatively integrating velocity. Does not actually modify body velocities. Keeps track of deactivation candidates.
+        /// </summary>
+        /// <param name="dt">Duration of the time step.</param>
+        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
+        public void PredictBoundingBoxes(float dt, IThreadDispatcher threadDispatcher = null)
+        {
+            ProfilerStart(PoseIntegrator);
+            PoseIntegrator.PredictBoundingBoxes(dt, BufferPool, threadDispatcher);
+            ProfilerEnd(PoseIntegrator);
+        }
+
+        /// <summary>
+        /// Updates the position and velocity of active bodies. Does not track deactivation candidacy.
+        /// </summary>
+        /// <param name="dt">Duration of the time step.</param>
+        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
+        public void IntegrateBodies(float dt, IThreadDispatcher threadDispatcher = null)
+        {
+            ProfilerStart(PoseIntegrator);
+            PoseIntegrator.IntegrateBodies(dt, BufferPool, threadDispatcher);
             ProfilerEnd(PoseIntegrator);
         }
 

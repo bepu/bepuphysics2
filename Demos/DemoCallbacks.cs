@@ -35,13 +35,13 @@ namespace Demos
             angularDampingDt = MathF.Pow(MathHelper.Clamp(1 - AngularDamping, 0, 1), dt);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IntegrateVelocity(int bodyIndex, ref RigidPose pose, ref BodyVelocity velocity, ref BodyInertia inertia, int workerIndex)
+        public void IntegrateVelocity(int bodyIndex, in RigidPose pose, in BodyInertia localInertia, int workerIndex, ref BodyVelocity velocity)
         {
             //Note that we avoid accelerating kinematics. Kinematics are any body with an inverse mass of zero (so a mass of ~infinity). No force can move them.
-            if (inertia.InverseMass > 0)
+            if (localInertia.InverseMass > 0)
             {
                 velocity.Linear = (velocity.Linear + gravityDt) * linearDampingDt;
-                velocity.Angular *= angularDampingDt;
+                velocity.Angular = velocity.Angular * angularDampingDt;
             }
             //Implementation sidenote: Why aren't kinematics all bundled together separately from dynamics to avoid this per-body condition?
             //Because kinematics can have a velocity- that is what distinguishes them from a static object. The solver must read velocities of all bodies involved in a constraint.
@@ -56,8 +56,13 @@ namespace Demos
     }
     public unsafe struct DemoNarrowPhaseCallbacks : INarrowPhaseCallbacks
     {
+        public SpringSettings ContactSpringiness;
+
         public void Initialize(Simulation simulation)
         {
+            //Use a default if the springiness value wasn't initialized.
+            if (ContactSpringiness.AngularFrequency == 0 && ContactSpringiness.TwiceDampingRatio == 0)
+                ContactSpringiness = new SpringSettings(30, 1);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -77,7 +82,7 @@ namespace Demos
         {
             pairMaterial.FrictionCoefficient = 1f;
             pairMaterial.MaximumRecoveryVelocity = 2f;
-            pairMaterial.SpringSettings = new SpringSettings(30, 1);
+            pairMaterial.SpringSettings = ContactSpringiness;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)

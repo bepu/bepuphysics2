@@ -611,7 +611,7 @@ namespace BepuPhysics
                 ExecuteStage(ref warmStartFallbackStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchStart, context.BatchBoundaries[FallbackBatchThreshold],
                     ref workerBatchStartCopy, ref syncStage, claimedState, unclaimedState);
                 ExecuteStage(ref fallbackScatterStage, ref context.FallbackBlocks, ref bounds, ref boundsBackBuffer,
-                    workerIndex, 0, context.FallbackBlocks.Blocks.Count, ref fallbackStart, ref syncStage, unclaimedState, claimedState); //note claim state swap: fallback scatter claims have no prestep, so its off by one cycle
+                    workerIndex, 0, context.FallbackBlocks.Blocks.Count, ref fallbackStart, ref syncStage, unclaimedState, claimedState); //note claim state swap: fallback scatter claims have no prestep, so it's off by one cycle
             }
             claimedState ^= 1;
             unclaimedState ^= 1;
@@ -632,7 +632,7 @@ namespace BepuPhysics
                     ExecuteStage(ref solveFallbackStage, ref context.ConstraintBlocks, ref bounds, ref boundsBackBuffer, workerIndex, batchOffset, context.BatchBoundaries[FallbackBatchThreshold],
                         ref batchStarts[FallbackBatchThreshold], ref syncStage, claimedState, unclaimedState);
                     ExecuteStage(ref fallbackScatterStage, ref context.FallbackBlocks, ref bounds, ref boundsBackBuffer,
-                        workerIndex, 0, context.FallbackBlocks.Blocks.Count, ref fallbackStart, ref syncStage, unclaimedState, claimedState); //note claim state swap: fallback scatter claims have no prestep, so its off by one cycle
+                        workerIndex, 0, context.FallbackBlocks.Blocks.Count, ref fallbackStart, ref syncStage, unclaimedState, claimedState); //note claim state swap: fallback scatter claims have no prestep, so it's off by one cycle
                 }
                 claimedState ^= 1;
                 unclaimedState ^= 1;

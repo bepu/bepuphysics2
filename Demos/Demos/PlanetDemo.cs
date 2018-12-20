@@ -10,6 +10,7 @@ using DemoUtilities;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Demos.Demos
@@ -32,9 +33,10 @@ namespace Demos.Demos
                 gravityDt = dt * Gravity;
             }
 
-            public void IntegrateVelocity(int bodyIndex, ref RigidPose pose, ref BodyVelocity velocity, ref BodyInertia inertia, int workerIndex)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void IntegrateVelocity(int bodyIndex, in RigidPose pose, in BodyInertia localInertia, int workerIndex, ref BodyVelocity velocity)
             {
-                if (inertia.InverseMass > 0) //Ignore kinematics.
+                if (localInertia.InverseMass > 0) //Ignore kinematics.
                 {
                     var offset = pose.Position - PlanetCenter;
                     var distance = offset.Length();
