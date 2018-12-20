@@ -29,7 +29,7 @@ namespace BepuPhysics.Constraints
     /// <typeparam name="TProjection">Type of the projection to input.</typeparam>
     public interface IOneBodyContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse> : IOneBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
-        void IncrementallyUpdateContactData(Bodies bodies, ref Vector<int> bodyReferences, int count, float dt, float inverseDt, in BodyVelocities velocity, ref TPrestepData prestepData);
+        void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocity, ref TPrestepData prestepData);
     }
 
     //Not a big fan of complex generic-filled inheritance hierarchies, but this is the shortest evolutionary step to removing duplicates.
@@ -201,7 +201,7 @@ namespace BepuPhysics.Constraints
     }
 
     public abstract class OneBodyContactTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
-        : TypeProcessor<Vector<int>, TPrestepData, TProjection, TAccumulatedImpulse>
+        : OneBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
         where TConstraintFunctions : struct, IOneBodyContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         public unsafe override void IncrementallyUpdateContactData(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
@@ -210,13 +210,14 @@ namespace BepuPhysics.Constraints
             ref var bodyReferencesBase = ref Unsafe.AsRef<Vector<int>>(typeBatch.BodyReferences.Memory);
             ref var bodyVelocities = ref bodies.ActiveSet.Velocities;
             var function = default(TConstraintFunctions);
+            var dtWide = new Vector<float>(dt);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref Unsafe.Add(ref prestepBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 var count = GetCountInBundle(ref typeBatch, i);
-                Bodies.GatherVelocities(ref bodyVelocities, ref references, count, out var wsvA);
-                function.IncrementallyUpdateContactData(bodies, ref references, count, dt, inverseDt, wsvA, ref prestep);
+                Bodies.GatherVelocities(ref bodyVelocities, ref references, count, out var velocityA);
+                function.IncrementallyUpdateContactData(dtWide, velocityA, ref prestep);
             }
         }
     }

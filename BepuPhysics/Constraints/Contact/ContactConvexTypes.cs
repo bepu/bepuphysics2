@@ -212,7 +212,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact1OneBodyFunctions : IOneBodyConstraintFunctions<Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses>
+	public struct Contact1OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
@@ -259,13 +259,18 @@ namespace BepuPhysics.Constraints.Contact
             TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact1OneBodyPrestepData prestep)
+        {
+			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
+        }
     }
 	
     /// <summary>
     /// Handles the solve iterations of a bunch of 1-contact one body manifold constraints.
     /// </summary>
     public class Contact1OneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses, Contact1OneBodyFunctions>
+        OneBodyContactTypeProcessor<Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses, Contact1OneBodyFunctions>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
         public const int BatchTypeId = 0;
@@ -373,7 +378,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact2OneBodyFunctions : IOneBodyConstraintFunctions<Contact2OneBodyPrestepData, Contact2OneBodyProjection, Contact2AccumulatedImpulses>
+	public struct Contact2OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact2OneBodyPrestepData, Contact2OneBodyProjection, Contact2AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
@@ -427,13 +432,19 @@ namespace BepuPhysics.Constraints.Contact
             TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact2OneBodyPrestepData prestep)
+        {
+			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
+			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.Normal, velocityA, ref prestep.PenetrationDepth1);
+        }
     }
 	
     /// <summary>
     /// Handles the solve iterations of a bunch of 2-contact one body manifold constraints.
     /// </summary>
     public class Contact2OneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact2OneBodyPrestepData, Contact2OneBodyProjection, Contact2AccumulatedImpulses, Contact2OneBodyFunctions>
+        OneBodyContactTypeProcessor<Contact2OneBodyPrestepData, Contact2OneBodyProjection, Contact2AccumulatedImpulses, Contact2OneBodyFunctions>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
         public const int BatchTypeId = 1;
@@ -550,7 +561,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact3OneBodyFunctions : IOneBodyConstraintFunctions<Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses>
+	public struct Contact3OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
@@ -610,13 +621,20 @@ namespace BepuPhysics.Constraints.Contact
             TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact3OneBodyPrestepData prestep)
+        {
+			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
+			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.Normal, velocityA, ref prestep.PenetrationDepth1);
+			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.Normal, velocityA, ref prestep.PenetrationDepth2);
+        }
     }
 	
     /// <summary>
     /// Handles the solve iterations of a bunch of 3-contact one body manifold constraints.
     /// </summary>
     public class Contact3OneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses, Contact3OneBodyFunctions>
+        OneBodyContactTypeProcessor<Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses, Contact3OneBodyFunctions>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
         public const int BatchTypeId = 2;
@@ -742,7 +760,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact4OneBodyFunctions : IOneBodyConstraintFunctions<Contact4OneBodyPrestepData, Contact4OneBodyProjection, Contact4AccumulatedImpulses>
+	public struct Contact4OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact4OneBodyPrestepData, Contact4OneBodyProjection, Contact4AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
@@ -808,13 +826,21 @@ namespace BepuPhysics.Constraints.Contact
             TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact4OneBodyPrestepData prestep)
+        {
+			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
+			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.Normal, velocityA, ref prestep.PenetrationDepth1);
+			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.Normal, velocityA, ref prestep.PenetrationDepth2);
+			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA3, prestep.Normal, velocityA, ref prestep.PenetrationDepth3);
+        }
     }
 	
     /// <summary>
     /// Handles the solve iterations of a bunch of 4-contact one body manifold constraints.
     /// </summary>
     public class Contact4OneBodyTypeProcessor :
-        OneBodyTypeProcessor<Contact4OneBodyPrestepData, Contact4OneBodyProjection, Contact4AccumulatedImpulses, Contact4OneBodyFunctions>
+        OneBodyContactTypeProcessor<Contact4OneBodyPrestepData, Contact4OneBodyProjection, Contact4AccumulatedImpulses, Contact4OneBodyFunctions>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
         public const int BatchTypeId = 3;
@@ -915,7 +941,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact1Functions : IConstraintFunctions<Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses>
+	public struct Contact1Functions : IContactConstraintFunctions<Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
@@ -939,7 +965,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB,ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -948,7 +974,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB,ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -963,13 +989,18 @@ namespace BepuPhysics.Constraints.Contact
             TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact1PrestepData prestep)
+        {
+			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
+        }
     }
 	
     /// <summary>
     /// Handles the solve iterations of a bunch of 1-contact two body manifold constraints.
     /// </summary>
     public class Contact1TypeProcessor :
-        TwoBodyTypeProcessor<Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses, Contact1Functions>
+        TwoBodyContactTypeProcessor<Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses, Contact1Functions>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
         public const int BatchTypeId = 4;
@@ -1079,7 +1110,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact2Functions : IConstraintFunctions<Contact2PrestepData, Contact2Projection, Contact2AccumulatedImpulses>
+	public struct Contact2Functions : IContactConstraintFunctions<Contact2PrestepData, Contact2Projection, Contact2AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
@@ -1107,7 +1138,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB,ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -1117,7 +1148,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB,ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -1134,13 +1165,19 @@ namespace BepuPhysics.Constraints.Contact
             TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact2PrestepData prestep)
+        {
+			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
+			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth1);
+        }
     }
 	
     /// <summary>
     /// Handles the solve iterations of a bunch of 2-contact two body manifold constraints.
     /// </summary>
     public class Contact2TypeProcessor :
-        TwoBodyTypeProcessor<Contact2PrestepData, Contact2Projection, Contact2AccumulatedImpulses, Contact2Functions>
+        TwoBodyContactTypeProcessor<Contact2PrestepData, Contact2Projection, Contact2AccumulatedImpulses, Contact2Functions>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
         public const int BatchTypeId = 5;
@@ -1259,7 +1296,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact3Functions : IConstraintFunctions<Contact3PrestepData, Contact3Projection, Contact3AccumulatedImpulses>
+	public struct Contact3Functions : IContactConstraintFunctions<Contact3PrestepData, Contact3Projection, Contact3AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
@@ -1290,7 +1327,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB,ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -1301,7 +1338,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB,ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -1320,13 +1357,20 @@ namespace BepuPhysics.Constraints.Contact
             TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact3PrestepData prestep)
+        {
+			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
+			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth1);
+			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth2);
+        }
     }
 	
     /// <summary>
     /// Handles the solve iterations of a bunch of 3-contact two body manifold constraints.
     /// </summary>
     public class Contact3TypeProcessor :
-        TwoBodyTypeProcessor<Contact3PrestepData, Contact3Projection, Contact3AccumulatedImpulses, Contact3Functions>
+        TwoBodyContactTypeProcessor<Contact3PrestepData, Contact3Projection, Contact3AccumulatedImpulses, Contact3Functions>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
         public const int BatchTypeId = 6;
@@ -1454,7 +1498,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact4Functions : IConstraintFunctions<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses>
+	public struct Contact4Functions : IContactConstraintFunctions<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
@@ -1488,7 +1532,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB,ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
             TangentFriction.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
@@ -1500,7 +1544,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB,ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -1521,13 +1565,21 @@ namespace BepuPhysics.Constraints.Contact
             TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact4PrestepData prestep)
+        {
+			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
+			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth1);
+			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth2);
+			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA3, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth3);
+        }
     }
 	
     /// <summary>
     /// Handles the solve iterations of a bunch of 4-contact two body manifold constraints.
     /// </summary>
     public class Contact4TypeProcessor :
-        TwoBodyTypeProcessor<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses, Contact4Functions>
+        TwoBodyContactTypeProcessor<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses, Contact4Functions>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
         public const int BatchTypeId = 7;

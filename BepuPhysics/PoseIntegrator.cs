@@ -244,7 +244,7 @@ namespace BepuPhysics
                 //Bounding box prediction does not need to update inertia tensors.                
                 var integratedVelocity = velocity;
                 callbacks.IntegrateVelocity(i, pose, Unsafe.Add(ref baseLocalInertia, i), workerIndex, ref integratedVelocity);
-
+                
                 boundingBoxBatcher.Add(i, pose, integratedVelocity, Unsafe.Add(ref baseCollidable, i));
             }
         }

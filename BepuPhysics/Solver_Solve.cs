@@ -670,7 +670,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        void ValidateWorkBlocks()
+        void ValidateWorkBlocks<TTypeBatchSolveFilter>(ref TTypeBatchSolveFilter filter) where TTypeBatchSolveFilter : ITypeBatchSolveFilter
         {
             ref var activeSet = ref ActiveSet;
             int[][][] batches = new int[activeSet.Batches.Count][][];
@@ -698,15 +698,19 @@ namespace BepuPhysics
             {
                 for (int typeBatchIndex = 0; typeBatchIndex < batches[batchIndex].Length; ++typeBatchIndex)
                 {
-                    for (int constraintIndex = 0; constraintIndex < batches[batchIndex][typeBatchIndex].Length; ++constraintIndex)
+                    ref var typeBatch = ref ActiveSet.Batches[batchIndex].TypeBatches[typeBatchIndex];
+                    if (filter.AllowType(typeBatch.TypeId))
                     {
-                        Debug.Assert(batches[batchIndex][typeBatchIndex][constraintIndex] == 1);
+                        for (int constraintIndex = 0; constraintIndex < batches[batchIndex][typeBatchIndex].Length; ++constraintIndex)
+                        {
+                            Debug.Assert(batches[batchIndex][typeBatchIndex][constraintIndex] == 1);
+                        }
                     }
                 }
             }
 
         }
-        
+
         void ExecuteMultithreaded<TTypeBatchSolveFilter>(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate) where TTypeBatchSolveFilter : ITypeBatchSolveFilter
         {
             var filter = default(TTypeBatchSolveFilter);
@@ -723,7 +727,7 @@ namespace BepuPhysics
 
             var targetBlocksPerBatch = workerCount * targetBlocksPerBatchPerWorker;
             BuildWorkBlocks(pool, minimumBlockSizeInBundles, targetBlocksPerBatch, ref filter);
-            ValidateWorkBlocks();
+            ValidateWorkBlocks(ref filter);
 
             //Note the clear; the block claims must be initialized to 0 so that the first worker stage knows that the data is available to claim.
             context.ConstraintBlocks.CreateClaims(pool);

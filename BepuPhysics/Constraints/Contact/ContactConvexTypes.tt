@@ -186,7 +186,7 @@ for (int i = 0; i < contactCount; ++i)
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact<#=contactCount#><#=suffix#>Functions : I<#=suffix#>ConstraintFunctions<Contact<#=contactCount#><#=suffix#>PrestepData, Contact<#=contactCount#><#=suffix#>Projection, Contact<#=contactCount#>AccumulatedImpulses>
+	public struct Contact<#=contactCount#><#=suffix#>Functions : I<#=suffix#>ContactConstraintFunctions<Contact<#=contactCount#><#=suffix#>PrestepData, Contact<#=contactCount#><#=suffix#>Projection, Contact<#=contactCount#>AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref <#=bodyReferencesType#> bodyReferences, int count,
@@ -222,7 +222,7 @@ for (int i = 0; i < contactCount; ++i)
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(ref BodyVelocities wsvA, <#if(bodyCount == 2) {#>ref BodyVelocities wsvB,<#}#>ref Contact<#=contactCount#><#=suffix#>Projection projection, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses)
+        public void WarmStart(ref BodyVelocities wsvA, <#if(bodyCount == 2) {#>ref BodyVelocities wsvB, <#}#>ref Contact<#=contactCount#><#=suffix#>Projection projection, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
             TangentFriction<#=suffix#>.WarmStart(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, <#if (bodyCount == 2) {#>ref projection.InertiaB, <#}#>ref accumulatedImpulses.Tangent, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
@@ -233,7 +233,7 @@ for (int i = 0; i < contactCount; ++i)
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(ref BodyVelocities wsvA, <#if(bodyCount == 2) {#>ref BodyVelocities wsvB,<#}#>ref Contact<#=contactCount#><#=suffix#>Projection projection, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses)
+        public void Solve(ref BodyVelocities wsvA, <#if(bodyCount == 2) {#>ref BodyVelocities wsvB, <#}#>ref Contact<#=contactCount#><#=suffix#>Projection projection, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
             var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
@@ -253,13 +253,20 @@ for (int i = 0; i < contactCount; ++i)
             TwistFriction<#=suffix#>.Solve(ref projection.Normal, ref projection.InertiaA, <#if (bodyCount == 2) {#>ref projection.InertiaB, <#}#>ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA,<#if(bodyCount == 2) {#> in BodyVelocities velocityB,<#}#> ref Contact<#=contactCount#><#=suffix#>PrestepData prestep)
+        {
+<#for (int i = 0; i < contactCount; ++i) {#>
+			PenetrationLimit<#=suffix#>.UpdatePenetrationDepth(dt, prestep.OffsetA<#=i#>, <#if(bodyCount == 2) {#>prestep.OffsetB, <#}#>prestep.Normal, velocityA, <#if (bodyCount == 2) {#>velocityB, <#}#>ref prestep.PenetrationDepth<#=i#>);
+<#}#>
+        }
     }
 	
     /// <summary>
     /// Handles the solve iterations of a bunch of <#= contactCount #>-contact <#Write(bodyCount == 1 ? "one" : "two");#> body manifold constraints.
     /// </summary>
     public class Contact<#= contactCount #><#=suffix#>TypeProcessor :
-        <#Write(bodyCount == 2 ? "Two" : "One");#>BodyTypeProcessor<Contact<#= contactCount #><#=suffix#>PrestepData, Contact<#= contactCount #><#=suffix#>Projection, Contact<#= contactCount #>AccumulatedImpulses, Contact<#= contactCount #><#=suffix#>Functions>
+        <#Write(bodyCount == 2 ? "Two" : "One");#>BodyContactTypeProcessor<Contact<#= contactCount #><#=suffix#>PrestepData, Contact<#= contactCount #><#=suffix#>Projection, Contact<#= contactCount #>AccumulatedImpulses, Contact<#= contactCount #><#=suffix#>Functions>
     {
         //Matches UpdateConstraintForManifold's manifoldTypeAsConstraintType computation.
         public const int BatchTypeId = <#Write(bodyCount == 1 ? (contactCount - 1).ToString() : (3 + contactCount).ToString());#>;

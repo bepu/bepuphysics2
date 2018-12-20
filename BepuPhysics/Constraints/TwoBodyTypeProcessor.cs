@@ -37,9 +37,9 @@ namespace BepuPhysics.Constraints
     /// <typeparam name="TPrestepData">Type of the prestep data used by the constraint.</typeparam>
     /// <typeparam name="TAccumulatedImpulse">Type of the accumulated impulses used by the constraint.</typeparam>
     /// <typeparam name="TProjection">Type of the projection to input.</typeparam>
-    public interface ITwoBodyContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse> : IConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+    public interface IContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse> : IConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
-        void IncrementallyUpdateContactData(Bodies bodies, ref TwoBodyReferences bodyReferences, int count, float dt, float inverseDt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref TPrestepData prestepData);
+        void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref TPrestepData prestepData);
     }
 
     //Not a big fan of complex generic-filled inheritance hierarchies, but this is the shortest evolutionary step to removing duplicates.
@@ -245,8 +245,8 @@ namespace BepuPhysics.Constraints
     }
 
     public abstract class TwoBodyContactTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
-        : TypeProcessor<Vector<int>, TPrestepData, TProjection, TAccumulatedImpulse>
-        where TConstraintFunctions : struct, ITwoBodyContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+        : TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
+        where TConstraintFunctions : struct, IContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         public unsafe override void IncrementallyUpdateContactData(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
@@ -254,13 +254,14 @@ namespace BepuPhysics.Constraints
             ref var bodyReferencesBase = ref Unsafe.AsRef<TwoBodyReferences>(typeBatch.BodyReferences.Memory);
             ref var bodyVelocities = ref bodies.ActiveSet.Velocities;
             var function = default(TConstraintFunctions);
+            var dtWide = new Vector<float>(dt);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref Unsafe.Add(ref prestepBase, i);
                 ref var references = ref Unsafe.Add(ref bodyReferencesBase, i);
                 var count = GetCountInBundle(ref typeBatch, i);
-                Bodies.GatherVelocities(ref bodyVelocities, ref references, count, out var wsvA, out var wsvB);
-                function.IncrementallyUpdateContactData(bodies, ref references, count, dt, inverseDt, wsvA, wsvB, ref prestep);
+                Bodies.GatherVelocities(ref bodyVelocities, ref references, count, out var velocityA, out var velocityB);
+                function.IncrementallyUpdateContactData(dtWide, velocityA, velocityB, ref prestep);
             }
         }
     }

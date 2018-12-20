@@ -92,7 +92,7 @@ namespace Demos.Demos
             //In this simulation, using 4 substeps with 1 velocity iteration each costs about 25% more than the non-substepping version with 8 velocity iterations. Not too bad for the quality increase.
             //Also note that both of these simulation configurations are using a higher than demo-usual contact stiffness. That's just so that you can wrap the rope around the nearby capsule.
             //In a simulation with lots of stacking, high contact stiffness would require substepping or a higher update rate for stability.
-            //Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 1) }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstWithSubsteppingTimestepper(4), 1);
+            //Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 1) }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new PositionFirstSubsteppingTimestepper(4), 1);
 
             //So, even though you can avoid the need for these kinds of hacks, it's good to know that they exist should you find yourself in a circumstance where substepping isn't viable.
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 1) }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));

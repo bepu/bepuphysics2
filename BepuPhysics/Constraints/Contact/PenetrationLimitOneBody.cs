@@ -89,5 +89,17 @@ namespace BepuPhysics.Constraints.Contact
             ApplyImpulse(projection, inertiaA, normal, correctiveCSI, ref wsvA);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void UpdatePenetrationDepth(in Vector<float> dt, in Vector3Wide contactOffset, in Vector3Wide normal, in BodyVelocities velocity, ref Vector<float> penetrationDepth)
+        {
+            //The normal is calibrated to point from B to A. Any movement of A along N results in a decrease in depth. Any movement of B along N results in an increase in depth. 
+            //But one body constraints have no B.
+            //estimatedPenetrationDepthChange = dot(normal, velocityDtA.Linear + velocityDtA.Angular x contactOffsetA)
+            Vector3Wide.CrossWithoutOverlap(velocity.Angular, contactOffset, out var wxr);
+            Vector3Wide.Add(wxr, velocity.Linear, out var contactVelocity);
+            Vector3Wide.Dot(normal, contactVelocity, out var estimatedDepthChange);
+            penetrationDepth -= estimatedDepthChange * dt;
+        }
+
     }
 }
