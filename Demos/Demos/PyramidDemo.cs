@@ -47,7 +47,7 @@ namespace Demos.Demos
                 }
             }
 
-            var staticShape = new Box(1500, 1, 1500);
+            var staticShape = new Box(2500, 1, 2500);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(staticShapeIndex, 0.1f)));
@@ -58,7 +58,7 @@ namespace Demos.Demos
         Random random = new Random(5);
         public override void Update(Input input, float dt)
         {
-            if (input != null && input.WasPushed(OpenTK.Input.Key.Q))
+            if (input != null && input.WasPushed(OpenTK.Input.Key.Z))
             {
                 //Create the shape that we'll launch at the pyramids when the user presses a button.
                 var bulletShape = new Sphere(0.5f + 5 * (float)random.NextDouble());
@@ -82,7 +82,7 @@ namespace Demos.Demos
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
-            text.Clear().Append("Press Q to launch a ball!");
+            text.Clear().Append("Press Z to launch a ball!");
             renderer.TextBatcher.Write(text, new Vector2(20, renderer.Surface.Resolution.Y - 20), 16, new Vector3(1, 1, 1), font);
             base.Render(renderer, camera, input, text, font);
         }

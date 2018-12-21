@@ -220,7 +220,19 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Updates the velocity and world space inertias of active bodies.
+        /// Updates the velocities, world space inertias, bounding boxes, and deactivation candidacy of active bodies.
+        /// </summary>
+        /// <param name="dt">Duration of the time step.</param>
+        /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
+        public void IntegrateVelocitiesBoundsAndInertias(float dt, IThreadDispatcher threadDispatcher = null)
+        {
+            ProfilerStart(PoseIntegrator);
+            PoseIntegrator.IntegrateVelocitiesBoundsAndInertias(dt, BufferPool, threadDispatcher);
+            ProfilerEnd(PoseIntegrator);
+        }
+
+        /// <summary>
+        /// Updates the velocities and world space inertias of active bodies.
         /// </summary>
         /// <param name="dt">Duration of the time step.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>

@@ -1,14 +1,9 @@
 ﻿using BepuUtilities;
 using DemoRenderer;
-using DemoUtilities;
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using System;
 using System.Numerics;
-using System.Diagnostics;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
-using System.Runtime.CompilerServices;
 using DemoContentLoader;
 using Quaternion = BepuUtilities.Quaternion;
 
@@ -31,9 +26,9 @@ namespace Demos.Demos
                     //Instead, if recentering is desired, it should performed ahead of time. The CompoundBuilder can help with this.
                     //We'll construct this compound using shapes far from the origin, and then use the CompoundBuilder overload that recenters the children and outputs the computed center.
                     var capsuleChildShape = new Capsule(0.5f, 0.5f);
-                    var capsuleLocalPose = new RigidPose { Position = new Vector3(-0.5f, 4, 4), Orientation = BepuUtilities.Quaternion.Identity };
+                    var capsuleLocalPose = new RigidPose { Position = new Vector3(-0.5f, 4, 4), Orientation = Quaternion.Identity };
                     var boxChildShape = new Box(0.5f, 1f, 1.5f);
-                    var boxLocalPose = new RigidPose { Position = new Vector3(0.5f, 4, 4), Orientation = BepuUtilities.Quaternion.Identity };
+                    var boxLocalPose = new RigidPose { Position = new Vector3(0.5f, 4, 4), Orientation = Quaternion.Identity };
 
                     //All allocations from the buffer pool used for the final compound shape will be disposed when the demo is disposed. Don't have to worry about leaks in these demos.
                     compoundBuilder.Add(capsuleChildShape, capsuleLocalPose, 1);
@@ -50,7 +45,7 @@ namespace Demos.Demos
                             SpeculativeMargin = 0.1f,
                         },
                         LocalInertia = compoundInertia,
-                        Pose = new RigidPose { Position = compoundCenter, Orientation = BepuUtilities.Quaternion.Identity },
+                        Pose = new RigidPose { Position = compoundCenter, Orientation = Quaternion.Identity },
                     };
 
                     Simulation.Bodies.Add(compoundDescription);
@@ -88,7 +83,7 @@ namespace Demos.Demos
                             SpeculativeMargin = 0.1f,
                         },
                         LocalInertia = gridInertia,
-                        Pose = new RigidPose { Orientation = BepuUtilities.Quaternion.Identity }
+                        Pose = new RigidPose { Orientation = Quaternion.Identity }
                     };
 
                     for (int i = 0; i < 4; ++i)
@@ -107,15 +102,15 @@ namespace Demos.Demos
                     var legShape = new Box(0.2f, 1, 0.2f);
                     legShape.ComputeInertia(1f, out var legInverseInertia);
                     var legShapeIndex = Simulation.Shapes.Add(legShape);
-                    var legPose0 = new RigidPose { Position = new Vector3(-1.5f, 0, -1.5f), Orientation = BepuUtilities.Quaternion.Identity };
-                    var legPose1 = new RigidPose { Position = new Vector3(-1.5f, 0, 1.5f), Orientation = BepuUtilities.Quaternion.Identity };
-                    var legPose2 = new RigidPose { Position = new Vector3(1.5f, 0, -1.5f), Orientation = BepuUtilities.Quaternion.Identity };
-                    var legPose3 = new RigidPose { Position = new Vector3(1.5f, 0, 1.5f), Orientation = BepuUtilities.Quaternion.Identity };
+                    var legPose0 = new RigidPose { Position = new Vector3(-1.5f, 0, -1.5f), Orientation = Quaternion.Identity };
+                    var legPose1 = new RigidPose { Position = new Vector3(-1.5f, 0, 1.5f), Orientation = Quaternion.Identity };
+                    var legPose2 = new RigidPose { Position = new Vector3(1.5f, 0, -1.5f), Orientation = Quaternion.Identity };
+                    var legPose3 = new RigidPose { Position = new Vector3(1.5f, 0, 1.5f), Orientation = Quaternion.Identity };
                     compoundBuilder.Add(legShapeIndex, legPose0, legInverseInertia.InverseInertiaTensor, 1);
                     compoundBuilder.Add(legShapeIndex, legPose1, legInverseInertia.InverseInertiaTensor, 1);
                     compoundBuilder.Add(legShapeIndex, legPose2, legInverseInertia.InverseInertiaTensor, 1);
                     compoundBuilder.Add(legShapeIndex, legPose3, legInverseInertia.InverseInertiaTensor, 1);
-                    var tableTopPose = new RigidPose { Position = new Vector3(0, 0.6f, 0), Orientation = BepuUtilities.Quaternion.Identity };
+                    var tableTopPose = new RigidPose { Position = new Vector3(0, 0.6f, 0), Orientation = Quaternion.Identity };
                     var tableTopShape = new Box(3.2f, 0.2f, 3.2f);
                     compoundBuilder.Add(tableTopShape, tableTopPose, 3);
 
@@ -131,7 +126,7 @@ namespace Demos.Demos
                             SpeculativeMargin = 0.1f,
                         },
                         LocalInertia = tableInertia,
-                        Pose = new RigidPose { Orientation = BepuUtilities.Quaternion.Identity }
+                        Pose = new RigidPose { Orientation = Quaternion.Identity }
                     };
 
                     //Stack some tables.
@@ -175,7 +170,7 @@ namespace Demos.Demos
                                 Shape = sphereIndex,
                                 SpeculativeMargin = 0.1f,
                             },
-                            Pose = new RigidPose { Position = new Vector3(10, 2, 0), Orientation = BepuUtilities.Quaternion.Identity }
+                            Pose = new RigidPose { Position = new Vector3(10, 2, 0), Orientation = Quaternion.Identity }
                         };
                         Simulation.Statics.Add(sphereDescription);
                     }
@@ -188,12 +183,12 @@ namespace Demos.Demos
                         var clampPieceShape = new Box(2f, 0.1f, 0.3f);
                         clampPieceShape.ComputeInertia(1f, out var clampPieceInverseInertia);
                         var clampPieceShapeIndex = Simulation.Shapes.Add(clampPieceShape);
-                        var clamp0 = new RigidPose { Position = new Vector3(0, -0.2f, -1.1f), Orientation = BepuUtilities.Quaternion.Identity };
-                        var clamp1 = new RigidPose { Position = new Vector3(0, 0.2f, -1.1f), Orientation = BepuUtilities.Quaternion.Identity };
-                        var clamp2 = new RigidPose { Position = new Vector3(0, -0.2f, 0), Orientation = BepuUtilities.Quaternion.Identity };
-                        var clamp3 = new RigidPose { Position = new Vector3(0, 0.2f, 0), Orientation = BepuUtilities.Quaternion.Identity };
-                        var clamp4 = new RigidPose { Position = new Vector3(0, -0.2f, 1.1f), Orientation = BepuUtilities.Quaternion.Identity };
-                        var clamp5 = new RigidPose { Position = new Vector3(0, 0.2f, 1.1f), Orientation = BepuUtilities.Quaternion.Identity };
+                        var clamp0 = new RigidPose { Position = new Vector3(0, -0.2f, -1.1f), Orientation = Quaternion.Identity };
+                        var clamp1 = new RigidPose { Position = new Vector3(0, 0.2f, -1.1f), Orientation = Quaternion.Identity };
+                        var clamp2 = new RigidPose { Position = new Vector3(0, -0.2f, 0), Orientation = Quaternion.Identity };
+                        var clamp3 = new RigidPose { Position = new Vector3(0, 0.2f, 0), Orientation = Quaternion.Identity };
+                        var clamp4 = new RigidPose { Position = new Vector3(0, -0.2f, 1.1f), Orientation = Quaternion.Identity };
+                        var clamp5 = new RigidPose { Position = new Vector3(0, 0.2f, 1.1f), Orientation = Quaternion.Identity };
                         compoundBuilder.Add(clampPieceShapeIndex, clamp0, clampPieceInverseInertia.InverseInertiaTensor, 1);
                         compoundBuilder.Add(clampPieceShapeIndex, clamp1, clampPieceInverseInertia.InverseInertiaTensor, 1);
                         compoundBuilder.Add(clampPieceShapeIndex, clamp2, clampPieceInverseInertia.InverseInertiaTensor, 1);
@@ -213,7 +208,7 @@ namespace Demos.Demos
                                 SpeculativeMargin = 0.1f,
                             },
                             LocalInertia = clampInertia,
-                            Pose = new RigidPose { Position = tableDescription.Pose.Position + new Vector3(2f, 0.3f, 0), Orientation = BepuUtilities.Quaternion.Identity }
+                            Pose = new RigidPose { Position = tableDescription.Pose.Position + new Vector3(2f, 0.3f, 0), Orientation = Quaternion.Identity }
                         };
                         Simulation.Bodies.Add(clampDescription);
                     }

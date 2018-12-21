@@ -107,7 +107,7 @@ namespace Demos.Demos
         Random random = new Random(5);
         public override void Update(Input input, float dt)
         {
-            if (input.WasPushed(OpenTK.Input.Key.Q))
+            if (input.WasPushed(OpenTK.Input.Key.Z))
             {
                 //INVEST TODAY FOR INCREDIBLE RETURNS DON'T MISS OUT LOOK AT THE COINS THERE ARE A LOT OF THEM AND THEY COULD BE YOURS
                 var origin = new Vector3(-30, 5, -30) + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) * new Vector3(60, 30, 60);
@@ -130,7 +130,7 @@ namespace Demos.Demos
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
-            text.Clear().Append("Press Q to create an ICO.");
+            text.Clear().Append("Press Z to create an ICO.");
             renderer.TextBatcher.Write(text, new Vector2(20, renderer.Surface.Resolution.Y - 20), 16, new Vector3(1, 1, 1), font);
             base.Render(renderer, camera, input, text, font);
         }

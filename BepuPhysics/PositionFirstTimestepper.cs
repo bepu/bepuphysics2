@@ -6,7 +6,7 @@ using BepuUtilities;
 namespace BepuPhysics
 {
     /// <summary>
-    /// Updates the simulation in the order of: sleeper -> body position, velocity and bounding boxes -> collision detection -> solver -> data structure optimization.
+    /// Updates the simulation in the order of: sleeper -> integrate body poses, velocity and bounding boxes -> collision detection -> solver -> data structure optimization.
     /// </summary>
     public class PositionFirstTimestepper : ITimestepper
     {
