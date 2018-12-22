@@ -87,7 +87,7 @@ for (int i = 0; i < contactCount; ++i)
         {
             return ref prestep.Contact0;
         }
-		
+        
         public int ContactCount => <#= contactCount #>;
     }
 
@@ -123,7 +123,7 @@ for (int i = 0; i < contactCount ; ++i)
 
         public int ContactCount => <#= contactCount #>;
     }
-	
+    
     /// <summary>
     /// Handles the solve iterations of a bunch of <#= contactCount #>-contact nonconvex two body manifold constraints.
     /// </summary>
@@ -135,7 +135,7 @@ for (int i = 0; i < contactCount ; ++i)
         public const int BatchTypeId = <#= 13 + contactCount #>;
     }
 
-	public struct Contact<#= contactCount #>NonconvexOneBody : INonconvexOneBodyContactConstraintDescription<Contact<#= contactCount #>NonconvexOneBody>
+    public struct Contact<#= contactCount #>NonconvexOneBody : INonconvexOneBodyContactConstraintDescription<Contact<#= contactCount #>NonconvexOneBody>
     {
         public NonconvexOneBodyManifoldConstraintProperties Common;
 <#
@@ -187,7 +187,7 @@ for (int i = 0; i < contactCount ; ++i)
     }
 
     public struct Contact<#= contactCount #>NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact<#= contactCount #>NonconvexOneBodyPrestepData>    
-	{
+    {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
         public NonconvexOneBodyContactPrestepCommon Common;
 <#
@@ -207,7 +207,7 @@ for (int i = 0; i < contactCount ; ++i)
         {
             return ref prestep.Contact0;
         }
-				
+                
         public int ContactCount => <#= contactCount #>;
     }
 
@@ -235,7 +235,7 @@ for (int i = 0; i < contactCount ; ++i)
         public int ContactCount => <#= contactCount #>;
     }
 
-	/// <summary>
+    /// <summary>
     /// Handles the solve iterations of a bunch of <#= contactCount #>-contact nonconvex one body manifold constraints.
     /// </summary>
     public class Contact<#= contactCount #>NonconvexOneBodyTypeProcessor :

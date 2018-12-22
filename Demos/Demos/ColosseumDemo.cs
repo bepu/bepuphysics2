@@ -96,7 +96,7 @@ namespace Demos.Demos
 
             //Console.WriteLine($"box count: {Simulation.Bodies.ActiveSet.Count}");
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(500, 1, 500)), 0.1f)));
-            
+
             var bulletShape = new Sphere(0.5f);
             bulletShape.ComputeInertia(.1f, out var bulletInertia);
             bulletDescription = BodyDescription.CreateDynamic(new Vector3(), bulletInertia, new CollidableDescription(Simulation.Shapes.Add(bulletShape), 10), new BodyActivityDescription(0.01f));

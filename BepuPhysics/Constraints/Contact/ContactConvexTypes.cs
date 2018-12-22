@@ -42,11 +42,11 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> Twist;
     }
 
-	internal static class FrictionHelpers
-	{
+    internal static class FrictionHelpers
+    {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeFrictionCenter(
-			in Vector3Wide offsetA0, in Vector3Wide offsetA1, 
+            in Vector3Wide offsetA0, in Vector3Wide offsetA1, 
             in Vector<float> depth0,in Vector<float> depth1, out Vector3Wide center)
         {
             //This can sometimes cause a weird center of friction. That's a bit strange, but the alternative is often stranger:
@@ -67,7 +67,7 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeFrictionCenter(
-			in Vector3Wide offsetA0, in Vector3Wide offsetA1, in Vector3Wide offsetA2, 
+            in Vector3Wide offsetA0, in Vector3Wide offsetA1, in Vector3Wide offsetA2, 
             in Vector<float> depth0,in Vector<float> depth1,in Vector<float> depth2, out Vector3Wide center)
         {
             //This can sometimes cause a weird center of friction. That's a bit strange, but the alternative is often stranger:
@@ -92,7 +92,7 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeFrictionCenter(
-			in Vector3Wide offsetA0, in Vector3Wide offsetA1, in Vector3Wide offsetA2, in Vector3Wide offsetA3, 
+            in Vector3Wide offsetA0, in Vector3Wide offsetA1, in Vector3Wide offsetA2, in Vector3Wide offsetA3, 
             in Vector<float> depth0,in Vector<float> depth1,in Vector<float> depth2,in Vector<float> depth3, out Vector3Wide center)
         {
             //This can sometimes cause a weird center of friction. That's a bit strange, but the alternative is often stranger:
@@ -119,7 +119,7 @@ namespace BepuPhysics.Constraints.Contact
             Vector3Wide.Add(a0a1, a2a3, out center);
         }
 
-	}
+    }
     public struct Contact1OneBody : IConvexOneBodyContactConstraintDescription<Contact1OneBody>
     {
         public ConstraintContactData Contact0;
@@ -131,34 +131,34 @@ namespace BepuPhysics.Constraints.Contact
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
-		    Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact1PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
-			
+            
             Vector3Wide.WriteFirst(OffsetB, ref target.OffsetB);
 
             GetFirst(ref target.FrictionCoefficient) = FrictionCoefficient;
-			
+            
             Vector3Wide.WriteFirst(Normal, ref target.Normal);
-			
+            
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
-            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;					
+            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;                    
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact1OneBody description)
         {    
-			Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact4OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
-			
+            
             Vector3Wide.ReadFirst(source.OffsetB, out description.OffsetB);
 
             description.FrictionCoefficient = GetFirst(ref source.FrictionCoefficient);
-			
+            
             Vector3Wide.ReadFirst(source.Normal, out description.Normal);
-			
+            
             SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
             description.MaximumRecoveryVelocity = GetFirst(ref source.MaximumRecoveryVelocity);
         }
@@ -171,7 +171,7 @@ namespace BepuPhysics.Constraints.Contact
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
-		
+        
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -192,7 +192,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetB;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
-		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
         public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
@@ -205,14 +205,14 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFrictionOneBody.Projection Tangent;
-		public Vector<float> SoftnessImpulseScale;
+        public Vector<float> SoftnessImpulseScale;
         public PenetrationLimitOneBodyProjection Penetration0;
         //Lever arms aren't included in the twist projection because the number of arms required varies independently of the twist projection itself.
         public Vector<float> LeverArm0;
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact1OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses>
+    public struct Contact1OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact1OneBodyPrestepData, Contact1OneBodyProjection, Contact1AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
@@ -226,8 +226,8 @@ namespace BepuPhysics.Constraints.Contact
             Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.Prestep(ref x, ref z, ref prestep.OffsetA0, ref projection.InertiaA, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-			Vector3Wide contactOffsetB;
-			Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide contactOffsetB;
+            Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.OffsetA0, prestep.Normal, prestep.PenetrationDepth0, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
             //Just assume the lever arms for B are the same. It's a good guess. (The only reason we computed the offset B is because we didn't want to go into world space.)
             Vector3Wide.Distance(prestep.OffsetA0, prestep.OffsetA0, out projection.LeverArm0);
@@ -247,25 +247,25 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref Contact1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-				(accumulatedImpulses.Penetration0);
-			TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
-			//Note that we solve the penetration constraints after the friction constraints. 
-			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-			//It's a pretty minor effect either way.
-			PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
-			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-				accumulatedImpulses.Penetration0 * projection.LeverArm0);
-			TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
+            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+                (accumulatedImpulses.Penetration0);
+            TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
+            //Note that we solve the penetration constraints after the friction constraints. 
+            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+            //It's a pretty minor effect either way.
+            PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
+            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+                accumulatedImpulses.Penetration0 * projection.LeverArm0);
+            TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact1OneBodyPrestepData prestep)
         {
-			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
         }
     }
-	
+    
     /// <summary>
     /// Handles the solve iterations of a bunch of 1-contact one body manifold constraints.
     /// </summary>
@@ -289,38 +289,38 @@ namespace BepuPhysics.Constraints.Contact
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
-		    Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact2PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
             Vector3Wide.WriteFirst(Contact1.OffsetA, ref target.OffsetA1);
             GetFirst(ref target.PenetrationDepth1) = Contact1.PenetrationDepth;
-			
+            
             Vector3Wide.WriteFirst(OffsetB, ref target.OffsetB);
 
             GetFirst(ref target.FrictionCoefficient) = FrictionCoefficient;
-			
+            
             Vector3Wide.WriteFirst(Normal, ref target.Normal);
-			
+            
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
-            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;					
+            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;                    
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact2OneBody description)
         {    
-			Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact4OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
             Vector3Wide.ReadFirst(source.OffsetA1, out description.Contact1.OffsetA);
             description.Contact1.PenetrationDepth = GetFirst(ref source.PenetrationDepth1);
-			
+            
             Vector3Wide.ReadFirst(source.OffsetB, out description.OffsetB);
 
             description.FrictionCoefficient = GetFirst(ref source.FrictionCoefficient);
-			
+            
             Vector3Wide.ReadFirst(source.Normal, out description.Normal);
-			
+            
             SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
             description.MaximumRecoveryVelocity = GetFirst(ref source.MaximumRecoveryVelocity);
         }
@@ -333,7 +333,7 @@ namespace BepuPhysics.Constraints.Contact
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
-		
+        
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -356,7 +356,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetB;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
-		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
         public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
@@ -369,7 +369,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFrictionOneBody.Projection Tangent;
-		public Vector<float> SoftnessImpulseScale;
+        public Vector<float> SoftnessImpulseScale;
         public PenetrationLimitOneBodyProjection Penetration0;
         public PenetrationLimitOneBodyProjection Penetration1;
         //Lever arms aren't included in the twist projection because the number of arms required varies independently of the twist projection itself.
@@ -378,7 +378,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact2OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact2OneBodyPrestepData, Contact2OneBodyProjection, Contact2AccumulatedImpulses>
+    public struct Contact2OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact2OneBodyPrestepData, Contact2OneBodyProjection, Contact2AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
@@ -393,10 +393,10 @@ namespace BepuPhysics.Constraints.Contact
             Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref projection.InertiaA, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-			Vector3Wide contactOffsetB;
-			Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide contactOffsetB;
+            Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.OffsetA0, prestep.Normal, prestep.PenetrationDepth0, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
-			Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.OffsetA1, prestep.Normal, prestep.PenetrationDepth1, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration1);
             //Just assume the lever arms for B are the same. It's a good guess. (The only reason we computed the offset B is because we didn't want to go into world space.)
             Vector3Wide.Distance(prestep.OffsetA0, offsetToManifoldCenterA, out projection.LeverArm0);
@@ -418,28 +418,28 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref Contact2OneBodyProjection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
-			TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
-			//Note that we solve the penetration constraints after the friction constraints. 
-			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-			//It's a pretty minor effect either way.
-			PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
-			PenetrationLimitOneBody.Solve(projection.Penetration1, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA);
-			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-				accumulatedImpulses.Penetration1 * projection.LeverArm1);
-			TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
+            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
+            TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
+            //Note that we solve the penetration constraints after the friction constraints. 
+            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+            //It's a pretty minor effect either way.
+            PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
+            PenetrationLimitOneBody.Solve(projection.Penetration1, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA);
+            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+                accumulatedImpulses.Penetration1 * projection.LeverArm1);
+            TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact2OneBodyPrestepData prestep)
         {
-			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
-			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.Normal, velocityA, ref prestep.PenetrationDepth1);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.Normal, velocityA, ref prestep.PenetrationDepth1);
         }
     }
-	
+    
     /// <summary>
     /// Handles the solve iterations of a bunch of 2-contact one body manifold constraints.
     /// </summary>
@@ -464,7 +464,7 @@ namespace BepuPhysics.Constraints.Contact
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
-		    Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact3PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
@@ -472,20 +472,20 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.PenetrationDepth1) = Contact1.PenetrationDepth;
             Vector3Wide.WriteFirst(Contact2.OffsetA, ref target.OffsetA2);
             GetFirst(ref target.PenetrationDepth2) = Contact2.PenetrationDepth;
-			
+            
             Vector3Wide.WriteFirst(OffsetB, ref target.OffsetB);
 
             GetFirst(ref target.FrictionCoefficient) = FrictionCoefficient;
-			
+            
             Vector3Wide.WriteFirst(Normal, ref target.Normal);
-			
+            
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
-            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;					
+            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;                    
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact3OneBody description)
         {    
-			Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact4OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
@@ -493,13 +493,13 @@ namespace BepuPhysics.Constraints.Contact
             description.Contact1.PenetrationDepth = GetFirst(ref source.PenetrationDepth1);
             Vector3Wide.ReadFirst(source.OffsetA2, out description.Contact2.OffsetA);
             description.Contact2.PenetrationDepth = GetFirst(ref source.PenetrationDepth2);
-			
+            
             Vector3Wide.ReadFirst(source.OffsetB, out description.OffsetB);
 
             description.FrictionCoefficient = GetFirst(ref source.FrictionCoefficient);
-			
+            
             Vector3Wide.ReadFirst(source.Normal, out description.Normal);
-			
+            
             SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
             description.MaximumRecoveryVelocity = GetFirst(ref source.MaximumRecoveryVelocity);
         }
@@ -512,7 +512,7 @@ namespace BepuPhysics.Constraints.Contact
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
-		
+        
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -537,7 +537,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetB;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
-		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
         public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
@@ -550,7 +550,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFrictionOneBody.Projection Tangent;
-		public Vector<float> SoftnessImpulseScale;
+        public Vector<float> SoftnessImpulseScale;
         public PenetrationLimitOneBodyProjection Penetration0;
         public PenetrationLimitOneBodyProjection Penetration1;
         public PenetrationLimitOneBodyProjection Penetration2;
@@ -561,7 +561,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact3OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses>
+    public struct Contact3OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact3OneBodyPrestepData, Contact3OneBodyProjection, Contact3AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
@@ -576,12 +576,12 @@ namespace BepuPhysics.Constraints.Contact
             Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref projection.InertiaA, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-			Vector3Wide contactOffsetB;
-			Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide contactOffsetB;
+            Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.OffsetA0, prestep.Normal, prestep.PenetrationDepth0, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
-			Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.OffsetA1, prestep.Normal, prestep.PenetrationDepth1, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration1);
-			Vector3Wide.Subtract(prestep.OffsetA2, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA2, prestep.OffsetB, out contactOffsetB);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.OffsetA2, prestep.Normal, prestep.PenetrationDepth2, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration2);
             //Just assume the lever arms for B are the same. It's a good guess. (The only reason we computed the offset B is because we didn't want to go into world space.)
             Vector3Wide.Distance(prestep.OffsetA0, offsetToManifoldCenterA, out projection.LeverArm0);
@@ -605,31 +605,31 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref Contact3OneBodyProjection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
-			TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
-			//Note that we solve the penetration constraints after the friction constraints. 
-			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-			//It's a pretty minor effect either way.
-			PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
-			PenetrationLimitOneBody.Solve(projection.Penetration1, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA);
-			PenetrationLimitOneBody.Solve(projection.Penetration2, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA);
-			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-				accumulatedImpulses.Penetration1 * projection.LeverArm1 +
-				accumulatedImpulses.Penetration2 * projection.LeverArm2);
-			TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
+            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
+            TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
+            //Note that we solve the penetration constraints after the friction constraints. 
+            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+            //It's a pretty minor effect either way.
+            PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
+            PenetrationLimitOneBody.Solve(projection.Penetration1, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA);
+            PenetrationLimitOneBody.Solve(projection.Penetration2, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA);
+            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+                accumulatedImpulses.Penetration1 * projection.LeverArm1 +
+                accumulatedImpulses.Penetration2 * projection.LeverArm2);
+            TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact3OneBodyPrestepData prestep)
         {
-			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
-			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.Normal, velocityA, ref prestep.PenetrationDepth1);
-			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.Normal, velocityA, ref prestep.PenetrationDepth2);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.Normal, velocityA, ref prestep.PenetrationDepth1);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.Normal, velocityA, ref prestep.PenetrationDepth2);
         }
     }
-	
+    
     /// <summary>
     /// Handles the solve iterations of a bunch of 3-contact one body manifold constraints.
     /// </summary>
@@ -655,7 +655,7 @@ namespace BepuPhysics.Constraints.Contact
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
-		    Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
@@ -665,20 +665,20 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.PenetrationDepth2) = Contact2.PenetrationDepth;
             Vector3Wide.WriteFirst(Contact3.OffsetA, ref target.OffsetA3);
             GetFirst(ref target.PenetrationDepth3) = Contact3.PenetrationDepth;
-			
+            
             Vector3Wide.WriteFirst(OffsetB, ref target.OffsetB);
 
             GetFirst(ref target.FrictionCoefficient) = FrictionCoefficient;
-			
+            
             Vector3Wide.WriteFirst(Normal, ref target.Normal);
-			
+            
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
-            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;					
+            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;                    
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact4OneBody description)
         {    
-			Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact4OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
@@ -688,13 +688,13 @@ namespace BepuPhysics.Constraints.Contact
             description.Contact2.PenetrationDepth = GetFirst(ref source.PenetrationDepth2);
             Vector3Wide.ReadFirst(source.OffsetA3, out description.Contact3.OffsetA);
             description.Contact3.PenetrationDepth = GetFirst(ref source.PenetrationDepth3);
-			
+            
             Vector3Wide.ReadFirst(source.OffsetB, out description.OffsetB);
 
             description.FrictionCoefficient = GetFirst(ref source.FrictionCoefficient);
-			
+            
             Vector3Wide.ReadFirst(source.Normal, out description.Normal);
-			
+            
             SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
             description.MaximumRecoveryVelocity = GetFirst(ref source.MaximumRecoveryVelocity);
         }
@@ -707,7 +707,7 @@ namespace BepuPhysics.Constraints.Contact
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
-		
+        
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -734,7 +734,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetB;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
-		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
         public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
@@ -747,7 +747,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFrictionOneBody.Projection Tangent;
-		public Vector<float> SoftnessImpulseScale;
+        public Vector<float> SoftnessImpulseScale;
         public PenetrationLimitOneBodyProjection Penetration0;
         public PenetrationLimitOneBodyProjection Penetration1;
         public PenetrationLimitOneBodyProjection Penetration2;
@@ -760,7 +760,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact4OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact4OneBodyPrestepData, Contact4OneBodyProjection, Contact4AccumulatedImpulses>
+    public struct Contact4OneBodyFunctions : IOneBodyContactConstraintFunctions<Contact4OneBodyPrestepData, Contact4OneBodyProjection, Contact4AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref Vector<int> bodyReferences, int count,
@@ -775,14 +775,14 @@ namespace BepuPhysics.Constraints.Contact
             Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
             TangentFrictionOneBody.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref projection.InertiaA, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-			Vector3Wide contactOffsetB;
-			Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide contactOffsetB;
+            Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.OffsetA0, prestep.Normal, prestep.PenetrationDepth0, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
-			Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.OffsetA1, prestep.Normal, prestep.PenetrationDepth1, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration1);
-			Vector3Wide.Subtract(prestep.OffsetA2, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA2, prestep.OffsetB, out contactOffsetB);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.OffsetA2, prestep.Normal, prestep.PenetrationDepth2, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration2);
-			Vector3Wide.Subtract(prestep.OffsetA3, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA3, prestep.OffsetB, out contactOffsetB);
             PenetrationLimitOneBody.Prestep(projection.InertiaA, prestep.OffsetA3, prestep.Normal, prestep.PenetrationDepth3, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration3);
             //Just assume the lever arms for B are the same. It's a good guess. (The only reason we computed the offset B is because we didn't want to go into world space.)
             Vector3Wide.Distance(prestep.OffsetA0, offsetToManifoldCenterA, out projection.LeverArm0);
@@ -808,34 +808,34 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref Contact4OneBodyProjection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
-			TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
-			//Note that we solve the penetration constraints after the friction constraints. 
-			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-			//It's a pretty minor effect either way.
-			PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
-			PenetrationLimitOneBody.Solve(projection.Penetration1, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA);
-			PenetrationLimitOneBody.Solve(projection.Penetration2, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA);
-			PenetrationLimitOneBody.Solve(projection.Penetration3, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration3, ref wsvA);
-			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-				accumulatedImpulses.Penetration1 * projection.LeverArm1 +
-				accumulatedImpulses.Penetration2 * projection.LeverArm2 +
-				accumulatedImpulses.Penetration3 * projection.LeverArm3);
-			TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
+            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
+            TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
+            //Note that we solve the penetration constraints after the friction constraints. 
+            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+            //It's a pretty minor effect either way.
+            PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
+            PenetrationLimitOneBody.Solve(projection.Penetration1, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA);
+            PenetrationLimitOneBody.Solve(projection.Penetration2, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA);
+            PenetrationLimitOneBody.Solve(projection.Penetration3, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration3, ref wsvA);
+            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+                accumulatedImpulses.Penetration1 * projection.LeverArm1 +
+                accumulatedImpulses.Penetration2 * projection.LeverArm2 +
+                accumulatedImpulses.Penetration3 * projection.LeverArm3);
+            TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, ref Contact4OneBodyPrestepData prestep)
         {
-			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
-			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.Normal, velocityA, ref prestep.PenetrationDepth1);
-			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.Normal, velocityA, ref prestep.PenetrationDepth2);
-			PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA3, prestep.Normal, velocityA, ref prestep.PenetrationDepth3);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.Normal, velocityA, ref prestep.PenetrationDepth0);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.Normal, velocityA, ref prestep.PenetrationDepth1);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.Normal, velocityA, ref prestep.PenetrationDepth2);
+            PenetrationLimitOneBody.UpdatePenetrationDepth(dt, prestep.OffsetA3, prestep.Normal, velocityA, ref prestep.PenetrationDepth3);
         }
     }
-	
+    
     /// <summary>
     /// Handles the solve iterations of a bunch of 4-contact one body manifold constraints.
     /// </summary>
@@ -858,34 +858,34 @@ namespace BepuPhysics.Constraints.Contact
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
-		    Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact1PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
-			
+            
             Vector3Wide.WriteFirst(OffsetB, ref target.OffsetB);
 
             GetFirst(ref target.FrictionCoefficient) = FrictionCoefficient;
-			
+            
             Vector3Wide.WriteFirst(Normal, ref target.Normal);
-			
+            
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
-            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;					
+            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;                    
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact1 description)
         {    
-			Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
-			
+            
             Vector3Wide.ReadFirst(source.OffsetB, out description.OffsetB);
 
             description.FrictionCoefficient = GetFirst(ref source.FrictionCoefficient);
-			
+            
             Vector3Wide.ReadFirst(source.Normal, out description.Normal);
-			
+            
             SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
             description.MaximumRecoveryVelocity = GetFirst(ref source.MaximumRecoveryVelocity);
         }
@@ -899,7 +899,7 @@ namespace BepuPhysics.Constraints.Contact
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
-		
+        
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -920,7 +920,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetB;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
-		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
         public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
@@ -934,14 +934,14 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFriction.Projection Tangent;
-		public Vector<float> SoftnessImpulseScale;
+        public Vector<float> SoftnessImpulseScale;
         public PenetrationLimitProjection Penetration0;
         //Lever arms aren't included in the twist projection because the number of arms required varies independently of the twist projection itself.
         public Vector<float> LeverArm0;
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact1Functions : IContactConstraintFunctions<Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses>
+    public struct Contact1Functions : IContactConstraintFunctions<Contact1PrestepData, Contact1Projection, Contact1AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
@@ -956,8 +956,8 @@ namespace BepuPhysics.Constraints.Contact
             Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
             TangentFriction.Prestep(ref x, ref z, ref prestep.OffsetA0, ref offsetToManifoldCenterB, ref projection.InertiaA, ref projection.InertiaB, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-			Vector3Wide contactOffsetB;
-			Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide contactOffsetB;
+            Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
             PenetrationLimit.Prestep(projection.InertiaA, projection.InertiaB, prestep.OffsetA0, contactOffsetB, prestep.Normal, prestep.PenetrationDepth0, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
             //Just assume the lever arms for B are the same. It's a good guess. (The only reason we computed the offset B is because we didn't want to go into world space.)
             Vector3Wide.Distance(prestep.OffsetA0, prestep.OffsetA0, out projection.LeverArm0);
@@ -977,25 +977,25 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-				(accumulatedImpulses.Penetration0);
-			TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
-			//Note that we solve the penetration constraints after the friction constraints. 
-			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-			//It's a pretty minor effect either way.
-			PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
-			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-				accumulatedImpulses.Penetration0 * projection.LeverArm0);
-			TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
+            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+                (accumulatedImpulses.Penetration0);
+            TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+            //Note that we solve the penetration constraints after the friction constraints. 
+            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+            //It's a pretty minor effect either way.
+            PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+                accumulatedImpulses.Penetration0 * projection.LeverArm0);
+            TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact1PrestepData prestep)
         {
-			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
         }
     }
-	
+    
     /// <summary>
     /// Handles the solve iterations of a bunch of 1-contact two body manifold constraints.
     /// </summary>
@@ -1019,38 +1019,38 @@ namespace BepuPhysics.Constraints.Contact
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
-		    Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact2PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
             Vector3Wide.WriteFirst(Contact1.OffsetA, ref target.OffsetA1);
             GetFirst(ref target.PenetrationDepth1) = Contact1.PenetrationDepth;
-			
+            
             Vector3Wide.WriteFirst(OffsetB, ref target.OffsetB);
 
             GetFirst(ref target.FrictionCoefficient) = FrictionCoefficient;
-			
+            
             Vector3Wide.WriteFirst(Normal, ref target.Normal);
-			
+            
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
-            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;					
+            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;                    
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact2 description)
         {    
-			Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
             Vector3Wide.ReadFirst(source.OffsetA1, out description.Contact1.OffsetA);
             description.Contact1.PenetrationDepth = GetFirst(ref source.PenetrationDepth1);
-			
+            
             Vector3Wide.ReadFirst(source.OffsetB, out description.OffsetB);
 
             description.FrictionCoefficient = GetFirst(ref source.FrictionCoefficient);
-			
+            
             Vector3Wide.ReadFirst(source.Normal, out description.Normal);
-			
+            
             SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
             description.MaximumRecoveryVelocity = GetFirst(ref source.MaximumRecoveryVelocity);
         }
@@ -1064,7 +1064,7 @@ namespace BepuPhysics.Constraints.Contact
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
-		
+        
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1087,7 +1087,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetB;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
-		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
         public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
@@ -1101,7 +1101,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFriction.Projection Tangent;
-		public Vector<float> SoftnessImpulseScale;
+        public Vector<float> SoftnessImpulseScale;
         public PenetrationLimitProjection Penetration0;
         public PenetrationLimitProjection Penetration1;
         //Lever arms aren't included in the twist projection because the number of arms required varies independently of the twist projection itself.
@@ -1110,7 +1110,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact2Functions : IContactConstraintFunctions<Contact2PrestepData, Contact2Projection, Contact2AccumulatedImpulses>
+    public struct Contact2Functions : IContactConstraintFunctions<Contact2PrestepData, Contact2Projection, Contact2AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
@@ -1126,10 +1126,10 @@ namespace BepuPhysics.Constraints.Contact
             Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
             TangentFriction.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref offsetToManifoldCenterB, ref projection.InertiaA, ref projection.InertiaB, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-			Vector3Wide contactOffsetB;
-			Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide contactOffsetB;
+            Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
             PenetrationLimit.Prestep(projection.InertiaA, projection.InertiaB, prestep.OffsetA0, contactOffsetB, prestep.Normal, prestep.PenetrationDepth0, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
-			Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
             PenetrationLimit.Prestep(projection.InertiaA, projection.InertiaB, prestep.OffsetA1, contactOffsetB, prestep.Normal, prestep.PenetrationDepth1, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration1);
             //Just assume the lever arms for B are the same. It's a good guess. (The only reason we computed the offset B is because we didn't want to go into world space.)
             Vector3Wide.Distance(prestep.OffsetA0, offsetToManifoldCenterA, out projection.LeverArm0);
@@ -1151,28 +1151,28 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
-			TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
-			//Note that we solve the penetration constraints after the friction constraints. 
-			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-			//It's a pretty minor effect either way.
-			PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
-			PenetrationLimit.Solve(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
-			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-				accumulatedImpulses.Penetration1 * projection.LeverArm1);
-			TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
+            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
+            TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+            //Note that we solve the penetration constraints after the friction constraints. 
+            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+            //It's a pretty minor effect either way.
+            PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            PenetrationLimit.Solve(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
+            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+                accumulatedImpulses.Penetration1 * projection.LeverArm1);
+            TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact2PrestepData prestep)
         {
-			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
-			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth1);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth1);
         }
     }
-	
+    
     /// <summary>
     /// Handles the solve iterations of a bunch of 2-contact two body manifold constraints.
     /// </summary>
@@ -1197,7 +1197,7 @@ namespace BepuPhysics.Constraints.Contact
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
-		    Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact3PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
@@ -1205,20 +1205,20 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.PenetrationDepth1) = Contact1.PenetrationDepth;
             Vector3Wide.WriteFirst(Contact2.OffsetA, ref target.OffsetA2);
             GetFirst(ref target.PenetrationDepth2) = Contact2.PenetrationDepth;
-			
+            
             Vector3Wide.WriteFirst(OffsetB, ref target.OffsetB);
 
             GetFirst(ref target.FrictionCoefficient) = FrictionCoefficient;
-			
+            
             Vector3Wide.WriteFirst(Normal, ref target.Normal);
-			
+            
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
-            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;					
+            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;                    
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact3 description)
         {    
-			Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
@@ -1226,13 +1226,13 @@ namespace BepuPhysics.Constraints.Contact
             description.Contact1.PenetrationDepth = GetFirst(ref source.PenetrationDepth1);
             Vector3Wide.ReadFirst(source.OffsetA2, out description.Contact2.OffsetA);
             description.Contact2.PenetrationDepth = GetFirst(ref source.PenetrationDepth2);
-			
+            
             Vector3Wide.ReadFirst(source.OffsetB, out description.OffsetB);
 
             description.FrictionCoefficient = GetFirst(ref source.FrictionCoefficient);
-			
+            
             Vector3Wide.ReadFirst(source.Normal, out description.Normal);
-			
+            
             SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
             description.MaximumRecoveryVelocity = GetFirst(ref source.MaximumRecoveryVelocity);
         }
@@ -1246,7 +1246,7 @@ namespace BepuPhysics.Constraints.Contact
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
-		
+        
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1271,7 +1271,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetB;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
-		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
         public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
@@ -1285,7 +1285,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFriction.Projection Tangent;
-		public Vector<float> SoftnessImpulseScale;
+        public Vector<float> SoftnessImpulseScale;
         public PenetrationLimitProjection Penetration0;
         public PenetrationLimitProjection Penetration1;
         public PenetrationLimitProjection Penetration2;
@@ -1296,7 +1296,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact3Functions : IContactConstraintFunctions<Contact3PrestepData, Contact3Projection, Contact3AccumulatedImpulses>
+    public struct Contact3Functions : IContactConstraintFunctions<Contact3PrestepData, Contact3Projection, Contact3AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
@@ -1312,12 +1312,12 @@ namespace BepuPhysics.Constraints.Contact
             Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
             TangentFriction.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref offsetToManifoldCenterB, ref projection.InertiaA, ref projection.InertiaB, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-			Vector3Wide contactOffsetB;
-			Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide contactOffsetB;
+            Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
             PenetrationLimit.Prestep(projection.InertiaA, projection.InertiaB, prestep.OffsetA0, contactOffsetB, prestep.Normal, prestep.PenetrationDepth0, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
-			Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
             PenetrationLimit.Prestep(projection.InertiaA, projection.InertiaB, prestep.OffsetA1, contactOffsetB, prestep.Normal, prestep.PenetrationDepth1, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration1);
-			Vector3Wide.Subtract(prestep.OffsetA2, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA2, prestep.OffsetB, out contactOffsetB);
             PenetrationLimit.Prestep(projection.InertiaA, projection.InertiaB, prestep.OffsetA2, contactOffsetB, prestep.Normal, prestep.PenetrationDepth2, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration2);
             //Just assume the lever arms for B are the same. It's a good guess. (The only reason we computed the offset B is because we didn't want to go into world space.)
             Vector3Wide.Distance(prestep.OffsetA0, offsetToManifoldCenterA, out projection.LeverArm0);
@@ -1341,31 +1341,31 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
-			TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
-			//Note that we solve the penetration constraints after the friction constraints. 
-			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-			//It's a pretty minor effect either way.
-			PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
-			PenetrationLimit.Solve(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
-			PenetrationLimit.Solve(projection.Penetration2, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA, ref wsvB);
-			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-				accumulatedImpulses.Penetration1 * projection.LeverArm1 +
-				accumulatedImpulses.Penetration2 * projection.LeverArm2);
-			TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
+            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
+            TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+            //Note that we solve the penetration constraints after the friction constraints. 
+            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+            //It's a pretty minor effect either way.
+            PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            PenetrationLimit.Solve(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
+            PenetrationLimit.Solve(projection.Penetration2, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA, ref wsvB);
+            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+                accumulatedImpulses.Penetration1 * projection.LeverArm1 +
+                accumulatedImpulses.Penetration2 * projection.LeverArm2);
+            TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact3PrestepData prestep)
         {
-			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
-			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth1);
-			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth2);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth1);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth2);
         }
     }
-	
+    
     /// <summary>
     /// Handles the solve iterations of a bunch of 3-contact two body manifold constraints.
     /// </summary>
@@ -1391,7 +1391,7 @@ namespace BepuPhysics.Constraints.Contact
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
-		    Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
@@ -1401,20 +1401,20 @@ namespace BepuPhysics.Constraints.Contact
             GetFirst(ref target.PenetrationDepth2) = Contact2.PenetrationDepth;
             Vector3Wide.WriteFirst(Contact3.OffsetA, ref target.OffsetA3);
             GetFirst(ref target.PenetrationDepth3) = Contact3.PenetrationDepth;
-			
+            
             Vector3Wide.WriteFirst(OffsetB, ref target.OffsetB);
 
             GetFirst(ref target.FrictionCoefficient) = FrictionCoefficient;
-			
+            
             Vector3Wide.WriteFirst(Normal, ref target.Normal);
-			
+            
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
-            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;					
+            GetFirst(ref target.MaximumRecoveryVelocity) = MaximumRecoveryVelocity;                    
         }
 
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact4 description)
         {    
-			Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
+            Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
@@ -1424,13 +1424,13 @@ namespace BepuPhysics.Constraints.Contact
             description.Contact2.PenetrationDepth = GetFirst(ref source.PenetrationDepth2);
             Vector3Wide.ReadFirst(source.OffsetA3, out description.Contact3.OffsetA);
             description.Contact3.PenetrationDepth = GetFirst(ref source.PenetrationDepth3);
-			
+            
             Vector3Wide.ReadFirst(source.OffsetB, out description.OffsetB);
 
             description.FrictionCoefficient = GetFirst(ref source.FrictionCoefficient);
-			
+            
             Vector3Wide.ReadFirst(source.Normal, out description.Normal);
-			
+            
             SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
             description.MaximumRecoveryVelocity = GetFirst(ref source.MaximumRecoveryVelocity);
         }
@@ -1444,7 +1444,7 @@ namespace BepuPhysics.Constraints.Contact
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
-		
+        
         public int ConstraintTypeId
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1471,7 +1471,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3Wide OffsetB;
         //In a convex manifold, all contacts share the same normal and tangents.
         public Vector3Wide Normal;
-		//Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
+        //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
         public Vector<float> FrictionCoefficient;
         //All contacts also share the spring settings.
         public SpringSettingsWide SpringSettings;
@@ -1485,7 +1485,7 @@ namespace BepuPhysics.Constraints.Contact
         public Vector<float> PremultipliedFrictionCoefficient;
         public Vector3Wide Normal;
         public TangentFriction.Projection Tangent;
-		public Vector<float> SoftnessImpulseScale;
+        public Vector<float> SoftnessImpulseScale;
         public PenetrationLimitProjection Penetration0;
         public PenetrationLimitProjection Penetration1;
         public PenetrationLimitProjection Penetration2;
@@ -1498,7 +1498,7 @@ namespace BepuPhysics.Constraints.Contact
         public TwistFrictionProjection Twist;
     }
 
-	public struct Contact4Functions : IContactConstraintFunctions<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses>
+    public struct Contact4Functions : IContactConstraintFunctions<Contact4PrestepData, Contact4Projection, Contact4AccumulatedImpulses>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Prestep(Bodies bodies, ref TwoBodyReferences bodyReferences, int count,
@@ -1514,14 +1514,14 @@ namespace BepuPhysics.Constraints.Contact
             Helpers.BuildOrthnormalBasis(prestep.Normal, out var x, out var z);
             TangentFriction.Prestep(ref x, ref z, ref offsetToManifoldCenterA, ref offsetToManifoldCenterB, ref projection.InertiaA, ref projection.InertiaB, out projection.Tangent);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
-			Vector3Wide contactOffsetB;
-			Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide contactOffsetB;
+            Vector3Wide.Subtract(prestep.OffsetA0, prestep.OffsetB, out contactOffsetB);
             PenetrationLimit.Prestep(projection.InertiaA, projection.InertiaB, prestep.OffsetA0, contactOffsetB, prestep.Normal, prestep.PenetrationDepth0, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration0);
-			Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA1, prestep.OffsetB, out contactOffsetB);
             PenetrationLimit.Prestep(projection.InertiaA, projection.InertiaB, prestep.OffsetA1, contactOffsetB, prestep.Normal, prestep.PenetrationDepth1, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration1);
-			Vector3Wide.Subtract(prestep.OffsetA2, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA2, prestep.OffsetB, out contactOffsetB);
             PenetrationLimit.Prestep(projection.InertiaA, projection.InertiaB, prestep.OffsetA2, contactOffsetB, prestep.Normal, prestep.PenetrationDepth2, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration2);
-			Vector3Wide.Subtract(prestep.OffsetA3, prestep.OffsetB, out contactOffsetB);
+            Vector3Wide.Subtract(prestep.OffsetA3, prestep.OffsetB, out contactOffsetB);
             PenetrationLimit.Prestep(projection.InertiaA, projection.InertiaB, prestep.OffsetA3, contactOffsetB, prestep.Normal, prestep.PenetrationDepth3, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaximumRecoveryVelocity, inverseDt, out projection.Penetration3);
             //Just assume the lever arms for B are the same. It's a good guess. (The only reason we computed the offset B is because we didn't want to go into world space.)
             Vector3Wide.Distance(prestep.OffsetA0, offsetToManifoldCenterA, out projection.LeverArm0);
@@ -1547,34 +1547,34 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
-			TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
-			//Note that we solve the penetration constraints after the friction constraints. 
-			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-			//It's a pretty minor effect either way.
-			PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
-			PenetrationLimit.Solve(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
-			PenetrationLimit.Solve(projection.Penetration2, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA, ref wsvB);
-			PenetrationLimit.Solve(projection.Penetration3, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration3, ref wsvA, ref wsvB);
-			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-				accumulatedImpulses.Penetration1 * projection.LeverArm1 +
-				accumulatedImpulses.Penetration2 * projection.LeverArm2 +
-				accumulatedImpulses.Penetration3 * projection.LeverArm3);
-			TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
+            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
+            TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+            //Note that we solve the penetration constraints after the friction constraints. 
+            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+            //It's a pretty minor effect either way.
+            PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
+            PenetrationLimit.Solve(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
+            PenetrationLimit.Solve(projection.Penetration2, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA, ref wsvB);
+            PenetrationLimit.Solve(projection.Penetration3, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration3, ref wsvA, ref wsvB);
+            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+                accumulatedImpulses.Penetration1 * projection.LeverArm1 +
+                accumulatedImpulses.Penetration2 * projection.LeverArm2 +
+                accumulatedImpulses.Penetration3 * projection.LeverArm3);
+            TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocities velocityA, in BodyVelocities velocityB, ref Contact4PrestepData prestep)
         {
-			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
-			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth1);
-			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth2);
-			PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA3, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth3);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA0, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth0);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA1, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth1);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA2, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth2);
+            PenetrationLimit.UpdatePenetrationDepth(dt, prestep.OffsetA3, prestep.OffsetB, prestep.Normal, velocityA, velocityB, ref prestep.PenetrationDepth3);
         }
     }
-	
+    
     /// <summary>
     /// Handles the solve iterations of a bunch of 4-contact two body manifold constraints.
     /// </summary>
