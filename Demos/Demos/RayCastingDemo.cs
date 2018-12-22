@@ -425,9 +425,9 @@ namespace Demos
             }
         }
 
-        public unsafe override void Update(Input input, float dt)
+        public unsafe override void Update(Window window, Camera camera, Input input, float dt)
         {
-            base.Update(input, dt);
+            base.Update(window, camera, input, dt);
 
             char one = '1';
             for (int i = 0; i < raySources.Count; ++i)

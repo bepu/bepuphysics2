@@ -50,22 +50,7 @@ namespace Demos
                 }
             }
         }
-
-        Vector3 GetRayDirection(Camera camera, bool mouseLocked, in Vector2 normalizedMousePosition)
-        {
-            //The ray direction depends on the camera and whether the camera is locked.
-            if (mouseLocked)
-            {
-                return camera.Forward;
-            }
-            var unitPlaneHalfHeight = MathF.Tan(camera.FieldOfView * 0.5f);
-            var unitPlaneHalfWidth = unitPlaneHalfHeight * camera.AspectRatio;
-            var localRayDirection = new Vector3(
-                new Vector2(unitPlaneHalfWidth, unitPlaneHalfHeight) * 2 * new Vector2(normalizedMousePosition.X - 0.5f, 0.5f - normalizedMousePosition.Y), -1);
-            Quaternion.TransformWithoutOverlap(localRayDirection, camera.OrientationQuaternion, out var rayDirection);
-            return rayDirection;
-        }
-
+        
         void CreateMotorDescription(in Vector3 target, float inverseMass, out OneBodyLinearServo linearDescription, out OneBodyAngularServo angularDescription)
         {
             linearDescription = new OneBodyLinearServo
@@ -101,7 +86,7 @@ namespace Demos
             }
             else if (shouldGrab && !active)
             {
-                var rayDirection = GetRayDirection(camera, mouseLocked, normalizedMousePosition);
+                var rayDirection = camera.GetRayDirection(mouseLocked, normalizedMousePosition);
                 var hitHandler = default(RayHitHandler);
                 hitHandler.T = float.MaxValue;
                 simulation.RayCast(camera.Position, rayDirection, float.MaxValue, ref hitHandler);
@@ -125,7 +110,7 @@ namespace Demos
                 Quaternion.TransformWithoutOverlap(localGrabPoint, body.Pose.Orientation, out var grabPointOffset);
                 var grabbedPoint = grabPointOffset + body.Pose.Position;
 
-                var rayDirection = GetRayDirection(camera, mouseLocked, normalizedMousePosition);
+                var rayDirection = camera.GetRayDirection(mouseLocked, normalizedMousePosition);
                 var targetPoint = camera.Position + rayDirection * t;
                 targetOrientation = Quaternion.Concatenate(targetOrientation, rotation);
 

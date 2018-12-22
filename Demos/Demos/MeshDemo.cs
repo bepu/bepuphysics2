@@ -192,13 +192,6 @@ namespace Demos.Demos
             pool.Return(ref vertices);
             mesh = new Mesh(triangles, scaling, pool);
         }
-        public override void Update(Input input, float dt)
-        {
-            //if (input.IsDown(OpenTK.Input.Key.P))
-            //    Console.Write("SDF");
-            base.Update(input, dt);
-        }
-
     }
 }
 

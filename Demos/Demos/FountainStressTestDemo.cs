@@ -160,7 +160,7 @@ namespace Demos.Demos
             }
         }
 
-        public override void Update(Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, float dt)
         {
             var timestepDuration = 1f / 60f;
             time += timestepDuration;
@@ -310,7 +310,7 @@ namespace Demos.Demos
                     break;
                 }
             }
-            base.Update(input, dt);
+            base.Update(window, camera, input, dt);
 
             if (input.WasPushed(OpenTK.Input.Key.P))
                 GC.Collect(int.MaxValue, GCCollectionMode.Forced, true, true);

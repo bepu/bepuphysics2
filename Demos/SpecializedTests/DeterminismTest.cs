@@ -24,7 +24,7 @@ namespace Demos.SpecializedTests
             Console.Write("Completed frames: ");
             for (int i = 0; i < frameCount; ++i)
             {
-                demo.Update(null, 1 / 60f);
+                demo.Update(null, null, null, 1 / 60f);
                 if ((i + 1) % 32 == 0)
                     Console.Write($"{i + 1}, ");
             }

@@ -77,7 +77,7 @@ namespace Demos
 
         }
 
-        public override void Update(Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, float dt)
         {
             for (int iterationIndex = 0; iterationIndex < 100; ++iterationIndex)
             {
@@ -104,7 +104,7 @@ namespace Demos
 
             }
 
-            base.Update(input, dt);
+            base.Update(window, camera, input, dt);
 
         }
 

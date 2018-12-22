@@ -236,21 +236,21 @@ for (int i = 0; i < contactCount; ++i)
         public void Solve(ref BodyVelocities wsvA, <#if(bodyCount == 2) {#>ref BodyVelocities wsvB, <#}#>ref Contact<#=contactCount#><#=suffix#>Projection projection, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-                (<#for (int i = 0; i < contactCount; ++i) {#>accumulatedImpulses.Penetration<#=i#><#if(i < contactCount - 1){#> + <#}}#>);
-            TangentFriction<#=suffix#>.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, <#if (bodyCount == 2) {#>ref projection.InertiaB, <#}#>ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
-            //Note that we solve the penetration constraints after the friction constraints. 
-            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-            //It's a pretty minor effect either way.
+			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+				(<#for (int i = 0; i < contactCount; ++i) {#>accumulatedImpulses.Penetration<#=i#><#if(i < contactCount - 1){#> + <#}}#>);
+			TangentFriction<#=suffix#>.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, <#if (bodyCount == 2) {#>ref projection.InertiaB, <#}#>ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
+			//Note that we solve the penetration constraints after the friction constraints. 
+			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+			//It's a pretty minor effect either way.
 <#for (int i = 0; i < contactCount; ++i) {#>
 			PenetrationLimit<#=suffix#>.Solve(projection.Penetration<#=i#>, projection.InertiaA, <#if (bodyCount == 2) {#>projection.InertiaB, <#}#>projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration<#=i#>, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
 <#}#>
-            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
 <#for (int i = 0; i < contactCount; ++i) {#>
-                accumulatedImpulses.Penetration<#=i#> * projection.LeverArm<#=i#><#if (i < contactCount - 1){#> +<#} else{#>);<#}#>
+				accumulatedImpulses.Penetration<#=i#> * projection.LeverArm<#=i#><#if (i < contactCount - 1){#> +<#} else{#>);<#}#>
 
 <#}#>
-            TwistFriction<#=suffix#>.Solve(ref projection.Normal, ref projection.InertiaA, <#if (bodyCount == 2) {#>ref projection.InertiaB, <#}#>ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
+			TwistFriction<#=suffix#>.Solve(ref projection.Normal, ref projection.InertiaA, <#if (bodyCount == 2) {#>ref projection.InertiaB, <#}#>ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

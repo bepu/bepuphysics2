@@ -138,7 +138,7 @@ namespace Demos.Demos
         }
         int bigBallHandle;
         float timeAccumulator;
-        public override void Update(Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, float dt)
         {
             var bigBall = new BodyReference(bigBallHandle, Simulation.Bodies);
             timeAccumulator += 1 / 60f;
@@ -147,7 +147,7 @@ namespace Demos.Demos
             if (!bigBall.IsActive)
                 Simulation.Awakener.AwakenBody(bigBallHandle);
             bigBall.Velocity.Linear = new Vector3(0, 3f * MathF.Sin(timeAccumulator * 5), 0);
-            base.Update(input, dt);
+            base.Update(window, camera, input, dt);
         }
     }
 }

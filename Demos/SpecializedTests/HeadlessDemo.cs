@@ -21,7 +21,7 @@ namespace Demos.SpecializedTests
                 GC.Collect(3, GCCollectionMode.Forced, true, true);
                 for (int i = 0; i < warmUpFrames; ++i)
                 {
-                    demo.Update(null, 1 / 60f);
+                    demo.Update(null, null, null, 1 / 60f);
                 }
                 Console.WriteLine($"Warmup {runIndex} complete");
                 double time = 0;
@@ -31,7 +31,7 @@ namespace Demos.SpecializedTests
                 {
                     CacheBlaster.Blast();
                     var start = Stopwatch.GetTimestamp();
-                    demo.Update(null, 1 / 60f);
+                    demo.Update(null, null, null, 1 / 60f);
                     var end = Stopwatch.GetTimestamp();
                     time += (end - start) / (double)Stopwatch.Frequency;
                     if (i % 32 == 0)

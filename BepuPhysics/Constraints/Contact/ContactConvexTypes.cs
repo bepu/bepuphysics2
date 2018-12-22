@@ -247,16 +247,16 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref Contact1OneBodyProjection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-                (accumulatedImpulses.Penetration0);
-            TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
-            //Note that we solve the penetration constraints after the friction constraints. 
-            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-            //It's a pretty minor effect either way.
+			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+				(accumulatedImpulses.Penetration0);
+			TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
+			//Note that we solve the penetration constraints after the friction constraints. 
+			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+			//It's a pretty minor effect either way.
 			PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
-            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-                accumulatedImpulses.Penetration0 * projection.LeverArm0);
-            TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
+			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+				accumulatedImpulses.Penetration0 * projection.LeverArm0);
+			TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -418,18 +418,18 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref Contact2OneBodyProjection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
-            TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
-            //Note that we solve the penetration constraints after the friction constraints. 
-            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-            //It's a pretty minor effect either way.
+			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
+			TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
+			//Note that we solve the penetration constraints after the friction constraints. 
+			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+			//It's a pretty minor effect either way.
 			PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
 			PenetrationLimitOneBody.Solve(projection.Penetration1, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA);
-            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-                accumulatedImpulses.Penetration1 * projection.LeverArm1);
-            TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
+			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+				accumulatedImpulses.Penetration1 * projection.LeverArm1);
+			TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -605,20 +605,20 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref Contact3OneBodyProjection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
-            TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
-            //Note that we solve the penetration constraints after the friction constraints. 
-            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-            //It's a pretty minor effect either way.
+			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
+			TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
+			//Note that we solve the penetration constraints after the friction constraints. 
+			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+			//It's a pretty minor effect either way.
 			PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
 			PenetrationLimitOneBody.Solve(projection.Penetration1, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA);
 			PenetrationLimitOneBody.Solve(projection.Penetration2, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA);
-            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-                accumulatedImpulses.Penetration1 * projection.LeverArm1 +
-                accumulatedImpulses.Penetration2 * projection.LeverArm2);
-            TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
+			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+				accumulatedImpulses.Penetration1 * projection.LeverArm1 +
+				accumulatedImpulses.Penetration2 * projection.LeverArm2);
+			TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -808,22 +808,22 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref Contact4OneBodyProjection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
-            TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
-            //Note that we solve the penetration constraints after the friction constraints. 
-            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-            //It's a pretty minor effect either way.
+			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
+			TangentFrictionOneBody.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA);
+			//Note that we solve the penetration constraints after the friction constraints. 
+			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+			//It's a pretty minor effect either way.
 			PenetrationLimitOneBody.Solve(projection.Penetration0, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA);
 			PenetrationLimitOneBody.Solve(projection.Penetration1, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA);
 			PenetrationLimitOneBody.Solve(projection.Penetration2, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA);
 			PenetrationLimitOneBody.Solve(projection.Penetration3, projection.InertiaA, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration3, ref wsvA);
-            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-                accumulatedImpulses.Penetration1 * projection.LeverArm1 +
-                accumulatedImpulses.Penetration2 * projection.LeverArm2 +
-                accumulatedImpulses.Penetration3 * projection.LeverArm3);
-            TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
+			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+				accumulatedImpulses.Penetration1 * projection.LeverArm1 +
+				accumulatedImpulses.Penetration2 * projection.LeverArm2 +
+				accumulatedImpulses.Penetration3 * projection.LeverArm3);
+			TwistFrictionOneBody.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA);
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -977,16 +977,16 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact1Projection projection, ref Contact1AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-                (accumulatedImpulses.Penetration0);
-            TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
-            //Note that we solve the penetration constraints after the friction constraints. 
-            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-            //It's a pretty minor effect either way.
+			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+				(accumulatedImpulses.Penetration0);
+			TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+			//Note that we solve the penetration constraints after the friction constraints. 
+			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+			//It's a pretty minor effect either way.
 			PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
-            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-                accumulatedImpulses.Penetration0 * projection.LeverArm0);
-            TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
+			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+				accumulatedImpulses.Penetration0 * projection.LeverArm0);
+			TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1151,18 +1151,18 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact2Projection projection, ref Contact2AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
-            TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
-            //Note that we solve the penetration constraints after the friction constraints. 
-            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-            //It's a pretty minor effect either way.
+			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1);
+			TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+			//Note that we solve the penetration constraints after the friction constraints. 
+			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+			//It's a pretty minor effect either way.
 			PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
 			PenetrationLimit.Solve(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
-            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-                accumulatedImpulses.Penetration1 * projection.LeverArm1);
-            TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
+			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+				accumulatedImpulses.Penetration1 * projection.LeverArm1);
+			TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1341,20 +1341,20 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact3Projection projection, ref Contact3AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
-            TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
-            //Note that we solve the penetration constraints after the friction constraints. 
-            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-            //It's a pretty minor effect either way.
+			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2);
+			TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+			//Note that we solve the penetration constraints after the friction constraints. 
+			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+			//It's a pretty minor effect either way.
 			PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
 			PenetrationLimit.Solve(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
 			PenetrationLimit.Solve(projection.Penetration2, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA, ref wsvB);
-            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-                accumulatedImpulses.Penetration1 * projection.LeverArm1 +
-                accumulatedImpulses.Penetration2 * projection.LeverArm2);
-            TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
+			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+				accumulatedImpulses.Penetration1 * projection.LeverArm1 +
+				accumulatedImpulses.Penetration2 * projection.LeverArm2);
+			TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1547,22 +1547,22 @@ namespace BepuPhysics.Constraints.Contact
         public void Solve(ref BodyVelocities wsvA, ref BodyVelocities wsvB, ref Contact4Projection projection, ref Contact4AccumulatedImpulses accumulatedImpulses)
         {
             Helpers.BuildOrthnormalBasis(projection.Normal, out var x, out var z);
-            var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
-                (accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
-            TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
-            //Note that we solve the penetration constraints after the friction constraints. 
-            //This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
-            //It's a pretty minor effect either way.
+			var maximumTangentImpulse = projection.PremultipliedFrictionCoefficient *
+				(accumulatedImpulses.Penetration0 + accumulatedImpulses.Penetration1 + accumulatedImpulses.Penetration2 + accumulatedImpulses.Penetration3);
+			TangentFriction.Solve(ref x, ref z, ref projection.Tangent, ref projection.InertiaA, ref projection.InertiaB, ref maximumTangentImpulse, ref accumulatedImpulses.Tangent, ref wsvA, ref wsvB);
+			//Note that we solve the penetration constraints after the friction constraints. 
+			//This makes the penetration constraints more authoritative at the cost of the first iteration of the first frame of an impact lacking friction influence.
+			//It's a pretty minor effect either way.
 			PenetrationLimit.Solve(projection.Penetration0, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration0, ref wsvA, ref wsvB);
 			PenetrationLimit.Solve(projection.Penetration1, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration1, ref wsvA, ref wsvB);
 			PenetrationLimit.Solve(projection.Penetration2, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration2, ref wsvA, ref wsvB);
 			PenetrationLimit.Solve(projection.Penetration3, projection.InertiaA, projection.InertiaB, projection.Normal, projection.SoftnessImpulseScale, ref accumulatedImpulses.Penetration3, ref wsvA, ref wsvB);
-            var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
-                accumulatedImpulses.Penetration0 * projection.LeverArm0 +
-                accumulatedImpulses.Penetration1 * projection.LeverArm1 +
-                accumulatedImpulses.Penetration2 * projection.LeverArm2 +
-                accumulatedImpulses.Penetration3 * projection.LeverArm3);
-            TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
+			var maximumTwistImpulse = projection.PremultipliedFrictionCoefficient * (
+				accumulatedImpulses.Penetration0 * projection.LeverArm0 +
+				accumulatedImpulses.Penetration1 * projection.LeverArm1 +
+				accumulatedImpulses.Penetration2 * projection.LeverArm2 +
+				accumulatedImpulses.Penetration3 * projection.LeverArm3);
+			TwistFriction.Solve(ref projection.Normal, ref projection.InertiaA, ref projection.InertiaB, ref projection.Twist, ref maximumTwistImpulse, ref accumulatedImpulses.Twist, ref wsvA, ref wsvB);
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

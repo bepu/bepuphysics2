@@ -392,9 +392,9 @@ namespace Demos.Demos
 
         }
 
-        public override void Update(Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            base.Update(input, dt);
+            base.Update(window, camera, input, dt);
             events.Flush();
 
             ref var particles = ref events.EventHandler.Particles;

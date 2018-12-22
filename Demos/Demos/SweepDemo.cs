@@ -194,9 +194,9 @@ namespace Demos.Demos
             }
         }
 
-        public override void Update(Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            base.Update(input, dt);
+            base.Update(window, camera, input, dt);
 
             if (!input.WasDown(OpenTK.Input.Key.P))
                 animationT = (animationT + 1 / 60f) % (128);

@@ -56,7 +56,7 @@ namespace Demos.Demos
 
         //We'll randomize the size of bullets.
         Random random = new Random(5);
-        public override void Update(Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, float dt)
         {
             if (input != null && input.WasPushed(OpenTK.Input.Key.Z))
             {
@@ -77,7 +77,7 @@ namespace Demos.Demos
                     new Vector3(0, 8, -130), new BodyVelocity(new Vector3(0, 0, 150)), bulletShape.Radius * bulletShape.Radius * bulletShape.Radius, Simulation.Shapes, bulletShape);
                 Simulation.Bodies.Add(bodyDescription);
             }
-            base.Update(input, dt);
+            base.Update(window, camera, input, dt);
         }
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)

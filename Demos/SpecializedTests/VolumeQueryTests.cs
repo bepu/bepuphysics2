@@ -255,9 +255,9 @@ namespace Demos.SpecializedTests
                 
         bool shouldUseMultithreading = true;
 
-        public unsafe override void Update(Input input, float dt)
+        public unsafe override void Update(Window window, Camera camera, Input input, float dt)
         {
-            base.Update(input, dt);
+            base.Update(window, camera, input, dt);
                         
             if (input.WasPushed(OpenTK.Input.Key.T))
             {

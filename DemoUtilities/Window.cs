@@ -4,6 +4,7 @@ using OpenTK;
 using BepuUtilities;
 using OpenTK.Graphics;
 using System.Threading;
+using Vector2 = System.Numerics.Vector2;
 
 namespace DemoUtilities
 {
@@ -102,6 +103,11 @@ namespace DemoUtilities
 
             WindowMode = windowMode;
 
+        }
+
+        public Vector2 GetNormalizedMousePosition(Int2 mousePosition)
+        {
+            return new Vector2((float)mousePosition.X / Resolution.X, (float)mousePosition.Y / Resolution.Y);
         }
 
         private void OnClosing(object sender, EventArgs e)

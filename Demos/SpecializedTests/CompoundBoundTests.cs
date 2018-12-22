@@ -27,14 +27,6 @@ namespace Demos.Demos
 
         }
 
-        public override void Update(Input input, float dt)
-        {
-
-            //if (input.IsDown(OpenTK.Input.Key.P))
-            //    Console.Write("SDF");
-            base.Update(input, dt);
-        }
-
         void GetArcExpansion(in Vector3 offset, in Vector3 angularVelocity, float dt, out Vector3 minExpansion, out Vector3 maxExpansion)
         {
             //minExpansion = default;

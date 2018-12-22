@@ -92,9 +92,9 @@ namespace Demos.SpecializedTests
         TimingsRingBuffer refineTimes;
         TimingsRingBuffer testTimes;
         long frameCount;
-        public override void Update(Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            base.Update(input, dt);
+            base.Update(window, camera, input, dt);
             refineTimes.Add(Simulation.Timings[Simulation.BroadPhase]);
             testTimes.Add(Simulation.Timings[Simulation.BroadPhaseOverlapFinder]);
             if (frameCount++ % sampleCount == 0)

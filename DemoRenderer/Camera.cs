@@ -226,6 +226,27 @@ namespace DemoRenderer
             FarClip = farClip;
         }
 
+        /// <summary>
+        /// Gets the ray direction for the given mouse state.
+        /// </summary>
+        /// <param name="mouseLocked">Whether the mouse is currently locked. If locked, the ray corresponding to the center of the screen will be used.</param>
+        /// <param name="normalizedMousePosition">Location of the mouse normalized to [0, 1] relative to window bounds.</param>
+        /// <returns>World space ray direction pointing the mouse's direction.</returns>
+        public Vector3 GetRayDirection(bool mouseLocked, in Vector2 normalizedMousePosition)
+        {
+            //The ray direction depends on the camera and whether the camera is locked.
+            if (mouseLocked)
+            {
+                return Forward;
+            }
+            var unitPlaneHalfHeight = MathF.Tan(FieldOfView * 0.5f);
+            var unitPlaneHalfWidth = unitPlaneHalfHeight * AspectRatio;
+            var localRayDirection = new Vector3(
+                new Vector2(unitPlaneHalfWidth, unitPlaneHalfHeight) * 2 * new Vector2(normalizedMousePosition.X - 0.5f, 0.5f - normalizedMousePosition.Y), -1);
+            Quaternion.TransformWithoutOverlap(localRayDirection, OrientationQuaternion, out var rayDirection);
+            return rayDirection;
+        }
+
 
     }
 }

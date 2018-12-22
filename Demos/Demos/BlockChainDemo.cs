@@ -105,7 +105,7 @@ namespace Demos.Demos
 
         BodyDescription coinDescription;
         Random random = new Random(5);
-        public override void Update(Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, float dt)
         {
             if (input.WasPushed(OpenTK.Input.Key.Z))
             {
@@ -125,7 +125,7 @@ namespace Demos.Demos
                     Simulation.Bodies.Add(coinDescription);
                 }
             }            
-            base.Update(input, dt);
+            base.Update(window, camera, input, dt);
         }
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)

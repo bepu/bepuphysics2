@@ -269,7 +269,7 @@ namespace Demos
                     incrementalGrabRotation = Quaternion.Identity;
                     grabberCachedMousePosition = null;
                 }
-                grabber.Update(demo.Simulation, camera, input.MouseLocked, controls.Grab.IsDown(input), incrementalGrabRotation, GetNormalizedMousePosition());
+                grabber.Update(demo.Simulation, camera, input.MouseLocked, controls.Grab.IsDown(input), incrementalGrabRotation, window.GetNormalizedMousePosition(input.MousePosition));
 
 
 
@@ -306,16 +306,11 @@ namespace Demos
             ++frameCount;
             if (!controls.SlowTimesteps.IsDown(input) || frameCount % 20 == 0)
             {
-                demo.Update(input, dt);
+                demo.Update(window, camera, input, dt);
             }
             timeSamples.RecordFrame(demo.Simulation);
         }
-
-        private Vector2 GetNormalizedMousePosition()
-        {
-            return new Vector2((float)input.MousePosition.X / window.Resolution.X, (float)input.MousePosition.Y / window.Resolution.Y);
-        }
-
+        
         TextBuilder uiText = new TextBuilder(128);
         public void Render(Renderer renderer)
         {
@@ -400,7 +395,7 @@ namespace Demos
                     uiText.Clear().Append(1e3 * timeSamples.Simulation[timeSamples.Simulation.End - 1], timingGraph.Description.VerticalIntervalLabelRounding).Append(" ms/step"),
                     new Vector2(window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, timingTextSize), inset), timingTextSize, timingGraph.Description.TextColor, font);
             }
-            grabber.Draw(renderer.Lines, camera, input.MouseLocked, controls.Grab.IsDown(input), GetNormalizedMousePosition());
+            grabber.Draw(renderer.Lines, camera, input.MouseLocked, controls.Grab.IsDown(input), window.GetNormalizedMousePosition(input.MousePosition));
             renderer.Shapes.AddInstances(demo.Simulation, demo.ThreadDispatcher);
             renderer.Lines.Extract(demo.Simulation.Bodies, demo.Simulation.Solver, demo.Simulation.BroadPhase, showConstraints, showContacts, showBoundingBoxes, demo.ThreadDispatcher);
         }

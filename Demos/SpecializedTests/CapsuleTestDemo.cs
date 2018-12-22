@@ -70,11 +70,11 @@ namespace Demos.SpecializedTests
 
         }
 
-        public override void Update(Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, float dt)
         {
             if (input.WasDown(OpenTK.Input.Key.P))
                 Console.WriteLine("$");
-            base.Update(input, dt);
+            base.Update(window, camera, input, dt);
         }
     }
 }
