@@ -33,6 +33,8 @@ Using higher update rates can enable the simulation of otherwise impossible mass
 
 ![](images/massratiosubstepping.gif)
 
+For more examples of substepping, check out the [SubsteppingDemo](../Demos/Demos/SubsteppingDemo.cs).
+
 So, if you're encountering constraint instability, here are some general guidelines for debugging:
 1. First, try increasing the update rate to a really high value (600hz or more). If the problem goes away, then it's probably related to the difficulty of the simulation and a lack of convergence and not to a configuration error.
 2. Drop back down to a normal update rate and increase the solver iteration count. If going up to 10 or 15 solver iterations fixes it, then it was likely just a mild convergence failure. If you can't identify any issues in the configuration that would make convergence more difficult than it needs to be (and there aren't any tricks available like the rope stuff described above), then using more solver iterations might just be required.
