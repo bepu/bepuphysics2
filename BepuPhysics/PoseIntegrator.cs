@@ -237,7 +237,6 @@ namespace BepuPhysics
             ref var basePoses = ref bodies.ActiveSet.Poses[0];
             ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
             ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
-            ref var baseInertia = ref bodies.Inertias[0];
             ref var baseActivity = ref bodies.ActiveSet.Activity[0];
             ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)

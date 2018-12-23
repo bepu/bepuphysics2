@@ -77,8 +77,9 @@ namespace BepuPhysics.Constraints
             bodies.GatherOrientation(ref bodyReferences, count, out var orientationA, out var orientationB);
             QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var axis);
             Symmetric3x3Wide.TransformWithoutOverlap(axis, inertiaA.InverseInertiaTensor, out projection.ImpulseToVelocityA);
-            Symmetric3x3Wide.VectorSandwich(axis, inertiaB.InverseInertiaTensor, out var contributionB);
             Vector3Wide.Dot(axis, projection.ImpulseToVelocityA, out var contributionA);
+            Symmetric3x3Wide.TransformWithoutOverlap(axis, inertiaB.InverseInertiaTensor, out projection.NegatedImpulseToVelocityB);
+            Vector3Wide.Dot(axis, projection.NegatedImpulseToVelocityB, out var contributionB);
             MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
             var effectiveMass = effectiveMassCFMScale / (contributionA + contributionB);
 

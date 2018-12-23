@@ -19,13 +19,13 @@ namespace Demos.Demos
     /// </summary>
     public class RopeStabilityDemo : Demo
     {
-        int[] BuildRopeBodies(in Vector3 start, int bodyCount, float bodySize, float bodySpacing, float massPerBody, float inverseInertiaScale)
+        static int[] BuildRopeBodies(Simulation simulation, in Vector3 start, int bodyCount, float bodySize, float bodySpacing, float massPerBody, float inverseInertiaScale)
         {
             int[] handles = new int[bodyCount + 1];
             var ropeShape = new Sphere(bodySize);
             ropeShape.ComputeInertia(massPerBody, out var ropeInertia);
             Symmetric3x3.Scale(ropeInertia.InverseInertiaTensor, inverseInertiaScale, out ropeInertia.InverseInertiaTensor);
-            var ropeShapeIndex = Simulation.Shapes.Add(ropeShape);
+            var ropeShapeIndex = simulation.Shapes.Add(ropeShape);
             //Build the links.
             var bodyDescription = new BodyDescription
             {
@@ -37,39 +37,39 @@ namespace Demos.Demos
             {
                 bodyDescription.LocalInertia = linkIndex == 0 ? new BodyInertia() : ropeInertia;
                 bodyDescription.Pose = new RigidPose(start - new Vector3(0, linkIndex * (bodySpacing + 2 * bodySize), 0));
-                handles[linkIndex] = Simulation.Bodies.Add(bodyDescription);
+                handles[linkIndex] = simulation.Bodies.Add(bodyDescription);
             }
 
             return handles;
         }
-        int[] BuildRope(in Vector3 start, int bodyCount, float bodySize, float bodySpacing, float constraintOffsetLength, float massPerBody, float inverseInertiaScale, SpringSettings springSettings)
+        public static int[] BuildRope(Simulation simulation, in Vector3 start, int bodyCount, float bodySize, float bodySpacing, float constraintOffsetLength, float massPerBody, float inverseInertiaScale, SpringSettings springSettings)
         {
-            var handles = BuildRopeBodies(start, bodyCount, bodySize, bodySpacing, massPerBody, inverseInertiaScale);
+            var handles = BuildRopeBodies(simulation, start, bodyCount, bodySize, bodySpacing, massPerBody, inverseInertiaScale);
             var maximumDistance = 2 * bodySize + bodySpacing - 2 * constraintOffsetLength;
             for (int i = 0; i < handles.Length - 1; ++i)
             {
-                Simulation.Solver.Add(handles[i], handles[i + 1],
+                simulation.Solver.Add(handles[i], handles[i + 1],
                     new DistanceLimit(new Vector3(0, -constraintOffsetLength, 0), new Vector3(0, constraintOffsetLength, 0), maximumDistance * 0.1f, maximumDistance, springSettings));
             }
             return handles;
         }
 
-        int CreateWreckingBall(int[] bodyHandles, float ropeBodyRadius, float bodySpacing, float wreckingBallRadius, BodyInertia wreckingBallInertia, TypedIndex wreckingBallShapeIndex)
+        static int CreateWreckingBall(Simulation simulation, int[] bodyHandles, float ropeBodyRadius, float bodySpacing, float wreckingBallRadius, BodyInertia wreckingBallInertia, TypedIndex wreckingBallShapeIndex)
         {
-            var lastBodyReference = new BodyReference(bodyHandles[bodyHandles.Length - 1], Simulation.Bodies);
+            var lastBodyReference = new BodyReference(bodyHandles[bodyHandles.Length - 1], simulation.Bodies);
             var wreckingBallPosition = lastBodyReference.Pose.Position - new Vector3(0, ropeBodyRadius + bodySpacing + wreckingBallRadius, 0);
             var description = BodyDescription.CreateDynamic(wreckingBallPosition, wreckingBallInertia, new CollidableDescription(wreckingBallShapeIndex, 0.1f), new BodyActivityDescription(0.01f));
             //Give it a little bump.
             description.Velocity = new BodyVelocity(new Vector3(-10, 0, 0), default);
-            var wreckingBallBodyHandle = Simulation.Bodies.Add(description);
+            var wreckingBallBodyHandle = simulation.Bodies.Add(description);
             return wreckingBallBodyHandle;
         }
 
-        int AttachWreckingBall(int[] bodyHandles, float ropeBodyRadius, float bodySpacing, float constraintOffsetLength, float wreckingBallRadius, BodyInertia wreckingBallInertia, TypedIndex wreckingBallShapeIndex, SpringSettings springSettings)
+        public static int AttachWreckingBall(Simulation simulation, int[] bodyHandles, float ropeBodyRadius, float bodySpacing, float constraintOffsetLength, float wreckingBallRadius, BodyInertia wreckingBallInertia, TypedIndex wreckingBallShapeIndex, SpringSettings springSettings)
         {
-            int wreckingBallBodyHandle = CreateWreckingBall(bodyHandles, ropeBodyRadius, bodySpacing, wreckingBallRadius, wreckingBallInertia, wreckingBallShapeIndex);
+            int wreckingBallBodyHandle = CreateWreckingBall(simulation, bodyHandles, ropeBodyRadius, bodySpacing, wreckingBallRadius, wreckingBallInertia, wreckingBallShapeIndex);
             var maximumDistance = bodySpacing + ropeBodyRadius - constraintOffsetLength;
-            Simulation.Solver.Add(bodyHandles[bodyHandles.Length - 1], wreckingBallBodyHandle,
+            simulation.Solver.Add(bodyHandles[bodyHandles.Length - 1], wreckingBallBodyHandle,
                 new DistanceLimit(new Vector3(0, -constraintOffsetLength, 0), new Vector3(0, wreckingBallRadius, 0), maximumDistance * 0.1f, maximumDistance, springSettings));
             return wreckingBallBodyHandle;
         }
@@ -96,6 +96,7 @@ namespace Demos.Demos
 
             //So, even though you can avoid the need for these kinds of hacks, it's good to know that they exist should you find yourself in a circumstance where substepping isn't viable.
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks() { ContactSpringiness = new SpringSettings(120, 1) }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+
             rolloverInfo = new RolloverInfo();
             var smallWreckingBall = new Sphere(1);
             smallWreckingBall.ComputeInertia(5, out var smallWreckingBallInertia);
@@ -106,10 +107,10 @@ namespace Demos.Demos
                 const float bodySpacing = 0.3f;
                 const float bodyRadius = 0.5f;
                 var springSettings = new SpringSettings(30, 1);
-                var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 1, 1, springSettings);
+                var bodyHandles = BuildRope(Simulation, startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 1, 1, springSettings);
 
                 //With a small wrecking ball, this actually works fine with reasonable spring settings.
-                AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, bodyRadius, smallWreckingBall.Radius, smallWreckingBallInertia, smallWreckingBallIndex, springSettings);
+                AttachWreckingBall(Simulation, bodyHandles, bodyRadius, bodySpacing, bodyRadius, smallWreckingBall.Radius, smallWreckingBallInertia, smallWreckingBallIndex, springSettings);
                 rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "Naive, 5:1 mass ratio");
             }
             var bigWreckingBall = new Sphere(3);
@@ -126,9 +127,9 @@ namespace Demos.Demos
                 const float bodySpacing = 0.3f;
                 const float bodyRadius = 0.5f;
                 var springSettings = new SpringSettings(30, 1);
-                var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 1, 1, springSettings);
+                var bodyHandles = BuildRope(Simulation, startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 1, 1, springSettings);
 
-                AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
+                AttachWreckingBall(Simulation, bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
                 rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "Naive, 100:1 mass ratio");
             }
             {
@@ -139,9 +140,9 @@ namespace Demos.Demos
                 const float bodySpacing = 0.3f;
                 const float bodyRadius = 0.5f;
                 var springSettings = new SpringSettings(3, 1);
-                var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 1, 1, springSettings);
+                var bodyHandles = BuildRope(Simulation, startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 1, 1, springSettings);
 
-                AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
+                AttachWreckingBall(Simulation, bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
                 rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "Softer constraints");
             }
             {
@@ -151,9 +152,9 @@ namespace Demos.Demos
                 const float bodySpacing = 0.3f;
                 const float bodyRadius = 0.5f;
                 var springSettings = new SpringSettings(30, 1);
-                var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 20, 1, springSettings);
+                var bodyHandles = BuildRope(Simulation, startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 20, 1, springSettings);
 
-                AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
+                AttachWreckingBall(Simulation, bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
                 rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "20x rope mass boost");
             }
             {
@@ -164,9 +165,9 @@ namespace Demos.Demos
                 const float bodySpacing = 0.3f;
                 const float bodyRadius = 0.5f;
                 var springSettings = new SpringSettings(30, 1);
-                var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 5, 0.2f, springSettings);
+                var bodyHandles = BuildRope(Simulation, startLocation, 12, bodyRadius, bodySpacing, bodyRadius, 5, 0.2f, springSettings);
 
-                AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
+                AttachWreckingBall(Simulation, bodyHandles, bodyRadius, bodySpacing, bodyRadius, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
                 rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "5x rope mass boost, 25x rope inertia boost");
             }
             {
@@ -179,9 +180,9 @@ namespace Demos.Demos
                 const float bodySpacing = 0.3f;
                 const float bodyRadius = 0.5f;
                 var springSettings = new SpringSettings(30, 1);
-                var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, 0, 1, 0, springSettings);
+                var bodyHandles = BuildRope(Simulation, startLocation, 12, bodyRadius, bodySpacing, 0, 1, 0, springSettings);
 
-                AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, 0, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
+                AttachWreckingBall(Simulation, bodyHandles, bodyRadius, bodySpacing, 0, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
                 rolloverInfo.Add(startLocation + new Vector3(0, 2, 0), "0 lever arm");
             }
             {
@@ -194,9 +195,9 @@ namespace Demos.Demos
                 const float bodySpacing = 0.3f;
                 const float bodyRadius = 0.5f;
                 var springSettings = new SpringSettings(30, 1);
-                var bodyHandles = BuildRope(startLocation, 12, bodyRadius, bodySpacing, 0, 1f, 0, springSettings);
+                var bodyHandles = BuildRope(Simulation, startLocation, 12, bodyRadius, bodySpacing, 0, 1f, 0, springSettings);
 
-                var wreckingBallHandle = AttachWreckingBall(bodyHandles, bodyRadius, bodySpacing, 0, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
+                var wreckingBallHandle = AttachWreckingBall(Simulation, bodyHandles, bodyRadius, bodySpacing, 0, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex, springSettings);
                 var wreckingBallConnectionOffset = new Vector3(0, bigWreckingBall.Radius, 0);
                 var maximumDistance = Vector3.Distance(
                     new BodyReference(bodyHandles[0], Simulation.Bodies).Pose.Position,
@@ -214,7 +215,7 @@ namespace Demos.Demos
                 const float bodySpacing = 0.3f;
                 const float bodyRadius = 0.5f;
                 var springSettings = new SpringSettings(30, 1);
-                var bodyHandles = BuildRopeBodies(startLocation, 100, bodyRadius, bodySpacing, 1f, 0);
+                var bodyHandles = BuildRopeBodies(Simulation, startLocation, 100, bodyRadius, bodySpacing, 1f, 0);
 
                 bool TryCreateConstraint(int handleIndexA, int handleIndexB)
                 {
@@ -238,7 +239,7 @@ namespace Demos.Demos
                     }
                 }
 
-                var wreckingBallHandle = CreateWreckingBall(bodyHandles, bodyRadius, bodySpacing, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex);
+                var wreckingBallHandle = CreateWreckingBall(Simulation, bodyHandles, bodyRadius, bodySpacing, bigWreckingBall.Radius, bigWreckingBallInertia, bigWreckingBallIndex);
                 var wreckingBallConnectionOffset = new Vector3(0, bigWreckingBall.Radius, 0);
                 for (int i = 1; i <= constraintsPerBody; ++i)
                 {

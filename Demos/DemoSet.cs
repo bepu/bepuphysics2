@@ -47,8 +47,9 @@ namespace Demos
             AddOption<MeshDemo>();
             AddOption<ClothDemo>();
             AddOption<NewtDemo>();
-            AddOption<RopeStabilityDemo>();
             AddOption<PlanetDemo>();
+            AddOption<RopeStabilityDemo>();
+            AddOption<SubsteppingDemo>();
             AddOption<BlockChainDemo>();
             AddOption<RayCastingDemo>();
             AddOption<SweepDemo>();
