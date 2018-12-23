@@ -12,6 +12,7 @@ Most constraint-related stability issues take one of two forms:
 Incomplete force propagation usually manifests as bouncing or mild oscillation. This is often observed in tall stacks of bodies. With insufficient iterations or timesteps, stacks can start to bounce and wiggle a bit. Generally, if you zoom in, any local pair of bodies in the stack is behaving reasonably, but tiny errors accumulate and make the whole the dance. In other words, the solver can't converge to a solution for all the constraints at once. In this case, increasing `Simulation.Solver.IterationCount` or setting it to a higher value in `Simulation.Create` usually helps.
 
 An example of what it looks like when the solver needs more iterations:
+
 ![bounceybounce](images/lowiterationcount.gif)
 
 One notable pathological case for the solver is high mass ratios. Very heavy objects rigidly depending on very light objects can make it nearly impossible for the solver to converge in a reasonable number of velocity iterations. One common example of this is a wrecking ball at the end of a rope composed of a bunch linked bodies. With constraint stiffness configured high enough to hold the wrecking ball, it's unlikely that a 60hz solver update rate and 8 velocity iterations will be sufficient to keep things stable at a 100:1 mass ratio.
@@ -29,6 +30,7 @@ The obvious way to increase the solver's execution rate is to call `Simulation.T
 If you're only concerned about solver stability, then you can instead use the `SubsteppingTimestepper` or another custom ITimestepper that works similarly. When calling `Simulation.Create`, pass the SubsteppingTimestepper with the desired number of substeps. For example, if the SubsteppingTimestepper uses 4 substeps and Simulation.Timestep is called at a rate of 60hz, then the solver and integrator will actually run at 240hz. Notably, because increasing the update rate is such a powerful stabilizer, you can usually drop the number of solver velocity iterations to save some simulation time.
 
 Using higher update rates can enable the simulation of otherwise impossible mass ratios, like 1000:1, even with fairly low velocity iterations. Here's a rope connected by 240hz frequency constraints with a 1000:1 mass ratio wrecking ball at the end, showing how the number of substeps affects quality:
+
 ![](images/massratiosubstepping.gif)
 
 So, if you're encountering constraint instability, here are some general guidelines for debugging:
