@@ -129,6 +129,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             depth = Vector.ConditionalSelect(Vector.LessThan(numerator, Vector<float>.Zero), -absDepth, absDepth);
         }
 
+        public enum SimplexGeneratingStep
+        {
+            Initialized,
+            Reflection,
+            Expansion,
+            Contraction
+        }
+
         public struct DebugSimplex
         {
             public Vector2 A;
@@ -137,6 +145,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             public float DepthB;
             public Vector2 C;
             public float DepthC;
+            public SimplexGeneratingStep Step;
 
             internal DebugSimplex(in Simplex simplex)
             {
@@ -149,6 +158,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 DepthA = depthA[0];
                 DepthB = depthB[0];
                 DepthC = depthC[0];
+                Step = SimplexGeneratingStep.Initialized;
+            }
+            internal DebugSimplex(in Simplex simplex, in Vector<int> usedExpansion, in Vector<int> usedContraction) : this(simplex)
+            {
+                if (usedExpansion[0] < 0)
+                    Step = SimplexGeneratingStep.Expansion;
+                else if (usedContraction[0] < 0)
+                    Step = SimplexGeneratingStep.Contraction;
+                else
+                    Step = SimplexGeneratingStep.Reflection;
             }
         }
 
@@ -235,7 +254,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Sample another couple of normals based on the initial guess.
             //The choice is not incredibly important- we'll try a couple of spots 30 degrees away along the tangent axes.
             //(We may want to allow input of the other two slots- the value of using known-suboptimal locations is not very clear, though. Would just save a little init time.)
-            candidateX.Point.X = new Vector<float>(0.5f);
+            candidateX.Point.X = new Vector<float>(.5f);
             candidateX.Point.Y = Vector<float>.Zero;
             var depthTester = default(TDepthTester);
             Sample(candidateX.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out candidateX.DepthNumerator, out candidateX.DepthDenominator);
@@ -259,6 +278,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Vector<int> useNonReflectionSamplePoint = default;
             Vector2Wide nonReflectionSamplePoint;
+            Vector<int> debugUsedExpansion = default, debugUsedContraction = default;
 
             var terminationEpsilonSquared = simplexTerminationEpsilon * simplexTerminationEpsilon;
 
@@ -287,7 +307,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 TryAdd(candidate, ref simplex, terminatedLanes, out var newBest, out var newSecondBest);
 
                 //Only use expansion next if the source of this sample was just reflection.
-                var useExpansion = Vector.AndNot(newBest, useNonReflectionSamplePoint); 
+                var useExpansion = Vector<int>.Zero;// Vector.AndNot(newBest, useNonReflectionSamplePoint);
 
                 //Sample(simplex.A.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out var testNumeratorA, out var testDenominatorA);
                 //Sample(simplex.B.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out var testNumeratorB, out var testDenominatorB);
@@ -302,7 +322,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseOr(shouldExitDueToDepthThreshold, shouldExitDueToSmallSimplex));
                 //If all lanes are done, we can quit.
                 if (terminatedLanes[0] == 0)
-                    debugData.Simplices.Add(new DebugSimplex(simplex));
+                    debugData.Simplices.Add(new DebugSimplex(simplex, debugUsedExpansion, debugUsedContraction));
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
 
@@ -317,6 +337,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector2Wide.ConditionalSelect(useContraction, contractionSamplePoint, nonReflectionSamplePoint, out nonReflectionSamplePoint);
 
                 useNonReflectionSamplePoint = Vector.BitwiseOr(useContraction, useExpansion);
+
+                debugUsedContraction = useContraction;
+                debugUsedExpansion = useExpansion;
 
                 //(The original nedler-mead method includes another transformation- 'shrink'- but I excluded it due to relative rarity and 
                 //the fact that it requires two evaluations unlike the other paths. We want to have pretty simple and unified code flow for SIMD purposes, so we ignore it.

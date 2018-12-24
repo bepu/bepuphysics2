@@ -31,7 +31,7 @@ namespace Demos.SpecializedTests
 
 
             var a = new Cylinder(0.5f, 1f);
-            var b = new Cylinder(1f, 2f);
+            var b = new Cylinder(1f, 0.1f);
             var localOffsetB = new Vector3(0.5f, 0.6f, 0.7f);
             var localOrientationB = Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathHelper.Pi * 1.5f);
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new Vector3(), Simulation.Shapes, a));
@@ -50,8 +50,8 @@ namespace Demos.SpecializedTests
             CylinderNelderMead.Refine(
                 aWide, bWide, localOffsetBWide, localOrientationBWide, initialNormalGuess, depth, Vector<int>.Zero, new Vector<float>(1e-4f), new Vector<float>(-float.MaxValue),
                 out var refinedNormal, out var refinedDepth, out debugData);
-            min = new Vector2(-1);
-            max = new Vector2(1);
+            min = new Vector2(-2);
+            max = new Vector2(2);
             CylinderNelderMead.SampleDebugDepths(aWide, bWide, localOffsetBWide, localOrientationBWide, initialNormalGuess, min, max, new Int2(256, 256), out depths);
         }
 
@@ -118,10 +118,10 @@ namespace Demos.SpecializedTests
             var a = ToWorldSpace(simplex.A);
             var b = ToWorldSpace(simplex.B);
             var c = ToWorldSpace(simplex.C);
-            var simplexColor = new Vector3(1, 0, 0.2f);
-            renderer.Lines.Allocate() = new LineInstance(a, b, simplexColor, default);
-            renderer.Lines.Allocate() = new LineInstance(b, c, simplexColor, default);
-            renderer.Lines.Allocate() = new LineInstance(c, a, simplexColor, default);
+            renderer.Lines.Allocate() = new LineInstance(a, b, new Vector3(1, 0, 0), default);
+            renderer.Lines.Allocate() = new LineInstance(b, c, new Vector3(0, 1, 0), default);
+            renderer.Lines.Allocate() = new LineInstance(c, a, new Vector3(0, 0, 1), default);
+            renderer.TextBatcher.Write(text.Clear().Append("Simplex source: ").Append(simplex.Step.ToString()), new Vector2(32, renderer.Surface.Resolution.Y - 48), 16, new Vector3(1), font);
             base.Render(renderer, camera, input, text, font);
         }
     }
