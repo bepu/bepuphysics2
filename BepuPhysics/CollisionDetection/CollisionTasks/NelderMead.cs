@@ -245,6 +245,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             candidateY.Point.Y = candidateX.Point.X;
             Sample(candidateY.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out candidateY.DepthNumerator, out candidateY.DepthDenominator);
             TryAdd(candidateY, ref simplex, terminatedLanes, out _, out _);
+            if (terminatedLanes[0] == 0)
+                debugData.Simplices.Add(new DebugSimplex(simplex));
 
             var minimumDepthThresholdNumerator = minimumDepthThreshold * minimumDepthThreshold;
             minimumDepthThresholdNumerator = Vector.ConditionalSelect(Vector.LessThan(minimumDepthThreshold, Vector<float>.Zero), -minimumDepthThresholdNumerator, minimumDepthThresholdNumerator);
@@ -282,7 +284,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 SimplexEntry candidate;
                 Vector2Wide.ConditionalSelect(useNonReflectionSamplePoint, nonReflectionSamplePoint, reflectionSamplePoint, out candidate.Point);
                 Sample(candidate.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out candidate.DepthNumerator, out candidate.DepthDenominator);
-                TryAdd(candidate, ref simplex, terminatedLanes, out var useExpansion, out var newSecondBest);
+                TryAdd(candidate, ref simplex, terminatedLanes, out var newBest, out var newSecondBest);
+
+                //Only use expansion next if the source of this sample was just reflection.
+                var useExpansion = Vector.AndNot(newBest, useNonReflectionSamplePoint); 
 
                 //Sample(simplex.A.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out var testNumeratorA, out var testDenominatorA);
                 //Sample(simplex.B.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out var testNumeratorB, out var testDenominatorB);
@@ -301,7 +306,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
 
-                var useContraction = Vector.AndNot(Vector.OnesComplement(useExpansion), newSecondBest);
+                //Only use contraction if the source of the failed sample was just reflection.
+                var useContraction = Vector.AndNot(Vector.AndNot(Vector.OnesComplement(useExpansion), newSecondBest), useNonReflectionSamplePoint);
                 //In expansion, use the reflection offset to take another step forward.
                 //Note that we don't conditional select this- no need, the contraction conditional select covers the contraction lanes, and the other lanes won't look at this value.
                 Vector2Wide.Add(reflectionOffset, reflectionSamplePoint, out nonReflectionSamplePoint);
