@@ -39,6 +39,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<NelderMeadTestDemo>();
             AddOption<CylinderTestDemo>();
             AddOption<ColosseumDemo>();
             AddOption<PyramidDemo>();

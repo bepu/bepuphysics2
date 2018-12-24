@@ -30,7 +30,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TShapeWideB : IShapeWide<TShapeB>
         where TDepthTester : struct, IDepthTester<TShapeA, TShapeWideA, TShapeB, TShapeWideB>
     {
-        struct SimplexEntry
+        internal struct SimplexEntry
         {
             public Vector2Wide Point;
             //To avoid divisions and square roots, the depth will be tracked without normalizing the normals at each step:
@@ -42,7 +42,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             public Vector<float> DepthDenominator;
         }
 
-        struct Simplex
+        internal struct Simplex
         {
             /// <summary>
             /// Point on the search space representing the best normal.
@@ -122,6 +122,62 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             depth = Vector.ConditionalSelect(Vector.LessThan(simplex.A.DepthNumerator, Vector<float>.Zero), -sqrtAbsNumerator, sqrtAbsNumerator) * normalizationScale;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void GetDepth(in Vector<float> numerator, in Vector<float> denominator, out Vector<float> depth)
+        {
+            var absDepth = Vector.SquareRoot(Vector.Abs(numerator) / denominator);
+            depth = Vector.ConditionalSelect(Vector.LessThan(numerator, Vector<float>.Zero), -absDepth, absDepth);
+        }
+
+        public struct DebugSimplex
+        {
+            public Vector2 A;
+            public float DepthA;
+            public Vector2 B;
+            public float DepthB;
+            public Vector2 C;
+            public float DepthC;
+
+            internal DebugSimplex(in Simplex simplex)
+            {
+                Vector2Wide.ReadFirst(simplex.B.Point, out B);
+                Vector2Wide.ReadFirst(simplex.C.Point, out C);
+                Vector2Wide.ReadFirst(simplex.A.Point, out A);
+                GetDepth(simplex.A.DepthNumerator, simplex.A.DepthDenominator, out var depthA);
+                GetDepth(simplex.B.DepthNumerator, simplex.B.DepthDenominator, out var depthB);
+                GetDepth(simplex.C.DepthNumerator, simplex.C.DepthDenominator, out var depthC);
+                DepthA = depthA[0];
+                DepthB = depthB[0];
+                DepthC = depthC[0];
+            }
+        }
+
+        public class ExecutionDebugData
+        {
+            public List<DebugSimplex> Simplices = new List<DebugSimplex>();
+        }
+
+        public static void SampleDebugDepths(in TShapeWideA a, in TShapeWideA b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, in Vector3Wide initialNormalGuess, Vector2 min, Vector2 max, Int2 sampleCounts, out float[,] depths)
+        {
+            depths = new float[sampleCounts.X, sampleCounts.Y];
+            Helpers.BuildOrthnormalBasis(initialNormalGuess, out var x, out var y);
+            var span = max - min;
+            var sampleSize = span / new Vector2(sampleCounts.X, sampleCounts.Y);
+            var depthTester = default(TDepthTester);
+            for (int i = 0; i < sampleCounts.X; ++i)
+            {
+                for (int j = 0; j < sampleCounts.X; ++j)
+                {
+                    var sample = min + sampleSize * new Vector2(0.5f + i, 0.5f + j);
+                    Vector2Wide.Broadcast(sample, out var sampleWide);
+                    //We could actually do this widely, but this is just for debug purposes so it really doesn't matter.
+                    Sample(sampleWide, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out var depthNumerator, out var depthDenominator);
+                    GetDepth(depthNumerator, depthDenominator, out var depthWide);
+                    depths[i, j] = depthWide[0];
+                }
+            }
+        }
+
 
         /// <summary>
         /// Attempts to refine a given normal toward a local minimum depth.
@@ -139,8 +195,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         /// <param name="maximumIterations">Maximum number of iterations to execute before terminating.</param>
         public static void Refine(in TShapeWideA a, in TShapeWideA b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB,
             in Vector3Wide initialNormalGuess, in Vector<float> initialDepth, in Vector<int> inactiveLanes, in Vector<float> simplexTerminationEpsilon, in Vector<float> minimumDepthThreshold,
-            out Vector3Wide normal, out Vector<float> depth, int maximumIterations = 25)
+            out Vector3Wide normal, out Vector<float> depth, out ExecutionDebugData debugData, int maximumIterations = 250)
         {
+            debugData = new ExecutionDebugData();
             var terminatedLanes = inactiveLanes;
 
             Debug.Assert(Vector.LessThanAll(
@@ -155,7 +212,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Simplex simplex;
             simplex.A.Point.X = Vector<float>.Zero;
             simplex.A.Point.Y = Vector<float>.Zero;
-            simplex.A.DepthNumerator = initialDepth;
+            simplex.A.DepthNumerator = initialDepth * initialDepth;
+            simplex.A.DepthNumerator = Vector.ConditionalSelect(Vector.LessThan(initialDepth, Vector<float>.Zero), -simplex.A.DepthNumerator, simplex.A.DepthNumerator);
             simplex.A.DepthDenominator = Vector<float>.One;
 
             terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.LessThan(initialDepth, minimumDepthThreshold));
@@ -226,6 +284,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Sample(candidate.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out candidate.DepthNumerator, out candidate.DepthDenominator);
                 TryAdd(candidate, ref simplex, terminatedLanes, out var useExpansion, out var newSecondBest);
 
+                //Sample(simplex.A.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out var testNumeratorA, out var testDenominatorA);
+                //Sample(simplex.B.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out var testNumeratorB, out var testDenominatorB);
+                //Sample(simplex.C.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out var testNumeratorC, out var testDenominatorC);
+
                 Vector2Wide.Subtract(simplex.B.Point, simplex.A.Point, out var ab);
                 Vector2Wide.Subtract(simplex.C.Point, simplex.A.Point, out var ac);
                 Vector2Wide.LengthSquared(ab, out var abLengthSquared);
@@ -234,6 +296,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var shouldExitDueToDepthThreshold = Vector.LessThan(simplex.A.DepthNumerator, minimumDepthThresholdNumerator * simplex.A.DepthDenominator);
                 terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseOr(shouldExitDueToDepthThreshold, shouldExitDueToSmallSimplex));
                 //If all lanes are done, we can quit.
+                if (terminatedLanes[0] == 0)
+                    debugData.Simplices.Add(new DebugSimplex(simplex));
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
 

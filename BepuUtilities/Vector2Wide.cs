@@ -62,12 +62,29 @@ namespace BepuUtilities
             length = Vector.SquareRoot(v.X * v.X + v.Y * v.Y);
         }
 
-        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Broadcast(in Vector2 source, out Vector2Wide broadcasted)
+        {
+            broadcasted.X = new Vector<float>(source.X);
+            broadcasted.Y = new Vector<float>(source.Y);
+        }
+
+        /// <summary>
+        /// Pulls one lane out of the wide representation.
+        /// </summary>
+        /// <param name="source">Source of the lane.</param>
+        /// <param name="target">Non-SIMD type to store the lane in.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ReadFirst(in Vector2Wide source, out Vector2 target)
+        {
+            target.X = source.X[0];
+            target.Y = source.Y[0];
+        }
+
         public override string ToString()
         {
             return $"<{X}, {Y}>";
         }
-
-
+  
     }
 }
