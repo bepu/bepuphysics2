@@ -368,7 +368,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //    out localNormal, out var depthBelowThreshold);
             //inactiveLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
             NelderMead<Cylinder, CylinderWide, Cylinder, CylinderWide, CylinderPairDepthTester>.Refine(
-                b, a, localOffsetA, rA, localNormal, depth, inactiveLanes, new Vector<float>(1e-4f), -speculativeMargin, out var newLocalNormal, out var newDepth, out var debugSimplices);
+                b, a, localOffsetA, rA, localNormal, depth, inactiveLanes, new Vector<float>(1e-3f), -speculativeMargin, out var newLocalNormal, out var newDepth);
             localNormal = newLocalNormal;
             depth = newDepth;
 

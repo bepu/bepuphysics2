@@ -90,11 +90,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void TryAdd(in SimplexEntry newEntry, ref Simplex simplex, in Vector<int> terminatedLanes, out Vector<int> newReplacesA, out Vector<int> newReplacesB)
+        static void TryAdd(in SimplexEntry newEntry, ref Simplex simplex, in Vector<int> onlyAttemptToReplaceA, in Vector<int> terminatedLanes, out Vector<int> newReplacesA, out Vector<int> newReplacesB)
         {
             LessThan(newEntry, simplex.A, out newReplacesA);
-            LessThan(newEntry, simplex.B, out newReplacesB);
-            LessThan(newEntry, simplex.C, out var newReplacesC);
+            LessThan(newEntry, simplex.B, out var newLessThanB);
+            LessThan(newEntry, simplex.C, out var newLessThanC);
+            //Expansions are not allowed to modify B or C; this helps preserve simplex area.
+            var shouldSwapAWithB = Vector.AndNot(newReplacesA, onlyAttemptToReplaceA);
+            newReplacesB = Vector.AndNot(newLessThanB, onlyAttemptToReplaceA);
+            var newReplacesC = Vector.AndNot(newLessThanC, onlyAttemptToReplaceA);
             //Terminated lanes should not be modified; if per-lane execution is dependent on the bundle, then determinism would depend on bundle order. That's no good!
             //The only value we end up examining at the end of execution is the best slot, so we only need to worry about A.
             newReplacesA = Vector.AndNot(newReplacesA, terminatedLanes);
@@ -103,9 +107,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //This incrementally maintains the order.
             ConditionalSelect(newReplacesB, simplex.B, simplex.C, out simplex.C);
             ConditionalSelect(newReplacesB, newEntry, simplex.B, out simplex.B);
-            ConditionalSelect(newReplacesA, simplex.A, simplex.B, out simplex.B);
+            ConditionalSelect(shouldSwapAWithB, simplex.A, simplex.B, out simplex.B);
             ConditionalSelect(newReplacesA, newEntry, simplex.A, out simplex.A);
-
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -214,7 +217,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         /// <param name="maximumIterations">Maximum number of iterations to execute before terminating.</param>
         public static void Refine(in TShapeWideA a, in TShapeWideA b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB,
             in Vector3Wide initialNormalGuess, in Vector<float> initialDepth, in Vector<int> inactiveLanes, in Vector<float> simplexTerminationEpsilon, in Vector<float> minimumDepthThreshold,
-            out Vector3Wide normal, out Vector<float> depth, out ExecutionDebugData debugData, int maximumIterations = 250)
+            out Vector3Wide normal, out Vector<float> depth, out ExecutionDebugData debugData, int maximumIterations = 50)
         {
             debugData = new ExecutionDebugData();
             var terminatedLanes = inactiveLanes;
@@ -258,12 +261,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             candidateX.Point.Y = Vector<float>.Zero;
             var depthTester = default(TDepthTester);
             Sample(candidateX.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out candidateX.DepthNumerator, out candidateX.DepthDenominator);
-            TryAdd(candidateX, ref simplex, terminatedLanes, out _, out _);
+            TryAdd(candidateX, ref simplex, Vector<int>.Zero, terminatedLanes, out _, out _);
             SimplexEntry candidateY;
             candidateY.Point.X = Vector<float>.Zero;
             candidateY.Point.Y = candidateX.Point.X;
             Sample(candidateY.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out candidateY.DepthNumerator, out candidateY.DepthDenominator);
-            TryAdd(candidateY, ref simplex, terminatedLanes, out _, out _);
+            TryAdd(candidateY, ref simplex, Vector<int>.Zero, terminatedLanes, out _, out _);
             if (terminatedLanes[0] == 0)
                 debugData.Simplices.Add(new DebugSimplex(simplex));
 
@@ -276,11 +279,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 return;
             }
 
-            Vector<int> useNonReflectionSamplePoint = default;
             Vector2Wide nonReflectionSamplePoint;
-            Vector<int> debugUsedExpansion = default, debugUsedContraction = default;
+            Vector<int> usedExpansion = default, usedContraction = default;
 
             var terminationEpsilonSquared = simplexTerminationEpsilon * simplexTerminationEpsilon;
+
+            Vector2Wide previousSample, previousPreviousSample;
 
             var half = new Vector<float>(0.5f);
             for (int i = 0; i < maximumIterations; ++i)
@@ -302,27 +306,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector2Wide.Add(reflectionCentroid, reflectionOffset, out var reflectionSamplePoint);
 
                 SimplexEntry candidate;
+                var useNonReflectionSamplePoint = Vector.BitwiseOr(usedContraction, usedExpansion);
                 Vector2Wide.ConditionalSelect(useNonReflectionSamplePoint, nonReflectionSamplePoint, reflectionSamplePoint, out candidate.Point);
                 Sample(candidate.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out candidate.DepthNumerator, out candidate.DepthDenominator);
-                TryAdd(candidate, ref simplex, terminatedLanes, out var newBest, out var newSecondBest);
+                TryAdd(candidate, ref simplex, usedExpansion, terminatedLanes, out var newBest, out var newSecondBest);
 
                 //Only use expansion next if the source of this sample was just reflection.
-                var useExpansion = Vector<int>.Zero;// Vector.AndNot(newBest, useNonReflectionSamplePoint);
+                var useExpansion = Vector.AndNot(newBest, useNonReflectionSamplePoint);
 
                 //Sample(simplex.A.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out var testNumeratorA, out var testDenominatorA);
                 //Sample(simplex.B.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out var testNumeratorB, out var testDenominatorB);
                 //Sample(simplex.C.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out var testNumeratorC, out var testDenominatorC);
 
-                Vector2Wide.Subtract(simplex.B.Point, simplex.A.Point, out var ab);
-                Vector2Wide.Subtract(simplex.C.Point, simplex.A.Point, out var ac);
-                Vector2Wide.LengthSquared(ab, out var abLengthSquared);
-                Vector2Wide.LengthSquared(ac, out var acLengthSquared);
-                var shouldExitDueToSmallSimplex = Vector.BitwiseAnd(Vector.LessThan(abLengthSquared, terminationEpsilonSquared), Vector.LessThan(acLengthSquared, terminationEpsilonSquared));
+                Vector2Wide.Subtract(candidate.Point, previousPreviousSample, out var sampleDifference);
+                Vector2Wide.LengthSquared(sampleDifference, out var sampleDistanceSquared);
+                var shouldExitDueToCycling = Vector.LessThan(sampleDistanceSquared, terminationEpsilonSquared);
                 var shouldExitDueToDepthThreshold = Vector.LessThan(simplex.A.DepthNumerator, minimumDepthThresholdNumerator * simplex.A.DepthDenominator);
-                terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseOr(shouldExitDueToDepthThreshold, shouldExitDueToSmallSimplex));
+                terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseOr(shouldExitDueToDepthThreshold, shouldExitDueToCycling));
                 //If all lanes are done, we can quit.
                 if (terminatedLanes[0] == 0)
-                    debugData.Simplices.Add(new DebugSimplex(simplex, debugUsedExpansion, debugUsedContraction));
+                    debugData.Simplices.Add(new DebugSimplex(simplex, usedExpansion, usedContraction));
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
 
@@ -332,14 +335,156 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Note that we don't conditional select this- no need, the contraction conditional select covers the contraction lanes, and the other lanes won't look at this value.
                 Vector2Wide.Add(reflectionOffset, reflectionSamplePoint, out nonReflectionSamplePoint);
                 //In contraction, sample a point halfway between the worst point and the centroid.
-                Vector2Wide.Scale(reflectionOffset, half, out var halfOffset);
+                Vector2Wide.Scale(reflectionOffset, half * 0.5f, out var halfOffset);
+                Vector2Wide.Subtract(reflectionCentroid, halfOffset, out var contractionSamplePoint);
+                Vector2Wide.ConditionalSelect(useContraction, contractionSamplePoint, nonReflectionSamplePoint, out nonReflectionSamplePoint);
+                
+                usedContraction = useContraction;
+                usedExpansion = useExpansion;
+                previousPreviousSample = previousSample;
+                previousSample = candidate.Point;
+
+                //(The original nedler-mead method includes another transformation- 'shrink'- but I excluded it due to relative rarity and 
+                //the fact that it requires two evaluations unlike the other paths. We want to have pretty simple and unified code flow for SIMD purposes, so we ignore it.
+                //Note that it is still possible to do it with one sample per iteration if you're willing to add more complexity to the state machine.)
+            }
+
+            Finalize(simplex, x, y, initialNormalGuess, out normal, out depth);
+        }
+
+        /// <summary>
+        /// Attempts to refine a given normal toward a local minimum depth.
+        /// </summary>
+        /// <param name="a">First shape in the convex pair.</param>
+        /// <param name="b">Second shape in the convex pair.</param>
+        /// <param name="localOffsetB">Offset from the center of A to the center of B in the local space of A.</param>
+        /// <param name="localOrientationB">Orientation of B in the local space of A.</param>
+        /// <param name="initialNormalGuess">Initial guess at the minimum depth normal. Must be unit length.</param>
+        /// <param name="initialDepth">Depth associated with the guess.</param>
+        /// <param name="inactiveLanes">Mask of lanes that should not be considered. Any lane with a value of -1 will be ignored.</param>
+        /// <param name="simplexTerminationEpsilon">If the test simplex's size (as measured by point distances, not area) drops below this threshold, the refinement loop will terminate.</param>
+        /// <param name="minimumDepthThreshold">If a lane finds a depth less than this threshold, the lane will terminate.</param>
+        /// <param name="normal">Refined normal.</param>
+        /// <param name="maximumIterations">Maximum number of iterations to execute before terminating.</param>
+        public static void Refine(in TShapeWideA a, in TShapeWideA b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB,
+            in Vector3Wide initialNormalGuess, in Vector<float> initialDepth, in Vector<int> inactiveLanes, in Vector<float> simplexTerminationEpsilon, in Vector<float> minimumDepthThreshold,
+            out Vector3Wide normal, out Vector<float> depth, int maximumIterations = 50)
+        {
+            var terminatedLanes = inactiveLanes;
+
+            Debug.Assert(Vector.LessThanAll(
+                Vector.BitwiseOr(inactiveLanes,
+                Vector.LessThan(Vector.Abs(Vector<float>.One - initialNormalGuess.X * initialNormalGuess.X - initialNormalGuess.Y * initialNormalGuess.Y - initialNormalGuess.Z * initialNormalGuess.Z), new Vector<float>(1e-5f))),
+                Vector<int>.Zero), "All active lanes must have started with a normalized initial guess.");
+
+            //We work in a 2d space. This means the search will never find any minima pointing in the opposite direction, but given remotely reasonable initial guesses, that won't be a problem.
+            //2d space cuts down on the simplex size and all the associated work and can help convergence by limiting the degrees of freedom.
+            Helpers.BuildOrthnormalBasis(initialNormalGuess, out var x, out var y);
+            var initialOffsetLength = new Vector<float>(0.5f);
+            Simplex simplex;
+            simplex.A.Point.X = Vector<float>.Zero;
+            simplex.A.Point.Y = Vector<float>.Zero;
+            simplex.A.DepthNumerator = initialDepth * initialDepth;
+            simplex.A.DepthNumerator = Vector.ConditionalSelect(Vector.LessThan(initialDepth, Vector<float>.Zero), -simplex.A.DepthNumerator, simplex.A.DepthNumerator);
+            simplex.A.DepthDenominator = Vector<float>.One;
+
+            terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.LessThan(initialDepth, minimumDepthThreshold));
+            normal = initialNormalGuess;
+            depth = initialDepth;
+            if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
+            {
+                return;
+            }
+
+            //We'll use the TryAdd to maintain proper order without extra work, so ensure that any new depths get accepted.
+            //(Could optimize this marginally, but not a big deal.)
+            simplex.B.DepthNumerator = new Vector<float>(float.MaxValue);
+            simplex.C.DepthNumerator = simplex.B.DepthNumerator;
+            simplex.B.DepthDenominator = Vector<float>.One;
+            simplex.C.DepthDenominator = Vector<float>.One;
+
+            SimplexEntry candidateX;
+            //Sample another couple of normals based on the initial guess.
+            //The choice is not incredibly important- we'll try a couple of spots 30 degrees away along the tangent axes.
+            //(We may want to allow input of the other two slots- the value of using known-suboptimal locations is not very clear, though. Would just save a little init time.)
+            candidateX.Point.X = new Vector<float>(.5f);
+            candidateX.Point.Y = Vector<float>.Zero;
+            var depthTester = default(TDepthTester);
+            Sample(candidateX.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out candidateX.DepthNumerator, out candidateX.DepthDenominator);
+            TryAdd(candidateX, ref simplex, Vector<int>.Zero, terminatedLanes, out _, out _);
+            SimplexEntry candidateY;
+            candidateY.Point.X = Vector<float>.Zero;
+            candidateY.Point.Y = candidateX.Point.X;
+            Sample(candidateY.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out candidateY.DepthNumerator, out candidateY.DepthDenominator);
+            TryAdd(candidateY, ref simplex, Vector<int>.Zero, terminatedLanes, out _, out _);
+
+            var minimumDepthThresholdNumerator = minimumDepthThreshold * minimumDepthThreshold;
+            minimumDepthThresholdNumerator = Vector.ConditionalSelect(Vector.LessThan(minimumDepthThreshold, Vector<float>.Zero), -minimumDepthThresholdNumerator, minimumDepthThresholdNumerator);
+            terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.LessThan(simplex.A.DepthNumerator, minimumDepthThresholdNumerator * simplex.A.DepthDenominator));
+            if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
+            {
+                Finalize(simplex, x, y, initialNormalGuess, out normal, out depth);
+                return;
+            }
+
+            Vector2Wide nonReflectionSamplePoint;
+            Vector<int> usedExpansion = default, usedContraction = default;
+
+            var terminationEpsilonSquared = simplexTerminationEpsilon * simplexTerminationEpsilon;
+
+            Vector2Wide previousSample, previousPreviousSample;
+
+            var half = new Vector<float>(0.5f);
+            for (int i = 0; i < maximumIterations; ++i)
+            {
+                //There are three ways to choose the next sample point: reflection, expansion, and contraction.
+                //Since we want to perform a single sample per iteration, we maintain a bit of extra data between iterations to act as a state machine.
+                //The transitions look like this:
+                //Reflection -> Expansion if the reflection found a new best location.
+                //Reflection -> Contraction if the reflection is no better than the second worst point in the simplex.
+                //Reflection -> Reflection is the reflection found a new second-best location.
+                //Expansion -> Reflection always.
+                //Contraction -> Reflection always.
+
+                //In reflection, just take the current worst point and reflect it over the centroid of the line between the best two points in the simplex.
+                //Choose the next location by reflecting the worst point across the centroid of the better two points.
+                Vector2Wide.Add(simplex.A.Point, simplex.B.Point, out var reflectionCentroid);
+                Vector2Wide.Scale(reflectionCentroid, half, out reflectionCentroid);
+                Vector2Wide.Subtract(reflectionCentroid, simplex.C.Point, out var reflectionOffset);
+                Vector2Wide.Add(reflectionCentroid, reflectionOffset, out var reflectionSamplePoint);
+
+                SimplexEntry candidate;
+                var useNonReflectionSamplePoint = Vector.BitwiseOr(usedContraction, usedExpansion);
+                Vector2Wide.ConditionalSelect(useNonReflectionSamplePoint, nonReflectionSamplePoint, reflectionSamplePoint, out candidate.Point);
+                Sample(candidate.Point, a, b, localOffsetB, localOrientationB, x, y, initialNormalGuess, ref depthTester, out candidate.DepthNumerator, out candidate.DepthDenominator);
+                TryAdd(candidate, ref simplex, usedExpansion, terminatedLanes, out var newBest, out var newSecondBest);
+
+                //Only use expansion next if the source of this sample was just reflection.
+                var useExpansion = Vector.AndNot(newBest, useNonReflectionSamplePoint);
+                
+                Vector2Wide.Subtract(candidate.Point, previousPreviousSample, out var sampleDifference);
+                Vector2Wide.LengthSquared(sampleDifference, out var sampleDistanceSquared);
+                var shouldExitDueToCycling = Vector.LessThan(sampleDistanceSquared, terminationEpsilonSquared);
+                var shouldExitDueToDepthThreshold = Vector.LessThan(simplex.A.DepthNumerator, minimumDepthThresholdNumerator * simplex.A.DepthDenominator);
+                terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseOr(shouldExitDueToDepthThreshold, shouldExitDueToCycling));
+                //If all lanes are done, we can quit.
+                if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
+                    break;
+
+                //Only use contraction if the source of the failed sample was just reflection.
+                var useContraction = Vector.AndNot(Vector.AndNot(Vector.OnesComplement(useExpansion), newSecondBest), useNonReflectionSamplePoint);
+                //In expansion, use the reflection offset to take another step forward.
+                //Note that we don't conditional select this- no need, the contraction conditional select covers the contraction lanes, and the other lanes won't look at this value.
+                Vector2Wide.Add(reflectionOffset, reflectionSamplePoint, out nonReflectionSamplePoint);
+                //In contraction, sample a point halfway between the worst point and the centroid.
+                Vector2Wide.Scale(reflectionOffset, half * 0.5f, out var halfOffset);
                 Vector2Wide.Subtract(reflectionCentroid, halfOffset, out var contractionSamplePoint);
                 Vector2Wide.ConditionalSelect(useContraction, contractionSamplePoint, nonReflectionSamplePoint, out nonReflectionSamplePoint);
 
-                useNonReflectionSamplePoint = Vector.BitwiseOr(useContraction, useExpansion);
-
-                debugUsedContraction = useContraction;
-                debugUsedExpansion = useExpansion;
+                usedContraction = useContraction;
+                usedExpansion = useExpansion;
+                previousPreviousSample = previousSample;
+                previousSample = candidate.Point;
 
                 //(The original nedler-mead method includes another transformation- 'shrink'- but I excluded it due to relative rarity and 
                 //the fact that it requires two evaluations unlike the other paths. We want to have pretty simple and unified code flow for SIMD purposes, so we ignore it.

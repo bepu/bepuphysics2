@@ -30,9 +30,9 @@ namespace Demos.SpecializedTests
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)));
 
 
-            var a = new Cylinder(0.5f, 1f);
-            var b = new Cylinder(1f, 0.1f);
-            var localOffsetB = new Vector3(0.5f, 0.6f, 0.7f);
+            var a = new Cylinder(1f, 1f);
+            var b = new Cylinder(1f, 1f);
+            var localOffsetB = new Vector3(.1f, 1.1f, 0.1f);
             var localOrientationB = Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathHelper.Pi * 1.5f);
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new Vector3(), Simulation.Shapes, a));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(localOffsetB, localOrientationB), Simulation.Shapes, b));
@@ -50,8 +50,8 @@ namespace Demos.SpecializedTests
             CylinderNelderMead.Refine(
                 aWide, bWide, localOffsetBWide, localOrientationBWide, initialNormalGuess, depth, Vector<int>.Zero, new Vector<float>(1e-4f), new Vector<float>(-float.MaxValue),
                 out var refinedNormal, out var refinedDepth, out debugData);
-            min = new Vector2(-2);
-            max = new Vector2(2);
+            min = new Vector2(-5);
+            max = new Vector2(5);
             CylinderNelderMead.SampleDebugDepths(aWide, bWide, localOffsetBWide, localOrientationBWide, initialNormalGuess, min, max, new Int2(256, 256), out depths);
         }
 
