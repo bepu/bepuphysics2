@@ -19,6 +19,8 @@ namespace Demos
         float linearDampingDt;
         float angularDampingDt;
 
+        public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
+
         public DemoPoseIntegratorCallbacks(Vector3 gravity, float linearDamping = .03f, float angularDamping = .03f) : this()
         {
             Gravity = gravity;

@@ -162,7 +162,7 @@ namespace BepuPhysics
             ref var set = ref Bodies.Sets[Location.SetIndex];
             ref var localInertia = ref set.LocalInertias[location.Index];
             ref var pose = ref set.Poses[location.Index];
-            PoseIntegration.RotateInverseInertia(ref localInertia.InverseInertiaTensor, ref pose.Orientation, out inverseInertia);
+            PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out inverseInertia);
         }
 
         /// <summary>
@@ -178,7 +178,7 @@ namespace BepuPhysics
             ref var localInertia = ref set.LocalInertias[location.Index];
             ref var pose = ref set.Poses[location.Index];
             ref var velocity = ref set.Velocities[location.Index];
-            PoseIntegration.RotateInverseInertia(ref localInertia.InverseInertiaTensor, ref pose.Orientation, out var inverseInertiaTensor);
+            PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out var inverseInertiaTensor);
 
             var offset = impulseLocation - pose.Position;
             velocity.Linear += impulse * LocalInertia.InverseMass;

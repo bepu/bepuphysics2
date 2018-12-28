@@ -288,7 +288,7 @@ namespace BepuPhysics
                             ref var targetPose = ref targetSet.Poses[targetIndex];
                             targetPose = sourcePose;
                             targetLocalInertia = sourceLocalInertia;
-                            PoseIntegration.RotateInverseInertia(ref sourceLocalInertia.InverseInertiaTensor, ref sourcePose.Orientation, out targetWorldInertia.InverseInertiaTensor);
+                            PoseIntegration.RotateInverseInertia(sourceLocalInertia.InverseInertiaTensor, sourcePose.Orientation, out targetWorldInertia.InverseInertiaTensor);
                             targetWorldInertia.InverseMass = sourceLocalInertia.InverseMass;
                         }
                         sourceSet.Velocities.CopyTo(job.SourceStart, ref targetSet.Velocities, job.TargetStart, job.Count);

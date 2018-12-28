@@ -24,10 +24,34 @@ namespace BepuPhysics
     }
 
     /// <summary>
+    /// Defines how a pose integrator should handle angular velocity integration.
+    /// </summary>
+    public enum AngularIntegrationMode
+    {
+        /// <summary>
+        /// Angular velocity is directly integrated and does not change as the body pose changes. Does not conserve angular momentum.
+        /// </summary>
+        Nonconserving,
+        /// <summary>
+        /// Approximately conserves angular momentum by updating the angular velocity according to the change in orientation.
+        /// </summary>
+        ConserveMomentum,
+        /// <summary>
+        /// Approximately conserves angular momentum and also includes an implicitly integrated gyroscopic force. This is the most accurate and expensive mode.
+        /// </summary>
+        ConserveMomentumWithGyroscopicForce
+    }
+
+    /// <summary>
     /// Defines a type that handles callbacks for body pose integration.
     /// </summary>
     public interface IPoseIntegratorCallbacks
     {
+        /// <summary>
+        /// Gets how the pose integrator should handle angular velocity integration.
+        /// </summary>
+        AngularIntegrationMode AngularIntegrationMode { get; }
+
         /// <summary>
         /// Called prior to integrating the simulation's active bodies. When used with a substepping timestepper, this could be called multiple times per frame with different time step values.
         /// </summary>
@@ -51,7 +75,7 @@ namespace BepuPhysics
     public static class PoseIntegration
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void RotateInverseInertia(ref Symmetric3x3 localInverseInertiaTensor, ref Quaternion orientation, out Symmetric3x3 rotatedInverseInertiaTensor)
+        public static void RotateInverseInertia(in Symmetric3x3 localInverseInertiaTensor, in Quaternion orientation, out Symmetric3x3 rotatedInverseInertiaTensor)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var orientationMatrix);
             //I^-1 = RT * Ilocal^-1 * R 
@@ -71,9 +95,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void Integrate(in Quaternion orientation, in Vector3 angularVelocity, float dt, out Quaternion integratedOrientation)
         {
-            //Note that we don't bother with conservation of angular momentum or the gyroscopic term or anything else- 
-            //it's not exactly correct, but it's stable, fast, and no one really notices. Unless they're trying to spin a multitool in space or something.
-            //(But frankly, that just looks like reality has a bug.)
+            //Note that we don't bother with conservation of angular momentum or the gyroscopic term or anything else. All orientation integration assumes a series of piecewise linear integrations
+            //That's not entirely correct, but it's a reasonable approximation that means we don't have to worry about conservation of angular momentum or gyroscopic terms when dealing with CCD sweeps.
 
             var speed = angularVelocity.Length();
             if (speed > 1e-15f)
@@ -177,6 +200,56 @@ namespace BepuPhysics
 
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void IntegrateAngularVelocityConserving(in Quaternion previousOrientation, in RigidPose pose, in BodyInertia localInertia, in BodyInertia inertia, ref Vector3 angularVelocity, float dt)
+        {
+            //Note that this effectively recomputes the previous frame's inertia. There may not have been a previous inertia stored in the inertias buffer.
+            //This just avoids the need for quite a bit of complexity around keeping the world inertias buffer updated with adds/removes/moves and other state changes that we can't easily track.
+            //Also, even if it were cached, the memory bandwidth requirements of loading another inertia tensor would hurt multithreaded scaling enough to eliminate any performance advantage.
+            Matrix3x3.CreateFromQuaternion(previousOrientation, out var previousOrientationMatrix);
+            Matrix3x3.TransformTranspose(angularVelocity, previousOrientationMatrix, out var localPreviousAngularVelocity);
+            Symmetric3x3.Invert(localInertia.InverseInertiaTensor, out var localInertiaTensor);
+            Symmetric3x3.TransformWithoutOverlap(localPreviousAngularVelocity, localInertiaTensor, out var localAngularMomentum);
+            Matrix3x3.Transform(localAngularMomentum, previousOrientationMatrix, out var angularMomentum);
+            Symmetric3x3.TransformWithoutOverlap(angularMomentum, inertia.InverseInertiaTensor, out angularVelocity);
+
+            //Note that this mode branch is optimized out for any callbacks that return a constant value.
+            if (callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicForce)
+            {
+                //Integrating the gyroscopic force explicitly can result in some instability, so we'll use an approximate implicit approach.
+ 
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void IntegrateAngularVelocity(in Quaternion previousOrientation, in RigidPose pose, in BodyInertia localInertia, in BodyInertia inertia, ref Vector3 angularVelocity, float dt)
+        {
+            //Note that this mode branch is optimized out for any callbacks that return a constant value.
+            if ((int)callbacks.AngularIntegrationMode >= (int)AngularIntegrationMode.ConserveMomentum)
+            {
+                if (!Bodies.HasLockedInertia(localInertia.InverseInertiaTensor))
+                {
+                    IntegrateAngularVelocityConserving(previousOrientation, pose, localInertia, inertia, ref angularVelocity, dt);
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void IntegrateAngularVelocity(in RigidPose pose, in BodyInertia localInertia, in BodyInertia inertia, ref Vector3 angularVelocity, float dt)
+        {
+            //We didn't have a previous orientation available. Reconstruct it by integrating backwards.
+            //(In single threaded terms, caching this information could be faster, but it adds a lot of complexity and could end up reducing performance on higher core counts.)
+            //Note that this mode branch is optimized out for any callbacks that return a constant value.
+            if ((int)callbacks.AngularIntegrationMode >= (int)AngularIntegrationMode.ConserveMomentum)
+            {
+                if (!Bodies.HasLockedInertia(localInertia.InverseInertiaTensor))
+                {
+                    PoseIntegration.Integrate(pose.Orientation, angularVelocity, -dt, out var previousOrientation);
+                    IntegrateAngularVelocityConserving(previousOrientation, pose, localInertia, inertia, ref angularVelocity, dt);
+                }
+            }
+        }
+
         unsafe void IntegrateBodiesAndUpdateBoundingBoxes(int startIndex, int endIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
             ref var basePoses = ref bodies.ActiveSet.Poses[0];
@@ -187,10 +260,10 @@ namespace BepuPhysics
             ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
-                //Integrate position with the latest linear velocity. Note that gravity is integrated afterwards.
                 ref var pose = ref Unsafe.Add(ref basePoses, i);
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
 
+                var previousOrientation = pose.Orientation; //This is unused if conservation of angular momentum is disabled... compiler *may* remove it...
                 PoseIntegration.Integrate(pose, velocity, dt, out pose);
 
                 //Note that this generally is used before velocity integration. That means an object can go inactive with gravity-induced velocity.
@@ -206,11 +279,12 @@ namespace BepuPhysics
                 //This would require a scan through all pose memory to support, but if you do it at the same time as AABB update, that's fine- that stage uses the pose too.
                 ref var localInertia = ref Unsafe.Add(ref baseLocalInertia, i);
                 ref var inertia = ref Unsafe.Add(ref baseInertias, i);
-                PoseIntegration.RotateInverseInertia(ref localInertia.InverseInertiaTensor, ref pose.Orientation, out inertia.InverseInertiaTensor);
+                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out inertia.InverseInertiaTensor);
                 //While it's a bit goofy just to copy over the inverse mass every frame even if it doesn't change,
                 //it's virtually always gathered together with the inertia tensor and it really isn't worth a whole extra external system to copy inverse masses only on demand.
                 inertia.InverseMass = localInertia.InverseMass;
 
+                IntegrateAngularVelocity(previousOrientation, pose, localInertia, inertia, ref velocity.Angular, dt);
                 callbacks.IntegrateVelocity(i, pose, localInertia, workerIndex, ref velocity);
 
                 //Bounding boxes are accumulated in a scalar fashion, but the actual bounding box calculations are deferred until a sufficient number of collidables are accumulated to make
@@ -241,7 +315,6 @@ namespace BepuPhysics
             ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
-                //Integrate position with the latest linear velocity. Note that gravity is integrated afterwards.
                 ref var pose = ref Unsafe.Add(ref basePoses, i);
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
 
@@ -251,6 +324,7 @@ namespace BepuPhysics
                 var integratedVelocity = velocity;
                 callbacks.IntegrateVelocity(i, pose, Unsafe.Add(ref baseLocalInertia, i), workerIndex, ref integratedVelocity);
 
+                //Note that we do not include fancier angular integration for the bounding box prediction- it's not very important.
                 boundingBoxBatcher.Add(i, pose, integratedVelocity, Unsafe.Add(ref baseCollidable, i));
             }
         }
@@ -265,7 +339,6 @@ namespace BepuPhysics
             ref var baseCollidable = ref bodies.ActiveSet.Collidables[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
-                //Integrate position with the latest linear velocity. Note that gravity is integrated afterwards.
                 ref var pose = ref Unsafe.Add(ref basePoses, i);
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
 
@@ -273,9 +346,10 @@ namespace BepuPhysics
 
                 ref var localInertia = ref Unsafe.Add(ref baseLocalInertia, i);
                 ref var inertia = ref Unsafe.Add(ref baseInertias, i);
-                PoseIntegration.RotateInverseInertia(ref localInertia.InverseInertiaTensor, ref pose.Orientation, out inertia.InverseInertiaTensor);
+                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out inertia.InverseInertiaTensor);
                 inertia.InverseMass = localInertia.InverseMass;
 
+                IntegrateAngularVelocity(pose, localInertia, inertia, ref velocity.Angular, dt);
                 callbacks.IntegrateVelocity(i, pose, localInertia, workerIndex, ref velocity);
 
                 boundingBoxBatcher.Add(i, pose, velocity, Unsafe.Add(ref baseCollidable, i));
@@ -289,18 +363,17 @@ namespace BepuPhysics
             ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
             ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
             ref var baseInertias = ref bodies.Inertias[0];
-            ref var baseActivity = ref bodies.ActiveSet.Activity[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
-                //Integrate position with the latest linear velocity. Note that gravity is integrated afterwards.
                 ref var pose = ref Unsafe.Add(ref basePoses, i);
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
 
                 ref var localInertia = ref Unsafe.Add(ref baseLocalInertia, i);
                 ref var inertia = ref Unsafe.Add(ref baseInertias, i);
-                PoseIntegration.RotateInverseInertia(ref localInertia.InverseInertiaTensor, ref pose.Orientation, out inertia.InverseInertiaTensor);
+                PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out inertia.InverseInertiaTensor);
                 inertia.InverseMass = localInertia.InverseMass;
 
+                IntegrateAngularVelocity(pose, localInertia, inertia, ref velocity.Angular, dt);
                 callbacks.IntegrateVelocity(i, pose, localInertia, workerIndex, ref velocity);
             }
         }
@@ -309,12 +382,8 @@ namespace BepuPhysics
         {
             ref var basePoses = ref bodies.ActiveSet.Poses[0];
             ref var baseVelocities = ref bodies.ActiveSet.Velocities[0];
-            ref var baseLocalInertia = ref bodies.ActiveSet.LocalInertias[0];
-            ref var baseInertias = ref bodies.Inertias[0];
-            ref var baseActivity = ref bodies.ActiveSet.Activity[0];
             for (int i = startIndex; i < endIndex; ++i)
             {
-                //Integrate position with the latest linear velocity. Note that gravity is integrated afterwards.
                 ref var pose = ref Unsafe.Add(ref basePoses, i);
                 ref var velocity = ref Unsafe.Add(ref baseVelocities, i);
 

@@ -27,6 +27,8 @@ namespace Demos.Demos
             public float Gravity;
             float gravityDt;
 
+            public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
+
             public void PrepareForIntegration(float dt)
             {
                 //No point in repeating this for every body; cache it.
