@@ -52,6 +52,12 @@ If you need determinism of results over long periods (for example, storing game 
 
 Such a drift correcting mechanism also compensates for the differences between processor architectures, so you'd gain the ability to share the replay across different hardware as a bonus.
 
+##### I was trying to simulate the behavior of a spinning multitool in zero gravity and noted a CLEAR lack of the Dzhanibekov effect!
+
+By default, angular momentum is not explicitly tracked; angular velocity will remain constant during rotation without outside impulses.
+
+Momentum-conserving angular integration can be chosen by returning a different value from the IPoseIntegratorCallbacks.AngularIntegrationMode property. Gyroscopes tend to work better with ConserveMomentum, while ConserveMomentumWithGyroscopicTorque is less prone to velocity drift toward lower inertia axes.
+
 #### Surprises
 
 Simulating real physics is slightly difficult, so corners are cut. Lots of corners. Sometimes this results in unexpected behavior. Sometimes different physics libraries cut different corners, so the unexpected behavior differs. 
@@ -61,12 +67,6 @@ Sometimes, to meet certain use cases or performance requirements, the API ends u
 This is a list of some things that might frustrate or raise an eyebrow (and what to do about them, where applicable).
 
 This list will probably change over time.
-
-##### I was trying to simulate the behavior of a spinning multitool in zero gravity and noted a CLEAR lack of the Dzhanibekov effect! Does this library not faithfully simulate angular motion?
-
-That's right! Angular momentum is not explicitly tracked; angular velocity will remain constant during rotation without outside impulses. Gyroscopes won't work very well.
-
-This is not for any big fundamental reason- those effects just carry a slight overhead, introduce instability, and tend to be irrelevant for game physics. It wouldn't be a *huge* amount of work to add support for this (behind a conditional compilation symbol), but I probably won't do it without a strong reason.
 
 ##### ...Where is the bounciness/restitution material property?
 
