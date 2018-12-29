@@ -30,6 +30,48 @@ namespace BepuUtilities
             }
         }
 
+        /// <summary>
+        /// Adds the components of two matrices together.
+        /// </summary>
+        /// <param name="a">First matrix to add.</param>
+        /// <param name="b">Second matrix to add.</param>
+        /// <param name="result">Sum of the two input matrices.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Add(in Matrix3x3 a, in Matrix3x3 b, out Matrix3x3 result)
+        {
+            result.X = a.X + b.X;
+            result.Y = a.Y + b.Y;
+            result.Z = a.Z + b.Z;
+        }
+
+        /// <summary>
+        /// Scales the components of a matrix by a scalar.
+        /// </summary>
+        /// <param name="matrix">Matrix to scale.</param>
+        /// <param name="scale">Scale to apply to the matrix's components.</param>
+        /// <param name="result">Scaled matrix.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Scale(Matrix3x3 matrix, float scale, out Matrix3x3 result)
+        {
+            result.X = matrix.X * scale;
+            result.Y = matrix.Y * scale;
+            result.Z = matrix.Z * scale;
+        }
+        
+        /// <summary>
+        /// Subtracts the components of one matrix from another.
+        /// </summary>
+        /// <param name="a">Matrix to be subtracted from.</param>
+        /// <param name="b">Matrix to subtract from a.</param>
+        /// <param name="result">Difference of the two input matrices.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Subtract(in Matrix3x3 a, in Matrix3x3 b, out Matrix3x3 result)
+        {
+            result.X = a.X - b.X;
+            result.Y = a.Y - b.Y;
+            result.Z = a.Z - b.Z;
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe static void Transpose(M* m, M* transposed)
@@ -54,14 +96,11 @@ namespace BepuUtilities
             transposed->M33 = m->M33;
         }
 
-
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void Transpose(Matrix3x3* m, Matrix3x3* transposed)
         {
             Transpose((M*)m, (M*)transposed);
         }
-
 
         /// <summary>                                                                                                
         /// Computes the transposed matrix of a matrix.                                                              
@@ -78,7 +117,6 @@ namespace BepuUtilities
             transposed.Y = new Vector3(xy, m.Y.Y, m.Z.Y);
             transposed.Z = new Vector3(xz, yz, m.Z.Z);
         }
-
 
         /// <summary>
         /// Calculates the determinant of the matrix.
