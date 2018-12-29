@@ -2,7 +2,7 @@
 
 This is a high level plan for future development. All dates and features are goals, not guarantees. For a detailed breakdown of tasks in progress, check the [issues](https://github.com/bepu/bepuphysics2/issues) page.
 
-## Near future (Q3-Q4 2018)
+## Near future (Q1-Q2 2019)
 
 The big goals for the initial version are:
 - Performance should generally be an order of magnitude better than v1.
@@ -15,7 +15,7 @@ Note that this release will lack many of v1's built in features, like:
 
 The initial version will be split into incremental stages: alpha, beta, and release. The alpha was released on March 31, 2018, and the beta on August 16, 2018.
 
-### Release (October-December 2018)
+### Release (January-March 2019)
 Should be able to support the core features required by physically complex games.
 - Better handling of some dangerous performance corner cases in the solver.
 - Fully enabled CCD.
@@ -30,7 +30,7 @@ There are a few features which aren't fundamentally required for a release, but 
 - Experimental general convex boundary smoothing.
 - Cones.
  
-## Medium term (2019)
+## Medium term (Q3-Q4 2019)
 
 Once the initial version is ready, most of my time will move to things other than core engine development. Much of that time will be spent actually using the engine, so expect to see incremental enhancements and fixes driven by practical use.
 
