@@ -18,7 +18,7 @@ namespace Demos.Demos
         //Pose integration isn't very expensive so using the higher quality option isn't that much of an issue, but it's also pretty subtle.
         //Unless your simulation requires the extra fidelity, there's not much reason to spend the extra time on it.
         DemoPoseIntegratorCallbacks innerCallbacks;
-        public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.ConserveMomentumWithExplicitGyroscopicTorque;
+        public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque;
 
         public GyroscopicIntegratorCallbacks(Vector3 gravity, float linearDamping, float angularDamping)
         {
@@ -39,7 +39,7 @@ namespace Demos.Demos
 
     }
 
-    public class GyroscopeDemo : Demo
+    public class GyroscopeTestDemo : Demo
     {
         public override void Initialize(ContentArchive content, Camera camera)
         {
@@ -53,7 +53,7 @@ namespace Demos.Demos
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(100, 1, 100)), 0.1f)));
 
             var gyroBaseBody = Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new Vector3(0, 2, 0), Simulation.Shapes, new Box(.1f, 4, .1f)));
-            var gyroSpinnerBody = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(2, 4, 0), new BodyVelocity(new Vector3(0, 0, 1), new Vector3(100, 0, 0)), 1, Simulation.Shapes, new Box(0.1f, 1f, 1f)));
+            var gyroSpinnerBody = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(2, 4, 0), new BodyVelocity(default, new Vector3(300, 0, 0)), 1, Simulation.Shapes, new Box(0.1f, 1f, 1f)));
             Simulation.Solver.Add(gyroBaseBody, gyroSpinnerBody, new BallSocket { LocalOffsetA = new Vector3(0, 2, 0), LocalOffsetB = new Vector3(-2, 0, 0), SpringSettings = new SpringSettings(30, 1) });
 
 

@@ -39,12 +39,7 @@ namespace BepuPhysics
         /// <summary>
         /// Approximately conserves angular momentum by including an implicit gyroscopic torque. Best option for Dzhanibekov effect simulation, but applies a damping effect that can make gyroscopes less useful.
         /// </summary>
-        ConserveMomentumWithImplicitGyroscopicTorque,
-        /// <summary>
-        /// Approximately conserves angular momentum by including an explicit gyroscopic torque. Explodes a lot, don't use it^__^
-        /// </summary>
-        ConserveMomentumWithExplicitGyroscopicTorque,
-
+        ConserveMomentumWithGyroscopicTorque,
     }
 
     /// <summary>
@@ -223,7 +218,7 @@ namespace BepuPhysics
             }
 
             //Note that this mode branch is optimized out for any callbacks that return a constant value.
-            if (callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithImplicitGyroscopicTorque)
+            if (callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
             {
                 //Integrating the gyroscopic force explicitly can result in some instability, so we'll use an approximate implicit approach.
                 //angularVelocity1 * inertia1 = angularVelocity0 * inertia1 + dt * ((angularVelocity1 * inertia1) x angularVelocity1)
@@ -265,15 +260,6 @@ namespace BepuPhysics
                 localAngularVelocity -= newtonStep;
 
                 Matrix3x3.Transform(localAngularVelocity, orientationMatrix, out angularVelocity);
-            }
-
-            if (callbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithExplicitGyroscopicTorque)
-            {
-                Symmetric3x3.Invert(inertia.InverseInertiaTensor, out var inertiaTensor);
-                Symmetric3x3.TransformWithoutOverlap(angularVelocity, inertiaTensor, out var angularMomentum);
-                Vector3x.Cross(angularVelocity, angularMomentum, out var cross);
-                Symmetric3x3.TransformWithoutOverlap(cross, inertia.InverseInertiaTensor, out var angularAcceleration);
-                angularVelocity -= dt * angularAcceleration;
             }
         }
 
