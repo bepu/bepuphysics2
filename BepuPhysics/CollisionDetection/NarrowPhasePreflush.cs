@@ -323,7 +323,7 @@ namespace BepuPhysics.CollisionDetection
                 var originalPairCacheMappingCount = PairCache.Mapping.Count;
                 //var start = Stopwatch.GetTimestamp();
                 preflushJobIndex = -1;
-                threadDispatcher.DispatchWorkers(preflushWorkerLoop);                
+                threadDispatcher.DispatchWorkers(preflushWorkerLoop);
                 //for (int i = 0; i < preflushJobs.Count; ++i)
                 //{
                 //    ExecutePreflushJob(0, ref preflushJobs[i]);
@@ -332,22 +332,39 @@ namespace BepuPhysics.CollisionDetection
                 //Console.WriteLine($"Preflush phase 1 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
 
                 //SECOND PHASE:
-                //1) Locally sequential constraint adds. This is the beefiest single task, and it runs on one thread. It can be deterministic or nondeterministic.
-                //2) Awakener phase two (broadphase update, constraint region copies).
-                //3) Freshness checker. Lots of smaller jobs that can hopefully fill the gap while the constraint adds finish. The wider the CPU, the less this will be possible.
+                //Here we just handle the awakener's second phase jobs, if any. These can't be stacked in phase one (since phase one handles awakener phase one jobs),
+                //and they can't be stacked (easily) with the narrow phase constraint add because it could trigger type batch resizes.
+                preflushJobs.Clear(); //Note job clear. We're setting up new jobs.
+                for (int i = 0; i < awakenerPhaseTwoJobCount; ++i)
+                {
+                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.AwakenerPhaseTwo, JobIndex = i }, Pool);
+                }
+                
+                //start = Stopwatch.GetTimestamp();
+                preflushJobIndex = -1;
+                threadDispatcher.DispatchWorkers(preflushWorkerLoop);
+                //for (int i = 0; i < preflushJobs.Count; ++i)
+                //{
+                //    ExecutePreflushJob(0, ref preflushJobs[i]);
+                //}
+                //end = Stopwatch.GetTimestamp();
+                //Console.WriteLine($"Preflush phase 2 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
 
+                //THIRD PHASE:
+                //1) Locally sequential constraint adds. This is the beefiest single task, and it runs on one thread. It can be deterministic or nondeterministic.
+                //2) Freshness checker. Lots of smaller jobs that can hopefully fill the gap while the constraint adds finish. The wider the CPU, the less this will be possible.
                 preflushJobs.Clear(); //Note job clear. We're setting up new jobs.
                 if (deterministic)
                 {
                     preflushJobs.Add(new PreflushJob { Type = PreflushJobType.DeterministicConstraintAdd }, Pool);
+                    //var job = new PreflushJob { Type = PreflushJobType.DeterministicConstraintAdd };
+                    //ExecutePreflushJob(0, ref job);
                 }
                 else
                 {
                     preflushJobs.Add(new PreflushJob { Type = PreflushJobType.NondeterministicConstraintAdd, WorkerCount = threadCount }, Pool);
-                }
-                for (int i = 0; i < awakenerPhaseTwoJobCount; ++i)
-                {
-                    preflushJobs.Add(new PreflushJob { Type = PreflushJobType.AwakenerPhaseTwo, JobIndex = i }, Pool);
+                    //var job = new PreflushJob { Type = PreflushJobType.NondeterministicConstraintAdd, WorkerCount = threadCount };
+                    //ExecutePreflushJob(0, ref job);
                 }
                 FreshnessChecker.CreateJobs(threadCount, ref preflushJobs, Pool, originalPairCacheMappingCount);
 
@@ -359,7 +376,7 @@ namespace BepuPhysics.CollisionDetection
                 //    ExecutePreflushJob(0, ref preflushJobs[i]);
                 //}
                 //end = Stopwatch.GetTimestamp();
-                //Console.WriteLine($"Preflush phase 2 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
+                //Console.WriteLine($"Preflush phase 3 time (us): {1e6 * (end - start) / Stopwatch.Frequency}");
 
                 for (int i = 0; i < threadCount; ++i)
                 {
@@ -387,10 +404,10 @@ namespace BepuPhysics.CollisionDetection
                     Simulation.Awakener.ExecutePhaseOneJob(i);
                 //Note that phase one of awakener must occur before the constraint flush. Phase one registers the newly awakened constraints in constraint batches.
                 //This this was not done, pending adds might end up in the same batches as newly awake constraints that share bodies.
-                overlapWorkers[0].PendingConstraints.FlushSequentially(Simulation, PairCache);
-                FreshnessChecker.CheckFreshnessInRegion(0, 0, originalMappingCount);
                 for (int i = 0; i < awakenerPhaseTwoJobCount; ++i)
                     Simulation.Awakener.ExecutePhaseTwoJob(i);
+                overlapWorkers[0].PendingConstraints.FlushSequentially(Simulation, PairCache);
+                FreshnessChecker.CheckFreshnessInRegion(0, 0, originalMappingCount);
             }
             for (int i = 0; i < threadCount; ++i)
             {

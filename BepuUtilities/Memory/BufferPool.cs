@@ -256,6 +256,7 @@ namespace BepuUtilities.Memory
                 {
                     Blocks[i].Clear();
                 }
+                Slots.Clear();
                 BlockCount = 0;
             }
 
