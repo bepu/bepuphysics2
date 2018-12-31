@@ -81,6 +81,18 @@ namespace BepuUtilities
             target.Y = source.Y[0];
         }
 
+        /// <summary>
+        /// Gathers values from a vector and places them into the first indices of the target vector.
+        /// </summary>
+        /// <param name="source">Vector to copy values from.</param>
+        /// <param name="targetSlot">Wide vectorto place values into.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteFirst(in Vector2 source, ref Vector2Wide targetSlot)
+        {
+            GatherScatter.GetFirst(ref targetSlot.X) = source.X;
+            GatherScatter.GetFirst(ref targetSlot.Y) = source.Y;
+        }
+
         public override string ToString()
         {
             return $"<{X}, {Y}>";

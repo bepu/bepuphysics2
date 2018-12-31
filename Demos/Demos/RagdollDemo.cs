@@ -486,24 +486,8 @@ namespace Demos.Demos
                     }
                 }
             }
-
-            var staticShape = new Box(300, 1, 300);
-            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
-            var staticDescription = new StaticDescription
-            {
-                Collidable = new CollidableDescription
-                {
-                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                    Shape = staticShapeIndex,
-                    SpeculativeMargin = 0.1f
-                },
-                Pose = new RigidPose
-                {
-                    Position = new Vector3(0, -0.5f, 0),
-                    Orientation = Quaternion.Identity
-                }
-            };
-            Simulation.Statics.Add(staticDescription);
+            
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 1, 300)), 0.1f)));
         }
 
     }
