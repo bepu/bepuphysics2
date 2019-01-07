@@ -29,8 +29,6 @@ namespace Demos.Demos.Character
     //This isn't the most wonderful solution in terms of development experience or tooling, 
     //but it maximizes performance and avoids the need for in-language turing complete metaprogramming, so I'm okay with it.
 
-
-
     //Constraint descriptions provide an explicit mapping from the array-of-structures format to the internal array-of-structures-of-arrays format used by the solver.
     //Note that there is a separate description for the one and two body case- constraint implementations take advantage of the lack of a second body to reduce data gathering requirements.
     /// <summary>
@@ -311,8 +309,6 @@ namespace Demos.Demos.Character
         /// </summary>
         public const int BatchTypeId = 40;
     }
-
-
     //Constraint descriptions provide an explicit mapping from the array-of-structures format to the internal array-of-structures-of-arrays format used by the solver.
     //Note that there is a separate description for the one and two body case- constraint implementations take advantage of the lack of a second body to reduce data gathering requirements.
     /// <summary>
