@@ -397,6 +397,24 @@ namespace Demos.Demos.Character
                         //If a support currently exists and there is still an old constraint, then update it.
                         //If a support currently exists and there is not an old constraint, add the new constraint.
                         ref var supportCandidate = ref workerCache0.SupportCandidates[supportCandidateIndex];
+
+                        //Project the view direction down onto the surface as represented by the contact normala.
+
+                        Matrix3x3 surfaceBasis;
+                        surfaceBasis.Y = Vector3.Dot(supportCandidate.OffsetFromCharacter, supportCandidate.Normal) > 0 ? -supportCandidate.Normal : supportCandidate.Normal;                        
+                        surfaceBasis.Z = Vector3.Dot(character.ViewDirection, surfaceBasis.Y) * surfaceBasis.Y - character.ViewDirection;
+                        var zLengthSquared = surfaceBasis.Z.LengthSquared();
+                        if(zLengthSquared > 1e-12f)
+                        {
+                            surfaceBasis.Z /= MathF.Sqrt(zLengthSquared);
+                        }
+                        else
+                        {
+                            Quaternion.GetQuaternionBetweenNormalizedVectors(Vector3.UnitY, surfaceBasis.Y, out var rotation);
+                            Quaternion.TransformUnitZ(rotation, out surfaceBasis.Z);
+                        }
+                        Vector3x.Cross(surfaceBasis.Y, surfaceBasis.Z, out surfaceBasis.X);
+                        Quaternion.CreateFromRotationMatrix(surfaceBasis, out var surfaceBasisQuaternion);
                         if (supportCandidate.Support.Mobility != CollidableMobility.Static)
                         {
                             //The character is supported by a body.
@@ -406,8 +424,8 @@ namespace Demos.Demos.Character
                                 MaximumVerticalForce = character.MaximumVerticalForce,
                                 OffsetFromCharacterToSupportPoint = supportCandidate.OffsetFromCharacter,
                                 OffsetFromSupportToSupportPoint = supportCandidate.OffsetFromSupport,
-                                SurfaceBasis = default,
-                                TargetVelocity = default
+                                SurfaceBasis = surfaceBasisQuaternion,
+                                TargetVelocity = character.TargetVelocity
                             };
                             if (character.Supported)
                             {
@@ -428,8 +446,8 @@ namespace Demos.Demos.Character
                                 MaximumHorizontalForce = character.MaximumHorizontalForce,
                                 MaximumVerticalForce = character.MaximumVerticalForce,
                                 OffsetFromCharacterToSupportPoint = supportCandidate.OffsetFromCharacter,
-                                SurfaceBasis = default,
-                                TargetVelocity = default
+                                SurfaceBasis = surfaceBasisQuaternion,
+                                TargetVelocity = character.TargetVelocity
                             };
                             if (character.Supported)
                             {
