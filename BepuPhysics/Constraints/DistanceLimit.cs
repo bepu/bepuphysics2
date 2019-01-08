@@ -39,7 +39,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(DistanceLimitTypeProcessor);
+        public Type TypeProcessorType => typeof(DistanceLimitTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

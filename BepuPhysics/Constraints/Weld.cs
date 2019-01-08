@@ -37,7 +37,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(WeldTypeProcessor);
+        public Type TypeProcessorType => typeof(WeldTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

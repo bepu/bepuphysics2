@@ -43,7 +43,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(AreaConstraintTypeProcessor);
+        public Type TypeProcessorType => typeof(AreaConstraintTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

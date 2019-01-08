@@ -41,6 +41,6 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// Gets the type of the type batch which contains described constraints.
         /// </summary>
-        Type BatchType  { get; }
+        Type TypeProcessorType  { get; }
     }
 }

@@ -24,7 +24,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(BallSocketTypeProcessor);
+        public Type TypeProcessorType => typeof(BallSocketTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

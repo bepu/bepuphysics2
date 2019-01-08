@@ -62,7 +62,7 @@ for (int i = 0; i < contactCount ; ++i)
             get => Contact<#= contactCount #>NonconvexTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact<#= contactCount #>NonconvexTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact<#= contactCount #>NonconvexTypeProcessor);
 
     }
 
@@ -182,7 +182,7 @@ for (int i = 0; i < contactCount ; ++i)
             get => Contact<#= contactCount #>NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact<#= contactCount #>NonconvexOneBodyTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact<#= contactCount #>NonconvexOneBodyTypeProcessor);
 
     }
 

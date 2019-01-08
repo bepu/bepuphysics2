@@ -217,7 +217,7 @@ namespace BepuPhysics
                     $"({typeof(TDescription).Name}, {default(TDescription).ConstraintTypeId}). " +
                     $"Cannot register the same type id more than once.");
             }
-            var processor = (TypeProcessor)Activator.CreateInstance(description.BatchType);
+            var processor = (TypeProcessor)Activator.CreateInstance(description.TypeProcessorType);
             TypeProcessors[description.ConstraintTypeId] = processor;
             processor.Initialize(description.ConstraintTypeId);
         }
@@ -398,6 +398,22 @@ namespace BepuPhysics
                     }
                 }
             }
+        }
+
+        [Conditional("DEBUG")]
+        internal void AssertConstraintHandleExists(int handle)
+        {
+            Debug.Assert(handle >= 0 && handle < HandleToConstraint.Length, "Handle must be contained within the handle mapping.");
+            ref var location = ref HandleToConstraint[handle];
+            Debug.Assert(location.SetIndex >= 0 && location.SetIndex < Sets.Length, "Set index must be within the sets buffer.");
+            ref var set = ref Sets[location.SetIndex];
+            Debug.Assert(location.BatchIndex >= 0 && location.BatchIndex < set.Batches.Count, "Batch index must be within the set's batches buffer.");
+            ref var batch = ref set.Batches[location.BatchIndex];
+            Debug.Assert(location.TypeId >= 0 && location.TypeId < batch.TypeIndexToTypeBatchIndex.Length, "Type id must exist within the batch's type id mapping.");
+            var typeBatchIndex = batch.TypeIndexToTypeBatchIndex[location.TypeId];
+            Debug.Assert(typeBatchIndex >= 0 && typeBatchIndex < batch.TypeBatches.Count, "Type batch index must be a valid index in the type batches list.");
+            ref var typeBatch = ref batch.TypeBatches[typeBatchIndex];
+            Debug.Assert(typeBatch.IndexToHandle[location.IndexInTypeBatch] == handle, "Index->handle mapping in type batch must agree with handle->index mapping.");
         }
 
         /// <summary>
@@ -593,6 +609,11 @@ namespace BepuPhysics
         public int Add<TDescription>(ref int bodyHandles, int bodyCount, ref TDescription description)
             where TDescription : IConstraintDescription<TDescription>
         {
+            Debug.Assert(description.ConstraintTypeId >= 0 && description.ConstraintTypeId < TypeProcessors.Length &&
+                TypeProcessors[description.ConstraintTypeId].GetType() == description.TypeProcessorType, 
+                "The description's constraint type and type processor don't match what has been registered in the solver. Did you forget to register the constraint type?");
+            Debug.Assert(bodyCount == TypeProcessors[description.ConstraintTypeId].BodiesPerConstraint,
+                "The number of bodies supplied to a constraint add must match the expected number of bodies involved in that constraint type. Did you use the wrong Solver.Add overload?");
             //Adding a constraint assumes that the involved bodies are active, so wake up anything that is sleeping.
             for (int i = 0; i < bodyCount; ++i)
             {
@@ -834,6 +855,7 @@ namespace BepuPhysics
                 awakener.AwakenConstraint(handle);
             }
             Debug.Assert(constraintLocation.SetIndex == 0);
+            AssertConstraintHandleExists(handle);   
             ConstraintGraphRemovalEnumerator enumerator;
             enumerator.bodies = bodies;
             enumerator.constraintHandle = handle;

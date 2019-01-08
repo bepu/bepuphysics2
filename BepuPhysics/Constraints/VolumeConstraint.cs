@@ -44,7 +44,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(VolumeConstraintTypeProcessor);
+        public Type TypeProcessorType => typeof(VolumeConstraintTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

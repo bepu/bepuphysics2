@@ -28,7 +28,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(HingeTypeProcessor);
+        public Type TypeProcessorType => typeof(HingeTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

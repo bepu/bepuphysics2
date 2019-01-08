@@ -28,7 +28,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(AngularAxisMotorTypeProcessor);
+        public Type TypeProcessorType => typeof(AngularAxisMotorTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

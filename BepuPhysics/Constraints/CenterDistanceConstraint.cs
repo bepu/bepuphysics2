@@ -33,7 +33,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(CenterDistanceTypeProcessor);
+        public Type TypeProcessorType => typeof(CenterDistanceTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

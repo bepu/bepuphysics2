@@ -23,7 +23,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(AngularSwivelHingeTypeProcessor);
+        public Type TypeProcessorType => typeof(AngularSwivelHingeTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

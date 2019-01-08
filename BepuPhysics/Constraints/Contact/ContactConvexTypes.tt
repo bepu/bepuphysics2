@@ -143,7 +143,7 @@ for (int i = 0; i < contactCount; ++i)
             get => Contact<#= contactCount #><#=suffix#>TypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact<#= contactCount #><#=suffix#>TypeProcessor);
+        public Type TypeProcessorType => typeof(Contact<#= contactCount #><#=suffix#>TypeProcessor);
 
     }
 

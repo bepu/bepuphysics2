@@ -35,7 +35,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(LinearAxisServoTypeProcessor);
+        public Type TypeProcessorType => typeof(LinearAxisServoTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

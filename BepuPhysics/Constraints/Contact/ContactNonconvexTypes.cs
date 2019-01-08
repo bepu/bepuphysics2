@@ -49,7 +49,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact2NonconvexTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact2NonconvexTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact2NonconvexTypeProcessor);
 
     }
 
@@ -157,7 +157,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact2NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact2NonconvexOneBodyTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact2NonconvexOneBodyTypeProcessor);
 
     }
 
@@ -262,7 +262,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact3NonconvexTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact3NonconvexTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact3NonconvexTypeProcessor);
 
     }
 
@@ -374,7 +374,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact3NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact3NonconvexOneBodyTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact3NonconvexOneBodyTypeProcessor);
 
     }
 
@@ -482,7 +482,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact4NonconvexTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact4NonconvexTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact4NonconvexTypeProcessor);
 
     }
 
@@ -598,7 +598,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact4NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact4NonconvexOneBodyTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact4NonconvexOneBodyTypeProcessor);
 
     }
 
@@ -709,7 +709,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact5NonconvexTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact5NonconvexTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact5NonconvexTypeProcessor);
 
     }
 
@@ -829,7 +829,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact5NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact5NonconvexOneBodyTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact5NonconvexOneBodyTypeProcessor);
 
     }
 
@@ -943,7 +943,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact6NonconvexTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact6NonconvexTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact6NonconvexTypeProcessor);
 
     }
 
@@ -1067,7 +1067,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact6NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact6NonconvexOneBodyTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact6NonconvexOneBodyTypeProcessor);
 
     }
 
@@ -1184,7 +1184,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact7NonconvexTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact7NonconvexTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact7NonconvexTypeProcessor);
 
     }
 
@@ -1312,7 +1312,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact7NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact7NonconvexOneBodyTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact7NonconvexOneBodyTypeProcessor);
 
     }
 
@@ -1432,7 +1432,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact8NonconvexTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact8NonconvexTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact8NonconvexTypeProcessor);
 
     }
 
@@ -1564,7 +1564,7 @@ namespace BepuPhysics.Constraints.Contact
             get => Contact8NonconvexOneBodyTypeProcessor.BatchTypeId;
         }
 
-        public Type BatchType => typeof(Contact8NonconvexOneBodyTypeProcessor);
+        public Type TypeProcessorType => typeof(Contact8NonconvexOneBodyTypeProcessor);
 
     }
 

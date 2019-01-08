@@ -45,7 +45,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(TwistLimitTypeProcessor);
+        public Type TypeProcessorType => typeof(TwistLimitTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {

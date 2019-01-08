@@ -87,19 +87,26 @@ namespace Demos.Demos.Character
         /// <summary>
         /// Creates a character controller systme.
         /// </summary>
-        /// <param name="simulation">Simulation that the characters will live in.</param>
         /// <param name="pool">Pool to allocate resources from.</param>
         /// <param name="threadDispatcher">Thread dispatcher to be used by the character controller.</param>
         /// <param name="initialCharacterCapacity">Number of characters to initially allocate space for.</param>
         /// <param name="initialBodyHandleCapacity">Number of body handles to initially allocate space for in the body handle->character mapping.</param>
-        public CharacterControllers(Simulation simulation, BufferPool pool, IThreadDispatcher threadDispatcher, int initialCharacterCapacity = 4096, int initialBodyHandleCapacity = 4096)
+        public CharacterControllers(BufferPool pool, IThreadDispatcher threadDispatcher, int initialCharacterCapacity = 4096, int initialBodyHandleCapacity = 4096)
         {
-            this.simulation = simulation;
             this.pool = pool;
             this.threadDispatcher = threadDispatcher;
             characters = new QuickList<Character>(initialCharacterCapacity, pool);
+            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCharacterCapacity, out characterIdPool);
             ResizeBodyHandleCapacity(initialBodyHandleCapacity);
+        }
 
+        /// <summary>
+        /// Caches the simulation associated with the characters.
+        /// </summary>
+        /// <param name="simulation">Simulation to be associated with the characters.</param>
+        public void Initialize(Simulation simulation)
+        {
+            this.simulation = simulation;
         }
 
         private void ResizeBodyHandleCapacity(int bodyHandleCapacity)
@@ -113,10 +120,11 @@ namespace Demos.Demos.Character
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Character GetCharacter(int index)
+        public ref Character GetCharacterByIndex(int index)
         {
             return ref characters[index];
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Character AllocateCharacter(int bodyHandle, out int characterIndex)
@@ -125,7 +133,12 @@ namespace Demos.Demos.Character
             characters.EnsureCapacity(characterIndex + 1, pool);
             if (bodyHandleToCharacterIndex.Length <= bodyHandle)
                 ResizeBodyHandleCapacity(Math.Max(bodyHandle + 1, bodyHandleToCharacterIndex.Length * 2));
-            return ref GetCharacter(characterIndex);
+            characterIndex = characters.Count;
+            ref var character = ref characters.AllocateUnsafely();
+            character = default;
+            character.BodyHandle = bodyHandle;
+            bodyHandleToCharacterIndex[bodyHandle] = characterIndex;
+            return ref character;
         }
 
         struct SupportCandidate
@@ -248,6 +261,7 @@ namespace Demos.Demos.Character
                                         supportCandidate.OffsetFromCharacter = deepestContact.Offset;
                                         supportCandidate.OffsetFromSupport = offsetFromB;
                                     }
+                                    supportCandidate.Support = supportCollidable;
                                 }
                             }
                         }
@@ -295,8 +309,8 @@ namespace Demos.Demos.Character
                                     supportCandidate.OffsetFromCharacter = deepestContact.Offset;
                                     supportCandidate.OffsetFromSupport = offsetFromB;
                                 }
+                                supportCandidate.Support = supportCollidable;
                             }
-
                         }
                     }
                     return true;
@@ -317,6 +331,8 @@ namespace Demos.Demos.Character
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryReportContacts<TManifold>(in CollidablePair pair, ref TManifold manifold, int workerIndex, ref PairMaterialProperties materialProperties) where TManifold : struct, IContactManifold
         {
+            Debug.Assert(workerCaches.Allocated && workerIndex < workerCaches.Length && workerCaches[workerIndex].SupportCandidates.Span.Allocated,
+                "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");
             //It's possible for neither, one, or both collidables to be a character. Check each one, treating the other as a potential support.
             var aIsCharacter = TryReportContacts(pair.A, pair.B, pair, ref manifold, workerIndex);
             var bIsCharacter = TryReportContacts(pair.B, pair.A, pair, ref manifold, workerIndex);
@@ -326,6 +342,7 @@ namespace Demos.Demos.Character
                 //Note- you could use the friction coefficient to change the horizontal motion constraint's maximum force to simulate different environments if you want.
                 //That would just require caching a bit more information for the AnalyzeContacts function to use.
                 materialProperties.FrictionCoefficient = 0;
+                return true;
             }
             return false;
         }
@@ -335,6 +352,7 @@ namespace Demos.Demos.Character
         /// </summary>
         public void PrepareForContacts()
         {
+            Debug.Assert(!workerCaches.Allocated, "Worker caches were already allocated; did you forget to call AnalyzeContacts after collision detection to flush the previous frame's results?");
             var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
             pool.Take(threadCount, out workerCaches);
             workerCaches = workerCaches.Slice(0, threadCount);
@@ -351,6 +369,7 @@ namespace Demos.Demos.Character
         /// </summary>
         public void AnalyzeContacts()
         {
+            Debug.Assert(workerCaches.Allocated, "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");
             ref var workerCache0 = ref workerCaches[0];
             for (int i = 1; i < workerCaches.Length; ++i)
             {
@@ -401,10 +420,10 @@ namespace Demos.Demos.Character
                         //Project the view direction down onto the surface as represented by the contact normala.
 
                         Matrix3x3 surfaceBasis;
-                        surfaceBasis.Y = Vector3.Dot(supportCandidate.OffsetFromCharacter, supportCandidate.Normal) > 0 ? -supportCandidate.Normal : supportCandidate.Normal;                        
+                        surfaceBasis.Y = Vector3.Dot(supportCandidate.OffsetFromCharacter, supportCandidate.Normal) > 0 ? -supportCandidate.Normal : supportCandidate.Normal;
                         surfaceBasis.Z = Vector3.Dot(character.ViewDirection, surfaceBasis.Y) * surfaceBasis.Y - character.ViewDirection;
                         var zLengthSquared = surfaceBasis.Z.LengthSquared();
-                        if(zLengthSquared > 1e-12f)
+                        if (zLengthSquared > 1e-12f)
                         {
                             surfaceBasis.Z /= MathF.Sqrt(zLengthSquared);
                         }
@@ -435,7 +454,7 @@ namespace Demos.Demos.Character
                             else
                             {
                                 //Doesn't exist, add it.
-                                simulation.Solver.Add(character.BodyHandle, supportCandidate.Support.Handle, ref motionConstraint);
+                                character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, supportCandidate.Support.Handle, ref motionConstraint);
                             }
                         }
                         else
@@ -457,9 +476,15 @@ namespace Demos.Demos.Character
                             else
                             {
                                 //Doesn't exist, add it.
-                                simulation.Solver.Add(character.BodyHandle, supportCandidate.Support.Handle, ref motionConstraint);
+                                character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, ref motionConstraint);
                             }
                         }
+                        character.Supported = true;
+                        character.Support = supportCandidate.Support;
+                    }
+                    else
+                    {
+                        character.Supported = false;
                     }
                 }
             }

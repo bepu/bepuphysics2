@@ -70,7 +70,7 @@ namespace Demos.Demos.Character
         /// <summary>
         /// Gets the TypeProcessor type that is associated with this description.
         /// </summary>
-        public Type BatchType => typeof(StaticCharacterMotionTypeProcessor);
+        public Type TypeProcessorType => typeof(StaticCharacterMotionTypeProcessor);
 
         //Note that these mapping functions use a "GetOffsetInstance" function. Each CharacterMotionPrestep is a bundle of multiple constraints;
         //by grabbing an offset instance, we're selecting a specific slot in the bundle to modify. For simplicity and to guarantee consistency of field strides,
@@ -224,8 +224,10 @@ namespace Demos.Demos.Character
         {
             //Transform the constraint space impulse into world space by using the jacobian and then apply each body's inverse inertia to get the velocity change.
             Vector3Wide.Scale(basis.X, constraintSpaceImpulse.X, out var linearImpulseAX);
-            Vector3Wide.Scale(basis.Y, constraintSpaceImpulse.Y, out var linearImpulseAY);
+            Vector3Wide.Scale(basis.Z, constraintSpaceImpulse.Y, out var linearImpulseAY);
             Vector3Wide.Add(linearImpulseAX, linearImpulseAY, out var linearImpulseA);
+            Vector3Wide.Scale(linearImpulseA, inertiaA.InverseMass, out var linearChangeA);
+            Vector3Wide.Add(velocityA.Linear, linearChangeA, out velocityA.Linear);
 
             Matrix2x3Wide.Transform(constraintSpaceImpulse, angularJacobianA, out var angularImpulseA);
             Symmetric3x3Wide.TransformWithoutOverlap(angularImpulseA, inertiaA.InverseInertiaTensor, out var angularChangeA);
@@ -307,7 +309,7 @@ namespace Demos.Demos.Character
         /// Simulation-wide unique id for the character motion constraint. Every type has needs a unique compile time id; this is a little bit annoying to guarantee given that there is no central
         /// registry of all types that can exist (custom ones, like this one, can always be created), but having it be constant helps simplify and optimize its internal usage.
         /// </summary>
-        public const int BatchTypeId = 40;
+        public const int BatchTypeId = 50;
     }
     //Constraint descriptions provide an explicit mapping from the array-of-structures format to the internal array-of-structures-of-arrays format used by the solver.
     //Note that there is a separate description for the one and two body case- constraint implementations take advantage of the lack of a second body to reduce data gathering requirements.
@@ -354,7 +356,7 @@ namespace Demos.Demos.Character
         /// <summary>
         /// Gets the TypeProcessor type that is associated with this description.
         /// </summary>
-        public Type BatchType => typeof(DynamicCharacterMotionTypeProcessor);
+        public Type TypeProcessorType => typeof(DynamicCharacterMotionTypeProcessor);
 
         //Note that these mapping functions use a "GetOffsetInstance" function. Each CharacterMotionPrestep is a bundle of multiple constraints;
         //by grabbing an offset instance, we're selecting a specific slot in the bundle to modify. For simplicity and to guarantee consistency of field strides,
@@ -522,11 +524,11 @@ namespace Demos.Demos.Character
         {
             //Transform the constraint space impulse into world space by using the jacobian and then apply each body's inverse inertia to get the velocity change.
             Vector3Wide.Scale(basis.X, constraintSpaceImpulse.X, out var linearImpulseAX);
-            Vector3Wide.Scale(basis.Y, constraintSpaceImpulse.Y, out var linearImpulseAY);
+            Vector3Wide.Scale(basis.Z, constraintSpaceImpulse.Y, out var linearImpulseAY);
             Vector3Wide.Add(linearImpulseAX, linearImpulseAY, out var linearImpulseA);
             Vector3Wide.Scale(linearImpulseA, inertiaA.InverseMass, out var linearChangeA);
-            Vector3Wide.Scale(linearImpulseA, inertiaB.InverseMass, out var negatedLinearChangeB); //Linear jacobians for B are just A's negated linear jacobians.
             Vector3Wide.Add(velocityA.Linear, linearChangeA, out velocityA.Linear);
+            Vector3Wide.Scale(linearImpulseA, inertiaB.InverseMass, out var negatedLinearChangeB); //Linear jacobians for B are just A's negated linear jacobians.
             Vector3Wide.Subtract(velocityB.Linear, negatedLinearChangeB, out velocityB.Linear);
 
             Matrix2x3Wide.Transform(constraintSpaceImpulse, angularJacobianA, out var angularImpulseA);
@@ -625,6 +627,6 @@ namespace Demos.Demos.Character
         /// Simulation-wide unique id for the character motion constraint. Every type has needs a unique compile time id; this is a little bit annoying to guarantee given that there is no central
         /// registry of all types that can exist (custom ones, like this one, can always be created), but having it be constant helps simplify and optimize its internal usage.
         /// </summary>
-        public const int BatchTypeId = 41;
+        public const int BatchTypeId = 51;
     }
 }

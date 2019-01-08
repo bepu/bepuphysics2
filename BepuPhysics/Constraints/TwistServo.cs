@@ -42,7 +42,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public Type BatchType => typeof(TwistServoTypeProcessor);
+        public Type TypeProcessorType => typeof(TwistServoTypeProcessor);
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
