@@ -421,6 +421,7 @@ namespace Demos.Demos.Character
 
                         Matrix3x3 surfaceBasis;
                         surfaceBasis.Y = Vector3.Dot(supportCandidate.OffsetFromCharacter, supportCandidate.Normal) > 0 ? -supportCandidate.Normal : supportCandidate.Normal;
+                        //Note negation: we're using a right handed basis where -Z is forward, +Z is backward.
                         surfaceBasis.Z = Vector3.Dot(character.ViewDirection, surfaceBasis.Y) * surfaceBasis.Y - character.ViewDirection;
                         var zLengthSquared = surfaceBasis.Z.LengthSquared();
                         if (zLengthSquared > 1e-12f)

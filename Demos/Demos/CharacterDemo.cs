@@ -84,8 +84,8 @@ namespace Demos.Demos
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(-20, 10, -20);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Position = new Vector3(20, 10, 20);
+            camera.Yaw = MathHelper.Pi * -1f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
             var masks = new BodyProperty<ulong>();
             var characters = new CharacterControllers(BufferPool, ThreadDispatcher);
@@ -110,11 +110,11 @@ namespace Demos.Demos
             character.MaximumVerticalForce = 10;
             character.MinimumSupportContinuationDepth = -0.1f;
             character.MinimumSupportDepth = -0.01f;
-            character.TargetVelocity = new Vector2(0, 4f);
+            character.TargetVelocity = new Vector2(1, 4f);
             character.ViewDirection = new Vector3(0, 0, -1);
 
             var origin = new Vector3(-3f, 0, 0);
-            var spacing = new Vector3(0.5f, 0, 0.5f);
+            var spacing = new Vector3(0.5f, 0, -0.5f);
             var random = new Random(5);
             for (int i = 0; i < 12; ++i)
             {

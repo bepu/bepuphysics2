@@ -264,8 +264,10 @@ namespace Demos.Demos.Character
             projection.OffsetFromCharacter = prestepData.OffsetFromCharacter;
 <#if (dynamic) {#>
             projection.OffsetFromSupport = prestepData.OffsetFromSupport;
-<#}#>
-            projection.TargetVelocity = prestepData.TargetVelocity;
+<#}#>            
+            projection.TargetVelocity.X = prestepData.TargetVelocity.X;
+            //The surface basis's Z axis points in the opposite direction to the view direction, so negate the target velocity along the Z axis to point it in the expected direction.
+            projection.TargetVelocity.Y = -prestepData.TargetVelocity.Y;
             projection.InertiaA = inertiaA;
 <#if (dynamic) {#>
             projection.InertiaB = inertiaB;

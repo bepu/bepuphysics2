@@ -214,7 +214,10 @@ namespace Demos.Demos.Character
             //have effectively optimal cache line efficiency (outside of their body velocity gathers and scatters, but that's unavoidable in this solver type).
             projection.SurfaceBasis = prestepData.SurfaceBasis;
             projection.OffsetFromCharacter = prestepData.OffsetFromCharacter;
-            projection.TargetVelocity = prestepData.TargetVelocity;
+            
+            projection.TargetVelocity.X = prestepData.TargetVelocity.X;
+            //The surface basis's Z axis points in the opposite direction to the view direction, so negate the target velocity along the Z axis to point it in the expected direction.
+            projection.TargetVelocity.Y = -prestepData.TargetVelocity.Y;
             projection.InertiaA = inertiaA;
             projection.MaximumHorizontalImpulse = prestepData.MaximumHorizontalForce * dt;
             projection.MaximumVerticalForce = prestepData.MaximumVerticalForce * dt;
@@ -523,7 +526,10 @@ namespace Demos.Demos.Character
             projection.SurfaceBasis = prestepData.SurfaceBasis;
             projection.OffsetFromCharacter = prestepData.OffsetFromCharacter;
             projection.OffsetFromSupport = prestepData.OffsetFromSupport;
-            projection.TargetVelocity = prestepData.TargetVelocity;
+            
+            projection.TargetVelocity.X = prestepData.TargetVelocity.X;
+            //The surface basis's Z axis points in the opposite direction to the view direction, so negate the target velocity along the Z axis to point it in the expected direction.
+            projection.TargetVelocity.Y = -prestepData.TargetVelocity.Y;
             projection.InertiaA = inertiaA;
             projection.InertiaB = inertiaB;
             projection.MaximumHorizontalImpulse = prestepData.MaximumHorizontalForce * dt;
