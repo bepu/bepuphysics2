@@ -233,6 +233,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetConstraintReference(int handle, out ConstraintReference reference)
         {
+            AssertConstraintHandleExists(handle);
             ref var constraintLocation = ref HandleToConstraint[handle];
             reference = new ConstraintReference(ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId), constraintLocation.IndexInTypeBatch);
         }

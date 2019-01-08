@@ -107,14 +107,44 @@ namespace Demos.Demos
             character.CosMaximumSlope = .707f;
             character.LocalUp = Vector3.UnitY;
             character.MaximumHorizontalForce = 10;
-            character.MaximumVerticalForce = 10000;
+            character.MaximumVerticalForce = 10;
             character.MinimumSupportContinuationDepth = -0.1f;
             character.MinimumSupportDepth = -0.01f;
-            character.TargetVelocity = new Vector2(0, 1f);
+            character.TargetVelocity = new Vector2(0, 4f);
             character.ViewDirection = new Vector3(0, 0, -1);
 
+            var origin = new Vector3(-3f, 0, 0);
+            var spacing = new Vector3(0.5f, 0, 0.5f);
+            var random = new Random(5);
+            for (int i = 0; i < 12; ++i)
+            {
+                for (int j = 0; j < 100; ++j)
+                {
+                    var position = origin + new Vector3(i, 0, j) * spacing;
+                    var orientation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble())), 10 * (float)random.NextDouble());
+                    var shape = new Box(0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble());
+                    var collidable = new CollidableDescription(Simulation.Shapes.Add(shape), 0.1f);
+                    shape.ComputeInertia(1, out var inertia);
+                    var choice = (i + j) % 3;
+                    switch (choice)
+                    {
+                        case 0:
+                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(position, orientation), inertia, collidable, new BodyActivityDescription(0.01f)));
+                            break;
+                        case 1:
+                            Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(position, orientation), collidable, new BodyActivityDescription(0.01f)));
+                            break;
+                        case 2:
+                            Simulation.Statics.Add(new StaticDescription(position, orientation, collidable));
+                            break;
+
+                    }
+                }
+            }
+
+
             Simulation.Statics.Add(new StaticDescription(
-                new Vector3(0, -0.5f, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathF.PI * 0.03f), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 1, 300)), 0.1f)));
+                new Vector3(0, -0.5f, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathF.PI * 0.00f), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 1, 300)), 0.1f)));
         }
 
     }

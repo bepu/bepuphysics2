@@ -447,7 +447,7 @@ namespace Demos.Demos.Character
                                 TargetVelocity = character.TargetVelocity,
                                 Depth = supportCandidate.Depth
                             };
-                            if (character.Supported)
+                            if (character.Supported && !shouldRemove)
                             {
                                 //Already exists, update it.
                                 simulation.Solver.ApplyDescriptionWithoutWaking(character.MotionConstraintHandle, ref motionConstraint);
@@ -470,7 +470,7 @@ namespace Demos.Demos.Character
                                 TargetVelocity = character.TargetVelocity,
                                 Depth = supportCandidate.Depth
                             };
-                            if (character.Supported)
+                            if (character.Supported && !shouldRemove)
                             {
                                 //Already exists, update it.
                                 simulation.Solver.ApplyDescriptionWithoutWaking(character.MotionConstraintHandle, ref motionConstraint);
