@@ -144,7 +144,7 @@ namespace Demos.Demos.Character
         struct SupportCandidate
         {
             public Vector3 OffsetFromCharacter;
-            public float Importance;
+            public float Depth;
             public Vector3 OffsetFromSupport;
             public int CharacterIndex;
             public Vector3 Normal;
@@ -174,7 +174,7 @@ namespace Demos.Demos.Character
                     Debug.Assert(SupportCandidates.Span.Length > SupportCandidates.Count, "The support candidates buffer should have been allocated large enough to hold supports for all characters at once.");
                     ref var supportCandidate = ref SupportCandidates.AllocateUnsafely();
                     //New support candidates should be replaced, so set the heuristic to guarantee a change.
-                    supportCandidate.Importance = float.MinValue;
+                    supportCandidate.Depth = float.MinValue;
                     supportCandidate.CharacterIndex = characterIndex;
                     return ref supportCandidate;
                 }
@@ -244,11 +244,11 @@ namespace Demos.Demos.Character
                             if (maximumDepth >= character.MinimumSupportDepth || (character.Supported && maximumDepth > character.MinimumSupportContinuationDepth))
                             {
                                 ref var supportCandidate = ref workerCaches[workerIndex].GetSupportForCharacter(characterIndex);
-                                if (supportCandidate.Importance < maximumDepth)
+                                if (supportCandidate.Depth < maximumDepth)
                                 {
                                     //This support candidate should be replaced.
                                     supportCandidate.Normal = convexManifold.Normal;
-                                    supportCandidate.Importance = maximumDepth;
+                                    supportCandidate.Depth = maximumDepth;
                                     ref var deepestContact = ref Unsafe.Add(ref convexManifold.Contact0, maximumDepthIndex);
                                     var offsetFromB = deepestContact.Offset - convexManifold.OffsetB;
                                     if (pair.B.Packed == characterCollidable.Packed)
@@ -292,12 +292,12 @@ namespace Demos.Demos.Character
                         if (maximumDepth >= character.MinimumSupportDepth || (character.Supported && maximumDepth > character.MinimumSupportContinuationDepth))
                         {
                             ref var supportCandidate = ref workerCaches[workerIndex].GetSupportForCharacter(characterIndex);
-                            if (supportCandidate.Importance < maximumDepth)
+                            if (supportCandidate.Depth < maximumDepth)
                             {
                                 //This support candidate should be replaced.
                                 ref var deepestContact = ref Unsafe.Add(ref nonconvexManifold.Contact0, maximumDepthIndex);
                                 supportCandidate.Normal = deepestContact.Normal;
-                                supportCandidate.Importance = maximumDepth;
+                                supportCandidate.Depth = maximumDepth;
                                 var offsetFromB = deepestContact.Offset - nonconvexManifold.OffsetB;
                                 if (pair.B.Packed == characterCollidable.Packed)
                                 {
@@ -379,7 +379,7 @@ namespace Demos.Demos.Character
                     ref var sourceSupportCandidate = ref workerCache.SupportCandidates[j];
                     ref var targetSupportCandidate = ref workerCache0.GetSupportForCharacter(sourceSupportCandidate.CharacterIndex);
                     //If this worker's support candidate is a better choice than the current one, use the worker's candidate.
-                    if (targetSupportCandidate.Importance < sourceSupportCandidate.Importance)
+                    if (targetSupportCandidate.Depth < sourceSupportCandidate.Depth)
                     {
                         targetSupportCandidate = sourceSupportCandidate;
                     }
@@ -444,7 +444,8 @@ namespace Demos.Demos.Character
                                 OffsetFromCharacterToSupportPoint = supportCandidate.OffsetFromCharacter,
                                 OffsetFromSupportToSupportPoint = supportCandidate.OffsetFromSupport,
                                 SurfaceBasis = surfaceBasisQuaternion,
-                                TargetVelocity = character.TargetVelocity
+                                TargetVelocity = character.TargetVelocity,
+                                Depth = supportCandidate.Depth
                             };
                             if (character.Supported)
                             {
@@ -466,7 +467,8 @@ namespace Demos.Demos.Character
                                 MaximumVerticalForce = character.MaximumVerticalForce,
                                 OffsetFromCharacterToSupportPoint = supportCandidate.OffsetFromCharacter,
                                 SurfaceBasis = surfaceBasisQuaternion,
-                                TargetVelocity = character.TargetVelocity
+                                TargetVelocity = character.TargetVelocity,
+                                Depth = supportCandidate.Depth
                             };
                             if (character.Supported)
                             {

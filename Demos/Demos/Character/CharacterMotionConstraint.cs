@@ -49,6 +49,10 @@ namespace Demos.Demos.Character
         /// </summary>
         public Vector2 TargetVelocity;
         /// <summary>
+        /// Depth of the supporting contact. The vertical motion constraint permits separating velocity if, after a frame, the objects will still be touching.
+        /// </summary>
+		public float Depth;
+        /// <summary>
         /// Stores the quaternion-packed orthonormal basis for the motion constraint. When expanded into a matrix, X and Z will represent the Right and Backward directions respectively. Y will represent Up.
         /// In other words, a target tangential velocity of (4, 2) will result in a goal velocity of 4 along the (1, 0, 0) * Basis direction and a goal velocity of 2 along the (0, 0, -1) * Basis direction.
         /// All motion moving along the (0, 1, 0) * Basis axis will be fought against by the vertical motion constraint.
@@ -83,6 +87,7 @@ namespace Demos.Demos.Character
             GetFirst(ref target.MaximumHorizontalForce) = MaximumHorizontalForce;
             GetFirst(ref target.MaximumVerticalForce) = MaximumVerticalForce;
             Vector2Wide.WriteFirst(TargetVelocity, ref target.TargetVelocity);
+			GetFirst(ref target.Depth) = Depth;
             Vector3Wide.WriteFirst(OffsetFromCharacterToSupportPoint, ref target.OffsetFromCharacter);
         }
 
@@ -93,6 +98,7 @@ namespace Demos.Demos.Character
             description.MaximumHorizontalForce = GetFirst(ref source.MaximumHorizontalForce);
             description.MaximumVerticalForce = GetFirst(ref source.MaximumVerticalForce);
             Vector2Wide.ReadFirst(source.TargetVelocity, out description.TargetVelocity);
+			description.Depth = GetFirst(ref source.Depth);
             Vector3Wide.ReadFirst(source.OffsetFromCharacter, out description.OffsetFromCharacterToSupportPoint);
         }
     }
@@ -114,6 +120,7 @@ namespace Demos.Demos.Character
         public QuaternionWide SurfaceBasis;
         public Vector<float> MaximumHorizontalForce;
         public Vector<float> MaximumVerticalForce;
+		public Vector<float> Depth;
         public Vector2Wide TargetVelocity;
         public Vector3Wide OffsetFromCharacter;
     }
@@ -126,10 +133,11 @@ namespace Demos.Demos.Character
         public Vector3Wide OffsetFromCharacter;
         public Vector2Wide TargetVelocity;
         public Symmetric2x2Wide HorizontalEffectiveMass;
-        public Vector<float> VerticalEffectiveMass;
         public Vector<float> MaximumHorizontalImpulse;
-        public Vector<float> MaximumVerticalForce;
         public BodyInertias InertiaA;
+        public Vector<float> VerticalBiasVelocity;
+        public Vector<float> VerticalEffectiveMass;
+        public Vector<float> MaximumVerticalForce;
 
     }
 
@@ -207,9 +215,11 @@ namespace Demos.Demos.Character
             projection.SurfaceBasis = prestepData.SurfaceBasis;
             projection.OffsetFromCharacter = prestepData.OffsetFromCharacter;
             projection.TargetVelocity = prestepData.TargetVelocity;
+            projection.InertiaA = inertiaA;
             projection.MaximumHorizontalImpulse = prestepData.MaximumHorizontalForce * dt;
             projection.MaximumVerticalForce = prestepData.MaximumVerticalForce * dt;
-            projection.InertiaA = inertiaA;
+			//If the character is deeply penetrating, the vertical motion constraint will allow some separating velocity- just enough for one frame of integration to reach zero depth.
+			projection.VerticalBiasVelocity = Vector.Max(Vector<float>.Zero, prestepData.Depth * inverseDt);
 
             //Note that there are other ways to store constraints efficiently, some of which can actually reduce the amount of compute work required by the solver iterations.
             //Their use depends on the number of DOFs in the constraint and sometimes special properties of specific constraints.
@@ -288,8 +298,8 @@ namespace Demos.Demos.Character
             //Same thing for the vertical constraint.
             Vector3Wide.Dot(basis.Y, velocityA.Linear, out var verticalLinearA);
             Vector3Wide.Dot(velocityA.Angular, verticalAngularJacobianA, out var verticalAngularA);
-            //The vertical constraint just targets zero velocity.
-            var verticalCorrectiveImpulse = (verticalLinearA + verticalAngularA) * projection.VerticalEffectiveMass;
+            //The vertical constraint just targets zero velocity, but does not attempt to fight any velocity which would merely push the character out of penetration.
+            var verticalCorrectiveImpulse = (projection.VerticalBiasVelocity - verticalLinearA - verticalAngularA) * projection.VerticalEffectiveMass;
 
             //Clamp the vertical constraint's impulse, but note that this is a bit different than above- the vertical constraint is not allowed to *push*, so there's an extra bound at zero.
             var previousVerticalAccumulatedImpulse = accumulatedImpulse.Vertical;
@@ -331,6 +341,10 @@ namespace Demos.Demos.Character
         /// </summary>
         public Vector2 TargetVelocity;
         /// <summary>
+        /// Depth of the supporting contact. The vertical motion constraint permits separating velocity if, after a frame, the objects will still be touching.
+        /// </summary>
+		public float Depth;
+        /// <summary>
         /// Stores the quaternion-packed orthonormal basis for the motion constraint. When expanded into a matrix, X and Z will represent the Right and Backward directions respectively. Y will represent Up.
         /// In other words, a target tangential velocity of (4, 2) will result in a goal velocity of 4 along the (1, 0, 0) * Basis direction and a goal velocity of 2 along the (0, 0, -1) * Basis direction.
         /// All motion moving along the (0, 1, 0) * Basis axis will be fought against by the vertical motion constraint.
@@ -369,6 +383,7 @@ namespace Demos.Demos.Character
             GetFirst(ref target.MaximumHorizontalForce) = MaximumHorizontalForce;
             GetFirst(ref target.MaximumVerticalForce) = MaximumVerticalForce;
             Vector2Wide.WriteFirst(TargetVelocity, ref target.TargetVelocity);
+			GetFirst(ref target.Depth) = Depth;
             Vector3Wide.WriteFirst(OffsetFromCharacterToSupportPoint, ref target.OffsetFromCharacter);
             Vector3Wide.WriteFirst(OffsetFromSupportToSupportPoint, ref target.OffsetFromSupport);
         }
@@ -380,6 +395,7 @@ namespace Demos.Demos.Character
             description.MaximumHorizontalForce = GetFirst(ref source.MaximumHorizontalForce);
             description.MaximumVerticalForce = GetFirst(ref source.MaximumVerticalForce);
             Vector2Wide.ReadFirst(source.TargetVelocity, out description.TargetVelocity);
+			description.Depth = GetFirst(ref source.Depth);
             Vector3Wide.ReadFirst(source.OffsetFromCharacter, out description.OffsetFromCharacterToSupportPoint);
             Vector3Wide.ReadFirst(source.OffsetFromSupport, out description.OffsetFromSupportToSupportPoint);
         }
@@ -402,6 +418,7 @@ namespace Demos.Demos.Character
         public QuaternionWide SurfaceBasis;
         public Vector<float> MaximumHorizontalForce;
         public Vector<float> MaximumVerticalForce;
+		public Vector<float> Depth;
         public Vector2Wide TargetVelocity;
         public Vector3Wide OffsetFromCharacter;
         public Vector3Wide OffsetFromSupport;
@@ -416,11 +433,12 @@ namespace Demos.Demos.Character
         public Vector3Wide OffsetFromSupport;
         public Vector2Wide TargetVelocity;
         public Symmetric2x2Wide HorizontalEffectiveMass;
-        public Vector<float> VerticalEffectiveMass;
         public Vector<float> MaximumHorizontalImpulse;
-        public Vector<float> MaximumVerticalForce;
         public BodyInertias InertiaA;
         public BodyInertias InertiaB;
+        public Vector<float> VerticalBiasVelocity;
+        public Vector<float> VerticalEffectiveMass;
+        public Vector<float> MaximumVerticalForce;
 
     }
 
@@ -506,10 +524,12 @@ namespace Demos.Demos.Character
             projection.OffsetFromCharacter = prestepData.OffsetFromCharacter;
             projection.OffsetFromSupport = prestepData.OffsetFromSupport;
             projection.TargetVelocity = prestepData.TargetVelocity;
-            projection.MaximumHorizontalImpulse = prestepData.MaximumHorizontalForce * dt;
-            projection.MaximumVerticalForce = prestepData.MaximumVerticalForce * dt;
             projection.InertiaA = inertiaA;
             projection.InertiaB = inertiaB;
+            projection.MaximumHorizontalImpulse = prestepData.MaximumHorizontalForce * dt;
+            projection.MaximumVerticalForce = prestepData.MaximumVerticalForce * dt;
+			//If the character is deeply penetrating, the vertical motion constraint will allow some separating velocity- just enough for one frame of integration to reach zero depth.
+			projection.VerticalBiasVelocity = Vector.Max(Vector<float>.Zero, prestepData.Depth * inverseDt);
 
             //Note that there are other ways to store constraints efficiently, some of which can actually reduce the amount of compute work required by the solver iterations.
             //Their use depends on the number of DOFs in the constraint and sometimes special properties of specific constraints.
@@ -606,8 +626,8 @@ namespace Demos.Demos.Character
             Vector3Wide.Dot(velocityA.Angular, verticalAngularJacobianA, out var verticalAngularA);
             Vector3Wide.Dot(basis.Y, velocityB.Linear, out var negatedVerticalLinearB);
             Vector3Wide.Dot(velocityB.Angular, verticalAngularJacobianB, out var verticalAngularB);
-            //The vertical constraint just targets zero velocity.
-            var verticalCorrectiveImpulse = (verticalLinearA - negatedVerticalLinearB + verticalAngularA + verticalAngularB) * projection.VerticalEffectiveMass;
+            //The vertical constraint just targets zero velocity, but does not attempt to fight any velocity which would merely push the character out of penetration.
+            var verticalCorrectiveImpulse = (projection.VerticalBiasVelocity - verticalLinearA + negatedVerticalLinearB - verticalAngularA - verticalAngularB) * projection.VerticalEffectiveMass;
 
             //Clamp the vertical constraint's impulse, but note that this is a bit different than above- the vertical constraint is not allowed to *push*, so there's an extra bound at zero.
             var previousVerticalAccumulatedImpulse = accumulatedImpulse.Vertical;

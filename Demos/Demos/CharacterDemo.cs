@@ -107,13 +107,14 @@ namespace Demos.Demos
             character.CosMaximumSlope = .707f;
             character.LocalUp = Vector3.UnitY;
             character.MaximumHorizontalForce = 10;
-            character.MaximumVerticalForce = 10;
+            character.MaximumVerticalForce = 10000;
             character.MinimumSupportContinuationDepth = -0.1f;
             character.MinimumSupportDepth = -0.01f;
             character.TargetVelocity = new Vector2(0, 1f);
             character.ViewDirection = new Vector3(0, 0, -1);
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 1, 300)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(
+                new Vector3(0, -0.5f, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathF.PI * 0.03f), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 1, 300)), 0.1f)));
         }
 
     }
