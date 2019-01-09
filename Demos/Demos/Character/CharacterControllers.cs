@@ -37,6 +37,14 @@ namespace Demos.Demos.Character
         /// </summary>
         public Vector2 TargetVelocity;
         /// <summary>
+        /// If true, the character will try to jump on the next time step. Will be reset to false after being processed.
+        /// </summary>
+        public bool TryJump;
+        /// <summary>
+        /// Velocity at which the character pushes off the support during a jump.
+        /// </summary>
+        public float JumpVelocity;
+        /// <summary>
         /// Maximum force the character can apply tangent to the supporting surface to move.
         /// </summary>
         public float MaximumHorizontalForce;
@@ -189,6 +197,7 @@ namespace Demos.Demos.Character
             public void Dispose(BufferPool pool)
             {
                 pool.Return(ref CharacterIndexToSupportCandidate);
+                SupportCandidates.Dispose(pool);
             }
         }
 
@@ -374,6 +383,7 @@ namespace Demos.Demos.Character
         /// </summary>
         public void AnalyzeContacts()
         {
+            //var start = Stopwatch.GetTimestamp();
             Debug.Assert(workerCaches.Allocated, "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");
             ref var workerCache0 = ref workerCaches[0];
             for (int i = 1; i < workerCaches.Length; ++i)
@@ -409,15 +419,24 @@ namespace Demos.Demos.Character
                     //3) The character was previously supported by a static, and is now supported by a body.
                     //4) The character was previously supported by a body, and is now supported by a static.
                     var supportCandidateIndex = workerCache0.CharacterIndexToSupportCandidate[i];
-                    var shouldRemove = character.Supported && (supportCandidateIndex < 0 || character.Support.Packed != workerCache0.SupportCandidates[supportCandidateIndex].Support.Packed);
+                    var shouldRemove = character.Supported && (character.TryJump || supportCandidateIndex < 0 || character.Support.Packed != workerCache0.SupportCandidates[supportCandidateIndex].Support.Packed);
                     if (shouldRemove)
                     {
                         //Remove the constraint.
                         simulation.Solver.Remove(character.MotionConstraintHandle);
                     }
 
-                    if (supportCandidateIndex >= 0)
+                    //If the character is jumping, don't create a constraint.
+                    if (supportCandidateIndex >= 0 && character.TryJump)
                     {
+                        Quaternion.Transform(character.LocalUp, simulation.Bodies.ActiveSet.Poses[bodyLocation.Index].Orientation, out var characterUp);
+                        simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear += character.JumpVelocity * characterUp;
+                        //If the support is dynamic, apply an opposing impulse.
+                        character.Supported = false;
+                    }
+                    else if (supportCandidateIndex >= 0)
+                    {
+
                         //If a support currently exists and there is still an old constraint, then update it.
                         //If a support currently exists and there is not an old constraint, add the new constraint.
                         ref var supportCandidate = ref workerCache0.SupportCandidates[supportCandidateIndex];
@@ -495,10 +514,15 @@ namespace Demos.Demos.Character
                         character.Supported = false;
                     }
                 }
+                //The TryJump flag is always reset even if the attempt failed.
+                character.TryJump = false;
             }
 
             workerCache0.Dispose(pool);
             pool.Return(ref workerCaches);
+
+            //var end = Stopwatch.GetTimestamp();
+            //Console.WriteLine($"Time (ms): {(end - start) / (1e-3 * Stopwatch.Frequency)}");
         }
 
         bool disposed;
