@@ -85,6 +85,11 @@ namespace Demos.Demos.Character
         QuickList<Character> characters;
 
         /// <summary>
+        /// Gets the number of characters being controlled.
+        /// </summary>
+        public int CharacterCount { get { return characters.Count; } }
+
+        /// <summary>
         /// Creates a character controller systme.
         /// </summary>
         /// <param name="pool">Pool to allocate resources from.</param>
@@ -131,7 +136,7 @@ namespace Demos.Demos.Character
         {
             characterIndex = characterIdPool.Take();
             characters.EnsureCapacity(characterIndex + 1, pool);
-            if (bodyHandleToCharacterIndex.Length <= bodyHandle)
+            if (bodyHandle >= bodyHandleToCharacterIndex.Length)
                 ResizeBodyHandleCapacity(Math.Max(bodyHandle + 1, bodyHandleToCharacterIndex.Length * 2));
             characterIndex = characters.Count;
             ref var character = ref characters.AllocateUnsafely();
@@ -193,10 +198,10 @@ namespace Demos.Demos.Character
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         bool TryReportContacts<TManifold>(CollidableReference characterCollidable, CollidableReference supportCollidable, CollidablePair pair, ref TManifold manifold, int workerIndex) where TManifold : struct, IContactManifold
         {
-            if (characterCollidable.Mobility == CollidableMobility.Dynamic)
+            if (characterCollidable.Mobility == CollidableMobility.Dynamic && characterCollidable.Handle < bodyHandleToCharacterIndex.Length)
             {
-                var characterHandle = characterCollidable.Handle;
-                var characterIndex = bodyHandleToCharacterIndex[characterHandle];
+                var characterBodyHandle = characterCollidable.Handle;
+                var characterIndex = bodyHandleToCharacterIndex[characterBodyHandle];
                 if (characterIndex >= 0)
                 {
                     //This is actually a character.

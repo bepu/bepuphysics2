@@ -82,13 +82,14 @@ namespace Demos.Demos
     /// </summary>
     public class CharacterDemo : Demo
     {
+        CharacterControllers characters;
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(20, 10, 20);
             camera.Yaw = MathHelper.Pi * -1f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
             var masks = new BodyProperty<ulong>();
-            var characters = new CharacterControllers(BufferPool, ThreadDispatcher);
+            characters = new CharacterControllers(BufferPool, ThreadDispatcher);
             var timestepper = new PositionFirstTimestepper();
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), timestepper);
             timestepper.BodiesUpdated += characters.PrepareForContacts;
@@ -96,26 +97,29 @@ namespace Demos.Demos
             Simulation.Solver.Register<DynamicCharacterMotionConstraint>();
             Simulation.Solver.Register<StaticCharacterMotionConstraint>();
 
-            ref var character = ref characters.AllocateCharacter(
-                Simulation.Bodies.Add(
-                    BodyDescription.CreateDynamic(
-                        new Vector3(0, 2, 0), new BodyInertia { InverseMass = 1 },
-                        new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1f)), 0.1f),
-                        new BodyActivityDescription(-1))),
-                out var characterIndex);
+            var random = new Random(5);
+            for (int i = 0; i < 4096; ++i)
+            {
+                ref var character = ref characters.AllocateCharacter(
+                    Simulation.Bodies.Add(
+                        BodyDescription.CreateDynamic(
+                            new Vector3(150 * (float)random.NextDouble(), 2, 150 * (float)random.NextDouble()), new BodyInertia { InverseMass = 1 },
+                            new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1f)), 0.1f),
+                            new BodyActivityDescription(-1))),
+                    out var characterIndex);
 
-            character.CosMaximumSlope = .707f;
-            character.LocalUp = Vector3.UnitY;
-            character.MaximumHorizontalForce = 10;
-            character.MaximumVerticalForce = 10;
-            character.MinimumSupportContinuationDepth = -0.1f;
-            character.MinimumSupportDepth = -0.01f;
-            character.TargetVelocity = new Vector2(1, 4f);
-            character.ViewDirection = new Vector3(0, 0, -1);
+                character.CosMaximumSlope = .707f;
+                character.LocalUp = Vector3.UnitY;
+                character.MaximumHorizontalForce = 10;
+                character.MaximumVerticalForce = 10;
+                character.MinimumSupportContinuationDepth = -0.1f;
+                character.MinimumSupportDepth = -0.01f;
+                character.TargetVelocity = new Vector2(1, 4f);
+                character.ViewDirection = new Vector3(0, 0, -1);
+            }
 
             var origin = new Vector3(-3f, 0, 0);
             var spacing = new Vector3(0.5f, 0, -0.5f);
-            var random = new Random(5);
             for (int i = 0; i < 12; ++i)
             {
                 for (int j = 0; j < 100; ++j)
@@ -144,9 +148,22 @@ namespace Demos.Demos
 
 
             Simulation.Statics.Add(new StaticDescription(
-                new Vector3(0, -0.5f, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathF.PI * 0.00f), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 1, 300)), 0.1f)));
+                new Vector3(0, -0.5f, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathF.PI * 0.00f), new CollidableDescription(Simulation.Shapes.Add(new Box(3000, 1, 3000)), 0.1f)));
         }
 
+
+        public override void Update(Window window, Camera camera, Input input, float dt)
+        {
+            var rotation = Matrix3x3.CreateFromAxisAngle(new Vector3(0, 1, 0), 0.5f * dt);
+            for (int i = 0; i < characters.CharacterCount; ++i)
+            {
+                ref var character = ref characters.GetCharacterByIndex(i);
+                Matrix3x3.Transform(new Vector3(character.TargetVelocity.X, 0, character.TargetVelocity.Y), rotation, out var rotatedVelocity);
+                character.TargetVelocity.X = rotatedVelocity.X;
+                character.TargetVelocity.Y = rotatedVelocity.Z;
+            }
+            base.Update(window, camera, input, dt);
+        }
     }
 }
 
