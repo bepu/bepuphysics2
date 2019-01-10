@@ -210,16 +210,19 @@ namespace BepuPhysics
                 //This also means we can just take the current type processors length as an accurate measure of type capacity for constraint batches.
                 Array.Resize(ref TypeProcessors, description.ConstraintTypeId + 1);
             }
-            if (TypeProcessors[description.ConstraintTypeId] != null)
+            if (TypeProcessors[description.ConstraintTypeId] == null)
+            {
+                var processor = (TypeProcessor)Activator.CreateInstance(description.TypeProcessorType);
+                TypeProcessors[description.ConstraintTypeId] = processor;
+                processor.Initialize(description.ConstraintTypeId);
+            }
+            else if (TypeProcessors[description.ConstraintTypeId].GetType() != description.TypeProcessorType)
             {
                 throw new ArgumentException(
                     $"Type processor {TypeProcessors[description.ConstraintTypeId].GetType().Name} has already been registered for this description's type id " +
                     $"({typeof(TDescription).Name}, {default(TDescription).ConstraintTypeId}). " +
-                    $"Cannot register the same type id more than once.");
+                    $"Cannot register two types with the same type id.");
             }
-            var processor = (TypeProcessor)Activator.CreateInstance(description.TypeProcessorType);
-            TypeProcessors[description.ConstraintTypeId] = processor;
-            processor.Initialize(description.ConstraintTypeId);
         }
 
         /// <summary>
@@ -611,7 +614,7 @@ namespace BepuPhysics
             where TDescription : IConstraintDescription<TDescription>
         {
             Debug.Assert(description.ConstraintTypeId >= 0 && description.ConstraintTypeId < TypeProcessors.Length &&
-                TypeProcessors[description.ConstraintTypeId].GetType() == description.TypeProcessorType, 
+                TypeProcessors[description.ConstraintTypeId].GetType() == description.TypeProcessorType,
                 "The description's constraint type and type processor don't match what has been registered in the solver. Did you forget to register the constraint type?");
             Debug.Assert(bodyCount == TypeProcessors[description.ConstraintTypeId].BodiesPerConstraint,
                 "The number of bodies supplied to a constraint add must match the expected number of bodies involved in that constraint type. Did you use the wrong Solver.Add overload?");
@@ -856,7 +859,7 @@ namespace BepuPhysics
                 awakener.AwakenConstraint(handle);
             }
             Debug.Assert(constraintLocation.SetIndex == 0);
-            AssertConstraintHandleExists(handle);   
+            AssertConstraintHandleExists(handle);
             ConstraintGraphRemovalEnumerator enumerator;
             enumerator.bodies = bodies;
             enumerator.constraintHandle = handle;

@@ -94,8 +94,6 @@ namespace Demos.Demos
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), timestepper);
             timestepper.BodiesUpdated += characters.PrepareForContacts;
             timestepper.CollisionsDetected += characters.AnalyzeContacts;
-            Simulation.Solver.Register<DynamicCharacterMotionConstraint>();
-            Simulation.Solver.Register<StaticCharacterMotionConstraint>();
 
             var random = new Random(5);
             for (int i = 0; i < 8192; ++i)

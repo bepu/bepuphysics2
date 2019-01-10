@@ -120,6 +120,8 @@ namespace Demos.Demos.Character
         public void Initialize(Simulation simulation)
         {
             this.simulation = simulation;
+            simulation.Solver.Register<DynamicCharacterMotionConstraint>();
+            simulation.Solver.Register<StaticCharacterMotionConstraint>();
         }
 
         private void ResizeBodyHandleCapacity(int bodyHandleCapacity)
@@ -534,6 +536,14 @@ namespace Demos.Demos.Character
             if (!disposed)
             {
                 disposed = true;
+                for (int i = 0; i < characters.Count; ++i)
+                {
+                    ref var character = ref characters[i];
+                    if (character.Supported)
+                    {
+                        simulation.Solver.Remove(character.MotionConstraintHandle);
+                    }
+                }
                 characterIdPool.Dispose(pool.SpecializeFor<int>());
                 characters.Dispose(pool);
                 pool.Return(ref bodyHandleToCharacterIndex);
