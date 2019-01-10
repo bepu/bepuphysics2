@@ -96,7 +96,7 @@ namespace Demos.Demos
             timestepper.CollisionsDetected += characters.AnalyzeContacts;
 
             var random = new Random(5);
-            for (int i = 0; i < 8192; ++i)
+            for (int i = 0; i < 16384; ++i)
             {
                 ref var character = ref characters.AllocateCharacter(
                     Simulation.Bodies.Add(

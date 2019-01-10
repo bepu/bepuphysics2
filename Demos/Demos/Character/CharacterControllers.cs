@@ -161,45 +161,27 @@ namespace Demos.Demos.Character
             public Vector3 OffsetFromCharacter;
             public float Depth;
             public Vector3 OffsetFromSupport;
-            public int CharacterIndex;
             public Vector3 Normal;
             public CollidableReference Support;
         }
 
         struct WorkerCache
         {
-            public Buffer<int> CharacterIndexToSupportCandidate;
-            public QuickList<SupportCandidate> SupportCandidates;
+            public Buffer<SupportCandidate> SupportCandidates;
 
             public unsafe WorkerCache(int maximumCharacterCount, BufferPool pool)
             {
-                pool.Take(maximumCharacterCount, out CharacterIndexToSupportCandidate);
-                //We assume unclaimed slots are filled with -1.
-                Unsafe.InitBlockUnaligned(CharacterIndexToSupportCandidate.Memory, 0xFF, (uint)CharacterIndexToSupportCandidate.Length * sizeof(int));
-                SupportCandidates = new QuickList<SupportCandidate>(maximumCharacterCount, pool);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ref SupportCandidate GetSupportForCharacter(int characterIndex)
-            {
-                ref var supportIndex = ref CharacterIndexToSupportCandidate[characterIndex];
-                if (supportIndex < 0)
+                pool.Take(maximumCharacterCount, out SupportCandidates);
+                for (int i = 0; i < maximumCharacterCount; ++i)
                 {
-                    supportIndex = SupportCandidates.Count;
-                    Debug.Assert(SupportCandidates.Span.Length > SupportCandidates.Count, "The support candidates buffer should have been allocated large enough to hold supports for all characters at once.");
-                    ref var supportCandidate = ref SupportCandidates.AllocateUnsafely();
-                    //New support candidates should be replaced, so set the heuristic to guarantee a change.
-                    supportCandidate.Depth = float.MinValue;
-                    supportCandidate.CharacterIndex = characterIndex;
-                    return ref supportCandidate;
+                    //Initialize the depths to a value that guarantees replacement.
+                    SupportCandidates[i].Depth = float.MinValue;
                 }
-                return ref SupportCandidates[supportIndex];
             }
 
             public void Dispose(BufferPool pool)
             {
-                pool.Return(ref CharacterIndexToSupportCandidate);
-                SupportCandidates.Dispose(pool);
+                pool.Return(ref SupportCandidates);
             }
         }
 
@@ -259,7 +241,7 @@ namespace Demos.Demos.Character
                             }
                             if (maximumDepth >= character.MinimumSupportDepth || (character.Supported && maximumDepth > character.MinimumSupportContinuationDepth))
                             {
-                                ref var supportCandidate = ref workerCaches[workerIndex].GetSupportForCharacter(characterIndex);
+                                ref var supportCandidate = ref workerCaches[workerIndex].SupportCandidates[characterIndex];
                                 if (supportCandidate.Depth < maximumDepth)
                                 {
                                     //This support candidate should be replaced.
@@ -307,7 +289,7 @@ namespace Demos.Demos.Character
                         }
                         if (maximumDepth >= character.MinimumSupportDepth || (character.Supported && maximumDepth > character.MinimumSupportContinuationDepth))
                         {
-                            ref var supportCandidate = ref workerCaches[workerIndex].GetSupportForCharacter(characterIndex);
+                            ref var supportCandidate = ref workerCaches[workerIndex].SupportCandidates[characterIndex];
                             if (supportCandidate.Depth < maximumDepth)
                             {
                                 //This support candidate should be replaced.
@@ -347,7 +329,7 @@ namespace Demos.Demos.Character
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryReportContacts<TManifold>(in CollidablePair pair, ref TManifold manifold, int workerIndex, ref PairMaterialProperties materialProperties) where TManifold : struct, IContactManifold
         {
-            Debug.Assert(workerCaches.Allocated && workerIndex < workerCaches.Length && workerCaches[workerIndex].SupportCandidates.Span.Allocated,
+            Debug.Assert(workerCaches.Allocated && workerIndex < workerCaches.Length && workerCaches[workerIndex].SupportCandidates.Allocated,
                 "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");
             //It's possible for neither, one, or both collidables to be a character. Check each one, treating the other as a potential support.
             var aIsCharacter = TryReportContacts(pair.A, pair.B, pair, ref manifold, workerIndex);
@@ -385,43 +367,33 @@ namespace Demos.Demos.Character
         /// </summary>
         public void AnalyzeContacts()
         {
-            //var start = Stopwatch.GetTimestamp();
+            var start = Stopwatch.GetTimestamp();
             Debug.Assert(workerCaches.Allocated, "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");
-            ref var workerCache0 = ref workerCaches[0];
-            for (int i = 1; i < workerCaches.Length; ++i)
-            {
-                ref var workerCache = ref workerCaches[i];
-                for (int j = 0; j < workerCache.SupportCandidates.Count; ++j)
-                {
-                    ref var sourceSupportCandidate = ref workerCache.SupportCandidates[j];
-                    ref var targetSupportCandidate = ref workerCache0.GetSupportForCharacter(sourceSupportCandidate.CharacterIndex);
-                    //If this worker's support candidate is a better choice than the current one, use the worker's candidate.
-                    if (targetSupportCandidate.Depth < sourceSupportCandidate.Depth)
-                    {
-                        targetSupportCandidate = sourceSupportCandidate;
-                    }
-                }
-                workerCache.Dispose(pool);
-            }
-            //Note that the merged workerCache0 now contains the updated state of all active characters with supports. It does *not* contain updated information for inactive characters
-            //or for characters that do not currently have any support.
 
-            //Active characters that previously had support and no longer do should have their constraints removed from the solver. 
             for (int i = 0; i < characters.Count; ++i)
             {
+                //Note that this iterates over both active and inactive characters rather than segmenting inactive characters into their own collection.
+                //This demands branching, but the expectation is that the vast majority of characters will be active, so there is less value in copying them into stasis.                
                 ref var character = ref characters[i];
                 ref var bodyLocation = ref simulation.Bodies.HandleToLocation[character.BodyHandle];
-                //Note that this iterates over both active and inactive characters rather than segmenting inactive characters into their own collection.
-                //This demands branching, but the expectation is that the vast majority of characters will be active, so there is less value in copying them into stasis.
                 if (bodyLocation.SetIndex == 0)
                 {
+                    var supportCandidate = workerCaches[0].SupportCandidates[i];
+                    for (int j = 1; j < workerCaches.Length; ++j)
+                    {
+                        ref var workerCandidate = ref workerCaches[j].SupportCandidates[i];
+                        if (workerCandidate.Depth > supportCandidate.Depth)
+                        {
+                            supportCandidate = workerCandidate;
+                        }
+                    }
+
                     //The body is active. We may need to remove the associated constraint from the solver. Remove if any of the following hold:
                     //1) The character was previously supported but is no longer.
                     //2) The character was previously supported by a body, and is now supported by a different body.
                     //3) The character was previously supported by a static, and is now supported by a body.
                     //4) The character was previously supported by a body, and is now supported by a static.
-                    var supportCandidateIndex = workerCache0.CharacterIndexToSupportCandidate[i];
-                    var shouldRemove = character.Supported && (character.TryJump || supportCandidateIndex < 0 || character.Support.Packed != workerCache0.SupportCandidates[supportCandidateIndex].Support.Packed);
+                    var shouldRemove = character.Supported && (character.TryJump || supportCandidate.Depth == float.MinValue || character.Support.Packed != supportCandidate.Support.Packed);
                     if (shouldRemove)
                     {
                         //Remove the constraint.
@@ -429,22 +401,19 @@ namespace Demos.Demos.Character
                     }
 
                     //If the character is jumping, don't create a constraint.
-                    if (supportCandidateIndex >= 0 && character.TryJump)
+                    if (supportCandidate.Depth > float.MinValue && character.TryJump)
                     {
                         Quaternion.Transform(character.LocalUp, simulation.Bodies.ActiveSet.Poses[bodyLocation.Index].Orientation, out var characterUp);
                         simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear += character.JumpVelocity * characterUp;
                         //If the support is dynamic, apply an opposing impulse.
                         character.Supported = false;
                     }
-                    else if (supportCandidateIndex >= 0)
+                    else if (supportCandidate.Depth > float.MinValue)
                     {
-
                         //If a support currently exists and there is still an old constraint, then update it.
                         //If a support currently exists and there is not an old constraint, add the new constraint.
-                        ref var supportCandidate = ref workerCache0.SupportCandidates[supportCandidateIndex];
 
-                        //Project the view direction down onto the surface as represented by the contact normala.
-
+                        //Project the view direction down onto the surface as represented by the contact normal.
                         Matrix3x3 surfaceBasis;
                         surfaceBasis.Y = Vector3.Dot(supportCandidate.OffsetFromCharacter, supportCandidate.Normal) > 0 ? -supportCandidate.Normal : supportCandidate.Normal;
                         //Note negation: we're using a right handed basis where -Z is forward, +Z is backward.
@@ -520,11 +489,14 @@ namespace Demos.Demos.Character
                 character.TryJump = false;
             }
 
-            workerCache0.Dispose(pool);
+            for (int i =0; i < workerCaches.Length; ++i)
+            {
+                workerCaches[i].Dispose(pool);
+            }
             pool.Return(ref workerCaches);
 
-            //var end = Stopwatch.GetTimestamp();
-            //Console.WriteLine($"Time (ms): {(end - start) / (1e-3 * Stopwatch.Frequency)}");
+            var end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Time (ms): {(end - start) / (1e-3 * Stopwatch.Frequency)}");
         }
 
         bool disposed;
