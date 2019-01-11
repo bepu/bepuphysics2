@@ -13,7 +13,8 @@ using DemoContentLoader;
 using DemoUtilities;
 using BepuUtilities.Memory;
 using static BepuUtilities.GatherScatter;
-using Demos.Demos.Character;
+using Demos.Demos.Characters;
+using BepuUtilities.Collections;
 
 namespace Demos.Demos
 {
@@ -96,7 +97,7 @@ namespace Demos.Demos
             timestepper.CollisionsDetected += characters.AnalyzeContacts;
 
             var random = new Random(5);
-            for (int i = 0; i < 16384; ++i)
+            for (int i = 0; i < 8192; ++i)
             {
                 ref var character = ref characters.AllocateCharacter(
                     Simulation.Bodies.Add(
@@ -159,8 +160,11 @@ namespace Demos.Demos
                 }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
+
+            removedCharacters = new QuickQueue<Character>(characters.CharacterCount, BufferPool);
         }
 
+        QuickQueue<Character> removedCharacters;
         int frameIndex;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
@@ -181,7 +185,24 @@ namespace Demos.Demos
                 character.TargetVelocity.Y = tangent.Z;
                 //Matrix3x3.Transform(new Vector3(character.TargetVelocity.X, 0, character.TargetVelocity.Y), rotation, out var rotatedVelocity);
                 //character.TargetVelocity.X = rotatedVelocity.X;
-                //character.TargetVelocity.Y = rotatedVelocity.Z;
+                //character.TargetVelocity.Y = rotatedVelocity.Z;          
+            }
+            {
+                if (characters.CharacterCount > 0)
+                {
+                    var indexToRemove = frameIndex % characters.CharacterCount;
+                    removedCharacters.EnqueueUnsafely(characters.GetCharacterByIndex(indexToRemove));
+                    characters.RemoveCharacterByIndex(indexToRemove);
+                }
+
+                var readdCount = (int)(removedCharacters.Count * 0.05f);
+                for (int i = 0; i < readdCount; ++i)
+                {
+                    var toAdd = removedCharacters.Dequeue();
+                    ref var character = ref characters.AllocateCharacter(toAdd.BodyHandle, out var characterIndex);
+                    character = toAdd;
+                }
+
             }
             frameIndex++;
             base.Update(window, camera, input, dt);

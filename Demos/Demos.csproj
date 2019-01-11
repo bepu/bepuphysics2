@@ -52,7 +52,7 @@
 
 
   <ItemGroup>
-    <None Update="Demos\Character\CharacterMotionConstraint.tt">
+    <None Update="Demos\Characters\CharacterMotionConstraint.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>CharacterMotionConstraint.cs</LastGenOutput>
     </None>
@@ -65,7 +65,7 @@
 
 
   <ItemGroup>
-    <Compile Update="Demos\Character\CharacterMotionConstraint.cs">
+    <Compile Update="Demos\Characters\CharacterMotionConstraint.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>CharacterMotionConstraint.tt</DependentUpon>

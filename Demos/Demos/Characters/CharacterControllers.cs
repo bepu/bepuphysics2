@@ -14,7 +14,7 @@ using System.Text;
 using System.Threading;
 using Quaternion = BepuUtilities.Quaternion;
 
-namespace Demos.Demos.Character
+namespace Demos.Demos.Characters
 {
     public struct Character
     {
@@ -141,10 +141,22 @@ namespace Demos.Demos.Character
             return ref characters[index];
         }
 
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref Character GetCharacterByBodyHandle(int bodyHandle)
+        {
+            return ref characters[bodyHandleToCharacterIndex[bodyHandle]];
+        }
+
+        /// <summary>
+        /// Allocates a character.
+        /// </summary>
+        /// <param name="bodyHandle">Body handle associated with the character.</param>
+        /// <param name="characterIndex">Index of the allocated character.</param>
+        /// <returns>Reference to the allocated character.</returns>
         public ref Character AllocateCharacter(int bodyHandle, out int characterIndex)
         {
+            Debug.Assert(bodyHandle >= 0 && (bodyHandle >= bodyHandleToCharacterIndex.Length || bodyHandleToCharacterIndex[bodyHandle] == -1),
+                "Cannot allocate more than one character for the same body handle.");
             characterIndex = characterIdPool.Take();
             characters.EnsureCapacity(characterIndex + 1, pool);
             if (bodyHandle >= bodyHandleToCharacterIndex.Length)
@@ -155,6 +167,36 @@ namespace Demos.Demos.Character
             character.BodyHandle = bodyHandle;
             bodyHandleToCharacterIndex[bodyHandle] = characterIndex;
             return ref character;
+        }
+
+        /// <summary>
+        /// Removes a character from the character controllers set by the character's index.
+        /// </summary>
+        /// <param name="characterIndex">Index of the character to remove.</param>
+        public void RemoveCharacterByIndex(int characterIndex)
+        {
+            Debug.Assert(characterIndex >= 0 && characterIndex < characters.Count, "Character index must exist in the set of characters.");
+            ref var character = ref characters[characterIndex];
+            Debug.Assert(character.BodyHandle >= 0 && character.BodyHandle < bodyHandleToCharacterIndex.Length && bodyHandleToCharacterIndex[character.BodyHandle] == characterIndex,
+                "Character must exist in the set of characters.");
+            bodyHandleToCharacterIndex[character.BodyHandle] = -1;
+            characters.FastRemoveAt(characterIndex);
+            //If the removal moved a character, update the body handle mapping.
+            if (characters.Count > characterIndex)
+            {
+                bodyHandleToCharacterIndex[characters[characterIndex].BodyHandle] = characterIndex;
+            }
+        }
+
+        /// <summary>
+        /// Removes a character from the character controllers set by the body handle associated with the character.
+        /// </summary>
+        /// <param name="bodyHandle">Body handle associated with the character to remove.</param>
+        public void RemoveCharacterByBodyHandle(int bodyHandle)
+        {
+            Debug.Assert(bodyHandle >= 0 && bodyHandle < bodyHandleToCharacterIndex.Length && bodyHandleToCharacterIndex[bodyHandle] >= 0,
+                "Removing a character by body handle requires that a character associated with the given body handle actually exists.");
+            RemoveCharacterByIndex(bodyHandleToCharacterIndex[bodyHandle]);
         }
 
         struct SupportCandidate
@@ -359,6 +401,9 @@ namespace Demos.Demos.Character
             {
                 contactCollectionWorkerCaches[i] = new ContactCollectionWorkerCache(characters.Count, pool);
             }
+            //If you wanted additional control during downstepping, you could introduce a bounding box resize here- 
+            //extend the bounding box in the direction of the character's local down direction by MinimumSupportContinuationDepth.
+            //If it walks off a step with height less than MinimumSupportContinuationDepth, it would retain constraint-based control.
         }
 
         struct PendingDynamicConstraint
@@ -557,6 +602,7 @@ namespace Demos.Demos.Character
             {
                 pool.Take(1, out analyzeContactsWorkerCaches);
                 analyzeContactsWorkerCaches = analyzeContactsWorkerCaches.Slice(0, 1);
+                analyzeContactsWorkerCaches[0] = new AnalyzeContactsWorkerCache(characters.Count, pool);
                 AnalyzeContactsForCharacterRegion(0, characters.Count, 0);
             }
             else
@@ -564,9 +610,9 @@ namespace Demos.Demos.Character
                 analysisJobCount = Math.Min(characters.Count, threadDispatcher.ThreadCount * 4);
                 if (analysisJobCount > 0)
                 {
-                    pool.Take(analysisJobCount, out jobs);
                     pool.Take(threadDispatcher.ThreadCount, out analyzeContactsWorkerCaches);
                     analyzeContactsWorkerCaches = analyzeContactsWorkerCaches.Slice(0, threadDispatcher.ThreadCount);
+                    pool.Take(analysisJobCount, out jobs);
                     for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
                     {
                         analyzeContactsWorkerCaches[i] = new AnalyzeContactsWorkerCache(characters.Count, pool);
@@ -593,36 +639,39 @@ namespace Demos.Demos.Character
             }
             pool.Return(ref contactCollectionWorkerCaches);
 
-            //Flush all the worker caches. Note that we perform all removals before moving onto any additions to avoid unnecessary constraint batches
-            //caused by the new and old constraint affecting the same bodies.
-            for (int threadIndex = 0; threadIndex < analyzeContactsWorkerCaches.Length; ++threadIndex)
+            if (analyzeContactsWorkerCaches.Allocated)
             {
-                ref var cache = ref analyzeContactsWorkerCaches[threadIndex];
-                for (int i = 0; i < cache.ConstraintHandlesToRemove.Count; ++i)
+                //Flush all the worker caches. Note that we perform all removals before moving onto any additions to avoid unnecessary constraint batches
+                //caused by the new and old constraint affecting the same bodies.
+                for (int threadIndex = 0; threadIndex < analyzeContactsWorkerCaches.Length; ++threadIndex)
                 {
-                    simulation.Solver.Remove(cache.ConstraintHandlesToRemove[i]);
+                    ref var cache = ref analyzeContactsWorkerCaches[threadIndex];
+                    for (int i = 0; i < cache.ConstraintHandlesToRemove.Count; ++i)
+                    {
+                        simulation.Solver.Remove(cache.ConstraintHandlesToRemove[i]);
+                    }
                 }
+                for (int threadIndex = 0; threadIndex < analyzeContactsWorkerCaches.Length; ++threadIndex)
+                {
+                    ref var workerCache = ref analyzeContactsWorkerCaches[threadIndex];
+                    for (int i = 0; i < workerCache.StaticConstraintsToAdd.Count; ++i)
+                    {
+                        ref var pendingConstraint = ref workerCache.StaticConstraintsToAdd[i];
+                        ref var character = ref characters[pendingConstraint.CharacterIndex];
+                        Debug.Assert(character.Support.Mobility == CollidableMobility.Static);
+                        character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, ref pendingConstraint.Description);
+                    }
+                    for (int i = 0; i < workerCache.DynamicConstraintsToAdd.Count; ++i)
+                    {
+                        ref var pendingConstraint = ref workerCache.DynamicConstraintsToAdd[i];
+                        ref var character = ref characters[pendingConstraint.CharacterIndex];
+                        Debug.Assert(character.Support.Mobility != CollidableMobility.Static);
+                        character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, character.Support.Handle, ref pendingConstraint.Description);
+                    }
+                    workerCache.Dispose(pool);
+                }
+                pool.Return(ref analyzeContactsWorkerCaches);
             }
-            for (int threadIndex = 0; threadIndex < analyzeContactsWorkerCaches.Length; ++threadIndex)
-            {
-                ref var workerCache = ref analyzeContactsWorkerCaches[threadIndex];
-                for (int i = 0; i < workerCache.StaticConstraintsToAdd.Count; ++i)
-                {
-                    ref var pendingConstraint = ref workerCache.StaticConstraintsToAdd[i];
-                    ref var character = ref characters[pendingConstraint.CharacterIndex];
-                    Debug.Assert(character.Support.Mobility == CollidableMobility.Static);
-                    character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, ref pendingConstraint.Description);
-                }
-                for (int i = 0; i < workerCache.DynamicConstraintsToAdd.Count; ++i)
-                {
-                    ref var pendingConstraint = ref workerCache.DynamicConstraintsToAdd[i];
-                    ref var character = ref characters[pendingConstraint.CharacterIndex];
-                    Debug.Assert(character.Support.Mobility != CollidableMobility.Static);
-                    character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, character.Support.Handle, ref pendingConstraint.Description);
-                }
-                workerCache.Dispose(pool);
-            }
-            pool.Return(ref analyzeContactsWorkerCaches);
 
             //var end = Stopwatch.GetTimestamp();
             //Console.WriteLine($"Time (ms): {(end - start) / (1e-3 * Stopwatch.Frequency)}");

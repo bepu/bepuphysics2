@@ -14,7 +14,7 @@ using DemoUtilities;
 using BepuUtilities.Memory;
 using static BepuUtilities.GatherScatter;
 
-namespace Demos.Demos.Character
+namespace Demos.Demos.Characters
 { 
     public struct CharacterMotionAccumulatedImpulse
     {
