@@ -89,7 +89,6 @@ namespace Demos.Demos.Characters
     public class CharacterControllers : IDisposable
     {
         Simulation simulation;
-        IThreadDispatcher threadDispatcher;
         BufferPool pool;
         IdPool<Buffer<int>> characterIdPool;
 
@@ -105,13 +104,11 @@ namespace Demos.Demos.Characters
         /// Creates a character controller systme.
         /// </summary>
         /// <param name="pool">Pool to allocate resources from.</param>
-        /// <param name="threadDispatcher">Thread dispatcher to be used by the character controller.</param>
         /// <param name="initialCharacterCapacity">Number of characters to initially allocate space for.</param>
         /// <param name="initialBodyHandleCapacity">Number of body handles to initially allocate space for in the body handle->character mapping.</param>
-        public CharacterControllers(BufferPool pool, IThreadDispatcher threadDispatcher, int initialCharacterCapacity = 4096, int initialBodyHandleCapacity = 4096)
+        public CharacterControllers(BufferPool pool, int initialCharacterCapacity = 4096, int initialBodyHandleCapacity = 4096)
         {
             this.pool = pool;
-            this.threadDispatcher = threadDispatcher;
             characters = new QuickList<CharacterController>(initialCharacterCapacity, pool);
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCharacterCapacity, out characterIdPool);
             ResizeBodyHandleCapacity(initialBodyHandleCapacity);

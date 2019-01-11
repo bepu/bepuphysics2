@@ -90,9 +90,8 @@ namespace Demos.Demos
             camera.Yaw = MathHelper.Pi * -1f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
             var masks = new BodyProperty<ulong>();
-            characters = new CharacterControllers(BufferPool, ThreadDispatcher);
-            var timestepper = new PositionFirstTimestepper();
-            Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), timestepper);
+            characters = new CharacterControllers(BufferPool);
+            Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var random = new Random(5);
             for (int i = 0; i < 8192; ++i)
