@@ -628,6 +628,36 @@ namespace Demos.Demos.Character
             //Console.WriteLine($"Time (ms): {(end - start) / (1e-3 * Stopwatch.Frequency)}");
         }
 
+        /// <summary>
+        /// Ensures that the internal structures of the character controllers system can handle the given number of characters and body handles, resizing if necessary.
+        /// </summary>
+        /// <param name="characterCapacity">Minimum character capacity to require.</param>
+        /// <param name="bodyHandleCapacity">Minimum number of body handles to allocate space for.</param>
+        public void EnsureCapacity(int characterCapacity, int bodyHandleCapacity)
+        {
+            characters.EnsureCapacity(characterCapacity, pool);
+            if (bodyHandleToCharacterIndex.Length < bodyHandleCapacity)
+            {
+                ResizeBodyHandleCapacity(bodyHandleCapacity);
+            }
+        }
+
+        /// <summary>
+        /// Resizes the internal structures of the character controllers system for the target sizes. Will not shrink below the currently active data size.
+        /// </summary>
+        /// <param name="characterCapacity">Target character capacity to allocate space for.</param>
+        /// <param name="bodyHandleCapacity">Target number of body handles to allocate space for.</param>
+        public void Resize(int characterCapacity, int bodyHandleCapacity)
+        {
+            var targetHandleCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(characterIdPool.HighestPossiblyClaimedId + 1, bodyHandleCapacity));
+            if (targetHandleCapacity != bodyHandleToCharacterIndex.Length)
+                pool.Resize(ref bodyHandleToCharacterIndex, targetHandleCapacity, characterIdPool.HighestPossiblyClaimedId);
+
+            var targetCharacterCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(characters.Count, characterCapacity));
+            if (targetCharacterCapacity != characters.Span.Length)
+                characters.Resize(targetCharacterCapacity, pool);
+        }
+
         bool disposed;
         /// <summary>
         /// Returns pool-allocated resources.
