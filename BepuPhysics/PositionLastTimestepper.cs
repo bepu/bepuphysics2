@@ -14,40 +14,40 @@ namespace BepuPhysics
         /// <summary>
         /// Fires after the sleeper completes and before bodies are integrated.
         /// </summary>
-        public event Action Slept;
+        public event TimestepperStageHandler Slept;
         /// <summary>
         /// Fires after bodies have had their velocities and bounding boxes updated, but before collision detection begins.
         /// </summary>
-        public event Action VelocitiesAndBoundsUpdated;
+        public event TimestepperStageHandler BeforeCollisionDetection;
         /// <summary>
         /// Fires after all collisions have been identified, but before constraints are solved.
         /// </summary>
-        public event Action CollisionsDetected;
+        public event TimestepperStageHandler CollisionsDetected;
         /// <summary>
         /// Fires after the solver executes and before body poses are integrated.
         /// </summary>
-        public event Action ConstraintsSolved;
+        public event TimestepperStageHandler ConstraintsSolved;
         /// <summary>
         /// Fires after bodies have their poses integrated and before data structures are incrementally optimized.
         /// </summary>
-        public event Action PosesIntegrated;
+        public event TimestepperStageHandler PosesIntegrated;
 
         public void Timestep(Simulation simulation, float dt, IThreadDispatcher threadDispatcher = null)
         {
             simulation.Sleep(threadDispatcher);
-            Slept?.Invoke();
+            Slept?.Invoke(dt, threadDispatcher);
 
             simulation.IntegrateVelocitiesBoundsAndInertias(dt, threadDispatcher);
-            VelocitiesAndBoundsUpdated?.Invoke();
+            BeforeCollisionDetection?.Invoke(dt, threadDispatcher);
 
             simulation.CollisionDetection(dt, threadDispatcher);
-            CollisionsDetected?.Invoke();
+            CollisionsDetected?.Invoke(dt, threadDispatcher);
 
             simulation.Solve(dt, threadDispatcher);
-            ConstraintsSolved?.Invoke();
+            ConstraintsSolved?.Invoke(dt, threadDispatcher);
 
             simulation.IntegratePoses(dt, threadDispatcher);
-            PosesIntegrated?.Invoke();
+            PosesIntegrated?.Invoke(dt, threadDispatcher);
 
             simulation.IncrementallyOptimizeDataStructures(threadDispatcher);
         }

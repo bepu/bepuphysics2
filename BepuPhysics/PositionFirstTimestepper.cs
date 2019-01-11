@@ -13,19 +13,19 @@ namespace BepuPhysics
         /// <summary>
         /// Fires after the sleeper completes and before bodies are integrated.
         /// </summary>
-        public event Action Slept;
+        public event TimestepperStageHandler Slept;
         /// <summary>
         /// Fires after bodies have had their position, velocity, and bounding boxes updated, but before collision detection begins.
         /// </summary>
-        public event Action BodiesUpdated;
+        public event TimestepperStageHandler BeforeCollisionDetection;
         /// <summary>
         /// Fires after all collisions have been identified, but before constraints are solved.
         /// </summary>
-        public event Action CollisionsDetected;
+        public event TimestepperStageHandler CollisionsDetected;
         /// <summary>
         /// Fires after the solver executes and before data structures are incrementally optimized.
         /// </summary>
-        public event Action ConstraintsSolved;
+        public event TimestepperStageHandler ConstraintsSolved;
 
         public void Timestep(Simulation simulation, float dt, IThreadDispatcher threadDispatcher = null)
         {
@@ -37,7 +37,7 @@ namespace BepuPhysics
 
             //Sleep at the start, on the other hand, stops some forms of unintuitive behavior when using direct awakenings. Just a matter of preference.
             simulation.Sleep(threadDispatcher);
-            Slept?.Invoke();
+            Slept?.Invoke(dt, threadDispatcher);
 
             //Note that pose integrator comes before collision detection and solving. This is a shift from v1, where collision detection went first.
             //This is a tradeoff:
@@ -57,13 +57,13 @@ namespace BepuPhysics
             //1) complicated on demand updates of world inertia when objects are added or local inertias are changed or 
             //2) local->world inertia calculation before the solver.
             simulation.IntegrateBodiesAndUpdateBoundingBoxes(dt, threadDispatcher);
-            BodiesUpdated?.Invoke();
+            BeforeCollisionDetection?.Invoke(dt, threadDispatcher);
 
             simulation.CollisionDetection(dt, threadDispatcher);
-            CollisionsDetected?.Invoke();
+            CollisionsDetected?.Invoke(dt, threadDispatcher);
 
             simulation.Solve(dt, threadDispatcher);
-            ConstraintsSolved?.Invoke();
+            ConstraintsSolved?.Invoke(dt, threadDispatcher);
 
             simulation.IncrementallyOptimizeDataStructures(threadDispatcher);
         }

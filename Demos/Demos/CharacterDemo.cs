@@ -93,8 +93,6 @@ namespace Demos.Demos
             characters = new CharacterControllers(BufferPool, ThreadDispatcher);
             var timestepper = new PositionFirstTimestepper();
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), timestepper);
-            timestepper.BodiesUpdated += characters.PrepareForContacts;
-            timestepper.CollisionsDetected += characters.AnalyzeContacts;
 
             var random = new Random(5);
             for (int i = 0; i < 8192; ++i)
@@ -161,10 +159,10 @@ namespace Demos.Demos
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
-            removedCharacters = new QuickQueue<Character>(characters.CharacterCount, BufferPool);
+            removedCharacters = new QuickQueue<CharacterController>(characters.CharacterCount, BufferPool);
         }
 
-        QuickQueue<Character> removedCharacters;
+        QuickQueue<CharacterController> removedCharacters;
         int frameIndex;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {

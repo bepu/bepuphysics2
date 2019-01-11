@@ -16,16 +16,11 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos.Characters
 {
-    public struct Character
+    /// <summary>
+    /// Raw data for a character controller instance.
+    /// </summary>
+    public struct CharacterController
     {
-        /// <summary>
-        /// Handle of the body associated with the character.
-        /// </summary>
-        public int BodyHandle;
-        /// <summary>
-        /// Character's up direction in the local space of the character's body.
-        /// </summary>
-        public Vector3 LocalUp;
         /// <summary>
         /// Direction the character is looking in world space. Defines the forward direction for movement.
         /// </summary>
@@ -40,6 +35,15 @@ namespace Demos.Demos.Characters
         /// If true, the character will try to jump on the next time step. Will be reset to false after being processed.
         /// </summary>
         public bool TryJump;
+
+        /// <summary>
+        /// Handle of the body associated with the character.
+        /// </summary>
+        public int BodyHandle;
+        /// <summary>
+        /// Character's up direction in the local space of the character's body.
+        /// </summary>
+        public Vector3 LocalUp;
         /// <summary>
         /// Velocity at which the character pushes off the support during a jump.
         /// </summary>
@@ -90,7 +94,7 @@ namespace Demos.Demos.Characters
         IdPool<Buffer<int>> characterIdPool;
 
         Buffer<int> bodyHandleToCharacterIndex;
-        QuickList<Character> characters;
+        QuickList<CharacterController> characters;
 
         /// <summary>
         /// Gets the number of characters being controlled.
@@ -108,7 +112,7 @@ namespace Demos.Demos.Characters
         {
             this.pool = pool;
             this.threadDispatcher = threadDispatcher;
-            characters = new QuickList<Character>(initialCharacterCapacity, pool);
+            characters = new QuickList<CharacterController>(initialCharacterCapacity, pool);
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCharacterCapacity, out characterIdPool);
             ResizeBodyHandleCapacity(initialBodyHandleCapacity);
             analyzeContactsWorker = AnalyzeContactsWorker;
@@ -123,6 +127,8 @@ namespace Demos.Demos.Characters
             this.simulation = simulation;
             simulation.Solver.Register<DynamicCharacterMotionConstraint>();
             simulation.Solver.Register<StaticCharacterMotionConstraint>();
+            simulation.Timestepper.BeforeCollisionDetection += PrepareForContacts;
+            simulation.Timestepper.CollisionsDetected += AnalyzeContacts;
         }
 
         private void ResizeBodyHandleCapacity(int bodyHandleCapacity)
@@ -136,13 +142,13 @@ namespace Demos.Demos.Characters
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Character GetCharacterByIndex(int index)
+        public ref CharacterController GetCharacterByIndex(int index)
         {
             return ref characters[index];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Character GetCharacterByBodyHandle(int bodyHandle)
+        public ref CharacterController GetCharacterByBodyHandle(int bodyHandle)
         {
             return ref characters[bodyHandleToCharacterIndex[bodyHandle]];
         }
@@ -153,7 +159,7 @@ namespace Demos.Demos.Characters
         /// <param name="bodyHandle">Body handle associated with the character.</param>
         /// <param name="characterIndex">Index of the allocated character.</param>
         /// <returns>Reference to the allocated character.</returns>
-        public ref Character AllocateCharacter(int bodyHandle, out int characterIndex)
+        public ref CharacterController AllocateCharacter(int bodyHandle, out int characterIndex)
         {
             Debug.Assert(bodyHandle >= 0 && (bodyHandle >= bodyHandleToCharacterIndex.Length || bodyHandleToCharacterIndex[bodyHandle] == -1),
                 "Cannot allocate more than one character for the same body handle.");
@@ -391,7 +397,7 @@ namespace Demos.Demos.Characters
         /// <summary>
         /// Preallocates space for support data collected during the narrow phase. Should be called before the narrow phase executes.
         /// </summary>
-        public void PrepareForContacts()
+        void PrepareForContacts(float dt, IThreadDispatcher threadDispatcher = null)
         {
             Debug.Assert(!contactCollectionWorkerCaches.Allocated, "Worker caches were already allocated; did you forget to call AnalyzeContacts after collision detection to flush the previous frame's results?");
             var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
@@ -593,7 +599,7 @@ namespace Demos.Demos.Characters
         /// Updates all character support states and motion constraints based on the current character goals and all the contacts collected since the last call to AnalyzeContacts. 
         /// Attach to a simulation callback where the most recent contact is available and before the solver executes.
         /// </summary>
-        public void AnalyzeContacts()
+        void AnalyzeContacts(float dt, IThreadDispatcher threadDispatcher)
         {
             //var start = Stopwatch.GetTimestamp();
             Debug.Assert(contactCollectionWorkerCaches.Allocated, "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");
@@ -724,6 +730,8 @@ namespace Demos.Demos.Characters
                         simulation.Solver.Remove(character.MotionConstraintHandle);
                     }
                 }
+                simulation.Timestepper.BeforeCollisionDetection -= PrepareForContacts;
+                simulation.Timestepper.CollisionsDetected -= AnalyzeContacts;
                 characterIdPool.Dispose(pool.SpecializeFor<int>());
                 characters.Dispose(pool);
                 pool.Return(ref bodyHandleToCharacterIndex);
