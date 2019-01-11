@@ -111,6 +111,7 @@ namespace Demos.Demos.Character
             characters = new QuickList<Character>(initialCharacterCapacity, pool);
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCharacterCapacity, out characterIdPool);
             ResizeBodyHandleCapacity(initialBodyHandleCapacity);
+            analyzeContactsWorker = AnalyzeContactsWorker;
         }
 
         /// <summary>
@@ -165,11 +166,11 @@ namespace Demos.Demos.Character
             public CollidableReference Support;
         }
 
-        struct WorkerCache
+        struct ContactCollectionWorkerCache
         {
             public Buffer<SupportCandidate> SupportCandidates;
 
-            public unsafe WorkerCache(int maximumCharacterCount, BufferPool pool)
+            public unsafe ContactCollectionWorkerCache(int maximumCharacterCount, BufferPool pool)
             {
                 pool.Take(maximumCharacterCount, out SupportCandidates);
                 for (int i = 0; i < maximumCharacterCount; ++i)
@@ -186,7 +187,7 @@ namespace Demos.Demos.Character
         }
 
 
-        Buffer<WorkerCache> workerCaches;
+        Buffer<ContactCollectionWorkerCache> contactCollectionWorkerCaches;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         bool TryReportContacts<TManifold>(CollidableReference characterCollidable, CollidableReference supportCollidable, CollidablePair pair, ref TManifold manifold, int workerIndex) where TManifold : struct, IContactManifold
@@ -241,7 +242,7 @@ namespace Demos.Demos.Character
                             }
                             if (maximumDepth >= character.MinimumSupportDepth || (character.Supported && maximumDepth > character.MinimumSupportContinuationDepth))
                             {
-                                ref var supportCandidate = ref workerCaches[workerIndex].SupportCandidates[characterIndex];
+                                ref var supportCandidate = ref contactCollectionWorkerCaches[workerIndex].SupportCandidates[characterIndex];
                                 if (supportCandidate.Depth < maximumDepth)
                                 {
                                     //This support candidate should be replaced.
@@ -289,7 +290,7 @@ namespace Demos.Demos.Character
                         }
                         if (maximumDepth >= character.MinimumSupportDepth || (character.Supported && maximumDepth > character.MinimumSupportContinuationDepth))
                         {
-                            ref var supportCandidate = ref workerCaches[workerIndex].SupportCandidates[characterIndex];
+                            ref var supportCandidate = ref contactCollectionWorkerCaches[workerIndex].SupportCandidates[characterIndex];
                             if (supportCandidate.Depth < maximumDepth)
                             {
                                 //This support candidate should be replaced.
@@ -329,7 +330,7 @@ namespace Demos.Demos.Character
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryReportContacts<TManifold>(in CollidablePair pair, ref TManifold manifold, int workerIndex, ref PairMaterialProperties materialProperties) where TManifold : struct, IContactManifold
         {
-            Debug.Assert(workerCaches.Allocated && workerIndex < workerCaches.Length && workerCaches[workerIndex].SupportCandidates.Allocated,
+            Debug.Assert(contactCollectionWorkerCaches.Allocated && workerIndex < contactCollectionWorkerCaches.Length && contactCollectionWorkerCaches[workerIndex].SupportCandidates.Allocated,
                 "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");
             //It's possible for neither, one, or both collidables to be a character. Check each one, treating the other as a potential support.
             var aIsCharacter = TryReportContacts(pair.A, pair.B, pair, ref manifold, workerIndex);
@@ -350,38 +351,65 @@ namespace Demos.Demos.Character
         /// </summary>
         public void PrepareForContacts()
         {
-            Debug.Assert(!workerCaches.Allocated, "Worker caches were already allocated; did you forget to call AnalyzeContacts after collision detection to flush the previous frame's results?");
+            Debug.Assert(!contactCollectionWorkerCaches.Allocated, "Worker caches were already allocated; did you forget to call AnalyzeContacts after collision detection to flush the previous frame's results?");
             var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
-            pool.Take(threadCount, out workerCaches);
-            workerCaches = workerCaches.Slice(0, threadCount);
-            for (int i = 0; i < workerCaches.Length; ++i)
+            pool.Take(threadCount, out contactCollectionWorkerCaches);
+            contactCollectionWorkerCaches = contactCollectionWorkerCaches.Slice(0, threadCount);
+            for (int i = 0; i < contactCollectionWorkerCaches.Length; ++i)
             {
-                workerCaches[i] = new WorkerCache(characters.Count, pool);
+                contactCollectionWorkerCaches[i] = new ContactCollectionWorkerCache(characters.Count, pool);
             }
         }
 
-
-        /// <summary>
-        /// Updates all character support states and motion constraints based on the current character goals and all the contacts collected since the last call to AnalyzeContacts. 
-        /// Attach to a simulation callback where the most recent contact is available and before the solver executes.
-        /// </summary>
-        public void AnalyzeContacts()
+        struct PendingDynamicConstraint
         {
-            var start = Stopwatch.GetTimestamp();
-            Debug.Assert(workerCaches.Allocated, "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");
+            public int CharacterIndex;
+            public DynamicCharacterMotionConstraint Description;
+        }
+        struct PendingStaticConstraint
+        {
+            public int CharacterIndex;
+            public StaticCharacterMotionConstraint Description;
+        }
+        struct AnalyzeContactsWorkerCache
+        {
+            //The solver does not permit multithreaded removals and additions. We handle all of them in a sequential postpass.
+            public QuickList<int> ConstraintHandlesToRemove;
+            public QuickList<PendingDynamicConstraint> DynamicConstraintsToAdd;
+            public QuickList<PendingStaticConstraint> StaticConstraintsToAdd;
 
-            for (int i = 0; i < characters.Count; ++i)
+            public AnalyzeContactsWorkerCache(int maximumCharacterCount, BufferPool pool)
+            {
+                ConstraintHandlesToRemove = new QuickList<int>(maximumCharacterCount, pool);
+                DynamicConstraintsToAdd = new QuickList<PendingDynamicConstraint>(maximumCharacterCount, pool);
+                StaticConstraintsToAdd = new QuickList<PendingStaticConstraint>(maximumCharacterCount, pool);
+            }
+
+            public void Dispose(BufferPool pool)
+            {
+                ConstraintHandlesToRemove.Dispose(pool);
+                DynamicConstraintsToAdd.Dispose(pool);
+                StaticConstraintsToAdd.Dispose(pool);
+            }
+        }
+
+        Buffer<AnalyzeContactsWorkerCache> analyzeContactsWorkerCaches;
+
+        void AnalyzeContactsForCharacterRegion(int start, int exclusiveEnd, int workerIndex)
+        {
+            ref var analyzeContactsWorkerCache = ref analyzeContactsWorkerCaches[workerIndex];
+            for (int characterIndex = start; characterIndex < exclusiveEnd; ++characterIndex)
             {
                 //Note that this iterates over both active and inactive characters rather than segmenting inactive characters into their own collection.
                 //This demands branching, but the expectation is that the vast majority of characters will be active, so there is less value in copying them into stasis.                
-                ref var character = ref characters[i];
+                ref var character = ref characters[characterIndex];
                 ref var bodyLocation = ref simulation.Bodies.HandleToLocation[character.BodyHandle];
                 if (bodyLocation.SetIndex == 0)
                 {
-                    var supportCandidate = workerCaches[0].SupportCandidates[i];
-                    for (int j = 1; j < workerCaches.Length; ++j)
+                    var supportCandidate = contactCollectionWorkerCaches[0].SupportCandidates[characterIndex];
+                    for (int j = 1; j < contactCollectionWorkerCaches.Length; ++j)
                     {
-                        ref var workerCandidate = ref workerCaches[j].SupportCandidates[i];
+                        ref var workerCandidate = ref contactCollectionWorkerCaches[j].SupportCandidates[characterIndex];
                         if (workerCandidate.Depth > supportCandidate.Depth)
                         {
                             supportCandidate = workerCandidate;
@@ -396,13 +424,14 @@ namespace Demos.Demos.Character
                     var shouldRemove = character.Supported && (character.TryJump || supportCandidate.Depth == float.MinValue || character.Support.Packed != supportCandidate.Support.Packed);
                     if (shouldRemove)
                     {
-                        //Remove the constraint.
-                        simulation.Solver.Remove(character.MotionConstraintHandle);
+                        //Mark the constraint for removal.
+                        analyzeContactsWorkerCache.ConstraintHandlesToRemove.AllocateUnsafely() = character.MotionConstraintHandle;
                     }
 
                     //If the character is jumping, don't create a constraint.
                     if (supportCandidate.Depth > float.MinValue && character.TryJump)
                     {
+                        //Note that this modifies the velocity- that's fine, characters do not share bodies so there is no danger of velocity corruption.
                         Quaternion.Transform(character.LocalUp, simulation.Bodies.ActiveSet.Poses[bodyLocation.Index].Orientation, out var characterUp);
                         simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear += character.JumpVelocity * characterUp;
                         //If the support is dynamic, apply an opposing impulse.
@@ -450,8 +479,10 @@ namespace Demos.Demos.Character
                             }
                             else
                             {
-                                //Doesn't exist, add it.
-                                character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, supportCandidate.Support.Handle, ref motionConstraint);
+                                //Doesn't exist, mark it for addition.
+                                ref var pendingConstraint = ref analyzeContactsWorkerCache.DynamicConstraintsToAdd.AllocateUnsafely();
+                                pendingConstraint.Description = motionConstraint;
+                                pendingConstraint.CharacterIndex = characterIndex;
                             }
                         }
                         else
@@ -473,8 +504,10 @@ namespace Demos.Demos.Character
                             }
                             else
                             {
-                                //Doesn't exist, add it.
-                                character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, ref motionConstraint);
+                                //Doesn't exist, mark it for addition.
+                                ref var pendingConstraint = ref analyzeContactsWorkerCache.StaticConstraintsToAdd.AllocateUnsafely();
+                                pendingConstraint.Description = motionConstraint;
+                                pendingConstraint.CharacterIndex = characterIndex;
                             }
                         }
                         character.Supported = true;
@@ -488,15 +521,111 @@ namespace Demos.Demos.Character
                 //The TryJump flag is always reset even if the attempt failed.
                 character.TryJump = false;
             }
+        }
 
-            for (int i =0; i < workerCaches.Length; ++i)
+        struct AnalyzeContactsJob
+        {
+            public int Start;
+            public int ExclusiveEnd;
+        }
+
+        int analysisJobIndex;
+        int analysisJobCount;
+        Buffer<AnalyzeContactsJob> jobs;
+        Action<int> analyzeContactsWorker;
+        void AnalyzeContactsWorker(int workerIndex)
+        {
+            int jobIndex;
+            while ((jobIndex = Interlocked.Increment(ref analysisJobIndex)) < analysisJobCount)
             {
-                workerCaches[i].Dispose(pool);
+                ref var job = ref jobs[jobIndex];
+                AnalyzeContactsForCharacterRegion(job.Start, job.ExclusiveEnd, workerIndex);
             }
-            pool.Return(ref workerCaches);
+        }
 
-            var end = Stopwatch.GetTimestamp();
-            Console.WriteLine($"Time (ms): {(end - start) / (1e-3 * Stopwatch.Frequency)}");
+
+        /// <summary>
+        /// Updates all character support states and motion constraints based on the current character goals and all the contacts collected since the last call to AnalyzeContacts. 
+        /// Attach to a simulation callback where the most recent contact is available and before the solver executes.
+        /// </summary>
+        public void AnalyzeContacts()
+        {
+            //var start = Stopwatch.GetTimestamp();
+            Debug.Assert(contactCollectionWorkerCaches.Allocated, "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");
+
+            if (threadDispatcher == null)
+            {
+                pool.Take(1, out analyzeContactsWorkerCaches);
+                analyzeContactsWorkerCaches = analyzeContactsWorkerCaches.Slice(0, 1);
+                AnalyzeContactsForCharacterRegion(0, characters.Count, 0);
+            }
+            else
+            {
+                analysisJobCount = Math.Min(characters.Count, threadDispatcher.ThreadCount * 4);
+                if (analysisJobCount > 0)
+                {
+                    pool.Take(analysisJobCount, out jobs);
+                    pool.Take(threadDispatcher.ThreadCount, out analyzeContactsWorkerCaches);
+                    analyzeContactsWorkerCaches = analyzeContactsWorkerCaches.Slice(0, threadDispatcher.ThreadCount);
+                    for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
+                    {
+                        analyzeContactsWorkerCaches[i] = new AnalyzeContactsWorkerCache(characters.Count, pool);
+                    }
+                    var baseCount = characters.Count / analysisJobCount;
+                    var remainder = characters.Count - baseCount * analysisJobCount;
+                    var previousEnd = 0;
+                    for (int i = 0; i < analysisJobCount; ++i)
+                    {
+                        ref var job = ref jobs[i];
+                        job.Start = previousEnd;
+                        job.ExclusiveEnd = job.Start + (i < remainder ? baseCount + 1 : baseCount);
+                        previousEnd = job.ExclusiveEnd;
+                    }
+                    analysisJobIndex = -1;
+                    threadDispatcher.DispatchWorkers(analyzeContactsWorker);
+                    pool.Return(ref jobs);
+                }
+            }
+            //We're done with all the contact collection worker caches.
+            for (int i = 0; i < contactCollectionWorkerCaches.Length; ++i)
+            {
+                contactCollectionWorkerCaches[i].Dispose(pool);
+            }
+            pool.Return(ref contactCollectionWorkerCaches);
+
+            //Flush all the worker caches. Note that we perform all removals before moving onto any additions to avoid unnecessary constraint batches
+            //caused by the new and old constraint affecting the same bodies.
+            for (int threadIndex = 0; threadIndex < analyzeContactsWorkerCaches.Length; ++threadIndex)
+            {
+                ref var cache = ref analyzeContactsWorkerCaches[threadIndex];
+                for (int i = 0; i < cache.ConstraintHandlesToRemove.Count; ++i)
+                {
+                    simulation.Solver.Remove(cache.ConstraintHandlesToRemove[i]);
+                }
+            }
+            for (int threadIndex = 0; threadIndex < analyzeContactsWorkerCaches.Length; ++threadIndex)
+            {
+                ref var workerCache = ref analyzeContactsWorkerCaches[threadIndex];
+                for (int i = 0; i < workerCache.StaticConstraintsToAdd.Count; ++i)
+                {
+                    ref var pendingConstraint = ref workerCache.StaticConstraintsToAdd[i];
+                    ref var character = ref characters[pendingConstraint.CharacterIndex];
+                    Debug.Assert(character.Support.Mobility == CollidableMobility.Static);
+                    character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, ref pendingConstraint.Description);
+                }
+                for (int i = 0; i < workerCache.DynamicConstraintsToAdd.Count; ++i)
+                {
+                    ref var pendingConstraint = ref workerCache.DynamicConstraintsToAdd[i];
+                    ref var character = ref characters[pendingConstraint.CharacterIndex];
+                    Debug.Assert(character.Support.Mobility != CollidableMobility.Static);
+                    character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, character.Support.Handle, ref pendingConstraint.Description);
+                }
+                workerCache.Dispose(pool);
+            }
+            pool.Return(ref analyzeContactsWorkerCaches);
+
+            //var end = Stopwatch.GetTimestamp();
+            //Console.WriteLine($"Time (ms): {(end - start) / (1e-3 * Stopwatch.Frequency)}");
         }
 
         bool disposed;
