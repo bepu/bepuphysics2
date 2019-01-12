@@ -88,7 +88,10 @@ namespace Demos.Demos.Characters
     /// </summary>
     public class CharacterControllers : IDisposable
     {
-        Simulation simulation;
+        /// <summary>
+        /// Gets the simulation to which this set of chracters belongs.
+        /// </summary>
+        public Simulation Simulation { get; private set; }
         BufferPool pool;
         IdPool<Buffer<int>> characterIdPool;
 
@@ -121,7 +124,7 @@ namespace Demos.Demos.Characters
         /// <param name="simulation">Simulation to be associated with the characters.</param>
         public void Initialize(Simulation simulation)
         {
-            this.simulation = simulation;
+            Simulation = simulation;
             simulation.Solver.Register<DynamicCharacterMotionConstraint>();
             simulation.Solver.Register<StaticCharacterMotionConstraint>();
             simulation.Timestepper.BeforeCollisionDetection += PrepareForContacts;
@@ -259,8 +262,8 @@ namespace Demos.Demos.Characters
 
                     //Note that the body may be inactive during this callback even though it will be activated by new constraints after the narrow phase flushes.
                     //Have to take into account the current potentially inactive location.
-                    ref var bodyLocation = ref simulation.Bodies.HandleToLocation[character.BodyHandle];
-                    ref var set = ref simulation.Bodies.Sets[bodyLocation.SetIndex];
+                    ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[character.BodyHandle];
+                    ref var set = ref Simulation.Bodies.Sets[bodyLocation.SetIndex];
                     ref var pose = ref set.Poses[bodyLocation.Index];
                     Quaternion.Transform(character.LocalUp, pose.Orientation, out var up);
                     //Note that this branch is compiled out- the generic constraints force type specialization.
@@ -451,7 +454,7 @@ namespace Demos.Demos.Characters
                 //Note that this iterates over both active and inactive characters rather than segmenting inactive characters into their own collection.
                 //This demands branching, but the expectation is that the vast majority of characters will be active, so there is less value in copying them into stasis.                
                 ref var character = ref characters[characterIndex];
-                ref var bodyLocation = ref simulation.Bodies.HandleToLocation[character.BodyHandle];
+                ref var bodyLocation = ref Simulation.Bodies.HandleToLocation[character.BodyHandle];
                 if (bodyLocation.SetIndex == 0)
                 {
                     var supportCandidate = contactCollectionWorkerCaches[0].SupportCandidates[characterIndex];
@@ -480,8 +483,8 @@ namespace Demos.Demos.Characters
                     if (supportCandidate.Depth > float.MinValue && character.TryJump)
                     {
                         //Note that this modifies the velocity- that's fine, characters do not share bodies so there is no danger of velocity corruption.
-                        Quaternion.Transform(character.LocalUp, simulation.Bodies.ActiveSet.Poses[bodyLocation.Index].Orientation, out var characterUp);
-                        simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear += character.JumpVelocity * characterUp;
+                        Quaternion.Transform(character.LocalUp, Simulation.Bodies.ActiveSet.Poses[bodyLocation.Index].Orientation, out var characterUp);
+                        Simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear += character.JumpVelocity * characterUp;
                         //If the support is dynamic, apply an opposing impulse.
                         character.Supported = false;
                     }
@@ -494,7 +497,11 @@ namespace Demos.Demos.Characters
                         Matrix3x3 surfaceBasis;
                         surfaceBasis.Y = Vector3.Dot(supportCandidate.OffsetFromCharacter, supportCandidate.Normal) > 0 ? -supportCandidate.Normal : supportCandidate.Normal;
                         //Note negation: we're using a right handed basis where -Z is forward, +Z is backward.
-                        surfaceBasis.Z = Vector3.Dot(character.ViewDirection, surfaceBasis.Y) * surfaceBasis.Y - character.ViewDirection;
+                        Quaternion.Transform(character.LocalUp, Simulation.Bodies.ActiveSet.Poses[bodyLocation.Index].Orientation, out var up);
+                        var rayDistance = Vector3.Dot(up, character.ViewDirection);
+                        var rayVelocity = Vector3.Dot(up, surfaceBasis.Y);
+                        Debug.Assert(rayVelocity > 0, "The calibrated support normal and the character's up direction should have a positive dot product if the maximum slope is working properly.");
+                        surfaceBasis.Z = up * (rayDistance / rayVelocity) - character.ViewDirection;
                         var zLengthSquared = surfaceBasis.Z.LengthSquared();
                         if (zLengthSquared > 1e-12f)
                         {
@@ -523,7 +530,7 @@ namespace Demos.Demos.Characters
                             if (character.Supported && !shouldRemove)
                             {
                                 //Already exists, update it.
-                                simulation.Solver.ApplyDescriptionWithoutWaking(character.MotionConstraintHandle, ref motionConstraint);
+                                Simulation.Solver.ApplyDescriptionWithoutWaking(character.MotionConstraintHandle, ref motionConstraint);
                             }
                             else
                             {
@@ -548,7 +555,7 @@ namespace Demos.Demos.Characters
                             if (character.Supported && !shouldRemove)
                             {
                                 //Already exists, update it.
-                                simulation.Solver.ApplyDescriptionWithoutWaking(character.MotionConstraintHandle, ref motionConstraint);
+                                Simulation.Solver.ApplyDescriptionWithoutWaking(character.MotionConstraintHandle, ref motionConstraint);
                             }
                             else
                             {
@@ -651,7 +658,7 @@ namespace Demos.Demos.Characters
                     ref var cache = ref analyzeContactsWorkerCaches[threadIndex];
                     for (int i = 0; i < cache.ConstraintHandlesToRemove.Count; ++i)
                     {
-                        simulation.Solver.Remove(cache.ConstraintHandlesToRemove[i]);
+                        Simulation.Solver.Remove(cache.ConstraintHandlesToRemove[i]);
                     }
                 }
                 for (int threadIndex = 0; threadIndex < analyzeContactsWorkerCaches.Length; ++threadIndex)
@@ -662,14 +669,14 @@ namespace Demos.Demos.Characters
                         ref var pendingConstraint = ref workerCache.StaticConstraintsToAdd[i];
                         ref var character = ref characters[pendingConstraint.CharacterIndex];
                         Debug.Assert(character.Support.Mobility == CollidableMobility.Static);
-                        character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, ref pendingConstraint.Description);
+                        character.MotionConstraintHandle = Simulation.Solver.Add(character.BodyHandle, ref pendingConstraint.Description);
                     }
                     for (int i = 0; i < workerCache.DynamicConstraintsToAdd.Count; ++i)
                     {
                         ref var pendingConstraint = ref workerCache.DynamicConstraintsToAdd[i];
                         ref var character = ref characters[pendingConstraint.CharacterIndex];
                         Debug.Assert(character.Support.Mobility != CollidableMobility.Static);
-                        character.MotionConstraintHandle = simulation.Solver.Add(character.BodyHandle, character.Support.Handle, ref pendingConstraint.Description);
+                        character.MotionConstraintHandle = Simulation.Solver.Add(character.BodyHandle, character.Support.Handle, ref pendingConstraint.Description);
                     }
                     workerCache.Dispose(pool);
                 }
@@ -724,11 +731,11 @@ namespace Demos.Demos.Characters
                     ref var character = ref characters[i];
                     if (character.Supported)
                     {
-                        simulation.Solver.Remove(character.MotionConstraintHandle);
+                        Simulation.Solver.Remove(character.MotionConstraintHandle);
                     }
                 }
-                simulation.Timestepper.BeforeCollisionDetection -= PrepareForContacts;
-                simulation.Timestepper.CollisionsDetected -= AnalyzeContacts;
+                Simulation.Timestepper.BeforeCollisionDetection -= PrepareForContacts;
+                Simulation.Timestepper.CollisionsDetected -= AnalyzeContacts;
                 characterIdPool.Dispose(pool.SpecializeFor<int>());
                 characters.Dispose(pool);
                 pool.Return(ref bodyHandleToCharacterIndex);
