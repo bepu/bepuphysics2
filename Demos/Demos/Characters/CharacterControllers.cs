@@ -424,11 +424,14 @@ namespace Demos.Demos.Characters
             public int CharacterIndex;
             public StaticCharacterMotionConstraint Description;
         }
-        struct JumpRequest
+        struct Jump
         {
-            public int BodyIndex;
-            public Vector3 Offset;
-            public Vector3 Impulse;
+            //Note that not every jump will contain a support body, so this can waste memory.
+            //That's not really a concern- jumps are very rare (relatively speaking), so all we're wasting is capacity, not bandwidth.
+            public int CharacterBodyIndex;
+            public Vector3 CharacterVelocityChange;
+            public int SupportBodyIndex;
+            public Vector3 SupportImpulseOffset;
         }
 
         struct AnalyzeContactsWorkerCache
@@ -437,14 +440,14 @@ namespace Demos.Demos.Characters
             public QuickList<int> ConstraintHandlesToRemove;
             public QuickList<PendingDynamicConstraint> DynamicConstraintsToAdd;
             public QuickList<PendingStaticConstraint> StaticConstraintsToAdd;
-            public QuickList<JumpRequest> Jumps;
+            public QuickList<Jump> Jumps;
 
             public AnalyzeContactsWorkerCache(int maximumCharacterCount, BufferPool pool)
             {
                 ConstraintHandlesToRemove = new QuickList<int>(maximumCharacterCount, pool);
                 DynamicConstraintsToAdd = new QuickList<PendingDynamicConstraint>(maximumCharacterCount, pool);
                 StaticConstraintsToAdd = new QuickList<PendingStaticConstraint>(maximumCharacterCount, pool);
-                Jumps = new QuickList<JumpRequest>(maximumCharacterCount, pool);
+                Jumps = new QuickList<Jump>(maximumCharacterCount, pool);
             }
 
             public void Dispose(BufferPool pool)
@@ -494,20 +497,44 @@ namespace Demos.Demos.Characters
                     //If the character is jumping, don't create a constraint.
                     if (supportCandidate.Depth > float.MinValue && character.TryJump)
                     {
-                        //Note that this modifies the velocity- that's fine, characters do not share bodies so there is no danger of velocity corruption.
                         Quaternion.Transform(character.LocalUp, Simulation.Bodies.ActiveSet.Poses[bodyLocation.Index].Orientation, out var characterUp);
-                        var velocityChange = character.JumpVelocity * characterUp;
-                        Simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear += velocityChange;
-                        //If the support is dynamic, apply an opposing impulse. Note that this cannot be done in the multithreaded context because characters could share a support.
-                        //That's really not concerning from a performance perspective- characters don't jump many times per frame.
-                        if (character.Support.Mobility == CollidableMobility.Dynamic)
+                        //Note that we assume that character orientations are constant. This isn't necessarily the case in all uses, but it's a decent approximation.
+                        var characterUpVelocity = Vector3.Dot(Simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear, characterUp);
+                        //We don't want the character to be able to 'superboost' by simply adding jump speed on top of horizontal motion.
+                        //Instead, jumping targets a velocity change necessary to reach character.JumpVelocity along the up axis.
+                        if (character.Support.Mobility != CollidableMobility.Static)
                         {
-                            ref var jump = ref analyzeContactsWorkerCache.Jumps.AllocateUnsafely();
                             ref var supportingBodyLocation = ref Simulation.Bodies.HandleToLocation[character.Support.Handle];
                             Debug.Assert(supportingBodyLocation.SetIndex == 0, "If the character is active, any support should be too.");
-                            jump.BodyIndex = supportingBodyLocation.Index;
-                            jump.Impulse = -velocityChange / Simulation.Bodies.ActiveSet.LocalInertias[bodyLocation.Index].InverseMass;
-                            jump.Offset = supportCandidate.OffsetFromSupport;
+                            ref var supportVelocity = ref Simulation.Bodies.ActiveSet.Velocities[supportingBodyLocation.Index];
+                            Vector3x.Cross(supportVelocity.Angular, supportCandidate.OffsetFromSupport, out var wxr);
+                            var supportContactVelocity = supportVelocity.Linear + wxr;
+                            var supportUpVelocity = Vector3.Dot(supportContactVelocity, characterUp);
+
+                            //If the support is dynamic, apply an opposing impulse. Note that velocity changes cannot safely be applied during multithreaded execution;
+                            //characters could share support bodies, and a character might be a support of another character.
+                            //That's really not concerning from a performance perspective- characters don't jump many times per frame.
+                            ref var jump = ref analyzeContactsWorkerCache.Jumps.AllocateUnsafely();
+                            jump.CharacterBodyIndex = bodyLocation.Index;
+                            jump.CharacterVelocityChange = characterUp * MathF.Max(0, character.JumpVelocity - (characterUpVelocity - supportUpVelocity));
+                            if (character.Support.Mobility == CollidableMobility.Dynamic)
+                            {
+                                jump.SupportBodyIndex = supportingBodyLocation.Index;
+                                jump.SupportImpulseOffset = supportCandidate.OffsetFromSupport;
+                            }
+                            else
+                            {
+                                //No point in applying impulses to kinematics.
+                                jump.SupportBodyIndex = -1;
+                            }
+                        }
+                        else
+                        {
+                            //Static bodies have no velocity, so we don't have to consider the support.
+                            ref var jump = ref analyzeContactsWorkerCache.Jumps.AllocateUnsafely();
+                            jump.CharacterBodyIndex = bodyLocation.Index;
+                            jump.CharacterVelocityChange = characterUp * MathF.Max(0, character.JumpVelocity - characterUpVelocity);
+                            jump.SupportBodyIndex = -1;
                         }
                         character.Supported = false;
                     }
@@ -702,11 +729,15 @@ namespace Demos.Demos.Characters
                         Debug.Assert(character.Support.Mobility != CollidableMobility.Static);
                         character.MotionConstraintHandle = Simulation.Solver.Add(character.BodyHandle, character.Support.Handle, ref pendingConstraint.Description);
                     }
-                    //Don't forget to apply jumps to the supporting bodies of characters!
+                    ref var activeSet = ref Simulation.Bodies.ActiveSet;
                     for (int i = 0; i < workerCache.Jumps.Count; ++i)
                     {
                         ref var jump = ref workerCache.Jumps[i];
-                        BodyReference.ApplyImpulse(Simulation.Bodies.ActiveSet, jump.BodyIndex, jump.Impulse, jump.Offset);
+                        activeSet.Velocities[jump.CharacterBodyIndex].Linear += jump.CharacterVelocityChange;
+                        if (jump.SupportBodyIndex >= 0)
+                        {
+                            BodyReference.ApplyImpulse(Simulation.Bodies.ActiveSet, jump.SupportBodyIndex, jump.CharacterVelocityChange / -activeSet.LocalInertias[jump.CharacterBodyIndex].InverseMass, jump.SupportImpulseOffset);
+                        }
                     }
                     workerCache.Dispose(pool);
                 }
