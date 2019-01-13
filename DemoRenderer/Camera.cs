@@ -217,7 +217,7 @@ namespace DemoRenderer
         /// <param name="nearClip">Near clip plane of the camera's projection.</param>
         /// <param name="farClip">Far clip plane of the camera's projection.</param>
         /// <param name="maximumPitch">Maximum angle that the camera can look up or down.</param>
-        public Camera(float aspectRatio, float fieldOfView, float nearClip, float farClip, float maximumPitch = (float)(Math.PI / 2))
+        public Camera(float aspectRatio, float fieldOfView, float nearClip, float farClip, float maximumPitch = MathF.PI * 0.499f)
         {
             AspectRatio = aspectRatio;
             FieldOfView = fieldOfView;

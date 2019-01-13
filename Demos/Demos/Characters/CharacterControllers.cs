@@ -270,10 +270,10 @@ namespace Demos.Demos.Characters
                     if (manifold.Convex)
                     {
                         ref var convexManifold = ref Unsafe.As<TManifold, ConvexContactManifold>(ref manifold);
-                        var upDot = Vector3.Dot(convexManifold.Normal, up);
+                        var normalUpDot = Vector3.Dot(convexManifold.Normal, up);
                         //The narrow phase generates contacts with normals pointing from B to A by convention.
                         //If the character is collidable B, then we need to negate the comparison.
-                        if ((pair.B.Packed == characterCollidable.Packed ? -upDot : upDot) > character.CosMaximumSlope)
+                        if ((pair.B.Packed == characterCollidable.Packed ? -normalUpDot : normalUpDot) > character.CosMaximumSlope)
                         {
                             //This manifold has a slope that is potentially supportive.
                             //Can the maximum depth contact be used as a support?
@@ -294,17 +294,18 @@ namespace Demos.Demos.Characters
                                 if (supportCandidate.Depth < maximumDepth)
                                 {
                                     //This support candidate should be replaced.
-                                    supportCandidate.Normal = convexManifold.Normal;
                                     supportCandidate.Depth = maximumDepth;
                                     ref var deepestContact = ref Unsafe.Add(ref convexManifold.Contact0, maximumDepthIndex);
                                     var offsetFromB = deepestContact.Offset - convexManifold.OffsetB;
                                     if (pair.B.Packed == characterCollidable.Packed)
                                     {
+                                        supportCandidate.Normal = -convexManifold.Normal;
                                         supportCandidate.OffsetFromCharacter = offsetFromB;
                                         supportCandidate.OffsetFromSupport = deepestContact.Offset;
                                     }
                                     else
                                     {
+                                        supportCandidate.Normal = convexManifold.Normal;
                                         supportCandidate.OffsetFromCharacter = deepestContact.Offset;
                                         supportCandidate.OffsetFromSupport = offsetFromB;
                                     }
@@ -343,16 +344,17 @@ namespace Demos.Demos.Characters
                             {
                                 //This support candidate should be replaced.
                                 ref var deepestContact = ref Unsafe.Add(ref nonconvexManifold.Contact0, maximumDepthIndex);
-                                supportCandidate.Normal = deepestContact.Normal;
                                 supportCandidate.Depth = maximumDepth;
                                 var offsetFromB = deepestContact.Offset - nonconvexManifold.OffsetB;
                                 if (pair.B.Packed == characterCollidable.Packed)
                                 {
+                                    supportCandidate.Normal = -deepestContact.Normal;
                                     supportCandidate.OffsetFromCharacter = offsetFromB;
                                     supportCandidate.OffsetFromSupport = deepestContact.Offset;
                                 }
                                 else
                                 {
+                                    supportCandidate.Normal = deepestContact.Normal;
                                     supportCandidate.OffsetFromCharacter = deepestContact.Offset;
                                     supportCandidate.OffsetFromSupport = offsetFromB;
                                 }
@@ -495,17 +497,21 @@ namespace Demos.Demos.Characters
 
                         //Project the view direction down onto the surface as represented by the contact normal.
                         Matrix3x3 surfaceBasis;
-                        surfaceBasis.Y = Vector3.Dot(supportCandidate.OffsetFromCharacter, supportCandidate.Normal) > 0 ? -supportCandidate.Normal : supportCandidate.Normal;
+                        surfaceBasis.Y = supportCandidate.Normal;
                         //Note negation: we're using a right handed basis where -Z is forward, +Z is backward.
                         Quaternion.Transform(character.LocalUp, Simulation.Bodies.ActiveSet.Poses[bodyLocation.Index].Orientation, out var up);
-                        var rayDistance = Vector3.Dot(up, character.ViewDirection);
+                        var rayDistance = Vector3.Dot(character.ViewDirection, surfaceBasis.Y);
                         var rayVelocity = Vector3.Dot(up, surfaceBasis.Y);
-                        Debug.Assert(rayVelocity > 0, "The calibrated support normal and the character's up direction should have a positive dot product if the maximum slope is working properly.");
+                        Debug.Assert(rayVelocity > 0,
+                            "The calibrated support normal and the character's up direction should have a positive dot product if the maximum slope is working properly. Is the maximum slope >= pi/2?");
                         surfaceBasis.Z = up * (rayDistance / rayVelocity) - character.ViewDirection;
                         var zLengthSquared = surfaceBasis.Z.LengthSquared();
                         if (zLengthSquared > 1e-12f)
                         {
                             surfaceBasis.Z /= MathF.Sqrt(zLengthSquared);
+                            var horizontal = Vector2.Normalize(new Vector2(surfaceBasis.Z.X, surfaceBasis.Z.Z));
+                            var horizontalViewDirection = Vector2.Normalize(new Vector2(character.ViewDirection.X, character.ViewDirection.Z));
+                            Debug.Assert(Vector2.Dot(horizontal, horizontalViewDirection) < -0.99f);
                         }
                         else
                         {
