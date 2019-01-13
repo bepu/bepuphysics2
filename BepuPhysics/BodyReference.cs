@@ -166,27 +166,37 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Applies an impulse to a body by index. Does not wake the body up.
+        /// </summary>
+        /// <param name="set">Body set containing the body to apply an impulse to.</param>
+        /// <param name="index">Index of the body in the body set.</param>
+        /// <param name="impulse">Impulse to apply to the body.</param>
+        /// <param name="impulseOffset">World space offset from the center of the body to apply the impulse at.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApplyImpulse(in BodySet set, int index, in Vector3 impulse, in Vector3 impulseOffset)
+        {
+            ref var localInertia = ref set.LocalInertias[index];
+            ref var pose = ref set.Poses[index];
+            ref var velocity = ref set.Velocities[index];
+            PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out var inverseInertiaTensor);
+            
+            velocity.Linear += impulse * localInertia.InverseMass;
+            Vector3x.Cross(impulseOffset, impulse, out var angularImpulse);
+            Symmetric3x3.TransformWithoutOverlap(angularImpulse, inverseInertiaTensor, out var angularVelocityChange);
+            velocity.Angular += angularVelocityChange;
+        }
+
+
+        /// <summary>
         /// Applies an impulse to a body at the given world space position. Does not modify activity states.
         /// </summary>
         /// <param name="impulse">Impulse to apply to the body.</param>
-        /// <param name="impulseLocation">World space location to apply the impulse at.</param>
+        /// <param name="impulseOffset">World space offset to apply the impulse at.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ApplyImpulse(in Vector3 impulse, in Vector3 impulseLocation)
+        public void ApplyImpulse(in Vector3 impulse, in Vector3 impulseOffset)
         {
             ref var location = ref Location;
-            ref var set = ref Bodies.Sets[Location.SetIndex];
-            ref var localInertia = ref set.LocalInertias[location.Index];
-            ref var pose = ref set.Poses[location.Index];
-            ref var velocity = ref set.Velocities[location.Index];
-            PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out var inverseInertiaTensor);
-
-            var offset = impulseLocation - pose.Position;
-            velocity.Linear += impulse * LocalInertia.InverseMass;
-            Vector3x.Cross(offset, impulse, out var angularImpulse);
-            Symmetric3x3.TransformWithoutOverlap(angularImpulse, inverseInertiaTensor, out var angularVelocityChange);
-            velocity.Angular += angularVelocityChange;
-            
-
+            ApplyImpulse(Bodies.Sets[location.SetIndex], location.Index, impulse, impulseOffset);   
         }
 
     }

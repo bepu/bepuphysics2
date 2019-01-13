@@ -424,18 +424,27 @@ namespace Demos.Demos.Characters
             public int CharacterIndex;
             public StaticCharacterMotionConstraint Description;
         }
+        struct JumpRequest
+        {
+            public int BodyIndex;
+            public Vector3 Offset;
+            public Vector3 Impulse;
+        }
+
         struct AnalyzeContactsWorkerCache
         {
             //The solver does not permit multithreaded removals and additions. We handle all of them in a sequential postpass.
             public QuickList<int> ConstraintHandlesToRemove;
             public QuickList<PendingDynamicConstraint> DynamicConstraintsToAdd;
             public QuickList<PendingStaticConstraint> StaticConstraintsToAdd;
+            public QuickList<JumpRequest> Jumps;
 
             public AnalyzeContactsWorkerCache(int maximumCharacterCount, BufferPool pool)
             {
                 ConstraintHandlesToRemove = new QuickList<int>(maximumCharacterCount, pool);
                 DynamicConstraintsToAdd = new QuickList<PendingDynamicConstraint>(maximumCharacterCount, pool);
                 StaticConstraintsToAdd = new QuickList<PendingStaticConstraint>(maximumCharacterCount, pool);
+                Jumps = new QuickList<JumpRequest>(maximumCharacterCount, pool);
             }
 
             public void Dispose(BufferPool pool)
@@ -443,6 +452,7 @@ namespace Demos.Demos.Characters
                 ConstraintHandlesToRemove.Dispose(pool);
                 DynamicConstraintsToAdd.Dispose(pool);
                 StaticConstraintsToAdd.Dispose(pool);
+                Jumps.Dispose(pool);
             }
         }
 
@@ -486,8 +496,19 @@ namespace Demos.Demos.Characters
                     {
                         //Note that this modifies the velocity- that's fine, characters do not share bodies so there is no danger of velocity corruption.
                         Quaternion.Transform(character.LocalUp, Simulation.Bodies.ActiveSet.Poses[bodyLocation.Index].Orientation, out var characterUp);
-                        Simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear += character.JumpVelocity * characterUp;
-                        //If the support is dynamic, apply an opposing impulse.
+                        var velocityChange = character.JumpVelocity * characterUp;
+                        Simulation.Bodies.ActiveSet.Velocities[bodyLocation.Index].Linear += velocityChange;
+                        //If the support is dynamic, apply an opposing impulse. Note that this cannot be done in the multithreaded context because characters could share a support.
+                        //That's really not concerning from a performance perspective- characters don't jump many times per frame.
+                        if (character.Support.Mobility == CollidableMobility.Dynamic)
+                        {
+                            ref var jump = ref analyzeContactsWorkerCache.Jumps.AllocateUnsafely();
+                            ref var supportingBodyLocation = ref Simulation.Bodies.HandleToLocation[character.Support.Handle];
+                            Debug.Assert(supportingBodyLocation.SetIndex == 0, "If the character is active, any support should be too.");
+                            jump.BodyIndex = supportingBodyLocation.Index;
+                            jump.Impulse = -velocityChange / Simulation.Bodies.ActiveSet.LocalInertias[bodyLocation.Index].InverseMass;
+                            jump.Offset = supportCandidate.OffsetFromSupport;
+                        }
                         character.Supported = false;
                     }
                     else if (supportCandidate.Depth > float.MinValue)
@@ -509,9 +530,6 @@ namespace Demos.Demos.Characters
                         if (zLengthSquared > 1e-12f)
                         {
                             surfaceBasis.Z /= MathF.Sqrt(zLengthSquared);
-                            var horizontal = Vector2.Normalize(new Vector2(surfaceBasis.Z.X, surfaceBasis.Z.Z));
-                            var horizontalViewDirection = Vector2.Normalize(new Vector2(character.ViewDirection.X, character.ViewDirection.Z));
-                            Debug.Assert(Vector2.Dot(horizontal, horizontalViewDirection) < -0.99f);
                         }
                         else
                         {
@@ -683,6 +701,12 @@ namespace Demos.Demos.Characters
                         ref var character = ref characters[pendingConstraint.CharacterIndex];
                         Debug.Assert(character.Support.Mobility != CollidableMobility.Static);
                         character.MotionConstraintHandle = Simulation.Solver.Add(character.BodyHandle, character.Support.Handle, ref pendingConstraint.Description);
+                    }
+                    //Don't forget to apply jumps to the supporting bodies of characters!
+                    for (int i = 0; i < workerCache.Jumps.Count; ++i)
+                    {
+                        ref var jump = ref workerCache.Jumps[i];
+                        BodyReference.ApplyImpulse(Simulation.Bodies.ActiveSet, jump.BodyIndex, jump.Impulse, jump.Offset);
                     }
                     workerCache.Dispose(pool);
                 }

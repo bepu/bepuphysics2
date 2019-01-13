@@ -33,7 +33,7 @@ namespace Demos.Demos
         int bodyHandle;
         CharacterControllers characters;
         float speed;
-        float cameraOffset;
+        Capsule shape;
 
         public CharacterInput(CharacterControllers characters, Vector3 initialPosition, Capsule shape,
             float speculativeMargin, float mass, float maximumHorizontalForce, float maximumVerticalGlueForce,
@@ -52,7 +52,7 @@ namespace Demos.Demos
             character.MinimumSupportDepth = shape.Radius * -0.01f;
             character.MinimumSupportContinuationDepth = -speculativeMargin;
             this.speed = speed;
-            this.cameraOffset = 1.1f * (shape.HalfLength + shape.Radius);
+            this.shape = shape;
         }
 
         static Key MoveForward = Key.W;
@@ -112,7 +112,11 @@ namespace Demos.Demos
             //We'll override the demo harness's camera control by attaching the camera to the character controller body.
             ref var character = ref characters.GetCharacterByBodyHandle(bodyHandle);
             var characterBody = new BodyReference(bodyHandle, characters.Simulation.Bodies);
-            camera.Position = characterBody.Pose.Position + new Vector3(0, cameraOffset, 0) - character.ViewDirection * cameraOffset * 4;
+            //Use a simple sorta-neck model so that when the camera looks down, the center of the screen sees past the character.
+            //Makes mouselocked ray picking easier.
+            camera.Position = characterBody.Pose.Position + new Vector3(0, shape.HalfLength, 0) + 
+                camera.Up * (shape.Radius * 1.2f) - 
+                camera.Forward * (shape.HalfLength + shape.Radius) * 4;
         }
 
         void RenderControl(ref Vector2 position, float textHeight, string controlName, string controlValue, TextBuilder text, TextBatcher textBatcher, Font font)
@@ -218,7 +222,36 @@ namespace Demos.Demos
             characters = new CharacterControllers(BufferPool);
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
-            CreateCharacter(new Vector3(0, 4, 0));
+            CreateCharacter(new Vector3(0, 2, 0));
+
+            var random = new Random(5);
+            var origin = new Vector3(-3f, 0.5f, 0);
+            var spacing = new Vector3(0.5f, 0, -0.5f);
+            for (int i = 0; i < 12; ++i)
+            {
+                for (int j = 0; j < 100; ++j)
+                {
+                    var position = origin + new Vector3(i, 0, j) * spacing;
+                    var orientation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble())), 10 * (float)random.NextDouble());
+                    var shape = new Box(0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble());
+                    var collidable = new CollidableDescription(Simulation.Shapes.Add(shape), 0.1f);
+                    shape.ComputeInertia(1, out var inertia);
+                    var choice = (i + j) % 3;
+                    switch (choice)
+                    {
+                        case 0:
+                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(position, orientation), inertia, collidable, new BodyActivityDescription(0.01f)));
+                            break;
+                        case 1:
+                            Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(position, orientation), collidable, new BodyActivityDescription(0.01f)));
+                            break;
+                        case 2:
+                            Simulation.Statics.Add(new StaticDescription(position, orientation, collidable));
+                            break;
+
+                    }
+                }
+            }
 
             //const int planeWidth = 256;
             //const int planeHeight = 256;
