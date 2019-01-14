@@ -114,8 +114,8 @@ namespace Demos.Demos
             var characterBody = new BodyReference(bodyHandle, characters.Simulation.Bodies);
             //Use a simple sorta-neck model so that when the camera looks down, the center of the screen sees past the character.
             //Makes mouselocked ray picking easier.
-            camera.Position = characterBody.Pose.Position + new Vector3(0, shape.HalfLength, 0) + 
-                camera.Up * (shape.Radius * 1.2f) - 
+            camera.Position = characterBody.Pose.Position + new Vector3(0, shape.HalfLength, 0) +
+                camera.Up * (shape.Radius * 1.2f) -
                 camera.Forward * (shape.HalfLength + shape.Radius) * 4;
         }
 
@@ -209,27 +209,28 @@ namespace Demos.Demos
             Characters.Initialize(simulation);
         }
     }
-    
+
     public class CharacterDemo : Demo
     {
         CharacterControllers characters;
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(20, 10, 20);
-            camera.Yaw = 0;
+            camera.Yaw = MathF.PI;
             camera.Pitch = 0;
             var masks = new BodyProperty<ulong>();
             characters = new CharacterControllers(BufferPool);
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
-            CreateCharacter(new Vector3(0, 2, 0));
+            CreateCharacter(new Vector3(0, 2, -4));
 
+            //Create a bunch of legos to hurt your feet on.
             var random = new Random(5);
             var origin = new Vector3(-3f, 0.5f, 0);
             var spacing = new Vector3(0.5f, 0, -0.5f);
             for (int i = 0; i < 12; ++i)
             {
-                for (int j = 0; j < 100; ++j)
+                for (int j = 0; j < 12; ++j)
                 {
                     var position = origin + new Vector3(i, 0, j) * spacing;
                     var orientation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble())), 10 * (float)random.NextDouble());
@@ -253,19 +254,69 @@ namespace Demos.Demos
                 }
             }
 
-            //const int planeWidth = 256;
-            //const int planeHeight = 256;
-            //MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
-            //    (int x, int y) =>
-            //    {
-            //        Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
-            //        return new Vector3(offsetFromCenter.X, MathF.Cos(x / 2f) + MathF.Sin(y / 2f), offsetFromCenter.Y);
-            //    }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
-            //Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
-            //    new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
+            //Add some spinning fans to get slapped by.
+            var bladeDescription = BodyDescription.CreateConvexDynamic(new Vector3(), 3, Simulation.Shapes, new Box(10, 0.2f, 2));
+            var bladeBaseDescription = BodyDescription.CreateConvexKinematic(new Vector3(), Simulation.Shapes, new Box(0.2f, 1, 0.2f));
+            for (int i = 0; i < 3; ++i)
+            {
+                bladeBaseDescription.Pose.Position = new Vector3(-22, 1, i * 11);
+                bladeDescription.Pose.Position = new Vector3(-22, 1.7f, i * 11);
+                var baseHandle = Simulation.Bodies.Add(bladeBaseDescription);
+                var bladeHandle = Simulation.Bodies.Add(bladeDescription);
+                Simulation.Solver.Add(baseHandle, bladeHandle,
+                    new Hinge
+                    {
+                        LocalHingeAxisA = Vector3.UnitY,
+                        LocalHingeAxisB = Vector3.UnitY,
+                        LocalOffsetA = new Vector3(0, 0.7f, 0),
+                        LocalOffsetB = new Vector3(0, 0, 0),
+                        SpringSettings = new SpringSettings(30, 1)
+                    });
+                Simulation.Solver.Add(baseHandle, bladeHandle,
+                    new AngularAxisMotor
+                    {
+                        LocalAxisA = Vector3.UnitY,
+                        TargetVelocity = (i + 1) * (i + 1) * (i + 1) * (i + 1) * 0.2f,
+                        Settings = new MotorSettings(5 * (i + 1), 0.0001f)
+                    });
+            }
 
+            //Include a giant newt to test character-newt behavior and to ensure thematic consistency.
             MeshDemo.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(15, 15, 15), out var newtMesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(newtMesh), 0.1f)));
+
+            //Give the newt a tongue, I guess.
+            var tongueBase = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(0, 8.4f, 24), default, default));
+            var tongue = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 8.4f, 27.5f), 1, Simulation.Shapes, new Box(1, 0.1f, 6f)));
+            Simulation.Solver.Add(tongueBase, tongue, new Hinge
+            {
+                LocalHingeAxisA = Vector3.UnitX,
+                LocalHingeAxisB = Vector3.UnitX,
+                LocalOffsetB = new Vector3(0, 0, -3f),
+                SpringSettings = new SpringSettings(30, 1)
+            });
+            Simulation.Solver.Add(tongueBase, tongue, new AngularServo
+            {
+                TargetRelativeRotationLocalA = Quaternion.Identity,
+                ServoSettings = ServoSettings.Default,
+                SpringSettings = new SpringSettings(2, 0)
+            });
+
+            //And a seesaw thing?
+            var seesawBase = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(0, 1f, 34f), new CollidableDescription(Simulation.Shapes.Add(new Box(0.2f, 1, 0.2f)), 0.1f), new BodyActivityDescription(0.01f)));
+            var seesaw = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 1.7f, 34f), 1, Simulation.Shapes, new Box(1, 0.1f, 6f)));
+            Simulation.Solver.Add(seesawBase, seesaw, new Hinge
+            {
+                LocalHingeAxisA = Vector3.UnitX,
+                LocalHingeAxisB = Vector3.UnitX,
+                LocalOffsetA = new Vector3(0, 0.7f, 0),
+                LocalOffsetB = new Vector3(0, 0, 0),
+                SpringSettings = new SpringSettings(30, 1)
+            });
+
+            Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 2.25f, 35.5f), 0.5f, Simulation.Shapes, new Box(1f, 1f, 1f)));
+
+            //Prevent the character from falling into the void.
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
         }
 

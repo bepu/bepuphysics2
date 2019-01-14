@@ -65,8 +65,9 @@ namespace BepuPhysics
         {
             BodyActivityDescription activity;
             activity.MinimumTimestepCountUnderThreshold = 32;
-            shape.ComputeAngularExpansionData(out var maximumRadius, out _);
-            activity.SleepThreshold = maximumRadius * maximumRadius * 0.01f;
+            shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
+            var minimumRadius = maximumRadius - maximumAngularExpansion;
+            activity.SleepThreshold = minimumRadius * minimumRadius * 0.1f;
             return activity;
         }
 

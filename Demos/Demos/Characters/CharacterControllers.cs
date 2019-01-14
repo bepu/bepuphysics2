@@ -787,14 +787,6 @@ namespace Demos.Demos.Characters
             if (!disposed)
             {
                 disposed = true;
-                for (int i = 0; i < characters.Count; ++i)
-                {
-                    ref var character = ref characters[i];
-                    if (character.Supported)
-                    {
-                        Simulation.Solver.Remove(character.MotionConstraintHandle);
-                    }
-                }
                 Simulation.Timestepper.BeforeCollisionDetection -= PrepareForContacts;
                 Simulation.Timestepper.CollisionsDetected -= AnalyzeContacts;
                 characterIdPool.Dispose(pool.SpecializeFor<int>());
