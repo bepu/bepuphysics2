@@ -16,7 +16,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     public class ConvexMeshSweepTask<TConvex, TConvexWide, TMesh, TOverlapFinder> : SweepTask
         where TConvex : struct, IConvexShape
         where TConvexWide : struct, IShapeWide<TConvex>
-        where TMesh : struct, IMeshShape
+        where TMesh : struct, IHomogeneousCompoundShape<Triangle, TriangleWide>
         where TOverlapFinder : struct, IConvexCompoundSweepOverlapFinder<TConvex, TMesh>
 
     {
@@ -47,7 +47,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     var childIndex = overlaps.Overlaps[i];
                     if (filter.AllowTest(flipRequired ? 0 : childIndex, flipRequired ? childIndex : 0))
                     {
-                        mesh.GetLocalTriangle(childIndex, out var triangle);
+                        mesh.GetLocalChild(childIndex, out var triangle);
                         var triangleCenter = (triangle.A + triangle.B + triangle.C) * (1f / 3f);
                         triangle.A -= triangleCenter;
                         triangle.B -= triangleCenter;

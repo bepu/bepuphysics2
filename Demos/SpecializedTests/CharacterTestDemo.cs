@@ -15,8 +15,9 @@ using BepuUtilities.Memory;
 using static BepuUtilities.GatherScatter;
 using Demos.Demos.Characters;
 using BepuUtilities.Collections;
+using Demos.Demos;
 
-namespace Demos.Demos.SpecializedTests
+namespace Demos.SpecializedTests
 {
     public class CharacterTestDemo : Demo
     {
@@ -121,23 +122,23 @@ namespace Demos.Demos.SpecializedTests
                 //character.TargetVelocity.X = rotatedVelocity.X;
                 //character.TargetVelocity.Y = rotatedVelocity.Z;          
             }
-            {
-                if (characters.CharacterCount > 0)
-                {
-                    var indexToRemove = frameIndex % characters.CharacterCount;
-                    removedCharacters.EnqueueUnsafely(characters.GetCharacterByIndex(indexToRemove));
-                    characters.RemoveCharacterByIndex(indexToRemove);
-                }
+            //{
+            //    if (characters.CharacterCount > 0)
+            //    {
+            //        var indexToRemove = frameIndex % characters.CharacterCount;
+            //        removedCharacters.EnqueueUnsafely(characters.GetCharacterByIndex(indexToRemove));
+            //        characters.RemoveCharacterByIndex(indexToRemove);
+            //    }
 
-                var readdCount = (int)(removedCharacters.Count * 0.05f);
-                for (int i = 0; i < readdCount; ++i)
-                {
-                    var toAdd = removedCharacters.Dequeue();
-                    ref var character = ref characters.AllocateCharacter(toAdd.BodyHandle, out var characterIndex);
-                    character = toAdd;
-                }
+            //    var readdCount = (int)(removedCharacters.Count * 0.05f);
+            //    for (int i = 0; i < readdCount; ++i)
+            //    {
+            //        var toAdd = removedCharacters.Dequeue();
+            //        ref var character = ref characters.AllocateCharacter(toAdd.BodyHandle, out var characterIndex);
+            //        character = toAdd;
+            //    }
 
-            }
+            //}
             frameIndex++;
             base.Update(window, camera, input, dt);
         }

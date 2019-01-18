@@ -6,7 +6,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public unsafe struct CompoundMeshContinuations<TCompound, TMesh> : ICompoundPairContinuationHandler<CompoundMeshReduction>
         where TCompound : ICompoundShape
-        where TMesh : IMeshShape
+        where TMesh : IHomogeneousCompoundShape<Triangle, TriangleWide>
     {
         public CollisionContinuationType CollisionContinuationType => CollisionContinuationType.CompoundMeshReduction;
 
@@ -59,7 +59,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref var triangle = ref continuation.Triangles[continuationChildIndex];
             childShapeDataB = Unsafe.AsPointer(ref triangle);
             childTypeB = triangle.TypeId;
-            Unsafe.AsRef<TMesh>(pair.B).GetLocalTriangle(childIndexB, out continuation.Triangles[continuationChildIndex]);
+            Unsafe.AsRef<TMesh>(pair.B).GetLocalChild(childIndexB, out continuation.Triangles[continuationChildIndex]);
             ref var continuationChild = ref continuation.Inner.Children[continuationChildIndex];
             //In meshes, the triangle's vertices already contain the offset, so there is no additional offset.                                 
             childPoseB = new RigidPose(default, pair.OrientationB);

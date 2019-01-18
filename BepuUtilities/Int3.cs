@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BepuUtilities.Collections;
+using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -7,7 +8,7 @@ namespace BepuUtilities
     /// <summary>
     /// A set of 3 integers, useful for spatial hashing.
     /// </summary>
-    public struct Int3 : IEquatable<Int3>
+    public struct Int3 : IEquatable<Int3>, IEqualityComparerRef<Int3>
     {
         public int X;
         public int Y;
@@ -50,6 +51,18 @@ namespace BepuUtilities
         public override string ToString()
         {
             return $"{{{X}, {Y}, {Z}}}";
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Hash(ref Int3 item)
+        {
+            return item.GetHashCode();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(ref Int3 a, ref Int3 b)
+        {
+            return a.X == b.X && a.Y == b.Y && a.Z == b.Z;
         }
     }
 

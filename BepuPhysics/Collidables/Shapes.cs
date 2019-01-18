@@ -253,9 +253,11 @@ namespace BepuPhysics.Collidables
         }
     }
 
-    public class MeshShapeBatch<TShape> : ShapeBatch<TShape> where TShape : struct, IMeshShape
+    public class HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide> : ShapeBatch<TShape> where TShape : struct, IHomogeneousCompoundShape<TChildShape, TChildShapeWide>
+        where TChildShape : IConvexShape
+        where TChildShapeWide : IShapeWide<TChildShape>
     {
-        public MeshShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
+        public HomogeneousCompoundShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
         {
             Compound = true;
         }
@@ -267,12 +269,12 @@ namespace BepuPhysics.Collidables
 
         protected override void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool)
         {
-            //Meshes don't have any shape-registered children.
+            //Meshes and other single-type containers don't have any shape-registered children.
         }
 
         public override void ComputeBounds(ref BoundingBoxBatcher batcher)
         {
-            batcher.ExecuteMeshBatch(this);
+            batcher.ExecuteHomogeneousCompoundBatch(this);
         }
 
         public override void ComputeBounds(int shapeIndex, in RigidPose pose, out Vector3 min, out Vector3 max)

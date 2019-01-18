@@ -12,8 +12,8 @@ using Quaternion = BepuUtilities.Quaternion;
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct MeshPairOverlapFinder<TMeshA, TMeshB> : ICompoundPairOverlapFinder
-        where TMeshA : struct, IMeshShape
-        where TMeshB : struct, IMeshShape
+        where TMeshA : struct, IHomogeneousCompoundShape<Triangle, TriangleWide>
+        where TMeshB : struct, IHomogeneousCompoundShape<Triangle, TriangleWide>
     {
 
         public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps)
@@ -21,7 +21,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var totalCompoundChildCount = 0;
             for (int i = 0; i < pairCount; ++i)
             {
-                totalCompoundChildCount += Unsafe.AsRef<TMeshA>(pairs[i].A).TriangleCount;
+                totalCompoundChildCount += Unsafe.AsRef<TMeshA>(pairs[i].A).ChildCount;
             }
             overlaps = new CompoundPairOverlaps(pool, pairCount, totalCompoundChildCount);
             var pairsToTest = stackalloc PairsToTestForOverlap[totalCompoundChildCount];
@@ -30,8 +30,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             {
                 ref var pair = ref pairs[i];
                 ref var meshA = ref Unsafe.AsRef<TMeshA>(pair.A);
-                overlaps.CreatePairOverlaps(meshA.TriangleCount, pool);
-                for (int j = 0; j < meshA.TriangleCount; ++j)
+                overlaps.CreatePairOverlaps(meshA.ChildCount, pool);
+                for (int j = 0; j < meshA.ChildCount; ++j)
                 {
                     var subpairIndex = nextSubpairIndex++;
                     overlaps.GetOverlapsForPair(subpairIndex).ChildIndex = j;
@@ -58,14 +58,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Negate(localOffsetB, out var localOffsetA);
 
                 ref var meshA = ref Unsafe.AsRef<TMeshA>(pair.A);
-                for (int j = 0; j < meshA.TriangleCount; j += Vector<float>.Count)
+                for (int j = 0; j < meshA.ChildCount; j += Vector<float>.Count)
                 {
-                    var count = meshA.TriangleCount - j;
+                    var count = meshA.ChildCount - j;
                     if (count > Vector<float>.Count)
                         count = Vector<float>.Count;
                     for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                     {
-                        meshA.GetLocalTriangle(j + innerIndex, ref GatherScatter.GetOffsetInstance(ref triangles, innerIndex));
+                        meshA.GetLocalChild(j + innerIndex, ref GatherScatter.GetOffsetInstance(ref triangles, innerIndex));
                     }
                     triangles.GetBounds(ref localOrientationA, out var maximumRadius, out var maximumAngularExpansion, out var min, out var max);
 

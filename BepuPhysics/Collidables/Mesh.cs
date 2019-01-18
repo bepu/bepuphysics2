@@ -15,7 +15,29 @@ namespace BepuPhysics.Collidables
         void OnRayHit(int childIndex, float* maximumT, float t, in Vector3 normal);
     }
 
-    public struct Mesh : IMeshShape
+    public unsafe struct ShapeTreeOverlapEnumerator<TSubpairOverlaps> : IBreakableForEach<int> where TSubpairOverlaps : ICollisionTaskSubpairOverlaps
+    {
+        public BufferPool Pool;
+        public void* Overlaps;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool LoopBody(int i)
+        {
+            Unsafe.AsRef<TSubpairOverlaps>(Overlaps).Allocate(Pool) = i;
+            return true;
+        }
+    }
+    public unsafe struct ShapeTreeSweepLeafTester<TOverlaps> : ISweepLeafTester where TOverlaps : ICollisionTaskSubpairOverlaps
+    {
+        public BufferPool Pool;
+        public void* Overlaps;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void TestLeaf(int leafIndex, ref float maximumT)
+        {
+            Unsafe.AsRef<TOverlaps>(Overlaps).Allocate(Pool) = leafIndex;
+        }
+    }
+
+    public struct Mesh : IHomogeneousCompoundShape<Triangle, TriangleWide>
     {
         public Tree Tree;
         public Buffer<Triangle> Triangles;
@@ -54,10 +76,10 @@ namespace BepuPhysics.Collidables
             Scale = scale;
         }
 
-        public int TriangleCount => Triangles.Length;
+        public int ChildCount => Triangles.Length;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GetLocalTriangle(int triangleIndex, out Triangle target)
+        public unsafe void GetLocalChild(int triangleIndex, out Triangle target)
         {
             ref var source = ref Triangles[triangleIndex];
             target.A = scale * source.A;
@@ -65,7 +87,7 @@ namespace BepuPhysics.Collidables
             target.C = scale * source.C;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GetLocalTriangle(int triangleIndex, ref TriangleWide target)
+        public unsafe void GetLocalChild(int triangleIndex, ref TriangleWide target)
         {
             //This inserts a triangle into the first slot of the given wide instance.
             ref var source = ref Triangles[triangleIndex];
@@ -101,7 +123,7 @@ namespace BepuPhysics.Collidables
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
-            return new MeshShapeBatch<Mesh>(pool, initialCapacity);
+            return new HomogeneousCompoundShapeBatch<Mesh, Triangle, TriangleWide>(pool, initialCapacity);
         }
 
         unsafe struct FirstHitLeafTester : IRayLeafTester
@@ -244,20 +266,7 @@ namespace BepuPhysics.Collidables
                     hitHandler.OnRayHit(i, leafTester.MinimumT, normal);
                 }
             }
-        }
-
-
-        unsafe struct Enumerator<TSubpairOverlaps> : IBreakableForEach<int> where TSubpairOverlaps : ICollisionTaskSubpairOverlaps
-        {
-            public BufferPool Pool;
-            public void* Overlaps;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool LoopBody(int i)
-            {
-                Unsafe.AsRef<TSubpairOverlaps>(Overlaps).Allocate(Pool) = i;
-                return true;
-            }
-        }
+        }       
 
         public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
@@ -266,7 +275,7 @@ namespace BepuPhysics.Collidables
             //For now, we don't use anything tricky. Just traverse every child against the tree sequentially.
             //TODO: This sequentializes a whole lot of cache misses. You could probably get some benefit out of traversing all pairs 'simultaneously'- that is, 
             //using the fact that we have lots of independent queries to ensure the CPU always has something to do.
-            Enumerator<TSubpairOverlaps> enumerator;
+            ShapeTreeOverlapEnumerator<TSubpairOverlaps> enumerator;
             enumerator.Pool = pool;
             for (int i = 0; i < count; ++i)
             {
@@ -279,23 +288,13 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        unsafe struct SweepLeafTester<TOverlaps> : ISweepLeafTester where TOverlaps : ICollisionTaskSubpairOverlaps
-        {
-            public BufferPool Pool;
-            public void* Overlaps;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void TestLeaf(int leafIndex, ref float maximumT)
-            {
-                Unsafe.AsRef<TOverlaps>(Overlaps).Allocate(Pool) = leafIndex;
-            }
-        }
         public unsafe void FindLocalOverlaps<TOverlaps>(in Vector3 min, in Vector3 max, in Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             var scaledMin = min * inverseScale;
             var scaledMax = max * inverseScale;
             var scaledSweep = sweep * inverseScale;
-            SweepLeafTester<TOverlaps> enumerator;
+            ShapeTreeSweepLeafTester<TOverlaps> enumerator;
             enumerator.Pool = pool;
             enumerator.Overlaps = overlaps;
             Tree.Sweep(scaledMin, scaledMax, scaledSweep, maximumT, ref enumerator);

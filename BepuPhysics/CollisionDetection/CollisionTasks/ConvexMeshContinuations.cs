@@ -6,7 +6,7 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public struct ConvexMeshContinuations<TMesh> : IConvexCompoundContinuationHandler<MeshReduction> where TMesh : IMeshShape
+    public struct ConvexMeshContinuations<TMesh> : IConvexCompoundContinuationHandler<MeshReduction> where TMesh : IHomogeneousCompoundShape<Triangle, TriangleWide>
     {
         public CollisionContinuationType CollisionContinuationType => CollisionContinuationType.MeshReduction;
 
@@ -35,7 +35,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref var triangle = ref continuation.Triangles[continuationChildIndex];
             childShapeDataB = Unsafe.AsPointer(ref triangle);
             childTypeB = triangle.TypeId;
-            Unsafe.AsRef<TMesh>(pair.B).GetLocalTriangle(childIndex, out continuation.Triangles[continuationChildIndex]);
+            Unsafe.AsRef<TMesh>(pair.B).GetLocalChild(childIndex, out continuation.Triangles[continuationChildIndex]);
             ref var continuationChild = ref continuation.Inner.Children[continuationChildIndex];
             //Triangles already have their local pose baked into their vertices, so we just need the orientation.
             childPoseB = new RigidPose(default, pair.OrientationB);

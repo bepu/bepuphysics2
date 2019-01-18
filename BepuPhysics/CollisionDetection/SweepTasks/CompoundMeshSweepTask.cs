@@ -15,7 +15,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public class CompoundMeshSweepTask<TCompound, TMesh, TOverlapFinder> : SweepTask
         where TCompound : struct, ICompoundShape
-        where TMesh : struct, IMeshShape
+        where TMesh : struct, IHomogeneousCompoundShape<Triangle, TriangleWide>
         where TOverlapFinder : struct, ICompoundPairSweepOverlapFinder<TCompound, TMesh>
     {
         public CompoundMeshSweepTask()
@@ -46,7 +46,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     var triangleIndex = childOverlaps.Overlaps[j];
                     if (filter.AllowTest(flipRequired ? triangleIndex : childOverlaps.ChildIndex, flipRequired ? childOverlaps.ChildIndex : triangleIndex))
                     {
-                        mesh.GetLocalTriangle(triangleIndex, out var triangle);
+                        mesh.GetLocalChild(triangleIndex, out var triangle);
                         ref var compoundChild = ref compound.GetChild(childOverlaps.ChildIndex);
                         var compoundChildType = compoundChild.ShapeIndex.Type;
                         var task = sweepTasks.GetTask(compoundChildType, Triangle.Id);

@@ -41,6 +41,9 @@ namespace BepuPhysics.Collidables
         bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal);
     }
 
+    /// <summary>
+    /// Defines a compound shape type that has children of potentially different types.
+    /// </summary>
     public interface ICompoundShape : IShape, IBoundsQueryableCompound
     {
         //Note that compound shapes have no wide GetBounds function. Compounds, by virtue of containing shapes of different types, cannot be usefully vectorized over.
@@ -57,18 +60,23 @@ namespace BepuPhysics.Collidables
         void Dispose(BufferPool pool);
     }
 
-    public interface IMeshShape : IShape, IBoundsQueryableCompound
+    /// <summary>
+    /// Defines a compound shape type that has children of only one type.
+    /// </summary>
+    /// <typeparam name="TChildShape">Type of the child shapes.</typeparam>
+    /// <typeparam name="TChildShapeWide">Type of the child shapes, formatted in AOSOA layout.</typeparam>
+    public interface IHomogeneousCompoundShape<TChildShape, TChildShapeWide> : IShape, IBoundsQueryableCompound
+        where TChildShape : IConvexShape
+        where TChildShapeWide : IShapeWide<TChildShape>
     {
-        //Meshes have homogenous child types, so internal vectorization is in principle possible. And it's hard to vectorize over multiple meshes.
-        //And the speed of mesh bounds calculation is pretty irrelevant, since meshes should essentially always be static.
         void ComputeBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max);
 
         bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal);
         void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler;
 
-        int TriangleCount { get; }
-        void GetLocalTriangle(int triangleIndex, out Triangle triangle);
-        void GetLocalTriangle(int triangleIndex, ref TriangleWide triangle);
+        int ChildCount { get; }
+        void GetLocalChild(int childIndex, out TChildShape childData);
+        void GetLocalChild(int childIndex, ref TChildShapeWide childData);
         void Dispose(BufferPool pool);
     }
 

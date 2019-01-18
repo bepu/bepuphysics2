@@ -174,7 +174,10 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe void ExecuteMeshBatch<TShape>(MeshShapeBatch<TShape> shapeBatch) where TShape : struct, IMeshShape
+        public unsafe void ExecuteHomogeneousCompoundBatch<TShape, TChildShape, TChildShapeWide>(HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide> shapeBatch) 
+            where TShape : struct, IHomogeneousCompoundShape<TChildShape, TChildShapeWide>
+            where TChildShape : IConvexShape
+            where TChildShapeWide : IShapeWide<TChildShape>
         {
             ref var batch = ref batches[shapeBatch.TypeId];
             ref var activeSet = ref bodies.ActiveSet;
