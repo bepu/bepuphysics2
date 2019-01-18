@@ -225,6 +225,7 @@ namespace BepuPhysics.CollisionDetection
             Shapes[shapeIndexB.Type].GetShapeData(shapeIndexB.Index, out var shapeB, out var shapeSizeB);
             AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, velocityA, velocityB, speculativeMargin, maximumExpansion, continuation);
         }
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, in Vector3 offsetB, in Quaternion orientationA, in Quaternion orientationB,
             float speculativeMargin, in PairContinuation continuation)
@@ -248,6 +249,21 @@ namespace BepuPhysics.CollisionDetection
             //TODO: Given the size of these copies, it's not clear that this copy implementation is ideal. Wouldn't worry too much about it.
             Buffer.MemoryCopy(shapeA, cachedShapeA, shapeSizeA, shapeSizeA);
             Buffer.MemoryCopy(shapeB, cachedShapeB, shapeSizeB, shapeSizeB);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void CacheShapeB(int shapeTypeA, int shapeTypeB, void* shapeDataB, int shapeSizeB, out void* cachedShapeDataB)
+        {
+            ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
+            ref var batch = ref batches[reference.TaskIndex];
+            if (!batch.Shapes.Buffer.Allocated)
+            {
+                var size = reference.BatchSize * (Shapes[shapeTypeA].ShapeDataSize + shapeSizeB);
+                Pool.Take(size, out batch.Shapes.Buffer);
+                Debug.Assert(batch.Shapes.ByteCount == 0);
+            }
+            cachedShapeDataB = batch.Shapes.Allocate(shapeSizeB);
+            Buffer.MemoryCopy(shapeDataB, cachedShapeDataB, shapeSizeB, shapeSizeB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

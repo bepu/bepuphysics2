@@ -18,7 +18,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             where TCallbacks : struct, ICollisionCallbacks;
 
         void ConfigureContinuationChild<TCallbacks>(
-            ref CollisionBatcher<TCallbacks> collisionBatcher, ref TContinuation continuation, int continuationChildIndex, in BoundsTestedPair pair, int childIndex,
+            ref CollisionBatcher<TCallbacks> collisionBatcher, ref TContinuation continuation, int continuationChildIndex, in BoundsTestedPair pair, int shapeTypeA, int childIndex,
             out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
             where TCallbacks : struct, ICollisionCallbacks;
     }
@@ -78,7 +78,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             continuationHandler.CollisionContinuationType, continuationIndex, continuationChildIndex);
                         if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
                         {
-                            continuationHandler.ConfigureContinuationChild(ref batcher, ref continuation, continuationChildIndex, pair, childIndex,
+                            continuationHandler.ConfigureContinuationChild(ref batcher, ref continuation, continuationChildIndex, pair, ShapeTypeIndexA, childIndex,
                                 out var compoundChildPose, out var compoundChildType, out var compoundChildShapeData);
 
                             var convexToChild = compoundChildPose.Position + pair.OffsetB;

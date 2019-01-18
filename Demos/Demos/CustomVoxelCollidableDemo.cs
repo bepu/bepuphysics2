@@ -37,7 +37,7 @@ namespace Demos.Demos
         public QuickList<Vector3> VoxelIndices;
 
         /// <summary>
-        /// Size of each individual voxel. Updating this value requires refitting the Tree.
+        /// Size of each individual voxel. Updating this value requires updating the tree leaf bounds and refitting.
         /// </summary>
         public Vector3 VoxelSize;
 
@@ -156,15 +156,68 @@ namespace Demos.Demos
             Tree.Dispose(pool);
             VoxelIndices.Dispose(pool);
         }
-
-
     }
 
-    //The Simulation.Shapes collection stores all shape data in a simulation, segregated by type.
-    //Systems can call into the type-specific shape batches to execute shape defined logic.
-    //(Most shape types just use one of the generic types like ConvexShapeBatch<T>, CompoundShapeBatch<T>, MeshShapeBatch<T>,
-    //but voxels aren't a perfect fit for any of those. You could pretty easily generalize MeshShapeBatch<T> to cover any group type
-    //that always outputs the same shape type, but rather than doing that, this demo will show how to create a unique shape batch type.)
+    //"Continuations" tell the collision batcher what to do with the collision detection results after completing a batch.
+    //For simple convex-convex pairs in the usual narrow phase pipeline, they just report the manifold for constraint generation.
+    //For more complex types like compounds, there may be multiple subpairs, each with their own contact manifold.
+    //Those manifolds are combined in a postprocessing step. For most compounds, this is a "NonconvexReduction".
+    //There is also a "MeshReduction" which is a bit more involved- it tries to smooth out collisions at the boundaries of triangles to avoid bumps during sliding.
+    //For our voxel set, we'll just use the NonconvexReduction despite the fact that it'll allow bumps at shape boundaries during sliding.
+    //(I'll leave boundary smoothing for voxels as a not-easy exercise for the highly motivated reader.)
+    public struct ConvexVoxelsContinuations : IConvexCompoundContinuationHandler<NonconvexReduction>
+    {
+        public CollisionContinuationType CollisionContinuationType => CollisionContinuationType.NonconvexReduction;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexReduction CreateContinuation<TCallbacks>(
+            ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, out int continuationIndex)
+            where TCallbacks : struct, ICollisionCallbacks
+        {
+            return ref collisionBatcher.NonconvexReductions.CreateContinuation(childCount, collisionBatcher.Pool, out continuationIndex);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void ConfigureContinuationChild<TCallbacks>(
+            ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReduction continuation, int continuationChildIndex, in BoundsTestedPair pair, int shapeTypeA, int childIndex,
+            out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
+            where TCallbacks : struct, ICollisionCallbacks
+        {
+            ref var voxels = ref Unsafe.AsRef<Voxels>(pair.B);
+            ref var voxelIndex = ref voxels.VoxelIndices[childIndex];
+            var localPosition = (voxelIndex + new Vector3(0.5f)) * voxels.VoxelSize;
+            Quaternion.TransformWithoutOverlap(localPosition, pair.OrientationB, out childPoseB.Position);
+            childPoseB.Orientation = Quaternion.Identity;
+            ref var continuationChild = ref continuation.Children[continuationChildIndex];
+            childTypeB = Box.Id;
+            //The collision batcher accumulates pairs to process by pointer, since in almost every other case the shape data is available by pointer already.
+            //But in the voxel set case, we don't actually have an explicit shape (or a secondary storage location as we have in MeshReductions).
+            //We can't just allocate a shape on the stack and return a pointer to it- the data needs to be valid until the collision batcher flushes that type batch.
+            //Fortunately, the collision batcher exposes a handy per-pair-type heap allocated memory blob that we can use to store the shape data.
+            //When the collision batcher flushes, it'll automatically get cleaned up.
+            var halfSize = voxels.VoxelSize * 0.5f;
+            //This reinterprets the vector3 as a Box to copy into the cache, which is a bit gross.
+            //The shape cache doesn't actually have any type information- it's just strategically placed memory.
+            //In other words, we're just giving a place for these 12 bytes to live until the flush.
+            collisionBatcher.CacheShapeB(shapeTypeA, childTypeB, Unsafe.AsPointer(ref halfSize), 12, out childShapeDataB);
+            //Collision processors expect data to be provided in a specific order. The flip mask is used to make sure we're giving the data in the proper order.
+            //The collision batcher also takes into account the flip mask when reporting collision data through callbacks to preserve original user order.
+            if (pair.FlipMask < 0)
+            {
+                continuationChild.ChildIndexA = childIndex;
+                continuationChild.ChildIndexB = 0;
+                continuationChild.OffsetA = childPoseB.Position;
+                continuationChild.OffsetB = default;
+            }
+            else
+            {
+                continuationChild.ChildIndexA = 0;
+                continuationChild.ChildIndexB = childIndex;
+                continuationChild.OffsetA = default;
+                continuationChild.OffsetB = childPoseB.Position;
+            }
+        }
+    }
 
 
     public class CustomVoxelCollidableDemo : Demo
@@ -176,7 +229,10 @@ namespace Demos.Demos
             camera.Pitch = MathHelper.Pi * 0.05f;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
-            //Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere, Voxels, ConvexCompoundOverlapFinder<Sphere, SphereWide, Voxels>, ConvexMeshContinuations<Voxels>, NonconvexReduction>());
+            Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere, Voxels, ConvexCompoundOverlapFinder<Sphere, SphereWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
+            Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, Voxels, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
+            Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Box, Voxels, ConvexCompoundOverlapFinder<Box, BoxWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
+            Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, Voxels, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 1, 300)), 0.1f)));
         }

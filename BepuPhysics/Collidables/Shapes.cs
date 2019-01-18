@@ -28,7 +28,11 @@ namespace BepuPhysics.Collidables
         /// Gets whether this shape batch's contained type potentially contains children that require other shape batches.
         /// </summary>
         public bool Compound { get; protected set; }
-        
+        /// <summary>
+        /// Gets the size of the shape type stored in this batch in bytes.
+        /// </summary>
+        public int ShapeDataSize { get { return shapeDataSize; } }
+
         protected abstract void Dispose(int index, BufferPool pool);
         protected abstract void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool);
 
