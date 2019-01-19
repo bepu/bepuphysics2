@@ -26,7 +26,7 @@ namespace Demos.Demos
     {
         //Type ids should be unique across all shape types in a simulation.
         public int TypeId => 12;
-        
+
         //Using an object space tree isn't necessarily ideal for a highly regular data like voxels.
         //We're using it here since it exists already and a voxel-specialized version doesn't.
         //If you wanted maximum efficiency for some specific use case- like a world containing
@@ -149,7 +149,7 @@ namespace Demos.Demos
             normal = default;
             return false;
         }
-        
+
         //Some shapes take advantage of multiple simultaneous incoming rays to perform batch execution.
         //That can improve performance quite a bit in some cases. We don't bother taking advantage of it here, but you could add it if you wanted!
         public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler
@@ -172,21 +172,23 @@ namespace Demos.Demos
                 }
             }
         }
-        
+
         public void GetLocalChild(int childIndex, out Box shape)
         {
-            shape.HalfWidth = VoxelSize.X;
-            shape.HalfHeight = VoxelSize.Y;
-            shape.HalfLength = VoxelSize.Z;
+            var halfSize = VoxelSize * 0.5f;
+            shape.HalfWidth = halfSize.X;
+            shape.HalfHeight = halfSize.Y;
+            shape.HalfLength = halfSize.Z;
         }
 
         public void GetLocalChild(int childIndex, ref BoxWide shapeWide)
         {
             //This function provides a reference to a lane in an AOSOA structure.
             //We are to fill in the first lane and ignore the others.
-            GatherScatter.GetFirst(ref shapeWide.HalfWidth) = VoxelSize.X;
-            GatherScatter.GetFirst(ref shapeWide.HalfHeight) = VoxelSize.Y;
-            GatherScatter.GetFirst(ref shapeWide.HalfLength) = VoxelSize.Z;
+            var halfSize = VoxelSize * 0.5f;
+            GatherScatter.GetFirst(ref shapeWide.HalfWidth) = halfSize.X;
+            GatherScatter.GetFirst(ref shapeWide.HalfHeight) = halfSize.Y;
+            GatherScatter.GetFirst(ref shapeWide.HalfLength) = halfSize.Z;
         }
 
         public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
@@ -247,17 +249,15 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ConfigureContinuationChild<TCallbacks>(
-            ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReduction continuation, int continuationChildIndex, in BoundsTestedPair pair, int shapeTypeA, int childIndex,
-            out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
+        public static unsafe void GetChildData<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReductionChild continuationChild,
+            in BoundsTestedPair pair, int shapeTypeA, int childIndexB, out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
             where TCallbacks : struct, ICollisionCallbacks
         {
             ref var voxels = ref Unsafe.AsRef<Voxels>(pair.B);
-            ref var voxelIndex = ref voxels.VoxelIndices[childIndex];
+            ref var voxelIndex = ref voxels.VoxelIndices[childIndexB];
             var localPosition = (voxelIndex + new Vector3(0.5f)) * voxels.VoxelSize;
             Quaternion.TransformWithoutOverlap(localPosition, pair.OrientationB, out childPoseB.Position);
             childPoseB.Orientation = Quaternion.Identity;
-            ref var continuationChild = ref continuation.Children[continuationChildIndex];
             childTypeB = Box.Id;
             //The collision batcher accumulates pairs to process by pointer, since in almost every other case the shape data is available by pointer already.
             //But in the voxel set case, we don't actually have an explicit shape (or a secondary storage location as we have in MeshReductions).
@@ -269,11 +269,21 @@ namespace Demos.Demos
             //The shape cache doesn't actually have any type information- it's just strategically placed memory.
             //In other words, we're just giving a place for these 12 bytes to live until the flush.
             collisionBatcher.CacheShapeB(shapeTypeA, childTypeB, Unsafe.AsPointer(ref halfSize), 12, out childShapeDataB);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void ConfigureContinuationChild<TCallbacks>(
+            ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReduction continuation, int continuationChildIndex, in BoundsTestedPair pair, int shapeTypeA, int childIndexB,
+            out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
+            where TCallbacks : struct, ICollisionCallbacks
+        {
+            ref var continuationChild = ref continuation.Children[continuationChildIndex];
+            GetChildData(ref collisionBatcher, ref continuationChild, pair, shapeTypeA, childIndexB, out childPoseB, out childTypeB, out childShapeDataB);
             //Collision processors expect data to be provided in a specific order. The flip mask is used to make sure we're giving the data in the proper order.
             //The collision batcher also takes into account the flip mask when reporting collision data through callbacks to preserve original user order.
             if (pair.FlipMask < 0)
             {
-                continuationChild.ChildIndexA = childIndex;
+                continuationChild.ChildIndexA = childIndexB;
                 continuationChild.ChildIndexB = 0;
                 continuationChild.OffsetA = childPoseB.Position;
                 continuationChild.OffsetB = default;
@@ -281,13 +291,64 @@ namespace Demos.Demos
             else
             {
                 continuationChild.ChildIndexA = 0;
-                continuationChild.ChildIndexB = childIndex;
+                continuationChild.ChildIndexB = childIndexB;
                 continuationChild.OffsetA = default;
                 continuationChild.OffsetB = childPoseB.Position;
             }
         }
     }
 
+    public unsafe struct CompoundVoxelsContinuations<TCompoundA> : ICompoundPairContinuationHandler<NonconvexReduction>
+        where TCompoundA : ICompoundShape
+    {
+        public CollisionContinuationType CollisionContinuationType => CollisionContinuationType.NonconvexReduction;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexReduction CreateContinuation<TCallbacks>(
+            ref CollisionBatcher<TCallbacks> collisionBatcher, int totalChildCount, ref Buffer<ChildOverlapsCollection> pairOverlaps, in BoundsTestedPair pair, out int continuationIndex)
+            where TCallbacks : struct, ICollisionCallbacks
+        {
+            return ref collisionBatcher.NonconvexReductions.CreateContinuation(totalChildCount, collisionBatcher.Pool, out continuationIndex);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void GetChildAData<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReduction continuation, in BoundsTestedPair pair, int childIndexA,
+            out RigidPose childPoseA, out int childTypeA, out void* childShapeDataA)
+            where TCallbacks : struct, ICollisionCallbacks
+        {
+            ref var compoundA = ref Unsafe.AsRef<TCompoundA>(pair.A);
+            ref var compoundChildA = ref compoundA.GetChild(childIndexA);
+            Compound.GetRotatedChildPose(compoundChildA.LocalPose, pair.OrientationA, out childPoseA);
+            childTypeA = compoundChildA.ShapeIndex.Type;
+            collisionBatcher.Shapes[childTypeA].GetShapeData(compoundChildA.ShapeIndex.Index, out childShapeDataA, out _);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void ConfigureContinuationChild<TCallbacks>(
+            ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReduction continuation, int continuationChildIndex, in BoundsTestedPair pair, int childIndexA, int childTypeA, int childIndexB, in RigidPose childPoseA,
+            out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
+            where TCallbacks : struct, ICollisionCallbacks
+        {
+            ref var continuationChild = ref continuation.Children[continuationChildIndex];
+
+            ConvexVoxelsContinuations.GetChildData(ref collisionBatcher, ref continuationChild, pair, childTypeA, childIndexB, out childPoseB, out childTypeB, out childShapeDataB);
+            if (pair.FlipMask < 0)
+            {
+                continuationChild.ChildIndexA = childIndexB;
+                continuationChild.ChildIndexB = childIndexA;
+                continuationChild.OffsetA = childPoseB.Position;
+                continuationChild.OffsetB = childPoseA.Position;
+            }
+            else
+            {
+                continuationChild.ChildIndexA = childIndexA;
+                continuationChild.ChildIndexB = childIndexB;
+                continuationChild.OffsetA = childPoseA.Position;
+                continuationChild.OffsetB = childPoseB.Position;
+            }
+        }
+
+    }
 
     public class CustomVoxelCollidableDemo : Demo
     {
@@ -300,16 +361,29 @@ namespace Demos.Demos
             camera.Pitch = MathHelper.Pi * 0.05f;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
+            //The narrow phase must be notified about the existence of the new collidable type. For every pair type we want to support, a collision task must be registered.
+            //All of the default engine types are registered upon simulation creation by a call to DefaultTypes.CreateDefaultCollisionTaskRegistry.
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere, Voxels, ConvexCompoundOverlapFinder<Sphere, SphereWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, Voxels, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Box, Voxels, ConvexCompoundOverlapFinder<Box, BoxWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, Voxels, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
 
+            Simulation.NarrowPhase.CollisionTaskRegistry.Register(new CompoundPairCollisionTask<Compound, Voxels, CompoundPairOverlapFinder<Compound, Voxels>, CompoundVoxelsContinuations<Compound>, NonconvexReduction>());
+            Simulation.NarrowPhase.CollisionTaskRegistry.Register(new CompoundPairCollisionTask<BigCompound, Voxels, CompoundPairOverlapFinder<BigCompound, Voxels>, CompoundVoxelsContinuations<BigCompound>, NonconvexReduction>());
+
+            //Note that this demo excludes mesh-voxels and voxels-voxels pairs. Those get a little more complicated since there's some gaps in the pre-built helpers.
+            //If you wanted to make your own, look into the various types related to meshes. They're a good starting point, although I'm not exactly happy with the complexity of the
+            //current design. They might receive some significant changes- keep that in mind if you create anything which depends heavily on their current implementation.
+
+            //To support sweep tests, we must also register sweep tasks.
+
+
             var widthInVoxels = 40;
-            var voxelIndices = new QuickList<Vector3>(widthInVoxels * widthInVoxels * widthInVoxels, BufferPool);
+            var heightInVoxels = 30;
+            var voxelIndices = new QuickList<Vector3>(widthInVoxels * heightInVoxels * widthInVoxels, BufferPool);
             for (int i = 0; i < widthInVoxels; ++i)
             {
-                for (int j = 0; j < widthInVoxels; ++j)
+                for (int j = 0; j < heightInVoxels; ++j)
                 {
                     for (int k = 0; k < widthInVoxels; ++k)
                     {

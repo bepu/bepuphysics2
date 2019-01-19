@@ -25,7 +25,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             where TCallbacks : struct, ICollisionCallbacks;
 
         void ConfigureContinuationChild<TCallbacks>(
-            ref CollisionBatcher<TCallbacks> collisionBatcher, ref TContinuation continuation, int continuationChildIndex, in BoundsTestedPair pair, int childIndexA, int childIndexB,
+            ref CollisionBatcher<TCallbacks> collisionBatcher, ref TContinuation continuation, int continuationChildIndex, in BoundsTestedPair pair, int childIndexA, int childTypeA, int childIndexB,
             in RigidPose childPoseA, out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
             where TCallbacks : struct, ICollisionCallbacks;
     }
@@ -98,7 +98,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                                 continuationHandler.CollisionContinuationType, continuationIndex, continuationChildIndex);
                             if (batcher.Callbacks.AllowCollisionTesting(pair.Continuation.PairId, childA, childB))
                             {
-                                continuationHandler.ConfigureContinuationChild(ref batcher, ref continuation, continuationChildIndex, pair, childOverlaps.ChildIndex, originalChildIndexB,
+                                continuationHandler.ConfigureContinuationChild(ref batcher, ref continuation, continuationChildIndex, pair, childOverlaps.ChildIndex, childTypeA, originalChildIndexB,
                                     childPoseA, out var childPoseB, out var childTypeB, out var childShapeDataB);
 
                                 var childAToChildB = pair.OffsetB + childPoseB.Position - childPoseA.Position;

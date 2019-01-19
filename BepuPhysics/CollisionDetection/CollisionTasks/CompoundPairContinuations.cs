@@ -32,7 +32,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void ConfigureContinuationChild<TCallbacks>(
-            ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReduction continuation, int continuationChildIndex, in BoundsTestedPair pair, int childIndexA, int childIndexB, in RigidPose childPoseA,
+            ref CollisionBatcher<TCallbacks> collisionBatcher, ref NonconvexReduction continuation, int continuationChildIndex, in BoundsTestedPair pair, int childIndexA, int childTypeA, int childIndexB, in RigidPose childPoseA,
             out RigidPose childPoseB, out int childTypeB, out void* childShapeDataB)
             where TCallbacks : struct, ICollisionCallbacks
         {
