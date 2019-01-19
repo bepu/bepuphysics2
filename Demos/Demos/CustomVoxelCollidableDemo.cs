@@ -99,17 +99,80 @@ namespace Demos.Demos
             max += childLocalMax;
         }
 
+
+        unsafe struct FirstHitLeafTester : IRayLeafTester
+        {
+            public QuickList<Vector3> VoxelIndices;
+            public Vector3 VoxelSize;
+            public Box VoxelShape;
+            public float MinimumT;
+            public Vector3 MinimumNormal;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public FirstHitLeafTester(in QuickList<Vector3> voxelIndices, in Vector3 voxelSize)
+            {
+                this.VoxelIndices = voxelIndices;
+                this.VoxelSize = voxelSize;
+                this.VoxelShape = new Box(voxelSize.X, voxelSize.Y, voxelSize.Z);
+                MinimumT = float.MaxValue;
+                MinimumNormal = default;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            {
+                ref var voxelIndex = ref VoxelIndices[leafIndex];
+                //This could be made a bit speedier if we used a local variant of the ray test. This assumes non-identity orientations, which don't exist in the voxel set's local space.
+                if (VoxelShape.RayTest(new RigidPose((voxelIndex + new Vector3(0.5f)) * VoxelSize), rayData->Origin, rayData->Direction, out var t, out var normal) && t < MinimumT && t <= *maximumT)
+                {
+                    MinimumT = t;
+                    MinimumNormal = normal;
+                }
+            }
+        }
+
         public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal)
         {
-            t = 0;
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
+            Matrix3x3.TransformTranspose(origin - pose.Position, orientation, out var localOrigin);
+            Matrix3x3.TransformTranspose(direction, orientation, out var localDirection);
+            var leafTester = new FirstHitLeafTester(VoxelIndices, VoxelSize);
+            Tree.RayCast(localOrigin, localDirection, maximumT, ref leafTester);
+            if (leafTester.MinimumT < float.MaxValue)
+            {
+                t = leafTester.MinimumT;
+                Matrix3x3.Transform(leafTester.MinimumNormal, orientation, out normal);
+                normal = Vector3.Normalize(normal);
+                return true;
+            }
+            t = default;
             normal = default;
             return false;
         }
-
-        public void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler
+        
+        //Some shapes take advantage of multiple simultaneous incoming rays to perform batch execution.
+        //That can improve performance quite a bit in some cases. We don't bother taking advantage of it here, but you could add it if you wanted!
+        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler
         {
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
+            Matrix3x3.Transpose(orientation, out var inverseOrientation);
+            var leafTester = new FirstHitLeafTester(VoxelIndices, VoxelSize);
+            for (int i = 0; i < rays.RayCount; ++i)
+            {
+                rays.GetRay(i, out var ray, out var maximumT);
+                Matrix3x3.Transform(ray->Origin - pose.Position, inverseOrientation, out var localOrigin);
+                Matrix3x3.Transform(ray->Direction, inverseOrientation, out var localDirection);
+                leafTester.MinimumT = float.MaxValue;
+                Tree.RayCast(localOrigin, localDirection, *maximumT, ref leafTester);
+                if (leafTester.MinimumT < float.MaxValue)
+                {
+                    Matrix3x3.Transform(leafTester.MinimumNormal, orientation, out var normal);
+                    normal = Vector3.Normalize(normal);
+                    hitHandler.OnRayHit(i, leafTester.MinimumT, normal);
+                }
+            }
         }
-
+        
         public void GetLocalChild(int childIndex, out Box shape)
         {
             shape.HalfWidth = VoxelSize.X;
