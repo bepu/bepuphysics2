@@ -11,6 +11,9 @@ using BepuPhysics.Trees;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using System.Runtime.CompilerServices;
+using DemoRenderer.UI;
+using DemoUtilities;
+using System;
 
 namespace Demos.Demos
 {
@@ -23,12 +26,14 @@ namespace Demos.Demos
     {
         //Type ids should be unique across all shape types in a simulation.
         public int TypeId => 12;
-
-
+        
         //Using an object space tree isn't necessarily ideal for a highly regular data like voxels.
         //We're using it here since it exists already and a voxel-specialized version doesn't.
-        //If you wanted maximum efficiency for some specific use case- especially with support for faster modifications- 
-        //then you may want to consider an alternative.
+        //If you wanted maximum efficiency for some specific use case- like a world containing
+        //~infinite numbers of voxels with very fast modifications- then you may want to consider an alternative.
+        //(The tree based version could still work if the data was organized into streamed chunks instead of 
+        //a single giant collidable, but it probably won't match a specialized structure that takes 
+        //advantage of regular voxel grids' unique properties.)
         public Tree Tree;
 
         /// <summary>
@@ -83,7 +88,7 @@ namespace Demos.Demos
             for (int i = 0; i < VoxelIndices.Count; ++i)
             {
                 var localVoxelPosition = (VoxelIndices[i] + new Vector3(0.5f)) * VoxelSize;
-                Matrix3x3.TransformTranspose(localVoxelPosition, basis, out var rotatedPosition);
+                Matrix3x3.Transform(localVoxelPosition, basis, out var rotatedPosition);
                 min = Vector3.Min(rotatedPosition, min);
                 max = Vector3.Max(rotatedPosition, max);
             }
@@ -96,12 +101,13 @@ namespace Demos.Demos
 
         public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal)
         {
-            throw new System.NotImplementedException();
+            t = 0;
+            normal = default;
+            return false;
         }
 
         public void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler
         {
-            throw new System.NotImplementedException();
         }
 
         public void GetLocalChild(int childIndex, out Box shape)
@@ -222,9 +228,11 @@ namespace Demos.Demos
 
     public class CustomVoxelCollidableDemo : Demo
     {
+        Voxels voxels;
+        int handle;
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(-20, 10, -20);
+            camera.Position = new Vector3(-40, 40, -40);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
@@ -234,9 +242,56 @@ namespace Demos.Demos
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Box, Voxels, ConvexCompoundOverlapFinder<Box, BoxWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, Voxels, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
 
+            var widthInVoxels = 40;
+            var voxelIndices = new QuickList<Vector3>(widthInVoxels * widthInVoxels * widthInVoxels, BufferPool);
+            for (int i = 0; i < widthInVoxels; ++i)
+            {
+                for (int j = 0; j < widthInVoxels; ++j)
+                {
+                    for (int k = 0; k < widthInVoxels; ++k)
+                    {
+                        //Create some sine wave based noise for a slightly interesting environment.
+                        var octave0 = MathF.Cos((i + 78) * 0.8f) + MathF.Cos((j + 37) * 0.8f) + MathF.Cos((k + 131) * 0.8f);
+                        var octave1 = MathF.Cos((i + 59) * 0.4f) + MathF.Cos((j + 100) * 0.4f) + MathF.Cos((k + 131) * 0.4f);
+                        var octave2 = MathF.Cos((i + 43) * 0.1f) + MathF.Cos((j + 200) * 0.1f) + MathF.Cos((k + 281) * 0.1f);
+                        var octave3 = MathF.Cos((i + 647) * 0.025f) + MathF.Cos((j + 1553) * 0.025f) + MathF.Cos((k + 53) * 0.025f);
+                        var density = octave0 + octave1 + octave2 + octave3;
+                        if (density > 0)
+                            voxelIndices.AllocateUnsafely() = new Vector3(i, j, k);
+                    }
+                }
+            }
+            voxels = new Voxels(voxelIndices, new Vector3(1, 1, 1), BufferPool);
+            handle = Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(voxels), 0.1f)));
+
+            var random = new Random(5);
+            var shapeToDrop = new Box(1, 1, 1);
+            shapeToDrop.ComputeInertia(1, out var shapeToDropInertia);
+            var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDropInertia, new CollidableDescription(Simulation.Shapes.Add(shapeToDrop), 0.1f), new BodyActivityDescription(0.01f));
+            for (int i = 0; i < 4096; ++i)
+            {
+                descriptionToDrop.Pose.Position = new Vector3(15 + 10 * (float)random.NextDouble(), 45 + 150 * (float)random.NextDouble(), 15 + 10 * (float)random.NextDouble());
+                Simulation.Bodies.Add(descriptionToDrop);
+            }
+
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 1, 300)), 0.1f)));
         }
 
+        public override unsafe void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        {
+            //The renderer doesn't have a super flexible drawing system, so we'll instead just directly add the voxel shapes. Not super efficient, but it works!
+            var shape = new Box(voxels.VoxelSize.X, voxels.VoxelSize.Y, voxels.VoxelSize.Z);
+            var shapeDataPointer = &shape;
+            ref var voxelsPose = ref Simulation.Statics.Poses[Simulation.Statics.HandleToIndex[handle]];
+            for (int i = 0; i < voxels.ChildCount; ++i)
+            {
+                var localPose = new RigidPose((voxels.VoxelIndices[i] + new Vector3(0.5f)) * voxels.VoxelSize);
+                Compound.GetRotatedChildPose(localPose, voxelsPose.Orientation, out var childPose);
+                childPose.Position += voxelsPose.Position;
+                renderer.Shapes.AddShape(shapeDataPointer, Box.Id, Simulation.Shapes, ref childPose, new Vector3(0.8f, 0.2f, 0.2f));
+            }
+            base.Render(renderer, camera, input, text, font);
+        }
     }
 }
 
