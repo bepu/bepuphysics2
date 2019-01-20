@@ -19,7 +19,7 @@ using System.Threading;
 
 namespace Demos.Demos
 {
-    //Bepuphysics itself doesn't have any concept of 'events'. It has callbacks that report the current status of contact manifolds.
+    //Bepuphysics v2 doesn't have any concept of 'events'. It has callbacks that report the current status of contact manifolds.
     //Events can be built around those callbacks. This demo shows one way of doing that.
 
     //It's worth noting a few things about this event handler approach:
