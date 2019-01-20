@@ -3,58 +3,27 @@ using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Collidables
 {
-    public enum ContinuousDetectionMode : byte
+    public enum ContinuousDetectionMode
     {
-        //These modes use bit flags to enable specific features.
-        //Bit 0: If set, allows velocity expansion beyond speculative margin. If unset, expansion is clamped to the margin.
-        //Bit 1: If set, collision tests use an extra inner sphere contact generation test.
-        //Bit 2: If set, collision tests use substepping. 
-        //Not all combinations are valid. If substepping is enabled, bounding box velocity expansion must be enabled, otherwise the substepping won't do much.
-        //Note that it's possible to have another mode- the bounding box expansion clamped to speculative margin, but then potentially expanded by an inner sphere swept by linear velocity.
-        //The extra complexity doesn't really seem worth it, considering that the user would need to be aware of the unique corner cases involved. (Some collisions would be missed.)
-
         /// <summary>
         /// <para>No dedicated continuous detection is performed. Default speculative contact generation will occur within the speculative margin.</para>
         /// <para>The collidable's bounding box will not be expanded by velocity beyond the speculative margin.</para>
         /// <para>This is the cheapest mode, but it may miss collisions. Note that if a Discrete mode collidable is moving quickly, the fact that its bounding box is not expanded
         /// may cause it to miss a collision even with a non-Discrete collidable.</para>
         /// </summary>
-        Discrete = 0b000,
+        Discrete = 0,
         /// <summary>
         /// <para>No dedicated continuous detection is performed. Default speculative contact generation will occur within the speculative margin.</para>
         /// <para>The collidable's bounding box will be expanded by velocity beyond the speculative margin if necessary.</para>
         /// <para>This is useful when a collidable may move quickly and does not itself require continuous detection, but there exist other collidables with continuous modes 
         /// that should avoid missing collisions.</para>
         /// </summary>
-        Passive = 0b001,
+        Passive = 1,
         /// <summary>
-        /// <para>In addition to the default speculative contact generation, a sphere embedded in the shape will be used as an additional speculative contact source when the 
-        /// collidable is moving quickly enough relative to a collidable neighbor. The extra contact will only be used if room in the contact manifold is available.</para>
-        /// <para>This is a very cheap form of continuous collision detection, and it tends to avoid ghost collisions better than simply increasing the speculative margin.
-        /// On the other hand, the extra contact cannot capture angular motion, and it will tend to allow more penetration than substepping or a large speculative margin.</para>
+        /// <para>Collision detection will start with a sweep test to identify a likely time of impact. Speculative contacts will be generated for the predicted collision.</para>
+        /// <para>This mode can capture angular motion with very few ghost collisions. It can, however, miss secondary collisions that would have occurred due to the primary impact's velocity change.</para>
         /// </summary>
-        Linear = 0b011,
-        /// <summary>
-        /// <para>Collision detection will use multiple poses that span the time between frames. For any collidable neighbor, the earliest detected contact manifold is used.</para>
-        /// <para>The number of substeps depends on the configured target step size and maximum step count. When moving slowly, substepping may be skipped entirely, and when moving quickly,
-        /// many substeps may be used.</para>
-        /// <para>This mode can capture angular motion with very few ghost collisions. Carefully choosing a target substep length and a speculative margin together can catch
-        /// virtually all primary impacts in a very natural way.</para> 
-        /// <para>Because it performs what amounts to multiple collision tests, this mode is more expensive for fast moving objects. Further, because part of its goal is to avoid ghost 
-        /// collisions, it can miss secondary collisions that would have occurred due to the primary impact's velocity change.</para>
-        /// </summary>
-        Substep = 0b101,
-        /// <summary>
-        /// <para>Uses both Linear and Substep modes together. This is the most expensive collision detection mode, but it has the benefits of both of the continuous modes.</para>
-        /// <para>The inner sphere contact generation helps avoid tunneling through secondary collisions that the substepping explicitly filtered out, while substepping captures 
-        /// the difficult angular motion. However, the inner sphere contact may reintroduce ghost collisions at extremely high velocities.</para>
-        /// </summary>
-        LinearAndSubstep = 0b111
-
-        //TODO: Not really happy with these names. "Linear" does an okay job at describing the goal of the mode, but it really doesn't tell you much about what it's doing
-        //or what corner cases to expect intuitively. And while something like "InnerSphere" would describe the underlying mechanism well, it doesn't provide much insight at a glance.
-        //And "LinearWithSubstep" is just unwieldy. I decided against something like "Full" there because it isn't some universal per-event conservative advancement- it still has
-        //definite holes and compromises. Even if it is the most complete of the bunch.
+        Continuous = 2,
     }
 
     [StructLayout(LayoutKind.Explicit)]
@@ -66,27 +35,58 @@ namespace BepuPhysics.Collidables
         [FieldOffset(0)]
         public ContinuousDetectionMode Mode;
         /// <summary>
-        /// If using a substepping mode, this is the maximum number of substeps allowed. Fewer substeps than the maximum may be used for slower motion.
-        /// </summary>
-        [FieldOffset(1)]
-        private byte MaximumSubstepCount;
-        /// <summary>
-        /// <para>The length of a motion path allowed before continuous collision detection will be used for this collidable.</para>
-        /// <para>For modes using substepping, this is the maximum distance any part of the shape can move (due to linear or angular motion) before another substep is introduced.
-        /// For modes using an inner sphere, this is the displacement in a single frame necessary to trigger the use of the extra inner sphere contact generator.</para>
+        /// If using ContinuousDetectionMode.Continuous, MinimumSweepTimestep is the minimum progress that the sweep test will make when searching for the first time of impact.
+        /// Collisions lasting less than MinimumProgress may be missed by the sweep test. Using larger values can significantly increase the performance of sweep tests.
         /// </summary>
         [FieldOffset(4)]
-        public float MaximumStepLength;
-        //Technically, there are situations where you would want to configure the step length for substepping and inner sphere separately. However, those are not terribly common,
-        //and we really don't want to bloat the size of this structure- L1 cache isn't big.
+        private float MinimumSweepTimestep;
+        /// <summary>
+        /// If using ContinuousDetectionMode.Continuous, sweep tests will terminate if the time of impact region has been refined to be smaller than SweepConvergenceThreshold.
+        /// Values closer to zero will converge more closely to the true time of impact, but for speculative contact generation larger values usually work fine.
+        /// Larger values allow the sweep to terminate much earlier and can significantly improve sweep performance.
+        /// </summary>
+        [FieldOffset(8)]
+        public float SweepConvergenceThreshold;
 
-        //Substepping CCD and AABB calculations also depend on the maximum radius, but that is handled by the Shape.
-        //There isn't a strong reason to include per-collidable information for that.
-
-        //Note that we disallow cases where expansion beyond the margin is off, yet continuous detection is on. So, there's no need for masking.
         internal bool AllowExpansionBeyondSpeculativeMargin { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (uint)Mode > 0; } }
-        internal bool UseInnerSphere { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return ((uint)Mode & 2) > 0; } }
-        internal bool UseSubstepping { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return ((uint)Mode & 4) > 0; } }
+
+        /// <summary>
+        /// <para>No dedicated continuous detection will be performed. Default speculative contact generation will occur within the speculative margin.</para>
+        /// <para>The collidable's bounding box will not be expanded by velocity beyond the speculative margin.</para>
+        /// <para>This is the cheapest mode, but it may miss collisions. Note that if a Discrete mode collidable is moving quickly, the fact that its bounding box is not expanded
+        /// may cause it to miss a collision even with a non-Discrete collidable.</para>
+        /// </summary>
+        public static ContinuousDetectionSettings Discrete
+        {
+            get { return new ContinuousDetectionSettings(); }
+        }
+
+        /// <summary>
+        /// <para>No dedicated continuous detection is performed. Default speculative contact generation will occur within the speculative margin.</para>
+        /// <para>The collidable's bounding box will be expanded by velocity beyond the speculative margin if necessary.</para>
+        /// <para>This is useful when a collidable may move quickly and does not itself require continuous detection, but there exist other collidables with continuous modes 
+        /// that should avoid missing collisions.</para>
+        /// </summary>
+        public static ContinuousDetectionSettings Passive
+        {
+            get { return new ContinuousDetectionSettings() { Mode = ContinuousDetectionMode.Passive }; }
+        }
+
+        /// <summary>
+        /// <para>Collision detection will start with a sweep test to identify a likely time of impact. Speculative contacts will be generated for the predicted collision.</para>
+        /// <para>This mode can capture angular motion with very few ghost collisions. It can, however, miss secondary collisions that would have occurred due to the primary impact's velocity change.</para>
+        /// </summary>
+        /// <param name="minimumSweepTimestep">Minimum progress that the sweep test will make when searching for the first time of impact.
+        /// Collisions lasting less than MinimumProgress may be missed by the sweep test. Using larger values can significantly increase the performance of sweep tests.</param>
+        /// <param name="sweepConvergenceThreshold">Threshold against which the time of impact region is compared for sweep termination. 
+        /// If the region has been refined to be smaller than SweepConvergenceThreshold, the sweep will terminate.
+        /// Values closer to zero will converge more closely to the true time of impact, but for speculative contact generation larger values usually work fine.
+        /// Larger values allow the sweep to terminate much earlier and can significantly improve sweep performance.</param>
+        /// <returns>Settings reflecting a continuous detection mode.</returns>
+        public static ContinuousDetectionSettings Continuous(float minimumSweepTimestep, float sweepConvergenceThreshold)
+        {
+            return new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Continuous, MinimumSweepTimestep = minimumSweepTimestep, SweepConvergenceThreshold = sweepConvergenceThreshold };
+        }
     }
 
     /// <summary>
@@ -100,16 +100,6 @@ namespace BepuPhysics.Collidables
         /// Continuous collision detection settings for this collidable. Includes the collision detection mode to use and tuning variables associated with those modes.
         /// </summary>
         public ContinuousDetectionSettings Continuity;
-        //These CCD settings are bundled together away from the rest of the collidable data for a few reasons:
-        //1) They do a little packing to avoid pointless memory overhead,
-        //2) It's possible that we'll want to split them out later if data access patterns suggest that it's a good idea,
-        //3) Don't really want to pollute this structure's members with CCD-conditional tuning variables.
-        
-        //Note that the order of these members is intentional: the narrowphase tends to access Continuity and Shape together when dispatching narrow phase work.
-        //Later on, the narrowphase will access the speculative margin when generating contacts. It never accesses the broad phase index.
-        //The AABB updater, in contrast, uses all of the properties.
-        //So, this order gives both systems contiguous access to their desired properties, increasing the chance that they'll all be in the same cache line.
-        //(Splitting this structure would stop the narrow phase from loading the unnecessary broad phase index, but that's a pretty small benefit for redundant memory.)
 
         /// <summary>
         /// Index of the shape used by the body. While this can be changed, any transition from shapeless->shapeful or shapeful->shapeless must be reported to the broad phase. 

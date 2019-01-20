@@ -135,7 +135,7 @@ namespace BepuPhysics.CollisionDetection
         {
             return constraintTypeId < PairCache.CollisionConstraintTypeCount;
         }
-        
+
         public void Prepare(float dt, IThreadDispatcher threadDispatcher = null)
         {
             timestepDuration = dt;
@@ -148,7 +148,7 @@ namespace BepuPhysics.CollisionDetection
         protected abstract void OnPreflush(IThreadDispatcher threadDispatcher, bool deterministic);
         protected abstract void OnPostflush(IThreadDispatcher threadDispatcher);
 
-        
+
         int flushJobIndex;
         QuickList<NarrowPhaseFlushJob> flushJobs;
         IThreadDispatcher threadDispatcher;
@@ -328,7 +328,7 @@ namespace BepuPhysics.CollisionDetection
         {
             Callbacks.Dispose();
         }
-        
+
         public unsafe void HandleOverlap(int workerIndex, CollidableReference a, CollidableReference b)
         {
             Debug.Assert(a.Packed != b.Packed, "Excuse me, broad phase, but an object cannot collide with itself!");
@@ -390,10 +390,6 @@ namespace BepuPhysics.CollisionDetection
             ref RigidPose poseA, ref RigidPose poseB, ref BodyVelocity velocityA, ref BodyVelocity velocityB)
         {
             Debug.Assert(pair.A.Packed != pair.B.Packed);
-            //Note that we never create 'unilateral' CCD pairs. That is, if either collidable in a pair enables a CCD feature, we just act like both are using it.
-            //That keeps things a little simpler. Unlike v1, we don't have to worry about the implications of 'motion clamping' here- no need for deeper configuration.
-            var useSubstepping = aCollidable.Continuity.UseSubstepping || bCollidable.Continuity.UseSubstepping;
-            var useInnerSphere = aCollidable.Continuity.UseInnerSphere || bCollidable.Continuity.UseInnerSphere;
             //Note that the pair's margin is the larger of the two involved collidables. This is based on two observations:
             //1) Values smaller than either contributor should never be used, because it may interfere with tuning. Difficult to choose substepping properties without a 
             //known minimum value for speculative margins.
@@ -401,16 +397,10 @@ namespace BepuPhysics.CollisionDetection
             //Taken together, max is implied.
             var speculativeMargin = Math.Max(aCollidable.SpeculativeMargin, bCollidable.SpeculativeMargin);
             //Create a continuation for the pair given the CCD state.
-            if (useSubstepping && useInnerSphere)
+            //Note that we never create 'unilateral' CCD pairs. That is, if either collidable in a pair enables a CCD feature, we just act like both are using it.
+            //That keeps things a little simpler. Unlike v1, we don't have to worry about the implications of 'motion clamping' here- no need for deeper configuration.
+            if (aCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous || bCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous)
             {
-            }
-            else if (useSubstepping)
-            {
-
-            }
-            else if (useInnerSphere)
-            {
-
             }
             else
             {
@@ -421,15 +411,6 @@ namespace BepuPhysics.CollisionDetection
                     poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, velocityA, velocityB,
                     speculativeMargin, speculativeMargin, new PairContinuation((int)continuation.Packed));
             }
-            ////Pull the velocity information for all involved bodies. We will request a number of steps that will cover the motion path.
-            ////number of substeps = min(maximum substep count, 1 + floor(estimated displacement / step length)), where
-            ////estimated displacement = dt * (length(linear velocity A - linear velocity B) +
-            ////                               maximum radius A * (length(angular velocity A) + maximum radius B * length(angular velocity B)) 
-            ////Once we have a number of 
-            ////We use the minimum step length of each contributing collidable. Treat non-substepping collidables as having a step length of infinity.
-            //var stepLengthA = aCollidable.Continuity.UseSubstepping ? aCollidable.Continuity.MaximumStepLength : float.MaxValue;
-            //var stepLengthB = bCollidable.Continuity.UseSubstepping ? bCollidable.Continuity.MaximumStepLength : float.MaxValue;
-            //float stepLength = stepLengthA < stepLengthB ? stepLengthA : stepLengthB;
         }
     }
 }
