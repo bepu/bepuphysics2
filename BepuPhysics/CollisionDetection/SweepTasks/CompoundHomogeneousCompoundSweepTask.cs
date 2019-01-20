@@ -13,15 +13,17 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
-    public class CompoundMeshSweepTask<TCompound, TMesh, TOverlapFinder> : SweepTask
-        where TCompound : struct, ICompoundShape
-        where TMesh : struct, IHomogeneousCompoundShape<Triangle, TriangleWide>
-        where TOverlapFinder : struct, ICompoundPairSweepOverlapFinder<TCompound, TMesh>
+    public class CompoundHomogeneousCompoundSweepTask<TCompoundA, TCompoundB, TChildShapeB, TChildShapeWideB, TOverlapFinder> : SweepTask
+        where TCompoundA : struct, ICompoundShape
+        where TCompoundB : struct, IHomogeneousCompoundShape<TChildShapeB, TChildShapeWideB>
+        where TChildShapeB : IConvexShape
+        where TChildShapeWideB : IShapeWide<TChildShapeB>
+        where TOverlapFinder : struct, ICompoundPairSweepOverlapFinder<TCompoundA, TCompoundB>
     {
-        public CompoundMeshSweepTask()
+        public CompoundHomogeneousCompoundSweepTask()
         {
-            ShapeTypeIndexA = default(TCompound).TypeId;
-            ShapeTypeIndexB = default(TMesh).TypeId;
+            ShapeTypeIndexA = default(TCompoundA).TypeId;
+            ShapeTypeIndexB = default(TCompoundB).TypeId;
         }
 
         protected unsafe override bool PreorderedTypeSweep<TSweepFilter>(
@@ -30,14 +32,14 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
-            ref var mesh = ref Unsafe.AsRef<TMesh>(shapeDataB);
+            ref var compoundB = ref Unsafe.AsRef<TCompoundB>(shapeDataB);
             TOverlapFinder overlapFinder = default;
             t0 = float.MaxValue;
             t1 = float.MaxValue;
             hitLocation = new Vector3();
             hitNormal = new Vector3();
-            ref var compound = ref Unsafe.AsRef<TCompound>(shapeDataA);
-            overlapFinder.FindOverlaps(ref compound, orientationA, velocityA, ref mesh, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
+            ref var compoundA = ref Unsafe.AsRef<TCompoundA>(shapeDataA);
+            overlapFinder.FindOverlaps(ref compoundA, orientationA, velocityA, ref compoundB, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
             for (int i = 0; i < overlaps.ChildCount; ++i)
             {
                 ref var childOverlaps = ref overlaps.GetOverlapsForChild(i);
@@ -46,18 +48,14 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     var triangleIndex = childOverlaps.Overlaps[j];
                     if (filter.AllowTest(flipRequired ? triangleIndex : childOverlaps.ChildIndex, flipRequired ? childOverlaps.ChildIndex : triangleIndex))
                     {
-                        mesh.GetLocalChild(triangleIndex, out var triangle);
-                        ref var compoundChild = ref compound.GetChild(childOverlaps.ChildIndex);
+                        compoundB.GetPosedLocalChild(triangleIndex, out var childB, out var childPoseB);
+                        ref var compoundChild = ref compoundA.GetChild(childOverlaps.ChildIndex);
                         var compoundChildType = compoundChild.ShapeIndex.Type;
                         var task = sweepTasks.GetTask(compoundChildType, Triangle.Id);
-                        var triangleCenter = (triangle.A + triangle.B + triangle.C) * (1f / 3f);
-                        triangle.A -= triangleCenter;
-                        triangle.B -= triangleCenter;
-                        triangle.C -= triangleCenter;
                         shapes[compoundChildType].GetShapeData(compoundChild.ShapeIndex.Index, out var compoundChildShapeData, out _);
                         if (task.Sweep(
                             compoundChildShapeData, compoundChildType, compoundChild.LocalPose, orientationA, velocityA,
-                            Unsafe.AsPointer(ref triangle), Triangle.Id, new RigidPose(triangleCenter, Quaternion.Identity), offsetB, orientationB, velocityB,
+                            Unsafe.AsPointer(ref childB), Triangle.Id, childPoseB, offsetB, orientationB, velocityB,
                             maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                             out var t0Candidate, out var t1Candidate, out var hitLocationCandidate, out var hitNormalCandidate))
                         {

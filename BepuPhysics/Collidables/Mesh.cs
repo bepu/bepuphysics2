@@ -86,6 +86,17 @@ namespace BepuPhysics.Collidables
             target.B = scale * source.B;
             target.C = scale * source.C;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void GetPosedLocalChild(int triangleIndex, out Triangle target, out RigidPose childPose)
+        {
+            GetLocalChild(triangleIndex, out target);
+            childPose = new RigidPose((target.A + target.B + target.C) * (1f / 3f));
+            target.A -= childPose.Position;
+            target.B -= childPose.Position;
+            target.C -= childPose.Position;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GetLocalChild(int triangleIndex, ref TriangleWide target)
         {
@@ -151,7 +162,7 @@ namespace BepuPhysics.Collidables
                 }
             }
         }
-        
+
         /// <summary>
         /// Casts a ray against the mesh. Returns the first hit.
         /// </summary>
@@ -266,7 +277,7 @@ namespace BepuPhysics.Collidables
                     hitHandler.OnRayHit(i, leafTester.MinimumT, normal);
                 }
             }
-        }       
+        }
 
         public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>

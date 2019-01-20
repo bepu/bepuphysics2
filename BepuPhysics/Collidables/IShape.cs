@@ -76,6 +76,7 @@ namespace BepuPhysics.Collidables
 
         int ChildCount { get; }
         void GetLocalChild(int childIndex, out TChildShape childData);
+        void GetPosedLocalChild(int childIndex, out TChildShape childData, out RigidPose childPose);
         void GetLocalChild(int childIndex, ref TChildShapeWide childData);
         void Dispose(BufferPool pool);
     }

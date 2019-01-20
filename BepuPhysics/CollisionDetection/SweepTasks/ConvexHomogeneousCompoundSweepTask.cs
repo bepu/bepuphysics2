@@ -13,17 +13,19 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
-    public class ConvexMeshSweepTask<TConvex, TConvexWide, TMesh, TOverlapFinder> : SweepTask
+    public class ConvexHomogeneousCompoundSweepTask<TConvex, TConvexWide, TCompound, TChildType, TChildTypeWide, TOverlapFinder> : SweepTask
         where TConvex : struct, IConvexShape
         where TConvexWide : struct, IShapeWide<TConvex>
-        where TMesh : struct, IHomogeneousCompoundShape<Triangle, TriangleWide>
-        where TOverlapFinder : struct, IConvexCompoundSweepOverlapFinder<TConvex, TMesh>
+        where TCompound : struct, IHomogeneousCompoundShape<TChildType, TChildTypeWide>
+        where TChildType : IConvexShape
+        where TChildTypeWide : IShapeWide<TChildType>
+        where TOverlapFinder : struct, IConvexCompoundSweepOverlapFinder<TConvex, TCompound>
 
     {
-        public ConvexMeshSweepTask()
+        public ConvexHomogeneousCompoundSweepTask()
         {
             ShapeTypeIndexA = default(TConvex).TypeId;
-            ShapeTypeIndexB = default(TMesh).TypeId;
+            ShapeTypeIndexB = default(TCompound).TypeId;
         }
 
 
@@ -33,28 +35,24 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             float minimumProgression, float convergenceThreshold, int maximumIterationCount,
             bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
-            ref var mesh = ref Unsafe.AsRef<TMesh>(shapeDataB);
+            ref var compound = ref Unsafe.AsRef<TCompound>(shapeDataB);
             t0 = float.MaxValue;
             t1 = float.MaxValue;
             hitLocation = new Vector3();
             hitNormal = new Vector3();
-            var task = sweepTasks.GetTask(ShapeTypeIndexA, Triangle.Id);
+            var task = sweepTasks.GetTask(ShapeTypeIndexA, default(TChildType).TypeId);
             if (task != null)
             {
-                default(TOverlapFinder).FindOverlaps(ref Unsafe.AsRef<TConvex>(shapeDataA), orientationA, velocityA, ref mesh, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
+                default(TOverlapFinder).FindOverlaps(ref Unsafe.AsRef<TConvex>(shapeDataA), orientationA, velocityA, ref compound, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
                 for (int i = 0; i < overlaps.Count; ++i)
                 {
                     var childIndex = overlaps.Overlaps[i];
                     if (filter.AllowTest(flipRequired ? 0 : childIndex, flipRequired ? childIndex : 0))
                     {
-                        mesh.GetLocalChild(childIndex, out var triangle);
-                        var triangleCenter = (triangle.A + triangle.B + triangle.C) * (1f / 3f);
-                        triangle.A -= triangleCenter;
-                        triangle.B -= triangleCenter;
-                        triangle.C -= triangleCenter;
+                        compound.GetPosedLocalChild(childIndex, out var childShape, out var childPose);
                         if (task.Sweep(
                             shapeDataA, ShapeTypeIndexA, new RigidPose(Vector3.Zero, Quaternion.Identity), orientationA, velocityA,
-                            Unsafe.AsPointer(ref triangle), Triangle.Id, new RigidPose(triangleCenter, Quaternion.Identity), offsetB, orientationB, velocityB,
+                            Unsafe.AsPointer(ref childShape), Triangle.Id, childPose, offsetB, orientationB, velocityB,
                             maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
                             out var t0Candidate, out var t1Candidate, out var hitLocationCandidate, out var hitNormalCandidate))
                         {
@@ -77,7 +75,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
         protected override unsafe bool PreorderedTypeSweep(void* shapeDataA, in RigidPose localPoseA, in Quaternion orientationA, in BodyVelocity velocityA, void* shapeDataB, in RigidPose localPoseB, in Vector3 offsetB, in Quaternion orientationB, in BodyVelocity velocityB, float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
-            throw new NotImplementedException("Meshes can never be nested; this should never be called.");
+            throw new NotImplementedException("Compounds can never be nested; this should never be called.");
         }
     }
 }

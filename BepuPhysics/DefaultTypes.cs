@@ -155,7 +155,7 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Sphere, SphereWide, Triangle, TriangleWide, SphereTriangleDistanceTester>());
             defaultTaskRegistry.Register(new ConvexCompoundSweepTask<Sphere, SphereWide, Compound, ConvexCompoundSweepOverlapFinder<Sphere, Compound>>());
             defaultTaskRegistry.Register(new ConvexCompoundSweepTask<Sphere, SphereWide, BigCompound, ConvexCompoundSweepOverlapFinder<Sphere, BigCompound>>());
-            defaultTaskRegistry.Register(new ConvexMeshSweepTask<Sphere, SphereWide, Mesh, ConvexCompoundSweepOverlapFinder<Sphere, Mesh>>());
+            defaultTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Sphere, SphereWide, Mesh, Triangle, TriangleWide, ConvexCompoundSweepOverlapFinder<Sphere, Mesh>>());
 
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Capsule, CapsuleWide, Capsule, CapsuleWide, CapsulePairDistanceTester>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Capsule, CapsuleWide, Cylinder, CylinderWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>>());
@@ -163,32 +163,32 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Capsule, CapsuleWide, Triangle, TriangleWide, GJKDistanceTester<Capsule, CapsuleWide, CapsuleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>());
             defaultTaskRegistry.Register(new ConvexCompoundSweepTask<Capsule, CapsuleWide, Compound, ConvexCompoundSweepOverlapFinder<Capsule, Compound>>());
             defaultTaskRegistry.Register(new ConvexCompoundSweepTask<Capsule, CapsuleWide, BigCompound, ConvexCompoundSweepOverlapFinder<Capsule, BigCompound>>());
-            defaultTaskRegistry.Register(new ConvexMeshSweepTask<Capsule, CapsuleWide, Mesh, ConvexCompoundSweepOverlapFinder<Capsule, Mesh>>());
-            
+            defaultTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Capsule, CapsuleWide, Mesh, Triangle, TriangleWide, ConvexCompoundSweepOverlapFinder<Capsule, Mesh>>());
+
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Cylinder, CylinderWide, Cylinder, CylinderWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Cylinder, CylinderWide, Box, BoxWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Box, BoxWide, BoxSupportFinder>>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Cylinder, CylinderWide, Triangle, TriangleWide, GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>());
             defaultTaskRegistry.Register(new ConvexCompoundSweepTask<Cylinder, CylinderWide, Compound, ConvexCompoundSweepOverlapFinder<Cylinder, Compound>>());
             defaultTaskRegistry.Register(new ConvexCompoundSweepTask<Cylinder, CylinderWide, BigCompound, ConvexCompoundSweepOverlapFinder<Cylinder, BigCompound>>());
-            defaultTaskRegistry.Register(new ConvexMeshSweepTask<Cylinder, CylinderWide, Mesh, ConvexCompoundSweepOverlapFinder<Cylinder, Mesh>>());
+            defaultTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Cylinder, CylinderWide, Mesh, Triangle, TriangleWide, ConvexCompoundSweepOverlapFinder<Cylinder, Mesh>>());
 
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Box, BoxWide, Box, BoxWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>>());
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Box, BoxWide, Triangle, TriangleWide, GJKDistanceTester<Box, BoxWide, BoxSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>());
             defaultTaskRegistry.Register(new ConvexCompoundSweepTask<Box, BoxWide, Compound, ConvexCompoundSweepOverlapFinder<Box, Compound>>());
             defaultTaskRegistry.Register(new ConvexCompoundSweepTask<Box, BoxWide, BigCompound, ConvexCompoundSweepOverlapFinder<Box, BigCompound>>());
-            defaultTaskRegistry.Register(new ConvexMeshSweepTask<Box, BoxWide, Mesh, ConvexCompoundSweepOverlapFinder<Box, Mesh>>());
+            defaultTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Box, BoxWide, Mesh, Triangle, TriangleWide, ConvexCompoundSweepOverlapFinder<Box, Mesh>>());
 
             defaultTaskRegistry.Register(new ConvexPairSweepTask<Triangle, TriangleWide, Triangle, TriangleWide, GJKDistanceTester<Triangle, TriangleWide, TriangleSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>>());
             defaultTaskRegistry.Register(new ConvexCompoundSweepTask<Triangle, TriangleWide, Compound, ConvexCompoundSweepOverlapFinder<Triangle, Compound>>());
             defaultTaskRegistry.Register(new ConvexCompoundSweepTask<Triangle, TriangleWide, BigCompound, ConvexCompoundSweepOverlapFinder<Triangle, BigCompound>>());
-            defaultTaskRegistry.Register(new ConvexMeshSweepTask<Triangle, TriangleWide, Mesh, ConvexCompoundSweepOverlapFinder<Triangle, Mesh>>());
+            defaultTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Triangle, TriangleWide, Mesh, Triangle, TriangleWide, ConvexCompoundSweepOverlapFinder<Triangle, Mesh>>());
 
             defaultTaskRegistry.Register(new CompoundPairSweepTask<Compound, Compound, CompoundPairSweepOverlapFinder<Compound, Compound>>());
             defaultTaskRegistry.Register(new CompoundPairSweepTask<Compound, BigCompound, CompoundPairSweepOverlapFinder<Compound, BigCompound>>());
-            defaultTaskRegistry.Register(new CompoundMeshSweepTask<Compound, Mesh, CompoundPairSweepOverlapFinder<Compound, Mesh>>());
+            defaultTaskRegistry.Register(new CompoundHomogeneousCompoundSweepTask<Compound, Mesh, Triangle, TriangleWide,  CompoundPairSweepOverlapFinder<Compound, Mesh>>());
 
             defaultTaskRegistry.Register(new CompoundPairSweepTask<BigCompound, BigCompound, CompoundPairSweepOverlapFinder<BigCompound, BigCompound>>());
-            defaultTaskRegistry.Register(new CompoundMeshSweepTask<BigCompound, Mesh, CompoundPairSweepOverlapFinder<BigCompound, Mesh>>());
+            defaultTaskRegistry.Register(new CompoundHomogeneousCompoundSweepTask<BigCompound, Mesh, Triangle, TriangleWide, CompoundPairSweepOverlapFinder<BigCompound, Mesh>>());
             
             //TODO: No mesh-mesh at the moment.
             return defaultTaskRegistry;

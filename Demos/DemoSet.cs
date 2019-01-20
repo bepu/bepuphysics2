@@ -39,7 +39,6 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<CustomVoxelCollidableDemo>();
             AddOption<CharacterTestDemo>();
             AddOption<NelderMeadTestDemo>();
             AddOption<CylinderTestDemo>();
@@ -59,6 +58,7 @@ namespace Demos
             AddOption<SweepDemo>();
             AddOption<ShapePileDemo>();
             AddOption<ContactEventsDemo>();
+            AddOption<CustomVoxelCollidableDemo>();
             AddOption<FountainStressTestDemo>();
             AddOption<SolverBatchTestDemo>();
             AddOption<ConstraintTestDemo>();

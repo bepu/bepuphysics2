@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
+using BepuPhysics.CollisionDetection.SweepTasks;
 
 namespace Demos.Demos
 {
@@ -173,14 +174,23 @@ namespace Demos.Demos
             }
         }
 
-        public void GetLocalChild(int childIndex, out Box shape)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetLocalChild(int childIndex, out Box childShape)
         {
             var halfSize = VoxelSize * 0.5f;
-            shape.HalfWidth = halfSize.X;
-            shape.HalfHeight = halfSize.Y;
-            shape.HalfLength = halfSize.Z;
+            childShape.HalfWidth = halfSize.X;
+            childShape.HalfHeight = halfSize.Y;
+            childShape.HalfLength = halfSize.Z;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetPosedLocalChild(int childIndex, out Box childShape, out RigidPose childPose)
+        {
+            GetLocalChild(childIndex, out childShape);
+            childPose = new RigidPose((VoxelIndices[childIndex] + new Vector3(0.5f)) * VoxelSize);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetLocalChild(int childIndex, ref BoxWide shapeWide)
         {
             //This function provides a reference to a lane in an AOSOA structure.
@@ -190,6 +200,7 @@ namespace Demos.Demos
             GatherScatter.GetFirst(ref shapeWide.HalfHeight) = halfSize.Y;
             GatherScatter.GetFirst(ref shapeWide.HalfLength) = halfSize.Z;
         }
+
 
         public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
              where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
@@ -366,6 +377,7 @@ namespace Demos.Demos
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere, Voxels, ConvexCompoundOverlapFinder<Sphere, SphereWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, Voxels, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Box, Voxels, ConvexCompoundOverlapFinder<Box, BoxWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
+            Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Cylinder, Voxels, ConvexCompoundOverlapFinder<Cylinder, CylinderWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, Voxels, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
 
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new CompoundPairCollisionTask<Compound, Voxels, CompoundPairOverlapFinder<Compound, Voxels>, CompoundVoxelsContinuations<Compound>, NonconvexReduction>());
@@ -375,7 +387,16 @@ namespace Demos.Demos
             //If you wanted to make your own, look into the various types related to meshes. They're a good starting point, although I'm not exactly happy with the complexity of the
             //current design. They might receive some significant changes- keep that in mind if you create anything which depends heavily on their current implementation.
 
-            //To support sweep tests, we must also register sweep tasks.
+            //To support sweep tests, we must also register sweep tasks. No extra work is required to support these; the interface implementation on the shape is good enough.
+            Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Sphere, SphereWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<Sphere, Voxels>>());
+            Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Capsule, CapsuleWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<Capsule, Voxels>>());
+            Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Box, BoxWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<Box, Voxels>>());
+            Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Cylinder, CylinderWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<Cylinder, Voxels>>());
+            Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Triangle, TriangleWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<Triangle, Voxels>>());
+
+            Simulation.NarrowPhase.SweepTaskRegistry.Register(new CompoundHomogeneousCompoundSweepTask<Compound, Voxels, Box, BoxWide, CompoundPairSweepOverlapFinder<Compound, Voxels>>());
+            Simulation.NarrowPhase.SweepTaskRegistry.Register(new CompoundHomogeneousCompoundSweepTask<BigCompound, Voxels, Box, BoxWide, CompoundPairSweepOverlapFinder<BigCompound, Voxels>>());
+            //Supporting voxels-mesh and voxels-voxels would again require a bit more effort, though a bit less than the collision task equivalents would.
 
 
             var widthInVoxels = 40;
