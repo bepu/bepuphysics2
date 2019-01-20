@@ -21,7 +21,7 @@ namespace Demos.Demos
         {
             camera.Position = new Vector3(-30, 8, -110);
             camera.Yaw = MathHelper.Pi * 3f / 4;
-
+            camera.Pitch = 0;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var boxShape = new Box(1, 1, 1);

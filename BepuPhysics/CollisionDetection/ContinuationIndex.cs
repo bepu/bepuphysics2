@@ -3,22 +3,11 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection
 {
-    public struct ContinuationIndex
+    public struct CCDContinuationIndex
     {
         public uint Packed;
 
-        //From least to most significant: 11 bits inner index, 13 bits continuation index, 7 bits type, 1 bit 'exists' flag.
-
-
-        /// <summary>
-        /// Gets the inner index of the continuation.
-        /// </summary>
-        public int InnerIndex
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (int)(Packed & 0x7FF); }
-        }
-
+        //From least to most significant: 30 bits index, 1 bit type, 1 bit 'exists' flag.
 
         /// <summary>
         /// Gets the index of the continuation.
@@ -26,17 +15,16 @@ namespace BepuPhysics.CollisionDetection
         public int Index
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (int)((Packed >> 11) & 0x1FFF); }
+            get { return (int)(Packed & 0x3FFFFFFF); }
         }
-
-
+        
         /// <summary>
         /// Gets the type index of the continuation.
         /// </summary>
         public int Type
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (int)((Packed >> 24) & 0x7F); }
+            get { return (int)((Packed >> 30) & 1); }
         }
 
         /// <summary>
@@ -49,25 +37,24 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ContinuationIndex(int type, int index, int innerIndex)
+        public CCDContinuationIndex(int type, int index)
         {
-            Debug.Assert(type >= 0 && type < 128, "Do you really have that many type indices, or is the index corrupt?");
-            Debug.Assert(index >= 0 && index < (1 << 13), "Do you really have that many instances, or is the index corrupt?");
-            Debug.Assert(innerIndex >= 0 && innerIndex < (1 << 11), "Do you really have that many inner slots, or is the index corrupt?");
+            Debug.Assert(type >= 0 && type < 2, "Do you really have that many type indices, or is the index corrupt?");
+            Debug.Assert(index >= 0 && index < (1 << 30), "Do you really have that many instances, or is the index corrupt?");
             //Note the inclusion of a set bit in the most significant slot.
             //This encodes that the index was explicitly constructed, so it is a 'real' reference.
             //A default constructed TypeIndex will have a 0 in the MSB, so we can use the default constructor for empty references.
-            Packed = (uint)((type << 24) | (index << 11) | (innerIndex) | (1u << 31));
+            Packed = (uint)((type << 30) | index | (1u << 31));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ContinuationIndex(int packed)
+        public CCDContinuationIndex(int packed)
         {
             this.Packed = (uint)packed;
         }
 
         public override string ToString()
         {
-            return $"<{Type}, {Index}, {InnerIndex}>";
+            return $"<{Type}, {Index}>";
         }
 
     }
