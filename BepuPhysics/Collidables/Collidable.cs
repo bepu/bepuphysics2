@@ -39,7 +39,7 @@ namespace BepuPhysics.Collidables
         /// Collisions lasting less than MinimumProgress may be missed by the sweep test. Using larger values can significantly increase the performance of sweep tests.
         /// </summary>
         [FieldOffset(4)]
-        private float MinimumSweepTimestep;
+        public float MinimumSweepTimestep;
         /// <summary>
         /// If using ContinuousDetectionMode.Continuous, sweep tests will terminate if the time of impact region has been refined to be smaller than SweepConvergenceThreshold.
         /// Values closer to zero will converge more closely to the true time of impact, but for speculative contact generation larger values usually work fine.

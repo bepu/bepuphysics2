@@ -68,7 +68,9 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="childIndexB">Index of the child of collidable B in the pair. If collidable B is not compound, then this is always 0.</param>
         /// <returns>True if collision detection should proceed, false otherwise.</returns>
         /// <remarks>This is called for each sub-overlap in a collidable pair involving compound collidables. If neither collidable in a pair is compound, this will not be called.
-        /// For compound-including pairs, if the earlier call to AllowContactGeneration returns false for owning pair, this will not be called.</remarks>
+        /// For compound-including pairs, if the earlier call to AllowContactGeneration returns false for owning pair, this will not be called. Note that it is possible
+        /// for this function to be called twice for the same subpair if the pair has continuous collision detection enabled; 
+        /// the CCD sweep test that runs before the contact generation test also asks before performing child pair tests.</remarks>
         bool AllowContactGeneration(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB);
         /// <summary>
         /// Provides a notification that a manifold has been created between the children of two collidables in a compound-including pair.

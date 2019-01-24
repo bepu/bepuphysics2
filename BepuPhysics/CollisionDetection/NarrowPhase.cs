@@ -358,7 +358,7 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(bodyLocationA.SetIndex == 0 || bodyLocationB.SetIndex == 0, "One of the two bodies must be active. Otherwise, something is busted!");
                 ref var setA = ref Bodies.Sets[bodyLocationA.SetIndex];
                 ref var setB = ref Bodies.Sets[bodyLocationB.SetIndex];
-                AddBatchEntries(ref overlapWorker, ref pair,
+                AddBatchEntries(workerIndex, ref overlapWorker, ref pair,
                     ref setA.Collidables[bodyLocationA.Index], ref setB.Collidables[bodyLocationB.Index],
                     ref setA.Poses[bodyLocationA.Index], ref setB.Poses[bodyLocationB.Index],
                     ref setA.Velocities[bodyLocationA.Index], ref setB.Velocities[bodyLocationB.Index]);
@@ -376,7 +376,7 @@ namespace BepuPhysics.CollisionDetection
                 //TODO: Ideally, the compiler would see this and optimize away the relevant math in AddBatchEntries. That's a longshot, though. May want to abuse some generics to force it.
                 var zeroVelocity = default(BodyVelocity);
                 ref var bodySet = ref Bodies.ActiveSet;
-                AddBatchEntries(ref overlapWorker, ref pair,
+                AddBatchEntries(workerIndex, ref overlapWorker, ref pair,
                     ref bodySet.Collidables[bodyLocation.Index], ref Statics.Collidables[staticIndex],
                     ref bodySet.Poses[bodyLocation.Index], ref Statics.Poses[staticIndex],
                     ref bodySet.Velocities[bodyLocation.Index], ref zeroVelocity);
@@ -384,8 +384,35 @@ namespace BepuPhysics.CollisionDetection
 
         }
 
+        unsafe struct CCDSweepFilter : ISweepFilter
+        {
+            public NarrowPhase<TCallbacks> NarrowPhase;
+            public CollidablePair Pair;
+            public int WorkerIndex;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool AllowTest(int childA, int childB)
+            {
+                return NarrowPhase.Callbacks.AllowContactGeneration(WorkerIndex, Pair, childA, childB);
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe void AddBatchEntries(ref OverlapWorker overlapWorker,
+        static void CreateDiscretePair(ref OverlapWorker overlapWorker,
+            ref CollidablePair pair, in Collidable aCollidable, in Collidable bCollidable,
+            in RigidPose poseA, in RigidPose poseB, in BodyVelocity velocityA, in BodyVelocity velocityB,
+            float speculativeMargin, float maximumExpansion)
+        {
+            //This pair uses no CCD beyond its speculative margin.
+            var continuation = overlapWorker.Batcher.Callbacks.AddDiscrete(ref pair);
+            overlapWorker.Batcher.Add(
+                aCollidable.Shape, bCollidable.Shape,
+                poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, velocityA, velocityB,
+                speculativeMargin, maximumExpansion, new PairContinuation((int)continuation.Packed));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private unsafe void AddBatchEntries(int workerIndex, ref OverlapWorker overlapWorker,
             ref CollidablePair pair, ref Collidable aCollidable, ref Collidable bCollidable,
             ref RigidPose poseA, ref RigidPose poseB, ref BodyVelocity velocityA, ref BodyVelocity velocityB)
         {
@@ -396,21 +423,66 @@ namespace BepuPhysics.CollisionDetection
             //2) The larger the margin, the higher the risk of ghost collisions. 
             //Taken together, max is implied.
             var speculativeMargin = Math.Max(aCollidable.SpeculativeMargin, bCollidable.SpeculativeMargin);
+            var allowExpansion = aCollidable.Continuity.AllowExpansionBeyondSpeculativeMargin | bCollidable.Continuity.AllowExpansionBeyondSpeculativeMargin;
+            //Note that we pick float.MaxValue for the maximum bounds expansion passive-involving pairs.
+            //This is a compromise- looser bounds are not a correctness issue, so we're trading off potentially more subpairs
+            //and the need to compute a tighter maximum bound. That's not incredibly expensive, but it does add up. For now, we use the looser bound under the assumption
+            //that the vast majority of pairs won't benefit from the tighter bound.
+            var maximumExpansion = allowExpansion ? float.MaxValue : speculativeMargin;
+
             //Create a continuation for the pair given the CCD state.
             //Note that we never create 'unilateral' CCD pairs. That is, if either collidable in a pair enables a CCD feature, we just act like both are using it.
-            //That keeps things a little simpler. Unlike v1, we don't have to worry about the implications of 'motion clamping' here- no need for deeper configuration.
+            //That keeps things a little simpler. Unlike v1, we don't have to worry about the implications of 'motion clamping' here- no need for deeper configuration.            
+            CCDContinuationIndex continuationIndex = default;
             if (aCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous || bCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous)
             {
+                var sweepTask = SweepTaskRegistry.GetTask(aCollidable.Shape.Type, bCollidable.Shape.Type);
+                if (sweepTask != null)
+                {
+                    //Not every continuous pair requires an actual sweep test. If the maximum approaching displacement for any point on the involved shapes isn't any larger
+                    //than the speculative margin, then we don't need to perform a sweep- we can assume that the speculative margin will take care of it.
+                    //sweepRequired = (||angularVelocityA|| * maximumRadiusA + ||angularVelocityB|| * maximumRadiusB + ||relativeLinearVelocity||) * dt > speculativeMargin
+                    //Unfortunately, there's no easy and quick way to grab a reliable maximum radius for all shape types. Convexes have a relatively cheap value (though it may
+                    //involve a square root sometimes), but compounds tend to require heavier lifting and iteration.
+                    //Given that this should be a pretty rarely used loose optimization, we'll instead make use of the bounding boxes to create an estimate.
+                    //Note that the broad phase already touched this data on this thread, so it's still available in L1. (This function is called from broad phase collision testing.)
+                    //TODO: May want to reconsider this approach if you end up caching more properties on the shape (or if profiling suggests it is a concern).
+                    var aInStaticTree = pair.A.Mobility == CollidableMobility.Static || Simulation.Bodies.HandleToLocation[pair.A.Handle].SetIndex > 0;
+                    var bInStaticTree = pair.B.Mobility == CollidableMobility.Static || Simulation.Bodies.HandleToLocation[pair.B.Handle].SetIndex > 0;
+                    ref var aTree = ref aInStaticTree ? ref Simulation.BroadPhase.StaticTree : ref Simulation.BroadPhase.ActiveTree;
+                    ref var bTree = ref bInStaticTree ? ref Simulation.BroadPhase.StaticTree : ref Simulation.BroadPhase.ActiveTree;
+                    BroadPhase.GetBoundsPointers(aCollidable.BroadPhaseIndex, ref aTree, out var aMin, out var aMax);
+                    BroadPhase.GetBoundsPointers(aCollidable.BroadPhaseIndex, ref bTree, out var bMin, out var bMax);
+                    var maximumRadiusA = (*aMax - *aMin).Length() * 0.5f;
+                    var maximumRadiusB = (*bMax - *bMin).Length() * 0.5f;
+                    if ((velocityA.Angular.Length() * maximumRadiusA + velocityB.Angular.Length() * maximumRadiusB + (velocityB.Linear - velocityA.Linear).Length()) * timestepDuration > speculativeMargin)
+                    {
+                        Simulation.Shapes[aCollidable.Shape.Type].GetShapeData(aCollidable.Shape.Index, out var shapeDataA, out var shapeSizeA);
+                        Simulation.Shapes[bCollidable.Shape.Type].GetShapeData(bCollidable.Shape.Index, out var shapeDataB, out var shapeSizeB);
+                        var filter = new CCDSweepFilter { NarrowPhase = this, Pair = pair, WorkerIndex = workerIndex };
+                        if (sweepTask.Sweep(
+                            shapeDataA, aCollidable.Shape.Type, poseA.Orientation, velocityA,
+                            shapeDataB, bCollidable.Shape.Type, poseB.Position - poseA.Position, poseB.Orientation, velocityB,
+                            timestepDuration,
+                            //Note that we use the *smaller* thresholds. This allows high fidelity objects to demand more time even if paired with low fidelity objects.
+                            Math.Min(aCollidable.Continuity.MinimumSweepTimestep, bCollidable.Continuity.MinimumSweepTimestep),
+                            Math.Min(aCollidable.Continuity.SweepConvergenceThreshold, bCollidable.Continuity.SweepConvergenceThreshold), 25, //Note the fixed but high iteration threshold.
+                            ref filter, Simulation.Shapes, SweepTaskRegistry, Simulation.BufferPool, out _, out var t1, out _, out _))
+                        {
+                            continuationIndex = overlapWorker.Batcher.Callbacks.AddContinuous(ref pair, velocityB.Linear - velocityA.Linear, velocityA.Angular, velocityB.Angular, t1);
+                        }
+                    }
+                }
             }
-            else
+            if(!continuationIndex.Exists)
             {
-                //This pair uses no CCD beyond its speculative margin.
-                var continuation = overlapWorker.Batcher.Callbacks.AddDiscrete(ref pair);
-                overlapWorker.Batcher.Add(
-                    aCollidable.Shape, bCollidable.Shape,
-                    poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, velocityA, velocityB,
-                    speculativeMargin, speculativeMargin, new PairContinuation((int)continuation.Packed));
+                //No CCD continuation was created, so create a discrete one.
+                continuationIndex = overlapWorker.Batcher.Callbacks.AddDiscrete(ref pair);
             }
+            overlapWorker.Batcher.Add(
+               aCollidable.Shape, bCollidable.Shape,
+               poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, velocityA, velocityB,
+               speculativeMargin, maximumExpansion, new PairContinuation((int)continuationIndex.Packed));
         }
     }
 }
