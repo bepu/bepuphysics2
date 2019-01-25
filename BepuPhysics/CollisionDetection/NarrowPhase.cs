@@ -398,20 +398,6 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void CreateDiscretePair(ref OverlapWorker overlapWorker,
-            ref CollidablePair pair, in Collidable aCollidable, in Collidable bCollidable,
-            in RigidPose poseA, in RigidPose poseB, in BodyVelocity velocityA, in BodyVelocity velocityB,
-            float speculativeMargin, float maximumExpansion)
-        {
-            //This pair uses no CCD beyond its speculative margin.
-            var continuation = overlapWorker.Batcher.Callbacks.AddDiscrete(ref pair);
-            overlapWorker.Batcher.Add(
-                aCollidable.Shape, bCollidable.Shape,
-                poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, velocityA, velocityB,
-                speculativeMargin, maximumExpansion, new PairContinuation((int)continuation.Packed));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void AddBatchEntries(int workerIndex, ref OverlapWorker overlapWorker,
             ref CollidablePair pair, ref Collidable aCollidable, ref Collidable bCollidable,
             ref RigidPose poseA, ref RigidPose poseB, ref BodyVelocity velocityA, ref BodyVelocity velocityB)
@@ -459,30 +445,63 @@ namespace BepuPhysics.CollisionDetection
                     {
                         Simulation.Shapes[aCollidable.Shape.Type].GetShapeData(aCollidable.Shape.Index, out var shapeDataA, out var shapeSizeA);
                         Simulation.Shapes[bCollidable.Shape.Type].GetShapeData(bCollidable.Shape.Index, out var shapeDataB, out var shapeSizeB);
+                        float minimumSweepTimestepA, sweepConvergenceThresholdA;
+                        if(aCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous)
+                        {
+                            minimumSweepTimestepA = aCollidable.Continuity.MinimumSweepTimestep;
+                            sweepConvergenceThresholdA = aCollidable.Continuity.SweepConvergenceThreshold;
+                        }
+                        else
+                        {
+                            minimumSweepTimestepA = float.MaxValue;
+                            sweepConvergenceThresholdA = float.MaxValue;
+                        }
+                        float minimumSweepTimestepB, sweepConvergenceThresholdB;
+                        if (bCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous)
+                        {
+                            minimumSweepTimestepB = bCollidable.Continuity.MinimumSweepTimestep;
+                            sweepConvergenceThresholdB = bCollidable.Continuity.SweepConvergenceThreshold;
+                        }
+                        else
+                        {
+                            minimumSweepTimestepB = float.MaxValue;
+                            sweepConvergenceThresholdB = float.MaxValue;
+                        }
                         var filter = new CCDSweepFilter { NarrowPhase = this, Pair = pair, WorkerIndex = workerIndex };
                         if (sweepTask.Sweep(
                             shapeDataA, aCollidable.Shape.Type, poseA.Orientation, velocityA,
                             shapeDataB, bCollidable.Shape.Type, poseB.Position - poseA.Position, poseB.Orientation, velocityB,
                             timestepDuration,
                             //Note that we use the *smaller* thresholds. This allows high fidelity objects to demand more time even if paired with low fidelity objects.
-                            Math.Min(aCollidable.Continuity.MinimumSweepTimestep, bCollidable.Continuity.MinimumSweepTimestep),
-                            Math.Min(aCollidable.Continuity.SweepConvergenceThreshold, bCollidable.Continuity.SweepConvergenceThreshold), 25, //Note the fixed but high iteration threshold.
+                            Math.Min(minimumSweepTimestepA, minimumSweepTimestepB),
+                            Math.Min(sweepConvergenceThresholdA, sweepConvergenceThresholdB), 25, //Note the fixed but high iteration threshold.
                             ref filter, Simulation.Shapes, SweepTaskRegistry, Simulation.BufferPool, out _, out var t1, out _, out _))
                         {
+                            //Create the pair at a position known to be intersecting from the sweep test. t0 and t1 are the bounding region of the first time of impact,
+                            //so we pick the later one (t1). The continuation handler will 'rewind' the depths to create speculative contacts.
                             continuationIndex = overlapWorker.Batcher.Callbacks.AddContinuous(ref pair, velocityB.Linear - velocityA.Linear, velocityA.Angular, velocityB.Angular, t1);
+
+                            //The poses should be as they will be at t1, not where they are now. Velocity is treated as constant throughout the the timestep.
+                            PoseIntegration.Integrate(poseA.Orientation, velocityA.Angular, t1, out var integratedOrientationA);
+                            PoseIntegration.Integrate(poseB.Orientation, velocityB.Angular, t1, out var integratedOrientationB);
+                            var offsetB = poseB.Position - poseA.Position + (velocityB.Linear - velocityA.Linear) * t1;
+                            overlapWorker.Batcher.Add(
+                               aCollidable.Shape, bCollidable.Shape,
+                               offsetB, integratedOrientationA, integratedOrientationB, velocityA, velocityB,
+                               speculativeMargin, maximumExpansion, new PairContinuation((int)continuationIndex.Packed));
                         }
                     }
                 }
             }
-            if(!continuationIndex.Exists)
+            if (!continuationIndex.Exists)
             {
                 //No CCD continuation was created, so create a discrete one.
                 continuationIndex = overlapWorker.Batcher.Callbacks.AddDiscrete(ref pair);
+                overlapWorker.Batcher.Add(
+                   aCollidable.Shape, bCollidable.Shape,
+                   poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, velocityA, velocityB,
+                   speculativeMargin, maximumExpansion, new PairContinuation((int)continuationIndex.Packed));
             }
-            overlapWorker.Batcher.Add(
-               aCollidable.Shape, bCollidable.Shape,
-               poseB.Position - poseA.Position, poseA.Orientation, poseB.Orientation, velocityA, velocityB,
-               speculativeMargin, maximumExpansion, new PairContinuation((int)continuationIndex.Packed));
         }
     }
 }

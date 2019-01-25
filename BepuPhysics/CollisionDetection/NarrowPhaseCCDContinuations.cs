@@ -157,8 +157,8 @@ namespace BepuPhysics.CollisionDetection
                                     ref var contact = ref Unsafe.Add(ref manifold.Contact0, i);
                                     Vector3x.Cross(continuation.AngularA, contact.Offset, out var angularContributionA);
                                     Vector3x.Cross(continuation.AngularB, contact.Offset - manifold.OffsetB, out var angularContributionB);
-                                    var velocityAtContact = Vector3.Dot(angularContributionA + angularContributionB + continuation.RelativeLinearVelocity, manifold.Normal);
-                                    contact.Depth += velocityAtContact * continuation.T;
+                                    var velocityAtContact = Vector3.Dot(angularContributionB - angularContributionA + continuation.RelativeLinearVelocity, manifold.Normal);
+                                    contact.Depth -= velocityAtContact * continuation.T;
                                 }
                             }
                             else
@@ -170,8 +170,8 @@ namespace BepuPhysics.CollisionDetection
                                     ref var contact = ref Unsafe.Add(ref manifold.Contact0, i);
                                     Vector3x.Cross(continuation.AngularA, contact.Offset, out var angularContributionA);
                                     Vector3x.Cross(continuation.AngularB, contact.Offset - manifold.OffsetB, out var angularContributionB);
-                                    var velocityAtContact = Vector3.Dot(angularContributionA + angularContributionB + continuation.RelativeLinearVelocity, contact.Normal);
-                                    contact.Depth += velocityAtContact * continuation.T;
+                                    var velocityAtContact = Vector3.Dot(angularContributionB - angularContributionA + continuation.RelativeLinearVelocity, contact.Normal);
+                                    contact.Depth -= velocityAtContact * continuation.T;
                                 }
                             }
                             narrowPhase.UpdateConstraintsForPair<TManifold, EmptyCollisionCache>(workerIndex, ref continuation.Pair, manifoldPointer, ref todoTestCollisionCache);
