@@ -1,6 +1,6 @@
 # Q&A
 
-##### How do I make an object that can't be moved by outside influences, like other colliding dynamic bodies, but can still have a velocity?
+### How do I make an object that can't be moved by outside influences, like other colliding dynamic bodies, but can still have a velocity?
 
 Use a kinematic body. To create one, set the inverse mass and all components of the inverse inertia to zero in the body description passed to Simulation.Add. Kinematic bodies have effectively infinite mass and cannot be moved by any force. You can still change their velocity directly, though.
 
@@ -10,7 +10,7 @@ Be careful when using kinematics- they are both unstoppable forces and immovable
 
 Also, if two kinematic bodies collide, a constraint will not be generated. Kinematics cannot respond to collisions, not even with other infinitely massive objects. They will simply continue to move along the path defined by their velocity.
 
-##### I made a body with zero inverse mass and nonzero inverse inertia and the simulation exploded/crashed! Why?
+### I made a body with zero inverse mass and nonzero inverse inertia and the simulation exploded/crashed! Why?
 
 While dynamic bodies with zero inverse mass and nonzero inverse inertia tensors are technically allowed, they require extreme care. It is possible for constraints to be configured such that there is no solution, resulting in a division by zero. NaN values will propagate through the simulation and make everything explode.
 
@@ -22,7 +22,7 @@ Generally, avoid creating dynamic bodies with zero inverse mass unless you can a
 
 (You can also just use a constraint to keep an object positioned in one spot rather than setting its inverse mass to zero!)
 
-##### How can I ensure that the results of a simulation are deterministic (given the same inputs, the simulation produces the same physical result) on a single machine?
+### How can I ensure that the results of a simulation are deterministic (given the same inputs, the simulation produces the same physical result) on a single machine?
 
 Take great care to ensure that every interaction with the physics simulation is reproduced in exactly the same order on each execution. This even includes the order of adds and removes!
 
@@ -32,7 +32,7 @@ Assuming that all external interactions with the engine are deterministic, the s
 
 The Deterministic property defaults to false. Ensuring determinism has a slight performance impact. It should be trivial for most simulations, but large and extremely chaotic simulations may take a few hundred microseconds more per frame.
 
-##### What do I do if I want determinism across different computers?
+### What do I do if I want determinism across different computers?
 
 Hope that they happen to have exactly the same architecture so that every single instruction produces bitwise identical results. :(
 
@@ -44,7 +44,7 @@ At the moment, BEPUphysics v2 does not support fixed point math out of the box, 
 
 I may look into conditionally compiled alternative scalar types in the future. I can't guarantee when or if I'll get around to it, though; don't wait for me!
 
-##### I updated to the latest version of the physics library and simulations are producing different results than before, even though I set the Simulation.Deterministic property to true! What do?
+### I updated to the latest version of the physics library and simulations are producing different results than before, even though I set the Simulation.Deterministic property to true! What do?
 
 Different versions of the library are not guaranteed to produce identical simulation results. Guaranteeing cross-version determinism would constrain development to an unacceptable degree.
 
@@ -52,13 +52,13 @@ If you need determinism of results over long periods (for example, storing game 
 
 Such a drift correcting mechanism also compensates for the differences between processor architectures, so you'd gain the ability to share the replay across different hardware as a bonus.
 
-##### I was trying to simulate the behavior of a spinning multitool in zero gravity and noted a CLEAR lack of the Dzhanibekov effect!
+### I was trying to simulate the behavior of a spinning multitool in zero gravity and noted a CLEAR lack of the Dzhanibekov effect!
 
 By default, angular momentum is not explicitly tracked; angular velocity will remain constant during rotation without outside impulses.
 
 Momentum-conserving angular integration can be chosen by returning a different value from the IPoseIntegratorCallbacks.AngularIntegrationMode property. Gyroscopes tend to work better with ConserveMomentum, while ConserveMomentumWithGyroscopicTorque is less prone to velocity drift toward lower inertia axes.
 
-#### Surprises
+## Surprises
 
 Simulating real physics is slightly difficult, so corners are cut. Lots of corners. Sometimes this results in unexpected behavior. Sometimes different physics libraries cut different corners, so the unexpected behavior differs. 
 
@@ -68,7 +68,7 @@ This is a list of some things that might frustrate or raise an eyebrow (and what
 
 This list will probably change over time.
 
-##### ...Where is the bounciness/restitution material property?
+### ...Where is the bounciness/restitution material property?
 
 You're not crazy- it doesn't exist! Instead, at the time of writing, there is friction, frequency, damping ratio, and maximum recovery velocity.
 
@@ -78,7 +78,7 @@ The reason for this is speculative contacts. v1 used them too, but v2 pushes the
 
 I'd like to see if the frequency/damping ratio can suffice for most use cases. If this is a critical problem for what you are trying to do, let me know. I can't guarantee I'll fix it in the near term, but if it becomes a blocking problem for a large number of people (or myself) there's a better chance that I'll spend the time to add a workaround.
 
-##### Swept shape tests against the backfaces of meshes don't go through, but collisions do. What's going on?
+### Swept shape tests against the backfaces of meshes don't go through, but collisions do. What's going on?
 
 While ray and collision testing against triangles is always one sided, swept shape tests are double sided. This is pretty strange, and there isn't a secret good reason for it.
 
