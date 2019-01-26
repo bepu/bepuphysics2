@@ -12,22 +12,23 @@ To build the source, you'll need a recent version of Visual Studio with the .NET
 
 ## Features
 
-The beta contains:
 - Spheres, capsules, boxes, triangles
 - Compounds of the above
 - Meshes
+- A [whole bunch of constraint types](BepuPhysics/Constraints/)
+- [Newts](Demos/Demos/NewtDemo.cs)
+- Linear and angular continuous collision detection
+- Extremely low cost sleep states for resting bodies
+- Efficient scene-wide ray and sweep queries
+- [Character controller example](Demos/Demos/CharacterDemo.cs)
+- At least somewhat extensible collision pipeline, with [example custom voxel collidable](Demos/Demos/CustomVoxelCollidableDemo.cs)
 - Highly nonidiomatic APIs
-- Automatic sleeping/waking management
-- Ball socket, hinge, swivel hinge, swing limit, twist servo, twist motor, twist limit, angular servo, and angular motor
-- Speediness
+- Super speediness
+- And a bunch of other miscellaneous stuff!
 
 It notably does *not* yet include:
-- Convex hulls, cylinders, cones, or other complex shapes 
-- Dedicated heightmap terrain meshes
-- Mesh-mesh collision detection
+- Convex hulls, cylinders, or other more general convexes
 - Bounciness, other than the frequency/damping ratio tuning
-- Continuous collision detection, other than the speculative margin
-- Many useful constraint types
 
 ## Links
 
