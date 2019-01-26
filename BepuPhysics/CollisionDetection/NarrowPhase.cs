@@ -475,7 +475,7 @@ namespace BepuPhysics.CollisionDetection
                             //Note that we use the *smaller* thresholds. This allows high fidelity objects to demand more time even if paired with low fidelity objects.
                             Math.Min(minimumSweepTimestepA, minimumSweepTimestepB),
                             Math.Min(sweepConvergenceThresholdA, sweepConvergenceThresholdB), 25, //Note the fixed but high iteration threshold.
-                            ref filter, Simulation.Shapes, SweepTaskRegistry, Simulation.BufferPool, out _, out var t1, out _, out _))
+                            ref filter, Simulation.Shapes, SweepTaskRegistry, overlapWorker.Batcher.Pool, out _, out var t1, out _, out _))
                         {
                             //Create the pair at a position known to be intersecting from the sweep test. t0 and t1 are the bounding region of the first time of impact,
                             //so we pick the later one (t1). The continuation handler will 'rewind' the depths to create speculative contacts.
