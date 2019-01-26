@@ -166,33 +166,39 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //(A * AB) * (AB * AC) - (A * AC) * (AB * AB) >= 0  (from (A x AB) * (AB x AC) >= 0)
             //(AC * AB) * (A * AC) - (AC * AC) * (A * AB) >= 0  (from (AC x A) * (AB x AC) >= 0)
             //The third edge plane test doesn't need be computed.
-            //Note the cross product order and signs. 
+            //Note the cross product order and signs.
 
-            //Now for the scaling factor to bring the plane test down to a barycentric coordinate.
-            //The barycentric weight of vertex C on triangle ABC for the origin is:
-            //(A x AB) * (AB x AC) / ((AB x AC) * (AB x AC))
-            //Expanding with identities, this transforms to:
-            //((A * AB) * (AB * AC) - (A * AC) * (AB * AB)) / ((AB * AB) * (AC * AC) - (AB * AC) * (AC * AB))
+            //Instead of constructing the simplex closest point from barycentric weights, we'll cast a ray to the triangle along the triangle normal.
+            //This is mathematically equivalent but numerically superior for face contacts- it guarantees that a closest point on the triangle's face
+            //can never produce an offset that isn't aligned with the triangle normal.
+            //(The triangle normal might still have some numerical issues, but it's far less severe than explicitly using the barycentric weights.)
+            //N = ab x ac
+            //closestPointOnTriangle = O + t * N
+            //closestPointOnTriangle = O + N * dot(vertexA - O, N) / dot(N, N)
+            //closestPointOnTriangle = N * dot(vertexA, N) / dot(N, N)
+            Vector3Wide.CrossWithoutOverlap(ab, ac, out var n);
+            Vector3Wide.LengthSquared(n, out var abxacLengthSquared);
+            Vector3Wide.Dot(a, n, out var aN);
+            var inverseNLengthSquared = Vector<float>.One / abxacLengthSquared;
+            var t = aN * inverseNLengthSquared;
+            Vector3Wide.Scale(n, t, out var closestCandidate);
+            //Note that the above is not the fastest possible implementation. There are some shared terms that we're not taking advantage of for numerical reasons.
+            //(But I bet there's still a clever way to be faster with equal or better numerical behavior!)
+            //(But maximum performance improvement would be on the scale of 10% on the high end for GJK in isolation, so not exactly a big deal.)
+
             Vector3Wide.Dot(ab, ac, out var abac);
-            //Note that degenerate triangles can result in a division by zero.
-            //In that case, bWeight and cWeight will be NaN. By IEEE754, all comparisons with NaN return false, so the projectionInTriangle is guaranteed to evaluate to false.
-            var abcDenom = Vector<float>.One / (abab * acac - abac * abac);
-            var cWeight = (abA * abac - acA * abab) * abcDenom;
-            var bWeight = (abac * acA - acac * abA) * abcDenom;
+            var cWeight = (abA * abac - acA * abab) * inverseNLengthSquared;
+            var bWeight = (abac * acA - acac * abA) * inverseNLengthSquared;
             var aWeight = Vector<float>.One - bWeight - cWeight;
             var projectionInTriangle = Vector.BitwiseAnd(
                 Vector.BitwiseAnd(
                     Vector.GreaterThanOrEqual(aWeight, Vector<float>.Zero),
                     Vector.GreaterThanOrEqual(bWeight, Vector<float>.Zero)),
                 Vector.GreaterThanOrEqual(cWeight, Vector<float>.Zero));
-            Vector3Wide.Scale(a, aWeight, out var aContribution);
-            Vector3Wide.Scale(b, bWeight, out var bContribution);
-            Vector3Wide.Scale(c, cWeight, out var cContribution);
+
             Vector3Wide.Scale(aOnA, aWeight, out var aOnAContribution);
             Vector3Wide.Scale(bOnA, bWeight, out var bOnAContribution);
             Vector3Wide.Scale(cOnA, cWeight, out var cOnAContribution);
-            Vector3Wide.Add(aContribution, bContribution, out var closestCandidate);
-            Vector3Wide.Add(cContribution, closestCandidate, out closestCandidate);
             Vector3Wide.Add(aOnAContribution, bOnAContribution, out var closestACandidate);
             Vector3Wide.Add(cOnAContribution, closestACandidate, out closestACandidate);
             Vector3Wide.LengthSquared(closestCandidate, out var distanceSquaredCandidate);

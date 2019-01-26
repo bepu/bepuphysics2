@@ -39,7 +39,7 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<CCDTestDemo>();
+            AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<NelderMeadTestDemo>();
             AddOption<CylinderTestDemo>();
             AddOption<ColosseumDemo>();
