@@ -81,8 +81,8 @@ namespace Demos.Demos
 
             //Build a couple of spinners to ram into each other to showcase angular CCD. Note that the spin speeds are slightly different- that helps avoid 
             //synchronization that makes the blades frequently miss each other, which sorta ruins a CCD demo.
-            spinnerMotorA = BuildSpinner(new Vector3(-5, 10, -5), 31);
-            spinnerMotorB = BuildSpinner(new Vector3(5, 10, -5), 37);
+            spinnerMotorA = BuildSpinner(new Vector3(-5, 10, -5), 53);
+            spinnerMotorB = BuildSpinner(new Vector3(5, 10, -5), 59);
             rolloverInfo.Add(new Vector3(0, 12, -5), "High angular velocity continuous detection");
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 10, 300)), 0.1f)));

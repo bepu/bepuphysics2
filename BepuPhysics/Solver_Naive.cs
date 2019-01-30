@@ -21,9 +21,13 @@
 //            var inverseDt = 1f / context.Dt;
 //            while ((blockIndex = Interlocked.Increment(ref manualNaiveBlockIndex)) <= manualNaiveExclusiveEndIndex)
 //            {
-//                ref var block = ref context.WorkBlocks[blockIndex - 1];
+//                blockIndex -= 1;
+//                ref var block = ref context.ConstraintBlocks.Blocks[blockIndex];
 //                ref var typeBatch = ref activeSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
-//                TypeProcessors[typeBatch.TypeId].Prestep(ref typeBatch, bodies, context.Dt, inverseDt, block.StartBundle, block.End);
+//                if (block.BatchIndex < FallbackBatchThreshold)
+//                    TypeProcessors[typeBatch.TypeId].Prestep(ref typeBatch, bodies, context.Dt, inverseDt, block.StartBundle, block.End);
+//                else
+//                    TypeProcessors[typeBatch.TypeId].JacobiPrestep(ref typeBatch, bodies, ref ActiveSet.Fallback, context.Dt, inverseDt, block.StartBundle, block.End);
 //            }
 //        }
 //        void ManualNaiveWarmStart(int workBlockIndex)
@@ -32,9 +36,16 @@
 //            ref var activeSet = ref ActiveSet;
 //            while ((blockIndex = Interlocked.Increment(ref manualNaiveBlockIndex)) <= manualNaiveExclusiveEndIndex)
 //            {
-//                ref var block = ref context.WorkBlocks[blockIndex - 1];
+//                ref var block = ref context.ConstraintBlocks.Blocks[blockIndex - 1];
 //                ref var typeBatch = ref activeSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
-//                TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, block.StartBundle, block.End);
+//                if (block.BatchIndex < FallbackBatchThreshold)
+//                {
+//                    TypeProcessors[typeBatch.TypeId].JacobiWarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, ref context.FallbackResults[block.TypeBatchIndex], block.StartBundle, block.End);
+//                }
+//                else
+//                {
+//                    TypeProcessors[typeBatch.TypeId].WarmStart(ref typeBatch, ref bodies.ActiveSet.Velocities, block.StartBundle, block.End);
+//                }
 //            }
 //        }
 
@@ -44,16 +55,23 @@
 //            ref var activeSet = ref ActiveSet;
 //            while ((blockIndex = Interlocked.Increment(ref manualNaiveBlockIndex)) <= manualNaiveExclusiveEndIndex)
 //            {
-//                ref var block = ref context.WorkBlocks[blockIndex - 1];
+//                ref var block = ref context.ConstraintBlocks.Blocks[blockIndex - 1];
 //                ref var typeBatch = ref activeSet.Batches[block.BatchIndex].TypeBatches[block.TypeBatchIndex];
-//                TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, block.StartBundle, block.End);
+//                if (block.BatchIndex < FallbackBatchThreshold)
+//                {
+//                    TypeProcessors[typeBatch.TypeId].SolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, block.StartBundle, block.End);
+//                }
+//                else
+//                {
+//                    TypeProcessors[typeBatch.TypeId].JacobiSolveIteration(ref typeBatch, ref bodies.ActiveSet.Velocities, ref context.FallbackResults[block.TypeBatchIndex], block.StartBundle, block.End);
+//                }
 //            }
 //        }
 
 
 
 
-//        public double ManualNaiveMultithreadedUpdate(IThreadDispatcher threadPool, BufferPool bufferPool, float dt, float inverseDt)
+//        public void ManualNaiveMultithreadedUpdate(IThreadDispatcher threadPool, BufferPool bufferPool, float dt, float inverseDt)
 //        {
 //            var workerCount = context.WorkerCount = threadPool.ThreadCount;
 //            context.Dt = dt;
@@ -67,12 +85,12 @@
 //            //and assuming 500ns per bundle, we risk up to 4 microseconds per iteration-batch worth of idle time.
 //            //This issue isn't unique to the somewhat odd workstealing scheme we use- it would still be a concern regardless.
 //            var maximumBlocksPerBatch = workerCount * targetBlocksPerBatchPerWorker;
-//            BuildWorkBlocks(bufferPool, minimumBlockSizeInBundles, maximumBlocksPerBatch);
-//            ValidateWorkBlocks();
+//            var filter = new MainSolveFilter();
+//            BuildWorkBlocks(bufferPool, minimumBlockSizeInBundles, maximumBlocksPerBatch, ref filter);
+//            ValidateWorkBlocks(ref filter);
 
 //            manualNaiveBlockIndex = 0;
-//            manualNaiveExclusiveEndIndex = context.WorkBlocks.Count;
-//            var start = Stopwatch.GetTimestamp();
+//            manualNaiveExclusiveEndIndex = context.ConstraintBlocks.Blocks.Count;
 //            threadPool.DispatchWorkers(ManualNaivePrestep);
 
 //            ref var activeSet = ref ActiveSet;
@@ -93,11 +111,9 @@
 //                }
 //            }
 
-//            var end = Stopwatch.GetTimestamp();
 
-//            context.WorkBlocks.Dispose(bufferPool.SpecializeFor<WorkBlock>());
-//            context.BatchBoundaries.Dispose(bufferPool.SpecializeFor<int>());
-//            return (end - start) / (double)Stopwatch.Frequency;
+//            context.ConstraintBlocks.Blocks.Dispose(bufferPool);
+//            bufferPool.Return(ref context.BatchBoundaries);
 //        }
 
 //    }

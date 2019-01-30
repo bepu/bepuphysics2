@@ -79,17 +79,23 @@ namespace BepuPhysics
         [Conditional("PROFILE")]
         void ProfilerClear()
         {
+#if PROFILE
             Timings.Clear();
+#endif
         }
         [Conditional("PROFILE")]
         void ProfilerStart(object o)
         {
+#if PROFILE
             Timings.Start(o);
+#endif
         }
         [Conditional("PROFILE")]
         void ProfilerEnd(object o)
         {
+#if PROFILE
             Timings.End(o);
+#endif
         }
     }
 }
