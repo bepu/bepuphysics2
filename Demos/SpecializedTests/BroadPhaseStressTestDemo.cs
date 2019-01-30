@@ -95,8 +95,8 @@ namespace Demos.SpecializedTests
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
             base.Update(window, camera, input, dt);
-            refineTimes.Add(Simulation.Timings[Simulation.BroadPhase]);
-            testTimes.Add(Simulation.Timings[Simulation.BroadPhaseOverlapFinder]);
+            refineTimes.Add(Simulation.Profiler[Simulation.BroadPhase]);
+            testTimes.Add(Simulation.Profiler[Simulation.BroadPhaseOverlapFinder]);
             if (frameCount++ % sampleCount == 0)
             {
                 var refineStats = refineTimes.ComputeStats();

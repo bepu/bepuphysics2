@@ -30,6 +30,12 @@ namespace BepuPhysics
         public CollidableOverlapFinder BroadPhaseOverlapFinder { get; private set; }
         public NarrowPhase NarrowPhase { get; private set; }
 
+        SimulationProfiler profiler = new SimulationProfiler(13);
+        /// <summary>
+        /// Gets the simulation profiler. Note that the SimulationProfiler implementation only exists when the library is compiled with the PROFILE compilation symbol; if not defined, returned times are undefined.
+        /// </summary>
+        public SimulationProfiler Profiler { get { return profiler; } }
+
         //Helpers shared across at least two stages.
         internal ConstraintRemover constraintRemover;
 
@@ -190,9 +196,9 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for the sleeper execution, if any.</param>
         public void Sleep(IThreadDispatcher threadDispatcher = null)
         {
-            ProfilerStart(Sleeper);
+            profiler.Start(Sleeper);
             Sleeper.Update(threadDispatcher, Deterministic);
-            ProfilerEnd(Sleeper);
+            profiler.End(Sleeper);
         }
 
         /// <summary>
@@ -202,9 +208,9 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         public void IntegrateBodiesAndUpdateBoundingBoxes(float dt, IThreadDispatcher threadDispatcher = null)
         {
-            ProfilerStart(PoseIntegrator);
+            profiler.Start(PoseIntegrator);
             PoseIntegrator.IntegrateBodiesAndUpdateBoundingBoxes(dt, BufferPool, threadDispatcher);
-            ProfilerEnd(PoseIntegrator);
+            profiler.End(PoseIntegrator);
         }
 
         /// <summary>
@@ -214,9 +220,9 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         public void PredictBoundingBoxes(float dt, IThreadDispatcher threadDispatcher = null)
         {
-            ProfilerStart(PoseIntegrator);
+            profiler.Start(PoseIntegrator);
             PoseIntegrator.PredictBoundingBoxes(dt, BufferPool, threadDispatcher);
-            ProfilerEnd(PoseIntegrator);
+            profiler.End(PoseIntegrator);
         }
 
         /// <summary>
@@ -226,9 +232,9 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         public void IntegrateVelocitiesBoundsAndInertias(float dt, IThreadDispatcher threadDispatcher = null)
         {
-            ProfilerStart(PoseIntegrator);
+            profiler.Start(PoseIntegrator);
             PoseIntegrator.IntegrateVelocitiesBoundsAndInertias(dt, BufferPool, threadDispatcher);
-            ProfilerEnd(PoseIntegrator);
+            profiler.End(PoseIntegrator);
         }
 
         /// <summary>
@@ -238,9 +244,9 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         public void IntegrateVelocitiesAndUpdateInertias(float dt, IThreadDispatcher threadDispatcher = null)
         {
-            ProfilerStart(PoseIntegrator);
+            profiler.Start(PoseIntegrator);
             PoseIntegrator.IntegrateVelocitiesAndUpdateInertias(dt, BufferPool, threadDispatcher);
-            ProfilerEnd(PoseIntegrator);
+            profiler.End(PoseIntegrator);
         }
 
         /// <summary>
@@ -250,9 +256,9 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         public void IntegratePoses(float dt, IThreadDispatcher threadDispatcher = null)
         {
-            ProfilerStart(PoseIntegrator);
+            profiler.Start(PoseIntegrator);
             PoseIntegrator.IntegratePoses(dt, BufferPool, threadDispatcher);
-            ProfilerEnd(PoseIntegrator);
+            profiler.End(PoseIntegrator);
         }
 
         /// <summary>
@@ -262,17 +268,17 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         public void CollisionDetection(float dt, IThreadDispatcher threadDispatcher = null)
         {
-            ProfilerStart(BroadPhase);
+            profiler.Start(BroadPhase);
             BroadPhase.Update(threadDispatcher);
-            ProfilerEnd(BroadPhase);
+            profiler.End(BroadPhase);
 
-            ProfilerStart(BroadPhaseOverlapFinder);
+            profiler.Start(BroadPhaseOverlapFinder);
             BroadPhaseOverlapFinder.DispatchOverlaps(dt, threadDispatcher);
-            ProfilerEnd(BroadPhaseOverlapFinder);
+            profiler.End(BroadPhaseOverlapFinder);
 
-            ProfilerStart(NarrowPhase);
+            profiler.Start(NarrowPhase);
             NarrowPhase.Flush(threadDispatcher);
-            ProfilerEnd(NarrowPhase);
+            profiler.End(NarrowPhase);
         }
 
         /// <summary>
@@ -282,9 +288,9 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         public void IncrementallyUpdateContactConstraints(float dt, IThreadDispatcher threadDispatcher = null)
         {
-            ProfilerStart(Solver);
+            profiler.Start(Solver);
             Solver.IncrementallyUpdateContactConstraints(dt, threadDispatcher);
-            ProfilerEnd(Solver);
+            profiler.End(Solver);
         }
 
         /// <summary>
@@ -294,9 +300,9 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         public void Solve(float dt, IThreadDispatcher threadDispatcher = null)
         {
-            ProfilerStart(Solver);
+            profiler.Start(Solver);
             Solver.Solve(dt, threadDispatcher);
-            ProfilerEnd(Solver);
+            profiler.End(Solver);
         }
 
         /// <summary>
@@ -308,17 +314,17 @@ namespace BepuPhysics
             //Note that constraint optimization should be performed after body optimization, since body optimization moves the bodies - and so affects the optimal constraint position.
             //TODO: The order of these optimizer stages is performance relevant, even though they don't have any effect on correctness.
             //You may want to try them in different locations to see how they impact cache residency.
-            ProfilerStart(BodyLayoutOptimizer);
+            profiler.Start(BodyLayoutOptimizer);
             BodyLayoutOptimizer.IncrementalOptimize();
-            ProfilerEnd(BodyLayoutOptimizer);
+            profiler.End(BodyLayoutOptimizer);
 
-            ProfilerStart(ConstraintLayoutOptimizer);
+            profiler.Start(ConstraintLayoutOptimizer);
             ConstraintLayoutOptimizer.Update(BufferPool, threadDispatcher);
-            ProfilerEnd(ConstraintLayoutOptimizer);
+            profiler.End(ConstraintLayoutOptimizer);
 
-            ProfilerStart(SolverBatchCompressor);
+            profiler.Start(SolverBatchCompressor);
             SolverBatchCompressor.Compress(BufferPool, threadDispatcher, threadDispatcher != null && Deterministic);
-            ProfilerEnd(SolverBatchCompressor);
+            profiler.End(SolverBatchCompressor);
         }
 
         //TODO: I wonder if people will abuse the dt-as-parameter to the point where we should make it a field instead, like it effectively was in v1.
@@ -332,12 +338,12 @@ namespace BepuPhysics
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
         public void Timestep(float dt, IThreadDispatcher threadDispatcher = null)
         {
-            ProfilerClear();
-            ProfilerStart(this);
+            profiler.Clear();
+            profiler.Start(this);
 
             Timestepper.Timestep(this, dt, threadDispatcher);
 
-            ProfilerEnd(this);
+            profiler.End(this);
         }
 
         /// <summary>
