@@ -71,7 +71,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public static void Test(
             in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB,
-            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector<float> surfaceEpsilon, in Vector<int> inactiveLanes, out Vector<int> intersecting, out Vector3Wide localNormal, int maximumIterations = 15)
+            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector<float> surfaceEpsilon, in Vector<int> inactiveLanes, out Vector<int> intersecting, out Vector3Wide localNormal, MinkowskiSimplexes simplexes = null, int maximumIterations = 15)
         {
             //We'll be using a minkowski difference support(N, A) - support(-N, B).
             //So, the starting point for the origin ray is simply -localOffsetB.
@@ -84,8 +84,20 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             intersecting = shouldExitV0;
             var laneComplete = Vector.BitwiseOr(inactiveLanes, shouldExitV0);
 
+            if (simplexes != null)
+            {
+                var debugSimplex = simplexes.AllocateSimplex(1);
+                Vector3Wide.ReadSlot(ref v0, 0, out debugSimplex[0]);
+            }
             //Find an initial portal through which the ray passes.
             FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localOffsetB, out var v1);
+
+            if (simplexes != null)
+            {
+                var debugSimplex = simplexes.AllocateSimplex(2);
+                Vector3Wide.ReadSlot(ref v0, 0, out debugSimplex[0]);
+                Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
+            }
 
             Vector3Wide.Dot(v1, localOffsetB, out var v1ExitDot);
 
@@ -111,6 +123,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(laneStateChanging, n, localNormal, out localNormal);
             intersecting = Vector.ConditionalSelect(laneStateChanging, Vector<int>.Zero, intersecting);
             laneComplete = Vector.BitwiseOr(laneComplete, shouldExitV2);
+
+            if (simplexes != null)
+            {
+                var debugSimplex = simplexes.AllocateSimplex(3);
+                Vector3Wide.ReadSlot(ref v0, 0, out debugSimplex[0]);
+                Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
+                Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
+            }
 
             if (Vector.LessThanAll(laneComplete, Vector<int>.Zero))
             {
@@ -143,6 +163,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var secondPlaneTestFoundInvalid = Vector.LessThan(originOffset302, Vector<float>.Zero);
                 Vector3Wide.ConditionalSelect(Vector.AndNot(Vector.AndNot(secondPlaneTestFoundInvalid, firstPlaneTestFoundInvalid), preloopCompleted), v3, v1, out v1);
 
+                if (simplexes != null)
+                {
+                    var debugSimplex = simplexes.AllocateSimplex(4);
+                    Vector3Wide.ReadSlot(ref v0, 0, out debugSimplex[0]);
+                    Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
+                    Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
+                    Vector3Wide.ReadSlot(ref v3, 0, out debugSimplex[3]);
+                }
+
                 preloopCompleted = Vector.BitwiseOr(preloopCompleted, Vector.AndNot(Vector.OnesComplement(firstPlaneTestFoundInvalid), secondPlaneTestFoundInvalid));
                 if (Vector.LessThanAll(Vector.BitwiseOr(preloopCompleted, laneComplete), Vector<int>.Zero))
                     break;
@@ -167,6 +196,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     return;
                 }
                 FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var v4);
+
+                if (simplexes != null)
+                {
+                    var debugSimplex = simplexes.AllocateSimplex(4);
+                    Vector3Wide.ReadSlot(ref v0, 0, out debugSimplex[0]);
+                    Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
+                    Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
+                    Vector3Wide.ReadSlot(ref v3, 0, out debugSimplex[3]);
+                }
 
                 //Compare the latest support sample with the triangle. Are we close to the surface?
                 Vector3Wide.Subtract(v4, v1, out var v1v4);
@@ -315,7 +353,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Subtract(v1, v2, out var v2v1);
                 Vector3Wide.Subtract(v3, v2, out var v2v3);
                 Vector3Wide.CrossWithoutOverlap(v2v1, v2v3, out n);
-                
+
                 //Keep working towards the surface.  Find the next extreme point.
                 FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var v4);
 
@@ -339,14 +377,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 if (Vector.LessThanAll(completedLanes, Vector<int>.Zero))
                 {
                     Vector3Wide.Dot(localNormal, direction, out nDotDirection);
-                    Vector3Wide.Dot(v1, localNormal, out v1DotN);                    
+                    Vector3Wide.Dot(v1, localNormal, out v1DotN);
                     t = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(nDotDirection), new Vector<float>(1e-15f)), v1DotN / nDotDirection, Vector<float>.Zero);
                     break;
                 }
 
                 //Still haven't exited, so refine the portal.
                 //Test direction against the three planes that separate the new portal candidates: (v1,v4,v0) (v2,v4,v0) (v3,v4,v0)
-                
+
                 //This may look a little weird at first.
                 //'inside' here means 'on the positive side of the plane.'
                 //There are three total planes being tested, one for each of v1, v2, and v3.
@@ -374,7 +412,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(eliminateV1, v4, v1, out v1);
                 Vector3Wide.ConditionalSelect(eliminateV2, v4, v2, out v2);
                 Vector3Wide.ConditionalSelect(eliminateV3, v4, v3, out v3);
-                
+
             }
         }
     }

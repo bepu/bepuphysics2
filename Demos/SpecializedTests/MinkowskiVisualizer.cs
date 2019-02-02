@@ -15,67 +15,26 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.SpecializedTests
 {
-    /// <summary>
-    /// Debug helper class for storing the simplexes associated with minkowski space method execution.
-    /// </summary>
-    public class MinkowskiSimplexes
-    {
-        public QuickList<int> SimplexIndices;
-        public QuickList<Vector3> Points;
-
-        BufferPool pool;
-
-        public int SimplexCount { get { return SimplexIndices.Count; } }
-
-        public MinkowskiSimplexes(BufferPool pool, int initialSimplexCapacity = 2048)
-        {
-            this.pool = pool;
-            SimplexIndices = new QuickList<int>(initialSimplexCapacity, pool);
-            Points = new QuickList<Vector3>(initialSimplexCapacity * 4, pool);
-        }
-
-        public Buffer<Vector3> AllocateSimplex(int count)
-        {
-            var newCount = Points.Count + count;
-            Points.EnsureCapacity(newCount, pool);
-            var simplexPoints = Points.Span.Slice(Points.Count, count);
-            SimplexIndices.Add(Points.Count, pool);
-            Points.Count += count;
-            return simplexPoints;
-        }
-
-        public Buffer<Vector3> GetSimplex(int simplexIndex)
-        {
-            var simplexStart = SimplexIndices[simplexIndex];
-            var simplexEnd = simplexIndex == SimplexIndices.Count ? Points.Count : SimplexIndices[simplexIndex + 1];
-            return Points.Span.Slice(simplexStart, simplexEnd - simplexStart);
-        }
-
-        public void Clear()
-        {
-            SimplexIndices.Count = 0;
-            Points.Count = 0;
-        }
-
-        public void Dispose()
-        {
-            SimplexIndices.Dispose(pool);
-            Points.Dispose(pool);
-        }
-    }
-
     public static class SimplexVisualizer
     {
         public static void Draw(Renderer renderer, Buffer<Vector3> simplex, in Vector3 position, in Vector3 lineColor, in Vector3 backgroundColor)
         {
             var packedLineColor = Helpers.PackColor(lineColor);
             var packedBackgroundColor = Helpers.PackColor(backgroundColor);
-            for (int i = 0; i < simplex.Length; ++i)
+            if (simplex.Length == 1)
             {
-                for (int j = i + 1; j < simplex.Length; ++j)
+                renderer.Lines.Allocate() = new LineInstance(simplex[0], simplex[0], packedLineColor, packedBackgroundColor);
+            }
+            else
+            {
+                for (int i = 0; i < simplex.Length; ++i)
                 {
-                    renderer.Lines.Allocate() = new LineInstance(simplex[i] + position, simplex[j] + position, packedLineColor, packedBackgroundColor);
+                    for (int j = i + 1; j < simplex.Length; ++j)
+                    {
+                        renderer.Lines.Allocate() = new LineInstance(simplex[i] + position, simplex[j] + position, packedLineColor, packedBackgroundColor);
+                    }
                 }
+
             }
         }
     }
