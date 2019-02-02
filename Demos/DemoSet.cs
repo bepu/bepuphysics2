@@ -39,8 +39,9 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<ContinuousCollisionDetectionDemo>();
+            AddOption<MPRTestDemo>();
             AddOption<NelderMeadTestDemo>();
+            AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<CylinderTestDemo>();
             AddOption<ColosseumDemo>();
             AddOption<PyramidDemo>();

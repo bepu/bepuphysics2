@@ -393,6 +393,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //tester.TerminationEpsilon = 1e-10f;
             //tester.ContainmentEpsilon = 1e-7f;
             //tester.Test(a, b, localOffsetB, rAQuaternion, identity, inactiveLanes, out var intersected, out var distance, out var closestA, out var newLocalNormal);
+            //CylinderSupportFinder supportFinder = default;
             //MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localOffsetA, new Vector<float>(1e-3f), inactiveLanes, out var mprT, out var newLocalNormal);
             //MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, new Vector<float>(1e-3f), inactiveLanes, out var intersecting, out var newLocalNormal);
             //Vector3Wide.Normalize(newLocalNormal, out newLocalNormal);
