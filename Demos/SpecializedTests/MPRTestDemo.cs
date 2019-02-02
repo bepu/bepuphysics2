@@ -24,7 +24,8 @@ namespace Demos.SpecializedTests
         MinkowskiSimplexes simplexes;
         Vector3 basePosition;
         Vector3 localNormal;
-        bool intersecting;
+        //bool intersecting;
+        float t;
 
         public override void Initialize(ContentArchive content, Camera camera)
         {
@@ -55,9 +56,17 @@ namespace Demos.SpecializedTests
             Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
             var cylinderSupportFinder = default(CylinderSupportFinder);
             simplexes = new MinkowskiSimplexes(BufferPool);
-            MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(
-                aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, new Vector<float>(0.0001f), new Vector<int>(), out var intersecting, out var localNormal, simplexes);
-            this.intersecting = intersecting[0] < 0;
+            //MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(
+            //    aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, new Vector<float>(0.0001f), new Vector<int>(), out var intersecting, out var localNormal, simplexes);
+            //this.intersecting = intersecting[0] < 0;
+            //Vector3Wide.ReadSlot(ref localNormal, 0, out this.localNormal);
+            //this.intersecting = intersecting[0] < 0;
+            //Vector3Wide.ReadSlot(ref localNormal, 0, out this.localNormal);
+
+            Vector3Wide.Broadcast(new Vector3(1, 1, 1), out var sampleDirection);
+            MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(
+                aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, sampleDirection, new Vector<float>(1e-5f), new Vector<int>(), out var t, out var localNormal, simplexes);
+            this.t = t[0];
             Vector3Wide.ReadSlot(ref localNormal, 0, out this.localNormal);
         }
 
@@ -78,15 +87,21 @@ namespace Demos.SpecializedTests
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             MinkowskiShapeVisualizer.Draw(shapeLines, renderer);
-            SimplexVisualizer.Draw(renderer, simplexes.GetSimplex(simplexIndex), basePosition, new Vector3(1, 0, 0), default);
+            SimplexVisualizer.Draw(renderer, simplexes.GetSimplex(simplexIndex).points, basePosition, new Vector3(1, 0, 0), default);
             renderer.TextBatcher.Write(
                 text.Clear().Append($"Enumerate simplexes with X and C. Current simplex: ").Append(simplexIndex + 1).Append(" out of ").Append(simplexes.SimplexCount),
-                new Vector2(32, renderer.Surface.Resolution.Y - 64), 20, new Vector3(1), font);
+                new Vector2(32, renderer.Surface.Resolution.Y - 80), 20, new Vector3(1), font);
+            renderer.TextBatcher.Write(
+                text.Clear().Append($"Simplex tag: ").Append(simplexes.GetSimplex(simplexIndex).tag),
+                new Vector2(32, renderer.Surface.Resolution.Y - 60), 20, new Vector3(1), font);
             if (simplexIndex == simplexes.SimplexCount - 1)
             {
+                //renderer.TextBatcher.Write(
+                //    text.Clear().Append($"Terminated in state: ").Append(intersecting ? "intersecting" : "separated"),
+                //    new Vector2(32, renderer.Surface.Resolution.Y - 40), 20, new Vector3(1), font);
                 renderer.TextBatcher.Write(
-                    text.Clear().Append($"Terminated in state: ").Append(intersecting ? "intersecting" : "separated"),
-                    new Vector2(32, renderer.Surface.Resolution.Y - 44), 20, new Vector3(1), font);
+                    text.Clear().Append($"T: ").Append(t, 2),
+                    new Vector2(32, renderer.Surface.Resolution.Y - 40), 20, new Vector3(1), font);
                 renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + localNormal, new Vector3(1), default);
             }
             base.Render(renderer, camera, input, text, font);

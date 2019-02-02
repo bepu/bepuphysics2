@@ -12,47 +12,46 @@ namespace BepuPhysics.CollisionDetection
     /// </summary>
     public class MinkowskiSimplexes
     {
-        public QuickList<int> SimplexIndices;
-        public QuickList<Vector3> Points;
+        private List<(string tag, int pointsStartIndex)> simplexes;
+        private QuickList<Vector3> points;
 
         BufferPool pool;
 
-        public int SimplexCount { get { return SimplexIndices.Count; } }
+        public int SimplexCount { get { return simplexes.Count; } }
 
         public MinkowskiSimplexes(BufferPool pool, int initialSimplexCapacity = 2048)
         {
             this.pool = pool;
-            SimplexIndices = new QuickList<int>(initialSimplexCapacity, pool);
-            Points = new QuickList<Vector3>(initialSimplexCapacity * 4, pool);
+            simplexes = new List<(string, int)>(initialSimplexCapacity);
+            points = new QuickList<Vector3>(initialSimplexCapacity * 4, pool);
         }
 
-        public Buffer<Vector3> AllocateSimplex(int count)
+        public Buffer<Vector3> AllocateSimplex(int count, string tag = null)
         {
-            var newCount = Points.Count + count;
-            Points.EnsureCapacity(newCount, pool);
-            var simplexPoints = Points.Span.Slice(Points.Count, count);
-            SimplexIndices.Add(Points.Count, pool);
-            Points.Count += count;
+            var newCount = points.Count + count;
+            points.EnsureCapacity(newCount, pool);
+            var simplexPoints = points.Span.Slice(points.Count, count);
+            simplexes.Add((tag, points.Count));
+            points.Count += count;
             return simplexPoints;
         }
 
-        public Buffer<Vector3> GetSimplex(int simplexIndex)
+        public (string tag, Buffer<Vector3> points) GetSimplex(int simplexIndex)
         {
-            var simplexStart = SimplexIndices[simplexIndex];
-            var simplexEnd = simplexIndex == SimplexIndices.Count - 1 ? Points.Count : SimplexIndices[simplexIndex + 1];
-            return Points.Span.Slice(simplexStart, simplexEnd - simplexStart);
+            var simplexStart = simplexes[simplexIndex].pointsStartIndex;
+            var simplexEnd = simplexIndex == simplexes.Count - 1 ? points.Count : simplexes[simplexIndex + 1].pointsStartIndex;
+            return (simplexes[simplexIndex].tag, points.Span.Slice(simplexStart, simplexEnd - simplexStart));
         }
 
         public void Clear()
         {
-            SimplexIndices.Count = 0;
-            Points.Count = 0;
+            simplexes.Clear();
+            points.Count = 0;
         }
 
         public void Dispose()
         {
-            SimplexIndices.Dispose(pool);
-            Points.Dispose(pool);
+            points.Dispose(pool);
         }
     }
 }

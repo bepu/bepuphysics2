@@ -86,7 +86,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             if (simplexes != null)
             {
-                var debugSimplex = simplexes.AllocateSimplex(1);
+                var debugSimplex = simplexes.AllocateSimplex(1, "Initial sample (localOffsetB)");
                 Vector3Wide.ReadSlot(ref v0, 0, out debugSimplex[0]);
             }
             //Find an initial portal through which the ray passes.
@@ -94,7 +94,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             if (simplexes != null)
             {
-                var debugSimplex = simplexes.AllocateSimplex(2);
+                var debugSimplex = simplexes.AllocateSimplex(2, "Second initial sample");
                 Vector3Wide.ReadSlot(ref v0, 0, out debugSimplex[0]);
                 Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
             }
@@ -126,7 +126,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             if (simplexes != null)
             {
-                var debugSimplex = simplexes.AllocateSimplex(3);
+                var debugSimplex = simplexes.AllocateSimplex(3, "Third initial sample");
                 Vector3Wide.ReadSlot(ref v0, 0, out debugSimplex[0]);
                 Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
                 Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
@@ -165,7 +165,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 if (simplexes != null)
                 {
-                    var debugSimplex = simplexes.AllocateSimplex(4);
+                    var debugSimplex = simplexes.AllocateSimplex(4, "Portal finding");
                     Vector3Wide.ReadSlot(ref v0, 0, out debugSimplex[0]);
                     Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
                     Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
@@ -199,7 +199,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 if (simplexes != null)
                 {
-                    var debugSimplex = simplexes.AllocateSimplex(4);
+                    var debugSimplex = simplexes.AllocateSimplex(4, "Portal refinement");
                     Vector3Wide.ReadSlot(ref v0, 0, out debugSimplex[0]);
                     Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
                     Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
@@ -252,19 +252,32 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public static void LocalSurfaceCast(
             in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB,
-            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction, in Vector<float> surfaceEpsilon, in Vector<int> inactiveLanes, out Vector<float> t, out Vector3Wide localNormal, int maximumIterations = 15)
+            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction, in Vector<float> surfaceEpsilon, in Vector<int> inactiveLanes, out Vector<float> t, out Vector3Wide localNormal, 
+            MinkowskiSimplexes simplexes = null, int maximumIterations = 15)
         {
             //Local surface cast is very similar to regular MPR.  However, instead of starting at an interior point and targeting the origin,
             //the ray starts at the origin (a point known to be in both shapeA and shapeB during overlap), and just goes towards the direction until the surface
             //is found.  The portal (v1, v2, v3) at termination defines the surface normal, and the distance from the origin to the portal along the direction is used as the 't' result.
 
             //'v0' is no longer explicitly tracked since it is simply the origin.
+            if (simplexes != null)
+            {
+                var debugSimplex = simplexes.AllocateSimplex(1, "First sample (origin)");
+                debugSimplex[0] = default;
+            }
 
             //Now that the origin ray is known, create a portal through which the ray passes.
             //To do this, first guess a portal.
             //This implementation is similar to that of the original XenoCollide.
             //'n' will be the direction used to find supports throughout the algorithm.
             FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, direction, out var v1);
+
+            if (simplexes != null)
+            {
+                var debugSimplex = simplexes.AllocateSimplex(2, "Second sample");
+                debugSimplex[0] = default;
+                Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[0]);
+            }
 
             //Find another extreme point in a direction perpendicular to the previous.
             Vector3Wide.CrossWithoutOverlap(direction, v1, out var n);
@@ -282,6 +295,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var v2);
+
+            if (simplexes != null)
+            {
+                var debugSimplex = simplexes.AllocateSimplex(3, "Third sample");
+                debugSimplex[0] = default;
+                Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
+                Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
+            }
 
             //Set n for the first iteration.
             Vector3Wide.CrossWithoutOverlap(v1, v2, out n);
@@ -332,6 +353,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Replace the point that was on the inside of the plane (v1) with the new extreme point.
                 Vector3Wide.ConditionalSelect(shouldReplaceV1, v3, v1, out v1);
                 Vector3Wide.ConditionalSelect(shouldReplaceV1, v3xv2, n, out n);
+                
+                if (simplexes != null)
+                {
+                    var debugSimplex = simplexes.AllocateSimplex(4, "Portal finding");
+                    debugSimplex[0] = default;
+                    Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
+                    Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
+                    Vector3Wide.ReadSlot(ref v3, 0, out debugSimplex[3]);
+                }
 
                 preloopComplete = Vector.BitwiseOr(Vector.AndNot(Vector.OnesComplement(shouldReplaceV1), shouldReplaceV2), preloopComplete);
                 if (Vector.LessThanAll(preloopComplete, Vector<int>.Zero))
@@ -356,6 +386,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 //Keep working towards the surface.  Find the next extreme point.
                 FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var v4);
+
+                if (simplexes != null)
+                {
+                    var debugSimplex = simplexes.AllocateSimplex(4, "Portal refinement");
+                    debugSimplex[0] = default;
+                    Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
+                    Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
+                    Vector3Wide.ReadSlot(ref v3, 0, out debugSimplex[3]);
+                }
 
                 //If the plane which generated the normal is very close to the extreme point, then we're at the surface.
                 Vector3Wide.Dot(n, v1, out var v1DotN);
