@@ -25,6 +25,7 @@ namespace Demos.SpecializedTests
         Vector3 basePosition;
         Vector3 localNormal;
         //bool intersecting;
+        Vector3 surfaceCastDirection;
         float t;
 
         public override void Initialize(ContentArchive content, Camera camera)
@@ -37,7 +38,7 @@ namespace Demos.SpecializedTests
             var shapeA = new Cylinder(0.5f, 0.5f);
             var poseA = new RigidPose(new Vector3(0, 0, 0));
             var shapeB = new Cylinder(0.5f, 0.5f);
-            var poseB = new RigidPose(new Vector3(.70569725f, 0.70569725f, 0), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f));
+            var poseB = new RigidPose(new Vector3(0.3f, 0.3f, 0), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f));
 
             basePosition = default;
             shapeLines = MinkowskiShapeVisualizer.CreateLines<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>(
@@ -63,9 +64,10 @@ namespace Demos.SpecializedTests
             //this.intersecting = intersecting[0] < 0;
             //Vector3Wide.ReadSlot(ref localNormal, 0, out this.localNormal);
 
-            Vector3Wide.Broadcast(new Vector3(1, 1, 1), out var sampleDirection);
+            surfaceCastDirection = new Vector3(1, -1, 1);
+            Vector3Wide.Broadcast(surfaceCastDirection, out var surfaceCastDirectionWide);
             MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(
-                aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, sampleDirection, new Vector<float>(1e-5f), new Vector<int>(), out var t, out var localNormal, simplexes);
+                aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, surfaceCastDirectionWide, new Vector<float>(1e-5f), new Vector<int>(), out var t, out var localNormal, simplexes, 100);
             this.t = t[0];
             Vector3Wide.ReadSlot(ref localNormal, 0, out this.localNormal);
         }
@@ -94,15 +96,28 @@ namespace Demos.SpecializedTests
             renderer.TextBatcher.Write(
                 text.Clear().Append($"Simplex tag: ").Append(simplexes.GetSimplex(simplexIndex).tag),
                 new Vector2(32, renderer.Surface.Resolution.Y - 60), 20, new Vector3(1), font);
+            renderer.Lines.Allocate() = new LineInstance(basePosition, surfaceCastDirection, new Vector3(1), default);
             if (simplexIndex == simplexes.SimplexCount - 1)
             {
                 //renderer.TextBatcher.Write(
                 //    text.Clear().Append($"Terminated in state: ").Append(intersecting ? "intersecting" : "separated"),
                 //    new Vector2(32, renderer.Surface.Resolution.Y - 40), 20, new Vector3(1), font);
                 renderer.TextBatcher.Write(
-                    text.Clear().Append($"T: ").Append(t, 2),
+                    text.Clear().Append($"T: ").Append(t, 8),
                     new Vector2(32, renderer.Surface.Resolution.Y - 40), 20, new Vector3(1), font);
-                renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + localNormal, new Vector3(1), default);
+
+                Vector3 simplexCenter = default;
+                var simplex = simplexes.GetSimplex(simplexIndex).points;
+                if (simplex.Length > 1)
+                {
+                    for (int i = 1; i < simplex.Length; ++i)
+                    {
+                        simplexCenter += simplex[i];
+                    }
+                    simplexCenter /= simplex.Length - 1;
+                }
+                simplexCenter += basePosition;
+                renderer.Lines.Allocate() = new LineInstance(simplexCenter, simplexCenter + Vector3.Normalize(localNormal), new Vector3(0, 1, 1), default);
             }
             base.Render(renderer, camera, input, text, font);
         }

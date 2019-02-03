@@ -252,7 +252,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public static void LocalSurfaceCast(
             in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB,
-            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction, in Vector<float> surfaceEpsilon, in Vector<int> inactiveLanes, out Vector<float> t, out Vector3Wide localNormal, 
+            ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction, in Vector<float> surfaceEpsilon, in Vector<int> inactiveLanes, out Vector<float> t, out Vector3Wide localNormal,
             MinkowskiSimplexes simplexes = null, int maximumIterations = 15)
         {
             //Local surface cast is very similar to regular MPR.  However, instead of starting at an interior point and targeting the origin,
@@ -335,6 +335,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var newV3);
                 Vector3Wide.ConditionalSelect(preloopComplete, v3, newV3, out v3);
 
+                if (simplexes != null)
+                {
+                    var debugSimplex = simplexes.AllocateSimplex(4, "Portal finding");
+                    debugSimplex[0] = default;
+                    Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
+                    Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
+                    Vector3Wide.ReadSlot(ref v3, 0, out debugSimplex[3]);
+                }
+
                 //By now, the simplex is a tetrahedron, but it is not known whether or not the ray actually passes through the portal
                 //defined by v1, v2, v3.
 
@@ -353,15 +362,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Replace the point that was on the inside of the plane (v1) with the new extreme point.
                 Vector3Wide.ConditionalSelect(shouldReplaceV1, v3, v1, out v1);
                 Vector3Wide.ConditionalSelect(shouldReplaceV1, v3xv2, n, out n);
-                
-                if (simplexes != null)
-                {
-                    var debugSimplex = simplexes.AllocateSimplex(4, "Portal finding");
-                    debugSimplex[0] = default;
-                    Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
-                    Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
-                    Vector3Wide.ReadSlot(ref v3, 0, out debugSimplex[3]);
-                }
+
 
                 preloopComplete = Vector.BitwiseOr(Vector.AndNot(Vector.OnesComplement(shouldReplaceV1), shouldReplaceV2), preloopComplete);
                 if (Vector.LessThanAll(preloopComplete, Vector<int>.Zero))
@@ -382,19 +383,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Compute the outward facing normal.
                 Vector3Wide.Subtract(v1, v2, out var v2v1);
                 Vector3Wide.Subtract(v3, v2, out var v2v3);
-                Vector3Wide.CrossWithoutOverlap(v2v1, v2v3, out n);
+                Vector3Wide.CrossWithoutOverlap(v2v3, v2v1, out n);
 
                 //Keep working towards the surface.  Find the next extreme point.
                 FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var v4);
-
-                if (simplexes != null)
-                {
-                    var debugSimplex = simplexes.AllocateSimplex(4, "Portal refinement");
-                    debugSimplex[0] = default;
-                    Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
-                    Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
-                    Vector3Wide.ReadSlot(ref v3, 0, out debugSimplex[3]);
-                }
 
                 //If the plane which generated the normal is very close to the extreme point, then we're at the surface.
                 Vector3Wide.Dot(n, v1, out var v1DotN);
@@ -433,7 +425,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 //This v4 x direction is just a minor reordering of a scalar triple product: (v1 x v4) * direction.
                 //It eliminates the need for extra cross products for the inner if.
-                Vector3Wide.CrossWithoutOverlap(direction, v4, out var v4xDirection);
+                Vector3Wide.CrossWithoutOverlap(v4, direction, out var v4xDirection);
                 Vector3Wide.Dot(v1, v4xDirection, out var v1PlaneDot);
                 Vector3Wide.Dot(v2, v4xDirection, out var v2PlaneDot);
                 Vector3Wide.Dot(v3, v4xDirection, out var v3PlaneDot);
@@ -451,6 +443,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(eliminateV1, v4, v1, out v1);
                 Vector3Wide.ConditionalSelect(eliminateV2, v4, v2, out v2);
                 Vector3Wide.ConditionalSelect(eliminateV3, v4, v3, out v3);
+
+                if (simplexes != null)
+                {
+                    var debugSimplex = simplexes.AllocateSimplex(4, "Portal refinement");
+                    debugSimplex[0] = default;
+                    Vector3Wide.ReadSlot(ref v1, 0, out debugSimplex[1]);
+                    Vector3Wide.ReadSlot(ref v2, 0, out debugSimplex[2]);
+                    Vector3Wide.ReadSlot(ref v3, 0, out debugSimplex[3]);
+                }
 
             }
         }

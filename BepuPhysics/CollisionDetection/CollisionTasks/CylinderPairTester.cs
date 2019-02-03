@@ -367,10 +367,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //    b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, -speculativeMargin, new Vector<float>(1e-4f), 25, inactiveLanes,
             //    out localNormal, out var depthBelowThreshold);
             //inactiveLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
-            NelderMead<Cylinder, CylinderWide, Cylinder, CylinderWide, CylinderPairDepthTester>.Refine(
-                b, a, localOffsetA, rA, localNormal, depth, inactiveLanes, new Vector<float>(1e-3f), -speculativeMargin, out var newLocalNormal, out var newDepth);
-            localNormal = newLocalNormal;
-            depth = newDepth;
+            //NelderMead<Cylinder, CylinderWide, Cylinder, CylinderWide, CylinderPairDepthTester>.Refine(
+            //    b, a, localOffsetA, rA, localNormal, depth, inactiveLanes, new Vector<float>(1e-3f), -speculativeMargin, out var newLocalNormal, out var newDepth);
+            //localNormal = newLocalNormal;
+            //depth = newDepth;
 
             //Vector3Wide.Dot(rA.Y, localNormal, out var earlyNDotAY);
             //Vector3Wide.Scale(rA.Y, Vector.ConditionalSelect(Vector.GreaterThan(earlyNDotAY, Vector<float>.Zero), -a.HalfLength, a.HalfLength), out var earlyCapCenterA);
@@ -393,8 +393,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //tester.TerminationEpsilon = 1e-10f;
             //tester.ContainmentEpsilon = 1e-7f;
             //tester.Test(a, b, localOffsetB, rAQuaternion, identity, inactiveLanes, out var intersected, out var distance, out var closestA, out var newLocalNormal);
-            //CylinderSupportFinder supportFinder = default;
-            //MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localOffsetA, new Vector<float>(1e-3f), inactiveLanes, out var mprT, out var newLocalNormal);
+            CylinderSupportFinder supportFinder = default;
+            MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localOffsetA, new Vector<float>(1e-8f), inactiveLanes, out var mprT, out var newLocalNormal);
+            //MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(b, a, newLocalNormal, rA, ref supportFinder, ref supportFinder, localOffsetA, new Vector<float>(1e-8f), inactiveLanes, out mprT, out newLocalNormal);
+            //MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(b, a, newLocalNormal, rA, ref supportFinder, ref supportFinder, localOffsetA, new Vector<float>(1e-8f), inactiveLanes, out mprT, out newLocalNormal);
+            Vector3Wide.Normalize(newLocalNormal, out newLocalNormal);
+            //Vector3Wide.Negate(newLocalNormal, out localNormal);
+
             //MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, new Vector<float>(1e-3f), inactiveLanes, out var intersecting, out var newLocalNormal);
             //Vector3Wide.Normalize(newLocalNormal, out newLocalNormal);
             //Vector3Wide.Negate(newLocalNormal, out localNormal);
