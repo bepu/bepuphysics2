@@ -64,10 +64,18 @@ namespace Demos.SpecializedTests
             //this.intersecting = intersecting[0] < 0;
             //Vector3Wide.ReadSlot(ref localNormal, 0, out this.localNormal);
 
-            surfaceCastDirection = new Vector3(1, -1, 1);
+            surfaceCastDirection = localOffsetB;
             Vector3Wide.Broadcast(surfaceCastDirection, out var surfaceCastDirectionWide);
             MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(
                 aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, surfaceCastDirectionWide, new Vector<float>(1e-5f), new Vector<int>(), out var t, out var localNormal, simplexes, 100);
+            for (int i = 0; i < 2; ++i)
+            {
+                Vector3Wide.Normalize(localNormal, out surfaceCastDirectionWide);
+                Vector3Wide.ReadSlot(ref surfaceCastDirectionWide, 0, out surfaceCastDirection);
+                simplexes.Clear();
+                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(
+                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, surfaceCastDirectionWide, new Vector<float>(1e-5f), new Vector<int>(), out t, out localNormal, simplexes, 100);
+            }
             this.t = t[0];
             Vector3Wide.ReadSlot(ref localNormal, 0, out this.localNormal);
         }
