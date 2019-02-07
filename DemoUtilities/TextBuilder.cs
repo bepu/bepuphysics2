@@ -110,22 +110,28 @@ namespace DemoUtilities
             var place = (int)Math.Floor(Math.Log10(value));
             var multiplier = Math.Pow(0.1, place);
             var epsilon = Math.Pow(0.1, decimalCount);
-
-            for (int i = place; i >= 0; --i)
+            if (value < epsilon)
             {
-                AddDigit(ref value, ref multiplier);
+                Add('0');
             }
-            if (value > epsilon)
+            else
             {
-                Add('.');
-                for (int i = -1; i > place; --i)
-                {
-                    Add('0');
-                }
-                do
+                for (int i = place; i >= 0; --i)
                 {
                     AddDigit(ref value, ref multiplier);
-                } while (value > epsilon);
+                }
+                if (value > epsilon)
+                {
+                    Add('.');
+                    for (int i = -1; i > place; --i)
+                    {
+                        Add('0');
+                    }
+                    do
+                    {
+                        AddDigit(ref value, ref multiplier);
+                    } while (value > epsilon);
+                }
             }
             return this;
 

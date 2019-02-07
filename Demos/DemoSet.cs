@@ -39,6 +39,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<PlaneWalkerTestDemo>();
             AddOption<MPRTestDemo>();
             AddOption<NelderMeadTestDemo>();
             AddOption<ContinuousCollisionDetectionDemo>();
