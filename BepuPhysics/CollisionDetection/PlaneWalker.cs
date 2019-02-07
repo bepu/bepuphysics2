@@ -18,6 +18,7 @@ namespace BepuPhysics.CollisionDetection
         public float BestDepth;
         public float NewestDepth;
         public bool Improved;
+        public bool Oscillating;
         public Vector3 PointOnOriginLine;
         public Vector3 ImprovedNormal;
         public float Progression;
@@ -83,7 +84,9 @@ namespace BepuPhysics.CollisionDetection
 
             var terminatedLanes = inactiveLanes;
 
-            var progressionScale = new Vector<float>(1f);
+            var progressionScale = new Vector<float>(0.25f);
+
+            var previousOriginOffset = default(Vector3Wide);
 
             for (int i = 0; i < maximumIterations; ++i)
             {
@@ -108,6 +111,14 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.Subtract(closestPointOnPlane, support, out var supportToClosestPoint);
                 Vector3Wide.Length(supportToClosestPoint, out var offsetLength);
 
+                //When the local surface is fairly flat, it's possible for the search to oscillate around the origin while only fractionally improving the 
+                //depth each time. While depth is improving, it can converge extremely slowly. We can detect oscillation by comparing the 
+                //offset from the support to the projected origin for this iteration versus the previous iteration.
+                //If they point in opposing directions, then we know the search is jumping over the origin.
+                Vector3Wide.Dot(supportToClosestPoint, previousOriginOffset, out var oscillationDot);
+                previousOriginOffset = supportToClosestPoint;
+                var oscillating = Vector.LessThan(oscillationDot, Vector<float>.Zero);
+
                 //Instead of working directly with angles, we create a point on the line passing through the origin along the normal
                 //according to where the support plane is and how far away the support point is from the closest point to the origin to the plane is.
                 //We then compute a new plane normal that intersects both the current support and the point on the origin line.
@@ -126,6 +137,7 @@ namespace BepuPhysics.CollisionDetection
                 step.BestDepth = Vector.Min(depth, newDepth)[0];
                 step.NewestDepth = newDepth[0];
                 step.Improved = depthImproved[0] < 0;
+                step.Oscillating = oscillating[0] < 0;
                 Vector3Wide.ReadSlot(ref pointOnOriginLine, 0, out step.PointOnOriginLine);
                 Vector3Wide.ReadSlot(ref newNormal, 0, out step.ImprovedNormal);
                 step.ImprovedNormal = Vector3.Normalize(step.ImprovedNormal);
@@ -133,12 +145,12 @@ namespace BepuPhysics.CollisionDetection
                 steps.Add(step);
 
                 //The previous normal doesn't change if the depth hasn't improved- we need to keep that history around so we can continue to recover if necessary.
-                Vector3Wide.Scale(normal, new Vector<float>(0.1f), out var newContribution);
-                Vector3Wide.Scale(previousNormal, new Vector<float>(0.9f), out var oldContribution);
+                Vector3Wide.Scale(normal, new Vector<float>(0.25f), out var newContribution);
+                Vector3Wide.Scale(previousNormal, new Vector<float>(0.75f), out var oldContribution);
                 Vector3Wide.Add(newContribution, oldContribution, out var fallbackNormal);
                 Vector3Wide.ConditionalSelect(depthImproved, normal, previousNormal, out previousNormal);
                 Vector3Wide.ConditionalSelect(depthImproved, newNormal, fallbackNormal, out newNormal);
-                progressionScale *= Vector.ConditionalSelect(depthImproved, new Vector<float>(1.0f), new Vector<float>(0.1f));
+                progressionScale *= Vector.ConditionalSelect(depthImproved, Vector.ConditionalSelect(oscillating, new Vector<float>(0.25f), new Vector<float>(1.5f)), new Vector<float>(0.25f));
 
                 //TODO: This could be replaced by a faster rsqrt with platform intrinsics.
                 Vector3Wide.Length(newNormal, out var newNormalLength);

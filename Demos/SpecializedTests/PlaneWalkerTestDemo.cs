@@ -32,10 +32,10 @@ namespace Demos.SpecializedTests
             camera.Pitch = MathF.PI * 0.05f;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
-            var shapeA = new Cylinder(0.5f, 0.5f);
+            var shapeA = new Cylinder(150.5f, 0.5f);
             var poseA = new RigidPose(new Vector3(0, 0, 0));
-            var shapeB = new Cylinder(10.5f, 0.5f);
-            var poseB = new RigidPose(new Vector3(10.75f, 0.35f, 0.72f), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.35f));
+            var shapeB = new Cylinder(0.5f, 0.5f);
+            var poseB = new RigidPose(new Vector3(150.75f, 0.85f, 0.72f), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.35f));
 
             basePosition = default;
             shapeLines = MinkowskiShapeVisualizer.CreateLines<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>(
@@ -80,20 +80,23 @@ namespace Demos.SpecializedTests
             MinkowskiShapeVisualizer.Draw(shapeLines, renderer);
             renderer.TextBatcher.Write(
                 text.Clear().Append($"Enumerate step with X and C. Current step: ").Append(stepIndex + 1).Append(" out of ").Append(steps.Count),
+                new Vector2(32, renderer.Surface.Resolution.Y - 140), 20, new Vector3(1), font);
+            var step = steps[stepIndex];
+            renderer.TextBatcher.Write(
+                text.Clear().Append($"Depth improved: ").Append(step.Improved ? "true" : "false"),
                 new Vector2(32, renderer.Surface.Resolution.Y - 120), 20, new Vector3(1), font);
             renderer.TextBatcher.Write(
-                text.Clear().Append($"Depth improved: ").Append(steps[stepIndex].Improved ? "true" : "false"),
+                text.Clear().Append($"Oscillation detected: ").Append(step.Oscillating ? "true" : "false"),
                 new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
-            var step = steps[stepIndex];
+            renderer.TextBatcher.Write(
+                text.Clear().Append($"Progression parameter: ").Append(step.Progression, 9),
+                new Vector2(32, renderer.Surface.Resolution.Y - 80), 20, new Vector3(1), font);
             renderer.TextBatcher.Write(
                text.Clear().Append($"Best depth: ").Append(step.BestDepth, 9),
                new Vector2(32, renderer.Surface.Resolution.Y - 60), 20, new Vector3(1), font);
             renderer.TextBatcher.Write(
                text.Clear().Append($"Current depth: ").Append(step.NewestDepth, 9),
                new Vector2(32, renderer.Surface.Resolution.Y - 40), 20, new Vector3(1), font);
-            renderer.TextBatcher.Write(
-                text.Clear().Append($"Progression parameter: ").Append(step.Progression, 9),
-                new Vector2(32, renderer.Surface.Resolution.Y - 80), 20, new Vector3(1), font);
             renderer.Lines.Allocate() = new LineInstance(step.Support + basePosition, step.Support + basePosition + step.Normal, new Vector3(0, 1, 0), default);
             var closestPointToOrigin = step.Normal * step.BestDepth + basePosition;
             renderer.Lines.Allocate() = new LineInstance(step.Support + basePosition, closestPointToOrigin, new Vector3(0, 1, 1), default);
