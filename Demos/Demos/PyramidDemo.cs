@@ -47,11 +47,7 @@ namespace Demos.Demos
                 }
             }
 
-            var staticShape = new Box(2500, 1, 2500);
-            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
-
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(staticShapeIndex, 0.1f)));
-
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(2500, 1, 2500)), 0.1f)));
         }
 
         //We'll randomize the size of bullets.

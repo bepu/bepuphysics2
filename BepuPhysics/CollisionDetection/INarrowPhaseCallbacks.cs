@@ -26,7 +26,12 @@ namespace BepuPhysics.CollisionDetection
     //TODO: We've made some modifications to the way callbacks are used. You should reconsider whether initialize and dispose still make any sense for this type.
     public unsafe interface INarrowPhaseCallbacks
     {
+        /// <summary>
+        /// Performs any required initialization logic after the Simulation instance has been constructed.
+        /// </summary>
+        /// <param name="simulation">Simulation that owns these callbacks.</param>
         void Initialize(Simulation simulation);
+
         /// <summary>
         /// Chooses whether to allow contact generation to proceed for two overlapping collidables.
         /// </summary>
