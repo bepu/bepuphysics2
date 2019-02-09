@@ -209,7 +209,7 @@ namespace Demos.Demos
             }
 
             //If you intend to reuse the BufferPool, disposing the simulation is a good idea- it returns all the buffers to the pool for reuse.
-            //Here, we dispose it, but it's not really required-;we immediately thereafter clear the BufferPool of all held memory.
+            //Here, we dispose it, but it's not really required; we immediately thereafter clear the BufferPool of all held memory.
             //Note that failing to dispose buffer pools can result in memory leaks.
             simulation.Dispose();
             threadDispatcher.Dispose();
