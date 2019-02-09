@@ -32,37 +32,70 @@ namespace Demos.SpecializedTests
             camera.Yaw = MathF.PI * 3f / 4;
             camera.Pitch = MathF.PI * 0.05f;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            {
+                var shapeA = new Cylinder(0.5f, 0.5f);
+                var poseA = new RigidPose(new Vector3(0, 0, 0));
+                var shapeB = new Cylinder(0.5f, 0.5f);
+                var poseB = new RigidPose(new Vector3(0.01f, -.75f, 0.45f), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathF.PI * 0.35f));
 
-            var shapeA = new Cylinder(0.5f, 50.5f);
-            var poseA = new RigidPose(new Vector3(0, 0, 0));
-            var shapeB = new Cylinder(50.5f, 0.5f);
-            var poseB = new RigidPose(new Vector3(1.01f, -0.45f, 0.45f), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathF.PI * 0.35f));
+                basePosition = default;
+                shapeLines = MinkowskiShapeVisualizer.CreateLines<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>(
+                    shapeA, shapeB, poseA, poseB, 65536,
+                    0.01f, new Vector3(0.4f, 0.4f, 0),
+                    0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
 
-            basePosition = default;
-            shapeLines = MinkowskiShapeVisualizer.CreateLines<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>(
-                shapeA, shapeB, poseA, poseB, 65536,
-                0.01f, new Vector3(0.4f, 0.4f, 0),
-                0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
+                var aWide = default(CylinderWide);
+                var bWide = default(CylinderWide);
+                aWide.Broadcast(shapeA);
+                bWide.Broadcast(shapeB);
+                var worldOffsetB = poseB.Position - poseA.Position;
+                var localOrientationB = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseB.Orientation, Quaternion.Conjugate(poseA.Orientation)));
+                var localOffsetB = Quaternion.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
+                Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
+                Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
+                var cylinderSupportFinder = default(CylinderSupportFinder);
 
-            var aWide = default(CylinderWide);
-            var bWide = default(CylinderWide);
-            aWide.Broadcast(shapeA);
-            bWide.Broadcast(shapeB);
-            var worldOffsetB = poseB.Position - poseA.Position;
-            var localOrientationB = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseB.Orientation, Quaternion.Conjugate(poseA.Orientation)));
-            var localOffsetB = Quaternion.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
-            Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
-            Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
-            var cylinderSupportFinder = default(CylinderSupportFinder);
+                var initialNormal = Vector3.Normalize(localOffsetB);
+                Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
+                steps1 = new List<PlaneWalkerStep1>();
+                PlaneWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth1(
+                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, initialNormalWide, new Vector<int>(), out var depthWide1, out var localNormalWide1, steps1, 1000);
+                steps2 = new List<PlaneWalkerStep2>();
+                PlaneWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth2(
+                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-7f), out var depthWide2, out var localNormalWide2, steps2, 1000);
+            }
+            //{
+            //    var shapeA = new Box(0.5f, 0.5f, 0.5f);
+            //    var poseA = new RigidPose(new Vector3(0, 0, 0));
+            //    var shapeB = new Box(0.5f, 0.5f, 0.5f);
+            //    var poseB = new RigidPose(new Vector3(0.8f, -0.55f, 0.45f), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathF.PI * 0.35f));
 
-            var initialNormal = Vector3.Normalize(localOffsetB);
-            Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
-            steps1 = new List<PlaneWalkerStep1>();
-            PlaneWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth1(
-                aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, initialNormalWide, new Vector<int>(), out var depthWide1, out var localNormalWide1, steps1, 1000);
-            steps2 = new List<PlaneWalkerStep2>();
-            PlaneWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth2(
-                aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, initialNormalWide, new Vector<int>(), out var depthWide2, out var localNormalWide2, steps2, 1000);
+            //    basePosition = default;
+            //    shapeLines = MinkowskiShapeVisualizer.CreateLines<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>(
+            //        shapeA, shapeB, poseA, poseB, 65536,
+            //        0.01f, new Vector3(0.4f, 0.4f, 0),
+            //        0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
+
+            //    var aWide = default(BoxWide);
+            //    var bWide = default(BoxWide);
+            //    aWide.Broadcast(shapeA);
+            //    bWide.Broadcast(shapeB);
+            //    var worldOffsetB = poseB.Position - poseA.Position;
+            //    var localOrientationB = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseB.Orientation, Quaternion.Conjugate(poseA.Orientation)));
+            //    var localOffsetB = Quaternion.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
+            //    Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
+            //    Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
+            //    var cylinderSupportFinder = default(BoxSupportFinder);
+
+            //    var initialNormal = Vector3.Normalize(localOffsetB);
+            //    Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
+            //    steps1 = new List<PlaneWalkerStep1>();
+            //    PlaneWalker<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth1(
+            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, initialNormalWide, new Vector<int>(), out var depthWide1, out var localNormalWide1, steps1, 1000);
+            //    steps2 = new List<PlaneWalkerStep2>();
+            //    PlaneWalker<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth2(
+            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-7f), out var depthWide2, out var localNormalWide2, steps2, 1000);
+            //}
         }
 
         int stepIndex;
@@ -135,11 +168,11 @@ namespace Demos.SpecializedTests
             renderer.Lines.Allocate() = new LineInstance(step.InterpolatedSupport + basePosition, step.InterpolatedSupport + basePosition + step.InterpolatedNormal, new Vector3(0, 0.75f, 0.1f), default);
             renderer.Lines.Allocate() = new LineInstance(step.Support + basePosition, step.Support + basePosition + step.Normal, new Vector3(0, 1, 0), default);
             renderer.Lines.Allocate() = new LineInstance(step.PreviousSupport + basePosition, step.Support + basePosition, new Vector3(0.6f, 0, 0.6f), default);
+            var closestPointToOrigin = step.Normal * step.NewestDepth + basePosition;
+            renderer.Lines.Allocate() = new LineInstance(step.InterpolatedSupport + basePosition, closestPointToOrigin, new Vector3(0, 1, 1), default);
+            renderer.Lines.Allocate() = new LineInstance(basePosition, closestPointToOrigin, new Vector3(0, 1, 1), default);
             if (step.Improved)
             {
-                var closestPointToOrigin = step.Normal * step.NewestDepth + basePosition;
-                renderer.Lines.Allocate() = new LineInstance(step.InterpolatedSupport + basePosition, closestPointToOrigin, new Vector3(0, 1, 1), default);
-                renderer.Lines.Allocate() = new LineInstance(basePosition, closestPointToOrigin, new Vector3(0, 1, 1), default);
                 renderer.Lines.Allocate() = new LineInstance(basePosition + step.InterpolatedSupport, basePosition + step.PointOnOriginLine, new Vector3(0, 0, 1), default);
                 renderer.Lines.Allocate() = new LineInstance(basePosition + step.InterpolatedSupport, basePosition + step.InterpolatedSupport + step.NextNormal, new Vector3(0, 0, 1), default);
                 //Debug.Assert(MathF.Abs(Vector3.Dot(step.NextNormal, step.PointOnOriginLine - step.Support)) < 0.00001f);

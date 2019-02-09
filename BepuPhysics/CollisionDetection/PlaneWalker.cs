@@ -87,7 +87,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         public static void FindMinimumDepth2(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
-            in Vector3Wide initialNormal, in Vector<int> inactiveLanes, out Vector<float> depth, out Vector3Wide refinedNormal, List<PlaneWalkerStep2> steps, int maximumIterations = 30)
+            in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> terminationThreshold, out Vector<float> depth, out Vector3Wide refinedNormal, List<PlaneWalkerStep2> steps, int maximumIterations = 30)
         {
             //The idea behind this algorithm is to greedily hillclimb the penetration depth function in minkowski space.
             //Using a strict gradient descent is hard to generalize due to the poorly behaving gradients and the tendency to converge extremely slowly in valleys (which are very common).
@@ -115,6 +115,7 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.LengthSquared(initialNormal, out var initialNormalLengthSquared);
             Debug.Assert(Vector.LessThanAll(Vector.BitwiseOr(inactiveLanes, Vector.LessThan(Vector.Abs(initialNormalLengthSquared - Vector<float>.One), new Vector<float>(1e-6f))), Vector<int>.Zero));
 #endif
+            refinedNormal = initialNormal;
             var previousNormal = initialNormal;
             FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, previousNormal, out var previousSupport);
             Vector3Wide.Dot(previousSupport, previousNormal, out depth);
@@ -174,6 +175,14 @@ namespace BepuPhysics.CollisionDetection
                 var depthNotWorse = Vector.LessThanOrEqual(newDepth, depth);
                 var depthStrictlyImproved = Vector.LessThan(newDepth, depth);
 
+                //We'll terminate if we failed to make any improvements and the progression scale is below the target threshold.
+                //In theory, progression could speed up again, but for reasonable termination thresholds that's not a concern.
+                //(Note that the progression parameter is approximately proportional to tilting angle- if it's 1e-7f, the normal is pretty close.)
+                var shouldTerminate = Vector.AndNot(Vector.LessThanOrEqual(progressionScale, terminationThreshold), depthStrictlyImproved);
+                terminatedLanes = Vector.BitwiseOr(shouldTerminate, terminatedLanes);
+                if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
+                    break;
+
                 //It's possible that the new normal/support has rocketed off to the other side of the origin.
                 //This becomes very common when small changes in the normal result in large changes in the support location.
                 //Pivoting around the latest support point exclusively in such a case would tend to make very little progress-
@@ -188,7 +197,7 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.Dot(previousSupport, supportOffset, out var dot);
                 var t = -dot / supportOffsetLengthSquared;
                 //Note that, if the depth has failed to improve, we force the interpolated point backwards quite a distance to try to return to a safe state.
-                t = Vector.Max(Vector<float>.Zero, Vector.Min(t, Vector.ConditionalSelect(depthNotWorse, Vector<float>.One, new Vector<float>(0.125f))));
+                t = Vector.Max(Vector<float>.Zero, Vector.Min(t, Vector.ConditionalSelect(depthNotWorse, Vector<float>.One, new Vector<float>(0.25f))));
                 Vector3Wide.Scale(supportOffset, t, out var previousSupportToClosestPointOnLineToOrigin);
                 Vector3Wide.Add(previousSupport, previousSupportToClosestPointOnLineToOrigin, out var interpolatedSupport);
                 Vector3Wide.Scale(previousNormal, Vector<float>.One - t, out var weightedPreviousNormal);
@@ -245,13 +254,6 @@ namespace BepuPhysics.CollisionDetection
                 progressionScale *= Vector.ConditionalSelect(depthNotWorse, Vector.ConditionalSelect(depthStrictlyImproved, new Vector<float>(1.5f), new Vector<float>(0.5f)), new Vector<float>(0.125f));
                 //progressionScale *= Vector.ConditionalSelect(depthStrictlyImproved, new Vector<float>(1.5f), new Vector<float>(0.125f));
 
-                //If the offset length is zero, the normal length will be zero and the latest support point is the closest point to the origin.
-                //This is sufficient to guarantee that no further progress is possible and we can early out.
-                //(Note that for shapes with flat faces, this termination condition may not be met- the support point is not unique.)
-                //invalidNormal = Vector.LessThan(newNormalLength, new Vector<float>(1e-10f));
-                //terminatedLanes = Vector.BitwiseOr(invalidNormal, terminatedLanes);
-                if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
-                    break;
                 var useNewResult = Vector.AndNot(depthNotWorse, terminatedLanes);
                 Vector3Wide.ConditionalSelect(useNewResult, normal, refinedNormal, out refinedNormal);
                 depth = Vector.ConditionalSelect(useNewResult, newDepth, depth);
