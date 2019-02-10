@@ -184,6 +184,14 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ConditionallyNegate(in Vector<int> shouldNegate, in Vector3Wide v, out Vector3Wide negated)
+        {
+            negated.X = Vector.ConditionalSelect(shouldNegate, -v.X, v.X);
+            negated.Y = Vector.ConditionalSelect(shouldNegate, -v.Y, v.Y);
+            negated.Z = Vector.ConditionalSelect(shouldNegate, -v.Z, v.Z);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CrossWithoutOverlap(in Vector3Wide a, in Vector3Wide b, out Vector3Wide result)
         {
             //This will fail if the result reference is actually a or b! 

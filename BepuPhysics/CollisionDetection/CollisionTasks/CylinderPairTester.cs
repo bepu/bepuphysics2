@@ -2,6 +2,7 @@
 using BepuPhysics.CollisionDetection.SweepTasks;
 using BepuUtilities;
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -318,47 +319,72 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //1) Offset from B to A
             Vector3Wide.Length(localOffsetA, out var length);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / length, out var localNormal);
-            GetDepth(rA.Y, localOffsetB, localNormal, a, b, out var depth);
-            depth = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-7f)), new Vector<float>(float.MaxValue), depth);
+            CylinderSupportFinder supportFinder;
+            PlaneWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindSupport(
+                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, out var initialSupport);
+            Vector3Wide.Dot(initialSupport, localNormal, out var depth);
+            depth = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-9f)), new Vector<float>(float.MaxValue), depth);
 
             //2) Cap normal A
-            GetDepthContributionB(b, rA.Y, out var capNormalAContributionB);
-            Vector3Wide.Dot(localOffsetA, rA.Y, out var capNormalAOffsetDot);
-            var capNormalADepth = a.HalfLength + capNormalAContributionB - Vector.Abs(capNormalAOffsetDot);
-            var useCapNormalA = Vector.LessThan(capNormalADepth, depth);
-            depth = Vector.ConditionalSelect(useCapNormalA, capNormalADepth, depth);
-            Vector3Wide.ConditionalSelect(useCapNormalA, rA.Y, localNormal, out localNormal);
+            {
+                //Use the sign that points rA.Y from B to A. Using B-A minkowski difference.
+                Vector3Wide.Dot(rA.Y, localOffsetA, out var rAYDot);
+                Vector3Wide.ConditionallyNegate(Vector.LessThan(rAYDot, Vector<float>.Zero), rA.Y, out var normalCandidate);
+                Vector3Wide.Scale(normalCandidate, -a.HalfLength, out var supportA);
+                Vector3Wide.Add(supportA, localOffsetA, out supportA);
+                supportFinder.ComputeLocalSupport(b, normalCandidate, out var supportB);
+                Vector3Wide.Subtract(supportB, supportA, out var supportCandidate);
+                Vector3Wide.Dot(supportCandidate, normalCandidate, out var depthCandidate);
+                var useCandidate = Vector.LessThan(depthCandidate, depth);
+                depth = Vector.ConditionalSelect(useCandidate, depthCandidate, depth);
+                Vector3Wide.ConditionalSelect(useCandidate, normalCandidate, localNormal, out localNormal);
+                Vector3Wide.ConditionalSelect(useCandidate, supportCandidate, initialSupport, out initialSupport);
+            }
 
             //3) Cap normal B
-            GetDepthContributionA(a, rA.Y.Y, out var capNormalBContributionA);
-            var capNormalBDepth = b.HalfLength + capNormalBContributionA - Vector.Abs(localOffsetA.Y);
-            var useCapNormalB = Vector.LessThan(capNormalBDepth, depth);
-            depth = Vector.ConditionalSelect(useCapNormalB, capNormalBDepth, depth);
-            localNormal.X = Vector.ConditionalSelect(useCapNormalB, Vector<float>.Zero, localNormal.X);
-            localNormal.Y = Vector.ConditionalSelect(useCapNormalB, Vector<float>.One, localNormal.Y);
-            localNormal.Z = Vector.ConditionalSelect(useCapNormalB, Vector<float>.Zero, localNormal.Z);
+            {
+                //Use the local Y axis sign that points from B to A.
+                Vector3Wide negatedNormalCandidate;
+                negatedNormalCandidate.X = Vector<float>.Zero;
+                negatedNormalCandidate.Y = Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), new Vector<float>(-1), Vector<float>.One);
+                negatedNormalCandidate.Z = Vector<float>.Zero;
+                supportFinder.ComputeSupport(a, rA, negatedNormalCandidate, out var supportA);
+                Vector3Wide.Add(supportA, localOffsetA, out supportA);
+                Vector3Wide supportCandidate;
+                supportCandidate.X = -supportA.X;
+                supportCandidate.Y = negatedNormalCandidate.Y * -b.HalfLength - supportA.Y;
+                supportCandidate.Z = -supportA.Z;
+                Vector3Wide.Dot(supportCandidate, negatedNormalCandidate, out var negatedDepthCandidate);
+                var depthCandidate = -negatedDepthCandidate;
+                var useCandidate = Vector.LessThan(depthCandidate, depth);
+                depth = Vector.ConditionalSelect(useCandidate, depthCandidate, depth);
+                localNormal.X = Vector.ConditionalSelect(useCandidate, Vector<float>.Zero, localNormal.X);
+                localNormal.Y = Vector.ConditionalSelect(useCandidate, -negatedNormalCandidate.Y, localNormal.Y);
+                localNormal.Z = Vector.ConditionalSelect(useCandidate, Vector<float>.Zero, localNormal.Z);
+                Vector3Wide.ConditionalSelect(useCandidate, supportCandidate, initialSupport, out initialSupport);
+            }
 
-            //4) Axis A x axis B.
-            var axisCrossLengthSquared = rA.Y.X * rA.Y.X + rA.Y.Z * rA.Y.Z;
-            var axisCrossFallbackLengthSquared = localOffsetA.X * localOffsetA.X + localOffsetA.Z * localOffsetA.Z;
-            //If the axes are parallel, just use the horizontal direction pointing from B to A.
-            var useAxisCrossFallback = Vector.LessThan(axisCrossLengthSquared, new Vector<float>(1e-10f));
-            var skipAxisCross = Vector.BitwiseAnd(useAxisCrossFallback, Vector.LessThan(axisCrossFallbackLengthSquared, new Vector<float>(1e-10f)));
-            var inverseAxisCrossLength = Vector<float>.One / Vector.SquareRoot(Vector.ConditionalSelect(useAxisCrossFallback, axisCrossFallbackLengthSquared, axisCrossLengthSquared));
-            Vector3Wide axisAxAxisB;
-            axisAxAxisB.X = Vector.ConditionalSelect(useAxisCrossFallback, localOffsetA.X, -rA.Y.Z) * inverseAxisCrossLength;
-            axisAxAxisB.Y = Vector<float>.Zero;
-            axisAxAxisB.Z = Vector.ConditionalSelect(useAxisCrossFallback, localOffsetA.Z, rA.Y.X) * inverseAxisCrossLength;
-            //By virtue of being perpendicular to both cylinder axes, there can be no contribution from the half lengths.
-            Vector3Wide.Dot(axisAxAxisB, localOffsetA, out var axisCrossOffsetDot);
-            var axisCrossDepth = a.Radius + b.Radius - Vector.Abs(axisCrossOffsetDot);
-            var useAxisCross = Vector.AndNot(Vector.LessThan(axisCrossDepth, depth), skipAxisCross);
-            depth = Vector.ConditionalSelect(useAxisCross, axisCrossDepth, depth);
-            Vector3Wide.ConditionalSelect(useAxisCross, axisAxAxisB, localNormal, out localNormal);
+            ////4) Axis A x axis B.
+            //var axisCrossLengthSquared = rA.Y.X * rA.Y.X + rA.Y.Z * rA.Y.Z;
+            //var axisCrossFallbackLengthSquared = localOffsetA.X * localOffsetA.X + localOffsetA.Z * localOffsetA.Z;
+            ////If the axes are parallel, just use the horizontal direction pointing from B to A.
+            //var useAxisCrossFallback = Vector.LessThan(axisCrossLengthSquared, new Vector<float>(1e-10f));
+            //var skipAxisCross = Vector.BitwiseAnd(useAxisCrossFallback, Vector.LessThan(axisCrossFallbackLengthSquared, new Vector<float>(1e-10f)));
+            //var inverseAxisCrossLength = Vector<float>.One / Vector.SquareRoot(Vector.ConditionalSelect(useAxisCrossFallback, axisCrossFallbackLengthSquared, axisCrossLengthSquared));
+            //Vector3Wide axisAxAxisB;
+            //axisAxAxisB.X = Vector.ConditionalSelect(useAxisCrossFallback, localOffsetA.X, -rA.Y.Z) * inverseAxisCrossLength;
+            //axisAxAxisB.Y = Vector<float>.Zero;
+            //axisAxAxisB.Z = Vector.ConditionalSelect(useAxisCrossFallback, localOffsetA.Z, rA.Y.X) * inverseAxisCrossLength;
+            ////By virtue of being perpendicular to both cylinder axes, there can be no contribution from the half lengths.
+            //Vector3Wide.Dot(axisAxAxisB, localOffsetA, out var axisCrossOffsetDot);
+            //var axisCrossDepth = a.Radius + b.Radius - Vector.Abs(axisCrossOffsetDot);
+            //var useAxisCross = Vector.AndNot(Vector.LessThan(axisCrossDepth, depth), skipAxisCross);
+            //depth = Vector.ConditionalSelect(useAxisCross, axisCrossDepth, depth);
+            //Vector3Wide.ConditionalSelect(useAxisCross, axisAxAxisB, localNormal, out localNormal);
 
-            //Calibrate the normal to point from B to A.
-            Vector3Wide.Dot(localNormal, localOffsetA, out var normalDotLocalOffsetB);
-            Vector3Wide.ConditionallyNegate(Vector.LessThan(normalDotLocalOffsetB, Vector<float>.Zero), ref localNormal);
+            ////Calibrate the normal to point from B to A.
+            //Vector3Wide.Dot(localNormal, localOffsetA, out var normalDotLocalOffsetB);
+            //Vector3Wide.ConditionallyNegate(Vector.LessThan(normalDotLocalOffsetB, Vector<float>.Zero), ref localNormal);
 
             //We now have a decent estimate for the local normal. Refine it to a local minimum.
             //CylinderSupportFinder supportFinder = default;
@@ -367,8 +393,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //    b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, -speculativeMargin, new Vector<float>(1e-4f), 25, inactiveLanes,
             //    out localNormal, out var depthBelowThreshold);
             //inactiveLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
-            NelderMead<Cylinder, CylinderWide, Cylinder, CylinderWide, CylinderPairDepthTester>.Refine(
-                b, a, localOffsetA, rA, localNormal, depth, inactiveLanes, new Vector<float>(1e-3f), -speculativeMargin, out var newLocalNormal, out var newDepth);
+            //NelderMead<Cylinder, CylinderWide, Cylinder, CylinderWide, CylinderPairDepthTester>.Refine(
+            //    b, a, localOffsetA, rA, localNormal, depth, inactiveLanes, new Vector<float>(1e-3f), -speculativeMargin, out var newLocalNormal, out var newDepth);
+            //localNormal = newLocalNormal;
+            //depth = newDepth;
+
+            PlaneWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
+                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, initialSupport, depth, inactiveLanes, new Vector<float>(1e-20f), -speculativeMargin, out var newDepth, out var newLocalNormal, null, 500);
+            //PlaneWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindSupport(
+            //  b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, newLocalNormal, out var testSupport);
+            //Vector3Wide.Dot(testSupport, newLocalNormal, out var testDepth);
+            //Debug.Assert(Vector.Abs(testDepth - newDepth)[0] < 1e-6f, "Bad refined normal.");
             localNormal = newLocalNormal;
             depth = newDepth;
 

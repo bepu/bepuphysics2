@@ -26,6 +26,8 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
     <Optimize>true</Optimize>
     <DefineConstants>TRACE;RELEASE;PROFILE;NETSTANDARD2_0</DefineConstants>
   </PropertyGroup>
