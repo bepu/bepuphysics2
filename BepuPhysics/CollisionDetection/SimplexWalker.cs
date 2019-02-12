@@ -10,6 +10,14 @@ using System.Text;
 
 namespace BepuPhysics.CollisionDetection
 {
+
+    public enum SimplexNormalSource
+    {
+        Edge,
+        TriangleNormal,
+        Barycentric
+    }
+
     public struct SimplexWalkerVertex
     {
         public Vector3 Support;
@@ -22,6 +30,11 @@ namespace BepuPhysics.CollisionDetection
         public SimplexWalkerVertex A;
         public SimplexWalkerVertex B;
         public SimplexWalkerVertex C;
+        public SimplexNormalSource NormalSource;
+        public Vector3 NextNormal;
+        public Vector3 PointOnOriginLine;
+        public Vector3 InterpolatedNormal;
+        public Vector3 InterpolatedSupport;
     }
 
 
@@ -70,11 +83,11 @@ namespace BepuPhysics.CollisionDetection
         public static void Add(ref Simplex simplex, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth)
         {
             //Preserve the ordering of simplex vertices by depth.
-            var replaceC = Vector.LessThan(depth, simplex.C.Depth);
-            Replace(replaceC, ref simplex.C, support, normal, depth);
-            //simplex.C.Support = support;
-            //simplex.C.Normal = normal;
-            //simplex.C.Depth = depth;
+            //var replaceC = Vector.LessThan(depth, simplex.C.Depth);
+            //Replace(replaceC, ref simplex.C, support, normal, depth);
+            simplex.C.Support = support;
+            simplex.C.Normal = normal;
+            simplex.C.Depth = depth;
             var replaceB = Vector.LessThan(depth, simplex.B.Depth);
             Replace(replaceB, ref simplex.C, simplex.B.Support, simplex.B.Normal, simplex.B.Depth);
             Replace(replaceB, ref simplex.B, support, normal, depth);
@@ -110,7 +123,7 @@ namespace BepuPhysics.CollisionDetection
             FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, inactiveLanes, convergenceThreshold, minimumDepthThreshold, out depth, out refinedNormal, steps, maximumIterations);
         }
 
-        static void GetNextNormal(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector<int> terminatedLanes, out Vector3Wide nextNormal, out Vector<int> normalIsSimplexNormal)
+        static void GetNextNormal(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector<int> terminatedLanes, List<SimplexWalkerStep> steps, out Vector3Wide nextNormal, out Vector<int> normalIsSimplexNormal)
         {
             //Compute the barycentric coordinates of the origin on the triangle.
             Vector3Wide.Subtract(simplex.B.Support, simplex.A.Support, out var ab);
@@ -121,6 +134,9 @@ namespace BepuPhysics.CollisionDetection
             var simplexIsDegenerate = Vector.LessThan(nLengthSquared, new Vector<float>(1e-14f));
             nextNormal = default;
             normalIsSimplexNormal = Vector<int>.Zero;
+
+            CreateDebugStep(ref simplex, out var step);
+
             if (Vector.LessThanAny(Vector.AndNot(simplexIsDegenerate, terminatedLanes), Vector<int>.Zero))
             {
                 //At least one active lane cannot compute valid barycentric coordinates; the simplex is not a triangle.
@@ -151,9 +167,9 @@ namespace BepuPhysics.CollisionDetection
                 //dot(origin - edgeStart, edgeOffset / ||edgeOffset||) * edgeOffset / ||edgeOffset||
                 Vector3Wide.Dot(edgeStart, edgeOffset, out var dot);
                 //TODO: Approximate rcp would be sufficient here.
-                //Note that division by zero will get filtered out by the clamp, so this works for the vertex case.
                 var t = -dot / lengthSquared;
                 t = Vector.Min(Vector<float>.One, Vector.Max(Vector<float>.Zero, t));
+                t = Vector.ConditionalSelect(Vector.LessThan(lengthSquared, new Vector<float>(1e-14f)), Vector<float>.Zero, t);
                 Vector3Wide.Scale(edgeOffset, t, out var interpolatedOffset);
                 Vector3Wide.Add(interpolatedOffset, edgeStart, out var interpolatedSupport);
                 Vector3Wide.Scale(normalStart, Vector<float>.One - t, out var normalStartContribution);
@@ -171,6 +187,14 @@ namespace BepuPhysics.CollisionDetection
 
                 Vector3Wide.LengthSquared(nextNormal, out var nextNormalLengthSquared);
                 Vector3Wide.ConditionalSelect(Vector.GreaterThan(nextNormalLengthSquared, new Vector<float>(1e-14f)), nextNormal, interpolatedNormal, out nextNormal);
+
+                if (Vector.AndNot(simplexIsDegenerate, terminatedLanes)[0] < 0)
+                {
+                    step.NormalSource = SimplexNormalSource.Edge;
+                    Vector3Wide.ReadSlot(ref pointOnOriginLine, 0, out step.PointOnOriginLine);
+                    Vector3Wide.ReadSlot(ref interpolatedNormal, 0, out step.InterpolatedNormal);
+                    Vector3Wide.ReadSlot(ref interpolatedSupport, 0, out step.InterpolatedSupport);
+                }
             }
             if (Vector.LessThanAny(Vector.AndNot(Vector.OnesComplement(simplexIsDegenerate), terminatedLanes), Vector<int>.Zero))
             {
@@ -178,10 +202,10 @@ namespace BepuPhysics.CollisionDetection
                 //TODO: Approximate RCP could be useful here.
                 var inverseNLengthSquared = Vector<float>.One / nLengthSquared;
 
-                Vector3Wide.CrossWithoutOverlap(simplex.A.Support, ab, out var axab);
-                Vector3Wide.CrossWithoutOverlap(simplex.A.Support, ca, out var axca);
+                Vector3Wide.CrossWithoutOverlap(ab, simplex.A.Support, out var axab);
+                Vector3Wide.CrossWithoutOverlap(ca, simplex.C.Support, out var cxca);
                 Vector3Wide.Dot(axab, n, out var cNumerator);
-                Vector3Wide.Dot(axca, n, out var bNumerator);
+                Vector3Wide.Dot(cxca, n, out var bNumerator);
                 var cWeight = cNumerator * inverseNLengthSquared;
                 var bWeight = bNumerator * inverseNLengthSquared;
                 var aWeight = Vector<float>.One - bWeight - cWeight;
@@ -207,29 +231,47 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.ConditionalSelect(useTriangleNormal, n, interpolatedNormal, out var normalCandidate);
                 Vector3Wide.ConditionalSelect(simplexIsDegenerate, nextNormal, normalCandidate, out nextNormal);
                 Vector.ConditionalSelect(Vector.AndNot(useTriangleNormal, simplexIsDegenerate), new Vector<int>(-1), Vector<int>.Zero);
+
+                if (Vector.AndNot(Vector.OnesComplement(simplexIsDegenerate), terminatedLanes)[0] < 0)
+                {
+                    if (useTriangleNormal[0] < 0)
+                    {
+                        step.NormalSource = SimplexNormalSource.TriangleNormal;
+                    }
+                    else
+                    {
+                        step.NormalSource = SimplexNormalSource.Barycentric;
+                        Vector3Wide.ReadSlot(ref simplex.A.Support, 0, out var a);
+                        Vector3Wide.ReadSlot(ref simplex.B.Support, 0, out var b);
+                        Vector3Wide.ReadSlot(ref simplex.C.Support, 0, out var c);
+                        step.InterpolatedSupport = (a * aWeight[0] + b * bWeight[0] + c * cWeight[0]);
+                    }
+                }
             }
             //TOOD: rsqrt would be nice here.
             Vector3Wide.Length(nextNormal, out var normalLength);
             Vector3Wide.Scale(nextNormal, Vector<float>.One / normalLength, out nextNormal);
+
+            if (steps != null)
+            {
+                Vector3Wide.ReadSlot(ref nextNormal, 0, out step.NextNormal);
+                steps.Add(step);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void AddDebugStep(ref Simplex simplex, List<SimplexWalkerStep> steps)
+        static void CreateDebugStep(ref Simplex simplex, out SimplexWalkerStep step)
         {
-            if (steps != null)
-            {
-                SimplexWalkerStep step;
-                Vector3Wide.ReadSlot(ref simplex.A.Support, 0, out step.A.Support);
-                Vector3Wide.ReadSlot(ref simplex.A.Normal, 0, out step.A.Normal);
-                step.A.Depth = simplex.A.Depth[0];
-                Vector3Wide.ReadSlot(ref simplex.B.Support, 0, out step.B.Support);
-                Vector3Wide.ReadSlot(ref simplex.B.Normal, 0, out step.B.Normal);
-                step.B.Depth = simplex.B.Depth[0];
-                Vector3Wide.ReadSlot(ref simplex.C.Support, 0, out step.C.Support);
-                Vector3Wide.ReadSlot(ref simplex.C.Normal, 0, out step.C.Normal);
-                step.C.Depth = simplex.C.Depth[0];
-                steps.Add(step);
-            }
+            step = default;
+            Vector3Wide.ReadSlot(ref simplex.A.Support, 0, out step.A.Support);
+            Vector3Wide.ReadSlot(ref simplex.A.Normal, 0, out step.A.Normal);
+            step.A.Depth = simplex.A.Depth[0];
+            Vector3Wide.ReadSlot(ref simplex.B.Support, 0, out step.B.Support);
+            Vector3Wide.ReadSlot(ref simplex.B.Normal, 0, out step.B.Normal);
+            step.B.Depth = simplex.B.Depth[0];
+            Vector3Wide.ReadSlot(ref simplex.C.Support, 0, out step.C.Support);
+            Vector3Wide.ReadSlot(ref simplex.C.Normal, 0, out step.C.Normal);
+            step.C.Depth = simplex.C.Depth[0];
         }
 
 
@@ -251,9 +293,7 @@ namespace BepuPhysics.CollisionDetection
                 return;
             }
 
-            GetNextNormal(ref simplex, localOffsetB, terminatedLanes, out var normal, out var normalIsSimplexNormal);
-
-            AddDebugStep(ref simplex, steps);
+            GetNextNormal(ref simplex, localOffsetB, terminatedLanes, steps, out var normal, out var normalIsSimplexNormal);
 
             for (int i = 0; i < maximumIterations; ++i)
             {
@@ -261,25 +301,17 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.Dot(support, normal, out var depth);
 
                 Vector3Wide.Dot(simplex.A.Support, normal, out var aDotN);
-                var noProgressMade = Vector.BitwiseAnd(normalIsSimplexNormal, Vector.LessThan(aDotN, surfaceThreshold));
+                var progressBelowEpsilon = Vector.BitwiseAnd(normalIsSimplexNormal, Vector.LessThan(aDotN, surfaceThreshold));
 
                 Add(ref simplex, support, normal, depth);
 
                 //If all lanes are sufficiently separated, then we can early out.
                 depthBelowThreshold = Vector.LessThan(simplex.A.Depth, minimumDepthThreshold);
-                terminatedLanes = Vector.BitwiseOr(depthBelowThreshold, terminatedLanes);
+                terminatedLanes = Vector.BitwiseOr(depthBelowThreshold, Vector.BitwiseOr(progressBelowEpsilon, terminatedLanes));
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
 
-                GetNextNormal(ref simplex, localOffsetB, terminatedLanes, out normal, out normalIsSimplexNormal);
-
-                
-
-                
-                
-                AddDebugStep(ref simplex, steps);
-
-      
+                GetNextNormal(ref simplex, localOffsetB, terminatedLanes, steps, out normal, out normalIsSimplexNormal);
             }
             refinedNormal = simplex.A.Normal;
             refinedDepth = simplex.A.Depth;
