@@ -73,7 +73,7 @@ namespace Demos.SpecializedTests
                 Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
                 steps = new List<SimplexWalkerStep>();
                 SimplexWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
-                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-20f), new Vector<float>(-500),
+                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-7f), new Vector<float>(-500),
                     out var depthWide2, out var localNormalWide2, steps, 1000);
 
                 //const int iterationCount = 1000;
@@ -154,15 +154,62 @@ namespace Demos.SpecializedTests
                 text.Clear().Append($"Simplex normal source: ").Append(step.NormalSource.ToString()),
                 new Vector2(32, renderer.Surface.Resolution.Y - 120), 20, new Vector3(1), font);
             renderer.TextBatcher.Write(
-               text.Clear().Append($"Best depth: ").Append(step.A.Depth, 9),
+               text.Clear().Append($"Best depth: ").Append(MathF.Min(step.A.Depth, MathF.Min(step.B.Depth, step.C.Depth)), 9),
                new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
+            SimplexWalkerVertex best, medium, worst;
+            if (step.A.Depth < step.B.Depth)
+            {
+                if (step.A.Depth < step.C.Depth)
+                {
+                    best = step.A;
+                    if (step.B.Depth < step.C.Depth)
+                    {
+                        medium = step.B;
+                        worst = step.C;
+                    }
+                    else
+                    {
+                        medium = step.C;
+                        worst = step.B;
+                    }
+                }
+                else
+                {
+                    best = step.C;
+                    medium = step.A;
+                    worst = step.B;
+                }
+            }
+            else
+            {
+                if (step.B.Depth < step.C.Depth)
+                {
+                    best = step.B;
+                    if (step.C.Depth < step.A.Depth)
+                    {
+                        medium = step.C;
+                        worst = step.A;
+                    }
+                    else
+                    {
+                        worst = step.A;
+                        medium = step.C;
+                    }
+                }
+                else
+                {
+                    best = step.C;
+                    medium = step.B;
+                    worst = step.A;
+                }
+            }
             renderer.Lines.Allocate() = new LineInstance(step.A.Support + basePosition, step.B.Support + basePosition, new Vector3(0, 0.6f, 0.1f), default);
             renderer.Lines.Allocate() = new LineInstance(step.B.Support + basePosition, step.C.Support + basePosition, new Vector3(0, 0.6f, 0.1f), default);
             renderer.Lines.Allocate() = new LineInstance(step.C.Support + basePosition, step.A.Support + basePosition, new Vector3(0, 0.6f, 0.1f), default);
 
-            renderer.Lines.Allocate() = new LineInstance(step.A.Support + basePosition, step.A.Support + basePosition + step.A.Normal, new Vector3(0, 1f, 0), default);
-            renderer.Lines.Allocate() = new LineInstance(step.B.Support + basePosition, step.B.Support + basePosition + step.B.Normal, new Vector3(0, 0.6f, 0.1f), default);
-            renderer.Lines.Allocate() = new LineInstance(step.C.Support + basePosition, step.C.Support + basePosition + step.C.Normal, new Vector3(0, 0.3f, 0.2f), default);
+            renderer.Lines.Allocate() = new LineInstance(best.Support + basePosition, best.Support + basePosition + best.Normal, new Vector3(0, 1f, 0), default);
+            renderer.Lines.Allocate() = new LineInstance(medium.Support + basePosition, medium.Support + basePosition + medium.Normal, new Vector3(0, 0.6f, 0.1f), default);
+            renderer.Lines.Allocate() = new LineInstance(worst.Support + basePosition, worst.Support + basePosition + worst.Normal, new Vector3(0, 0.3f, 0.2f), default);
 
             switch (step.NormalSource)
             {

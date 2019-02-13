@@ -80,20 +80,21 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(ref Simplex simplex, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth)
+        public static void Add(ref Simplex simplex, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth, in Vector<int> normalSource)
         {
-            //Preserve the ordering of simplex vertices by depth.
-            //var replaceC = Vector.LessThan(depth, simplex.C.Depth);
-            //Replace(replaceC, ref simplex.C, support, normal, depth);
-            simplex.C.Support = support;
-            simplex.C.Normal = normal;
-            simplex.C.Depth = depth;
-            var replaceB = Vector.LessThan(depth, simplex.B.Depth);
-            Replace(replaceB, ref simplex.C, simplex.B.Support, simplex.B.Normal, simplex.B.Depth);
-            Replace(replaceB, ref simplex.B, support, normal, depth);
-            var replaceA = Vector.LessThan(depth, simplex.A.Depth);
-            Replace(replaceA, ref simplex.B, simplex.A.Support, simplex.A.Normal, simplex.A.Depth);
+            //In the edge case (normalSource & 1 == 0), use the bits at 1<<2, 1<<3, and 1<<4 to choose which vertex to replace.
+            //In the barycentric case (normalSource & 1 == 1), use the bits at 1<<2, 1<<3, and 1<<4 to choose which vertex to replace.
+            //In the triangle normal case (normalSource == 2), replace the greatest depth vertex with the new sample.
+            var replaceWorstDepth = Vector.Equals(normalSource, new Vector<int>(2));
+            var aIsWorst = Vector.GreaterThanOrEqual(simplex.A.Depth, Vector.Max(simplex.B.Depth, simplex.C.Depth));
+            var bIsWorst = Vector.AndNot(Vector.GreaterThanOrEqual(simplex.B.Depth, Vector.Max(simplex.A.Depth, simplex.C.Depth)), aIsWorst);
+            var replaceA = Vector.BitwiseOr(Vector.BitwiseAnd(replaceWorstDepth, aIsWorst), Vector.GreaterThan(Vector.BitwiseAnd(normalSource, new Vector<int>(1 << 2)), Vector<int>.Zero));
+            var replaceB = Vector.BitwiseOr(Vector.BitwiseAnd(replaceWorstDepth, bIsWorst), Vector.GreaterThan(Vector.BitwiseAnd(normalSource, new Vector<int>(1 << 3)), Vector<int>.Zero));
+            var replaceC = Vector.AndNot(Vector.OnesComplement(replaceA), replaceB);
+
             Replace(replaceA, ref simplex.A, support, normal, depth);
+            Replace(replaceB, ref simplex.B, support, normal, depth);
+            Replace(replaceC, ref simplex.C, support, normal, depth);
         }
 
 
@@ -123,7 +124,7 @@ namespace BepuPhysics.CollisionDetection
             FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, inactiveLanes, convergenceThreshold, minimumDepthThreshold, out depth, out refinedNormal, steps, maximumIterations);
         }
 
-        static void GetNextNormal(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector<int> terminatedLanes, List<SimplexWalkerStep> steps, out Vector3Wide nextNormal, out Vector<int> normalIsSimplexNormal)
+        static void GetNextNormal(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector<int> terminatedLanes, List<SimplexWalkerStep> steps, out Vector3Wide nextNormal, out Vector<int> normalSource)
         {
             //Compute the barycentric coordinates of the origin on the triangle.
             Vector3Wide.Subtract(simplex.B.Support, simplex.A.Support, out var ab);
@@ -133,7 +134,7 @@ namespace BepuPhysics.CollisionDetection
 
             var simplexIsDegenerate = Vector.LessThan(nLengthSquared, new Vector<float>(1e-14f));
             nextNormal = default;
-            normalIsSimplexNormal = Vector<int>.Zero;
+            normalSource = default;
 
             CreateDebugStep(ref simplex, out var step);
 
@@ -145,8 +146,8 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.LengthSquared(ab, out var abLengthSquared);
                 Vector3Wide.LengthSquared(bc, out var bcLengthSquared);
                 Vector3Wide.LengthSquared(ca, out var caLengthSquared);
-                var useAB = Vector.GreaterThan(abLengthSquared, Vector.Max(bcLengthSquared, caLengthSquared));
-                var useBC = Vector.GreaterThan(bcLengthSquared, Vector.Max(abLengthSquared, caLengthSquared));
+                var useAB = Vector.GreaterThanOrEqual(abLengthSquared, Vector.Max(bcLengthSquared, caLengthSquared));
+                var useBC = Vector.AndNot(Vector.GreaterThanOrEqual(bcLengthSquared, Vector.Max(abLengthSquared, caLengthSquared)), useAB);
 
                 Vector3Wide edgeOffset, edgeStart;
                 Vector3Wide normalStart, normalEnd;
@@ -180,13 +181,22 @@ namespace BepuPhysics.CollisionDetection
                 //We're pivoting on the interpolated support, tilting the interpolated normal a little closer to the origin.
                 //This is not exactly a rigorous process- the goal is just to expand the simplex so a better heuristic can be used.
                 Vector3Wide.LengthSquared(interpolatedSupport, out var originToSupportLengthSquared);
-                Vector3Wide.Scale(simplex.A.Normal, simplex.A.Depth - originToSupportLengthSquared * 0.25f, out var pointOnOriginLine);
+                //Note the use of the deepest depth and normal to create the point on origin line.
+                var aIsBest = Vector.LessThan(simplex.A.Depth, Vector.Min(simplex.B.Depth, simplex.C.Depth));
+                var bIsBest = Vector.LessThan(simplex.B.Depth, Vector.Min(simplex.A.Depth, simplex.C.Depth));
+                var bestDepth = Vector.ConditionalSelect(aIsBest, simplex.A.Depth, Vector.ConditionalSelect(bIsBest, simplex.B.Depth, simplex.C.Depth));
+                Vector3Wide.ConditionalSelect(aIsBest, simplex.A.Normal, simplex.B.Normal, out var bestNormal);
+                Vector3Wide.ConditionalSelect(bIsBest, bestNormal, simplex.C.Normal, out bestNormal);
+                Vector3Wide.Scale(bestNormal, bestDepth - originToSupportLengthSquared * 0.25f, out var pointOnOriginLine);
                 Vector3Wide.Subtract(pointOnOriginLine, interpolatedSupport, out var supportToPointOnOriginLine);
                 Vector3Wide.CrossWithoutOverlap(interpolatedNormal, supportToPointOnOriginLine, out var intermediate);
                 Vector3Wide.CrossWithoutOverlap(supportToPointOnOriginLine, intermediate, out nextNormal);
 
                 Vector3Wide.LengthSquared(nextNormal, out var nextNormalLengthSquared);
                 Vector3Wide.ConditionalSelect(Vector.GreaterThan(nextNormalLengthSquared, new Vector<float>(1e-14f)), nextNormal, interpolatedNormal, out nextNormal);
+
+                //The normal source for edge cases is 0; 'or' in the vertices to replace.
+                normalSource = Vector.ConditionalSelect(useAB, new Vector<int>(1 << 4), Vector.ConditionalSelect(useBC, new Vector<int>(1 << 2), new Vector<int>(1 << 3)));
 
                 if (Vector.AndNot(simplexIsDegenerate, terminatedLanes)[0] < 0)
                 {
@@ -230,7 +240,15 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.ConditionallyNegate(shouldCalibrateTriangleNormal, ref n);
                 Vector3Wide.ConditionalSelect(useTriangleNormal, n, interpolatedNormal, out var normalCandidate);
                 Vector3Wide.ConditionalSelect(simplexIsDegenerate, nextNormal, normalCandidate, out nextNormal);
-                Vector.ConditionalSelect(Vector.AndNot(useTriangleNormal, simplexIsDegenerate), new Vector<int>(-1), Vector<int>.Zero);
+                //In the event that we're using a barycentric-found normal, include a flag for which vertex should be replaced.
+                //For this process, we ignore depths- instead, we go by barycentric weight signs. A negative weight associated with a vertex
+                //implies that the origin is outside of the opposing edge. That is, a negative weight for vertex B implies the origin
+                //is outside the CA edge plane. (It may *also* be outside the BC edge plane, but if the origin is outside
+                //two edge planes, we just arbitrarily pick one of the opposing vertices to remove.)
+                var replaceA = Vector.LessThan(aWeight, Vector<float>.Zero);
+                var replaceB = Vector.LessThan(bWeight, Vector<float>.Zero);
+                var replaceFlag = Vector.ConditionalSelect(replaceA, new Vector<int>(1 << 2), Vector.ConditionalSelect(replaceB, new Vector<int>(1 << 3), new Vector<int>(1 << 4)));
+                normalSource = Vector.ConditionalSelect(simplexIsDegenerate, normalSource, Vector.ConditionalSelect(useTriangleNormal, new Vector<int>(2), Vector.BitwiseOr(new Vector<int>(1), replaceFlag)));
 
                 if (Vector.AndNot(Vector.OnesComplement(simplexIsDegenerate), terminatedLanes)[0] < 0)
                 {
@@ -293,17 +311,19 @@ namespace BepuPhysics.CollisionDetection
                 return;
             }
 
-            GetNextNormal(ref simplex, localOffsetB, terminatedLanes, steps, out var normal, out var normalIsSimplexNormal);
+            GetNextNormal(ref simplex, localOffsetB, terminatedLanes, steps, out var normal, out var normalSource);
 
             for (int i = 0; i < maximumIterations; ++i)
             {
                 FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normal, out var support);
                 Vector3Wide.Dot(support, normal, out var depth);
 
+                //If we used the triangle normal (because the origin was contained within the face region) and couldn't find a more extreme point,
+                //then we have found the surface and can terminate.
                 Vector3Wide.Dot(simplex.A.Support, normal, out var aDotN);
-                var progressBelowEpsilon = Vector.BitwiseAnd(normalIsSimplexNormal, Vector.LessThan(aDotN, surfaceThreshold));
+                var progressBelowEpsilon = Vector.BitwiseAnd(Vector.Equals(normalSource, new Vector<int>(2)), Vector.LessThan(depth - aDotN, surfaceThreshold));
 
-                Add(ref simplex, support, normal, depth);
+                Add(ref simplex, support, normal, depth, normalSource);
 
                 //If all lanes are sufficiently separated, then we can early out.
                 depthBelowThreshold = Vector.LessThan(simplex.A.Depth, minimumDepthThreshold);
@@ -311,7 +331,7 @@ namespace BepuPhysics.CollisionDetection
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
 
-                GetNextNormal(ref simplex, localOffsetB, terminatedLanes, steps, out normal, out normalIsSimplexNormal);
+                GetNextNormal(ref simplex, localOffsetB, terminatedLanes, steps, out normal, out normalSource);
             }
             refinedNormal = simplex.A.Normal;
             refinedDepth = simplex.A.Depth;
