@@ -21,7 +21,6 @@ namespace BepuPhysics.CollisionDetection
     {
         public Vector3 Support;
         public Vector3 Normal;
-        public float Depth;
     }
 
     public struct NotGJKStep
@@ -29,9 +28,11 @@ namespace BepuPhysics.CollisionDetection
         public NotGJKVertex A;
         public NotGJKVertex B;
         public NotGJKVertex C;
-        public NotGJKSimplexNormalSource NormalSource;
-        public Vector3 ClosestPointOnSimplex;
+        public bool EdgeCase;
+        public Vector3 ClosestPointOnTriangleToOrigin;
         public Vector3 NextNormal;
+        public float BestDepth;
+        public Vector3 BestNormal;
     }
 
 
@@ -58,14 +59,13 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void FillSlot(in Vector<int> shouldReplace, ref Vertex vertex, in Vector3Wide support, in Vector3Wide normal, out Vector<int> slotFilled)
+        static void FillSlot(in Vector<int> shouldFill, ref Vertex vertex, in Vector3Wide support, in Vector3Wide normal)
         {
-            slotFilled = Vector.AndNot(shouldReplace, vertex.Exists);
             //Note that this always fills empty slots. That's important- we avoid figuring out what subsimplex is active
             //and instead just treat it as a degenerate simplex with some duplicates. (Shares code with the actual degenerate path.)
             Vector3Wide.ConditionalSelect(vertex.Exists, vertex.Support, support, out vertex.Support);
             Vector3Wide.ConditionalSelect(vertex.Exists, vertex.Normal, normal, out vertex.Normal);
-            vertex.Exists = Vector.BitwiseOr(vertex.Exists, shouldReplace);
+            vertex.Exists = Vector.BitwiseOr(vertex.Exists, shouldFill);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -79,8 +79,15 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Create(in Vector3Wide normal, in Vector3Wide support, out Simplex simplex)
         {
+            //While only one slot is actually full, GetNextNormal expects every slot to have some kind of data-
+            //for those slots which are not yet filled, it should be duplicates of other data.
+            //(The sub-triangle case is treated the same as the degenerate case.)
             simplex.A.Support = support;
+            simplex.B.Support = support;
+            simplex.C.Support = support;
             simplex.A.Normal = normal;
+            simplex.B.Normal = normal;
+            simplex.C.Normal = normal;
             simplex.A.Exists = new Vector<int>(-1);
             simplex.B.Exists = Vector<int>.Zero;
             simplex.C.Exists = Vector<int>.Zero;
@@ -96,20 +103,6 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.Add(extremeB, localOffsetB, out extremeB);
 
             Vector3Wide.Subtract(extremeA, extremeB, out support);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
-            in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> depth, out Vector3Wide refinedNormal, List<NotGJKStep> steps, int maximumIterations = 50)
-        {
-#if DEBUG
-            Vector3Wide.LengthSquared(initialNormal, out var initialNormalLengthSquared);
-            Debug.Assert(Vector.LessThanAll(Vector.BitwiseOr(inactiveLanes, Vector.LessThan(Vector.Abs(initialNormalLengthSquared - Vector<float>.One), new Vector<float>(1e-6f))), Vector<int>.Zero));
-#endif
-            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialNormal, out var initialSupport);
-            Vector3Wide.Dot(initialSupport, initialNormal, out var initialDepth);
-            Create(initialNormal, initialSupport, out var simplex);
-            FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, initialDepth, inactiveLanes, convergenceThreshold, minimumDepthThreshold, out depth, out refinedNormal, steps, maximumIterations);
         }
 
         static void AddNewSample(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide normal, in Vector3Wide support, in Vector<int> terminatedLanes)
@@ -164,13 +157,11 @@ namespace BepuPhysics.CollisionDetection
             //If there is an empty slot, fill it with the new support. Note that this cannot conflict with the 
             //simplexFull case above- that only occurs for lanes which started with a full simplex, and it completes with a full simplex.
             var tryFillSlot = Vector.OnesComplement(simplexFull);
-            FillSlot(tryFillSlot, ref simplex.A, support, normal, out var slotFilled);
-            tryFillSlot = Vector.AndNot(tryFillSlot, slotFilled);
-            FillSlot(tryFillSlot, ref simplex.B, support, normal, out slotFilled);
-            tryFillSlot = Vector.AndNot(tryFillSlot, slotFilled);
-            FillSlot(tryFillSlot, ref simplex.C, support, normal, out slotFilled);
+            FillSlot(tryFillSlot, ref simplex.A, support, normal);
+            FillSlot(tryFillSlot, ref simplex.B, support, normal);
+            FillSlot(tryFillSlot, ref simplex.C, support, normal);
         }
-        static void GetNextNormal(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector<int> terminatedLanes, List<NotGJKStep> steps, out Vector3Wide nextNormal)
+        static void GetNextNormal(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector<int> terminatedLanes, out Vector3Wide nextNormal, out NotGJKStep step)
         {
             //Compute the barycentric coordinates of the origin on the triangle.
             //Note that the above FillSlot calls filled all empty slots with the new support, so
@@ -221,6 +212,18 @@ namespace BepuPhysics.CollisionDetection
             var useBC = Vector.ConditionalSelect(simplexIsDegenerate, useBCDegenerate, useBCBarycentric);
             var useCA = Vector.ConditionalSelect(simplexIsDegenerate, useCADegenerate, useCABarycentric);
             var useEdgeCase = Vector.AndNot(Vector.BitwiseOr(Vector.BitwiseOr(useAB, useBC), useCA), terminatedLanes);
+            {
+                //DEBUG STUFF
+                step = default;
+                Vector3Wide.ReadSlot(ref simplex.A.Support, 0, out step.A.Support);
+                Vector3Wide.ReadSlot(ref simplex.A.Normal, 0, out step.A.Normal);
+                Vector3Wide.ReadSlot(ref simplex.B.Support, 0, out step.B.Support);
+                Vector3Wide.ReadSlot(ref simplex.B.Normal, 0, out step.B.Normal);
+                Vector3Wide.ReadSlot(ref simplex.C.Support, 0, out step.C.Support);
+                Vector3Wide.ReadSlot(ref simplex.C.Normal, 0, out step.C.Normal);
+                step.EdgeCase = useEdgeCase[0] < 0;
+                step.ClosestPointOnTriangleToOrigin = step.A.Support * aWeight[0] + step.B.Support * bWeight[0] + step.C.Support * cWeight[0];
+            }
             if (Vector.LessThanAny(useEdgeCase, Vector<int>.Zero))
             {
                 //At least one lane is using an edge case.
@@ -256,11 +259,21 @@ namespace BepuPhysics.CollisionDetection
                 //Note that as a part of the 'fill' we did earlier, all slots contain some valid data, so we just pick slot A.
                 Vector3Wide.ConditionalSelect(simplexIsDegenerate, simplex.A.Normal, triangleNormal, out var flipPlaneNormal);
                 Vector3Wide.Dot(flipPlaneNormal, simplex.A.Support, out var planeDepth);
-                var shouldNotFlipNormal = Vector.GreaterThan(planeDepth, Vector<float>.Zero);
+                var shouldFlipNormal = Vector.GreaterThan(planeDepth, Vector<float>.Zero);
+                //If we're using the triangle normal as the bounding plane, we already computed its inverse length squared.
+                //If we're using a vertex's bounding plane, the normal is unit length so the inverse is just 1.
+                //TODO: If we change the normal to allow non-unit length values, this must be updated.
+                var inverseFlipNormalLengthSquared = Vector.ConditionalSelect(simplexIsDegenerate, Vector<float>.One, inverseNLengthSquared);
 
-                //The normal should be from the triangle to the (potentially reflected image of the) origin, so it's just the negated closestPointOnTriangleToOrigin.
-                //(It's a double negative with the flip plane, hence the oddness.)
-                Vector3Wide.ConditionallyNegate(shouldNotFlipNormal, closestPointOnTriangleToOrigin, out var edgeNormal);
+                //The normal should be from the triangle to the (potentially reflected image of the) origin.
+                //To flip over the bounding plane:
+                //origin + 2 * dot(N / ||N||, pointOnPlane - origin) * N / ||N|| 
+                Vector3Wide.Scale(flipPlaneNormal, 2 * planeDepth * inverseFlipNormalLengthSquared, out var flippedOrigin);
+                Vector3Wide edgeNormal;
+                edgeNormal.X = Vector.ConditionalSelect(shouldFlipNormal, flippedOrigin.X, Vector<float>.Zero) - closestPointOnTriangleToOrigin.X;
+                edgeNormal.Y = Vector.ConditionalSelect(shouldFlipNormal, flippedOrigin.Y, Vector<float>.Zero) - closestPointOnTriangleToOrigin.Y;
+                edgeNormal.Z = Vector.ConditionalSelect(shouldFlipNormal, flippedOrigin.Z, Vector<float>.Zero) - closestPointOnTriangleToOrigin.Z;
+
                 //It would be strange for the origin to be right on top of the edge, but it's not numerically impossible.
                 //In that case, just fall back to the triangle normal... if it's not degenerate.
                 Vector3Wide.LengthSquared(closestPointOnTriangleToOrigin, out var edgeNormalLengthSquared);
@@ -286,14 +299,30 @@ namespace BepuPhysics.CollisionDetection
                     //If the simplex is degenerate, the origin is on the edge, AND the edge spans two identical support points/normals such that no progress will be made,
                     //then the search is complete!
                 }
+
+                Vector3Wide.ReadSlot(ref closestPointOnTriangleToOrigin, 0, out step.ClosestPointOnTriangleToOrigin);
             }
 
             //TODO: We can use the nosqrt/nodiv depth comparison instead of requiring normalized normals.
             Vector3Wide.Length(nextNormal, out var nextNormalLength);
             Vector3Wide.Scale(nextNormal, Vector<float>.One / nextNormalLength, out nextNormal);
+
+            Vector3Wide.ReadSlot(ref nextNormal, 0, out step.NextNormal);
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
+    in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> depth, out Vector3Wide refinedNormal, List<NotGJKStep> steps, int maximumIterations = 50)
+        {
+#if DEBUG
+            Vector3Wide.LengthSquared(initialNormal, out var initialNormalLengthSquared);
+            Debug.Assert(Vector.LessThanAll(Vector.BitwiseOr(inactiveLanes, Vector.LessThan(Vector.Abs(initialNormalLengthSquared - Vector<float>.One), new Vector<float>(1e-6f))), Vector<int>.Zero));
+#endif
+            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialNormal, out var initialSupport);
+            Vector3Wide.Dot(initialSupport, initialNormal, out var initialDepth);
+            Create(initialNormal, initialSupport, out var simplex);
+            FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, initialDepth, inactiveLanes, convergenceThreshold, minimumDepthThreshold, out depth, out refinedNormal, steps, maximumIterations);
+        }
 
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
             ref Simplex simplex, in Vector<float> initialDepth,
@@ -306,14 +335,17 @@ namespace BepuPhysics.CollisionDetection
             var depthBelowThreshold = Vector.LessThan(initialDepth, minimumDepthThreshold);
             var terminatedLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
 
+            refinedNormal = simplex.A.Normal;
+            refinedDepth = initialDepth;
             if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
             {
-                refinedNormal = simplex.A.Normal;
-                refinedDepth = initialDepth;
                 return;
             }
 
-            GetNextNormal(ref simplex, localOffsetB, terminatedLanes, steps, out var normal);
+            GetNextNormal(ref simplex, localOffsetB, terminatedLanes, out var normal, out var debugStep);
+            debugStep.BestDepth = refinedDepth[0];
+            Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
+            steps.Add(debugStep);
 
             for (int i = 0; i < maximumIterations; ++i)
             {
@@ -325,7 +357,10 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
 
                 AddNewSample(ref simplex, localOffsetB, normal, support, terminatedLanes);
-                GetNextNormal(ref simplex, localOffsetB, terminatedLanes, steps, out normal);
+                GetNextNormal(ref simplex, localOffsetB, terminatedLanes, out normal, out debugStep);
+                debugStep.BestDepth = refinedDepth[0];
+                Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
+                steps.Add(debugStep);
             }
         }
     }

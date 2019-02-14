@@ -39,6 +39,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<NotGJKTestDemo>();
             AddOption<SimplexWalkerTestDemo>();
             AddOption<PlaneWalkerTestDemo>();
             AddOption<MPRTestDemo>();
