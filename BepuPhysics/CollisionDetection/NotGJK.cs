@@ -185,6 +185,7 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.Dot(triangleNormal, localOffsetB, out var calibrationDot);
             var shouldCalibrate = Vector.LessThan(calibrationDot, Vector<float>.Zero);
             Vector3Wide.ConditionallyNegate(Vector.LessThan(calibrationDot, Vector<float>.Zero), ref triangleNormal);
+            nextNormal = triangleNormal;
 
             //We need to fall back to an edge test in two cases:
             //1) The simplex is degenerate, so triangular barycentric coordinates cannot be computed
@@ -300,7 +301,8 @@ namespace BepuPhysics.CollisionDetection
                     //then the search is complete!
                 }
 
-                Vector3Wide.ReadSlot(ref closestPointOnTriangleToOrigin, 0, out step.ClosestPointOnTriangleToOrigin);
+                if (useEdgeCase[0] < 0)
+                    Vector3Wide.ReadSlot(ref closestPointOnTriangleToOrigin, 0, out step.ClosestPointOnTriangleToOrigin);
             }
 
             //TODO: We can use the nosqrt/nodiv depth comparison instead of requiring normalized normals.

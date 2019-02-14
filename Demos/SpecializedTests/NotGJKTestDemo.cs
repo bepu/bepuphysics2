@@ -42,7 +42,8 @@ namespace Demos.SpecializedTests
                 //    Y = new Vector3(-0.1539477f, 0.9362175f, -0.3159063f),
                 //    Z = new Vector3(-0.1564862f, 0.2925809f, 0.9433496f)
                 //};
-                var positionB = new Vector3(-2.437585f, 1.386236f, -2.124907f);
+                //var positionB = new Vector3(-1.437585f, 0.386236f, -1.124907f);
+                var positionB = new Vector3(-0.437585f, 0.386236f, -1.124907f);
                 var localOrientationBMatrix = new Matrix3x3
                 {
                     X = new Vector3(-0.7615921f, 0.001486331f, -0.648055f),
@@ -166,9 +167,7 @@ namespace Demos.SpecializedTests
             renderer.Lines.Allocate() = new LineInstance(step.C.Support + basePosition, step.A.Support + basePosition, new Vector3(0, 0.6f, 0.1f), default);
             renderer.Lines.Allocate() = new LineInstance(step.C.Support + basePosition, step.C.Support + basePosition + step.C.Normal, new Vector3(0, 0.3f, 0.2f), default);
 
-
             renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangleToOrigin + basePosition, step.ClosestPointOnTriangleToOrigin + basePosition + step.NextNormal, new Vector3(1, 0, 1), default);
-
 
             renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.BestDepth * step.BestNormal, new Vector3(1, 0, 0), default);
             base.Render(renderer, camera, input, text, font);
