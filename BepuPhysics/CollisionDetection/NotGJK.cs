@@ -17,18 +17,18 @@ namespace BepuPhysics.CollisionDetection
         TriangleNormal
     }
 
-    public struct NotGJKSimplexVertex
+    public struct NotGJKVertex
     {
         public Vector3 Support;
         public Vector3 Normal;
         public float Depth;
     }
 
-    public struct NotGJKSimplexStep
+    public struct NotGJKStep
     {
-        public NotGJKSimplexVertex A;
-        public NotGJKSimplexVertex B;
-        public NotGJKSimplexVertex C;
+        public NotGJKVertex A;
+        public NotGJKVertex B;
+        public NotGJKVertex C;
         public NotGJKSimplexNormalSource NormalSource;
         public Vector3 ClosestPointOnSimplex;
         public Vector3 NextNormal;
@@ -100,7 +100,7 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
-            in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> depth, out Vector3Wide refinedNormal, List<SimplexWalkerStep> steps, int maximumIterations = 50)
+            in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> depth, out Vector3Wide refinedNormal, List<NotGJKStep> steps, int maximumIterations = 50)
         {
 #if DEBUG
             Vector3Wide.LengthSquared(initialNormal, out var initialNormalLengthSquared);
@@ -112,7 +112,7 @@ namespace BepuPhysics.CollisionDetection
             FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, initialDepth, inactiveLanes, convergenceThreshold, minimumDepthThreshold, out depth, out refinedNormal, steps, maximumIterations);
         }
 
-        static void UpdateSimplex(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide normal, in Vector3Wide support, in Vector<int> terminatedLanes, List<NotGJKSimplexStep> steps, out Vector3Wide nextNormal, out Vector<int> normalSource)
+        static void AddNewSample(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide normal, in Vector3Wide support, in Vector<int> terminatedLanes)
         {
             var simplexFull = Vector.BitwiseAnd(simplex.A.Exists, Vector.BitwiseAnd(simplex.B.Exists, simplex.C.Exists));
             if (Vector.LessThanAny(Vector.AndNot(simplexFull, terminatedLanes), Vector<int>.Zero))
@@ -156,7 +156,7 @@ namespace BepuPhysics.CollisionDetection
                 var useADB = Vector.BitwiseAnd(adbLessThanBDC, adbLessThanCDA);
                 var useBDC = Vector.AndNot(bdcLessThanCDA, useADB);
                 var useCDA = Vector.AndNot(Vector.OnesComplement(useADB), useBDC);
-                
+
                 ForceFillSlot(useADB, ref simplex.C, support, normal);
                 ForceFillSlot(useBDC, ref simplex.A, support, normal);
                 ForceFillSlot(useCDA, ref simplex.B, support, normal);
@@ -169,177 +169,135 @@ namespace BepuPhysics.CollisionDetection
             FillSlot(tryFillSlot, ref simplex.B, support, normal, out slotFilled);
             tryFillSlot = Vector.AndNot(tryFillSlot, slotFilled);
             FillSlot(tryFillSlot, ref simplex.C, support, normal, out slotFilled);
-
+        }
+        static void GetNextNormal(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector<int> terminatedLanes, List<NotGJKStep> steps, out Vector3Wide nextNormal)
+        {
             //Compute the barycentric coordinates of the origin on the triangle.
             //Note that the above FillSlot calls filled all empty slots with the new support, so
             //we combine the empty simplex case with the degenerate case.
             Vector3Wide.Subtract(simplex.B.Support, simplex.A.Support, out var ab);
             Vector3Wide.Subtract(simplex.A.Support, simplex.C.Support, out var ca);
-            Vector3Wide.CrossWithoutOverlap(ab, ca, out var n);
-            Vector3Wide.LengthSquared(n, out var nLengthSquared);
+            Vector3Wide.CrossWithoutOverlap(ab, ca, out var triangleNormal);
+            Vector3Wide.LengthSquared(triangleNormal, out var nLengthSquared);
+
+            //TODO: Approximate RCP could be useful here.
+            var inverseNLengthSquared = Vector<float>.One / nLengthSquared;
+            Vector3Wide.CrossWithoutOverlap(ab, simplex.A.Support, out var axab);
+            Vector3Wide.CrossWithoutOverlap(ca, simplex.C.Support, out var cxca);
+            Vector3Wide.Dot(axab, triangleNormal, out var cNumerator);
+            Vector3Wide.Dot(cxca, triangleNormal, out var bNumerator);
+            var cWeight = cNumerator * inverseNLengthSquared;
+            var bWeight = bNumerator * inverseNLengthSquared;
+            var aWeight = Vector<float>.One - bWeight - cWeight;
+
+            //Note that the simplex is not guaranteed to have consistent winding, so calibrate it for remaining use.
+            Vector3Wide.Dot(triangleNormal, localOffsetB, out var calibrationDot);
+            var shouldCalibrate = Vector.LessThan(calibrationDot, Vector<float>.Zero);
+            Vector3Wide.ConditionallyNegate(Vector.LessThan(calibrationDot, Vector<float>.Zero), ref triangleNormal);
+
+            //We need to fall back to an edge test in two cases:
+            //1) The simplex is degenerate, so triangular barycentric coordinates cannot be computed
+            //2) The projected origin is outside the triangle, so the closest point is on an edge (or vertex).
+            //These two cases are collapsed into one to maximize flow coherence.
+
+            //If the simplex is not degenerate, choose which edge to use according to the barycentric weights.
+            var useABBarycentric = Vector.LessThan(cWeight, Vector<float>.Zero);
+            var useBCBarycentric = Vector.AndNot(Vector.LessThan(aWeight, Vector<float>.Zero), useABBarycentric);
+            var useCABarycentric = Vector.AndNot(Vector.LessThan(bWeight, Vector<float>.Zero), Vector.BitwiseOr(useABBarycentric, useBCBarycentric));
+            //If the simplex is degenerate, choose which edge to use based on which is longest.
+            Vector3Wide.Subtract(simplex.C.Support, simplex.B.Support, out var bc);
+            Vector3Wide.LengthSquared(ab, out var abLengthSquared);
+            Vector3Wide.LengthSquared(bc, out var bcLengthSquared);
+            Vector3Wide.LengthSquared(ca, out var caLengthSquared);
+            var abGreaterThanBC = Vector.GreaterThan(abLengthSquared, bcLengthSquared);
+            var abGreaterThanCA = Vector.GreaterThan(abLengthSquared, caLengthSquared);
+            var bcGreaterThanCA = Vector.GreaterThan(bcLengthSquared, caLengthSquared);
+            var useABDegenerate = Vector.BitwiseAnd(abGreaterThanBC, abGreaterThanCA);
+            var useBCDegenerate = Vector.AndNot(bcGreaterThanCA, useABDegenerate);
+            var useCADegenerate = Vector.AndNot(Vector.OnesComplement(useABDegenerate), useBCDegenerate);
 
             var simplexIsDegenerate = Vector.LessThan(nLengthSquared, new Vector<float>(1e-14f));
-            nextNormal = default;
-            normalSource = default;            
+            var useAB = Vector.ConditionalSelect(simplexIsDegenerate, useABDegenerate, useABBarycentric);
+            var useBC = Vector.ConditionalSelect(simplexIsDegenerate, useBCDegenerate, useBCBarycentric);
+            var useCA = Vector.ConditionalSelect(simplexIsDegenerate, useCADegenerate, useCABarycentric);
+            var useEdgeCase = Vector.AndNot(Vector.BitwiseOr(Vector.BitwiseOr(useAB, useBC), useCA), terminatedLanes);
+            if (Vector.LessThanAny(useEdgeCase, Vector<int>.Zero))
+            {
+                //At least one lane is using an edge case.
+                //Remove unused vertices.
+                simplex.A.Exists = Vector.AndNot(simplex.A.Exists, useBC);
+                simplex.B.Exists = Vector.AndNot(simplex.B.Exists, useCA);
+                simplex.C.Exists = Vector.AndNot(simplex.C.Exists, useAB);
 
-            //if (Vector.LessThanAny(Vector.AndNot(simplexIsDegenerate, terminatedLanes), Vector<int>.Zero))
-            //{
-            //    //At least one active lane cannot compute valid barycentric coordinates; the simplex is not a triangle.
-            //    //It's either edge-like or vertex-like. Capture both cases by choosing the longest edge and using the closest point on it to the origin.
-            //    Vector3Wide.Subtract(simplex.C.Support, simplex.B.Support, out var bc);
-            //    Vector3Wide.LengthSquared(ab, out var abLengthSquared);
-            //    Vector3Wide.LengthSquared(bc, out var bcLengthSquared);
-            //    Vector3Wide.LengthSquared(ca, out var caLengthSquared);
-            //    var useAB = Vector.GreaterThanOrEqual(abLengthSquared, Vector.Max(bcLengthSquared, caLengthSquared));
-            //    var useBC = Vector.AndNot(Vector.GreaterThanOrEqual(bcLengthSquared, Vector.Max(abLengthSquared, caLengthSquared)), useAB);
+                Vector3Wide edgeOffset, edgeStart;
+                edgeOffset.X = Vector.ConditionalSelect(useAB, ab.X, Vector.ConditionalSelect(useBC, bc.X, ca.X));
+                edgeOffset.Y = Vector.ConditionalSelect(useAB, ab.Y, Vector.ConditionalSelect(useBC, bc.Y, ca.Y));
+                edgeOffset.Z = Vector.ConditionalSelect(useAB, ab.Z, Vector.ConditionalSelect(useBC, bc.Z, ca.Z));
+                edgeStart.X = Vector.ConditionalSelect(useAB, simplex.A.Support.X, Vector.ConditionalSelect(useBC, simplex.B.Support.X, simplex.C.Support.X));
+                edgeStart.Y = Vector.ConditionalSelect(useAB, simplex.A.Support.Y, Vector.ConditionalSelect(useBC, simplex.B.Support.Y, simplex.C.Support.Y));
+                edgeStart.Z = Vector.ConditionalSelect(useAB, simplex.A.Support.Z, Vector.ConditionalSelect(useBC, simplex.B.Support.Z, simplex.C.Support.Z));
+                var lengthSquared = Vector.ConditionalSelect(useAB, abLengthSquared, Vector.ConditionalSelect(useBC, bcLengthSquared, caLengthSquared));
+                //dot(origin - edgeStart, edgeOffset / ||edgeOffset||) * edgeOffset / ||edgeOffset||
+                Vector3Wide.Dot(edgeStart, edgeOffset, out var dot);
+                //TODO: Approximate rcp would be sufficient here.
+                var t = -dot / lengthSquared;
+                t = Vector.Min(Vector<float>.One, Vector.Max(Vector<float>.Zero, t));
+                //Protecting against division by zero. TODO: Don't think there's a way to guarantee min/max NaN behavior across hardware to avoid this? Doing RCP first for inf...
+                t = Vector.ConditionalSelect(Vector.LessThan(lengthSquared, new Vector<float>(1e-14f)), Vector<float>.Zero, t);
+                Vector3Wide.Scale(edgeOffset, t, out var interpolatedOffset);
+                Vector3Wide.Add(interpolatedOffset, edgeStart, out var closestPointOnTriangleToOrigin);
 
-            //    Vector3Wide edgeOffset, edgeStart;
-            //    Vector3Wide normalStart, normalEnd;
-            //    edgeOffset.X = Vector.ConditionalSelect(useAB, ab.X, Vector.ConditionalSelect(useBC, bc.X, ca.X));
-            //    edgeOffset.Y = Vector.ConditionalSelect(useAB, ab.Y, Vector.ConditionalSelect(useBC, bc.Y, ca.Y));
-            //    edgeOffset.Z = Vector.ConditionalSelect(useAB, ab.Z, Vector.ConditionalSelect(useBC, bc.Z, ca.Z));
-            //    edgeStart.X = Vector.ConditionalSelect(useAB, simplex.A.Support.X, Vector.ConditionalSelect(useBC, simplex.B.Support.X, simplex.C.Support.X));
-            //    edgeStart.Y = Vector.ConditionalSelect(useAB, simplex.A.Support.Y, Vector.ConditionalSelect(useBC, simplex.B.Support.Y, simplex.C.Support.Y));
-            //    edgeStart.Z = Vector.ConditionalSelect(useAB, simplex.A.Support.Z, Vector.ConditionalSelect(useBC, simplex.B.Support.Z, simplex.C.Support.Z));
-            //    normalStart.X = Vector.ConditionalSelect(useAB, simplex.A.Normal.X, Vector.ConditionalSelect(useBC, simplex.B.Normal.X, simplex.C.Normal.X));
-            //    normalStart.Y = Vector.ConditionalSelect(useAB, simplex.A.Normal.Y, Vector.ConditionalSelect(useBC, simplex.B.Normal.Y, simplex.C.Normal.Y));
-            //    normalStart.Z = Vector.ConditionalSelect(useAB, simplex.A.Normal.Z, Vector.ConditionalSelect(useBC, simplex.B.Normal.Z, simplex.C.Normal.Z));
-            //    normalEnd.X = Vector.ConditionalSelect(useAB, simplex.B.Normal.X, Vector.ConditionalSelect(useBC, simplex.C.Normal.X, simplex.A.Normal.X));
-            //    normalEnd.Y = Vector.ConditionalSelect(useAB, simplex.B.Normal.Y, Vector.ConditionalSelect(useBC, simplex.C.Normal.Y, simplex.A.Normal.Y));
-            //    normalEnd.Z = Vector.ConditionalSelect(useAB, simplex.B.Normal.Z, Vector.ConditionalSelect(useBC, simplex.C.Normal.Z, simplex.A.Normal.Z));
-            //    var lengthSquared = Vector.ConditionalSelect(useAB, abLengthSquared, Vector.ConditionalSelect(useBC, bcLengthSquared, caLengthSquared));
+                //We don't want to search a normal which points backward into the shape. If the origin is contained within the shape,
+                //flip the origin over the plane and target the reflected location.
+                //The closest point on the triangle does not change due to this flip, so this is effectively
+                //just flipping the resulting normal
+                //Note that we don't actually know whether the origin is contained, so we approximate it by comparing the origin's location against
+                //the plane of the triangle (or, if the triangle is degenerate, an existing sample's normal).
+                //Note that as a part of the 'fill' we did earlier, all slots contain some valid data, so we just pick slot A.
+                Vector3Wide.ConditionalSelect(simplexIsDegenerate, simplex.A.Normal, triangleNormal, out var flipPlaneNormal);
+                Vector3Wide.Dot(flipPlaneNormal, simplex.A.Support, out var planeDepth);
+                var shouldNotFlipNormal = Vector.GreaterThan(planeDepth, Vector<float>.Zero);
 
-            //    //dot(origin - edgeStart, edgeOffset / ||edgeOffset||) * edgeOffset / ||edgeOffset||
-            //    Vector3Wide.Dot(edgeStart, edgeOffset, out var dot);
-            //    //TODO: Approximate rcp would be sufficient here.
-            //    var t = -dot / lengthSquared;
-            //    t = Vector.Min(Vector<float>.One, Vector.Max(Vector<float>.Zero, t));
-            //    t = Vector.ConditionalSelect(Vector.LessThan(lengthSquared, new Vector<float>(1e-14f)), Vector<float>.Zero, t);
-            //    Vector3Wide.Scale(edgeOffset, t, out var interpolatedOffset);
-            //    Vector3Wide.Add(interpolatedOffset, edgeStart, out var interpolatedSupport);
-            //    Vector3Wide.Scale(normalStart, Vector<float>.One - t, out var normalStartContribution);
-            //    Vector3Wide.Scale(normalEnd, t, out var normalEndContribution);
-            //    Vector3Wide.Add(normalStartContribution, normalEndContribution, out var interpolatedNormal);
+                //The normal should be from the triangle to the (potentially reflected image of the) origin, so it's just the negated closestPointOnTriangleToOrigin.
+                //(It's a double negative with the flip plane, hence the oddness.)
+                Vector3Wide.ConditionallyNegate(shouldNotFlipNormal, closestPointOnTriangleToOrigin, out var edgeNormal);
+                //It would be strange for the origin to be right on top of the edge, but it's not numerically impossible.
+                //In that case, just fall back to the triangle normal... if it's not degenerate.
+                Vector3Wide.LengthSquared(closestPointOnTriangleToOrigin, out var edgeNormalLengthSquared);
+                var edgeNormalValid = Vector.GreaterThan(edgeNormalLengthSquared, new Vector<float>(1e-14f));
+                Vector3Wide.ConditionalSelect(Vector.BitwiseAnd(useEdgeCase, edgeNormalValid), edgeNormal, nextNormal, out nextNormal);
+                var degenerateWithBadEdgeNormal = Vector.AndNot(simplexIsDegenerate, edgeNormalValid);
+                if (Vector.LessThanAny(Vector.AndNot(degenerateWithBadEdgeNormal, terminatedLanes), Vector<int>.Zero))
+                {
+                    //If the origin is right on the edge AND the triangle is degenerate, try interpolating the edge normals.
+                    //(This should be hit exceptionally rarely, so the branch is prooobably worth it.)
+                    Vector3Wide normalStart, normalEnd;
+                    normalStart.X = Vector.ConditionalSelect(useAB, simplex.A.Normal.X, Vector.ConditionalSelect(useBC, simplex.B.Normal.X, simplex.C.Normal.X));
+                    normalStart.Y = Vector.ConditionalSelect(useAB, simplex.A.Normal.Y, Vector.ConditionalSelect(useBC, simplex.B.Normal.Y, simplex.C.Normal.Y));
+                    normalStart.Z = Vector.ConditionalSelect(useAB, simplex.A.Normal.Z, Vector.ConditionalSelect(useBC, simplex.B.Normal.Z, simplex.C.Normal.Z));
+                    normalEnd.X = Vector.ConditionalSelect(useAB, simplex.B.Normal.X, Vector.ConditionalSelect(useBC, simplex.C.Normal.X, simplex.A.Normal.X));
+                    normalEnd.Y = Vector.ConditionalSelect(useAB, simplex.B.Normal.Y, Vector.ConditionalSelect(useBC, simplex.C.Normal.Y, simplex.A.Normal.Y));
+                    normalEnd.Z = Vector.ConditionalSelect(useAB, simplex.B.Normal.Z, Vector.ConditionalSelect(useBC, simplex.C.Normal.Z, simplex.A.Normal.Z));
+                    Vector3Wide.Scale(normalStart, Vector<float>.One - t, out var normalStartContribution);
+                    Vector3Wide.Scale(normalEnd, t, out var normalEndContribution);
+                    Vector3Wide.Add(normalStartContribution, normalEndContribution, out var interpolatedNormal);
+                    Vector3Wide.ConditionalSelect(degenerateWithBadEdgeNormal, interpolatedNormal, nextNormal, out nextNormal);
 
-            //    //Create a target point on the origin line that we want a tilted bounding plane to intersect.
-            //    //We're pivoting on the interpolated support, tilting the interpolated normal a little closer to the origin.
-            //    //This is not exactly a rigorous process- the goal is just to expand the simplex so a better heuristic can be used.
-            //    Vector3Wide.LengthSquared(interpolatedSupport, out var originToSupportLengthSquared);
-            //    //Note the use of the deepest depth and normal to create the point on origin line.
-            //    var aIsBest = Vector.LessThan(simplex.A.Depth, Vector.Min(simplex.B.Depth, simplex.C.Depth));
-            //    var bIsBest = Vector.LessThan(simplex.B.Depth, Vector.Min(simplex.A.Depth, simplex.C.Depth));
-            //    var bestDepth = Vector.ConditionalSelect(aIsBest, simplex.A.Depth, Vector.ConditionalSelect(bIsBest, simplex.B.Depth, simplex.C.Depth));
-            //    Vector3Wide.ConditionalSelect(aIsBest, simplex.A.Normal, simplex.B.Normal, out var bestNormal);
-            //    Vector3Wide.ConditionalSelect(bIsBest, bestNormal, simplex.C.Normal, out bestNormal);
-            //    Vector3Wide.Scale(bestNormal, bestDepth - originToSupportLengthSquared * 0.25f, out var pointOnOriginLine);
-            //    Vector3Wide.Subtract(pointOnOriginLine, interpolatedSupport, out var supportToPointOnOriginLine);
-            //    Vector3Wide.CrossWithoutOverlap(interpolatedNormal, supportToPointOnOriginLine, out var intermediate);
-            //    Vector3Wide.CrossWithoutOverlap(supportToPointOnOriginLine, intermediate, out nextNormal);
+                    //If the simplex is degenerate, the origin is on the edge, AND the edge spans two identical support points/normals such that no progress will be made,
+                    //then the search is complete!
+                }
+            }
 
-            //    Vector3Wide.LengthSquared(nextNormal, out var nextNormalLengthSquared);
-            //    Vector3Wide.ConditionalSelect(Vector.GreaterThan(nextNormalLengthSquared, new Vector<float>(1e-14f)), nextNormal, interpolatedNormal, out nextNormal);
-
-            //    //The normal source for edge cases is 0; 'or' in the vertices to replace.
-            //    normalSource = Vector.ConditionalSelect(useAB, new Vector<int>(1 << 4), Vector.ConditionalSelect(useBC, new Vector<int>(1 << 2), new Vector<int>(1 << 3)));
-
-            //    if (Vector.AndNot(simplexIsDegenerate, terminatedLanes)[0] < 0)
-            //    {
-            //        step.NormalSource = SimplexNormalSource.Edge;
-            //        Vector3Wide.ReadSlot(ref pointOnOriginLine, 0, out step.PointOnOriginLine);
-            //        Vector3Wide.ReadSlot(ref interpolatedNormal, 0, out step.InterpolatedNormal);
-            //        Vector3Wide.ReadSlot(ref interpolatedSupport, 0, out step.InterpolatedSupport);
-            //    }
-            //}
-            //if (Vector.LessThanAny(Vector.AndNot(Vector.OnesComplement(simplexIsDegenerate), terminatedLanes), Vector<int>.Zero))
-            //{
-            //    //At least one active lane has a non-degenerate simplex.
-            //    //TODO: Approximate RCP could be useful here.
-            //    var inverseNLengthSquared = Vector<float>.One / nLengthSquared;
-
-            //    Vector3Wide.CrossWithoutOverlap(ab, simplex.A.Support, out var axab);
-            //    Vector3Wide.CrossWithoutOverlap(ca, simplex.C.Support, out var cxca);
-            //    Vector3Wide.Dot(axab, n, out var cNumerator);
-            //    Vector3Wide.Dot(cxca, n, out var bNumerator);
-            //    var cWeight = cNumerator * inverseNLengthSquared;
-            //    var bWeight = bNumerator * inverseNLengthSquared;
-            //    var aWeight = Vector<float>.One - bWeight - cWeight;
-
-            //    var originInTriangle = Vector.BitwiseAnd(Vector.BitwiseAnd(
-            //        Vector.GreaterThanOrEqual(cWeight, Vector<float>.Zero),
-            //        Vector.GreaterThanOrEqual(bWeight, Vector<float>.Zero)),
-            //        Vector.GreaterThanOrEqual(aWeight, Vector<float>.Zero));
-
-            //    //If the origin is in the triangle, then the next normal is simply the triangle normal.
-            //    //Otherwise, use the barycentric coordinates to extrapolate the normal from the simplex normals.
-            //    Vector3Wide.Scale(simplex.A.Normal, aWeight, out var normalContributionA);
-            //    Vector3Wide.Scale(simplex.B.Normal, bWeight, out var normalContributionB);
-            //    Vector3Wide.Scale(simplex.C.Normal, cWeight, out var normalContributionC);
-            //    Vector3Wide.Add(normalContributionA, normalContributionB, out var interpolatedNormal);
-            //    Vector3Wide.Add(normalContributionC, interpolatedNormal, out interpolatedNormal);
-
-            //    Vector3Wide.LengthSquared(interpolatedNormal, out var interpolatedNormalLengthSquared);
-            //    var useTriangleNormal = Vector.BitwiseOr(originInTriangle, Vector.LessThan(interpolatedNormalLengthSquared, new Vector<float>(1e-14f)));
-            //    Vector3Wide.Dot(n, localOffsetB, out var nDotOffsetB);
-            //    var shouldCalibrateTriangleNormal = Vector.LessThan(nDotOffsetB, Vector<float>.Zero);
-            //    Vector3Wide.ConditionallyNegate(shouldCalibrateTriangleNormal, ref n);
-            //    Vector3Wide.ConditionalSelect(useTriangleNormal, n, interpolatedNormal, out var normalCandidate);
-            //    Vector3Wide.ConditionalSelect(simplexIsDegenerate, nextNormal, normalCandidate, out nextNormal);
-            //    //In the event that we're using a barycentric-found normal, include a flag for which vertex should be replaced.
-            //    //For this process, we ignore depths- instead, we go by barycentric weight signs. A negative weight associated with a vertex
-            //    //implies that the origin is outside of the opposing edge. That is, a negative weight for vertex B implies the origin
-            //    //is outside the CA edge plane. (It may *also* be outside the BC edge plane, but if the origin is outside
-            //    //two edge planes, we just arbitrarily pick one of the opposing vertices to remove.)
-            //    var replaceA = Vector.LessThan(aWeight, Vector<float>.Zero);
-            //    var replaceB = Vector.LessThan(bWeight, Vector<float>.Zero);
-            //    var replaceFlag = Vector.ConditionalSelect(replaceA, new Vector<int>(1 << 2), Vector.ConditionalSelect(replaceB, new Vector<int>(1 << 3), new Vector<int>(1 << 4)));
-            //    normalSource = Vector.ConditionalSelect(simplexIsDegenerate, normalSource, Vector.ConditionalSelect(useTriangleNormal, new Vector<int>(2), Vector.BitwiseOr(new Vector<int>(1), replaceFlag)));
-
-            //    if (Vector.AndNot(Vector.OnesComplement(simplexIsDegenerate), terminatedLanes)[0] < 0)
-            //    {
-            //        if (useTriangleNormal[0] < 0)
-            //        {
-            //            step.NormalSource = SimplexNormalSource.TriangleNormal;
-            //        }
-            //        else
-            //        {
-            //            step.NormalSource = SimplexNormalSource.Barycentric;
-            //            Vector3Wide.ReadSlot(ref simplex.A.Support, 0, out var a);
-            //            Vector3Wide.ReadSlot(ref simplex.B.Support, 0, out var b);
-            //            Vector3Wide.ReadSlot(ref simplex.C.Support, 0, out var c);
-            //            step.InterpolatedSupport = (a * aWeight[0] + b * bWeight[0] + c * cWeight[0]);
-            //        }
-            //    }
-            //}
-            ////TOOD: rsqrt would be nice here.
-            //Vector3Wide.Length(nextNormal, out var normalLength);
-            //Vector3Wide.Scale(nextNormal, Vector<float>.One / normalLength, out nextNormal);
-
-            //if (steps != null)
-            //{
-            //    Vector3Wide.ReadSlot(ref nextNormal, 0, out step.NextNormal);
-            //    steps.Add(step);
-            //}
+            //TODO: We can use the nosqrt/nodiv depth comparison instead of requiring normalized normals.
+            Vector3Wide.Length(nextNormal, out var nextNormalLength);
+            Vector3Wide.Scale(nextNormal, Vector<float>.One / nextNormalLength, out nextNormal);
         }
 
-        //        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //        static void CreateDebugStep(ref Simplex simplex, out SimplexWalkerStep step)
-        //        {
-        //            step = default;
-        //            Vector3Wide.ReadSlot(ref simplex.A.Support, 0, out step.A.Support);
-        //            Vector3Wide.ReadSlot(ref simplex.A.Normal, 0, out step.A.Normal);
-        //            step.A.Depth = simplex.A.Depth[0];
-        //            Vector3Wide.ReadSlot(ref simplex.B.Support, 0, out step.B.Support);
-        //            Vector3Wide.ReadSlot(ref simplex.B.Normal, 0, out step.B.Normal);
-        //            step.B.Depth = simplex.B.Depth[0];
-        //            Vector3Wide.ReadSlot(ref simplex.C.Support, 0, out step.C.Support);
-        //            Vector3Wide.ReadSlot(ref simplex.C.Normal, 0, out step.C.Normal);
-        //            step.C.Depth = simplex.C.Depth[0];
-        //        }
 
 
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
             ref Simplex simplex, in Vector<float> initialDepth,
-            in Vector<int> inactiveLanes, in Vector<float> surfaceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> refinedDepth, out Vector3Wide refinedNormal, List<SimplexWalkerStep> steps, int maximumIterations = 50)
+            in Vector<int> inactiveLanes, in Vector<float> surfaceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> refinedDepth, out Vector3Wide refinedNormal, List<NotGJKStep> steps, int maximumIterations = 50)
         {
 #if DEBUG
             Vector3Wide.LengthSquared(simplex.A.Normal, out var initialNormalLengthSquared);
@@ -355,30 +313,20 @@ namespace BepuPhysics.CollisionDetection
                 return;
             }
 
-            //UpdateSimplex(ref simplex, localOffsetB, terminatedLanes, steps, out var normal, out var normalSource);
+            GetNextNormal(ref simplex, localOffsetB, terminatedLanes, steps, out var normal);
 
-            //for (int i = 0; i < maximumIterations; ++i)
-            //{
-            //    FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normal, out var support);
-            //    Vector3Wide.Dot(support, normal, out var depth);
+            for (int i = 0; i < maximumIterations; ++i)
+            {
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normal, out var support);
+                Vector3Wide.Dot(support, normal, out var depth);
 
-            //    //If we used the triangle normal (because the origin was contained within the face region) and couldn't find a more extreme point,
-            //    //then we have found the surface and can terminate.
-            //    Vector3Wide.Dot(simplex.A.Support, normal, out var aDotN);
-            //    var progressBelowEpsilon = Vector.BitwiseAnd(Vector.Equals(normalSource, new Vector<int>(2)), Vector.LessThan(depth - aDotN, surfaceThreshold));
+                var useNewDepth = Vector.LessThan(depth, refinedDepth);
+                refinedDepth = Vector.ConditionalSelect(useNewDepth, depth, refinedDepth);
+                Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
 
-            //    Add(ref simplex, support, normal, depth, normalSource);
-
-            //    //If all lanes are sufficiently separated, then we can early out.
-            //    depthBelowThreshold = Vector.LessThan(simplex.A.Depth, minimumDepthThreshold);
-            //    terminatedLanes = Vector.BitwiseOr(depthBelowThreshold, Vector.BitwiseOr(progressBelowEpsilon, terminatedLanes));
-            //    if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
-            //        break;
-
-            //    GetNextNormal(ref simplex, localOffsetB, terminatedLanes, steps, out normal, out normalSource);
-            //}
-            //refinedNormal = simplex.A.Normal;
-            //refinedDepth = simplex.A.Depth;
+                AddNewSample(ref simplex, localOffsetB, normal, support, terminatedLanes);
+                GetNextNormal(ref simplex, localOffsetB, terminatedLanes, steps, out normal);
+            }
         }
     }
 }
