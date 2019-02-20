@@ -342,7 +342,7 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.ConditionalSelect(shouldReflect, flippedNextNormal, bestNormal, out nextNormal);
             Vector3Wide.Length(nextNormal, out var normalLength);
             Vector3Wide.Scale(nextNormal, Vector<float>.One / normalLength, out nextNormal);
-
+            
             {
                 //DEBUG STUFF
                 step = default;
