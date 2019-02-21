@@ -529,7 +529,7 @@ namespace BepuPhysics
         public void IntegrateBodiesAndUpdateBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
             //Users of this codepath are expecting all integration related work to be done at once, so we need to update inertias.
-            bodies.EnsureInertiasCapacity(bodies.ActiveSet.Count);
+            bodies.EnsureInertiasCapacity(Math.Max(1, bodies.ActiveSet.Count));
 
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
@@ -582,7 +582,7 @@ namespace BepuPhysics
 
         public void IntegrateVelocitiesBoundsAndInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
-            bodies.EnsureInertiasCapacity(bodies.ActiveSet.Count);
+            bodies.EnsureInertiasCapacity(Math.Max(1, bodies.ActiveSet.Count));
 
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
@@ -605,7 +605,7 @@ namespace BepuPhysics
         public void IntegrateVelocitiesAndUpdateInertias(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
             //Isolated velocity integration is used by substeppers that also expect an inertia update.
-            bodies.EnsureInertiasCapacity(bodies.ActiveSet.Count);
+            bodies.EnsureInertiasCapacity(Math.Max(1, bodies.ActiveSet.Count));
 
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
