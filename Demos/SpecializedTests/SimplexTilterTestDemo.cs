@@ -155,11 +155,47 @@ namespace Demos.SpecializedTests
                text.Clear().Append($"Edge case: ").Append(step.EdgeCase ? "true" : "false"),
                new Vector2(32, renderer.Surface.Resolution.Y - 120), 20, new Vector3(1), font);
             renderer.TextBatcher.Write(
-               text.Clear().Append($"Best depth: ").Append(step.BestDepth, 9),
+               text.Clear().Append($"Using reflection: ").Append(step.UsingReflection ? "true" : "false"),
                new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
             renderer.TextBatcher.Write(
-               text.Clear().Append($"Progression scale: ").Append(step.ProgressionScale, 9),
+               text.Clear().Append($"Best depth: ").Append(step.BestDepth, 9),
                new Vector2(32, renderer.Surface.Resolution.Y - 80), 20, new Vector3(1), font);
+            renderer.TextBatcher.Write(
+               text.Clear().Append($"Progression scale: ").Append(step.ProgressionScale, 9),
+               new Vector2(32, renderer.Surface.Resolution.Y - 60), 20, new Vector3(1), font);
+
+            if (!step.A.Exists && !step.B.Exists)
+            {
+                step.A = step.C;
+            }
+            else if (!step.A.Exists && step.B.Exists)
+            {
+                step.A = step.B;
+                if (step.C.Exists)
+                    step.B = step.C;
+            }
+            else if (step.A.Exists && !step.B.Exists)
+            {
+                step.B = step.C;
+            }
+            if (step.C.Depth < step.B.Depth && step.C.Exists && step.B.Exists)
+            {
+                var temp = step.B;
+                step.B = step.C;
+                step.C = temp;
+            }
+            if (step.B.Depth < step.A.Depth && step.A.Exists && step.B.Exists)
+            {
+                var temp = step.A;
+                step.A = step.B;
+                step.B = temp;
+            }
+            if (step.C.Depth < step.B.Depth && step.C.Exists && step.B.Exists)
+            {
+                var temp = step.B;
+                step.B = step.C;
+                step.C = temp;
+            }
 
             if (step.A.Exists)
             {
@@ -194,7 +230,7 @@ namespace Demos.SpecializedTests
             }
 
             renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.ClosestPointOnTriangle + basePosition + step.NextNormal, new Vector3(1, 0, 1), default);
-            if (step.EdgeCase)
+            if (step.EdgeCase && !step.UsingReflection)
             {
                 renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.TiltTargetPoint + basePosition, new Vector3(1, 0, 1), default);
                 renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.ClosestPointOnTriangle + step.TiltOffset + basePosition, new Vector3(0.25f, 0, 1), default);

@@ -27,6 +27,7 @@ namespace BepuPhysics.CollisionDetection
         public SimplexTilterVertex D;
         public float ProgressionScale;
         public bool EdgeCase;
+        public bool UsingReflection;
         public Vector3 ClosestPointOnTriangle;
         public Vector3 TiltStart;
         public Vector3 TiltTargetPoint;
@@ -312,12 +313,6 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.Subtract(pointOnPlane, closestPointOnEdge, out var tiltOffset);
                 Vector3Wide.Length(tiltOffset, out var tiltOffsetLength);
 
-                Vector3Wide.Dot(simplex.A.Normal, simplex.B.Normal, out var abDot);
-                Vector3Wide.Dot(simplex.B.Normal, simplex.C.Normal, out var bcDot);
-                Vector3Wide.Dot(simplex.C.Normal, simplex.A.Normal, out var caDot);
-                var minimumDot = Vector.Min(Vector.Min(abDot, bcDot), caDot);
-                progressionScale = Vector.ConditionalSelect(simplexDegenerate, progressionScale, (Vector<float>.One - minimumDot) / Vector.SquareRoot(longestEdgeLengthSquared));
-
                 //var useStart = Vector.LessThan(t, new Vector<float>(0.5f));
                 //Vector3Wide.ConditionalSelect(useStart, normalStart, normalEnd, out var originLineNormal);
                 //var originLineDepth = Vector.ConditionalSelect(useStart, depthStart, depthEnd);
@@ -327,8 +322,18 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.Subtract(tiltTargetPoint, closestPointOnEdge, out var triangleToOriginLine);
                 Vector3Wide.CrossWithoutOverlap(triangleToOriginLine, tiltStart, out var n);
                 Vector3Wide.CrossWithoutOverlap(n, triangleToOriginLine, out var tiltedNormal);
-
-                Vector3Wide.ConditionalSelect(activeEdgeLane, tiltedNormal, triangleNormal, out nextNormal);
+                
+                //If the simplex was not degenerate, flip the far vertex normal over the edge midpoint.
+                Vector3Wide.Add(normalStart, normalEnd, out var scaledMidpoint);
+                Vector3Wide opposingNormal;
+                opposingNormal.X = Vector.ConditionalSelect(testAB, simplex.C.Normal.X, Vector.ConditionalSelect(testBC, simplex.A.Normal.X, simplex.B.Normal.X));
+                opposingNormal.Y = Vector.ConditionalSelect(testAB, simplex.C.Normal.Y, Vector.ConditionalSelect(testBC, simplex.A.Normal.Y, simplex.B.Normal.Y));
+                opposingNormal.Z = Vector.ConditionalSelect(testAB, simplex.C.Normal.Z, Vector.ConditionalSelect(testBC, simplex.A.Normal.Z, simplex.B.Normal.Z));
+                Vector3Wide.Scale(opposingNormal, new Vector<float>(2), out var scaledOpposingNormal);
+                Vector3Wide.Subtract(scaledMidpoint, scaledOpposingNormal, out var offset);
+                Vector3Wide.Add(opposingNormal, offset, out var reflectedNormal);
+                Vector3Wide.ConditionalSelect(simplexDegenerate, tiltedNormal, reflectedNormal, out var edgeNormal);
+                Vector3Wide.ConditionalSelect(activeEdgeLane, edgeNormal, nextNormal, out nextNormal);
 
                 //Delete any uninvolved simplex entries.
                 var testCA = Vector.AndNot(Vector.OnesComplement(testAB), testBC);
@@ -352,6 +357,7 @@ namespace BepuPhysics.CollisionDetection
                 {
                     //DEBUG STUFF
                     step.EdgeCase = activeEdgeLane[0] < 0;
+                    step.UsingReflection = step.EdgeCase && simplexDegenerate[0] == 0; 
                     Vector3Wide.ReadFirst(tiltOffset, out step.TiltOffset);
                     Vector3Wide.ReadFirst(closestPointOnEdge, out step.ClosestPointOnTriangle);
                     Vector3Wide.ReadFirst(tiltStart, out step.TiltStart);
