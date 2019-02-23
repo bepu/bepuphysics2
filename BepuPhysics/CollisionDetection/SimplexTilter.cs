@@ -115,7 +115,8 @@ namespace BepuPhysics.CollisionDetection
 
         struct HasNewSupport { }
         struct HasNoNewSupport { }
-        static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth, in Vector<float> progressionScale, in Vector<int> terminatedLanes,
+        static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth, ref Vector<float> progressionScale, in Vector<int> terminatedLanes,
+            in Vector3Wide bestNormal, in Vector<float> bestDepth,
             out Vector3Wide nextNormal, out SimplexTilterStep step)
         {
             //Try to add the new support to the simplex. A couple of cases:
@@ -147,7 +148,6 @@ namespace BepuPhysics.CollisionDetection
                 step.B.Exists = simplex.B.Exists[0] < 0;
                 step.C.Exists = simplex.C.Exists[0] < 0;
                 step.D.Exists = typeof(T) == typeof(HasNewSupport);
-                step.ProgressionScale = progressionScale[0];
             }
 
             if (typeof(T) == typeof(HasNewSupport))
@@ -245,7 +245,7 @@ namespace BepuPhysics.CollisionDetection
             //The triangle normal length squared is also proportional to area, so it's a good way to threshold degeneracy.
             //TODO: May want to use external epsilon to provide the scale or some lower bound.
             var longestEdgeLengthSquared = Vector.ConditionalSelect(abLongest, abLengthSquared, Vector.ConditionalSelect(bcLongest, bcLengthSquared, caLengthSquared));
-            var simplexDegenerate = Vector.LessThanOrEqual(triangleNormalLengthSquared, longestEdgeLengthSquared * 1e-5f);
+            var simplexDegenerate = Vector.LessThanOrEqual(triangleNormalLengthSquared, longestEdgeLengthSquared * 1e-10f);
 
             var outsideAB = Vector.LessThan(abPlaneTest, Vector<float>.Zero);
             var outsideBC = Vector.LessThan(bcPlaneTest, Vector<float>.Zero);
@@ -312,10 +312,16 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.Subtract(pointOnPlane, closestPointOnEdge, out var tiltOffset);
                 Vector3Wide.Length(tiltOffset, out var tiltOffsetLength);
 
-                var useStart = Vector.LessThan(t, new Vector<float>(0.5f));
-                Vector3Wide.ConditionalSelect(useStart, normalStart, normalEnd, out var originLineNormal);
-                var originLineDepth = Vector.ConditionalSelect(useStart, depthStart, depthEnd);
-                Vector3Wide.Scale(originLineNormal, tiltOffsetLength * progressionScale, out var originLineNormalOffset);
+                Vector3Wide.Dot(simplex.A.Normal, simplex.B.Normal, out var abDot);
+                Vector3Wide.Dot(simplex.B.Normal, simplex.C.Normal, out var bcDot);
+                Vector3Wide.Dot(simplex.C.Normal, simplex.A.Normal, out var caDot);
+                var minimumDot = Vector.Min(Vector.Min(abDot, bcDot), caDot);
+                progressionScale = Vector.ConditionalSelect(simplexDegenerate, progressionScale, (Vector<float>.One - minimumDot) / Vector.SquareRoot(longestEdgeLengthSquared));
+
+                //var useStart = Vector.LessThan(t, new Vector<float>(0.5f));
+                //Vector3Wide.ConditionalSelect(useStart, normalStart, normalEnd, out var originLineNormal);
+                //var originLineDepth = Vector.ConditionalSelect(useStart, depthStart, depthEnd);
+                Vector3Wide.Scale(bestNormal, tiltOffsetLength * progressionScale, out var originLineNormalOffset);
                 Vector3Wide.Subtract(pointOnPlane, originLineNormalOffset, out var tiltTargetPoint);
 
                 Vector3Wide.Subtract(tiltTargetPoint, closestPointOnEdge, out var triangleToOriginLine);
@@ -357,6 +363,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 //DEBUG STUFF
                 Vector3Wide.ReadFirst(nextNormal, out step.NextNormal);
+                step.ProgressionScale = progressionScale[0];
             }
         }
 
@@ -394,7 +401,7 @@ namespace BepuPhysics.CollisionDetection
             }
 
             var progressionScale = new Vector<float>(0.5f);
-            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, default, progressionScale, terminatedLanes, out var normal, out var debugStep);
+            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, default, ref progressionScale, terminatedLanes, refinedNormal, refinedDepth, out var normal, out var debugStep);
             debugStep.BestDepth = refinedDepth[0];
             Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
             steps.Add(debugStep);
@@ -404,12 +411,13 @@ namespace BepuPhysics.CollisionDetection
                 FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normal, out var support);
                 Vector3Wide.Dot(support, normal, out var depth);
 
-
-                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, progressionScale, terminatedLanes, out normal, out debugStep);
-
                 var useNewDepth = Vector.LessThan(depth, refinedDepth);
                 refinedDepth = Vector.ConditionalSelect(useNewDepth, depth, refinedDepth);
                 Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
+                //progressionScale = Vector.ConditionalSelect(useNewDepth, progressionScale, progressionScale * 0.85f);
+
+                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, ref progressionScale, terminatedLanes, refinedNormal, refinedDepth, out normal, out debugStep);
+
                 debugStep.BestDepth = refinedDepth[0];
                 Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
 

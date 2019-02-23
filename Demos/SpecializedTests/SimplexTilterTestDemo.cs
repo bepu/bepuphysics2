@@ -43,7 +43,7 @@ namespace Demos.SpecializedTests
                 //    Z = new Vector3(-0.1564862f, 0.2925809f, 0.9433496f)
                 //};
                 //var positionB = new Vector3(-1.437585f, 0.386236f, -1.124907f);
-                var positionB = new Vector3(-0.437585f, 0.386236f, -.124907f);
+                var positionB = new Vector3(-1.437585f, 0.386236f, .224907f);
                 var localOrientationBMatrix = new Matrix3x3
                 {
                     X = new Vector3(-0.7615921f, 0.001486331f, -0.648055f),
@@ -157,6 +157,9 @@ namespace Demos.SpecializedTests
             renderer.TextBatcher.Write(
                text.Clear().Append($"Best depth: ").Append(step.BestDepth, 9),
                new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
+            renderer.TextBatcher.Write(
+               text.Clear().Append($"Progression scale: ").Append(step.ProgressionScale, 9),
+               new Vector2(32, renderer.Surface.Resolution.Y - 80), 20, new Vector3(1), font);
 
             if (step.A.Exists)
             {
