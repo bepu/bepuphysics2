@@ -152,17 +152,14 @@ namespace Demos.SpecializedTests
                 new Vector2(32, renderer.Surface.Resolution.Y - 140), 20, new Vector3(1), font);
             var step = steps[stepIndex];
             renderer.TextBatcher.Write(
-               text.Clear().Append($"Edge case: ").Append(step.EdgeCase ? "true" : "false"),
+               text.Clear().Append($"Next normal source: ").Append(step.NextNormalSource.ToString()),
                new Vector2(32, renderer.Surface.Resolution.Y - 120), 20, new Vector3(1), font);
             renderer.TextBatcher.Write(
-               text.Clear().Append($"Using reflection: ").Append(step.UsingReflection ? "true" : "false"),
+               text.Clear().Append($"Best depth: ").Append(step.BestDepth, 9),
                new Vector2(32, renderer.Surface.Resolution.Y - 100), 20, new Vector3(1), font);
             renderer.TextBatcher.Write(
-               text.Clear().Append($"Best depth: ").Append(step.BestDepth, 9),
-               new Vector2(32, renderer.Surface.Resolution.Y - 80), 20, new Vector3(1), font);
-            renderer.TextBatcher.Write(
                text.Clear().Append($"Progression scale: ").Append(step.ProgressionScale, 9),
-               new Vector2(32, renderer.Surface.Resolution.Y - 60), 20, new Vector3(1), font);
+               new Vector2(32, renderer.Surface.Resolution.Y - 80), 20, new Vector3(1), font);
 
             if (!step.A.Exists && !step.B.Exists)
             {
@@ -230,7 +227,7 @@ namespace Demos.SpecializedTests
             }
 
             renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.ClosestPointOnTriangle + basePosition + step.NextNormal, new Vector3(1, 0, 1), default);
-            if (step.EdgeCase && !step.UsingReflection)
+            if (step.NextNormalSource == SimplexTilterNormalSource.EdgeTilt)
             {
                 renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.TiltTargetPoint + basePosition, new Vector3(1, 0, 1), default);
                 renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.ClosestPointOnTriangle + step.TiltOffset + basePosition, new Vector3(0.25f, 0, 1), default);
