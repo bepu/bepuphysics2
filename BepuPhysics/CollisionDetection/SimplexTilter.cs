@@ -264,6 +264,7 @@ namespace BepuPhysics.CollisionDetection
 
             var newSampleNotImprovement = Vector.GreaterThan(depth, bestDepth);
             var shouldContract = Vector.BitwiseAnd(Vector.AndNot(Vector.BitwiseAnd(projectedOriginOutsideTriangle, newSampleNotImprovement), simplexDegenerate), Vector.Equals(normalSource, new Vector<int>(2)));
+            //var shouldContract = Vector.BitwiseAnd(Vector.AndNot(newSampleNotImprovement, simplexDegenerate), Vector.Equals(normalSource, new Vector<int>(2)));
             {
                 var aBetterThanB = Vector.LessThan(simplex.A.Depth, simplex.B.Depth);
                 var aBetterThanC = Vector.LessThan(simplex.A.Depth, simplex.C.Depth);
@@ -276,6 +277,19 @@ namespace BepuPhysics.CollisionDetection
                 worstNormal.Y = Vector.ConditionalSelect(aWorst, simplex.A.Normal.Y, Vector.ConditionalSelect(bWorst, simplex.B.Normal.Y, simplex.C.Normal.Y));
                 worstNormal.Z = Vector.ConditionalSelect(aWorst, simplex.A.Normal.Z, Vector.ConditionalSelect(bWorst, simplex.B.Normal.Z, simplex.C.Normal.Z));
                 Vector3Wide.Add(bestNormal, worstNormal, out var contractedNormal);
+                //Vector3Wide.Scale(bestNormal, new Vector<float>(1f), out var weightedBest);
+                //Vector3Wide.Add(weightedBest, worstNormal, out var contractedNormal);
+
+                //Vector3Wide normalStart, normalEnd;
+                //normalStart.X = Vector.ConditionalSelect(aWorst, simplex.B.Normal.X, Vector.ConditionalSelect(bWorst, simplex.C.Normal.X, simplex.A.Normal.X));
+                //normalStart.Y = Vector.ConditionalSelect(aWorst, simplex.B.Normal.Y, Vector.ConditionalSelect(bWorst, simplex.C.Normal.Y, simplex.A.Normal.Y));
+                //normalStart.Z = Vector.ConditionalSelect(aWorst, simplex.B.Normal.Z, Vector.ConditionalSelect(bWorst, simplex.C.Normal.Z, simplex.A.Normal.Z));
+                //normalEnd.X = Vector.ConditionalSelect(aWorst, simplex.C.Normal.X, Vector.ConditionalSelect(bWorst, simplex.A.Normal.X, simplex.B.Normal.X));
+                //normalEnd.Y = Vector.ConditionalSelect(aWorst, simplex.C.Normal.Y, Vector.ConditionalSelect(bWorst, simplex.A.Normal.Y, simplex.B.Normal.Y));
+                //normalEnd.Z = Vector.ConditionalSelect(aWorst, simplex.C.Normal.Z, Vector.ConditionalSelect(bWorst, simplex.A.Normal.Z, simplex.B.Normal.Z));
+                //Vector3Wide.Add(normalStart, normalEnd, out var midpoint);
+                //Vector3Wide.Add(midpoint, worstNormal, out var contractedNormal);
+
                 Vector3Wide.ConditionalSelect(shouldContract, contractedNormal, nextNormal, out nextNormal);
 
                 //Delete the deepest vertex if this is a full triangle simplex that resorted to an edge test.
@@ -450,19 +464,24 @@ namespace BepuPhysics.CollisionDetection
                 //simplex.C.Exists = Vector.BitwiseOr(useTriangle, Vector.OnesComplement(cWorst));
 
                 //Delete any uninvolved simplex entries.
+                //var testCA = Vector.AndNot(Vector.OnesComplement(testAB), testBC);
+                //simplex.A.Exists = Vector.ConditionalSelect(useEdge,
+                //    Vector.BitwiseOr(
+                //        Vector.BitwiseAnd(testCA, Vector.GreaterThan(t, Vector<float>.Zero)),
+                //        Vector.BitwiseAnd(testAB, Vector.LessThan(t, Vector<float>.One))), simplex.A.Exists);
+                //simplex.B.Exists = Vector.ConditionalSelect(useEdge,
+                //    Vector.BitwiseOr(
+                //        Vector.BitwiseAnd(testAB, Vector.GreaterThan(t, Vector<float>.Zero)),
+                //        Vector.BitwiseAnd(testBC, Vector.LessThan(t, Vector<float>.One))), simplex.B.Exists);
+                //simplex.C.Exists = Vector.ConditionalSelect(useEdge,
+                //    Vector.BitwiseOr(
+                //        Vector.BitwiseAnd(testBC, Vector.GreaterThan(t, Vector<float>.Zero)),
+                //        Vector.BitwiseAnd(testCA, Vector.LessThan(t, Vector<float>.One))), simplex.C.Exists);
+
                 var testCA = Vector.AndNot(Vector.OnesComplement(testAB), testBC);
-                simplex.A.Exists = Vector.ConditionalSelect(useEdge,
-                    Vector.BitwiseOr(
-                        Vector.BitwiseAnd(testCA, Vector.GreaterThan(t, Vector<float>.Zero)),
-                        Vector.BitwiseAnd(testAB, Vector.LessThan(t, Vector<float>.One))), simplex.A.Exists);
-                simplex.B.Exists = Vector.ConditionalSelect(useEdge,
-                    Vector.BitwiseOr(
-                        Vector.BitwiseAnd(testAB, Vector.GreaterThan(t, Vector<float>.Zero)),
-                        Vector.BitwiseAnd(testBC, Vector.LessThan(t, Vector<float>.One))), simplex.B.Exists);
-                simplex.C.Exists = Vector.ConditionalSelect(useEdge,
-                    Vector.BitwiseOr(
-                        Vector.BitwiseAnd(testBC, Vector.GreaterThan(t, Vector<float>.Zero)),
-                        Vector.BitwiseAnd(testCA, Vector.LessThan(t, Vector<float>.One))), simplex.C.Exists);
+                simplex.A.Exists = Vector.ConditionalSelect(useEdge, Vector.BitwiseOr(testCA, testAB), simplex.A.Exists);
+                simplex.B.Exists = Vector.ConditionalSelect(useEdge, Vector.BitwiseOr(testAB, testBC), simplex.B.Exists);
+                simplex.C.Exists = Vector.ConditionalSelect(useEdge, Vector.BitwiseOr(testBC, testCA), simplex.C.Exists);
 
                 normalSource = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(simplexDegenerate, Vector<int>.One, new Vector<int>(2)), normalSource);
 

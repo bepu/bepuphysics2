@@ -43,7 +43,7 @@ namespace Demos.SpecializedTests
                 //    Z = new Vector3(-0.1564862f, 0.2925809f, 0.9433496f)
                 //};
                 //var positionB = new Vector3(-1.437585f, 0.386236f, -1.124907f);
-                var positionB = new Vector3(-1.437585f, 0.386236f, .224907f);
+                var positionB = new Vector3(-1.337585f, -0.386236f, .224907f);
                 var localOrientationBMatrix = new Matrix3x3
                 {
                     X = new Vector3(-0.7615921f, 0.001486331f, -0.648055f),
