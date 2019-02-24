@@ -21,10 +21,11 @@ namespace BepuPhysics.CollisionDetection
 
     public enum SimplexTilterNormalSource
     {
-        TriangleFace,
-        Contraction,
-        EdgeReflect,
-        EdgeTilt
+        Initialization = -1,
+        TriangleFace = 0,
+        EdgeTilt = 1,
+        EdgeReflect = 2,
+        Contraction = 3,
     }
 
     public struct SimplexTilterStep
@@ -124,7 +125,7 @@ namespace BepuPhysics.CollisionDetection
         struct HasNewSupport { }
         struct HasNoNewSupport { }
         static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth, ref Vector<float> progressionScale, in Vector<int> terminatedLanes,
-            in Vector3Wide bestNormal, in Vector<float> bestDepth,
+            in Vector3Wide bestNormal, in Vector<float> bestDepth, ref Vector<int> normalSource,
             out Vector3Wide nextNormal, out SimplexTilterStep step)
         {
             //Try to add the new support to the simplex. A couple of cases:
@@ -262,7 +263,7 @@ namespace BepuPhysics.CollisionDetection
             var projectedOriginOutsideTriangle = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideBC, outsideCA));
 
             var newSampleNotImprovement = Vector.GreaterThan(depth, bestDepth);
-            var shouldContract = Vector.AndNot(Vector.BitwiseAnd(projectedOriginOutsideTriangle, newSampleNotImprovement), simplexDegenerate);
+            var shouldContract = Vector.BitwiseAnd(Vector.AndNot(Vector.BitwiseAnd(projectedOriginOutsideTriangle, newSampleNotImprovement), simplexDegenerate), Vector.Equals(normalSource, new Vector<int>(2)));
             {
                 var aBetterThanB = Vector.LessThan(simplex.A.Depth, simplex.B.Depth);
                 var aBetterThanC = Vector.LessThan(simplex.A.Depth, simplex.C.Depth);
@@ -281,10 +282,8 @@ namespace BepuPhysics.CollisionDetection
                 simplex.A.Exists = Vector.BitwiseOr(Vector.AndNot(simplex.A.Exists, shouldContract), Vector.OnesComplement(Vector.BitwiseAnd(shouldContract, aWorst)));
                 simplex.B.Exists = Vector.BitwiseOr(Vector.AndNot(simplex.B.Exists, shouldContract), Vector.OnesComplement(Vector.BitwiseAnd(shouldContract, bWorst)));
                 simplex.C.Exists = Vector.BitwiseOr(Vector.AndNot(simplex.C.Exists, shouldContract), Vector.OnesComplement(Vector.BitwiseAnd(shouldContract, cWorst)));
-                {
-                    //DEBUG STUFF
-                    step.NextNormalSource = shouldContract[0] < 0 ? SimplexTilterNormalSource.Contraction : step.NextNormalSource;
-                }
+
+                normalSource = Vector.ConditionalSelect(shouldContract, new Vector<int>(3), Vector<int>.Zero);
             }
 
 
@@ -465,9 +464,10 @@ namespace BepuPhysics.CollisionDetection
                         Vector.BitwiseAnd(testBC, Vector.GreaterThan(t, Vector<float>.Zero)),
                         Vector.BitwiseAnd(testCA, Vector.LessThan(t, Vector<float>.One))), simplex.C.Exists);
 
+                normalSource = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(simplexDegenerate, Vector<int>.One, new Vector<int>(2)), normalSource);
+
                 {
                     //DEBUG STUFF
-                    step.NextNormalSource = useEdge[0] < 0 ? (simplexDegenerate[0] < 0 ? SimplexTilterNormalSource.EdgeTilt : SimplexTilterNormalSource.EdgeReflect) : step.NextNormalSource;
                     //step.UsingReflection = step.EdgeCase && simplexDegenerate[0] == 0; 
                     Vector3Wide.ReadFirst(tiltOffset, out step.TiltOffset);
                     Vector3Wide.ReadFirst(closestPointOnEdge, out step.ClosestPointOnTriangle);
@@ -480,6 +480,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 //DEBUG STUFF
                 Vector3Wide.ReadFirst(nextNormal, out step.NextNormal);
+                step.NextNormalSource = (SimplexTilterNormalSource)normalSource[0];
                 step.ProgressionScale = progressionScale[0];
             }
         }
@@ -487,7 +488,7 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
-    in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> depth, out Vector3Wide refinedNormal, List<SimplexTilterStep> steps, int maximumIterations = 50)
+            in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> depth, out Vector3Wide refinedNormal, List<SimplexTilterStep> steps, int maximumIterations = 50)
         {
 #if DEBUG
             Vector3Wide.LengthSquared(initialNormal, out var initialNormalLengthSquared);
@@ -517,8 +518,9 @@ namespace BepuPhysics.CollisionDetection
                 return;
             }
 
+            var normalSource = new Vector<int>(-1);
             var progressionScale = new Vector<float>(0.5f);
-            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, default, ref progressionScale, terminatedLanes, refinedNormal, refinedDepth, out var normal, out var debugStep);
+            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, default, ref progressionScale, terminatedLanes, refinedNormal, refinedDepth, ref normalSource, out var normal, out var debugStep);
             debugStep.BestDepth = refinedDepth[0];
             Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
             steps.Add(debugStep);
@@ -533,7 +535,7 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
                 //progressionScale = Vector.ConditionalSelect(useNewDepth, progressionScale, progressionScale * 0.85f);
 
-                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, ref progressionScale, terminatedLanes, refinedNormal, refinedDepth, out normal, out debugStep);
+                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, ref progressionScale, terminatedLanes, refinedNormal, refinedDepth, ref normalSource, out normal, out debugStep);
 
                 debugStep.BestDepth = refinedDepth[0];
                 Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
