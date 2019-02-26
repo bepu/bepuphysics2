@@ -226,13 +226,13 @@ namespace Demos.SpecializedTests
                 renderer.Lines.Allocate() = new LineInstance(step.D.Support + basePosition, step.D.Support + basePosition + step.D.Normal, new Vector3(1f, 0.8f, 0.2f), default);
             }
 
-            renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.ClosestPointOnTriangle + basePosition + step.NextNormal, new Vector3(1, 0, 1), default);
-            if (step.NextNormalSource == SimplexTilterNormalSource.EdgeTilt)
-            {
-                renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.TiltTargetPoint + basePosition, new Vector3(1, 0, 1), default);
-                renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.ClosestPointOnTriangle + step.TiltOffset + basePosition, new Vector3(0.25f, 0, 1), default);
-                renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.ClosestPointOnTriangle + step.TiltStart + basePosition, new Vector3(0.5f, 0, 0.5f), default);
-            }
+            renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.NextNormal, new Vector3(1, 0, 1), default);
+            //if (step.NextNormalSource == SimplexTilterNormalSource.EdgeTilt)
+            //{
+            //    renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.TiltTargetPoint + basePosition, new Vector3(1, 0, 1), default);
+            //    renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.ClosestPointOnTriangle + step.TiltOffset + basePosition, new Vector3(0.25f, 0, 1), default);
+            //    renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.ClosestPointOnTriangle + step.TiltStart + basePosition, new Vector3(0.5f, 0, 0.5f), default);
+            //}
 
             renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.BestDepth * step.BestNormal, new Vector3(1, 0, 0), default);
             base.Render(renderer, camera, input, text, font);
