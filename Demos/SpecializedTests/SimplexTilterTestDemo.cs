@@ -43,7 +43,7 @@ namespace Demos.SpecializedTests
                 //    Z = new Vector3(-0.1564862f, 0.2925809f, 0.9433496f)
                 //};
                 //var positionB = new Vector3(-1.437585f, 0.386236f, -1.124907f);
-                var positionB = new Vector3(-0.5037585f, -0.386236f, -1.624907f);
+                var positionB = new Vector3(-0.5037585f, -0.386236f, -1.424907f);
                 var localOrientationBMatrix = new Matrix3x3
                 {
                     X = new Vector3(-0.7615921f, 0.001486331f, -0.648055f),
@@ -199,7 +199,7 @@ namespace Demos.SpecializedTests
                 if (step.B.Exists)
                     renderer.Lines.Allocate() = new LineInstance(step.A.Support + basePosition, step.B.Support + basePosition, new Vector3(0, 0.6f, 0.1f), default);
                 renderer.Lines.Allocate() = new LineInstance(step.A.Support + basePosition, step.A.Support + basePosition + step.A.Normal, new Vector3(0, 1f, 0), default);
-                renderer.Lines.Allocate() = new LineInstance(basePosition, step.A.Support + basePosition, new Vector3(0, 0, 0.5f), default);
+                //renderer.Lines.Allocate() = new LineInstance(basePosition, step.A.Support + basePosition, new Vector3(0, 0, 0.5f), default);
             }
 
             if (step.B.Exists)
@@ -207,7 +207,7 @@ namespace Demos.SpecializedTests
                 if (step.C.Exists)
                     renderer.Lines.Allocate() = new LineInstance(step.B.Support + basePosition, step.C.Support + basePosition, new Vector3(0, 0.6f, 0.1f), default);
                 renderer.Lines.Allocate() = new LineInstance(step.B.Support + basePosition, step.B.Support + basePosition + step.B.Normal, new Vector3(0, 0.6f, 0.1f), default);
-                renderer.Lines.Allocate() = new LineInstance(step.B.Support + basePosition, basePosition, new Vector3(0, 0, 0.5f), default);
+                //renderer.Lines.Allocate() = new LineInstance(step.B.Support + basePosition, basePosition, new Vector3(0, 0, 0.5f), default);
             }
 
             if (step.C.Exists)
@@ -215,7 +215,7 @@ namespace Demos.SpecializedTests
                 if (step.A.Exists)
                     renderer.Lines.Allocate() = new LineInstance(step.C.Support + basePosition, step.A.Support + basePosition, new Vector3(0, 0.6f, 0.1f), default);
                 renderer.Lines.Allocate() = new LineInstance(step.C.Support + basePosition, step.C.Support + basePosition + step.C.Normal, new Vector3(0, 0.3f, 0.2f), default);
-                renderer.Lines.Allocate() = new LineInstance(step.C.Support + basePosition, basePosition, new Vector3(0, 0, 0.5f), default);
+                //renderer.Lines.Allocate() = new LineInstance(step.C.Support + basePosition, basePosition, new Vector3(0, 0, 0.5f), default);
             }
 
             if (step.D.Exists)
@@ -227,7 +227,7 @@ namespace Demos.SpecializedTests
                 if (step.C.Exists)
                     renderer.Lines.Allocate() = new LineInstance(step.C.Support + basePosition, step.D.Support + basePosition, new Vector3(1, 0.6f, 0.1f), default);
                 renderer.Lines.Allocate() = new LineInstance(step.D.Support + basePosition, step.D.Support + basePosition + step.D.Normal, new Vector3(1f, 0.8f, 0.2f), default);
-                renderer.Lines.Allocate() = new LineInstance(step.D.Support + basePosition, basePosition, new Vector3(0, 0, 0.5f), default);
+                //renderer.Lines.Allocate() = new LineInstance(step.D.Support + basePosition, basePosition, new Vector3(0, 0, 0.5f), default);
             }
 
             renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.NextNormal, new Vector3(1, 0, 1), default);
@@ -238,7 +238,7 @@ namespace Demos.SpecializedTests
             //    renderer.Lines.Allocate() = new LineInstance(step.ClosestPointOnTriangle + basePosition, step.ClosestPointOnTriangle + step.TiltStart + basePosition, new Vector3(0.5f, 0, 0.5f), default);
             //}
 
-            renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.BestDepth * step.BestNormal, new Vector3(1, 0, 0), default);
+            renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.BestNormal, new Vector3(1, 0, 0), default);
             base.Render(renderer, camera, input, text, font);
         }
     }
