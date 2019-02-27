@@ -187,9 +187,6 @@ namespace BepuPhysics.CollisionDetection
                 {
                     //At least one active lane has a full simplex and an incoming new sample.
                     //Choose one of the resulting triangles based on which triangle contains the current best normal.
-                    //(Note that the current best normal may not be the same as the previous best normal if the triangle face normal
-                    //turns out to be better. In other words, bestNormal it may not be contained in ABC's window,
-                    //but we can still use the edge planes to choose a subtriangle.)
                     //The three edges we need to test are: ADO, BDO, CDO.
                     Vector3Wide.CrossWithoutOverlap(simplex.A.Support, support, out var axd);
                     Vector3Wide.CrossWithoutOverlap(simplex.B.Support, support, out var bxd);
@@ -202,39 +199,16 @@ namespace BepuPhysics.CollisionDetection
                     var useBCD = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(bdPlaneTest, Vector<float>.Zero), Vector.LessThan(cdPlaneTest, Vector<float>.Zero));
                     var useCAD = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(cdPlaneTest, Vector<float>.Zero), Vector.LessThan(adPlaneTest, Vector<float>.Zero));
 
+                    //Because the best normal may have changed due to the latest sample, ABC's portal may not contain the best normal anymore, which means none of the
+                    //subtriangles do either. This is fairly rare and the fallback heuristic doesn't matter much- this won't cause cycles because
+                    //it can only occur on iterations where depth improvement has been made (and thus the best normal has changed).
+                    //So we'll do something stupid!
+                    useABD = Vector.ConditionalSelect(Vector.OnesComplement(Vector.BitwiseOr(Vector.BitwiseOr(useABD, useBCD), useCAD)), new Vector<int>(-1), useABD);
+
                     ForceFillSlot(Vector.BitwiseAnd(useBCD, simplexFull), ref simplex.A, support, normal, depth);
                     ForceFillSlot(Vector.BitwiseAnd(useCAD, simplexFull), ref simplex.B, support, normal, depth);
                     ForceFillSlot(Vector.BitwiseAnd(useABD, simplexFull), ref simplex.C, support, normal, depth);
 
-                    ////We need to choose one of the three existing vertices to replace with the new sample.
-                    ////Pick by projecting the new support D onto the simplex ABC's plane, creating 3 edge planes between the triangles:
-                    ////abcN x AD, abcN x BD, and abcN x CD
-                    ////Detecting which side of the AD plane the origin is on:
-                    ////dot(origin - D, abcN x AD) = dot(D, AD x abcN) = dot(AD, abcN x D)
-                    ////So we can perform all three plane tests with only two cross products and three dots.
-                    //Vector3Wide.Subtract(simplex.B.Support, simplex.A.Support, out var edgeAB);
-                    //Vector3Wide.Subtract(simplex.A.Support, simplex.C.Support, out var edgeCA);
-                    //Vector3Wide.CrossWithoutOverlap(edgeAB, edgeCA, out var abcN);
-                    //Vector3Wide.CrossWithoutOverlap(abcN, support, out var abcNxD);
-                    //Vector3Wide.Subtract(support, simplex.A.Support, out var ad);
-                    //Vector3Wide.Subtract(support, simplex.B.Support, out var bd);
-                    //Vector3Wide.Subtract(support, simplex.C.Support, out var cd);
-                    //Vector3Wide.Dot(abcNxD, ad, out var adPlaneTest);
-                    //Vector3Wide.Dot(abcNxD, bd, out var bdPlaneTest);
-                    //Vector3Wide.Dot(abcNxD, cd, out var cdPlaneTest);
-
-                    ////Note that we're not concerned about abcN being zero. In order for this codepath to be relevant, the previous 
-                    ////iteration must have determined the projected origin was contained by ABC. A degenerate simplex would not have contained the origin.
-                    ////ad/bd/cd projected onto ABC's plane may also be zero length. That will pull the resulting plane test toward 0 and doesn't actually
-                    ////cause any issues- in order to be chosen, a triangle must pass two edge planes. If ABC is not degenerate, then only one edge plane
-                    ////will be degenerate at any one time, and there will be one subtriangle with two nondegenerate edge planes).
-                    //var useABD = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(adPlaneTest, Vector<float>.Zero), Vector.LessThan(bdPlaneTest, Vector<float>.Zero));
-                    //var useBCD = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(bdPlaneTest, Vector<float>.Zero), Vector.LessThan(cdPlaneTest, Vector<float>.Zero));
-                    //var useCAD = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(cdPlaneTest, Vector<float>.Zero), Vector.LessThan(adPlaneTest, Vector<float>.Zero));
-
-                    //ForceFillSlot(Vector.BitwiseAnd(useBCD, simplexFull), ref simplex.A, support, normal, depth);
-                    //ForceFillSlot(Vector.BitwiseAnd(useCAD, simplexFull), ref simplex.B, support, normal, depth);
-                    //ForceFillSlot(Vector.BitwiseAnd(useABD, simplexFull), ref simplex.C, support, normal, depth);
                 }
             }
             else
@@ -282,14 +256,14 @@ namespace BepuPhysics.CollisionDetection
             var caDegenerate = Vector.LessThan(caLengthSquared, degeneracyEpsilon);
             var outsideABOrDegenerate = Vector.BitwiseOr(outsideAB, abDegenerate);
             var outsideBCOrDegenerate = Vector.BitwiseOr(outsideBC, bcDegenerate);
-            var outsideCAOrDegenerate = Vector.BitwiseOr(outsideCA, caDegenerate);        
+            var outsideCAOrDegenerate = Vector.BitwiseOr(outsideCA, caDegenerate);
 
             //If the best normal is not contained, then the simplex needs to search it out. We already know which edge(s) see the origin as being outside.
             //If the origin is outside two of the edge planes, use the shared vertex as a representative.
             var outsideSum = outsideAB + outsideBC + outsideCA;
             var bestNormalContained = Vector.AndNot(Vector.Equals(outsideSum, Vector<int>.Zero), simplexDegenerate);
             var useVertex = simplexIsAVertex;// Vector.BitwiseOr(simplexIsAVertex, Vector.Equals(outsideSum, new Vector<int>(-2)));
-            var pushScale = new Vector<float>(1f);
+            var pushScale = new Vector<float>(2f);
             if (Vector.LessThanAny(Vector.AndNot(useVertex, terminatedLanes), Vector<int>.Zero))
             {
                 //At least one lane has a vertex normal offset source.
