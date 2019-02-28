@@ -325,10 +325,38 @@ namespace BepuPhysics.CollisionDetection
 
                 var outsideSum = outsideAB + outsideBC + outsideCA;
                 var bestNormalContained = Vector.AndNot(Vector.Equals(outsideSum, Vector<int>.Zero), simplexDegenerate);
-
-                //If the best normal is not contained, then the simplex needs to search it out. We already know which edge(s) see the origin as being outside.
-                var useVertex = Vector.AndNot(simplexIsAVertex, useGJKStyleSearch);
-                var pushScale = Vector<float>.One;// Vector.ConditionalSelect(flipBestNormal, new Vector<float>(-1f), Vector<float>.One);
+                var useEdge = Vector.AndNot(Vector.AndNot(Vector.OnesComplement(bestNormalContained), simplexIsAVertex), useGJKStyleSearch);
+                var pushScale = new Vector<float>(8f);
+                if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
+                {
+                    //At least one lane has an edge normal offset source.                 
+                    var useAB = Vector.BitwiseOr(outsideAB, Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, abLengthSquared), simplexDegenerate));
+                    var useCA = Vector.BitwiseOr(outsideCA, Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, caLengthSquared), simplexDegenerate));
+                    Vector3Wide.ConditionalSelect(useCA, axc, cxb, out var edgePlaneNormal);
+                    Vector3Wide.ConditionalSelect(useAB, bxa, edgePlaneNormal, out edgePlaneNormal);
+                    Vector3Wide.Dot(edgePlaneNormal, bestNormal, out var edgeDot);
+                    Vector3Wide.LengthSquared(edgePlaneNormal, out var edgePlaneNormalLengthSquared);
+                    Vector3Wide.Scale(edgePlaneNormal, pushScale * edgeDot / edgePlaneNormalLengthSquared, out var normalPushOffset);
+                    Vector3Wide.Add(normalPushOffset, bestNormal, out var nextNormalCandidate);
+                    //If the edge dot or plane normal length squared are zero, this candidate isn't helpful.
+                    var useFallback = Vector.BitwiseOr(Vector.LessThan(Vector.Abs(edgeDot), degeneracyEpsilon), Vector.LessThan(edgePlaneNormalLengthSquared, degeneracyEpsilon));
+                    if(Vector.LessThanAny(Vector.AndNot(useFallback, terminatedLanes), Vector<int>.Zero))
+                    {
+                        //Create a fallback from the edge and best normal. Let it point a bit toward the best normal, but the exact angle isn't very important.
+                        Vector3Wide.ConditionalSelect(useAB, simplex.A.Support, simplex.B.Support, out var edgeStart);
+                        Vector3Wide.ConditionalSelect(useAB, simplex.B.Support, simplex.C.Support, out var edgeEnd);
+                        Vector3Wide.ConditionalSelect(useCA, simplex.C.Support, edgeStart, out edgeStart);
+                        Vector3Wide.ConditionalSelect(useCA, simplex.A.Support, edgeEnd, out edgeEnd);
+                        Vector3Wide.Subtract(edgeEnd, edgeStart, out var edgeOffset);
+                        Vector3Wide.CrossWithoutOverlap(edgeOffset, bestNormal, out var fallbackNormal);
+                        Vector3Wide.Add(fallbackNormal, bestNormal, out fallbackNormal);
+                        Vector3Wide.ConditionalSelect(useFallback, fallbackNormal, nextNormalCandidate, out nextNormalCandidate);
+                    }
+                    Vector3Wide.ConditionalSelect(useEdge, nextNormalCandidate, nextNormal, out nextNormal);
+                    relevantFeatures = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, new Vector<int>(1 + 2), Vector.ConditionalSelect(useCA, new Vector<int>(1 + 4), new Vector<int>(2 + 4))), relevantFeatures);
+                }
+                
+                var useVertex = Vector.AndNot(Vector.BitwiseOr(simplexIsAVertex, Vector.AndNot(Vector.OnesComplement(useEdge), bestNormalContained)), useGJKStyleSearch);
                 if (Vector.LessThanAny(Vector.AndNot(useVertex, terminatedLanes), Vector<int>.Zero))
                 {
                     //At least one lane has a vertex normal offset source.
@@ -351,24 +379,10 @@ namespace BepuPhysics.CollisionDetection
                     Vector3Wide.Scale(offsetToBestNormal, pushScale, out var normalPushOffset);
                     //TODO: Push offset can be zero length.
                     Vector3Wide.Add(normalPushOffset, bestNormal, out var nextNormalCandidate);
-                    Vector3Wide.ConditionalSelect(simplexIsAVertex, nextNormalCandidate, nextNormal, out nextNormal);
-                    relevantFeatures = Vector.ConditionalSelect(simplexIsAVertex, Vector.ConditionalSelect(useA, Vector<int>.One, Vector.ConditionalSelect(useB, new Vector<int>(2), new Vector<int>(4))), relevantFeatures);
+                    Vector3Wide.ConditionalSelect(useVertex, nextNormalCandidate, nextNormal, out nextNormal);
+                    relevantFeatures = Vector.ConditionalSelect(useVertex, Vector.ConditionalSelect(useA, Vector<int>.One, Vector.ConditionalSelect(useB, new Vector<int>(2), new Vector<int>(4))), relevantFeatures);
                 }
-                var useEdge = Vector.AndNot(Vector.AndNot(Vector.OnesComplement(bestNormalContained), useVertex), useGJKStyleSearch);
-                if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
-                {
-                    //At least one lane has an edge normal offset source.
-                    Vector3Wide.ConditionalSelect(outsideCA, axc, cxb, out var edgePlaneNormal);
-                    Vector3Wide.ConditionalSelect(outsideAB, bxa, edgePlaneNormal, out edgePlaneNormal);
-                    Vector3Wide.Dot(edgePlaneNormal, bestNormal, out var edgeDot);
-                    Vector3Wide.LengthSquared(edgePlaneNormal, out var edgePlaneNormalLengthSquared);
-                    //The edge plane normal can't be zero length. If it was, the edge would be considered to containing the best normal.
-                    Vector3Wide.Scale(edgePlaneNormal, pushScale * edgeDot / edgePlaneNormalLengthSquared, out var normalPushOffset);
-                    //TODO: normal push offset can be zero length.
-                    Vector3Wide.Add(normalPushOffset, bestNormal, out var nextNormalCandidate);
-                    Vector3Wide.ConditionalSelect(useEdge, nextNormalCandidate, nextNormal, out nextNormal);
-                    relevantFeatures = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(outsideAB, new Vector<int>(1 + 2), Vector.ConditionalSelect(outsideCA, new Vector<int>(1 + 4), new Vector<int>(2 + 4))), relevantFeatures);
-                }
+
 
                 {
                     //DEBUG STUFF

@@ -93,7 +93,7 @@ namespace Demos.SpecializedTests
                 var shapeA = new Box(1f, 1f, 1f);
                 var poseA = new RigidPose(new Vector3(0, 0, 0));
                 var shapeB = new Box(1f, 1f, 1f);
-                var poseB = new RigidPose(new Vector3(3.1f, 0.001f, -0.2f), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1,1,1)), MathHelper.PiOver2));
+                var poseB = new RigidPose(new Vector3(0.5f, 0.99f, 0));//, Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1,1,1)), MathHelper.PiOver2));
 
                 basePosition = default;
                 shapeLines = MinkowskiShapeVisualizer.CreateLines<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>(
