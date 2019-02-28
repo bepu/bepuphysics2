@@ -23,9 +23,10 @@ namespace BepuPhysics.CollisionDetection
     {
         Initialization = -1,
         TriangleFace = 0,
-        Edge = 1,
-        Vertex = 2,
-        GJKEdgeStyle = 3,
+        TriangleFaceGJK = 1,
+        Edge = 2,
+        Vertex = 3,
+        EdgeGJK = 4,
         //EdgeReflect = 2,
         //Contraction = 3,
     }
@@ -138,8 +139,8 @@ namespace BepuPhysics.CollisionDetection
 
         struct HasNewSupport { }
         struct HasNoNewSupport { }
-        static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth, ref Vector<float> progressionScale, in Vector<int> terminatedLanes,
-            in Vector3Wide bestNormal, in Vector<float> bestDepth,
+        static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth, in Vector<int> terminatedLanes,
+            in Vector3Wide bestNormal, in Vector<float> bestDepth, ref Vector<int> previousIterationWasGJKStyle,
             out Vector3Wide nextNormal, out SimplexTilterStep step)
         {
             {
@@ -171,20 +172,40 @@ namespace BepuPhysics.CollisionDetection
                 FillSlot(ref simplex.B, support, normal, depth);
                 FillSlot(ref simplex.C, support, normal, depth);
 
-
-
                 var activeFullSimplex = Vector.AndNot(simplexFull, terminatedLanes);
                 if (Vector.LessThanAny(activeFullSimplex, Vector<int>.Zero))
                 {
                     //At least one active lane has a full simplex and an incoming new sample.
-                    //Choose one of the resulting triangles based on which triangle contains the current best normal.
-                    //The three edges we need to test are: ADO, BDO, CDO.
-                    Vector3Wide.CrossWithoutOverlap(simplex.A.Support, support, out var axd);
-                    Vector3Wide.CrossWithoutOverlap(simplex.B.Support, support, out var bxd);
-                    Vector3Wide.CrossWithoutOverlap(simplex.C.Support, support, out var cxd);
-                    Vector3Wide.Dot(axd, bestNormal, out var adPlaneTest);
-                    Vector3Wide.Dot(bxd, bestNormal, out var bdPlaneTest);
-                    Vector3Wide.Dot(cxd, bestNormal, out var cdPlaneTest);
+
+                    Vector<float> adPlaneTest = default, bdPlaneTest = default, cdPlaneTest = default;
+                    if (Vector.LessThanAny(Vector.BitwiseAnd(activeFullSimplex, previousIterationWasGJKStyle), Vector<int>.Zero))
+                    {
+                        Vector3Wide.Subtract(simplex.B.Support, simplex.A.Support, out var abEarly);
+                        Vector3Wide.Subtract(simplex.A.Support, simplex.C.Support, out var caEarly);
+                        Vector3Wide.Subtract(support, simplex.A.Support, out var ad);
+                        Vector3Wide.Subtract(support, simplex.B.Support, out var bd);
+                        Vector3Wide.Subtract(support, simplex.C.Support, out var cd);
+                        Vector3Wide.CrossWithoutOverlap(abEarly, caEarly, out var triangleNormalEarly);
+                        //(ad x n) * d = (n x d) * ad
+                        Vector3Wide.CrossWithoutOverlap(triangleNormalEarly, support, out var dxn);
+                        Vector3Wide.Dot(dxn, ad, out adPlaneTest);
+                        Vector3Wide.Dot(dxn, bd, out bdPlaneTest);
+                        Vector3Wide.Dot(dxn, cd, out cdPlaneTest);
+                    }
+                    if (Vector.LessThanAny(Vector.AndNot(activeFullSimplex, previousIterationWasGJKStyle), Vector<int>.Zero))
+                    {
+                        //Choose one of the resulting triangles based on which triangle contains the current best normal.
+                        //The three edges we need to test are: ADO, BDO, CDO.
+                        Vector3Wide.CrossWithoutOverlap(simplex.A.Support, support, out var axd);
+                        Vector3Wide.CrossWithoutOverlap(simplex.B.Support, support, out var bxd);
+                        Vector3Wide.CrossWithoutOverlap(simplex.C.Support, support, out var cxd);
+                        Vector3Wide.Dot(axd, bestNormal, out var adPlaneTestCandidate);
+                        Vector3Wide.Dot(bxd, bestNormal, out var bdPlaneTestCandidate);
+                        Vector3Wide.Dot(cxd, bestNormal, out var cdPlaneTestCandidate);
+                        adPlaneTest = Vector.ConditionalSelect(previousIterationWasGJKStyle, adPlaneTest, adPlaneTestCandidate);
+                        bdPlaneTest = Vector.ConditionalSelect(previousIterationWasGJKStyle, bdPlaneTest, bdPlaneTestCandidate);
+                        cdPlaneTest = Vector.ConditionalSelect(previousIterationWasGJKStyle, cdPlaneTest, cdPlaneTestCandidate);
+                    }
 
                     var useABD = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(adPlaneTest, Vector<float>.Zero), Vector.LessThan(bdPlaneTest, Vector<float>.Zero));
                     var useBCD = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(bdPlaneTest, Vector<float>.Zero), Vector.LessThan(cdPlaneTest, Vector<float>.Zero));
@@ -230,86 +251,130 @@ namespace BepuPhysics.CollisionDetection
             //Just assume the triangle normal will be used for now.
             nextNormal = triangleNormal;
 
-            Vector3Wide.CrossWithoutOverlap(simplex.B.Support, simplex.A.Support, out var bxa);
-            Vector3Wide.CrossWithoutOverlap(simplex.C.Support, simplex.B.Support, out var cxb);
-            Vector3Wide.CrossWithoutOverlap(simplex.A.Support, simplex.C.Support, out var axc);
-            Vector3Wide.Dot(bxa, bestNormal, out var abPlaneTest);
-            Vector3Wide.Dot(cxb, bestNormal, out var bcPlaneTest);
-            Vector3Wide.Dot(axc, bestNormal, out var caPlaneTest);
+            Vector3Wide.Dot(triangleNormal, simplex.A.Support, out var aDot);
+            var originOutsideTrianglePlane = Vector.LessThan(aDot, Vector<float>.Zero);
 
-            //Note that these tests will mark degenerate edges as containing the normal, since a degenerate plane test will be 0.
-            var outsideAB = Vector.LessThan(abPlaneTest, Vector<float>.Zero);
-            var outsideBC = Vector.LessThan(bcPlaneTest, Vector<float>.Zero);
-            var outsideCA = Vector.LessThan(caPlaneTest, Vector<float>.Zero);
-
-            //If the origin is outside the edge planes and the objects are separated, use a GJK-style search.
-            var outsideSum = outsideAB + outsideBC + outsideCA;
-            var bestNormalContained = Vector.AndNot(Vector.Equals(outsideSum, Vector<int>.Zero), simplexDegenerate);
+            var useGJKStyleSearch = Vector.BitwiseOr(Vector.LessThan(bestDepth, Vector<float>.Zero), originOutsideTrianglePlane);
+            previousIterationWasGJKStyle = useGJKStyleSearch;
             var relevantFeatures = new Vector<int>(1 + 2 + 4);
-            var useGJKStyleEdge = Vector.AndNot(Vector.AndNot(Vector.LessThan(bestDepth, Vector<float>.Zero), bestNormalContained), terminatedLanes);
-            if (Vector.LessThanAny(useGJKStyleEdge, Vector<int>.Zero))
+            if (Vector.LessThanAny(Vector.AndNot(useGJKStyleSearch, terminatedLanes), Vector<int>.Zero))
             {
-                var useAB = Vector.BitwiseOr(Vector.AndNot(outsideAB, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, abLengthSquared), simplexDegenerate));
-                var useBC = Vector.BitwiseOr(Vector.AndNot(outsideBC, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, bcLengthSquared), simplexDegenerate));
-                var useCA = Vector.BitwiseOr(Vector.AndNot(outsideCA, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, caLengthSquared), simplexDegenerate));
-                Vector3Wide.ConditionalSelect(useCA, ca, bc, out var edgeOffset);
-                Vector3Wide.ConditionalSelect(useAB, ab, edgeOffset, out edgeOffset);
-                var edgeLengthSquared = Vector.ConditionalSelect(useCA, caLengthSquared, Vector.ConditionalSelect(useAB, abLengthSquared, bcLengthSquared));
-                var inverseEdgeLengthSquared = Vector<float>.One / edgeLengthSquared;
-                Vector3Wide.ConditionalSelect(useCA, simplex.C.Support, simplex.B.Support, out var edgeStart);
-                Vector3Wide.ConditionalSelect(useAB, simplex.A.Support, edgeStart, out edgeStart);
-                relevantFeatures = Vector.ConditionalSelect(useGJKStyleEdge, Vector.ConditionalSelect(outsideAB, new Vector<int>(1 + 2), Vector.ConditionalSelect(outsideCA, new Vector<int>(1 + 4), new Vector<int>(2 + 4))), relevantFeatures);
-                Vector3Wide.Dot(edgeStart, edgeOffset, out var startDot);
-                var negatedT = Vector.ConditionalSelect(Vector.GreaterThan(edgeLengthSquared, Vector<float>.Zero), Vector.Max(new Vector<float>(-1f), Vector.Min(Vector<float>.Zero, startDot * inverseEdgeLengthSquared)), Vector<float>.Zero);
-                Vector3Wide.Scale(edgeOffset, negatedT, out var negatedScaledOffset);
-                Vector3Wide.Subtract(negatedScaledOffset, edgeStart, out var nextNormalCandidate);
-                Vector3Wide.LengthSquared(nextNormalCandidate, out var normalCandidateLengthSquared);
-                var originIsOnEdge = Vector.LessThan(normalCandidateLengthSquared, degeneracyEpsilon);
-                Vector3Wide.ConditionalSelect(Vector.AndNot(useGJKStyleEdge, originIsOnEdge), nextNormalCandidate, nextNormal, out nextNormal);
+                //At least one active lane wants to run a GJK-like search.      
+                //Note that ab/bc/ca were computed pre-swap, so we recompute based on current simplex state.     
+                Vector3Wide.Subtract(simplex.B.Support, simplex.A.Support, out ab);
+                Vector3Wide.Subtract(simplex.A.Support, simplex.C.Support, out ca);
+                //Compute the plane sign tests. Note that these are barycentric weights that have not been scaled by the inverse triangle normal length squared;
+                //we do not have to compute the correct magnitude to know the sign, and the sign is all we care about.
+                Vector3Wide.CrossWithoutOverlap(ab, simplex.A.Support, out var abxa);
+                Vector3Wide.CrossWithoutOverlap(ca, simplex.C.Support, out var caxc);
+                Vector3Wide.Dot(abxa, triangleNormal, out var abPlaneTest);
+                Vector3Wide.Dot(caxc, triangleNormal, out var caPlaneTest);
+                var bcPlaneTest = triangleNormalLengthSquared - caPlaneTest - abPlaneTest;
 
+                var outsideAB = Vector.LessThan(abPlaneTest, Vector<float>.Zero);
+                var outsideBC = Vector.LessThan(bcPlaneTest, Vector<float>.Zero);
+                var outsideCA = Vector.LessThan(caPlaneTest, Vector<float>.Zero);
+
+                var bestNormalContained = Vector.AndNot(Vector.OnesComplement(Vector.BitwiseOr(Vector.BitwiseOr(outsideAB, outsideBC), outsideCA)), simplexDegenerate);
+
+                //If the origin is outside the edge planes and the objects are separated, use a GJK-style search.
+                var useGJKStyleEdge = Vector.AndNot(Vector.AndNot(useGJKStyleSearch, bestNormalContained), terminatedLanes);
+                if (Vector.LessThanAny(useGJKStyleEdge, Vector<int>.Zero))
+                {
+                    var useAB = Vector.BitwiseOr(Vector.AndNot(outsideAB, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, abLengthSquared), simplexDegenerate));
+                    var useBC = Vector.BitwiseOr(Vector.AndNot(outsideBC, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, bcLengthSquared), simplexDegenerate));
+                    var useCA = Vector.BitwiseOr(Vector.AndNot(outsideCA, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, caLengthSquared), simplexDegenerate));
+                    Vector3Wide.ConditionalSelect(useCA, ca, bc, out var edgeOffset);
+                    Vector3Wide.ConditionalSelect(useAB, ab, edgeOffset, out edgeOffset);
+                    var edgeLengthSquared = Vector.ConditionalSelect(useCA, caLengthSquared, Vector.ConditionalSelect(useAB, abLengthSquared, bcLengthSquared));
+                    var inverseEdgeLengthSquared = Vector<float>.One / edgeLengthSquared;
+                    Vector3Wide.ConditionalSelect(useCA, simplex.C.Support, simplex.B.Support, out var edgeStart);
+                    Vector3Wide.ConditionalSelect(useAB, simplex.A.Support, edgeStart, out edgeStart);
+                    relevantFeatures = Vector.ConditionalSelect(useGJKStyleEdge, Vector.ConditionalSelect(useAB, new Vector<int>(1 + 2), Vector.ConditionalSelect(useCA, new Vector<int>(1 + 4), new Vector<int>(2 + 4))), relevantFeatures);
+                    Vector3Wide.Dot(edgeStart, edgeOffset, out var startDot);
+                    var negatedT = Vector.ConditionalSelect(Vector.GreaterThan(edgeLengthSquared, Vector<float>.Zero), Vector.Max(new Vector<float>(-1f), Vector.Min(Vector<float>.Zero, startDot * inverseEdgeLengthSquared)), Vector<float>.Zero);
+                    Vector3Wide.Scale(edgeOffset, negatedT, out var negatedScaledOffset);
+                    Vector3Wide.Subtract(negatedScaledOffset, edgeStart, out var nextNormalCandidate);
+                    Vector3Wide.LengthSquared(nextNormalCandidate, out var normalCandidateLengthSquared);
+                    var originIsOnEdge = Vector.LessThan(normalCandidateLengthSquared, degeneracyEpsilon);
+                    //TODO: If simplex is degenerate and origin is on edge, we need a fallback.
+                    Vector3Wide.ConditionalSelect(Vector.AndNot(useGJKStyleEdge, originIsOnEdge), nextNormalCandidate, nextNormal, out nextNormal);
+                }
+
+                {
+                    //DEBUG STUFF
+                    if (useGJKStyleSearch[0] < 0)
+                        step.NextNormalSource = useGJKStyleEdge[0] < 0 ? SimplexTilterNormalSource.EdgeGJK : SimplexTilterNormalSource.TriangleFaceGJK;
+                }
             }
-            //If the best normal is not contained, then the simplex needs to search it out. We already know which edge(s) see the origin as being outside.
-            var useVertex = Vector.AndNot(simplexIsAVertex, useGJKStyleEdge);
-            var pushScale = Vector<float>.One;// Vector.ConditionalSelect(flipBestNormal, new Vector<float>(-1f), Vector<float>.One);
-            if (Vector.LessThanAny(Vector.AndNot(useVertex, terminatedLanes), Vector<int>.Zero))
+
+            if (Vector.LessThanAny(Vector.AndNot(Vector.OnesComplement(useGJKStyleSearch), terminatedLanes), Vector<int>.Zero))
             {
-                //At least one lane has a vertex normal offset source.
-                var abDegenerate = Vector.LessThan(abLengthSquared, degeneracyEpsilon);
-                var bcDegenerate = Vector.LessThan(bcLengthSquared, degeneracyEpsilon);
-                var caDegenerate = Vector.LessThan(caLengthSquared, degeneracyEpsilon);
-                var outsideABOrDegenerate = Vector.BitwiseOr(outsideAB, abDegenerate);
-                var outsideBCOrDegenerate = Vector.BitwiseOr(outsideBC, bcDegenerate);
-                var outsideCAOrDegenerate = Vector.BitwiseOr(outsideCA, caDegenerate);
-                var useA = Vector.BitwiseAnd(outsideCAOrDegenerate, outsideABOrDegenerate);
-                var useB = Vector.BitwiseAnd(outsideABOrDegenerate, outsideBCOrDegenerate);
-                var useC = Vector.BitwiseAnd(outsideBCOrDegenerate, outsideCAOrDegenerate);
-                Vector3Wide.ConditionalSelect(useC, simplex.C.Support, simplex.B.Support, out var vertex);
-                Vector3Wide.ConditionalSelect(useA, simplex.A.Support, vertex, out vertex);
-                Vector3Wide.Dot(vertex, bestNormal, out var vertexDot);
-                Vector3Wide.LengthSquared(vertex, out var vertexLengthSquared);
-                //TODO: Vertex can be on top of the origin and it's not a termination condition.
-                Vector3Wide.Scale(vertex, vertexDot / vertexLengthSquared, out var pointOnVertexLine);
-                Vector3Wide.Subtract(bestNormal, pointOnVertexLine, out var offsetToBestNormal);
-                Vector3Wide.Scale(offsetToBestNormal, pushScale, out var normalPushOffset);
-                //TODO: Push offset can be zero length.
-                Vector3Wide.Add(normalPushOffset, bestNormal, out var nextNormalCandidate);
-                Vector3Wide.ConditionalSelect(simplexIsAVertex, nextNormalCandidate, nextNormal, out nextNormal);
-                relevantFeatures = Vector.ConditionalSelect(simplexIsAVertex, Vector.ConditionalSelect(useA, Vector<int>.One, Vector.ConditionalSelect(useB, new Vector<int>(2), new Vector<int>(4))), relevantFeatures);
-            }
-            var useEdge = Vector.AndNot(Vector.AndNot(Vector.OnesComplement(bestNormalContained), useVertex), useGJKStyleEdge);
-            if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
-            {
-                //At least one lane has an edge normal offset source.
-                Vector3Wide.ConditionalSelect(outsideCA, axc, cxb, out var edgePlaneNormal);
-                Vector3Wide.ConditionalSelect(outsideAB, bxa, edgePlaneNormal, out edgePlaneNormal);
-                Vector3Wide.Dot(edgePlaneNormal, bestNormal, out var edgeDot);
-                Vector3Wide.LengthSquared(edgePlaneNormal, out var edgePlaneNormalLengthSquared);
-                //The edge plane normal can't be zero length. If it was, the edge would be considered to containing the best normal.
-                Vector3Wide.Scale(edgePlaneNormal, pushScale * edgeDot / edgePlaneNormalLengthSquared, out var normalPushOffset);
-                //TODO: normal push offset can be zero length.
-                Vector3Wide.Add(normalPushOffset, bestNormal, out var nextNormalCandidate);
-                Vector3Wide.ConditionalSelect(useEdge, nextNormalCandidate, nextNormal, out nextNormal);
-                relevantFeatures = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(outsideAB, new Vector<int>(1 + 2), Vector.ConditionalSelect(outsideCA, new Vector<int>(1 + 4), new Vector<int>(2 + 4))), relevantFeatures);
+                //At least one active lane wants to run a penetration search.
+                Vector3Wide.CrossWithoutOverlap(simplex.B.Support, simplex.A.Support, out var bxa);
+                Vector3Wide.CrossWithoutOverlap(simplex.C.Support, simplex.B.Support, out var cxb);
+                Vector3Wide.CrossWithoutOverlap(simplex.A.Support, simplex.C.Support, out var axc);
+                Vector3Wide.Dot(bxa, bestNormal, out var abPlaneTest);
+                Vector3Wide.Dot(cxb, bestNormal, out var bcPlaneTest);
+                Vector3Wide.Dot(axc, bestNormal, out var caPlaneTest);
+
+                //Note that these tests will mark degenerate edges as containing the normal, since a degenerate plane test will be 0.
+                var outsideAB = Vector.LessThan(abPlaneTest, Vector<float>.Zero);
+                var outsideBC = Vector.LessThan(bcPlaneTest, Vector<float>.Zero);
+                var outsideCA = Vector.LessThan(caPlaneTest, Vector<float>.Zero);
+
+                var outsideSum = outsideAB + outsideBC + outsideCA;
+                var bestNormalContained = Vector.AndNot(Vector.Equals(outsideSum, Vector<int>.Zero), simplexDegenerate);
+
+                //If the best normal is not contained, then the simplex needs to search it out. We already know which edge(s) see the origin as being outside.
+                var useVertex = Vector.AndNot(simplexIsAVertex, useGJKStyleSearch);
+                var pushScale = Vector<float>.One;// Vector.ConditionalSelect(flipBestNormal, new Vector<float>(-1f), Vector<float>.One);
+                if (Vector.LessThanAny(Vector.AndNot(useVertex, terminatedLanes), Vector<int>.Zero))
+                {
+                    //At least one lane has a vertex normal offset source.
+                    var abDegenerate = Vector.LessThan(abLengthSquared, degeneracyEpsilon);
+                    var bcDegenerate = Vector.LessThan(bcLengthSquared, degeneracyEpsilon);
+                    var caDegenerate = Vector.LessThan(caLengthSquared, degeneracyEpsilon);
+                    var outsideABOrDegenerate = Vector.BitwiseOr(outsideAB, abDegenerate);
+                    var outsideBCOrDegenerate = Vector.BitwiseOr(outsideBC, bcDegenerate);
+                    var outsideCAOrDegenerate = Vector.BitwiseOr(outsideCA, caDegenerate);
+                    var useA = Vector.BitwiseAnd(outsideCAOrDegenerate, outsideABOrDegenerate);
+                    var useB = Vector.BitwiseAnd(outsideABOrDegenerate, outsideBCOrDegenerate);
+                    var useC = Vector.BitwiseAnd(outsideBCOrDegenerate, outsideCAOrDegenerate);
+                    Vector3Wide.ConditionalSelect(useC, simplex.C.Support, simplex.B.Support, out var vertex);
+                    Vector3Wide.ConditionalSelect(useA, simplex.A.Support, vertex, out vertex);
+                    Vector3Wide.Dot(vertex, bestNormal, out var vertexDot);
+                    Vector3Wide.LengthSquared(vertex, out var vertexLengthSquared);
+                    //TODO: Vertex can be on top of the origin and it's not a termination condition.
+                    Vector3Wide.Scale(vertex, vertexDot / vertexLengthSquared, out var pointOnVertexLine);
+                    Vector3Wide.Subtract(bestNormal, pointOnVertexLine, out var offsetToBestNormal);
+                    Vector3Wide.Scale(offsetToBestNormal, pushScale, out var normalPushOffset);
+                    //TODO: Push offset can be zero length.
+                    Vector3Wide.Add(normalPushOffset, bestNormal, out var nextNormalCandidate);
+                    Vector3Wide.ConditionalSelect(simplexIsAVertex, nextNormalCandidate, nextNormal, out nextNormal);
+                    relevantFeatures = Vector.ConditionalSelect(simplexIsAVertex, Vector.ConditionalSelect(useA, Vector<int>.One, Vector.ConditionalSelect(useB, new Vector<int>(2), new Vector<int>(4))), relevantFeatures);
+                }
+                var useEdge = Vector.AndNot(Vector.AndNot(Vector.OnesComplement(bestNormalContained), useVertex), useGJKStyleSearch);
+                if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
+                {
+                    //At least one lane has an edge normal offset source.
+                    Vector3Wide.ConditionalSelect(outsideCA, axc, cxb, out var edgePlaneNormal);
+                    Vector3Wide.ConditionalSelect(outsideAB, bxa, edgePlaneNormal, out edgePlaneNormal);
+                    Vector3Wide.Dot(edgePlaneNormal, bestNormal, out var edgeDot);
+                    Vector3Wide.LengthSquared(edgePlaneNormal, out var edgePlaneNormalLengthSquared);
+                    //The edge plane normal can't be zero length. If it was, the edge would be considered to containing the best normal.
+                    Vector3Wide.Scale(edgePlaneNormal, pushScale * edgeDot / edgePlaneNormalLengthSquared, out var normalPushOffset);
+                    //TODO: normal push offset can be zero length.
+                    Vector3Wide.Add(normalPushOffset, bestNormal, out var nextNormalCandidate);
+                    Vector3Wide.ConditionalSelect(useEdge, nextNormalCandidate, nextNormal, out nextNormal);
+                    relevantFeatures = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(outsideAB, new Vector<int>(1 + 2), Vector.ConditionalSelect(outsideCA, new Vector<int>(1 + 4), new Vector<int>(2 + 4))), relevantFeatures);
+                }
+
+                {
+                    //DEBUG STUFF
+                    if (useGJKStyleSearch[0] == 0)
+                        step.NextNormalSource = bestNormalContained[0] < 0 ? SimplexTilterNormalSource.TriangleFace : useVertex[0] < 0 ? SimplexTilterNormalSource.Vertex : SimplexTilterNormalSource.Edge;
+                }
             }
 
             simplex.A.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, Vector<int>.One), Vector<int>.Zero);
@@ -319,10 +384,7 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.Scale(nextNormal, Vector<float>.One / nextNormalLength, out nextNormal);
             {
                 //DEBUG STUFF
-                step.NextNormalSource = bestNormalContained[0] < 0 ? SimplexTilterNormalSource.TriangleFace : useVertex[0] < 0 ? SimplexTilterNormalSource.Vertex : useEdge[0] < 0 ? SimplexTilterNormalSource.Edge : SimplexTilterNormalSource.GJKEdgeStyle;
-
                 Vector3Wide.ReadFirst(nextNormal, out step.NextNormal);
-                step.ProgressionScale = progressionScale[0];
             }
         }
 
@@ -359,8 +421,8 @@ namespace BepuPhysics.CollisionDetection
                 return;
             }
 
-            var progressionScale = new Vector<float>(0.5f);
-            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, default, ref progressionScale, terminatedLanes, refinedNormal, refinedDepth, out var normal, out var debugStep);
+            var previousIterationWasGJKStyle = Vector<int>.Zero;
+            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, default, terminatedLanes, refinedNormal, refinedDepth, ref previousIterationWasGJKStyle, out var normal, out var debugStep);
             debugStep.BestDepth = refinedDepth[0];
             Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
             steps.Add(debugStep);
@@ -375,7 +437,7 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
                 //progressionScale = Vector.ConditionalSelect(useNewDepth, progressionScale, progressionScale * 0.85f);
 
-                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, ref progressionScale, terminatedLanes, refinedNormal, refinedDepth, out normal, out debugStep);
+                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, terminatedLanes, refinedNormal, refinedDepth, ref previousIterationWasGJKStyle, out normal, out debugStep);
 
                 debugStep.BestDepth = refinedDepth[0];
                 Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
