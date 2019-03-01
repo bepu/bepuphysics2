@@ -139,7 +139,7 @@ namespace BepuPhysics.CollisionDetection
 
         struct HasNewSupport { }
         struct HasNoNewSupport { }
-        static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth, in Vector<int> terminatedLanes,
+        static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth, ref Vector<int> terminatedLanes,
             in Vector3Wide bestNormal, in Vector<float> bestDepth, ref Vector<int> previousIterationWasGJKStyle,
             out Vector3Wide nextNormal, out SimplexTilterStep step)
         {
@@ -254,7 +254,7 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.Dot(triangleNormal, simplex.A.Support, out var aDot);
             var originOutsideTrianglePlane = Vector.LessThan(aDot, Vector<float>.Zero);
 
-            var useGJKStyleSearch = Vector.BitwiseOr(Vector.LessThan(bestDepth, Vector<float>.Zero), originOutsideTrianglePlane);
+            var useGJKStyleSearch = Vector.BitwiseOr(simplexDegenerate, Vector.BitwiseOr(Vector.LessThan(bestDepth, Vector<float>.Zero), originOutsideTrianglePlane));
             previousIterationWasGJKStyle = useGJKStyleSearch;
             var relevantFeatures = new Vector<int>(1 + 2 + 4);
             if (Vector.LessThanAny(Vector.AndNot(useGJKStyleSearch, terminatedLanes), Vector<int>.Zero))
@@ -297,7 +297,17 @@ namespace BepuPhysics.CollisionDetection
                     Vector3Wide.Subtract(negatedScaledOffset, edgeStart, out var nextNormalCandidate);
                     Vector3Wide.LengthSquared(nextNormalCandidate, out var normalCandidateLengthSquared);
                     var originIsOnEdge = Vector.LessThan(normalCandidateLengthSquared, degeneracyEpsilon);
-                    //TODO: If simplex is degenerate and origin is on edge, we need a fallback.
+                    //If the origin is on either vertex of the edge, the search can terminate; whatever normal found the vertex will work.
+                    var originIsOnVertex = Vector.BitwiseAnd(originIsOnEdge, Vector.BitwiseOr(Vector.Equals(negatedT, new Vector<float>(-1f)), Vector.Equals(negatedT, Vector<float>.Zero)));
+                    terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(useGJKStyleEdge, originIsOnVertex));
+                    //If the origin is on the interior of the edge, it may not yet be at the surface.
+                    var useOnEdgeFallback = Vector.AndNot(originIsOnEdge, terminatedLanes);
+                    if(Vector.LessThanAny(useOnEdgeFallback, Vector<int>.Zero))
+                    {
+                        Vector3Wide.CrossWithoutOverlap(bestNormal, edgeOffset, out var fallbackNormal);
+                        Vector3Wide.Add(fallbackNormal, bestNormal, out fallbackNormal);
+                        Vector3Wide.ConditionalSelect(useOnEdgeFallback, fallbackNormal, nextNormalCandidate, out nextNormalCandidate);
+                    }
                     Vector3Wide.ConditionalSelect(Vector.AndNot(useGJKStyleEdge, originIsOnEdge), nextNormalCandidate, nextNormal, out nextNormal);
                 }
 
@@ -340,7 +350,7 @@ namespace BepuPhysics.CollisionDetection
                     Vector3Wide.Add(normalPushOffset, bestNormal, out var nextNormalCandidate);
                     //If the edge dot or plane normal length squared are zero, this candidate isn't helpful.
                     var useFallback = Vector.BitwiseOr(Vector.LessThan(Vector.Abs(edgeDot), degeneracyEpsilon), Vector.LessThan(edgePlaneNormalLengthSquared, degeneracyEpsilon));
-                    if(Vector.LessThanAny(Vector.AndNot(useFallback, terminatedLanes), Vector<int>.Zero))
+                    if (Vector.LessThanAny(Vector.AndNot(useFallback, terminatedLanes), Vector<int>.Zero))
                     {
                         //Create a fallback from the edge and best normal. Let it point a bit toward the best normal, but the exact angle isn't very important.
                         Vector3Wide.ConditionalSelect(useAB, simplex.A.Support, simplex.B.Support, out var edgeStart);
@@ -348,16 +358,16 @@ namespace BepuPhysics.CollisionDetection
                         Vector3Wide.ConditionalSelect(useCA, simplex.C.Support, edgeStart, out edgeStart);
                         Vector3Wide.ConditionalSelect(useCA, simplex.A.Support, edgeEnd, out edgeEnd);
                         Vector3Wide.Subtract(edgeEnd, edgeStart, out var edgeOffset);
-                        Vector3Wide.CrossWithoutOverlap(edgeOffset, bestNormal, out var fallbackNormal);
+                        Vector3Wide.CrossWithoutOverlap(bestNormal, edgeOffset, out var fallbackNormal);
                         Vector3Wide.Add(fallbackNormal, bestNormal, out fallbackNormal);
                         Vector3Wide.ConditionalSelect(useFallback, fallbackNormal, nextNormalCandidate, out nextNormalCandidate);
                     }
                     Vector3Wide.ConditionalSelect(useEdge, nextNormalCandidate, nextNormal, out nextNormal);
                     relevantFeatures = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, new Vector<int>(1 + 2), Vector.ConditionalSelect(useCA, new Vector<int>(1 + 4), new Vector<int>(2 + 4))), relevantFeatures);
                 }
-                
-                var useVertex = Vector.AndNot(Vector.BitwiseOr(simplexIsAVertex, Vector.AndNot(Vector.OnesComplement(useEdge), bestNormalContained)), useGJKStyleSearch);
-                if (Vector.LessThanAny(Vector.AndNot(useVertex, terminatedLanes), Vector<int>.Zero))
+
+                var useVertex = Vector.AndNot(Vector.AndNot(Vector.BitwiseOr(simplexIsAVertex, Vector.AndNot(Vector.OnesComplement(useEdge), bestNormalContained)), useGJKStyleSearch), terminatedLanes);
+                if (Vector.LessThanAny(useVertex, Vector<int>.Zero))
                 {
                     //At least one lane has a vertex normal offset source.
                     var abDegenerate = Vector.LessThan(abLengthSquared, degeneracyEpsilon);
@@ -379,6 +389,14 @@ namespace BepuPhysics.CollisionDetection
                     Vector3Wide.Scale(offsetToBestNormal, pushScale, out var normalPushOffset);
                     //TODO: Push offset can be zero length.
                     Vector3Wide.Add(normalPushOffset, bestNormal, out var nextNormalCandidate);
+                    var useFallback = Vector.BitwiseAnd(useVertex, Vector.BitwiseOr(Vector.LessThan(Vector.Abs(vertexDot), degeneracyEpsilon), Vector.LessThan(vertexLengthSquared, degeneracyEpsilon)));
+                    if (Vector.LessThanAny(useFallback, Vector<int>.Zero))
+                    {
+                        //No progress possible; use a fallback.
+                        Helpers.FindPerpendicular(bestNormal, out var perpendicular);
+                        Vector3Wide.Add(perpendicular, bestNormal, out var fallbackNormal);
+                        Vector3Wide.ConditionalSelect(useFallback, fallbackNormal, nextNormalCandidate, out nextNormalCandidate);
+                    }
                     Vector3Wide.ConditionalSelect(useVertex, nextNormalCandidate, nextNormal, out nextNormal);
                     relevantFeatures = Vector.ConditionalSelect(useVertex, Vector.ConditionalSelect(useA, Vector<int>.One, Vector.ConditionalSelect(useB, new Vector<int>(2), new Vector<int>(4))), relevantFeatures);
                 }
@@ -436,13 +454,15 @@ namespace BepuPhysics.CollisionDetection
             }
 
             var previousIterationWasGJKStyle = Vector<int>.Zero;
-            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, default, terminatedLanes, refinedNormal, refinedDepth, ref previousIterationWasGJKStyle, out var normal, out var debugStep);
+            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, default, ref terminatedLanes, refinedNormal, refinedDepth, ref previousIterationWasGJKStyle, out var normal, out var debugStep);
             debugStep.BestDepth = refinedDepth[0];
             Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
             steps.Add(debugStep);
 
             for (int i = 0; i < maximumIterations; ++i)
             {
+                if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
+                    break;
                 FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normal, out var support);
                 Vector3Wide.Dot(support, normal, out var depth);
 
@@ -451,7 +471,7 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
                 //progressionScale = Vector.ConditionalSelect(useNewDepth, progressionScale, progressionScale * 0.85f);
 
-                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, terminatedLanes, refinedNormal, refinedDepth, ref previousIterationWasGJKStyle, out normal, out debugStep);
+                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, ref terminatedLanes, refinedNormal, refinedDepth, ref previousIterationWasGJKStyle, out normal, out debugStep);
 
                 debugStep.BestDepth = refinedDepth[0];
                 Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
