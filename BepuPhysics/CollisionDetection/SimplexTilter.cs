@@ -244,6 +244,7 @@ namespace BepuPhysics.CollisionDetection
             var outsideBC = Vector.LessThan(bcPlaneTest, Vector<float>.Zero);
             var outsideCA = Vector.LessThan(caPlaneTest, Vector<float>.Zero);
 
+
             Vector3Wide.LengthSquared(ab, out var abLengthSquared);
             Vector3Wide.LengthSquared(bc, out var bcLengthSquared);
             Vector3Wide.LengthSquared(ca, out var caLengthSquared);
@@ -257,25 +258,52 @@ namespace BepuPhysics.CollisionDetection
             var shouldCalibrate = Vector.LessThan(calibrationDot, Vector<float>.Zero);
             Vector3Wide.ConditionallyNegate(Vector.LessThan(calibrationDot, Vector<float>.Zero), ref triangleNormal);
 
+            //If the simplex is degenerate and has length, use the longest edge. Otherwise, just use an edge whose plane is violated.
+            //Note that if there are two edges with violated edge planes, simply picking one does not guarantee that the resulting closest point
+            //will be the globally closest point on the triangle. It *usually* works out, though, and when it fails, the cost
+            //is generally just an extra iteration or two- not a huge deal, and we get to avoid doing more than one edge test every iteration.
+            var useAB = Vector.BitwiseOr(Vector.AndNot(outsideAB, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, abLengthSquared), simplexDegenerate));
+            var useBC = Vector.BitwiseOr(Vector.AndNot(outsideBC, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, bcLengthSquared), simplexDegenerate));
+            var originOutsideTriangleEdges = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideBC, outsideCA));
+
+            //If the origin is inside the bounding plane, then we use the simplex portal walls to guide the search.
+            //If the origin is outside the bounding plane, we use a GJK-ish closest point->origin search.
+            Vector3Wide.Dot(triangleNormal, simplex.A.Support, out var aDot);
+            var originOutsideBoundingPlane = Vector.BitwiseOr(
+                    Vector.BitwiseAnd(simplexDegenerate, Vector.LessThan(bestDepth, Vector<float>.Zero)),
+                    Vector.AndNot(Vector.LessThan(aDot, Vector<float>.Zero), simplexDegenerate));
+
+            if (Vector.EqualsAny(Vector.BitwiseOr(originOutsideBoundingPlane, terminatedLanes), Vector<int>.Zero))
+            {
+                //At least one lane wants to use portal based search.
+                Vector3Wide.CrossWithoutOverlap(bc, simplex.B.Support, out var bcxb);
+                Vector3Wide.Dot(abxa, bestNormal, out var abPortalDot);
+                Vector3Wide.Dot(caxc, bestNormal, out var caPortalDot);
+                Vector3Wide.Dot(bcxb, bestNormal, out var bcPortalDot);
+
+                var outsideABPortal = Vector.ConditionalSelect(shouldCalibrate, Vector.GreaterThan(abPortalDot, Vector<float>.Zero), Vector.LessThan(abPortalDot, Vector<float>.Zero));
+                var outsideBCPortal = Vector.ConditionalSelect(shouldCalibrate, Vector.GreaterThan(bcPortalDot, Vector<float>.Zero), Vector.LessThan(bcPortalDot, Vector<float>.Zero));
+                var outsideCAPortal = Vector.ConditionalSelect(shouldCalibrate, Vector.GreaterThan(caPortalDot, Vector<float>.Zero), Vector.LessThan(caPortalDot, Vector<float>.Zero));
+
+                originOutsideTriangleEdges = Vector.ConditionalSelect(originOutsideBoundingPlane, originOutsideTriangleEdges, Vector.BitwiseOr(outsideABPortal, Vector.BitwiseOr(outsideBCPortal, outsideCAPortal)));
+                useAB = Vector.ConditionalSelect(originOutsideBoundingPlane, useAB, outsideABPortal);
+                useBC = Vector.ConditionalSelect(originOutsideBoundingPlane, useBC, outsideBCPortal);
+            }
+
             //Compute the direction from the origin to the closest point on the triangle.
             //If the simplex is degenerate and just a vertex, pick the first simplex entry as representative.
             var originToTriangle = simplex.A.Support;
+
             var relevantFeatures = Vector<int>.One;
-            //Normal source 0: vertex, 1: edge, 2: face. We'll use this flag to decide how to update the normal after we get the closest offset.
-            //var closestPointSource = Vector<int>.Zero;
             var alignedBestNormal = bestNormal;
 
-            var originOutsideTriangleEdges = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideBC, outsideCA));
             var useEdge = Vector.BitwiseOr(originOutsideTriangleEdges, simplexIsAnEdge);
-            Vector3Wide violatedEdgePlaneNormal = default;
+            //If this is a vertex case and the sample is right on top of the origin, immediately quit.
+            Vector3Wide.LengthSquared(simplex.A.Support, out var vertexLengthSquared);
+            terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(originOutsideTriangleEdges, Vector.LessThan(vertexLengthSquared, degeneracyEpsilon)));
+
             if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
             {
-                //If the simplex is degenerate and has length, use the longest edge. Otherwise, just use an edge whose plane is violated.
-                //Note that if there are two edges with violated edge planes, simply picking one does not guarantee that the resulting closest point
-                //will be the globally closest point on the triangle. It *usually* works out, though, and when it fails, the cost
-                //is generally just an extra iteration or two- not a huge deal, and we get to avoid doing more than one edge test every iteration.
-                var useAB = Vector.BitwiseOr(Vector.AndNot(outsideAB, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, abLengthSquared), simplexDegenerate));
-                var useBC = Vector.BitwiseOr(Vector.AndNot(outsideBC, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, bcLengthSquared), simplexDegenerate));
                 var edgeLengthSquared = Vector.ConditionalSelect(useAB, abLengthSquared, Vector.ConditionalSelect(useBC, bcLengthSquared, caLengthSquared));
                 var inverseEdgeLengthSquared = Vector<float>.One / edgeLengthSquared;
                 Vector3Wide.ConditionalSelect(useAB, ab, ca, out var edgeOffset);
@@ -298,7 +326,6 @@ namespace BepuPhysics.CollisionDetection
                 var featureForBC = Vector.ConditionalSelect(originNearestStart, new Vector<int>(2), Vector.ConditionalSelect(originNearestEnd, new Vector<int>(4), new Vector<int>(2 + 4)));
                 var featureForCA = Vector.ConditionalSelect(originNearestStart, new Vector<int>(4), Vector.ConditionalSelect(originNearestEnd, Vector<int>.One, new Vector<int>(4 + 1)));
                 relevantFeatures = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, featureForAB, Vector.ConditionalSelect(useBC, featureForBC, featureForCA)), relevantFeatures);
-                var closestToAnEndpoint = Vector.BitwiseOr(originNearestStart, originNearestEnd);
                 //If the origin is on the interior of the edge, it may not yet be at the surface.
                 var useOnEdgeFallback = Vector.AndNot(originIsOnEdge, terminatedLanes);
                 if (Vector.LessThanAny(useOnEdgeFallback, Vector<int>.Zero))
@@ -317,18 +344,12 @@ namespace BepuPhysics.CollisionDetection
                     Vector3Wide.Subtract(bestNormal, normalAligningOffset, out var alignedNormalCandidate);
                     Vector3Wide.ConditionalSelect(useEdge, alignedNormalCandidate, alignedBestNormal, out alignedBestNormal);
                 }
-                //Store out the edge plane normal in case we hit the weird case where the normal push pushes into the triangle.
-                //Vector3Wide.CrossWithoutOverlap(triangleNormal, edgeOffset, out var violatedEdgePlaneNormalCandidate);
-                Vector3Wide.CrossWithoutOverlap(bc, simplex.B.Support, out var bcxb);
-                Vector3Wide.ConditionalSelect(useAB, abxa, caxc, out var violatedEdgePlaneNormalCandidate);
-                Vector3Wide.ConditionalSelect(useBC, bcxb, violatedEdgePlaneNormalCandidate, out violatedEdgePlaneNormalCandidate);
-                Vector3Wide.ConditionalSelect(Vector.BitwiseOr(simplexDegenerate, Vector.OnesComplement(useEdge)), violatedEdgePlaneNormal, violatedEdgePlaneNormalCandidate, out violatedEdgePlaneNormal);
             }
 
             //A few cases:
             //1) The origin is 'outside' the triangle plane or the shapes are known to be separated (negative best depth). Next normal should point from the triangle to origin.
-            //2) The origin is inside the triangle plane and the closest point was on an edge or vertex. Push the (aligned) normal away from the closest point offset.
-            //3) The origin is inside the triangle plane is within the triangle edge planes. Just use the triangle normal.
+            //2) The origin is inside the triangle plane and the best normal was outside the portal edge planes. Push the (aligned) normal away from the closest point offset.
+            //3) The origin is inside the triangle plane is within the portal edge planes. Just use the triangle normal.
             var originContainedInEdgePlanes = Vector.AndNot(Vector.OnesComplement(originOutsideTriangleEdges), simplexDegenerate);
             relevantFeatures = Vector.ConditionalSelect(originContainedInEdgePlanes, new Vector<int>(1 + 2 + 4), relevantFeatures);
             //Start with an assumption that the origin is contained.
@@ -337,41 +358,29 @@ namespace BepuPhysics.CollisionDetection
             if (Vector.EqualsAny(terminatedOrOriginInEdgePlanes, Vector<int>.Zero))
             {
                 //At least one lane needs the non-origin-contained case.
-                //Inside or outside?
-                Vector3Wide.Dot(triangleNormal, simplex.A.Support, out var aDot);
-                var originOutsideBoundingPlane = Vector.BitwiseOr(
-                        Vector.BitwiseAnd(simplexDegenerate, Vector.LessThan(bestDepth, Vector<float>.Zero)),
-                        Vector.AndNot(Vector.LessThan(aDot, Vector<float>.Zero), simplexDegenerate));
 
                 if (Vector.EqualsAny(Vector.BitwiseOr(originOutsideBoundingPlane, terminatedOrOriginInEdgePlanes), Vector<int>.Zero))
                 {
                     //At least one lane is inside the bounding plane and outside the triangle edge planes; push.
-                    Vector3Wide.LengthSquared(originToTriangle, out var originDistanceSquared);
-                    var inverseDistanceSquared = Vector<float>.One / originDistanceSquared;
-                    Vector3Wide.Dot(alignedBestNormal, originToTriangle, out var normalDot);
-                    Vector3Wide.Scale(originToTriangle, normalDot * inverseDistanceSquared, out var normalProjectedOnOffset);
-                    Vector3Wide.Subtract(alignedBestNormal, normalProjectedOnOffset, out var normalPushOffset);
-                    Vector3Wide.Add(alignedBestNormal, normalPushOffset, out var nextNormalCandidate);
-                    //It's possible for the push to trigger a cycle if it is pushing 'into' the triangle.
-                    //This can happen when:
-                    //1) the origin is inside the bounding plane,
-                    //2) the simplex is nondegenerate,
-                    //3) the best normal is contained within the portal formed by the origin and ABC,
-                    //4) the origin is outside the edge planes of ABC, and
-                    //5) ABC was chosen as a subtriangle from a full simplex case.
-                    //In other words, it's pretty rare. It's also easy to detect- if dot(violatedEdgePlaneNormal, normalPushOffset) < 0, then it happened.
-                    //In this case, we'll just use the triangle normal.
-                    //Note that the violatedEdgePlaneNormal is just the zero vector if this wasn't generated by a nondegenerate edge case.
-                    Vector3Wide.Dot(violatedEdgePlaneNormal, normalPushOffset, out var pushDot);
-                    Vector3Wide.ConditionalSelect(Vector.BitwiseOr(originContainedInEdgePlanes, Vector.GreaterThan(pushDot, Vector<float>.Zero)), nextNormal, nextNormalCandidate, out nextNormal);
-                    //Vector3Wide.ConditionalSelect(originContainedInEdgePlanes, nextNormal, nextNormalCandidate, out nextNormal);
+                    //Vector3Wide.LengthSquared(originToTriangle, out var originDistanceSquared);
+                    //var inverseDistanceSquared = Vector<float>.One / originDistanceSquared;
+                    //Vector3Wide.Dot(alignedBestNormal, originToTriangle, out var normalDot);
+                    //Vector3Wide.Scale(originToTriangle, normalDot * inverseDistanceSquared, out var normalProjectedOnOffset);
+                    //Vector3Wide.Subtract(alignedBestNormal, normalProjectedOnOffset, out var normalPushOffset);
+                    //Vector3Wide.Scale(normalPushOffset, new Vector<float>(100000), out normalPushOffset);
+                    //Vector3Wide.Add(alignedBestNormal, normalPushOffset, out var nextNormalCandidate);
+
+                    //Note that the vertex and edge cases both explicitly handle zero length originToTriangle, so we don't have to worry about that here.
+                    Vector3Wide.CrossWithoutOverlap(alignedBestNormal, originToTriangle, out var n);
+                    Vector3Wide.CrossWithoutOverlap(originToTriangle, n, out var nextNormalCandidate);
+                    Vector3Wide.ConditionalSelect(originContainedInEdgePlanes, nextNormal, nextNormalCandidate, out nextNormal);
                 }
                 //Finally, use the triangle->origin direction directly if it's outside and not within the triangle edge planes. GJK-ish.
                 Vector3Wide.Negate(originToTriangle, out var outsideNormalCandidate);
                 Vector3Wide.ConditionalSelect(Vector.AndNot(originOutsideBoundingPlane, originContainedInEdgePlanes), outsideNormalCandidate, nextNormal, out nextNormal);
             }
 
-            Swap(shouldCalibrate, ref simplex.A, ref simplex.B);
+            //Swap(shouldCalibrate, ref simplex.A, ref simplex.B);
             {
                 //DEBUG STUFF
                 var features = relevantFeatures[0];
