@@ -336,6 +336,9 @@ namespace BepuPhysics.CollisionDetection
             if (Vector.EqualsAny(terminatedOrOriginInEdgePlanes, Vector<int>.Zero))
             {
                 //At least one lane needs the non-origin-contained case.
+                //Use the triangle->origin direction directly if it's outside and not within the triangle edge planes. GJK-ish.
+                Vector3Wide.Negate(originToTriangle, out var outsideNormalCandidate);
+                Vector3Wide.ConditionalSelect(originContainedInEdgePlanes, nextNormal, outsideNormalCandidate, out nextNormal);
 
                 if (Vector.EqualsAny(Vector.BitwiseOr(originOutsideBoundingPlane, terminatedOrOriginInEdgePlanes), Vector<int>.Zero))
                 {
@@ -348,11 +351,16 @@ namespace BepuPhysics.CollisionDetection
                     Vector3Wide.Scale(normalPushOffset, new Vector<float>(8), out normalPushOffset);
                     Vector3Wide.Add(alignedBestNormal, normalPushOffset, out var nextNormalCandidate);
 
-                    Vector3Wide.ConditionalSelect(originContainedInEdgePlanes, nextNormal, nextNormalCandidate, out nextNormal);
+                    //Use the GJK-style search if the normal is very near 90 degrees away.
+                    //This captures a corner case at zero depth where the vertex-sized simplex refuses to expand toward the origin.
+                    //dot(n / ||n||, closest / ||closest||) < 0.01
+                    //dot(n, closest) < 0.01 * ||originDistanceSquared|| * ||alignedBestNormal||
+                    //Approximate ||alignedBestNormal|| as 1.
+                    //dot(n, closest)^2 < 0.01^2 * originDistanceSquared
+                    var forceGJKStyle = Vector.LessThan(normalDot * normalDot, new Vector<float>(1e-4f) * originDistanceSquared);
+                    
+                    Vector3Wide.ConditionalSelect(Vector.BitwiseOr(Vector.BitwiseOr(originOutsideBoundingPlane, originContainedInEdgePlanes), forceGJKStyle), nextNormal, nextNormalCandidate, out nextNormal);
                 }
-                //Finally, use the triangle->origin direction directly if it's outside and not within the triangle edge planes. GJK-ish.
-                Vector3Wide.Negate(originToTriangle, out var outsideNormalCandidate);
-                Vector3Wide.ConditionalSelect(Vector.AndNot(originOutsideBoundingPlane, originContainedInEdgePlanes), outsideNormalCandidate, nextNormal, out nextNormal);
             }
 
             {
