@@ -96,9 +96,11 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.ConditionalSelect(shouldSwap, b.Support, a.Support, out a.Support);
             Vector3Wide.ConditionalSelect(shouldSwap, b.Normal, a.Normal, out a.Normal);
             a.Depth = Vector.ConditionalSelect(shouldSwap, b.Depth, a.Depth);
+            a.Exists = Vector.ConditionalSelect(shouldSwap, b.Exists, a.Exists);
             Vector3Wide.ConditionalSelect(shouldSwap, temp.Support, b.Support, out b.Support);
             Vector3Wide.ConditionalSelect(shouldSwap, temp.Normal, b.Normal, out b.Normal);
             b.Depth = Vector.ConditionalSelect(shouldSwap, temp.Depth, b.Depth);
+            b.Exists = Vector.ConditionalSelect(shouldSwap, temp.Exists, b.Exists);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
