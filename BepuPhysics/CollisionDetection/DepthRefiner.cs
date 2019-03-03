@@ -121,7 +121,7 @@ namespace BepuPhysics.CollisionDetection
                 step.D.Exists = typeof(T) == typeof(HasNewSupport);
             }
 
-            Vector3Wide.Scale(bestNormal, bestDepth, out var searchTarget);
+            Vector3Wide.Scale(bestNormal, Vector.Max(Vector<float>.Zero, bestDepth), out var searchTarget);
 
             if (typeof(T) == typeof(HasNewSupport))
             {
@@ -257,24 +257,34 @@ namespace BepuPhysics.CollisionDetection
             if (Vector.LessThanAny(Vector.AndNot(targetContainedInEdgePlanes, terminatedLanes), Vector<int>.Zero))
             {
                 //At least one lane needs a face test.
-                Vector3Wide.Dot(simplex.A.Support, triangleNormal, out var aDot);
-                Vector3Wide.Scale(triangleNormal, aDot / triangleNormalLengthSquared, out var targetToTriangleCandidate);
-                Vector3Wide.ConditionalSelect(targetContainedInEdgePlanes, targetToTriangleCandidate, targetToTriangle, out targetToTriangle);
+                //Note that we don't actually need to compute the closest point here- we can just use the triangleNormal.
+                //We do need to calculate the distance from the closest point to the search target, but that's just:
+
+                //||searchTarget-closestOnTriangle||^2 = ||(dot(n/||n||, searchTarget - a) * n/||n||)||^2
+                //||(dot(n, searchTarget - a) / ||n||^2) * n||^2
+                //||n||^2 * (dot(n, searchTarget - a) / ||n||^2)^2
+                //dot(n, searchTarget - a)^2 / ||n||^2
+                //Then the comparison can performed with a multiplication rather than a division.
+                Vector3Wide.Dot(targetToA, triangleNormal, out var targetToADot);
+                var targetOnTriangleSurface = Vector.LessThan(targetToADot * targetToADot, searchEpsilon * triangleNormalLengthSquared);
+                terminatedLanes = Vector.BitwiseOr(Vector.BitwiseAnd(targetContainedInEdgePlanes, targetOnTriangleSurface), terminatedLanes);
+                //TODO: targetToTriangle should be triangleToTarget really.
+                Vector3Wide.Negate(triangleNormal, out var negatedTriangleNormal);
+                Vector3Wide.ConditionalSelect(targetContainedInEdgePlanes, negatedTriangleNormal, targetToTriangle, out targetToTriangle);
                 relevantFeatures = Vector.ConditionalSelect(targetContainedInEdgePlanes, new Vector<int>(1 + 2 + 4), relevantFeatures);
             }
 
-            simplex.A.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, Vector<int>.One), Vector<int>.Zero);
-            simplex.B.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(2)), Vector<int>.Zero);
-            simplex.C.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(4)), Vector<int>.Zero);
-
-            Vector3Wide.LengthSquared(targetToTriangle, out var lengthSquared);
-            terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(targetContainedInEdgePlanes, Vector.LessThan(lengthSquared, searchEpsilon)));
             if (Vector.EqualsAny(terminatedLanes, Vector<int>.Zero))
             {
+                simplex.A.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, Vector<int>.One), Vector<int>.Zero);
+                simplex.B.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(2)), Vector<int>.Zero);
+                simplex.C.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(4)), Vector<int>.Zero);
+                //No active lanes can have a zero length targetToTriangle, so we can normalize safely.
+                Vector3Wide.LengthSquared(targetToTriangle, out var lengthSquared);
                 Vector3Wide.Negate(targetToTriangle, out nextNormal);
                 Vector3Wide.Scale(nextNormal, Vector<float>.One / Vector.SquareRoot(lengthSquared), out nextNormal);
             }
-      
+
             {
                 //DEBUG STUFF
                 var features = relevantFeatures[0];
@@ -336,7 +346,7 @@ namespace BepuPhysics.CollisionDetection
                     break;
 
                 GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, ref terminatedLanes, refinedNormal, refinedDepth, searchEpsilon, out normal, out debugStep);
-                
+
                 debugStep.BestDepth = refinedDepth[0];
                 Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
 
