@@ -70,24 +70,26 @@ namespace Demos.SpecializedTests
             MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(
                 aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, surfaceCastDirectionWide, new Vector<float>(1e-5f), new Vector<int>(), out var t, out var localNormal, simplexes, 100);
 
-            for (int i = 0; i < 2; ++i)
-            {
-                Vector3Wide.Normalize(localNormal, out surfaceCastDirectionWide);
-                Vector3Wide.ReadSlot(ref surfaceCastDirectionWide, 0, out surfaceCastDirection);
-                simplexes.Clear();
-                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(
-                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, surfaceCastDirectionWide, new Vector<float>(1e-5f), new Vector<int>(), out t, out localNormal, simplexes, 100);
-            }
-
-            //var iterationCount = 100000;
-            //var start = Stopwatch.GetTimestamp();
-            //for (int i = 0; i < iterationCount; ++i)
+            //for (int i = 0; i < 2; ++i)
             //{
+            //    Vector3Wide.Normalize(localNormal, out surfaceCastDirectionWide);
+            //    Vector3Wide.ReadSlot(ref surfaceCastDirectionWide, 0, out surfaceCastDirection);
+            //    simplexes.Clear();
             //    MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(
-            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, surfaceCastDirectionWide, new Vector<float>(1e-5f), new Vector<int>(), out t, out localNormal, null, 100);
+            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, surfaceCastDirectionWide, new Vector<float>(1e-5f), new Vector<int>(), out t, out localNormal, simplexes, 100);
             //}
-            //var end = Stopwatch.GetTimestamp();
-            //Console.WriteLine($"Time (ns): {(end - start) * 1e9 / (iterationCount * Stopwatch.Frequency)}");
+
+            var iterationCount = 100000;
+            surfaceCastDirection = localOffsetB;
+            Vector3Wide.Broadcast(surfaceCastDirection, out surfaceCastDirectionWide);
+            var start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < iterationCount; ++i)
+            {
+                MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(
+                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref cylinderSupportFinder, ref cylinderSupportFinder, surfaceCastDirectionWide, new Vector<float>(1e-5f), new Vector<int>(), out t, out localNormal, null, 100);
+            }
+            var end = Stopwatch.GetTimestamp();
+            Console.WriteLine($"Time (ns): {(end - start) * 1e9 / (iterationCount * Stopwatch.Frequency)}");
             this.t = t[0];
             Vector3Wide.ReadSlot(ref localNormal, 0, out this.localNormal);
         }

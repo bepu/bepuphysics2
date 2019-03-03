@@ -44,7 +44,7 @@ namespace Demos.SpecializedTests
                 //};
                 //var positionB = new Vector3(-1.437585f, 0.386236f, -1.124907f);
                 //var positionB = new Vector3(.1037585f, 1.568576f, .124907f);
-                var positionB = new Vector3(.3037585f, -1.0268576f, .824907f);
+                var positionB = new Vector3(-1.3037585f, 1.0268576f, -.824907f);
                 var localOrientationBMatrix = new Matrix3x3
                 {
                     X = new Vector3(-0.7615921f, 0.001486331f, -0.648055f),
@@ -75,20 +75,20 @@ namespace Demos.SpecializedTests
                 Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
                 steps = new List<SimplexTilterStep>();
                 SimplexTilter<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
-                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-7f), new Vector<float>(-500),
-                    out var depthWide, out var localNormalWide, steps, 1000);
+                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1f - 1e-9f), new Vector<float>(-500),
+                    out var depthWide, out var localNormalWide, steps, 50);
 
-                //const int iterationCount = 100000;
-                //var start = Stopwatch.GetTimestamp();
-                //for (int i = 0; i < iterationCount; ++i)
-                //{
-                //    SimplexTilter<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
-                //            aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-7f), new Vector<float>(-500),
-                //            out var depthWide2, out var localNormalWide2, null, 20);
-                //}
-                //var stop = Stopwatch.GetTimestamp();
-                //var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
-                //Console.WriteLine($"Time (ns): {span}");
+                const int iterationCount = 100000;
+                var start = Stopwatch.GetTimestamp();
+                for (int i = 0; i < iterationCount; ++i)
+                {
+                    SimplexTilter<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
+                            aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1 - 1e-9f), new Vector<float>(-500),
+                            out var depthWide2, out var localNormalWide2, null, 50);
+                }
+                var stop = Stopwatch.GetTimestamp();
+                var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
+                Console.WriteLine($"Time (ns): {span}");
             }
 
             //{
@@ -118,20 +118,20 @@ namespace Demos.SpecializedTests
             //    Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
             //    steps = new List<SimplexTilterStep>();
             //    SimplexTilter<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
-            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-7f), new Vector<float>(-500),
-            //        out var depthWide, out var localNormalWide, steps, 1000);
+            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1f - 1e-9f), new Vector<float>(-500),
+            //        out var depthWide, out var localNormalWide, steps, 50);
 
-            //    //const int iterationCount = 100000;
-            //    //var start = Stopwatch.GetTimestamp();
-            //    //for (int i = 0; i < iterationCount; ++i)
-            //    //{
-            //    //    SimplexTilter<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
-            //    //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-7f), new Vector<float>(-500),
-            //    //        out var depthWide2, out var localNormalWide2, null, 20);
-            //    //}
-            //    //var stop = Stopwatch.GetTimestamp();
-            //    //var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
-            //    //Console.WriteLine($"Time (ns): {span}");
+            //    const int iterationCount = 100000;
+            //    var start = Stopwatch.GetTimestamp();
+            //    for (int i = 0; i < iterationCount; ++i)
+            //    {
+            //        SimplexTilter<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
+            //            aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1 - 1e-9f), new Vector<float>(-500),
+            //            out var depthWide2, out var localNormalWide2, null, 50);
+            //    }
+            //    var stop = Stopwatch.GetTimestamp();
+            //    var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
+            //    Console.WriteLine($"Time (ns): {span}");
             //}
 
         }

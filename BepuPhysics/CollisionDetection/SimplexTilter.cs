@@ -136,7 +136,7 @@ namespace BepuPhysics.CollisionDetection
         struct HasNewSupport { }
         struct HasNoNewSupport { }
         static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth, ref Vector<int> terminatedLanes,
-            in Vector3Wide bestNormal, in Vector<float> bestDepth, ref Vector<int> previousIterationWasGJKStyle,
+            in Vector3Wide bestNormal, in Vector<float> bestDepth,
             out Vector3Wide nextNormal, out SimplexTilterStep step)
         {
             {
@@ -384,7 +384,7 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
-            in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> depth, out Vector3Wide refinedNormal, List<SimplexTilterStep> steps, int maximumIterations = 50)
+            in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> normalConvergenceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> depth, out Vector3Wide refinedNormal, List<SimplexTilterStep> steps, int maximumIterations = 50)
         {
 #if DEBUG
             Vector3Wide.LengthSquared(initialNormal, out var initialNormalLengthSquared);
@@ -393,12 +393,12 @@ namespace BepuPhysics.CollisionDetection
             FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialNormal, out var initialSupport);
             Vector3Wide.Dot(initialSupport, initialNormal, out var initialDepth);
             Create(initialNormal, initialSupport, initialDepth, out var simplex);
-            FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, initialDepth, inactiveLanes, convergenceThreshold, minimumDepthThreshold, out depth, out refinedNormal, steps, maximumIterations);
+            FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, initialDepth, inactiveLanes, normalConvergenceThreshold, minimumDepthThreshold, out depth, out refinedNormal, steps, maximumIterations);
         }
 
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
             ref Simplex simplex, in Vector<float> initialDepth,
-            in Vector<int> inactiveLanes, in Vector<float> surfaceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> refinedDepth, out Vector3Wide refinedNormal, List<SimplexTilterStep> steps, int maximumIterations = 50)
+            in Vector<int> inactiveLanes, in Vector<float> normalConvergenceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> refinedDepth, out Vector3Wide refinedNormal, List<SimplexTilterStep> steps, int maximumIterations = 50)
         {
 #if DEBUG
             Vector3Wide.LengthSquared(simplex.A.Normal, out var initialNormalLengthSquared);
@@ -413,9 +413,8 @@ namespace BepuPhysics.CollisionDetection
             {
                 return;
             }
-
-            var previousIterationWasGJKStyle = Vector<int>.Zero;
-            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, default, ref terminatedLanes, refinedNormal, refinedDepth, ref previousIterationWasGJKStyle, out var normal, out var debugStep);
+            
+            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, default, ref terminatedLanes, refinedNormal, refinedDepth, out var normal, out var debugStep);
             debugStep.BestDepth = refinedDepth[0];
             Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
             steps?.Add(debugStep);
@@ -430,8 +429,14 @@ namespace BepuPhysics.CollisionDetection
                 var useNewDepth = Vector.LessThan(depth, refinedDepth);
                 refinedDepth = Vector.ConditionalSelect(useNewDepth, depth, refinedDepth);
                 Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
+                terminatedLanes = Vector.BitwiseOr(Vector.LessThanOrEqual(refinedDepth, minimumDepthThreshold), terminatedLanes);
+                if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
+                    break;
 
-                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, ref terminatedLanes, refinedNormal, refinedDepth, ref previousIterationWasGJKStyle, out normal, out debugStep);
+                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, ref terminatedLanes, refinedNormal, refinedDepth, out normal, out debugStep);
+
+                Vector3Wide.Dot(normal, refinedNormal, out var normalDot);
+                terminatedLanes = Vector.BitwiseOr(Vector.GreaterThanOrEqual(normalDot, normalConvergenceThreshold), terminatedLanes);
 
                 debugStep.BestDepth = refinedDepth[0];
                 Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
