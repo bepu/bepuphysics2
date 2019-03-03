@@ -418,7 +418,7 @@ namespace BepuPhysics.CollisionDetection
             debugStep.BestDepth = refinedDepth[0];
             Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
             steps?.Add(debugStep);
-
+            
             for (int i = 0; i < maximumIterations; ++i)
             {
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))

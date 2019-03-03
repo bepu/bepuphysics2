@@ -78,17 +78,17 @@ namespace Demos.SpecializedTests
                     aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1f - 1e-9f), new Vector<float>(-500),
                     out var depthWide, out var localNormalWide, steps, 50);
 
-                const int iterationCount = 100000;
-                var start = Stopwatch.GetTimestamp();
-                for (int i = 0; i < iterationCount; ++i)
-                {
-                    SimplexTilter<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
-                            aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1 - 1e-9f), new Vector<float>(-500),
-                            out var depthWide2, out var localNormalWide2, null, 50);
-                }
-                var stop = Stopwatch.GetTimestamp();
-                var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
-                Console.WriteLine($"Time (ns): {span}");
+                //const int iterationCount = 100000;
+                //var start = Stopwatch.GetTimestamp();
+                //for (int i = 0; i < iterationCount; ++i)
+                //{
+                //    SimplexTilter<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
+                //            aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1 - 1e-9f), new Vector<float>(-500),
+                //            out var depthWide2, out var localNormalWide2, null, 50);
+                //}
+                //var stop = Stopwatch.GetTimestamp();
+                //var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
+                //Console.WriteLine($"Time (ns): {span}");
             }
 
             //{

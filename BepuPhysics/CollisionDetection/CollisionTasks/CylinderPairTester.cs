@@ -398,10 +398,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //localNormal = newLocalNormal;
             //depth = newDepth;
 
-            PlaneWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
-                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, initialSupport, depth, inactiveLanes, new Vector<float>(1e-20f), -speculativeMargin, out var newDepth, out var newLocalNormal, null, 500);
+            //PlaneWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
+            //    b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, initialSupport, depth, inactiveLanes, new Vector<float>(1e-20f), -speculativeMargin, out var newDepth, out var newLocalNormal, null, 500);
             //PlaneWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindSupport(
-            //  b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, newLocalNormal, out var testSupport);
+            //  b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, newLocalNormal, out var testSupport);            
+            SimplexTilter<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
+                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, inactiveLanes, new Vector<float>(1f - 1e-10f), -speculativeMargin, out var newDepth, out var newLocalNormal, null, 1000);
             //Vector3Wide.Dot(testSupport, newLocalNormal, out var testDepth);
             //Debug.Assert(Vector.Abs(testDepth - newDepth)[0] < 1e-6f, "Bad refined normal.");
             localNormal = newLocalNormal;
