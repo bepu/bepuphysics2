@@ -36,22 +36,24 @@ namespace Demos.SpecializedTests
                 var poseA = new RigidPose(new Vector3(0, 0, 0));
                 var shapeB = new Cylinder(1f, 2f);
                 //var positionB = new Vector3(-0.2570486f, 1.780561f, -1.033215f);
-                var positionB = new Vector3(-0.5570486f, -0.580561f, .033215f);
-                var localOrientationBMatrix = new Matrix3x3
-                {
-                    X = new Vector3(0.9756086f, 0.1946615f, 0.101463f),
-                    Y = new Vector3(-0.1539477f, 0.9362175f, -0.3159063f),
-                    Z = new Vector3(-0.1564862f, 0.2925809f, 0.9433496f)
-                };
+                //var positionB = new Vector3(-1.0570486f, -.380561f, 1.0833215f);
+                //var positionB = new Vector3(-1.5570486f, -.580561f, .033215f);
+                //var localOrientationBMatrix = new Matrix3x3
+                //{
+                //    X = new Vector3(0.9756086f, 0.1946615f, 0.101463f),
+                //    Y = new Vector3(-0.1539477f, 0.9362175f, -0.3159063f),
+                //    Z = new Vector3(-0.1564862f, 0.2925809f, 0.9433496f)
+                //};
                 //var positionB = new Vector3(-1.437585f, 0.386236f, -1.124907f);
                 //var positionB = new Vector3(.1037585f, 1.568576f, .124907f);
                 //var positionB = new Vector3(1.037585f, .7568576f, 0.90424907f);
-                //var localOrientationBMatrix = new Matrix3x3
-                //{
-                //    X = new Vector3(-0.7615921f, 0.001486331f, -0.648055f),
-                //    Y = new Vector3(0.6341797f, 0.2075436f, -0.7448099f),
-                //    Z = new Vector3(-0.1333926f, -0.9782246f, -0.1590062f)
-                //};
+                var positionB = new Vector3(4.037585f, 2.7568576f, 2.90424907f);
+                var localOrientationBMatrix = new Matrix3x3
+                {
+                    X = new Vector3(-0.7615921f, 0.001486331f, -0.648055f),
+                    Y = new Vector3(0.6341797f, 0.2075436f, -0.7448099f),
+                    Z = new Vector3(-0.1333926f, -0.9782246f, -0.1590062f)
+                };
                 //var poseB = new RigidPose(new Vector3(-0.2570486f, 1.780561f, -1.033215f), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathF.PI * 0.35f));
                 var poseB = new RigidPose(positionB, Quaternion.CreateFromRotationMatrix(localOrientationBMatrix));
 
@@ -76,7 +78,7 @@ namespace Demos.SpecializedTests
                 Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
                 steps = new List<DepthRefinerStep>();
                 DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
-                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-15f), new Vector<float>(-500),
+                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-6f), new Vector<float>(-500),
                     out var depthWide, out var localNormalWide, steps, 50);
 
                 //const int iterationCount = 100000;
@@ -202,7 +204,7 @@ namespace Demos.SpecializedTests
             renderer.Lines.Allocate() = new LineInstance(basePosition + step.ClosestPointOnTriangle, searchTarget, new Vector3(0.5f, 0, 0), default);
             renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.NextNormal, new Vector3(1, 0, 1), default);
 
-            
+
             base.Render(renderer, camera, input, text, font);
         }
     }

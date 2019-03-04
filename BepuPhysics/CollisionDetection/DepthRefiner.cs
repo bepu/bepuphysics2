@@ -104,8 +104,8 @@ namespace BepuPhysics.CollisionDetection
 
         struct HasNewSupport { }
         struct HasNoNewSupport { }
-        static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide normal, in Vector<float> depth, ref Vector<int> terminatedLanes,
-            in Vector3Wide bestNormal, in Vector<float> bestDepth, in Vector<float> searchEpsilon,
+        static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide support, ref Vector<int> terminatedLanes,
+            in Vector3Wide bestNormal, in Vector<float> bestDepth, in Vector<float> convergenceThreshold,
             out Vector3Wide nextNormal, out DepthRefinerStep step)
         {
             {
@@ -121,7 +121,13 @@ namespace BepuPhysics.CollisionDetection
                 step.D.Exists = typeof(T) == typeof(HasNewSupport);
             }
 
+            //In the penetrating case, the search target is the closest point to the origin on the so-far-best bounding plane.
+            //In the separated case, it's just the origin itself.
+            //Termination conditions are based on the distance to the search target. In the penetrating case, we try to approach zero distance.
+            //The separated case makes use of the fact that the bestDepth and distance to closest point only converge when the offset and best normal align.
             Vector3Wide.Scale(bestNormal, Vector.Max(Vector<float>.Zero, bestDepth), out var searchTarget);
+            var terminationEpsilon = Vector.ConditionalSelect(Vector.LessThan(bestDepth, Vector<float>.Zero), convergenceThreshold - bestDepth, convergenceThreshold);
+            var terminationEpsilonSquared = terminationEpsilon * terminationEpsilon;
 
             if (typeof(T) == typeof(HasNewSupport))
             {
@@ -214,14 +220,19 @@ namespace BepuPhysics.CollisionDetection
 
             //Compute the direction from the origin to the closest point on the triangle.
             //If the simplex is degenerate and just a vertex, pick the first simplex entry as representative.
-            var targetToTriangle = targetToA;
+            Vector3Wide.Negate(targetToA, out var triangleToTarget);
+
+            {
+                //DEBUG STUFF
+                Vector3Wide.ReadFirst(simplex.A.Support, out step.ClosestPointOnTriangle);
+            }
 
             var relevantFeatures = Vector<int>.One;
 
             var useEdge = Vector.BitwiseOr(targetOutsideTriangleEdges, simplexIsAnEdge);
             //If this is a vertex case and the sample is right on top of the origin, immediately quit.
-            Vector3Wide.LengthSquared(targetToTriangle, out var vertexLengthSquared);
-            terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(simplexIsAVertex, Vector.LessThan(vertexLengthSquared, searchEpsilon)));
+            Vector3Wide.LengthSquared(targetToA, out var vertexLengthSquared);
+            terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(simplexIsAVertex, Vector.LessThan(vertexLengthSquared, terminationEpsilonSquared)));
 
             if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
             {
@@ -235,11 +246,11 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.Subtract(searchTarget, edgeStart, out var edgeStartToSearchTarget);
                 Vector3Wide.Dot(edgeStartToSearchTarget, edgeOffset, out var startDot);
                 var t = Vector.ConditionalSelect(Vector.GreaterThan(edgeLengthSquared, Vector<float>.Zero), Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, startDot * inverseEdgeLengthSquared)), Vector<float>.Zero);
-                Vector3Wide.Scale(edgeOffset, t, out var negatedScaledOffset);
-                Vector3Wide.Add(negatedScaledOffset, edgeStart, out var targetToTriangleCandidate);
-                Vector3Wide.Subtract(targetToTriangleCandidate, searchTarget, out targetToTriangleCandidate);
-                Vector3Wide.LengthSquared(targetToTriangleCandidate, out var candidateLengthSquared);
-                var targetIsOnEdge = Vector.LessThan(candidateLengthSquared, searchEpsilon);
+                Vector3Wide.Scale(edgeOffset, t, out var scaledOffset);
+                Vector3Wide.Add(scaledOffset, edgeStart, out var nearestPointOnEdge);
+                Vector3Wide.Subtract(searchTarget, nearestPointOnEdge,  out var triangleToTargetCandidate);
+                Vector3Wide.LengthSquared(triangleToTargetCandidate, out var candidateLengthSquared);
+                var targetIsOnEdge = Vector.LessThan(candidateLengthSquared, terminationEpsilonSquared);
                 //If the search target is on the edge, we can immediately quit.
                 terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(useEdge, targetIsOnEdge));
 
@@ -249,7 +260,15 @@ namespace BepuPhysics.CollisionDetection
                 var featureForBC = Vector.ConditionalSelect(originNearestStart, new Vector<int>(2), Vector.ConditionalSelect(originNearestEnd, new Vector<int>(4), new Vector<int>(2 + 4)));
                 var featureForCA = Vector.ConditionalSelect(originNearestStart, new Vector<int>(4), Vector.ConditionalSelect(originNearestEnd, Vector<int>.One, new Vector<int>(4 + 1)));
                 relevantFeatures = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, featureForAB, Vector.ConditionalSelect(useBC, featureForBC, featureForCA)), relevantFeatures);
-                Vector3Wide.ConditionalSelect(useEdge, targetToTriangleCandidate, targetToTriangle, out targetToTriangle);
+                Vector3Wide.ConditionalSelect(useEdge, triangleToTargetCandidate, triangleToTarget, out triangleToTarget);
+
+                {
+                    //DEBUG STUFF
+                    if (useEdge[0] < 0)
+                    {
+                        Vector3Wide.ReadFirst(nearestPointOnEdge, out step.ClosestPointOnTriangle);
+                    }
+                }
             }
 
             //We've examined the vertex and edge case, now we need to check the triangle face case.
@@ -266,13 +285,27 @@ namespace BepuPhysics.CollisionDetection
                 //dot(n, searchTarget - a)^2 / ||n||^2
                 //Then the comparison can performed with a multiplication rather than a division.
                 Vector3Wide.Dot(targetToA, triangleNormal, out var targetToADot);
-                var targetOnTriangleSurface = Vector.LessThan(targetToADot * targetToADot, searchEpsilon * triangleNormalLengthSquared);
+                var targetOnTriangleSurface = Vector.LessThan(targetToADot * targetToADot, terminationEpsilonSquared * triangleNormalLengthSquared);
                 terminatedLanes = Vector.BitwiseOr(Vector.BitwiseAnd(targetContainedInEdgePlanes, targetOnTriangleSurface), terminatedLanes);
-                //TODO: targetToTriangle should be triangleToTarget really.
-                Vector3Wide.Negate(triangleNormal, out var negatedTriangleNormal);
-                Vector3Wide.ConditionalSelect(targetContainedInEdgePlanes, negatedTriangleNormal, targetToTriangle, out targetToTriangle);
+                Vector3Wide.ConditionalSelect(targetContainedInEdgePlanes, triangleNormal, triangleToTarget, out triangleToTarget);
                 relevantFeatures = Vector.ConditionalSelect(targetContainedInEdgePlanes, new Vector<int>(1 + 2 + 4), relevantFeatures);
+
+                {
+                    //DEBUG STUFF
+                    if (targetContainedInEdgePlanes[0] < 0)
+                    {
+                        Vector3Wide.ReadFirst(triangleNormal, out var triangleNormalNarrow);
+                        Vector3Wide.ReadFirst(searchTarget, out var searchTargetNarrow);
+                        step.ClosestPointOnTriangle = triangleNormalNarrow * targetToADot[0] / triangleNormalLengthSquared[0] + searchTargetNarrow;
+                    }
+                }
             }
+
+            //In fairly rare cases near penetrating convergence, it's possible for the triangle->target offset to point nearly 90 degrees away from the previous best.
+            //This doesn't break convergence, but it can slow it down. To avoid it, use the offset to tilt the normal rather than using the offset directly.
+            Vector3Wide.Scale(triangleToTarget, new Vector<float>(4f), out var pushOffset);
+            Vector3Wide.Add(searchTarget, pushOffset, out var pushNormalCandidate);
+            Vector3Wide.ConditionalSelect(Vector.BitwiseOr(Vector.LessThanOrEqual(bestDepth, Vector<float>.Zero), targetContainedInEdgePlanes), triangleToTarget, pushNormalCandidate, out triangleToTarget);
 
             if (Vector.EqualsAny(terminatedLanes, Vector<int>.Zero))
             {
@@ -280,10 +313,10 @@ namespace BepuPhysics.CollisionDetection
                 simplex.B.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(2)), Vector<int>.Zero);
                 simplex.C.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(4)), Vector<int>.Zero);
                 //No active lanes can have a zero length targetToTriangle, so we can normalize safely.
-                Vector3Wide.LengthSquared(targetToTriangle, out var lengthSquared);
-                Vector3Wide.Negate(targetToTriangle, out nextNormal);
-                Vector3Wide.Scale(nextNormal, Vector<float>.One / Vector.SquareRoot(lengthSquared), out nextNormal);
+                Vector3Wide.LengthSquared(triangleToTarget, out var lengthSquared);
+                Vector3Wide.Scale(triangleToTarget, Vector<float>.One / Vector.SquareRoot(lengthSquared), out nextNormal);
             }
+
 
             {
                 //DEBUG STUFF
@@ -291,8 +324,6 @@ namespace BepuPhysics.CollisionDetection
                 var vertexCount = (features & 1) + ((features & 2) >> 1) + ((features & 4) >> 2);
                 step.NextNormalSource = (DepthRefinerNormalSource)vertexCount;
                 Vector3Wide.ReadFirst(nextNormal, out step.NextNormal);
-                Vector3Wide.Add(targetToTriangle, searchTarget, out var closestOnTriangle);
-                Vector3Wide.ReadFirst(closestOnTriangle, out step.ClosestPointOnTriangle);
             }
         }
 
@@ -313,7 +344,7 @@ namespace BepuPhysics.CollisionDetection
 
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
             ref Simplex simplex, Vector3Wide initialNormal, in Vector<float> initialDepth,
-            in Vector<int> inactiveLanes, in Vector<float> searchEpsilon, in Vector<float> minimumDepthThreshold, out Vector<float> refinedDepth, out Vector3Wide refinedNormal, List<DepthRefinerStep> steps, int maximumIterations = 50)
+            in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, out Vector<float> refinedDepth, out Vector3Wide refinedNormal, List<DepthRefinerStep> steps, int maximumIterations = 50)
         {
             var depthBelowThreshold = Vector.LessThan(initialDepth, minimumDepthThreshold);
             var terminatedLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
@@ -325,7 +356,7 @@ namespace BepuPhysics.CollisionDetection
                 return;
             }
 
-            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, default, ref terminatedLanes, refinedNormal, refinedDepth, searchEpsilon, out var normal, out var debugStep);
+            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out var normal, out var debugStep);
             debugStep.BestDepth = refinedDepth[0];
             Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
             steps?.Add(debugStep);
@@ -345,7 +376,7 @@ namespace BepuPhysics.CollisionDetection
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
 
-                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, normal, depth, ref terminatedLanes, refinedNormal, refinedDepth, searchEpsilon, out normal, out debugStep);
+                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out normal, out debugStep);
 
                 debugStep.BestDepth = refinedDepth[0];
                 Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
