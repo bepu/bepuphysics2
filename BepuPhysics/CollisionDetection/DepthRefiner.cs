@@ -32,6 +32,7 @@ namespace BepuPhysics.CollisionDetection
         public DepthRefinerVertex D;
         public DepthRefinerNormalSource NextNormalSource;
         public Vector3 ClosestPointOnTriangle;
+        public Vector3 SearchTarget;
         public Vector3 NextNormal;
 
         public float BestDepth;
@@ -108,6 +109,13 @@ namespace BepuPhysics.CollisionDetection
             in Vector3Wide bestNormal, in Vector<float> bestDepth, in Vector<float> convergenceThreshold,
             out Vector3Wide nextNormal, out DepthRefinerStep step)
         {
+            //In the penetrating case, the search target is the closest point to the origin on the so-far-best bounding plane.
+            //In the separated case, it's just the origin itself.
+            //Termination conditions are based on the distance to the search target. In the penetrating case, we try to approach zero distance.
+            //The separated case makes use of the fact that the bestDepth and distance to closest point only converge when the offset and best normal align.
+            Vector3Wide.Scale(bestNormal, Vector.Max(Vector<float>.Zero, bestDepth), out var searchTarget);
+            var terminationEpsilon = Vector.ConditionalSelect(Vector.LessThan(bestDepth, Vector<float>.Zero), convergenceThreshold - bestDepth, convergenceThreshold);
+            var terminationEpsilonSquared = terminationEpsilon * terminationEpsilon;
             {
                 //DEBUG STUFF
                 step = default;
@@ -119,15 +127,9 @@ namespace BepuPhysics.CollisionDetection
                 step.B.Exists = simplex.B.Exists[0] < 0;
                 step.C.Exists = simplex.C.Exists[0] < 0;
                 step.D.Exists = typeof(T) == typeof(HasNewSupport);
+                Vector3Wide.ReadFirst(searchTarget, out step.SearchTarget);
             }
 
-            //In the penetrating case, the search target is the closest point to the origin on the so-far-best bounding plane.
-            //In the separated case, it's just the origin itself.
-            //Termination conditions are based on the distance to the search target. In the penetrating case, we try to approach zero distance.
-            //The separated case makes use of the fact that the bestDepth and distance to closest point only converge when the offset and best normal align.
-            Vector3Wide.Scale(bestNormal, Vector.Max(Vector<float>.Zero, bestDepth), out var searchTarget);
-            var terminationEpsilon = Vector.ConditionalSelect(Vector.LessThan(bestDepth, Vector<float>.Zero), convergenceThreshold - bestDepth, convergenceThreshold);
-            var terminationEpsilonSquared = terminationEpsilon * terminationEpsilon;
 
             if (typeof(T) == typeof(HasNewSupport))
             {
@@ -210,12 +212,6 @@ namespace BepuPhysics.CollisionDetection
             var shouldCalibrate = Vector.LessThan(calibrationDot, Vector<float>.Zero);
             Vector3Wide.ConditionallyNegate(Vector.LessThan(calibrationDot, Vector<float>.Zero), ref triangleNormal);
 
-            //If the simplex is degenerate and has length, use the longest edge. Otherwise, just use an edge whose plane is violated.
-            //Note that if there are two edges with violated edge planes, simply picking one does not guarantee that the resulting closest point
-            //will be the globally closest point on the triangle. It *usually* works out, though, and when it fails, the cost
-            //is generally just an extra iteration or two- not a huge deal, and we get to avoid doing more than one edge test every iteration.
-            var useAB = Vector.BitwiseOr(Vector.AndNot(outsideAB, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, abLengthSquared), simplexDegenerate));
-            var useBC = Vector.BitwiseOr(Vector.AndNot(outsideBC, simplexDegenerate), Vector.BitwiseAnd(Vector.Equals(longestEdgeLengthSquared, bcLengthSquared), simplexDegenerate));
             var targetOutsideTriangleEdges = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideBC, outsideCA));
 
             //Compute the direction from the origin to the closest point on the triangle.
@@ -231,42 +227,78 @@ namespace BepuPhysics.CollisionDetection
 
             var useEdge = Vector.BitwiseOr(targetOutsideTriangleEdges, simplexIsAnEdge);
             //If this is a vertex case and the sample is right on top of the origin, immediately quit.
-            Vector3Wide.LengthSquared(targetToA, out var vertexLengthSquared);
-            terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(simplexIsAVertex, Vector.LessThan(vertexLengthSquared, terminationEpsilonSquared)));
+            Vector3Wide.LengthSquared(targetToA, out var targetToALengthSquared);
+            terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(simplexIsAVertex, Vector.LessThan(targetToALengthSquared, terminationEpsilonSquared)));
 
             if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
             {
+                //Choose the edge that is closest to the search target. Note that we can compute the closest edge distance without performing a division:
+                //distance squared from ab to target o = ||a - o + ab * t||^2
+                //t = clamp(dot(ab, ao), 0, ||ab||^2) / ||ab||^2
+                //dot(oa, oa) + 2 * dot(oa, ab) * t + dot(ab, ab) * t^2
+                //dot(oa, oa) + 2 * dot(oa, ab) * clamp(dot(ab, ao)) / ||ab||^2 + dot(ab, ab) * t^2
+                //dot(oa, oa) + 2 * dot(oa, ab) * clamp(dot(ab, ao)) / ||ab||^2 + dot(ab, ab) * clamp(dot(ab, ao))^2 / ||ab||^4
+                //dot(oa, oa) + 2 * dot(oa, ab) * clamp(-dot(ab, oa)) / ||ab||^2 + clamp(-dot(ab, oa))^2 / ||ab||^2
+                //abDistanceSquared = (dot(oa, oa) * ||ab||^2 + 2 * dot(oa, ab) * clamp(-dot(ab, oa)) + clamp(-dot(ab, oa))^2) / ||ab||^2
+                //abDistanceSquaredNumerator / ||ab||^2 <= bcDistanceSquaredNumerator / ||bc||^2
+                //abDistanceSquaredNumerator * ||bc||^2 <= bcDistanceSquaredNumerator * ||ab||^2
+                Vector3Wide.Subtract(simplex.B.Support, searchTarget, out var targetToB);
+                Vector3Wide.LengthSquared(targetToC, out var targetToCLengthSquared);
+                Vector3Wide.LengthSquared(targetToB, out var targetToBLengthSquared);
+                Vector3Wide.Dot(targetToA, ab, out var oaDotAB);
+                Vector3Wide.Dot(targetToB, bc, out var obDotBC);
+                Vector3Wide.Dot(targetToC, ca, out var ocDotCA);
+                var abScaledT = Vector.Max(Vector<float>.Zero, Vector.Min(abLengthSquared, -oaDotAB));
+                var bcScaledT = Vector.Max(Vector<float>.Zero, Vector.Min(bcLengthSquared, -obDotBC));
+                var caScaledT = Vector.Max(Vector<float>.Zero, Vector.Min(caLengthSquared, -ocDotCA));
+                var two = new Vector<float>(2);
+                var abScaledDistanceSquared = targetToALengthSquared * abLengthSquared + two * oaDotAB * abScaledT + abScaledT * abScaledT;
+                var bcScaledDistanceSquared = targetToBLengthSquared * bcLengthSquared + two * obDotBC * bcScaledT + bcScaledT * bcScaledT;
+                var caScaledDistanceSquared = targetToCLengthSquared * caLengthSquared + two * ocDotCA * caScaledT + caScaledT * caScaledT;
+
+                var bcDegenerate = Vector.Equals(bcLengthSquared, Vector<float>.Zero);
+                var caDegenerate = Vector.Equals(caLengthSquared, Vector<float>.Zero);
+                var abCloserThanBC = Vector.BitwiseOr(bcDegenerate, Vector.LessThan(abScaledDistanceSquared * bcLengthSquared, bcScaledDistanceSquared * abLengthSquared));
+                var abCloserThanCA = Vector.BitwiseOr(caDegenerate, Vector.LessThan(abScaledDistanceSquared * caLengthSquared, caScaledDistanceSquared * abLengthSquared));
+                var bcCloserThanCA = Vector.BitwiseOr(caDegenerate, Vector.LessThan(bcScaledDistanceSquared * caLengthSquared, caScaledDistanceSquared * bcLengthSquared));
+
+                var useAB = Vector.BitwiseAnd(abCloserThanBC, abCloserThanCA);
+                var useBC = Vector.AndNot(bcCloserThanCA, useAB);
+
+                var bestScaledDistanceSquared = Vector.ConditionalSelect(useAB, abScaledDistanceSquared, Vector.ConditionalSelect(useBC, bcScaledDistanceSquared, caScaledDistanceSquared));
                 var edgeLengthSquared = Vector.ConditionalSelect(useAB, abLengthSquared, Vector.ConditionalSelect(useBC, bcLengthSquared, caLengthSquared));
-                var inverseEdgeLengthSquared = Vector<float>.One / edgeLengthSquared;
-                Vector3Wide.ConditionalSelect(useAB, ab, ca, out var edgeOffset);
-                Vector3Wide.ConditionalSelect(useAB, simplex.A.Support, simplex.C.Support, out var edgeStart);
-                Vector3Wide.ConditionalSelect(useBC, bc, edgeOffset, out edgeOffset);
-                Vector3Wide.ConditionalSelect(useBC, simplex.B.Support, edgeStart, out edgeStart);
 
-                Vector3Wide.Subtract(searchTarget, edgeStart, out var edgeStartToSearchTarget);
-                Vector3Wide.Dot(edgeStartToSearchTarget, edgeOffset, out var startDot);
-                var t = Vector.ConditionalSelect(Vector.GreaterThan(edgeLengthSquared, Vector<float>.Zero), Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, startDot * inverseEdgeLengthSquared)), Vector<float>.Zero);
-                Vector3Wide.Scale(edgeOffset, t, out var scaledOffset);
-                Vector3Wide.Add(scaledOffset, edgeStart, out var nearestPointOnEdge);
-                Vector3Wide.Subtract(searchTarget, nearestPointOnEdge,  out var triangleToTargetCandidate);
-                Vector3Wide.LengthSquared(triangleToTargetCandidate, out var candidateLengthSquared);
-                var targetIsOnEdge = Vector.LessThan(candidateLengthSquared, terminationEpsilonSquared);
                 //If the search target is on the edge, we can immediately quit.
-                terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(useEdge, targetIsOnEdge));
+                terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(useEdge, Vector.LessThanOrEqual(bestScaledDistanceSquared, terminationEpsilonSquared * edgeLengthSquared)));
 
-                var originNearestStart = Vector.Equals(t, Vector<float>.Zero);
-                var originNearestEnd = Vector.Equals(t, Vector<float>.One);
-                var featureForAB = Vector.ConditionalSelect(originNearestStart, Vector<int>.One, Vector.ConditionalSelect(originNearestEnd, new Vector<int>(2), new Vector<int>(1 + 2)));
-                var featureForBC = Vector.ConditionalSelect(originNearestStart, new Vector<int>(2), Vector.ConditionalSelect(originNearestEnd, new Vector<int>(4), new Vector<int>(2 + 4)));
-                var featureForCA = Vector.ConditionalSelect(originNearestStart, new Vector<int>(4), Vector.ConditionalSelect(originNearestEnd, Vector<int>.One, new Vector<int>(4 + 1)));
-                relevantFeatures = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, featureForAB, Vector.ConditionalSelect(useBC, featureForBC, featureForCA)), relevantFeatures);
-                Vector3Wide.ConditionalSelect(useEdge, triangleToTargetCandidate, triangleToTarget, out triangleToTarget);
-
+                //TODO: Wrapping this in a condition under the assumption that we just terminated is a little iffy. Measure.
+                if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
                 {
-                    //DEBUG STUFF
-                    if (useEdge[0] < 0)
+                    var t = Vector.ConditionalSelect(useAB, abScaledT, Vector.ConditionalSelect(useBC, bcScaledT, caScaledT)) / edgeLengthSquared;
+                    Vector3Wide.ConditionalSelect(useAB, ab, ca, out var edgeOffset);
+                    Vector3Wide.ConditionalSelect(useAB, targetToA, targetToC, out var edgeStart);
+                    Vector3Wide.ConditionalSelect(useBC, bc, edgeOffset, out edgeOffset);
+                    Vector3Wide.ConditionalSelect(useBC, targetToB, edgeStart, out edgeStart);
+
+                    Vector3Wide.Scale(edgeOffset, -t, out var scaledOffset);
+                    Vector3Wide.Subtract(scaledOffset, edgeStart, out var triangleToTargetCandidate);
+                    //Vector3Wide.Subtract(searchTarget, nearestPointOnEdge, out var triangleToTargetCandidate);
+
+                    var originNearestStart = Vector.Equals(t, Vector<float>.Zero);
+                    var originNearestEnd = Vector.Equals(t, Vector<float>.One);
+                    var featureForAB = Vector.ConditionalSelect(originNearestStart, Vector<int>.One, Vector.ConditionalSelect(originNearestEnd, new Vector<int>(2), new Vector<int>(1 + 2)));
+                    var featureForBC = Vector.ConditionalSelect(originNearestStart, new Vector<int>(2), Vector.ConditionalSelect(originNearestEnd, new Vector<int>(4), new Vector<int>(2 + 4)));
+                    var featureForCA = Vector.ConditionalSelect(originNearestStart, new Vector<int>(4), Vector.ConditionalSelect(originNearestEnd, Vector<int>.One, new Vector<int>(4 + 1)));
+                    relevantFeatures = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, featureForAB, Vector.ConditionalSelect(useBC, featureForBC, featureForCA)), relevantFeatures);
+                    Vector3Wide.ConditionalSelect(useEdge, triangleToTargetCandidate, triangleToTarget, out triangleToTarget);
+
                     {
-                        Vector3Wide.ReadFirst(nearestPointOnEdge, out step.ClosestPointOnTriangle);
+                        //DEBUG STUFF
+                        if (useEdge[0] < 0)
+                        {
+                            Vector3Wide.ReadFirst(triangleToTargetCandidate, out var triangleToTargetCandidateNarrow);
+                            step.ClosestPointOnTriangle = step.SearchTarget - triangleToTargetCandidateNarrow;
+                        }
                     }
                 }
             }
@@ -281,7 +313,8 @@ namespace BepuPhysics.CollisionDetection
 
                 //||searchTarget-closestOnTriangle||^2 = ||(dot(n/||n||, searchTarget - a) * n/||n||)||^2
                 //||(dot(n, searchTarget - a) / ||n||^2) * n||^2
-                //||n||^2 * (dot(n, searchTarget - a) / ||n||^2)^2
+                //((dot(n, searchTarget - a) / ||n||^2))^2 * ||n||^2
+                //((dot(n, searchTarget - a)^2 / ||n||^4)) * ||n||^2
                 //dot(n, searchTarget - a)^2 / ||n||^2
                 //Then the comparison can performed with a multiplication rather than a division.
                 Vector3Wide.Dot(targetToA, triangleNormal, out var targetToADot);

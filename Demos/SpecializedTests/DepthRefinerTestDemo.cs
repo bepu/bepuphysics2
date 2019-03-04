@@ -35,25 +35,27 @@ namespace Demos.SpecializedTests
                 var shapeA = new Cylinder(0.5f, 1f);
                 var poseA = new RigidPose(new Vector3(0, 0, 0));
                 var shapeB = new Cylinder(1f, 2f);
-                //var positionB = new Vector3(-0.2570486f, 1.780561f, -1.033215f);
+                //var positionB = new Vector3(-0.2570486f, 0.780561f, -1.033215f);
+                //var positionB = new Vector3(-0.2570486f, 5.780561f, -1.033215f);
                 //var positionB = new Vector3(-1.0570486f, -.380561f, 1.0833215f);
-                //var positionB = new Vector3(-1.5570486f, -.580561f, .033215f);
-                //var localOrientationBMatrix = new Matrix3x3
-                //{
-                //    X = new Vector3(0.9756086f, 0.1946615f, 0.101463f),
-                //    Y = new Vector3(-0.1539477f, 0.9362175f, -0.3159063f),
-                //    Z = new Vector3(-0.1564862f, 0.2925809f, 0.9433496f)
-                //};
+                var positionB = new Vector3(-1.5570486f, -.580561f, .033215f);
+                var localOrientationBMatrix = new Matrix3x3
+                {
+                    X = new Vector3(0.9756086f, 0.1946615f, 0.101463f),
+                    Y = new Vector3(-0.1539477f, 0.9362175f, -0.3159063f),
+                    Z = new Vector3(-0.1564862f, 0.2925809f, 0.9433496f)
+                };
                 //var positionB = new Vector3(-1.437585f, 0.386236f, -1.124907f);
                 //var positionB = new Vector3(.1037585f, 1.568576f, .124907f);
                 //var positionB = new Vector3(1.037585f, .7568576f, 0.90424907f);
-                var positionB = new Vector3(4.037585f, 2.7568576f, 2.90424907f);
-                var localOrientationBMatrix = new Matrix3x3
-                {
-                    X = new Vector3(-0.7615921f, 0.001486331f, -0.648055f),
-                    Y = new Vector3(0.6341797f, 0.2075436f, -0.7448099f),
-                    Z = new Vector3(-0.1333926f, -0.9782246f, -0.1590062f)
-                };
+                //var positionB = new Vector3(4.037585f, 2.7568576f, 2.90424907f);
+                //var positionB = new Vector3(3.037585f, 1.7568576f, 1.90424907f);
+                //var localOrientationBMatrix = new Matrix3x3
+                //{
+                //    X = new Vector3(-0.7615921f, 0.001486331f, -0.648055f),
+                //    Y = new Vector3(0.6341797f, 0.2075436f, -0.7448099f),
+                //    Z = new Vector3(-0.1333926f, -0.9782246f, -0.1590062f)
+                //};
                 //var poseB = new RigidPose(new Vector3(-0.2570486f, 1.780561f, -1.033215f), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathF.PI * 0.35f));
                 var poseB = new RigidPose(positionB, Quaternion.CreateFromRotationMatrix(localOrientationBMatrix));
 
@@ -81,62 +83,76 @@ namespace Demos.SpecializedTests
                     aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-6f), new Vector<float>(-500),
                     out var depthWide, out var localNormalWide, steps, 50);
 
-                //const int iterationCount = 100000;
-                //var start = Stopwatch.GetTimestamp();
-                //for (int i = 0; i < iterationCount; ++i)
-                //{
-                //    DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
-                //            aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-15f), new Vector<float>(-500),
-                //            out var depthWide2, out var localNormalWide2, null, 20);
-                //}
-                //var stop = Stopwatch.GetTimestamp();
-                //var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
-                //Console.WriteLine($"Time (ns): {span}");
+                const int iterationCount = 100000;
+                double minTime = double.MaxValue;
+                for (int j = 0; j < 10; ++j)
+                {
+                    var start = Stopwatch.GetTimestamp();
+                    for (int i = 0; i < iterationCount; ++i)
+                    {
+                        DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
+                                aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-6f), new Vector<float>(-500),
+                                out var depthWide2, out var localNormalWide2, null, 50);
+                    }
+                    var stop = Stopwatch.GetTimestamp();
+                    var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
+                    Console.WriteLine($"Time {j} (ns): {span}");
+                    minTime = Math.Min(span, minTime);
+                }
+                Console.WriteLine($"Best time cylinders (ns): {minTime}, {steps.Count - 1} iterations");
             }
 
-            //{
-            //    var shapeA = new Box(1f, 1f, 1f);
-            //    var poseA = new RigidPose(new Vector3(0, 0, 0));
-            //    var shapeB = new Box(1f, 1f, 1f);
-            //    var poseB = new RigidPose(new Vector3(-1.9f, -0.8f, 0.7f), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathHelper.PiOver2));
+            Console.WriteLine();
+            {
+                var shapeA = new Box(1f, 1f, 1f);
+                var poseA = new RigidPose(new Vector3(0, 0, 0));
+                var shapeB = new Box(1f, 1f, 1f);
+                var poseB = new RigidPose(new Vector3(-.9f, -0.8f, 0.7f), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathHelper.PiOver2));
 
-            //    basePosition = default;
-            //    shapeLines = MinkowskiShapeVisualizer.CreateLines<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>(
-            //        shapeA, shapeB, poseA, poseB, 65536,
-            //        0.01f, new Vector3(0.4f, 0.4f, 0),
-            //        0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
+                basePosition = default;
+                shapeLines = MinkowskiShapeVisualizer.CreateLines<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>(
+                    shapeA, shapeB, poseA, poseB, 65536,
+                    0.01f, new Vector3(0.4f, 0.4f, 0),
+                    0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
 
-            //    var aWide = default(BoxWide);
-            //    var bWide = default(BoxWide);
-            //    aWide.Broadcast(shapeA);
-            //    bWide.Broadcast(shapeB);
-            //    var worldOffsetB = poseB.Position - poseA.Position;
-            //    var localOrientationB = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseB.Orientation, Quaternion.Conjugate(poseA.Orientation)));
-            //    var localOffsetB = Quaternion.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
-            //    Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
-            //    Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
-            //    var supportFinder = default(BoxSupportFinder);
+                var aWide = default(BoxWide);
+                var bWide = default(BoxWide);
+                aWide.Broadcast(shapeA);
+                bWide.Broadcast(shapeB);
+                var worldOffsetB = poseB.Position - poseA.Position;
+                var localOrientationB = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseB.Orientation, Quaternion.Conjugate(poseA.Orientation)));
+                var localOffsetB = Quaternion.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
+                Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
+                Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
+                var supportFinder = default(BoxSupportFinder);
 
-            //    var initialNormal = Vector3.Normalize(localOffsetB);
-            //    Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
-            //    steps = new List<DepthRefinerStep>();
-            //    DepthRefiner<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
-            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-12f), new Vector<float>(-500),
-            //        out var depthWide, out var localNormalWide, steps, 50);
+                var initialNormal = Vector3.Normalize(localOffsetB);
+                Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
+                steps = new List<DepthRefinerStep>();
+                DepthRefiner<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
+                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-6f), new Vector<float>(-500),
+                    out var depthWide, out var localNormalWide, steps, 50);
 
-            //    const int iterationCount = 100000;
-            //    var start = Stopwatch.GetTimestamp();
-            //    for (int i = 0; i < iterationCount; ++i)
-            //    {
-            //        DepthRefiner<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
-            //            aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-12f), new Vector<float>(-500),
-            //            out var depthWide2, out var localNormalWide2, null, 50);
-            //    }
-            //    var stop = Stopwatch.GetTimestamp();
-            //    var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
-            //    Console.WriteLine($"Time (ns): {span}");
-            //}
+                const int iterationCount = 100000;
+                double minTime = double.MaxValue;
+                for (int j = 0; j < 10; ++j)
+                {
+                    var start = Stopwatch.GetTimestamp();
+                    for (int i = 0; i < iterationCount; ++i)
+                    {
+                        DepthRefiner<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
+                            aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-6f), new Vector<float>(-500),
+                            out var depthWide2, out var localNormalWide2, null, 50);
+                    }
+                    var stop = Stopwatch.GetTimestamp();
+                    var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
+                    Console.WriteLine($"Time {j} (ns): {span}");
+                    minTime = Math.Min(span, minTime);
+                }
+                Console.WriteLine($"Best time boxes (ns): {minTime}, {steps.Count - 1} iterations");
+            }
 
+            Console.ReadLine();
         }
 
         int stepIndex;
@@ -199,9 +215,16 @@ namespace Demos.SpecializedTests
                 //renderer.Lines.Allocate() = new LineInstance(step.D.Support + basePosition, basePosition, new Vector3(0, 0, 0.5f), default);
             }
 
-            var searchTarget = basePosition + step.BestNormal * step.BestDepth;
-            renderer.Lines.Allocate() = new LineInstance(basePosition, searchTarget, new Vector3(1, 0, 0), default);
-            renderer.Lines.Allocate() = new LineInstance(basePosition + step.ClosestPointOnTriangle, searchTarget, new Vector3(0.5f, 0, 0), default);
+            if (step.BestDepth >= 0)
+                renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.SearchTarget, new Vector3(1, 0, 0), default);
+            else
+            {
+                ContactLines.BuildOrthnormalBasis(step.BestNormal, out var x, out var y);
+
+                renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.BestNormal, new Vector3(1, 0, 0), default);
+                renderer.Lines.Allocate() = new LineInstance(basePosition + step.BestNormal * step.BestDepth, basePosition + x * 0.1f + step.BestNormal * step.BestDepth, new Vector3(1, 1, 0), default);
+            }
+            renderer.Lines.Allocate() = new LineInstance(basePosition + step.ClosestPointOnTriangle, basePosition + step.SearchTarget, new Vector3(0.5f, 0, 0), default);
             renderer.Lines.Allocate() = new LineInstance(basePosition, basePosition + step.NextNormal, new Vector3(1, 0, 1), default);
 
 
