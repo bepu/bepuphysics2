@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
+    using DepthRefiner = BepuPhysics.CollisionDetection.DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>;
     public struct CylinderPairDepthTester : IDepthTester<Cylinder, CylinderWide, Cylinder, CylinderWide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -78,7 +79,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var tOffset = Vector.SquareRoot(Vector.Max(Vector<float>.Zero, b * b - a * c)) * inverseA;
             var tBase = -b * inverseA;
             tMin = tBase - tOffset;
-            tMax = tBase + tOffset;            
+            tMax = tBase + tOffset;
             //If the projected line direction is zero or the offset is too small, just compress the interval to tBase.
             //interval length in 3d space: ||tOffset * lineDirection||^2 = tOffset^2 * ||lineDirection||^2 = tOffset^2 * a
             var useFallback = Vector.BitwiseOr(Vector.LessThan(tOffset * tOffset * a, radius * 0.005f), Vector.LessThan(Vector.Abs(a), new Vector<float>(1e-12f)));
@@ -152,7 +153,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //A couple of notes on convexity:
             //Separated convex objects have a global minimum (negative) depth; the distance function between convex objects is itself convex. GJK takes advantage of this.
             //Intersecting convex objects, in contrast, may have multiple local minima for depth. MPR doesn't find a global minimum depth- in fact, it might not even be a local minimum.
-  
+
             //GJK and MPR are not the only possible algorithms in this space. For example, consider gradient descent. Starting from an initial guess normal, you can incrementally walk toward a local minimum 
             //through numerical (or in some cases even analytic) computation of the gradient. Gradient descent isn't always the quickest at converging, but if we have reasonably good starting points it can work.
 
@@ -163,9 +164,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Length(localOffsetA, out var length);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / length, out var localNormal);
             CylinderSupportFinder supportFinder;
-            PlaneWalker<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindSupport(
-                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, out var initialSupport);
-            Vector3Wide.Dot(initialSupport, localNormal, out var depth);
+            DepthRefiner.Simplex simplex;
+            DepthRefiner.FindSupport(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, out simplex.A.Support);
+            simplex.A.Exists = new Vector<int>(-1);
+            Vector3Wide.Dot(simplex.A.Support, localNormal, out var depth);
             depth = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-9f)), new Vector<float>(float.MaxValue), depth);
 
             //2) Cap normal A
@@ -176,12 +178,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Scale(normalCandidate, -a.HalfLength, out var supportA);
                 Vector3Wide.Add(supportA, localOffsetA, out supportA);
                 supportFinder.ComputeLocalSupport(b, normalCandidate, out var supportB);
-                Vector3Wide.Subtract(supportB, supportA, out var supportCandidate);
-                Vector3Wide.Dot(supportCandidate, normalCandidate, out var depthCandidate);
+                Vector3Wide.Subtract(supportB, supportA, out simplex.B.Support);
+                simplex.B.Exists = new Vector<int>(-1);
+                Vector3Wide.Dot(simplex.B.Support, normalCandidate, out var depthCandidate);
                 var useCandidate = Vector.LessThan(depthCandidate, depth);
                 depth = Vector.ConditionalSelect(useCandidate, depthCandidate, depth);
                 Vector3Wide.ConditionalSelect(useCandidate, normalCandidate, localNormal, out localNormal);
-                Vector3Wide.ConditionalSelect(useCandidate, supportCandidate, initialSupport, out initialSupport);
             }
 
             //3) Cap normal B
@@ -192,51 +194,34 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 negatedNormalCandidate.Y = Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), new Vector<float>(-1), Vector<float>.One);
                 negatedNormalCandidate.Z = Vector<float>.Zero;
                 supportFinder.ComputeSupport(a, rA, negatedNormalCandidate, out var supportA);
-                Vector3Wide.Add(supportA, localOffsetA, out supportA);
-                Vector3Wide supportCandidate;
-                supportCandidate.X = -supportA.X;
-                supportCandidate.Y = negatedNormalCandidate.Y * -b.HalfLength - supportA.Y;
-                supportCandidate.Z = -supportA.Z;
-                Vector3Wide.Dot(supportCandidate, negatedNormalCandidate, out var negatedDepthCandidate);
+                Vector3Wide.Add(supportA, localOffsetA, out supportA);               
+                simplex.C.Support.X = -supportA.X;
+                simplex.C.Support.Y = negatedNormalCandidate.Y * -b.HalfLength - supportA.Y;
+                simplex.C.Support.Z = -supportA.Z;
+                Vector3Wide.Dot(simplex.C.Support, negatedNormalCandidate, out var negatedDepthCandidate);
+                simplex.C.Exists = new Vector<int>(-1);
                 var depthCandidate = -negatedDepthCandidate;
                 var useCandidate = Vector.LessThan(depthCandidate, depth);
                 depth = Vector.ConditionalSelect(useCandidate, depthCandidate, depth);
                 localNormal.X = Vector.ConditionalSelect(useCandidate, Vector<float>.Zero, localNormal.X);
                 localNormal.Y = Vector.ConditionalSelect(useCandidate, -negatedNormalCandidate.Y, localNormal.Y);
                 localNormal.Z = Vector.ConditionalSelect(useCandidate, Vector<float>.Zero, localNormal.Z);
-                Vector3Wide.ConditionalSelect(useCandidate, supportCandidate, initialSupport, out initialSupport);
             }
 
-            ////4) Axis A x axis B.
-            //var axisCrossLengthSquared = rA.Y.X * rA.Y.X + rA.Y.Z * rA.Y.Z;
-            //var axisCrossFallbackLengthSquared = localOffsetA.X * localOffsetA.X + localOffsetA.Z * localOffsetA.Z;
-            ////If the axes are parallel, just use the horizontal direction pointing from B to A.
-            //var useAxisCrossFallback = Vector.LessThan(axisCrossLengthSquared, new Vector<float>(1e-10f));
-            //var skipAxisCross = Vector.BitwiseAnd(useAxisCrossFallback, Vector.LessThan(axisCrossFallbackLengthSquared, new Vector<float>(1e-10f)));
-            //var inverseAxisCrossLength = Vector<float>.One / Vector.SquareRoot(Vector.ConditionalSelect(useAxisCrossFallback, axisCrossFallbackLengthSquared, axisCrossLengthSquared));
-            //Vector3Wide axisAxAxisB;
-            //axisAxAxisB.X = Vector.ConditionalSelect(useAxisCrossFallback, localOffsetA.X, -rA.Y.Z) * inverseAxisCrossLength;
-            //axisAxAxisB.Y = Vector<float>.Zero;
-            //axisAxAxisB.Z = Vector.ConditionalSelect(useAxisCrossFallback, localOffsetA.Z, rA.Y.X) * inverseAxisCrossLength;
-            ////By virtue of being perpendicular to both cylinder axes, there can be no contribution from the half lengths.
-            //Vector3Wide.Dot(axisAxAxisB, localOffsetA, out var axisCrossOffsetDot);
-            //var axisCrossDepth = a.Radius + b.Radius - Vector.Abs(axisCrossOffsetDot);
-            //var useAxisCross = Vector.AndNot(Vector.LessThan(axisCrossDepth, depth), skipAxisCross);
-            //depth = Vector.ConditionalSelect(useAxisCross, axisCrossDepth, depth);
-            //Vector3Wide.ConditionalSelect(useAxisCross, axisAxAxisB, localNormal, out localNormal);
+            //There are some other axes we could try, like axisA x axisB, but they tend to be far less relevant for stacking.
+            //Also, keep in mind that feature pairs which form faces, edges, or vertices in minkowski space tend to converge extremely quickly.
+            //Blindly trying a bunch of low probability feature pairs- especially those which would fall into the above- isn't very wise.
 
-            ////Calibrate the normal to point from B to A.
-            //Vector3Wide.Dot(localNormal, localOffsetA, out var normalDotLocalOffsetB);
-            //Vector3Wide.ConditionallyNegate(Vector.LessThan(normalDotLocalOffsetB, Vector<float>.Zero), ref localNormal);
-
-            //We now have a decent estimate for the local normal. Refine it to a local minimum.
+            //We now have a decent estimate for the local normal and an initial simplex to work from. Refine it to a local minimum.
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
-  
+
+            var depthThreshold = -speculativeMargin;
             var epsilonScale = Vector.Min(Vector.Max(a.HalfLength, a.Radius), Vector.Max(b.HalfLength, b.Radius));
-            DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
-                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), -speculativeMargin, out depth, out localNormal, null, 35);
+            DepthRefiner.FindMinimumDepth(
+                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, ref simplex, localNormal, depth, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
+                out depth, out localNormal, null, 35);
 
-
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //All lanes are either inactive or were found to have a depth lower than the speculative margin, so we can just quit early.
