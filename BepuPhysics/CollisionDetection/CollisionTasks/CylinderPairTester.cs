@@ -69,19 +69,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //||linePosition + lineDirection * t|| = radius
             //dot(linePosition + lineDirection * t, linePosition + lineDirection * t) = radius * radius
             //dot(linePosition, linePosition) - radius * radius + t * 2 * dot(linePosition, lineDirection) + t^2 * dot(lineDirection, lineDirection) = 0
-            Vector2Wide.Dot(linePosition, linePosition, out var coefficientC);
-            coefficientC -= radius * radius;
-            Vector2Wide.Dot(linePosition, lineDirection, out var coefficientB);
-            Vector2Wide.Dot(lineDirection, lineDirection, out var coefficientA);
-            var inverseA = Vector<float>.One / coefficientA;
-            var tOffset = Vector.SquareRoot(Vector.Max(Vector<float>.Zero, coefficientB * coefficientB - coefficientA * coefficientC)) * inverseA;
-            var tBase = -coefficientB * inverseA;
+            Vector2Wide.Dot(lineDirection, lineDirection, out var a);
+            var inverseA = Vector<float>.One / a;
+            Vector2Wide.Dot(linePosition, lineDirection, out var b);
+            Vector2Wide.Dot(linePosition, linePosition, out var c);
+            var radiusSquared = radius * radius;
+            c -= radiusSquared;
+            var tOffset = Vector.SquareRoot(Vector.Max(Vector<float>.Zero, b * b - a * c)) * inverseA;
+            var tBase = -b * inverseA;
             tMin = tBase - tOffset;
-            tMax = tBase + tOffset;
-            //If the projected length is zero, just treat both points as being in the same location (at tNegative).
-            var useFallback = Vector.LessThan(Vector.Abs(coefficientA), new Vector<float>(1e-12f));
-            tMin = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, tMin);
-            tMax = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, tMax);
+            tMax = tBase + tOffset;            
+            //If the projected line direction is zero or the offset is too small, just compress the interval to tBase.
+            //interval length in 3d space: ||tOffset * lineDirection||^2 = tOffset^2 * ||lineDirection||^2 = tOffset^2 * a
+            var useFallback = Vector.BitwiseOr(Vector.LessThan(tOffset * tOffset * a, radius * 0.005f), Vector.LessThan(Vector.Abs(a), new Vector<float>(1e-12f)));
+            tMin = Vector.ConditionalSelect(useFallback, tBase, tMin);
+            tMax = Vector.ConditionalSelect(useFallback, tBase, tMax);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
