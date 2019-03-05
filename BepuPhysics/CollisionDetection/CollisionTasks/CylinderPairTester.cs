@@ -219,7 +219,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var epsilonScale = Vector.Min(Vector.Max(a.HalfLength, a.Radius), Vector.Max(b.HalfLength, b.Radius));
             DepthRefiner.FindMinimumDepth(
                 b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, ref simplex, localNormal, depth, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
-                out depth, out localNormal, null, 35);
+                out depth, out localNormal, maximumIterations: 35);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))

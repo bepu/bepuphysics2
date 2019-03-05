@@ -51,6 +51,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="CollisionDetection\DepthRefiner.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>DepthRefiner.tt</DependentUpon>
+    </Compile>
     <Compile Update="Constraints\Contact\ContactConvexTypes.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -64,6 +69,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="CollisionDetection\DepthRefiner.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>DepthRefiner.cs</LastGenOutput>
+    </None>
     <None Update="Constraints\Contact\ContactConvexTypes.tt">
       <LastGenOutput>ContactConvexTypes.cs</LastGenOutput>
       <Generator>TextTemplatingFileGenerator</Generator>
