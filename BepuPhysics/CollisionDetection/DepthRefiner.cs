@@ -119,15 +119,15 @@ namespace BepuPhysics.CollisionDetection
             {
                 //DEBUG STUFF
                 step = default;
-                Vector3Wide.ReadFirst(simplex.A.Support, out step.A.Support);
-                Vector3Wide.ReadFirst(simplex.B.Support, out step.B.Support);
-                Vector3Wide.ReadFirst(simplex.C.Support, out step.C.Support);
-                Vector3Wide.ReadFirst(support, out step.D.Support);
-                step.A.Exists = simplex.A.Exists[0] < 0;
-                step.B.Exists = simplex.B.Exists[0] < 0;
-                step.C.Exists = simplex.C.Exists[0] < 0;
-                step.D.Exists = typeof(T) == typeof(HasNewSupport);
-                Vector3Wide.ReadFirst(searchTarget, out step.SearchTarget);
+                //Vector3Wide.ReadFirst(simplex.A.Support, out step.A.Support);
+                //Vector3Wide.ReadFirst(simplex.B.Support, out step.B.Support);
+                //Vector3Wide.ReadFirst(simplex.C.Support, out step.C.Support);
+                //Vector3Wide.ReadFirst(support, out step.D.Support);
+                //step.A.Exists = simplex.A.Exists[0] < 0;
+                //step.B.Exists = simplex.B.Exists[0] < 0;
+                //step.C.Exists = simplex.C.Exists[0] < 0;
+                //step.D.Exists = typeof(T) == typeof(HasNewSupport);
+                //Vector3Wide.ReadFirst(searchTarget, out step.SearchTarget);
             }
 
 
@@ -220,7 +220,7 @@ namespace BepuPhysics.CollisionDetection
 
             {
                 //DEBUG STUFF
-                Vector3Wide.ReadFirst(simplex.A.Support, out step.ClosestPointOnTriangle);
+                //Vector3Wide.ReadFirst(simplex.A.Support, out step.ClosestPointOnTriangle);
             }
 
             var relevantFeatures = Vector<int>.One;
@@ -294,11 +294,11 @@ namespace BepuPhysics.CollisionDetection
 
                     {
                         //DEBUG STUFF
-                        if (useEdge[0] < 0)
-                        {
-                            Vector3Wide.ReadFirst(triangleToTargetCandidate, out var triangleToTargetCandidateNarrow);
-                            step.ClosestPointOnTriangle = step.SearchTarget - triangleToTargetCandidateNarrow;
-                        }
+                        //if (useEdge[0] < 0)
+                        //{
+                        //    Vector3Wide.ReadFirst(triangleToTargetCandidate, out var triangleToTargetCandidateNarrow);
+                        //    step.ClosestPointOnTriangle = step.SearchTarget - triangleToTargetCandidateNarrow;
+                        //}
                     }
                 }
             }
@@ -325,12 +325,12 @@ namespace BepuPhysics.CollisionDetection
 
                 {
                     //DEBUG STUFF
-                    if (targetContainedInEdgePlanes[0] < 0)
-                    {
-                        Vector3Wide.ReadFirst(triangleNormal, out var triangleNormalNarrow);
-                        Vector3Wide.ReadFirst(searchTarget, out var searchTargetNarrow);
-                        step.ClosestPointOnTriangle = triangleNormalNarrow * targetToADot[0] / triangleNormalLengthSquared[0] + searchTargetNarrow;
-                    }
+                    //if (targetContainedInEdgePlanes[0] < 0)
+                    //{
+                    //    Vector3Wide.ReadFirst(triangleNormal, out var triangleNormalNarrow);
+                    //    Vector3Wide.ReadFirst(searchTarget, out var searchTargetNarrow);
+                    //    step.ClosestPointOnTriangle = triangleNormalNarrow * targetToADot[0] / triangleNormalLengthSquared[0] + searchTargetNarrow;
+                    //}
                 }
             }
 
@@ -353,10 +353,10 @@ namespace BepuPhysics.CollisionDetection
 
             {
                 //DEBUG STUFF
-                var features = relevantFeatures[0];
-                var vertexCount = (features & 1) + ((features & 2) >> 1) + ((features & 4) >> 2);
-                step.NextNormalSource = (DepthRefinerNormalSource)vertexCount;
-                Vector3Wide.ReadFirst(nextNormal, out step.NextNormal);
+                //var features = relevantFeatures[0];
+                //var vertexCount = (features & 1) + ((features & 2) >> 1) + ((features & 4) >> 2);
+                //step.NextNormalSource = (DepthRefinerNormalSource)vertexCount;
+                //Vector3Wide.ReadFirst(nextNormal, out step.NextNormal);
             }
         }
 
@@ -390,9 +390,9 @@ namespace BepuPhysics.CollisionDetection
             }
 
             GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out var normal, out var debugStep);
-            debugStep.BestDepth = refinedDepth[0];
-            Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
-            steps?.Add(debugStep);
+            //debugStep.BestDepth = refinedDepth[0];
+            //Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
+            //steps?.Add(debugStep);
 
             for (int i = 0; i < maximumIterations; ++i)
             {
@@ -402,7 +402,7 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.Dot(support, normal, out var depth);
                 //Console.WriteLine($"Depth: {depth[0]}");
 
-                var useNewDepth = Vector.LessThan(depth, refinedDepth);
+                var useNewDepth = Vector.AndNot(Vector.LessThan(depth, refinedDepth), terminatedLanes);
                 refinedDepth = Vector.ConditionalSelect(useNewDepth, depth, refinedDepth);
                 Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
                 terminatedLanes = Vector.BitwiseOr(Vector.LessThanOrEqual(refinedDepth, minimumDepthThreshold), terminatedLanes);
@@ -411,10 +411,10 @@ namespace BepuPhysics.CollisionDetection
 
                 GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out normal, out debugStep);
 
-                debugStep.BestDepth = refinedDepth[0];
-                Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
+                //debugStep.BestDepth = refinedDepth[0];
+                //Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
 
-                steps?.Add(debugStep);
+                //steps?.Add(debugStep);
             }
         }
     }

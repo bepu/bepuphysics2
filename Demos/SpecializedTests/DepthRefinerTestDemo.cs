@@ -99,7 +99,7 @@ namespace Demos.SpecializedTests
                     Console.WriteLine($"Time {j} (ns): {span}");
                     minTime = Math.Min(span, minTime);
                 }
-                Console.WriteLine($"Best time cylinders (ns): {minTime}, {steps.Count - 1} iterations");
+                Console.WriteLine($"Best time cylinders (ns): {minTime}");
             }
 
             Console.WriteLine();
@@ -149,10 +149,9 @@ namespace Demos.SpecializedTests
                     Console.WriteLine($"Time {j} (ns): {span}");
                     minTime = Math.Min(span, minTime);
                 }
-                Console.WriteLine($"Best time boxes (ns): {minTime}, {steps.Count - 1} iterations");
+                Console.WriteLine($"Best time boxes (ns): {minTime}");
             }
-
-            Console.ReadLine();
+            
         }
 
         int stepIndex;

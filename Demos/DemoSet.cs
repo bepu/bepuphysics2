@@ -39,10 +39,8 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<DepthRefinerTestDemo>();
-            AddOption<SimplexTilterTestDemo>();
-            AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<CylinderTestDemo>();
+            AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<ColosseumDemo>();
             AddOption<PyramidDemo>();
             AddOption<RagdollDemo>();
