@@ -80,9 +80,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var tBase = -b * inverseA;
             tMin = tBase - tOffset;
             tMax = tBase + tOffset;
-            //If the projected line direction is zero or the offset is too small, just compress the interval to tBase.
-            //interval length in 3d space: ||tOffset * lineDirection||^2 = tOffset^2 * ||lineDirection||^2 = tOffset^2 * a
-            var useFallback = Vector.BitwiseOr(Vector.LessThan(tOffset * tOffset * a, radius * 0.005f), Vector.LessThan(Vector.Abs(a), new Vector<float>(1e-12f)));
+            //If the projected line direction is zero, just compress the interval to tBase.
+            var useFallback = Vector.LessThan(Vector.Abs(a), new Vector<float>(1e-12f));
             tMin = Vector.ConditionalSelect(useFallback, tBase, tMin);
             tMax = Vector.ConditionalSelect(useFallback, tBase, tMax);
         }
@@ -164,8 +163,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Length(localOffsetA, out var length);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / length, out var localNormal);
             CylinderSupportFinder supportFinder;
-            DepthRefiner.Simplex simplex;
-            DepthRefiner.FindSupport(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, out simplex.A.Support);
+            DepthRefiner.SimplexWithWitness simplex;
+            DepthRefiner.FindSupport(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, out simplex.A.Support, out simplex.A.SupportOnA);
             simplex.A.Exists = new Vector<int>(-1);
             Vector3Wide.Dot(simplex.A.Support, localNormal, out var depth);
             depth = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-9f)), new Vector<float>(float.MaxValue), depth);
@@ -177,8 +176,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionallyNegate(Vector.LessThan(rAYDot, Vector<float>.Zero), rA.Y, out var normalCandidate);
                 Vector3Wide.Scale(normalCandidate, -a.HalfLength, out var supportA);
                 Vector3Wide.Add(supportA, localOffsetA, out supportA);
-                supportFinder.ComputeLocalSupport(b, normalCandidate, out var supportB);
-                Vector3Wide.Subtract(supportB, supportA, out simplex.B.Support);
+                //A little confusing- DepthRefiner's A is our B and vice versa.
+                supportFinder.ComputeLocalSupport(b, normalCandidate, out simplex.B.SupportOnA);
+                Vector3Wide.Subtract(simplex.B.SupportOnA, supportA, out simplex.B.Support);
                 simplex.B.Exists = new Vector<int>(-1);
                 Vector3Wide.Dot(simplex.B.Support, normalCandidate, out var depthCandidate);
                 var useCandidate = Vector.LessThan(depthCandidate, depth);
@@ -194,10 +194,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 negatedNormalCandidate.Y = Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), new Vector<float>(-1), Vector<float>.One);
                 negatedNormalCandidate.Z = Vector<float>.Zero;
                 supportFinder.ComputeSupport(a, rA, negatedNormalCandidate, out var supportA);
-                Vector3Wide.Add(supportA, localOffsetA, out supportA);               
-                simplex.C.Support.X = -supportA.X;
-                simplex.C.Support.Y = negatedNormalCandidate.Y * -b.HalfLength - supportA.Y;
-                simplex.C.Support.Z = -supportA.Z;
+                Vector3Wide.Add(supportA, localOffsetA, out supportA);
+                //A little confusing- DepthRefiner's A is our B and vice versa.       
+                simplex.C.SupportOnA.X = Vector<float>.Zero;
+                simplex.C.SupportOnA.Y = negatedNormalCandidate.Y * -b.HalfLength;
+                simplex.C.SupportOnA.Z = Vector<float>.Zero;
+                Vector3Wide.Subtract(simplex.C.SupportOnA, supportA, out simplex.C.Support);
                 Vector3Wide.Dot(simplex.C.Support, negatedNormalCandidate, out var negatedDepthCandidate);
                 simplex.C.Exists = new Vector<int>(-1);
                 var depthCandidate = -negatedDepthCandidate;
@@ -219,7 +221,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var epsilonScale = Vector.Min(Vector.Max(a.HalfLength, a.Radius), Vector.Max(b.HalfLength, b.Radius));
             DepthRefiner.FindMinimumDepth(
                 b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, ref simplex, localNormal, depth, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
-                out depth, out localNormal, maximumIterations: 35);
+                out depth, out localNormal, out var closestOnB, maximumIterations: 25);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
@@ -253,25 +255,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useCapCap = Vector.AndNot(Vector.BitwiseAnd(useCapA, useCapB), inactiveLanes);
 
             //The extreme points along the contact normal are shared between multiple contact generator paths, so we just do them up front.
-            Vector3Wide.Dot(rA.X, localNormal, out var ax);
-            Vector3Wide.Dot(rA.Z, localNormal, out var az);
-            var horizontalNormalLengthA = Vector.SquareRoot(ax * ax + az * az);
-            var inverseHorizontalNormalLengthA = Vector<float>.One / horizontalNormalLengthA;
-            //No division by zero guard; we only use cap-cap for a lane if the local normal is well beyond perpendicular with the local cap normal.
-            var normalizeScaleA = -a.Radius * inverseHorizontalNormalLengthA;
-            var horizontalNormalLengthValidA = Vector.GreaterThan(horizontalNormalLengthA, new Vector<float>(1e-7f));
-            Vector3Wide.Scale(rA.X, Vector.ConditionalSelect(horizontalNormalLengthValidA, ax * normalizeScaleA, Vector<float>.Zero), out var extremeAX);
-            Vector3Wide.Scale(rA.Z, Vector.ConditionalSelect(horizontalNormalLengthValidA, az * normalizeScaleA, Vector<float>.Zero), out var extremeAZ);
-            Vector3Wide.Add(extremeAX, extremeAZ, out var extremeAOffset);
-            Vector3Wide.Add(extremeAOffset, capCenterA, out var extremeA);
+            Vector3Wide.Scale(localNormal, -depth, out var bToAOffset);
+            Vector3Wide.Add(closestOnB, bToAOffset, out var extremeA);
+            Vector3Wide.Subtract(extremeA, localOffsetA, out var extremeAHorizontalOffset);
+            Vector3Wide.Dot(extremeAHorizontalOffset, rA.Y, out var verticalDot);
+            Vector3Wide.Scale(rA.Y, verticalDot, out var toRemove);
+            Vector3Wide.Subtract(extremeAHorizontalOffset, toRemove, out extremeAHorizontalOffset);
 
-            var horizontalNormalLengthSquaredB = localNormal.X * localNormal.X + localNormal.Z * localNormal.Z;
-            var inverseHorizontalNormalLengthSquaredB = Vector<float>.One / horizontalNormalLengthSquaredB;
-            var normalizeScaleB = b.Radius * Vector.SquareRoot(inverseHorizontalNormalLengthSquaredB);
-            var horizontalNormalLengthValidB = Vector.GreaterThan(horizontalNormalLengthSquaredB, new Vector<float>(1e-10f));
             Vector2Wide extremeB;
-            extremeB.X = Vector.ConditionalSelect(horizontalNormalLengthValidB, localNormal.X * normalizeScaleB, Vector<float>.Zero);
-            extremeB.Y = Vector.ConditionalSelect(horizontalNormalLengthValidB, localNormal.Z * normalizeScaleB, Vector<float>.Zero);
+            extremeB.X = closestOnB.X;
+            extremeB.Y = closestOnB.Z;
 
             var useNegative = Vector.GreaterThan(nDotAY, Vector<float>.Zero);
             Vector3Wide capFeatureNormalA;
@@ -296,7 +289,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 const float parallelInterpolationMaxScalar = 0.9995f;
                 const float inverseParallelInterpolationSpanScalar = 1f / (parallelInterpolationMaxScalar - parallelThresholdScalar);
                 var parallelThreshold = new Vector<float>(parallelThresholdScalar);
-                var parallelInterpolationMax = new Vector<float>(parallelInterpolationMaxScalar);
                 var inverseParallelInterpolationSpan = new Vector<float>(inverseParallelInterpolationSpanScalar);
                 var absADot = Vector.Abs(nDotAY);
                 var absBDot = Vector.Abs(localNormal.Y);
@@ -305,7 +297,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 //The first contact should be chosen from the deepest points. This comes from one of three cases:
                 //1) capNormalA is NOT parallel with localNormal; use the extreme point on A along -localNormal.
-                Vector3Wide.Subtract(capCenterA, extremeAOffset, out var negativeExtremeA);
 
                 //Project extreme A down onto capB.
                 //No division by zero guard; we only use cap-cap for a lane if the local normal is well beyond perpendicular with the local cap normal.
@@ -398,15 +389,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             var useCapSide = Vector.AndNot(Vector.BitwiseOr(Vector.AndNot(useCapA, useCapB), Vector.AndNot(useCapB, useCapA)), inactiveLanes);
             //The side normal is used in both of the following contact generator cases.
+            Vector3Wide.Dot(rA.X, localNormal, out var ax);
+            Vector3Wide.Dot(rA.Z, localNormal, out var az);
+            var horizontalNormalLengthA = Vector.SquareRoot(ax * ax + az * az);
+            var inverseHorizontalNormalLengthA = Vector<float>.One / horizontalNormalLengthA;
             var xScale = ax * inverseHorizontalNormalLengthA;
             var zScale = az * inverseHorizontalNormalLengthA;
             Vector3Wide.Scale(rA.X, xScale, out var sideFeatureNormalAX);
             Vector3Wide.Scale(rA.Z, zScale, out var sideFeatureNormalAZ);
             Vector3Wide.Add(sideFeatureNormalAX, sideFeatureNormalAZ, out var sideFeatureNormalA);
             Vector3Wide sideCenterA, sideCenterB;
-            sideCenterA.X = extremeAOffset.X + localOffsetA.X;
-            sideCenterA.Y = extremeAOffset.Y + localOffsetA.Y;
-            sideCenterA.Z = extremeAOffset.Z + localOffsetA.Z;
+            sideCenterA.X = extremeAHorizontalOffset.X + localOffsetA.X;
+            sideCenterA.Y = extremeAHorizontalOffset.Y + localOffsetA.Y;
+            sideCenterA.Z = extremeAHorizontalOffset.Z + localOffsetA.Z;
             sideCenterB.X = extremeB.X;
             sideCenterB.Y = Vector<float>.Zero;
             sideCenterB.Z = extremeB.Y;
@@ -479,7 +474,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //This is similar to capsule-capsule; we have two line segments and we want a contact interval on B.
                 //Note that we test the line on the side of A against the line *in the center of* B. We then use its interval on the side of B.
                 //(Using the side of B to detect the interval can result in issues in medium-depth penetration where the deepest point is ignored in favor of the closest point between the side lines.)
-                Vector3Wide.Negate(sideCenterA, out var sideCenterAToLineB);
+                Vector3Wide.Negate(sideCenterA, out var sideCenterAToLineB);                          
+                var horizontalNormalLengthSquaredB = localNormal.X * localNormal.X + localNormal.Z * localNormal.Z;
+                var inverseHorizontalNormalLengthSquaredB = Vector<float>.One / horizontalNormalLengthSquaredB;
                 CapsuleCylinderTester.GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, rA.Y, localNormal, inverseHorizontalNormalLengthSquaredB, sideCenterAToLineB, out var contactTMin, out var contactTMax);
 
                 contact0.X = Vector.ConditionalSelect(useSideSide, extremeB.X, contact0.X);

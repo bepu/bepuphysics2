@@ -229,7 +229,6 @@ namespace BepuPhysics.CollisionDetection
 
                 //If the search target is on the edge, we can immediately quit.
                 terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(useEdge, Vector.LessThanOrEqual(bestScaledDistanceSquared, terminationEpsilonSquared * edgeLengthSquared)));
-
                 //TODO: Wrapping this in a condition under the assumption that we just terminated is a little iffy. Measure.
                 if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
                 {
@@ -276,17 +275,18 @@ namespace BepuPhysics.CollisionDetection
 				
             }
 
-            //In fairly rare cases near penetrating convergence, it's possible for the triangle->target offset to point nearly 90 degrees away from the previous best.
-            //This doesn't break convergence, but it can slow it down. To avoid it, use the offset to tilt the normal rather than using the offset directly.
-            Vector3Wide.Scale(triangleToTarget, new Vector<float>(4f), out var pushOffset);
-            Vector3Wide.Add(searchTarget, pushOffset, out var pushNormalCandidate);
-            Vector3Wide.ConditionalSelect(Vector.BitwiseOr(Vector.LessThanOrEqual(bestDepth, Vector<float>.Zero), targetContainedInEdgePlanes), triangleToTarget, pushNormalCandidate, out triangleToTarget);
+			simplex.A.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, Vector<int>.One), Vector<int>.Zero);
+            simplex.B.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(2)), Vector<int>.Zero);
+            simplex.C.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(4)), Vector<int>.Zero);
 
             if (Vector.EqualsAny(terminatedLanes, Vector<int>.Zero))
             {
-                simplex.A.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, Vector<int>.One), Vector<int>.Zero);
-                simplex.B.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(2)), Vector<int>.Zero);
-                simplex.C.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(4)), Vector<int>.Zero);
+				//In fairly rare cases near penetrating convergence, it's possible for the triangle->target offset to point nearly 90 degrees away from the previous best.
+				//This doesn't break convergence, but it can slow it down. To avoid it, use the offset to tilt the normal rather than using the offset directly.
+				Vector3Wide.Scale(triangleToTarget, new Vector<float>(4f), out var pushOffset);
+				Vector3Wide.Add(searchTarget, pushOffset, out var pushNormalCandidate);
+				Vector3Wide.ConditionalSelect(Vector.BitwiseOr(Vector.LessThanOrEqual(bestDepth, Vector<float>.Zero), targetContainedInEdgePlanes), triangleToTarget, pushNormalCandidate, out triangleToTarget);
+
                 //No active lanes can have a zero length targetToTriangle, so we can normalize safely.
                 Vector3Wide.LengthSquared(triangleToTarget, out var lengthSquared);
                 Vector3Wide.Scale(triangleToTarget, Vector<float>.One / Vector.SquareRoot(lengthSquared), out nextNormal);
@@ -359,22 +359,24 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.Subtract(supportOnA, extremeB, out support);
         }
 
-		public struct VertexWithClosest
+		public struct VertexWithWitness
         {
             public Vector3Wide Support;
 			public Vector3Wide SupportOnA;
+			public Vector<float> Weight;
             public Vector<int> Exists;
         }
 
-        public struct SimplexWithClosest
+        public struct SimplexWithWitness
         {
-            public VertexWithClosest A;
-            public VertexWithClosest B;
-            public VertexWithClosest C;
+            public VertexWithWitness A;
+            public VertexWithWitness B;
+            public VertexWithWitness C;
+			public Vector<float> WeightDenominator;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void FillSlot(ref VertexWithClosest vertex, in Vector3Wide support, in Vector3Wide supportOnA)
+        static void FillSlot(ref VertexWithWitness vertex, in Vector3Wide support, in Vector3Wide supportOnA)
         {
             //Note that this always fills empty slots. That's important- we avoid figuring out what subsimplex is active
             //and instead just treat it as a degenerate simplex with some duplicates. (Shares code with the actual degenerate path.)
@@ -384,7 +386,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ForceFillSlot(in Vector<int> shouldFill, ref VertexWithClosest vertex, in Vector3Wide support, in Vector3Wide supportOnA)
+        static void ForceFillSlot(in Vector<int> shouldFill, ref VertexWithWitness vertex, in Vector3Wide support, in Vector3Wide supportOnA)
         {
             vertex.Exists = Vector.BitwiseOr(vertex.Exists, shouldFill);
             Vector3Wide.ConditionalSelect(shouldFill, support, vertex.Support, out vertex.Support);
@@ -392,7 +394,7 @@ namespace BepuPhysics.CollisionDetection
         }
 	
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create(in Vector3Wide normal, in Vector3Wide support, in Vector3Wide supportOnA, out SimplexWithClosest simplex)
+        public static void Create(in Vector3Wide normal, in Vector3Wide support, in Vector3Wide supportOnA, out SimplexWithWitness simplex)
         {
             //While only one slot is actually full, GetNextNormal expects every slot to have some kind of data-
             //for those slots which are not yet filled, it should be duplicates of other data.
@@ -408,7 +410,7 @@ namespace BepuPhysics.CollisionDetection
             simplex.C.Exists = Vector<int>.Zero;
         }
 
-        static void GetNextNormal<T>(ref SimplexWithClosest simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide supportOnA, ref Vector<int> terminatedLanes,
+        static void GetNextNormal<T>(ref SimplexWithWitness simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide supportOnA, ref Vector<int> terminatedLanes,
             in Vector3Wide bestNormal, in Vector<float> bestDepth, in Vector<float> convergenceThreshold,
             out Vector3Wide nextNormal)
         {
@@ -466,9 +468,9 @@ namespace BepuPhysics.CollisionDetection
             }
             else
             {
-                FillSlot(ref simplex.A, simplex.A.Support, supportOnA);
-                FillSlot(ref simplex.B, simplex.A.Support, supportOnA);
-                FillSlot(ref simplex.C, simplex.A.Support, supportOnA);
+                FillSlot(ref simplex.A, simplex.A.Support, simplex.A.SupportOnA);
+                FillSlot(ref simplex.B, simplex.A.Support, simplex.A.SupportOnA);
+                FillSlot(ref simplex.C, simplex.A.Support, simplex.A.SupportOnA);
             }
             Vector3Wide.Subtract(simplex.B.Support, simplex.A.Support, out var ab);
             Vector3Wide.Subtract(simplex.A.Support, simplex.C.Support, out var ca);
@@ -510,6 +512,10 @@ namespace BepuPhysics.CollisionDetection
 
 
             var relevantFeatures = Vector<int>.One;
+			simplex.A.Weight = Vector<float>.One;
+			simplex.B.Weight = Vector<float>.Zero;
+			simplex.C.Weight = Vector<float>.Zero;
+			simplex.WeightDenominator = Vector<float>.One;
 
             var useEdge = Vector.BitwiseOr(targetOutsideTriangleEdges, simplexIsAnEdge);
             //If this is a vertex case and the sample is right on top of the origin, immediately quit.
@@ -556,9 +562,6 @@ namespace BepuPhysics.CollisionDetection
 
                 //If the search target is on the edge, we can immediately quit.
                 terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(useEdge, Vector.LessThanOrEqual(bestScaledDistanceSquared, terminationEpsilonSquared * edgeLengthSquared)));
-
-                //TODO: Wrapping this in a condition under the assumption that we just terminated is a little iffy. Measure.
-                if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
                 {
                     var t = Vector.ConditionalSelect(useAB, abScaledT, Vector.ConditionalSelect(useBC, bcScaledT, caScaledT)) / edgeLengthSquared;
                     Vector3Wide.ConditionalSelect(useAB, ab, ca, out var edgeOffset);
@@ -577,6 +580,11 @@ namespace BepuPhysics.CollisionDetection
                     var featureForCA = Vector.ConditionalSelect(originNearestStart, new Vector<int>(4), Vector.ConditionalSelect(originNearestEnd, Vector<int>.One, new Vector<int>(4 + 1)));
                     relevantFeatures = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, featureForAB, Vector.ConditionalSelect(useBC, featureForBC, featureForCA)), relevantFeatures);
                     Vector3Wide.ConditionalSelect(useEdge, triangleToTargetCandidate, triangleToTarget, out triangleToTarget);
+					var weightEdgeStart = Vector<float>.One - t;
+					simplex.A.Weight = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, weightEdgeStart, Vector.ConditionalSelect(useBC, Vector<float>.Zero, t)), simplex.A.Weight);
+					simplex.B.Weight = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, t, Vector.ConditionalSelect(useBC, weightEdgeStart, Vector<float>.Zero)), simplex.B.Weight);
+					simplex.C.Weight = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, Vector<float>.Zero, Vector.ConditionalSelect(useBC, t, weightEdgeStart)), simplex.C.Weight);
+					//Weight denominator is still just one, as it is in the vertex case.
 					
                 }
             }
@@ -600,20 +608,25 @@ namespace BepuPhysics.CollisionDetection
                 terminatedLanes = Vector.BitwiseOr(Vector.BitwiseAnd(targetContainedInEdgePlanes, targetOnTriangleSurface), terminatedLanes);
                 Vector3Wide.ConditionalSelect(targetContainedInEdgePlanes, triangleNormal, triangleToTarget, out triangleToTarget);
                 relevantFeatures = Vector.ConditionalSelect(targetContainedInEdgePlanes, new Vector<int>(1 + 2 + 4), relevantFeatures);
+				simplex.A.Weight = Vector.ConditionalSelect(targetContainedInEdgePlanes, bcPlaneTest, simplex.A.Weight);
+				simplex.B.Weight = Vector.ConditionalSelect(targetContainedInEdgePlanes, caPlaneTest, simplex.B.Weight);
+				simplex.C.Weight = Vector.ConditionalSelect(targetContainedInEdgePlanes, abPlaneTest, simplex.C.Weight);
+				simplex.WeightDenominator = Vector.ConditionalSelect(targetContainedInEdgePlanes, triangleNormalLengthSquared, simplex.WeightDenominator);
 				
             }
 
-            //In fairly rare cases near penetrating convergence, it's possible for the triangle->target offset to point nearly 90 degrees away from the previous best.
-            //This doesn't break convergence, but it can slow it down. To avoid it, use the offset to tilt the normal rather than using the offset directly.
-            Vector3Wide.Scale(triangleToTarget, new Vector<float>(4f), out var pushOffset);
-            Vector3Wide.Add(searchTarget, pushOffset, out var pushNormalCandidate);
-            Vector3Wide.ConditionalSelect(Vector.BitwiseOr(Vector.LessThanOrEqual(bestDepth, Vector<float>.Zero), targetContainedInEdgePlanes), triangleToTarget, pushNormalCandidate, out triangleToTarget);
+			simplex.A.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, Vector<int>.One), Vector<int>.Zero);
+            simplex.B.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(2)), Vector<int>.Zero);
+            simplex.C.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(4)), Vector<int>.Zero);
 
             if (Vector.EqualsAny(terminatedLanes, Vector<int>.Zero))
             {
-                simplex.A.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, Vector<int>.One), Vector<int>.Zero);
-                simplex.B.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(2)), Vector<int>.Zero);
-                simplex.C.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(4)), Vector<int>.Zero);
+				//In fairly rare cases near penetrating convergence, it's possible for the triangle->target offset to point nearly 90 degrees away from the previous best.
+				//This doesn't break convergence, but it can slow it down. To avoid it, use the offset to tilt the normal rather than using the offset directly.
+				Vector3Wide.Scale(triangleToTarget, new Vector<float>(4f), out var pushOffset);
+				Vector3Wide.Add(searchTarget, pushOffset, out var pushNormalCandidate);
+				Vector3Wide.ConditionalSelect(Vector.BitwiseOr(Vector.LessThanOrEqual(bestDepth, Vector<float>.Zero), targetContainedInEdgePlanes), triangleToTarget, pushNormalCandidate, out triangleToTarget);
+
                 //No active lanes can have a zero length targetToTriangle, so we can normalize safely.
                 Vector3Wide.LengthSquared(triangleToTarget, out var lengthSquared);
                 Vector3Wide.Scale(triangleToTarget, Vector<float>.One / Vector.SquareRoot(lengthSquared), out nextNormal);
@@ -634,12 +647,12 @@ namespace BepuPhysics.CollisionDetection
 #endif
             FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialNormal, out var initialSupport, out var initialSupportOnA);
             Vector3Wide.Dot(initialSupport, initialNormal, out var initialDepth);
-            Create(initialNormal, initialSupport, initialSupportOnA, out SimplexWithClosest simplex);
+            Create(initialNormal, initialSupport, initialSupportOnA, out SimplexWithWitness simplex);
             FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, initialNormal, initialDepth, inactiveLanes, searchEpsilon, minimumDepthThreshold, out depth, out refinedNormal, out witnessOnA, maximumIterations);
         }
 
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
-            ref SimplexWithClosest simplex, Vector3Wide initialNormal, in Vector<float> initialDepth,
+            ref SimplexWithWitness simplex, Vector3Wide initialNormal, in Vector<float> initialDepth,
             in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, 
 			out Vector<float> refinedDepth, out Vector3Wide refinedNormal, out Vector3Wide witnessOnA, int maximumIterations = 50)
         {
@@ -672,6 +685,13 @@ namespace BepuPhysics.CollisionDetection
                 GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, supportOnA, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out normal);
 				
             }
+			//For simplexes terminating in a triangle state, we deferred the division for converting plane tests to barycentric coordinates until now.
+			var inverseDenominator = Vector<float>.One / simplex.WeightDenominator;
+			Vector3Wide.Scale(simplex.A.SupportOnA, simplex.A.Weight * inverseDenominator, out var weightedA);
+			Vector3Wide.Scale(simplex.B.SupportOnA, simplex.B.Weight * inverseDenominator, out var weightedB);
+			Vector3Wide.Scale(simplex.C.SupportOnA, simplex.C.Weight * inverseDenominator, out var weightedC);
+			Vector3Wide.Add(weightedA, weightedB, out witnessOnA);
+			Vector3Wide.Add(weightedC, witnessOnA, out witnessOnA);			
         }
     }
 }
