@@ -57,7 +57,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ProjectOntoCapB(in Vector<float> capCenterBY, in Vector<float> inverseLocalNormalY, in Vector3Wide localNormal, in Vector3Wide point, out Vector2Wide projected)
+        internal static void ProjectOntoCapB(in Vector<float> capCenterBY, in Vector<float> inverseLocalNormalY, in Vector3Wide localNormal, in Vector3Wide point, out Vector2Wide projected)
         {
             var tAOnB = (point.Y - capCenterBY) * inverseLocalNormalY;
             projected.X = point.X - localNormal.X * tAOnB;
@@ -95,7 +95,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void TransformContact(
+        internal static void TransformContact(
             in Vector3Wide contact, in Vector3Wide localFeaturePositionA, in Vector3Wide localFeatureNormalA, Vector<float> inverseFeatureNormalADotLocalNormal,
             in Vector3Wide localOffsetB, in Matrix3x3Wide orientationB, Vector<float> negativeSpeculativeMargin,
             out Vector3Wide aToContact, out Vector<float> depth, ref Vector<int> contactExists)
@@ -162,12 +162,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //1) Offset from B to A
             Vector3Wide.Length(localOffsetA, out var length);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / length, out var localNormal);
+            var useInitialSampleFallback = Vector.LessThan(length, new Vector<float>(1e-10f));
+            localNormal.X = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.X);
+            localNormal.Y = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.One, localNormal.Y);
+            localNormal.Z = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.Z);
             CylinderSupportFinder supportFinder;
             DepthRefiner.SimplexWithWitness simplex;
             DepthRefiner.FindSupport(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, out simplex.A.Support, out simplex.A.SupportOnA);
             simplex.A.Exists = new Vector<int>(-1);
             Vector3Wide.Dot(simplex.A.Support, localNormal, out var depth);
-            depth = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-9f)), new Vector<float>(float.MaxValue), depth);
 
             //2) Cap normal A
             {
