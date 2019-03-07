@@ -52,12 +52,13 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void FillSlot(ref Vertex vertex, in Vector3Wide support)
+        static void FillSlot(ref Vertex vertex, in Vector3Wide support, in Vector<int> terminatedLanes)
         {
             //Note that this always fills empty slots. That's important- we avoid figuring out what subsimplex is active
             //and instead just treat it as a degenerate simplex with some duplicates. (Shares code with the actual degenerate path.)
-            Vector3Wide.ConditionalSelect(vertex.Exists, vertex.Support, support, out vertex.Support);
-            vertex.Exists = new Vector<int>(-1);
+			var dontFillSlot = Vector.BitwiseOr(vertex.Exists, terminatedLanes);
+            Vector3Wide.ConditionalSelect(dontFillSlot, vertex.Support, support, out vertex.Support);
+            vertex.Exists = Vector.ConditionalSelect(dontFillSlot, vertex.Exists, new Vector<int>(-1));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -93,17 +94,15 @@ namespace BepuPhysics.CollisionDetection
             var terminationEpsilon = Vector.ConditionalSelect(Vector.LessThan(bestDepth, Vector<float>.Zero), convergenceThreshold - bestDepth, convergenceThreshold);
             var terminationEpsilonSquared = terminationEpsilon * terminationEpsilon;
 
-
             if (typeof(T) == typeof(HasNewSupport))
             {
-                var simplexFull = Vector.BitwiseAnd(simplex.A.Exists, Vector.BitwiseAnd(simplex.B.Exists, simplex.C.Exists));
+                var simplexFull = Vector.AndNot(Vector.BitwiseAnd(simplex.A.Exists, Vector.BitwiseAnd(simplex.B.Exists, simplex.C.Exists)), terminatedLanes);
                 //Fill any empty slots with the new support. Combines partial simplex case with degenerate simplex case.
-                FillSlot(ref simplex.A, support);
-                FillSlot(ref simplex.B, support);
-                FillSlot(ref simplex.C, support);
+                FillSlot(ref simplex.A, support, terminatedLanes);
+                FillSlot(ref simplex.B, support, terminatedLanes);
+                FillSlot(ref simplex.C, support, terminatedLanes);
 
-                var activeFullSimplex = Vector.AndNot(simplexFull, terminatedLanes);
-                if (Vector.LessThanAny(activeFullSimplex, Vector<int>.Zero))
+                if (Vector.LessThanAny(simplexFull, Vector<int>.Zero))
                 {
                     //At least one active lane has a full simplex and an incoming new sample.
 
@@ -139,9 +138,9 @@ namespace BepuPhysics.CollisionDetection
             }
             else
             {
-                FillSlot(ref simplex.A, simplex.A.Support);
-                FillSlot(ref simplex.B, simplex.A.Support);
-                FillSlot(ref simplex.C, simplex.A.Support);
+                FillSlot(ref simplex.A, simplex.A.Support, terminatedLanes);
+                FillSlot(ref simplex.B, simplex.A.Support, terminatedLanes);
+                FillSlot(ref simplex.C, simplex.A.Support, terminatedLanes);
             }
             Vector3Wide.Subtract(simplex.B.Support, simplex.A.Support, out var ab);
             Vector3Wide.Subtract(simplex.A.Support, simplex.C.Support, out var ca);
@@ -172,7 +171,6 @@ namespace BepuPhysics.CollisionDetection
             var simplexIsAnEdge = Vector.AndNot(simplexDegenerate, simplexIsAVertex);
 
             Vector3Wide.Dot(triangleNormal, localOffsetB, out var calibrationDot);
-            var shouldCalibrate = Vector.LessThan(calibrationDot, Vector<float>.Zero);
             Vector3Wide.ConditionallyNegate(Vector.LessThan(calibrationDot, Vector<float>.Zero), ref triangleNormal);
 
             var targetOutsideTriangleEdges = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideBC, outsideCA));
@@ -184,12 +182,12 @@ namespace BepuPhysics.CollisionDetection
 
             var relevantFeatures = Vector<int>.One;
 
-            var useEdge = Vector.BitwiseOr(targetOutsideTriangleEdges, simplexIsAnEdge);
             //If this is a vertex case and the sample is right on top of the origin, immediately quit.
             Vector3Wide.LengthSquared(targetToA, out var targetToALengthSquared);
             terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(simplexIsAVertex, Vector.LessThan(targetToALengthSquared, terminationEpsilonSquared)));
 
-            if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
+            var useEdge = Vector.AndNot(Vector.BitwiseOr(targetOutsideTriangleEdges, simplexIsAnEdge), terminatedLanes);
+            if (Vector.LessThanAny(useEdge, Vector<int>.Zero))
             {
                 //Choose the edge that is closest to the search target. Note that we can compute the closest edge distance without performing a division:
                 //distance squared from ab to target o = ||a - o + ab * t||^2
@@ -254,8 +252,8 @@ namespace BepuPhysics.CollisionDetection
             }
 
             //We've examined the vertex and edge case, now we need to check the triangle face case.
-            var targetContainedInEdgePlanes = Vector.AndNot(Vector.OnesComplement(targetOutsideTriangleEdges), simplexDegenerate);
-            if (Vector.LessThanAny(Vector.AndNot(targetContainedInEdgePlanes, terminatedLanes), Vector<int>.Zero))
+            var targetContainedInEdgePlanes = Vector.AndNot(Vector.AndNot(Vector.OnesComplement(targetOutsideTriangleEdges), simplexDegenerate), terminatedLanes);
+            if (Vector.LessThanAny(targetContainedInEdgePlanes, Vector<int>.Zero))
             {
                 //At least one lane needs a face test.
                 //Note that we don't actually need to compute the closest point here- we can just use the triangleNormal.
@@ -291,7 +289,6 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.LengthSquared(triangleToTarget, out var lengthSquared);
                 Vector3Wide.Scale(triangleToTarget, Vector<float>.One / Vector.SquareRoot(lengthSquared), out nextNormal);
             }
-
 			
         }
 
@@ -376,13 +373,14 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void FillSlot(ref VertexWithWitness vertex, in Vector3Wide support, in Vector3Wide supportOnA)
+        static void FillSlot(ref VertexWithWitness vertex, in Vector3Wide support, in Vector3Wide supportOnA, in Vector<int> terminatedLanes)
         {
             //Note that this always fills empty slots. That's important- we avoid figuring out what subsimplex is active
             //and instead just treat it as a degenerate simplex with some duplicates. (Shares code with the actual degenerate path.)
-            Vector3Wide.ConditionalSelect(vertex.Exists, vertex.Support, support, out vertex.Support);
-            Vector3Wide.ConditionalSelect(vertex.Exists, vertex.SupportOnA, supportOnA, out vertex.SupportOnA);
-            vertex.Exists = new Vector<int>(-1);
+			var dontFillSlot = Vector.BitwiseOr(vertex.Exists, terminatedLanes);
+            Vector3Wide.ConditionalSelect(dontFillSlot, vertex.Support, support, out vertex.Support);
+            Vector3Wide.ConditionalSelect(dontFillSlot, vertex.SupportOnA, supportOnA, out vertex.SupportOnA);
+            vertex.Exists = Vector.ConditionalSelect(dontFillSlot, vertex.Exists, new Vector<int>(-1));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -422,17 +420,15 @@ namespace BepuPhysics.CollisionDetection
             var terminationEpsilon = Vector.ConditionalSelect(Vector.LessThan(bestDepth, Vector<float>.Zero), convergenceThreshold - bestDepth, convergenceThreshold);
             var terminationEpsilonSquared = terminationEpsilon * terminationEpsilon;
 
-
             if (typeof(T) == typeof(HasNewSupport))
             {
-                var simplexFull = Vector.BitwiseAnd(simplex.A.Exists, Vector.BitwiseAnd(simplex.B.Exists, simplex.C.Exists));
+                var simplexFull = Vector.AndNot(Vector.BitwiseAnd(simplex.A.Exists, Vector.BitwiseAnd(simplex.B.Exists, simplex.C.Exists)), terminatedLanes);
                 //Fill any empty slots with the new support. Combines partial simplex case with degenerate simplex case.
-                FillSlot(ref simplex.A, support, supportOnA);
-                FillSlot(ref simplex.B, support, supportOnA);
-                FillSlot(ref simplex.C, support, supportOnA);
+                FillSlot(ref simplex.A, support, supportOnA, terminatedLanes);
+                FillSlot(ref simplex.B, support, supportOnA, terminatedLanes);
+                FillSlot(ref simplex.C, support, supportOnA, terminatedLanes);
 
-                var activeFullSimplex = Vector.AndNot(simplexFull, terminatedLanes);
-                if (Vector.LessThanAny(activeFullSimplex, Vector<int>.Zero))
+                if (Vector.LessThanAny(simplexFull, Vector<int>.Zero))
                 {
                     //At least one active lane has a full simplex and an incoming new sample.
 
@@ -468,9 +464,9 @@ namespace BepuPhysics.CollisionDetection
             }
             else
             {
-                FillSlot(ref simplex.A, simplex.A.Support, simplex.A.SupportOnA);
-                FillSlot(ref simplex.B, simplex.A.Support, simplex.A.SupportOnA);
-                FillSlot(ref simplex.C, simplex.A.Support, simplex.A.SupportOnA);
+                FillSlot(ref simplex.A, simplex.A.Support, simplex.A.SupportOnA, terminatedLanes);
+                FillSlot(ref simplex.B, simplex.A.Support, simplex.A.SupportOnA, terminatedLanes);
+                FillSlot(ref simplex.C, simplex.A.Support, simplex.A.SupportOnA, terminatedLanes);
             }
             Vector3Wide.Subtract(simplex.B.Support, simplex.A.Support, out var ab);
             Vector3Wide.Subtract(simplex.A.Support, simplex.C.Support, out var ca);
@@ -501,7 +497,6 @@ namespace BepuPhysics.CollisionDetection
             var simplexIsAnEdge = Vector.AndNot(simplexDegenerate, simplexIsAVertex);
 
             Vector3Wide.Dot(triangleNormal, localOffsetB, out var calibrationDot);
-            var shouldCalibrate = Vector.LessThan(calibrationDot, Vector<float>.Zero);
             Vector3Wide.ConditionallyNegate(Vector.LessThan(calibrationDot, Vector<float>.Zero), ref triangleNormal);
 
             var targetOutsideTriangleEdges = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideBC, outsideCA));
@@ -512,17 +507,17 @@ namespace BepuPhysics.CollisionDetection
 
 
             var relevantFeatures = Vector<int>.One;
-			simplex.A.Weight = Vector<float>.One;
-			simplex.B.Weight = Vector<float>.Zero;
-			simplex.C.Weight = Vector<float>.Zero;
-			simplex.WeightDenominator = Vector<float>.One;
+			simplex.A.Weight = Vector.ConditionalSelect(terminatedLanes, simplex.A.Weight, Vector<float>.One);
+			simplex.B.Weight = Vector.ConditionalSelect(terminatedLanes, simplex.B.Weight, Vector<float>.Zero);
+			simplex.C.Weight = Vector.ConditionalSelect(terminatedLanes, simplex.C.Weight, Vector<float>.Zero);
+			simplex.WeightDenominator = Vector.ConditionalSelect(terminatedLanes, simplex.WeightDenominator, Vector<float>.One);
 
-            var useEdge = Vector.BitwiseOr(targetOutsideTriangleEdges, simplexIsAnEdge);
             //If this is a vertex case and the sample is right on top of the origin, immediately quit.
             Vector3Wide.LengthSquared(targetToA, out var targetToALengthSquared);
             terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(simplexIsAVertex, Vector.LessThan(targetToALengthSquared, terminationEpsilonSquared)));
 
-            if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
+            var useEdge = Vector.AndNot(Vector.BitwiseOr(targetOutsideTriangleEdges, simplexIsAnEdge), terminatedLanes);
+            if (Vector.LessThanAny(useEdge, Vector<int>.Zero))
             {
                 //Choose the edge that is closest to the search target. Note that we can compute the closest edge distance without performing a division:
                 //distance squared from ab to target o = ||a - o + ab * t||^2
@@ -590,8 +585,8 @@ namespace BepuPhysics.CollisionDetection
             }
 
             //We've examined the vertex and edge case, now we need to check the triangle face case.
-            var targetContainedInEdgePlanes = Vector.AndNot(Vector.OnesComplement(targetOutsideTriangleEdges), simplexDegenerate);
-            if (Vector.LessThanAny(Vector.AndNot(targetContainedInEdgePlanes, terminatedLanes), Vector<int>.Zero))
+            var targetContainedInEdgePlanes = Vector.AndNot(Vector.AndNot(Vector.OnesComplement(targetOutsideTriangleEdges), simplexDegenerate), terminatedLanes);
+            if (Vector.LessThanAny(targetContainedInEdgePlanes, Vector<int>.Zero))
             {
                 //At least one lane needs a face test.
                 //Note that we don't actually need to compute the closest point here- we can just use the triangleNormal.
@@ -631,7 +626,6 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.LengthSquared(triangleToTarget, out var lengthSquared);
                 Vector3Wide.Scale(triangleToTarget, Vector<float>.One / Vector.SquareRoot(lengthSquared), out nextNormal);
             }
-
 			
         }
 
@@ -663,6 +657,7 @@ namespace BepuPhysics.CollisionDetection
             refinedDepth = initialDepth;
             if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
             {
+				witnessOnA = default;
                 return;
             }
 

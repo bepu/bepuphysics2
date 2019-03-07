@@ -480,17 +480,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 CapsuleCylinderTester.GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, rA.Y, localNormal, inverseHorizontalNormalLengthSquaredB, sideCenterAToLineB, out var contactTMin, out var contactTMax);
 
                 contact0.X = Vector.ConditionalSelect(useSideSide, extremeB.X, contact0.X);
-                contact0.Y = contactTMin;
+                contact0.Y = Vector.ConditionalSelect(useSideSide, contactTMin, contact0.Y);
                 contact0.Z = Vector.ConditionalSelect(useSideSide, extremeB.Y, contact0.Z);
                 contact1.X = Vector.ConditionalSelect(useSideSide, extremeB.X, contact1.X);
-                contact1.Y = contactTMax;
+                contact1.Y = Vector.ConditionalSelect(useSideSide, contactTMax, contact1.Y);
                 contact1.Z = Vector.ConditionalSelect(useSideSide, extremeB.Y, contact1.Z);
                 manifold.Contact0Exists = Vector.ConditionalSelect(useSideSide, new Vector<int>(-1), manifold.Contact0Exists);
-                manifold.Contact1Exists = Vector.ConditionalSelect(useSideSide, Vector.GreaterThan(contactTMax, contactTMin), manifold.Contact0Exists);
+                manifold.Contact1Exists = Vector.ConditionalSelect(useSideSide, Vector.GreaterThan(contactTMax, contactTMin), manifold.Contact1Exists);
                 Vector3Wide.ConditionalSelect(useSideSide, sideFeatureNormalA, featureNormalA, out featureNormalA);
                 Vector3Wide.ConditionalSelect(useSideSide, sideCenterA, featurePositionA, out featurePositionA);
             }
-
             Vector3Wide.Dot(featureNormalA, localNormal, out var featureNormalADotLocalNormal);
             //No division guard; the feature normal we picked is never more than 45 degrees away from the local normal.
             var inverseFeatureNormalADotLocalNormal = Vector<float>.One / featureNormalADotLocalNormal;
