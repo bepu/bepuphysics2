@@ -177,7 +177,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //X and Y added together is slightly better, but 45 degree angles are not uncommon and can result in the same problem.
                 //So we just use a dot product with an arbitrary direction.
                 //This is a pretty small detail, but it is cheap enough that there's no reason not to take advantage of it.
-                var extremity = Vector.Abs(candidate.X) * 0.7946897654f + Vector.Abs(candidate.Y) * 0.60701579614f;
+                var extremity = Vector.Abs(candidate.X * 0.7946897654f + candidate.Y * 0.60701579614f);
                 var candidateScore = candidate.Depth + Vector.ConditionalSelect(Vector.GreaterThanOrEqual(candidate.Depth, Vector<float>.Zero), extremity * extremityScale, Vector<float>.Zero);
                 var candidateIsHighestScore = Vector.BitwiseAnd(candidateExists, Vector.GreaterThan(candidateScore, bestScore));
                 ConditionalSelect(candidateIsHighestScore, candidate, contact0, out contact0);

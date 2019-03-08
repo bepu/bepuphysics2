@@ -76,8 +76,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             in Vector2Wide edge1011, in Vector<float> edge1011PlaneMin, in Vector<float> edge1011PlaneMax,
             in Vector<int> allowContact, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
         {
-            var edge0010Dot = point.Y * edge0010.X - point.X * edge0010.Y;
-            var edge1011Dot = point.Y * edge1011.X - point.X * edge1011.Y;
+            var edge0010Dot = point.X * edge0010.Y - point.Y * edge0010.X;
+            var edge1011Dot = point.X * edge1011.Y - point.Y * edge1011.X;
             var contained = Vector.BitwiseAnd(allowContact, Vector.BitwiseAnd(
                 Vector.BitwiseAnd(Vector.GreaterThanOrEqual(edge0010Dot, edge0010PlaneMin), Vector.LessThanOrEqual(edge0010Dot, edge0010PlaneMax)),
                 Vector.BitwiseAnd(Vector.GreaterThanOrEqual(edge1011Dot, edge1011PlaneMin), Vector.LessThanOrEqual(edge1011Dot, edge1011PlaneMax))));
@@ -167,14 +167,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //Identify the box face.
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, rA, out var localNormalInA);
-            var useX = Vector.BitwiseAnd(Vector.LessThan(localNormalInA.X, localNormalInA.Y), Vector.LessThan(localNormalInA.X, localNormalInA.Z));
-            var useY = Vector.AndNot(Vector.LessThan(localNormalInA.Y, localNormalInA.Z), useX);
+            Vector3Wide.Abs(localNormalInA, out var absLocalNormalInA);
+            var useX = Vector.BitwiseAnd(Vector.GreaterThan(absLocalNormalInA.X, absLocalNormalInA.Y), Vector.GreaterThan(absLocalNormalInA.X, absLocalNormalInA.Z));
+            var useY = Vector.AndNot(Vector.GreaterThan(absLocalNormalInA.Y, absLocalNormalInA.Z), useX);
             Vector3Wide.ConditionalSelect(useX, rA.X, rA.Z, out var boxFaceNormal);
             Vector3Wide.ConditionalSelect(useY, rA.Y, boxFaceNormal, out boxFaceNormal);
             Vector3Wide.ConditionalSelect(useX, rA.Y, rA.X, out var boxFaceX);
             Vector3Wide.ConditionalSelect(useY, rA.Z, boxFaceX, out boxFaceX);
             Vector3Wide.ConditionalSelect(useX, rA.Z, rA.Y, out var boxFaceY);
             Vector3Wide.ConditionalSelect(useY, rA.X, boxFaceY, out boxFaceY);
+            var negateFace = 
+                Vector.ConditionalSelect(useX, Vector.GreaterThan(localNormalInA.X, Vector<float>.Zero), 
+                Vector.ConditionalSelect(useY, Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), Vector.GreaterThan(localNormalInA.Z, Vector<float>.Zero)));
+            Vector3Wide.ConditionallyNegate(negateFace, ref boxFaceNormal);
+            Vector3Wide.ConditionallyNegate(negateFace, ref boxFaceX);
+            Vector3Wide.ConditionallyNegate(negateFace, ref boxFaceY);
             var boxFaceHalfWidth = Vector.ConditionalSelect(useX, a.HalfHeight, Vector.ConditionalSelect(useY, a.HalfLength, a.HalfWidth));
             var boxFaceHalfHeight = Vector.ConditionalSelect(useX, a.HalfLength, Vector.ConditionalSelect(useY, a.HalfWidth, a.HalfHeight));
             var boxFaceNormalOffset = Vector.ConditionalSelect(useX, a.HalfWidth, Vector.ConditionalSelect(useY, a.HalfHeight, a.HalfLength));
@@ -240,8 +247,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //It's important to keep the deepest contact, so in the non parallel case, start with the witness point on B.
                 //In the parallel case, arbitrarily choose a direction- here we'll use (1, 0).
                 //Interpolate between the two choices based on the dot product to avoid instantaneous changes.
-                var interpolationMin = new Vector<float>(0.999f);
-                var inverseInterpolationSpan = new Vector<float>(1f / 0.0005f);
+                var interpolationMin = new Vector<float>(0.9995f);
+                var inverseInterpolationSpan = new Vector<float>(1f / 0.00025f);
                 var parallelWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(localNormal.Y) - interpolationMin) * inverseInterpolationSpan));
                 var deepestWeight = Vector<float>.One - parallelWeight;
                 Vector2Wide initialPoint;
@@ -261,11 +268,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 interior3.X = -interior0.Y;
                 interior3.Y = interior0.X;
 
-                //Test the four points against the edge plane.
-                var edge0010PlaneMin = p00.Y * edge0010.X - p00.X * edge0010.Y;
-                var edge0010PlaneMax = p01.Y * edge0010.X - p01.X * edge0010.Y;
-                var edge1011PlaneMin = p10.Y * edge1011.X - p10.X * edge1011.Y;
-                var edge1011PlaneMax = p00.Y * edge1011.X - p00.X * edge1011.Y;
+                //Test the four points against the edge plane. Note that signs depend on the orientation of the cylinder.
+                var edge0010Plane0 = p00.X * edge0010.Y - p00.Y * edge0010.X;
+                var edge0010Plane1 = p01.X * edge0010.Y - p01.Y * edge0010.X;
+                var edge1011Plane0 = p10.X * edge1011.Y - p10.Y * edge1011.X;
+                var edge1011Plane1 = p00.X * edge1011.Y - p00.Y * edge1011.X;
+                var edge0010PlaneMin = Vector.Min(edge0010Plane0, edge0010Plane1);
+                var edge0010PlaneMax = Vector.Max(edge0010Plane0, edge0010Plane1);
+                var edge1011PlaneMin = Vector.Min(edge1011Plane0, edge1011Plane1);
+                var edge1011PlaneMax = Vector.Max(edge1011Plane0, edge1011Plane1);
                 TryAddInteriorPoint(interior0, new Vector<int>(8), edge0010, edge0010PlaneMin, edge0010PlaneMax, edge1011, edge1011PlaneMin, edge1011PlaneMax, useCap, ref candidates, ref candidateCount, pairCount);
                 TryAddInteriorPoint(interior1, new Vector<int>(9), edge0010, edge0010PlaneMin, edge0010PlaneMax, edge1011, edge1011PlaneMin, edge1011PlaneMax, useCap, ref candidates, ref candidateCount, pairCount);
                 TryAddInteriorPoint(interior2, new Vector<int>(10), edge0010, edge0010PlaneMin, edge0010PlaneMax, edge1011, edge1011PlaneMin, edge1011PlaneMax, useCap, ref candidates, ref candidateCount, pairCount);
@@ -324,8 +335,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.CrossWithoutOverlap(boxFaceY, localNormal, out var edgeNormalY); //Points right
                 //Center of the side line is just (closestOnB.X, 0, closestOnB.Z), sideLineDirection is just (0, 1, 0).
                 //t = dot(sideLineStart - pointOnFaceEdge, edgeNormal) / dot(sideLineDirection, edgeNormal)
-                var xDenominator = Vector<float>.One / edgeNormalX.Y;
-                var yDenominator = Vector<float>.One / edgeNormalY.Y;
+                var negativeOne = new Vector<float>(-1f);
+                var xDenominator = negativeOne / edgeNormalX.Y;
+                var yDenominator = negativeOne / edgeNormalY.Y;
                 Vector3Wide v00ToSideLine, v11ToSideLine;
                 v00ToSideLine.X = closestOnB.X - v00.X;
                 v00ToSideLine.Y = -v00.Y;
@@ -338,18 +350,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Dot(edgeNormalY, v00ToSideLine, out var leftNumerator);
                 Vector3Wide.Dot(edgeNormalX, v11ToSideLine, out var topNumerator);
                 Vector3Wide.Dot(edgeNormalY, v11ToSideLine, out var rightNumerator);
-                var xValid = Vector.GreaterThan(edgeNormalX.Y, Vector<float>.Zero);
-                var yValid = Vector.GreaterThan(edgeNormalY.Y, Vector<float>.Zero);
+                var xInvalid = Vector.Equals(edgeNormalX.Y, Vector<float>.Zero);
+                var yInvalid = Vector.Equals(edgeNormalY.Y, Vector<float>.Zero);
                 var minValue = new Vector<float>(float.MinValue);
                 var maxValue = new Vector<float>(float.MaxValue);
                 var tX0 = bottomNumerator * xDenominator;
                 var tX1 = topNumerator * xDenominator;
                 var tY0 = leftNumerator * yDenominator;
                 var tY1 = rightNumerator * yDenominator;
-                var tXMin = Vector.ConditionalSelect(xValid, Vector.Min(tX0, tX1), maxValue);
-                var tXMax = Vector.ConditionalSelect(xValid, Vector.Max(tX0, tX1), minValue);
-                var tYMin = Vector.ConditionalSelect(yValid, Vector.Min(tY0, tY1), maxValue);
-                var tYMax = Vector.ConditionalSelect(yValid, Vector.Max(tY0, tY1), minValue);
+                var tXMin = Vector.ConditionalSelect(xInvalid, maxValue, Vector.Min(tX0, tX1));
+                var tXMax = Vector.ConditionalSelect(xInvalid, minValue, Vector.Max(tX0, tX1));
+                var tYMin = Vector.ConditionalSelect(yInvalid, maxValue, Vector.Min(tY0, tY1));
+                var tYMax = Vector.ConditionalSelect(yInvalid, minValue, Vector.Max(tY0, tY1));
                 //Shouldn't need to make contact generation conditional here. The closest points are guaranteed to be on these chosen features;
                 //they might just be in the same spot. We do clamp for numerical reasons.
                 var tMax = Vector.Min(Vector.Max(-b.HalfLength, Vector.Min(tXMax, tYMax)), b.HalfLength);
