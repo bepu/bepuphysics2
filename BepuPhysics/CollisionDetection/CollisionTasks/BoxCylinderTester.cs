@@ -324,6 +324,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 manifold.Depth2 = candidate2.Depth;
                 manifold.Depth3 = candidate3.Depth;
             }
+            else
+            {
+                manifold.Contact0Exists = default;
+                manifold.Contact1Exists = default;
+                manifold.Contact2Exists = default;
+                manifold.Contact3Exists = default;
+            }
 
             var useSide = Vector.AndNot(Vector.OnesComplement(useCap), inactiveLanes);
             if (Vector.LessThanAny(useSide, Vector<int>.Zero))
@@ -358,14 +365,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var tX1 = topNumerator * xDenominator;
                 var tY0 = leftNumerator * yDenominator;
                 var tY1 = rightNumerator * yDenominator;
-                var tXMin = Vector.ConditionalSelect(xInvalid, maxValue, Vector.Min(tX0, tX1));
-                var tXMax = Vector.ConditionalSelect(xInvalid, minValue, Vector.Max(tX0, tX1));
-                var tYMin = Vector.ConditionalSelect(yInvalid, maxValue, Vector.Min(tY0, tY1));
-                var tYMax = Vector.ConditionalSelect(yInvalid, minValue, Vector.Max(tY0, tY1));
+                //As the side aligns with one of the edge directions, unrestrict that axis to avoid numerical noise.
+                var interpolationMin = new Vector<float>(0.01f);
+                var inverseInterpolationSpan = new Vector<float>(1f / -0.005f);
+                var unrestrictWeightX = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalX.Y) - interpolationMin) * inverseInterpolationSpan));
+                var unrestrictWeightY = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalY.Y) - interpolationMin) * inverseInterpolationSpan));
+                var regularWeightX = Vector<float>.One - unrestrictWeightX;
+                var regularWeightY = Vector<float>.One - unrestrictWeightY;
+                var negativeHalfLength = -b.HalfLength;
+                var tXMin = Vector.ConditionalSelect(xInvalid, maxValue, unrestrictWeightX * negativeHalfLength + regularWeightX * Vector.Min(tX0, tX1));
+                var tXMax = Vector.ConditionalSelect(xInvalid, minValue, unrestrictWeightX * b.HalfLength + regularWeightX * Vector.Max(tX0, tX1));
+                var tYMin = Vector.ConditionalSelect(yInvalid, maxValue, unrestrictWeightY * negativeHalfLength + regularWeightY * Vector.Min(tY0, tY1));
+                var tYMax = Vector.ConditionalSelect(yInvalid, minValue, unrestrictWeightY * b.HalfLength + regularWeightY * Vector.Max(tY0, tY1));
                 //Shouldn't need to make contact generation conditional here. The closest points are guaranteed to be on these chosen features;
                 //they might just be in the same spot. We do clamp for numerical reasons.
-                var tMax = Vector.Min(Vector.Max(-b.HalfLength, Vector.Min(tXMax, tYMax)), b.HalfLength);
-                var tMin = Vector.Min(Vector.Max(-b.HalfLength, Vector.Max(tXMin, tYMin)), b.HalfLength);
+                var tMax = Vector.Min(Vector.Max(negativeHalfLength, Vector.Min(tXMax, tYMax)), b.HalfLength);
+                var tMin = Vector.Min(Vector.Max(negativeHalfLength, Vector.Max(tXMin, tYMin)), b.HalfLength);
 
                 Vector3Wide.Dot(boxFaceNormal, localNormal, out var faceNormalDotLocalNormal);
                 var inverseFaceNormalDotLocalNormal = Vector<float>.One / faceNormalDotLocalNormal;
@@ -384,6 +399,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 manifold.FeatureId1 = Vector.ConditionalSelect(useSide, Vector<int>.One, manifold.FeatureId1);
                 manifold.Contact0Exists = Vector.ConditionalSelect(useSide, new Vector<int>(-1), manifold.Contact0Exists);
                 manifold.Contact1Exists = Vector.ConditionalSelect(useSide, Vector.GreaterThan(tMax, tMin), manifold.Contact1Exists);
+                manifold.Contact2Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact2Exists);
+                manifold.Contact3Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact3Exists);
                 //depth = dot(pointOnFaceB - faceCenterA, faceNormalA) / dot(faceNormalA, normal)
                 Vector3Wide.Subtract(localContact0, boxFaceCenter, out var boxFaceToContact0);
                 Vector3Wide.Subtract(localContact1, boxFaceCenter, out var boxFaceToContact1);
