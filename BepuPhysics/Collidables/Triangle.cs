@@ -152,7 +152,7 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Type id of triangle shapes.
         /// </summary>
-        public const int Id = 5;
+        public const int Id = 3;
         public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 

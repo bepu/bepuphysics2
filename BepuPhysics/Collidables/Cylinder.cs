@@ -181,9 +181,9 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
-        /// Type id of capsule shapes.
+        /// Type id of cylinder shapes.
         /// </summary>
-        public const int Id = 2;
+        public const int Id = 4;
         public int TypeId { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return Id; } }
     }
 
