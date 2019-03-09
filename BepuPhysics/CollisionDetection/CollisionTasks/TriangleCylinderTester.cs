@@ -278,30 +278,31 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var tAB = abNumerator * abDenominator;
                 var tBC = bcNumerator * bcDenominator;
                 var tCA = caNumerator * caDenominator;
-                ////As the side aligns with one of the edge directions, unrestrict that axis to avoid numerical noise.
-                //var interpolationMin = new Vector<float>(0.01f);
-                //var inverseInterpolationSpan = new Vector<float>(1f / -0.005f);
-                //var unrestrictWeightAB = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalAB.Y) - interpolationMin) * inverseInterpolationSpan));
-                //var unrestrictWeightBC = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalBC.Y) - interpolationMin) * inverseInterpolationSpan));
-                //var unrestrictWeightCA = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalCA.Y) - interpolationMin) * inverseInterpolationSpan));
-                //var regularWeightAB = Vector<float>.One - unrestrictWeightAB;
-                //var regularWeightBC = Vector<float>.One - unrestrictWeightBC;
-                //var regularWeightCA = Vector<float>.One - unrestrictWeightCA;
-                //var negativeHalfLength = -b.HalfLength;
-                //var tABFiltered = Vector.ConditionalSelect(abInvalid, maxValue, unrestrictWeightAB * negativeHalfLength + regularWeightAB * tAB);
-                //var tBCFiltered = Vector.ConditionalSelect(bcInvalid, maxValue, unrestrictWeightBC * negativeHalfLength + regularWeightBC * tBC);
-                //var tCAFiltered = Vector.ConditionalSelect(caInvalid, maxValue, unrestrictWeightCA * negativeHalfLength + regularWeightCA * tCA);
-                //Shouldn't need to make contact generation conditional here. The closest points are guaranteed to be on these chosen features;
-                //they might just be in the same spot. We do clamp for numerical reasons.
+                //As the side aligns with one of the edge directions, unrestrict that axis to avoid numerical noise.
+                var interpolationMin = new Vector<float>(0.01f);
+                var inverseInterpolationSpan = new Vector<float>(1f / -0.005f);
+                var unrestrictWeightAB = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalAB.Y) - interpolationMin) * inverseInterpolationSpan));
+                var unrestrictWeightBC = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalBC.Y) - interpolationMin) * inverseInterpolationSpan));
+                var unrestrictWeightCA = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalCA.Y) - interpolationMin) * inverseInterpolationSpan));
+                var regularWeightAB = Vector<float>.One - unrestrictWeightAB;
+                var regularWeightBC = Vector<float>.One - unrestrictWeightBC;
+                var regularWeightCA = Vector<float>.One - unrestrictWeightCA;
+                var negativeHalfLength = -b.HalfLength;
 
-                var tABEntry = Vector.ConditionalSelect(Vector.LessThan(abNumerator, Vector<float>.Zero), tAB, minValue);
-                var tABExit = Vector.ConditionalSelect(Vector.LessThan(abNumerator, Vector<float>.Zero), maxValue, tAB);
-                var tBCEntry = Vector.ConditionalSelect(Vector.LessThan(abNumerator, Vector<float>.Zero), tBC, minValue);
-                var tBCExit = Vector.ConditionalSelect(Vector.LessThan(abNumerator, Vector<float>.Zero), maxValue, tBC);
-                var tCAEntry = Vector.ConditionalSelect(Vector.LessThan(abNumerator, Vector<float>.Zero), tCA, minValue);
-                var tCAExit = Vector.ConditionalSelect(Vector.LessThan(abNumerator, Vector<float>.Zero), maxValue, tCA);
-                var tMax = Vector.Max(-b.HalfLength, Vector.Min(tABExit, Vector.Min(tBCExit, tCAExit)));
-                var tMin = Vector.Min(b.HalfLength, Vector.Max(tABEntry, Vector.Max(tBCEntry, tCAEntry)));
+                var enteringAB = Vector.GreaterThan(edgeNormalAB.Y, Vector<float>.Zero);
+                var enteringBC = Vector.GreaterThan(edgeNormalBC.Y, Vector<float>.Zero);
+                var enteringCA = Vector.GreaterThan(edgeNormalCA.Y, Vector<float>.Zero);
+                var weightedAB = regularWeightAB * tAB;
+                var weightedBC = regularWeightBC * tBC;
+                var weightedCA = regularWeightCA * tCA;
+                var tABEntry = Vector.ConditionalSelect(enteringAB, unrestrictWeightAB * negativeHalfLength + weightedAB, minValue);
+                var tABExit = Vector.ConditionalSelect(enteringAB, maxValue, unrestrictWeightAB * b.HalfLength + weightedAB);
+                var tBCEntry = Vector.ConditionalSelect(enteringBC, unrestrictWeightBC * negativeHalfLength + weightedBC, minValue);
+                var tBCExit = Vector.ConditionalSelect(enteringBC, maxValue, unrestrictWeightBC * b.HalfLength + weightedBC);
+                var tCAEntry = Vector.ConditionalSelect(enteringCA, unrestrictWeightCA * negativeHalfLength + weightedCA, minValue);
+                var tCAExit = Vector.ConditionalSelect(enteringCA, maxValue, unrestrictWeightCA * b.HalfLength + weightedCA);
+                var tMax = Vector.Min(b.HalfLength, Vector.Max(-b.HalfLength, Vector.Min(tABExit, Vector.Min(tBCExit, tCAExit))));
+                var tMin = Vector.Min(b.HalfLength, Vector.Max(-b.HalfLength, Vector.Max(tABEntry, Vector.Max(tBCEntry, tCAEntry))));
 
                 var inverseFaceNormalDotLocalNormal = Vector<float>.One / faceNormalADotNormal;
                 Vector3Wide localContact0, localContact1;
@@ -322,10 +323,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 manifold.Contact2Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact2Exists);
                 manifold.Contact3Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact3Exists);
                 //depth = dot(pointOnFaceB - faceCenterA, faceNormalA) / dot(faceNormalA, normal)
-                Vector3Wide.Subtract(localContact0, triangleA, out var boxFaceToContact0);
-                Vector3Wide.Subtract(localContact1, triangleA, out var boxFaceToContact1);
-                Vector3Wide.Dot(boxFaceToContact0, triangleNormal, out var contact0Dot);
-                Vector3Wide.Dot(boxFaceToContact1, triangleNormal, out var contact1Dot);
+                Vector3Wide.Subtract(localContact0, triangleA, out var faceToContact0);
+                Vector3Wide.Subtract(localContact1, triangleA, out var faceToContact1);
+                Vector3Wide.Dot(faceToContact0, triangleNormal, out var contact0Dot);
+                Vector3Wide.Dot(faceToContact1, triangleNormal, out var contact1Dot);
                 var depth0 = contact0Dot * inverseFaceNormalDotLocalNormal;
                 var depth1 = contact1Dot * inverseFaceNormalDotLocalNormal;
                 manifold.Depth0 = Vector.ConditionalSelect(useSide, depth0, manifold.Depth0);

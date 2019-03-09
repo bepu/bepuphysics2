@@ -391,10 +391,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(useSide, contact1, manifold.OffsetA1, out manifold.OffsetA1);
                 manifold.FeatureId0 = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.FeatureId0);
                 manifold.FeatureId1 = Vector.ConditionalSelect(useSide, Vector<int>.One, manifold.FeatureId1);
-                manifold.Contact0Exists = Vector.ConditionalSelect(useSide, new Vector<int>(-1), manifold.Contact0Exists);
-                manifold.Contact1Exists = Vector.ConditionalSelect(useSide, Vector.GreaterThan(tMax, tMin), manifold.Contact1Exists);
-                manifold.Contact2Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact2Exists);
-                manifold.Contact3Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact3Exists);
                 //depth = dot(pointOnFaceB - faceCenterA, faceNormalA) / dot(faceNormalA, normal)
                 Vector3Wide.Subtract(localContact0, boxFaceCenter, out var boxFaceToContact0);
                 Vector3Wide.Subtract(localContact1, boxFaceCenter, out var boxFaceToContact1);
@@ -404,6 +400,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var depth1 = contact1Dot * inverseFaceNormalDotLocalNormal;
                 manifold.Depth0 = Vector.ConditionalSelect(useSide, depth0, manifold.Depth0);
                 manifold.Depth1 = Vector.ConditionalSelect(useSide, depth1, manifold.Depth1);
+                manifold.Contact0Exists = Vector.ConditionalSelect(useSide, Vector.GreaterThanOrEqual(depth0, depthThreshold), manifold.Contact0Exists);
+                manifold.Contact1Exists = Vector.ConditionalSelect(useSide, Vector.BitwiseAnd(Vector.GreaterThanOrEqual(depth1, depthThreshold), Vector.GreaterThan(tMax, tMin)), manifold.Contact1Exists);
+                manifold.Contact2Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact2Exists);
+                manifold.Contact3Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact3Exists);
             }
 
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, worldRB, out manifold.Normal);
