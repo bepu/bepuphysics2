@@ -158,7 +158,6 @@ namespace BepuPhysics.Trees
             refinementLeafCountThreshold = Math.Min(leafCount, maximumSubtrees);
         }
 
-
         void GetRefineTuning(int frameIndex, int refinementCandidatesCount, float refineAggressivenessScale, float costChange,
             out int targetRefinementCount, out int refinementPeriod, out int refinementOffset)
         {

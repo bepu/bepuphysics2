@@ -22,12 +22,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector2Wide.Subtract(point, projectedA, out var ap);
             Vector2Wide.Subtract(point, projectedB, out var bp);
             Vector2Wide.Subtract(point, projectedC, out var cp);
+            //Signs are dependent on the cylinder orientation. Rather than dealing with that, we just look for whether all three signs are the same.
+            //If the point is outside the triangle, it can't be outside all three edges at the same time.
             var abDot = ap.X * projectedAB.Y - ap.Y * projectedAB.X;
             var bcDot = bp.X * projectedBC.Y - bp.Y * projectedBC.X;
             var caDot = cp.X * projectedCA.Y - cp.Y * projectedCA.X;
-            var contained = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(allowContact, Vector.GreaterThanOrEqual(abDot, Vector<float>.Zero)),
-                Vector.BitwiseAnd(Vector.GreaterThanOrEqual(bcDot, Vector<float>.Zero), Vector.GreaterThanOrEqual(caDot, Vector<float>.Zero)));
+            var sum = Vector.GreaterThan(abDot, Vector<float>.Zero) + Vector.GreaterThan(bcDot, Vector<float>.Zero) + Vector.GreaterThan(caDot, Vector<float>.Zero);
+
+            var contained = Vector.BitwiseAnd(allowContact, Vector.BitwiseOr(Vector.Equals(sum, Vector<int>.Zero), Vector.Equals(sum, new Vector<int>(-3))));
             ManifoldCandidate candidate;
             candidate.X = point.X;
             candidate.Y = point.Y;
@@ -107,15 +109,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Note that we still calibrate the direction against the offset, even though we reject collisions against the backside of the triangle-
                 //if we sample the frontface when the collision is actually against the backface, the sample will just slow down the depth refiner convergence.
                 Vector3Wide.Dot(localOffsetA, triangleNormal, out var offsetNormalDot);
-                Vector3Wide.ConditionallyNegate(Vector.LessThan(offsetNormalDot, Vector<float>.Zero), triangleNormal, out var sampleDirection);
+                Vector3Wide.ConditionallyNegate(Vector.LessThan(offsetNormalDot, Vector<float>.Zero), triangleNormal, out var localNormalCandidate);
                 //A little confusing- DepthRefiner's A is our B and vice versa.       
-                cylinderSupportFinder.ComputeLocalSupport(b, sampleDirection, out simplex.C.SupportOnA);
+                cylinderSupportFinder.ComputeLocalSupport(b, localNormalCandidate, out simplex.C.SupportOnA);
                 Vector3Wide.Subtract(simplex.C.SupportOnA, triangleA, out simplex.C.Support);
                 simplex.C.Exists = new Vector<int>(-1);
-                Vector3Wide.Dot(simplex.C.Support, sampleDirection, out var depthCandidate);
+                Vector3Wide.Dot(simplex.C.Support, localNormalCandidate, out var depthCandidate);
                 var useCandidate = Vector.LessThan(depthCandidate, depth);
                 depth = Vector.ConditionalSelect(useCandidate, depthCandidate, depth);
-                Vector3Wide.ConditionalSelect(useCandidate, sampleDirection, localNormal, out localNormal);
+                Vector3Wide.ConditionalSelect(useCandidate, localNormalCandidate, localNormal, out localNormal);
             }
 
             //We now have a decent estimate for the local normal and an initial simplex to work from. Refine it to a local minimum.
@@ -131,7 +133,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //If the cylinder is too far away or if it's on the backside of the triangle, don't generate any contacts.
             Vector3Wide.Dot(triangleNormal, localNormal, out var faceNormalADotNormal);
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.LessThan(faceNormalADotNormal, Vector<float>.Zero), Vector.LessThan(depth, depthThreshold)));
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThan(faceNormalADotNormal, Vector<float>.Zero), Vector.LessThan(depth, depthThreshold)));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //All lanes are either inactive or were found to have a depth lower than the speculative margin, so we can just quit early.
@@ -183,9 +185,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 //Test the four points against the edge plane. Note that signs depend on the orientation of the cylinder.
                 TryAddInteriorPoint(interior0, new Vector<int>(8), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
-                TryAddInteriorPoint(interior1, new Vector<int>(9), pB, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
-                TryAddInteriorPoint(interior2, new Vector<int>(10), pC, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
-                TryAddInteriorPoint(interior3, new Vector<int>(11), pC, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
+                TryAddInteriorPoint(interior1, new Vector<int>(9), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
+                TryAddInteriorPoint(interior2, new Vector<int>(10), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
+                TryAddInteriorPoint(interior3, new Vector<int>(11), pA, projectedAB, pB, projectedBC, pC, projectedCA, useCap, ref candidates, ref candidateCount, pairCount);
 
                 Vector3Wide capCenterToTriangle;
                 capCenterToTriangle.X = triangleA.X;

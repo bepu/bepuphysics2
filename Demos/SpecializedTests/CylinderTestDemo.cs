@@ -174,7 +174,7 @@ namespace Demos.SpecializedTests
             camera.Pitch = 0;
             camera.Yaw = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10f, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0f, 0)));
 
             var cylinder = BodyDescription.CreateConvexDynamic(new Vector3(10f, 3, 0), 1f, Simulation.Shapes, new Cylinder(1f, 1));
             //cylinder.Activity.SleepThreshold = -1f;
