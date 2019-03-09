@@ -14,7 +14,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public int BatchSize => 32;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void IntersectLineCircle(in Vector2Wide linePosition, in Vector2Wide lineDirection, in Vector<float> radius, out Vector<float> tMin, out Vector<float> tMax, out Vector<int> intersected)
+        internal static void IntersectLineCircle(in Vector2Wide linePosition, in Vector2Wide lineDirection, in Vector<float> radius, out Vector<float> tMin, out Vector<float> tMax, out Vector<int> intersected)
         {
             //||linePosition + lineDirection * t|| = radius
             //dot(linePosition + lineDirection * t, linePosition + lineDirection * t) = radius * radius
@@ -38,7 +38,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void AddCandidateForEdge(in Vector2Wide edgeStart, in Vector2Wide edgeOffset, in Vector<float> tMin, in Vector<float> tMax, in Vector<int> intersected, in Vector<int> edgeId, in Vector<int> allowFeatureContacts, int pairCount,
+        internal static void AddCandidateForEdge(in Vector2Wide edgeStart, in Vector2Wide edgeOffset, in Vector<float> tMin, in Vector<float> tMax, in Vector<int> intersected, in Vector<int> edgeId, in Vector<int> allowFeatureContacts, int pairCount,
                  ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
         {
             //We're going to be a little lazy with feature ids. If the box face changes, these will get partially invalidated even if an edge survived.
@@ -60,14 +60,33 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void CandidateToOffsetA(in ManifoldCandidate candidate, in Vector3Wide featureCenterB, in Vector3Wide tangentBX, in Vector3Wide tangentBY, in Vector3Wide localOffsetB, in Matrix3x3Wide orientationB, out Vector3Wide offsetA)
+        internal static unsafe void GenerateInteriorPoints(in CylinderWide b, in Vector3Wide localNormal, in Vector3Wide closestOnB, out Vector2Wide interior0, out Vector2Wide interior1, out Vector2Wide interior2, out Vector2Wide interior3)
         {
-            Vector3Wide.Scale(tangentBX, candidate.X, out var x);
-            Vector3Wide.Scale(tangentBY, candidate.Y, out var y);
-            Vector3Wide.Add(x, y, out var offset);
-            Vector3Wide.Add(featureCenterB, offset, out var localContact);
-            Vector3Wide.Add(localContact, localOffsetB, out localContact);
-            Matrix3x3Wide.TransformWithoutOverlap(localContact, orientationB, out offsetA);
+            //We need representative points on the cylinder to cover the case where the cap is not touching edges.
+            //We'll create 4 candidates on the edges of the cylinder and test them against the already-projected edge planes.
+            //Start with a seed and then generate three more sample points by rotating it by 90 degrees 3 times.
+            //It's important to keep the deepest contact, so in the non parallel case, start with the witness point on B.
+            //In the parallel case, arbitrarily choose a direction- here we'll use (1, 0).
+            //Interpolate between the two choices based on the dot product to avoid instantaneous changes.
+            var interpolationMin = new Vector<float>(0.9995f);
+            var inverseInterpolationSpan = new Vector<float>(1f / 0.00025f);
+            var parallelWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(localNormal.Y) - interpolationMin) * inverseInterpolationSpan));
+            var deepestWeight = Vector<float>.One - parallelWeight;
+            Vector2Wide initialPoint;
+            initialPoint.X = closestOnB.X * deepestWeight + parallelWeight;
+            initialPoint.Y = closestOnB.Z * deepestWeight;
+            Vector2Wide.Length(initialPoint, out var initialLength);
+            var useFallbackInitialPoint = Vector.LessThan(initialLength, new Vector<float>(1e-10f));
+            initialLength = Vector.ConditionalSelect(useFallbackInitialPoint, Vector<float>.One, initialLength);
+            initialPoint.X = Vector.ConditionalSelect(useFallbackInitialPoint, Vector<float>.One, initialPoint.X);
+            initialPoint.Y = Vector.ConditionalSelect(useFallbackInitialPoint, Vector<float>.Zero, initialPoint.Y);
+            Vector2Wide.Scale(initialPoint, b.Radius / initialLength, out interior0);
+            interior1.X = interior0.Y;
+            interior1.Y = -interior0.X;
+            interior2.X = -interior0.X;
+            interior2.Y = -interior0.Y;
+            interior3.X = -interior0.Y;
+            interior3.Y = interior0.X;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -241,32 +260,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 AddCandidateForEdge(p10, edge1011, tMin1011, tMax1011, intersected1011, new Vector<int>(2), useCap, pairCount, ref candidates, ref candidateCount);
                 AddCandidateForEdge(p11, edge1101, tMin1101, tMax1101, intersected1101, new Vector<int>(3), useCap, pairCount, ref candidates, ref candidateCount);
 
-                //We need representative points on the cylinder to cover the case where the cap is not touching edges.
-                //We'll create 4 candidates on the edges of the cylinder and test them against the already-projected edge planes.
-                //Start with a seed and then generate three more sample points by rotating it by 90 degrees 3 times.
-                //It's important to keep the deepest contact, so in the non parallel case, start with the witness point on B.
-                //In the parallel case, arbitrarily choose a direction- here we'll use (1, 0).
-                //Interpolate between the two choices based on the dot product to avoid instantaneous changes.
-                var interpolationMin = new Vector<float>(0.9995f);
-                var inverseInterpolationSpan = new Vector<float>(1f / 0.00025f);
-                var parallelWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(localNormal.Y) - interpolationMin) * inverseInterpolationSpan));
-                var deepestWeight = Vector<float>.One - parallelWeight;
-                Vector2Wide initialPoint;
-                initialPoint.X = closestOnB.X * deepestWeight + parallelWeight;
-                initialPoint.Y = closestOnB.Z * deepestWeight;
-                Vector2Wide.Length(initialPoint, out var initialLength);
-                var useFallbackInitialPoint = Vector.LessThan(initialLength, new Vector<float>(1e-10f));
-                initialLength = Vector.ConditionalSelect(useFallbackInitialPoint, Vector<float>.One, initialLength);
-                initialPoint.X = Vector.ConditionalSelect(useFallbackInitialPoint, Vector<float>.One, initialPoint.X);
-                initialPoint.Y = Vector.ConditionalSelect(useFallbackInitialPoint, Vector<float>.Zero, initialPoint.Y);
-                Vector2Wide.Scale(initialPoint, b.Radius / initialLength, out var interior0);
-                Vector2Wide interior1, interior2, interior3;
-                interior1.X = interior0.Y;
-                interior1.Y = -interior0.X;
-                interior2.X = -interior0.X;
-                interior2.Y = -interior0.Y;
-                interior3.X = -interior0.Y;
-                interior3.Y = interior0.X;
+                GenerateInteriorPoints(b, localNormal, closestOnB, out var interior0, out var interior1, out var interior2, out var interior3);
 
                 //Test the four points against the edge plane. Note that signs depend on the orientation of the cylinder.
                 var edge0010Plane0 = p00.X * edge0010.Y - p00.Y * edge0010.X;

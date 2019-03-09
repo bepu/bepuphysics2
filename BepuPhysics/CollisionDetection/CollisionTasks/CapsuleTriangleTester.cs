@@ -241,7 +241,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Any edge contributions are now stored in the b0, b1, localNormal, and depth fields. 
             //1) If face contact won (no edges contributed any contacts), then generate two contacts by clipping the capsule axis against the triangle edge planes.
             //(Clipping is used so that the results can be shared by #2, and in case where the capsule axis is parallel to the face surface so an edge that 'should' have won, didn't.)
-            //2) If an edge contact one and only generated one contact, then try to generate one additional face contact by
+            //2) If an edge contact won and only generated one contact, then try to generate one additional face contact by
             //projecting a capsule endpoint onto the triangle if it's on the colliding side and is within the triangle's bounds.
             //The bounds check can share the clipping done for face contacts.
             //3) If an edge contact has generated two contacts, then no additional contacts are required.

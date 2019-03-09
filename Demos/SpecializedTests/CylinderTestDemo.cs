@@ -184,6 +184,8 @@ namespace Demos.SpecializedTests
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(5, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Capsule(0.5f, 1f)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(10, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Cylinder(0.5f, 1f)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(15, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Box(3f, 4f, 5f)));
+            Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(25, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes,
+                new Triangle(new Vector3(-3, 0, 3), new Vector3(-3, 0, -3), new Vector3(3, 0, -3))));
 
 
             var cylinderShape = new Cylinder(1f, 2);
@@ -204,63 +206,63 @@ namespace Demos.SpecializedTests
             //    }
             //}
 
-            var box = new Box(1f, 3f, 2f);
-            var capsule = new Capsule(1f, 1f);
-            var sphere = new Sphere(1.5f);
-            box.ComputeInertia(1, out var boxInertia);
-            capsule.ComputeInertia(1, out var capsuleInertia);
-            sphere.ComputeInertia(1, out var sphereInertia);
-            var boxIndex = Simulation.Shapes.Add(box);
-            var capsuleIndex = Simulation.Shapes.Add(capsule);
-            var sphereIndex = Simulation.Shapes.Add(sphere);
-            const int width = 10;
-            const int height = 10;
-            const int length = 10;
-            for (int i = 0; i < width; ++i)
-            {
-                for (int j = 0; j < height; ++j)
-                {
-                    for (int k = 0; k < length; ++k)
-                    {
-                        var location = new Vector3(3, 3, 3) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 2.5f, -30 - length * 1.5f);
-                        var bodyDescription = new BodyDescription
-                        {
-                            Activity = new BodyActivityDescription(0.01f),
-                            Pose = new RigidPose
-                            {
-                                Orientation = Quaternion.Identity,// Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathF.PI * 0.79813f),
-                                Position = location
-                            },
-                            Collidable = new CollidableDescription
-                            {
-                                Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                                SpeculativeMargin = 0.1f
-                            }
-                        };
-                        switch (j % 4)
-                        {
-                            case 0:
-                                bodyDescription.Collidable.Shape = boxIndex;
-                                bodyDescription.LocalInertia = boxInertia;
-                                break;
-                            case 1:
-                                bodyDescription.Collidable.Shape = capsuleIndex;
-                                bodyDescription.LocalInertia = capsuleInertia;
-                                break;
-                            case 2:
-                                bodyDescription.Collidable.Shape = sphereIndex;
-                                bodyDescription.LocalInertia = sphereInertia;
-                                break;
-                            case 3:
-                                bodyDescription.Collidable.Shape = cylinderShapeIndex;
-                                bodyDescription.LocalInertia = cylinderInertia;
-                                break;
-                        }
-                        Simulation.Bodies.Add(bodyDescription);
+            //var box = new Box(1f, 3f, 2f);
+            //var capsule = new Capsule(1f, 1f);
+            //var sphere = new Sphere(1.5f);
+            //box.ComputeInertia(1, out var boxInertia);
+            //capsule.ComputeInertia(1, out var capsuleInertia);
+            //sphere.ComputeInertia(1, out var sphereInertia);
+            //var boxIndex = Simulation.Shapes.Add(box);
+            //var capsuleIndex = Simulation.Shapes.Add(capsule);
+            //var sphereIndex = Simulation.Shapes.Add(sphere);
+            //const int width = 10;
+            //const int height = 10;
+            //const int length = 10;
+            //for (int i = 0; i < width; ++i)
+            //{
+            //    for (int j = 0; j < height; ++j)
+            //    {
+            //        for (int k = 0; k < length; ++k)
+            //        {
+            //            var location = new Vector3(3, 3, 3) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 2.5f, -30 - length * 1.5f);
+            //            var bodyDescription = new BodyDescription
+            //            {
+            //                Activity = new BodyActivityDescription(0.01f),
+            //                Pose = new RigidPose
+            //                {
+            //                    Orientation = Quaternion.Identity,// Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 1, 1)), MathF.PI * 0.79813f),
+            //                    Position = location
+            //                },
+            //                Collidable = new CollidableDescription
+            //                {
+            //                    Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
+            //                    SpeculativeMargin = 0.1f
+            //                }
+            //            };
+            //            switch (j % 4)
+            //            {
+            //                case 0:
+            //                    bodyDescription.Collidable.Shape = boxIndex;
+            //                    bodyDescription.LocalInertia = boxInertia;
+            //                    break;
+            //                case 1:
+            //                    bodyDescription.Collidable.Shape = capsuleIndex;
+            //                    bodyDescription.LocalInertia = capsuleInertia;
+            //                    break;
+            //                case 2:
+            //                    bodyDescription.Collidable.Shape = sphereIndex;
+            //                    bodyDescription.LocalInertia = sphereInertia;
+            //                    break;
+            //                case 3:
+            //                    bodyDescription.Collidable.Shape = cylinderShapeIndex;
+            //                    bodyDescription.LocalInertia = cylinderInertia;
+            //                    break;
+            //            }
+            //            Simulation.Bodies.Add(bodyDescription);
 
-                    }
-                }
-            }
+            //        }
+            //    }
+            //}
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0), Simulation.Shapes.Add(new Cylinder(100, 1f)), 0.1f));
 

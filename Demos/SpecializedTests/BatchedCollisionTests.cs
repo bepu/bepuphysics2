@@ -170,10 +170,11 @@ namespace Demos.SpecializedTests
             //Test(ref capsule, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref capsule, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref capsule, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref cylinder, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref box, ref box, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref box, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref box, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref triangle, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref cylinder, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
 
 
             //Test<Sphere, SphereWide, Sphere, SphereWide, SpherePairDistanceTester>(sphere, sphere, ref posesA, ref posesB, iterationCount);
