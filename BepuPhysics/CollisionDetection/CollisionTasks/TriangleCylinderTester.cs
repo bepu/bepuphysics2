@@ -8,7 +8,35 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    using DepthRefiner = DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, TriangleSupportFinder>;
+    using DepthRefiner = DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>;
+
+    internal struct PretransformedTriangleSupportFinder : ISupportFinder<Triangle, TriangleWide>
+    {
+        public bool HasMargin => throw new NotImplementedException();
+
+        public void ComputeLocalSupport(in TriangleWide shape, in Vector3Wide direction, out Vector3Wide support)
+        {
+            throw new NotImplementedException();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ComputeSupport(in TriangleWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, out Vector3Wide support)
+        {
+            Vector3Wide.Dot(shape.A, direction, out var a);
+            Vector3Wide.Dot(shape.B, direction, out var b);
+            Vector3Wide.Dot(shape.C, direction, out var c);
+            var max = Vector.Max(a, Vector.Max(b, c));
+            Vector3Wide.ConditionalSelect(Vector.Equals(max, a), shape.A, shape.B, out support);
+            Vector3Wide.ConditionalSelect(Vector.Equals(max, c), shape.C, support, out support);
+        }
+
+        public void GetMargin(in TriangleWide shape, out Vector<float> margin)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+
     public struct TriangleCylinderTester : IPairTester<TriangleWide, CylinderWide, Convex4ContactManifoldWide>
     {
         public int BatchSize => 32;
@@ -48,20 +76,43 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Work in b's local space.
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(worldRA, worldRB, out var rA);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, worldRB, out var localOffsetB);
-            Vector3Wide.Negate(localOffsetB, out var localOffsetA);
+
+            //Pretransform and recenter the triangle so that the DepthRefiner can work with it (and to avoid unnecessary transforms).
+            TriangleWide triangle;
+            Matrix3x3Wide.TransformWithoutOverlap(a.A, rA, out triangle.A);
+            Matrix3x3Wide.TransformWithoutOverlap(a.B, rA, out triangle.B);
+            Matrix3x3Wide.TransformWithoutOverlap(a.C, rA, out triangle.C);
+            Vector3Wide.Add(triangle.A, triangle.B, out var centroid);
+            Vector3Wide.Add(triangle.C, centroid, out centroid);
+            Vector3Wide.Scale(centroid, new Vector<float>(1f / 3f), out centroid);
+            Vector3Wide.Subtract(triangle.A, centroid, out triangle.A);
+            Vector3Wide.Subtract(triangle.B, centroid, out triangle.B);
+            Vector3Wide.Subtract(triangle.C, centroid, out triangle.C);
+            Vector3Wide.Subtract(centroid, localOffsetB, out var localTriangleCenter);
+            Vector3Wide.Subtract(triangle.B, triangle.A, out var triangleAB);
+            Vector3Wide.Subtract(triangle.C, triangle.B, out var triangleBC);
+            Vector3Wide.Subtract(triangle.A, triangle.C, out var triangleCA);
+            //We'll be using B-local triangle vertices quite a bit, so cache them.
+            Vector3Wide.Add(triangle.A, localTriangleCenter, out var triangleA);
+            Vector3Wide.Add(triangle.B, localTriangleCenter, out var triangleB);
+            Vector3Wide.Add(triangle.C, localTriangleCenter, out var triangleC);
+            Vector3Wide.CrossWithoutOverlap(triangleAB, triangleCA, out var triangleNormal);
+            Vector3Wide.Length(triangleNormal, out var triangleNormalLength);
+            Vector3Wide.Scale(triangleNormal, Vector<float>.One / triangleNormalLength, out triangleNormal);
+            //Note that degenerate triangles (triangleNormalLength near zero) are ignored completely by the later inactiveLanes mask.
 
             //First, we'll try a few easy known normal candidates.
             //1) Offset from B to A
-            Vector3Wide.Length(localOffsetA, out var length);
-            Vector3Wide.Scale(localOffsetA, Vector<float>.One / length, out var localNormal);
+            Vector3Wide.Length(localTriangleCenter, out var length);
+            Vector3Wide.Scale(localTriangleCenter, Vector<float>.One / length, out var localNormal);
             var useInitialSampleFallback = Vector.LessThan(length, new Vector<float>(1e-10f));
             localNormal.X = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.X);
             localNormal.Y = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.One, localNormal.Y);
             localNormal.Z = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.Z);
-            TriangleSupportFinder triangleSupportFinder = default;
+            PretransformedTriangleSupportFinder triangleSupportFinder = default;
             CylinderSupportFinder cylinderSupportFinder = default;
             DepthRefiner.SimplexWithWitness simplex;
-            DepthRefiner.FindSupport(b, a, localOffsetA, rA, ref cylinderSupportFinder, ref triangleSupportFinder, localNormal, out simplex.A.Support, out simplex.A.SupportOnA);
+            DepthRefiner.FindSupport(b, triangle, localTriangleCenter, rA, ref cylinderSupportFinder, ref triangleSupportFinder, localNormal, out simplex.A.Support, out simplex.A.SupportOnA);
             simplex.A.Exists = new Vector<int>(-1);
             Vector3Wide.Dot(simplex.A.Support, localNormal, out var depth);
 
@@ -70,10 +121,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Use the local Y axis sign that points from B to A.
                 Vector3Wide negatedNormalCandidate;
                 negatedNormalCandidate.X = Vector<float>.Zero;
-                negatedNormalCandidate.Y = Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), new Vector<float>(-1), Vector<float>.One);
+                negatedNormalCandidate.Y = Vector.ConditionalSelect(Vector.GreaterThan(localTriangleCenter.Y, Vector<float>.Zero), new Vector<float>(-1), Vector<float>.One);
                 negatedNormalCandidate.Z = Vector<float>.Zero;
-                triangleSupportFinder.ComputeSupport(a, rA, negatedNormalCandidate, out var supportA);
-                Vector3Wide.Add(supportA, localOffsetA, out supportA);
+                triangleSupportFinder.ComputeSupport(triangle, rA, negatedNormalCandidate, out var supportA);
+                Vector3Wide.Add(supportA, localTriangleCenter, out supportA);
                 //A little confusing- DepthRefiner's A is our B and vice versa.       
                 simplex.B.SupportOnA.X = Vector<float>.Zero;
                 simplex.B.SupportOnA.Y = negatedNormalCandidate.Y * -b.HalfLength;
@@ -89,26 +140,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 localNormal.Z = Vector.ConditionalSelect(useCandidate, Vector<float>.Zero, localNormal.Z);
             }
 
-            Matrix3x3Wide.TransformWithoutOverlap(a.A, rA, out var triangleA);
-            Matrix3x3Wide.TransformWithoutOverlap(a.B, rA, out var triangleB);
-            Matrix3x3Wide.TransformWithoutOverlap(a.C, rA, out var triangleC);
-            Vector3Wide.Add(triangleA, localOffsetA, out triangleA);
-            Vector3Wide.Add(triangleB, localOffsetA, out triangleB);
-            Vector3Wide.Add(triangleC, localOffsetA, out triangleC);
-            Vector3Wide.Subtract(triangleB, triangleA, out var triangleAB);
-            Vector3Wide.Subtract(triangleC, triangleB, out var triangleBC);
-            Vector3Wide.Subtract(triangleA, triangleC, out var triangleCA);
-            Vector3Wide.CrossWithoutOverlap(triangleAB, triangleCA, out var triangleNormal);
-            Vector3Wide.Length(triangleNormal, out var triangleNormalLength);
-            Vector3Wide.Scale(triangleNormal, Vector<float>.One / triangleNormalLength, out triangleNormal);
-            //Note that degenerate triangles (triangleNormalLength near zero) are ignored completely by the later inactiveLanes mask.
+
 
             //3) Triangle face
             {
                 //While extra sampling in polytopes is a little iffy, triangle face collisions are so common that it's not quite so silly.
                 //Note that we still calibrate the direction against the offset, even though we reject collisions against the backside of the triangle-
                 //if we sample the frontface when the collision is actually against the backface, the sample will just slow down the depth refiner convergence.
-                Vector3Wide.Dot(localOffsetA, triangleNormal, out var offsetNormalDot);
+                Vector3Wide.Dot(localTriangleCenter, triangleNormal, out var offsetNormalDot);
                 Vector3Wide.ConditionallyNegate(Vector.LessThan(offsetNormalDot, Vector<float>.Zero), triangleNormal, out var localNormalCandidate);
                 //A little confusing- DepthRefiner's A is our B and vice versa.       
                 cylinderSupportFinder.ComputeLocalSupport(b, localNormalCandidate, out simplex.C.SupportOnA);
@@ -128,7 +167,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var depthThreshold = -speculativeMargin;
             var epsilonScale = Vector.Max(b.HalfLength, b.Radius);
             DepthRefiner.FindMinimumDepth(
-                b, a, localOffsetA, rA, ref cylinderSupportFinder, ref triangleSupportFinder, ref simplex, localNormal, depth, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
+                b, triangle, localTriangleCenter, rA, ref cylinderSupportFinder, ref triangleSupportFinder, ref simplex, localNormal, depth, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
                 out depth, out localNormal, out var closestOnB, maximumIterations: 25);
 
             //If the cylinder is too far away or if it's on the backside of the triangle, don't generate any contacts.
@@ -256,6 +295,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var abDenominator = negativeOne / edgeNormalAB.Y;
                 var bcDenominator = negativeOne / edgeNormalBC.Y;
                 var caDenominator = negativeOne / edgeNormalCA.Y;
+                Vector3Wide.LengthSquared(edgeNormalAB, out var edgeNormalABLengthSquared);
+                Vector3Wide.LengthSquared(edgeNormalBC, out var edgeNormalBCLengthSquared);
+                Vector3Wide.LengthSquared(edgeNormalCA, out var edgeNormalCALengthSquared);
+                var inverseEdgeNormalABLengthSquared = Vector<float>.One / edgeNormalABLengthSquared;
+                var inverseEdgeNormalBCLengthSquared = Vector<float>.One / edgeNormalBCLengthSquared;
+                var inverseEdgeNormalCALengthSquared = Vector<float>.One / edgeNormalCALengthSquared;
                 Vector3Wide aToSideLine, bToSideLine, cToSideLine;
                 aToSideLine.X = closestOnB.X - triangleA.X;
                 aToSideLine.Y = -triangleA.Y;
@@ -270,20 +315,28 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Dot(edgeNormalAB, aToSideLine, out var abNumerator);
                 Vector3Wide.Dot(edgeNormalBC, bToSideLine, out var bcNumerator);
                 Vector3Wide.Dot(edgeNormalCA, cToSideLine, out var caNumerator);
-                var abInvalid = Vector.Equals(edgeNormalAB.Y, Vector<float>.Zero);
-                var bcInvalid = Vector.Equals(edgeNormalBC.Y, Vector<float>.Zero);
-                var caInvalid = Vector.Equals(edgeNormalCA.Y, Vector<float>.Zero);
                 var minValue = new Vector<float>(float.MinValue);
                 var maxValue = new Vector<float>(float.MaxValue);
                 var tAB = abNumerator * abDenominator;
                 var tBC = bcNumerator * bcDenominator;
                 var tCA = caNumerator * caDenominator;
                 //As the side aligns with one of the edge directions, unrestrict that axis to avoid numerical noise.
-                var interpolationMin = new Vector<float>(0.01f);
-                var inverseInterpolationSpan = new Vector<float>(1f / -0.005f);
-                var unrestrictWeightAB = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalAB.Y) - interpolationMin) * inverseInterpolationSpan));
-                var unrestrictWeightBC = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalBC.Y) - interpolationMin) * inverseInterpolationSpan));
-                var unrestrictWeightCA = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalCA.Y) - interpolationMin) * inverseInterpolationSpan));
+                //Do something similar to capsule tests: 
+                //sin(angleFromEdgePlane) = dot(sideLineDirection, edgeNormal / ||edgeNormal||) / ||sideLineDirection||
+                //sin(angleFromEdgePlane) = dot(sideLineDirection, edgeNormal / ||edgeNormal||)
+                //Only relevant in very small angles, so sin(x) ~= x:
+                //angleFromEdgePlane = dot(sideLineDirection, edgeNormal / ||edgeNormal||)
+                //Interpolation behavior is pretty arbitrary, so squaring is fine:
+                //angleFromEdgePlane^2 = dot(sideLineDirection, edgeNormal)^2 / ||edgeNormal||^2
+                const float lowerThresholdAngle = 0.01f;
+                const float upperThresholdAngle = 0.05f;
+                const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
+                const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
+                var interpolationMin = new Vector<float>(upperThreshold);
+                var inverseInterpolationSpan = new Vector<float>(1f / (upperThreshold - lowerThreshold));
+                var unrestrictWeightAB = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (interpolationMin - edgeNormalAB.Y * edgeNormalAB.Y * inverseEdgeNormalABLengthSquared) * inverseInterpolationSpan));
+                var unrestrictWeightBC = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (interpolationMin - edgeNormalBC.Y * edgeNormalBC.Y * inverseEdgeNormalBCLengthSquared) * inverseInterpolationSpan));
+                var unrestrictWeightCA = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (interpolationMin - edgeNormalCA.Y * edgeNormalCA.Y * inverseEdgeNormalCALengthSquared) * inverseInterpolationSpan));
                 var regularWeightAB = Vector<float>.One - unrestrictWeightAB;
                 var regularWeightBC = Vector<float>.One - unrestrictWeightBC;
                 var regularWeightCA = Vector<float>.One - unrestrictWeightCA;
@@ -318,10 +371,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ConditionalSelect(useSide, contact1, manifold.OffsetA1, out manifold.OffsetA1);
                 manifold.FeatureId0 = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.FeatureId0);
                 manifold.FeatureId1 = Vector.ConditionalSelect(useSide, Vector<int>.One, manifold.FeatureId1);
-                manifold.Contact0Exists = Vector.ConditionalSelect(useSide, new Vector<int>(-1), manifold.Contact0Exists);
-                manifold.Contact1Exists = Vector.ConditionalSelect(useSide, Vector.GreaterThan(tMax, tMin), manifold.Contact1Exists);
-                manifold.Contact2Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact2Exists);
-                manifold.Contact3Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact3Exists);
                 //depth = dot(pointOnFaceB - faceCenterA, faceNormalA) / dot(faceNormalA, normal)
                 Vector3Wide.Subtract(localContact0, triangleA, out var faceToContact0);
                 Vector3Wide.Subtract(localContact1, triangleA, out var faceToContact1);
@@ -331,6 +380,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var depth1 = contact1Dot * inverseFaceNormalDotLocalNormal;
                 manifold.Depth0 = Vector.ConditionalSelect(useSide, depth0, manifold.Depth0);
                 manifold.Depth1 = Vector.ConditionalSelect(useSide, depth1, manifold.Depth1);
+                manifold.Contact0Exists = Vector.ConditionalSelect(useSide, Vector.GreaterThan(depth0, depthThreshold), manifold.Contact0Exists);
+                manifold.Contact1Exists = Vector.ConditionalSelect(useSide, Vector.BitwiseAnd(Vector.GreaterThan(depth1, depthThreshold), Vector.GreaterThan(tMax, tMin)), manifold.Contact1Exists);
+                manifold.Contact2Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact2Exists);
+                manifold.Contact3Exists = Vector.ConditionalSelect(useSide, Vector<int>.Zero, manifold.Contact3Exists);
             }
 
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, worldRB, out manifold.Normal);

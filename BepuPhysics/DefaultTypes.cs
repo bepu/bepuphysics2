@@ -116,7 +116,7 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, Compound, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, BigCompound, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, Mesh, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
-            
+
             defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Box, BoxWide, FliplessPair, FliplessPairWide<Box, BoxWide>, Convex4ContactManifoldWide, BoxPairTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Triangle, TriangleWide, CollisionPair, ConvexPairWide<Box, BoxWide, Triangle, TriangleWide>, Convex4ContactManifoldWide, BoxTriangleTester>());
             defaultTaskRegistry.Register(new ConvexCollisionTask<Box, BoxWide, Cylinder, CylinderWide, CollisionPair, ConvexPairWide<Box, BoxWide, Cylinder, CylinderWide>, Convex4ContactManifoldWide, BoxCylinderTester>());
@@ -131,6 +131,9 @@ namespace BepuPhysics
             defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, Mesh, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
 
             defaultTaskRegistry.Register(new ConvexCollisionTask<Cylinder, CylinderWide, Cylinder, CylinderWide, CollisionPair, ConvexPairWide<Cylinder, CylinderWide, Cylinder, CylinderWide>, Convex4ContactManifoldWide, CylinderPairTester>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Cylinder, Compound, ConvexCompoundOverlapFinder<Cylinder, CylinderWide, Compound>, ConvexCompoundContinuations<Compound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Cylinder, BigCompound, ConvexCompoundOverlapFinder<Cylinder, CylinderWide, BigCompound>, ConvexCompoundContinuations<BigCompound>, NonconvexReduction>());
+            defaultTaskRegistry.Register(new ConvexCompoundCollisionTask<Cylinder, Mesh, ConvexCompoundOverlapFinder<Cylinder, CylinderWide, Mesh>, ConvexMeshContinuations<Mesh>, MeshReduction>());
 
             defaultTaskRegistry.Register(new CompoundPairCollisionTask<Compound, Compound, CompoundPairOverlapFinder<Compound, Compound>, CompoundPairContinuations<Compound, Compound>, NonconvexReduction>());
             defaultTaskRegistry.Register(new CompoundPairCollisionTask<Compound, BigCompound, CompoundPairOverlapFinder<Compound, BigCompound>, CompoundPairContinuations<Compound, BigCompound>, NonconvexReduction>());
@@ -187,11 +190,11 @@ namespace BepuPhysics
 
             defaultTaskRegistry.Register(new CompoundPairSweepTask<Compound, Compound, CompoundPairSweepOverlapFinder<Compound, Compound>>());
             defaultTaskRegistry.Register(new CompoundPairSweepTask<Compound, BigCompound, CompoundPairSweepOverlapFinder<Compound, BigCompound>>());
-            defaultTaskRegistry.Register(new CompoundHomogeneousCompoundSweepTask<Compound, Mesh, Triangle, TriangleWide,  CompoundPairSweepOverlapFinder<Compound, Mesh>>());
+            defaultTaskRegistry.Register(new CompoundHomogeneousCompoundSweepTask<Compound, Mesh, Triangle, TriangleWide, CompoundPairSweepOverlapFinder<Compound, Mesh>>());
 
             defaultTaskRegistry.Register(new CompoundPairSweepTask<BigCompound, BigCompound, CompoundPairSweepOverlapFinder<BigCompound, BigCompound>>());
             defaultTaskRegistry.Register(new CompoundHomogeneousCompoundSweepTask<BigCompound, Mesh, Triangle, TriangleWide, CompoundPairSweepOverlapFinder<BigCompound, Mesh>>());
-            
+
             //TODO: No mesh-mesh at the moment.
             return defaultTaskRegistry;
         }

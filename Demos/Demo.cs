@@ -39,9 +39,12 @@ namespace Demos
 
         public virtual void Update(Window window, Camera camera, Input input, float dt)
         {
-            //TODO: While for the sake of the demos, using one update per render is probably the easiest/best choice,
-            //we can't assume that every monitor has a 60hz refresh rate. One simple option here is to just measure the primary display's refresh rate ahead of time
-            //and use that as the simulation timestep duration. Different displays would affect the simulation, but it wouldn't be too bad, and it would be locally consistent.
+            //In the demos, we use one time step per frame. We don't bother modifying the physics time step duration for different monitors so different refresh rates
+            //change the rate of simulation. This doesn't actually change the result of the simulation, though, and the simplicity is a good fit for the demos.
+            //In the context of a 'real' application, you could instead use a time accumulator to take time steps of fixed length as needed, or
+            //fully decouple simulation and rendering rates across different threads.
+            //(In either case, you'd also want to interpolate or extrapolate simulation results during rendering for smoothness.)
+            //Note that taking steps of variable length can reduce stability. Gradual or one-off changes can work reasonably well.
             Simulation.Timestep(1 / 60f, ThreadDispatcher);
         }
 

@@ -174,6 +174,7 @@ namespace Demos.SpecializedTests
             //Test(ref box, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref box, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref triangle, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref triangle, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref cylinder, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
 
 
