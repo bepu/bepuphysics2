@@ -329,7 +329,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Interpolation behavior is pretty arbitrary, so squaring is fine:
                 //angleFromEdgePlane^2 = dot(sideLineDirection, edgeNormal)^2 / ||edgeNormal||^2
                 const float lowerThresholdAngle = 0.01f;
-                const float upperThresholdAngle = 0.05f;
+                const float upperThresholdAngle = 0.02f;
                 const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
                 const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
                 var interpolationMin = new Vector<float>(upperThreshold);

@@ -216,9 +216,9 @@ namespace Demos.SpecializedTests
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);
-            const int width = 20;
+            const int width = 2;
             const int height = 1;
-            const int length = 20;
+            const int length = 2;
             for (int i = 0; i < width; ++i)
             {
                 for (int j = 0; j < height; ++j)
@@ -277,7 +277,7 @@ namespace Demos.SpecializedTests
                     var octave4 = (MathF.Sin((x + 67) * 1.50f) + MathF.Sin((y + 13) * 1.5f)) * 0.25f;
                     return new Vector3(x, octave0 + octave1 + octave2 + octave3 + octave4, y);
                 }, new Vector3(4, 1, 4), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-100, -10, 100), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-100, -15, 100), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
             //Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0), Simulation.Shapes.Add(new Cylinder(100, 1f)), 0.1f));

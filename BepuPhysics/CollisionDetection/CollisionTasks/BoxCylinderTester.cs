@@ -339,6 +339,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var negativeOne = new Vector<float>(-1f);
                 var xDenominator = negativeOne / edgeNormalX.Y;
                 var yDenominator = negativeOne / edgeNormalY.Y;
+                Vector3Wide.LengthSquared(edgeNormalX, out var edgeNormalXLengthSquared);
+                Vector3Wide.LengthSquared(edgeNormalY, out var edgeNormalYLengthSquared);
+                var inverseEdgeNormalXLengthSquared = Vector<float>.One / edgeNormalXLengthSquared;
+                var inverseEdgeNormalYLengthSquared = Vector<float>.One / edgeNormalYLengthSquared;
                 Vector3Wide v00ToSideLine, v11ToSideLine;
                 v00ToSideLine.X = closestOnB.X - v00.X;
                 v00ToSideLine.Y = -v00.Y;
@@ -360,10 +364,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var tY0 = leftNumerator * yDenominator;
                 var tY1 = rightNumerator * yDenominator;
                 //As the side aligns with one of the edge directions, unrestrict that axis to avoid numerical noise.
-                var interpolationMin = new Vector<float>(0.01f);
-                var inverseInterpolationSpan = new Vector<float>(1f / -0.005f);
-                var unrestrictWeightX = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalX.Y) - interpolationMin) * inverseInterpolationSpan));
-                var unrestrictWeightY = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(edgeNormalY.Y) - interpolationMin) * inverseInterpolationSpan));
+                //Do something similar to capsule tests: 
+                //sin(angleFromEdgePlane) = dot(sideLineDirection, edgeNormal / ||edgeNormal||) / ||sideLineDirection||
+                //sin(angleFromEdgePlane) = dot(sideLineDirection, edgeNormal / ||edgeNormal||)
+                //Only relevant in very small angles, so sin(x) ~= x:
+                //angleFromEdgePlane = dot(sideLineDirection, edgeNormal / ||edgeNormal||)
+                //Interpolation behavior is pretty arbitrary, so squaring is fine:
+                //angleFromEdgePlane^2 = dot(sideLineDirection, edgeNormal)^2 / ||edgeNormal||^2
+                const float lowerThresholdAngle = 0.01f;
+                const float upperThresholdAngle = 0.02f;
+                const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
+                const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
+                var interpolationMin = new Vector<float>(upperThreshold);
+                var inverseInterpolationSpan = new Vector<float>(1f / (upperThreshold - lowerThreshold));
+                var unrestrictWeightX = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (interpolationMin - edgeNormalX.Y * edgeNormalX.Y * inverseEdgeNormalXLengthSquared) * inverseInterpolationSpan));
+                var unrestrictWeightY = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (interpolationMin - edgeNormalY.Y * edgeNormalY.Y * inverseEdgeNormalYLengthSquared) * inverseInterpolationSpan));
                 var regularWeightX = Vector<float>.One - unrestrictWeightX;
                 var regularWeightY = Vector<float>.One - unrestrictWeightY;
                 var negativeHalfLength = -b.HalfLength;
