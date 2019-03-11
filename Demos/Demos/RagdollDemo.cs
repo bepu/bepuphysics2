@@ -74,8 +74,8 @@ namespace Demos.Demos
         /// <param name="b">Filter from which to remove collisions with filter a's subgroups.</param>
         public static void DisableCollision(ref SubgroupCollisionFilter filterA, ref SubgroupCollisionFilter filterB)
         {
-            filterA.CollidableSubgroups ^= filterB.SubgroupMembership;
-            filterB.CollidableSubgroups ^= filterA.SubgroupMembership;
+            filterA.CollidableSubgroups &= (ushort)~filterB.SubgroupMembership;
+            filterB.CollidableSubgroups &= (ushort)~filterA.SubgroupMembership;
         }
 
     }
