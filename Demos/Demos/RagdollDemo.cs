@@ -15,13 +15,80 @@ using BepuUtilities.Memory;
 
 namespace Demos.Demos
 {
-    //For the purposes of this demo, we have custom collision filtering rules.
-    struct RagdollCallbacks : INarrowPhaseCallbacks
+    /// <summary>
+    /// Bit masks which control whether different members of a group of objects can collide with each other.
+    /// </summary>
+    public struct SubgroupCollisionFilter
     {
-        public BodyProperty<ulong> Masks;
+        /// <summary>
+        /// A mask of 16 bits, each set bit representing a collision group that an object belongs to.
+        /// </summary>
+        public ushort SubgroupMembership;
+        /// <summary>
+        /// A mask of 16 bits, each set bit representing a collision group that an object can interact with.
+        /// </summary>
+        public ushort CollidableSubgroups;
+        /// <summary>
+        /// Id of the owner of the object. Objects belonging to different groups always collide.
+        /// </summary>
+        public int GroupId;
+
+        /// <summary>
+        /// Initializes a collision filter that collides with everything in the group.
+        /// </summary>
+        /// <param name="groupId">Id of the group that this filter operates within.</param>
+        public SubgroupCollisionFilter(int groupId)
+        {
+            GroupId = groupId;
+            SubgroupMembership = ushort.MaxValue;
+            CollidableSubgroups = ushort.MaxValue;
+        }
+
+        /// <summary>
+        /// Initializes a collision filter that belongs to one specific subgroup and can collide with any other subgroup.
+        /// </summary>
+        /// <param name="groupId">Id of the group that this filter operates within.</param>
+        /// <param name="subgroupId">Id of the subgroup to put this ragdoll</param>
+        public SubgroupCollisionFilter(int groupId, int subgroupId)
+        {
+            GroupId = groupId;
+            Debug.Assert(subgroupId >= 0 && subgroupId < 16, "The subgroup field is a ushort; it can only hold 16 distinct subgroups.");
+            SubgroupMembership = (ushort)(1 << subgroupId);
+            CollidableSubgroups = ushort.MaxValue;
+        }
+
+        /// <summary>
+        /// Disables a collision between this filter and the specified subgroup.
+        /// </summary>
+        /// <param name="subgroupId">Subgroup id to disable collision with.</param>
+        public void DisableCollision(int subgroupId)
+        {
+            Debug.Assert(subgroupId >= 0 && subgroupId < 16, "The subgroup field is a ushort; it can only hold 16 distinct subgroups.");
+            CollidableSubgroups ^= (ushort)(1 << subgroupId);
+        }
+
+        /// <summary>
+        /// Modifies the interactable subgroups such that filterB does not interact with the subgroups defined by filter a and vice versa.
+        /// </summary>
+        /// <param name="a">Filter from which to remove collisions with filter b's subgroups.</param>
+        /// <param name="b">Filter from which to remove collisions with filter a's subgroups.</param>
+        public static void DisableCollision(ref SubgroupCollisionFilter filterA, ref SubgroupCollisionFilter filterB)
+        {
+            filterA.CollidableSubgroups ^= filterB.SubgroupMembership;
+            filterB.CollidableSubgroups ^= filterA.SubgroupMembership;
+        }
+
+    }
+
+    /// <summary>
+    /// Narrow phase callbacks that prune out collisions between members of a group of objects.
+    /// </summary>
+    struct SubgroupFilteredCallbacks : INarrowPhaseCallbacks
+    {
+        public BodyProperty<SubgroupCollisionFilter> CollisionFilters;
         public void Initialize(Simulation simulation)
         {
-            Masks.Initialize(simulation.Bodies);
+            CollisionFilters.Initialize(simulation.Bodies);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -29,18 +96,11 @@ namespace Demos.Demos
         {
             if (a.Mobility == CollidableMobility.Dynamic && b.Mobility == CollidableMobility.Dynamic)
             {
-                //The upper 32 bits of the mask hold the ragdoll instance id. Different instances are always allowed to collide.
-                var maskA = Masks[a.Handle];
-                var maskB = Masks[b.Handle];
-                const ulong upperMask = ((ulong)uint.MaxValue << 32);
-                if ((maskA & upperMask) != (maskB & upperMask))
-                    return true;
-                //Bits 0 through 15 contain which local collision groups a body belongs to.
-                //Bits 16 through 31 contain which local collision groups a given body will collide with. 
+                ref var maskA = ref CollisionFilters[a.Handle];
+                ref var maskB = ref CollisionFilters[b.Handle];
+                //Different instances are always allowed to collide.
                 //Note that this only tests a's accepted groups against b's membership, instead of both directions.
-                const ulong lower16Mask = ((1 << 16) - 1);
-                return (((maskA >> 16) & maskB) & lower16Mask) > 0;
-
+                return maskA.GroupId != maskB.GroupId || (maskA.CollidableSubgroups & maskB.SubgroupMembership) > 0;
                 //This demo will ensure symmetry for simplicity. Optionally, you could make use of the fact that collidable references obey an order;
                 //the lower valued handle will always be CollidableReference a. Static collidables will always be in CollidableReference b if they exist.
             }
@@ -81,7 +141,7 @@ namespace Demos.Demos
 
         public void Dispose()
         {
-            Masks.Dispose();
+            CollisionFilters.Dispose();
         }
     }
 
@@ -117,22 +177,6 @@ namespace Demos.Demos
             orientation = crossLength > 1e-8f ? Quaternion.CreateFromAxisAngle(cross / crossLength, (float)Math.Asin(crossLength)) : Quaternion.Identity;
         }
 
-        static ulong BuildCollisionFilteringMask(int ragdollIndex, int localBodyIndex)
-        {
-            ulong instanceId = (ulong)ragdollIndex << 32;
-            //Note that we initialize allowed collisions to all groups.
-            ulong acceptedCollisionGroups = ((1ul << 16) - 1) << 16;
-            Debug.Assert(localBodyIndex >= 0 && localBodyIndex < 16, "The mask is set up to only handle 16 distinct ragdoll pieces.");
-            ulong membership = (ulong)(1 << localBodyIndex);
-            return instanceId | acceptedCollisionGroups | membership;
-        }
-
-        static void DisableCollision(ref ulong maskA, int localBodyIndexA, ref ulong maskB, int localBodyIndexB)
-        {
-            maskA ^= 1ul << (localBodyIndexB + 16);
-            maskB ^= 1ul << (localBodyIndexA + 16);
-        }
-
         public static Quaternion CreateBasis(in Vector3 z, in Vector3 x)
         {
             //For ease of use, don't assume that x is perpendicular to z, nor that either input is normalized.
@@ -153,8 +197,8 @@ namespace Demos.Demos
             return new AngularMotor { TargetVelocityLocalA = new Vector3(), Settings = new MotorSettings(float.MaxValue, 0.01f) };
         }
 
-        static void AddArm(float sign, Vector3 localShoulder, RigidPose localChestPose, int chestHandle, int chestLocalIndex, ref ulong chestMask,
-            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyProperty<ulong> masks, SpringSettings constraintSpringSettings, Simulation simulation)
+        static void AddArm(float sign, Vector3 localShoulder, RigidPose localChestPose, int chestHandle, ref SubgroupCollisionFilter chestMask,
+            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyProperty<SubgroupCollisionFilter> filters, SpringSettings constraintSpringSettings, Simulation simulation)
         {
             var localElbow = localShoulder + new Vector3(sign * 0.45f, 0, 0);
             var localWrist = localElbow + new Vector3(sign * 0.45f, 0, 0);
@@ -244,19 +288,20 @@ namespace Demos.Demos
             var upperArmLocalIndex = limbBaseBitIndex;
             var lowerArmLocalIndex = limbBaseBitIndex + 1;
             var handLocalIndex = limbBaseBitIndex + 2;
-            var upperArmMask = BuildCollisionFilteringMask(ragdollIndex, upperArmLocalIndex);
-            var lowerArmMask = BuildCollisionFilteringMask(ragdollIndex, lowerArmLocalIndex);
-            var handMask = BuildCollisionFilteringMask(ragdollIndex, handLocalIndex);
-            DisableCollision(ref chestMask, chestLocalIndex, ref upperArmMask, upperArmLocalIndex);
-            DisableCollision(ref upperArmMask, upperArmLocalIndex, ref lowerArmMask, lowerArmLocalIndex);
-            DisableCollision(ref lowerArmMask, lowerArmLocalIndex, ref handMask, handLocalIndex);
-            masks.Allocate(upperArm.Handle) = upperArmMask;
-            masks.Allocate(lowerArm.Handle) = lowerArmMask;
-            masks.Allocate(hand.Handle) = handMask;
+            ref var upperArmFilter = ref filters.Allocate(upperArm.Handle);
+            ref var lowerArmFilter = ref filters.Allocate(lowerArm.Handle);
+            ref var handFilter = ref filters.Allocate(hand.Handle);
+            upperArmFilter = new SubgroupCollisionFilter(ragdollIndex, upperArmLocalIndex);
+            lowerArmFilter = new SubgroupCollisionFilter(ragdollIndex, lowerArmLocalIndex);
+            handFilter = new SubgroupCollisionFilter(ragdollIndex, handLocalIndex);
+            SubgroupCollisionFilter.DisableCollision(ref chestMask, ref upperArmFilter);
+            SubgroupCollisionFilter.DisableCollision(ref upperArmFilter, ref lowerArmFilter);
+            SubgroupCollisionFilter.DisableCollision(ref lowerArmFilter, ref handFilter);
+
         }
 
-        static void AddLeg(Vector3 localHip, RigidPose localHipsPose, int hipsHandle, int hipsLocalIndex, ref ulong hipsMask,
-            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyProperty<ulong> masks, SpringSettings constraintSpringSettings, Simulation simulation)
+        static void AddLeg(Vector3 localHip, RigidPose localHipsPose, int hipsHandle, ref SubgroupCollisionFilter hipsFilter,
+            int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, BodyProperty<SubgroupCollisionFilter> filters, SpringSettings constraintSpringSettings, Simulation simulation)
         {
             var localKnee = localHip - new Vector3(0, 0.5f, 0);
             var localAnkle = localKnee - new Vector3(0, 0.5f, 0);
@@ -338,18 +383,18 @@ namespace Demos.Demos
             var upperLegLocalIndex = limbBaseBitIndex;
             var lowerLegLocalIndex = limbBaseBitIndex + 1;
             var footLocalIndex = limbBaseBitIndex + 2;
-            var upperLegMask = BuildCollisionFilteringMask(ragdollIndex, upperLegLocalIndex);
-            var lowerLegMask = BuildCollisionFilteringMask(ragdollIndex, lowerLegLocalIndex);
-            var footMask = BuildCollisionFilteringMask(ragdollIndex, footLocalIndex);
-            DisableCollision(ref hipsMask, hipsLocalIndex, ref upperLegMask, upperLegLocalIndex);
-            DisableCollision(ref upperLegMask, upperLegLocalIndex, ref lowerLegMask, lowerLegLocalIndex);
-            DisableCollision(ref lowerLegMask, lowerLegLocalIndex, ref footMask, footLocalIndex);
-            masks.Allocate(upperLeg.Handle) = upperLegMask;
-            masks.Allocate(lowerLeg.Handle) = lowerLegMask;
-            masks.Allocate(foot.Handle) = footMask;
+            ref var upperLegFilter = ref filters.Allocate(upperLeg.Handle);
+            ref var lowerLegFilter = ref filters.Allocate(lowerLeg.Handle);
+            ref var footFilter = ref filters.Allocate(foot.Handle);
+            upperLegFilter = new SubgroupCollisionFilter(ragdollIndex, upperLegLocalIndex);
+            lowerLegFilter = new SubgroupCollisionFilter(ragdollIndex, lowerLegLocalIndex);
+            footFilter = new SubgroupCollisionFilter(ragdollIndex, footLocalIndex);
+            SubgroupCollisionFilter.DisableCollision(ref hipsFilter, ref upperLegFilter);
+            SubgroupCollisionFilter.DisableCollision(ref upperLegFilter, ref lowerLegFilter);
+            SubgroupCollisionFilter.DisableCollision(ref lowerLegFilter, ref footFilter);
         }
 
-        public static void AddRagdoll(Vector3 position, Quaternion orientation, int ragdollIndex, BodyProperty<ulong> masks, Simulation simulation)
+        public static void AddRagdoll(Vector3 position, Quaternion orientation, int ragdollIndex, BodyProperty<SubgroupCollisionFilter> collisionFilters, Simulation simulation)
         {
             var ragdollPose = new RigidPose { Position = position, Orientation = orientation };
             var horizontalOrientation = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathHelper.PiOver2);
@@ -441,25 +486,24 @@ namespace Demos.Demos
             var abdomenLocalIndex = 1;
             var chestLocalIndex = 2;
             var headLocalIndex = 3;
-            var hipsMask = BuildCollisionFilteringMask(ragdollIndex, hipsLocalIndex);
-            var abdomenMask = BuildCollisionFilteringMask(ragdollIndex, abdomenLocalIndex);
-            var chestMask = BuildCollisionFilteringMask(ragdollIndex, chestLocalIndex);
-            var headMask = BuildCollisionFilteringMask(ragdollIndex, headLocalIndex);
+            ref var hipsFilter = ref collisionFilters.Allocate(hips.Handle);
+            ref var abdomenFilter = ref collisionFilters.Allocate(abdomen.Handle);
+            ref var chestFilter = ref collisionFilters.Allocate(chest.Handle);
+            ref var headFilter = ref collisionFilters.Allocate(head.Handle);
+            hipsFilter = new SubgroupCollisionFilter(ragdollIndex, hipsLocalIndex);
+            abdomenFilter = new SubgroupCollisionFilter(ragdollIndex, abdomenLocalIndex);
+            chestFilter = new SubgroupCollisionFilter(ragdollIndex, chestLocalIndex);
+            headFilter = new SubgroupCollisionFilter(ragdollIndex, headLocalIndex);
             //Disable collisions in the torso and head.
-            DisableCollision(ref hipsMask, hipsLocalIndex, ref abdomenMask, abdomenLocalIndex);
-            DisableCollision(ref abdomenMask, abdomenLocalIndex, ref chestMask, chestLocalIndex);
-            DisableCollision(ref chestMask, chestLocalIndex, ref headMask, headLocalIndex);
+            SubgroupCollisionFilter.DisableCollision(ref hipsFilter, ref abdomenFilter);
+            SubgroupCollisionFilter.DisableCollision(ref abdomenFilter, ref chestFilter);
+            SubgroupCollisionFilter.DisableCollision(ref chestFilter, ref headFilter);
 
             //Build all the limbs. Setting the masks is delayed until after the limbs have been created and have disabled collisions with the chest/hips.
-            AddArm(1, chestPose.Position + new Vector3(0.4f, 0.1f, 0), chestPose, chest.Handle, chestLocalIndex, ref chestMask, 4, ragdollIndex, ragdollPose, masks, springSettings, simulation);
-            AddArm(-1, chestPose.Position + new Vector3(-0.4f, 0.1f, 0), chestPose, chest.Handle, chestLocalIndex, ref chestMask, 7, ragdollIndex, ragdollPose, masks, springSettings, simulation);
-            AddLeg(hipsPose.Position + new Vector3(-0.17f, -0.2f, 0), hipsPose, hips.Handle, hipsLocalIndex, ref hipsMask, 10, ragdollIndex, ragdollPose, masks, springSettings, simulation);
-            AddLeg(hipsPose.Position + new Vector3(0.17f, -0.2f, 0), hipsPose, hips.Handle, hipsLocalIndex, ref hipsMask, 13, ragdollIndex, ragdollPose, masks, springSettings, simulation);
-
-            masks.Allocate(hips.Handle) = hipsMask;
-            masks.Allocate(abdomen.Handle) = abdomenMask;
-            masks.Allocate(chest.Handle) = chestMask;
-            masks.Allocate(head.Handle) = headMask;
+            AddArm(1, chestPose.Position + new Vector3(0.4f, 0.1f, 0), chestPose, chest.Handle, ref chestFilter, 4, ragdollIndex, ragdollPose, collisionFilters, springSettings, simulation);
+            AddArm(-1, chestPose.Position + new Vector3(-0.4f, 0.1f, 0), chestPose, chest.Handle, ref chestFilter, 7, ragdollIndex, ragdollPose, collisionFilters, springSettings, simulation);
+            AddLeg(hipsPose.Position + new Vector3(-0.17f, -0.2f, 0), hipsPose, hips.Handle, ref hipsFilter, 10, ragdollIndex, ragdollPose, collisionFilters, springSettings, simulation);
+            AddLeg(hipsPose.Position + new Vector3(0.17f, -0.2f, 0), hipsPose, hips.Handle, ref hipsFilter, 13, ragdollIndex, ragdollPose, collisionFilters, springSettings, simulation);
         }
 
         public unsafe override void Initialize(ContentArchive content, Camera camera)
@@ -467,8 +511,8 @@ namespace Demos.Demos
             camera.Position = new Vector3(-20, 10, -20);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
-            var masks = new BodyProperty<ulong>();
-            Simulation = Simulation.Create(BufferPool, new RagdollCallbacks { Masks = masks }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            var collisionFilters = new BodyProperty<SubgroupCollisionFilter>();
+            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks { CollisionFilters = collisionFilters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             int ragdollIndex = 0;
             var spacing = new Vector3(2f, 3, 1);
@@ -482,11 +526,11 @@ namespace Demos.Demos
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        AddRagdoll(origin + spacing * new Vector3(i, j, k), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f), ragdollIndex++, masks, Simulation);
+                        AddRagdoll(origin + spacing * new Vector3(i, j, k), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f), ragdollIndex++, collisionFilters, Simulation);
                     }
                 }
             }
-            
+
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(300, 1, 300)), 0.1f)));
         }
 

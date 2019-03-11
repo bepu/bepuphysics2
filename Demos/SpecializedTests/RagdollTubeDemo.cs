@@ -26,8 +26,8 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(0, 9, -40);
             camera.Yaw = MathHelper.Pi;
             camera.Pitch = 0;
-            var masks = new BodyProperty<ulong>();
-            Simulation = Simulation.Create(BufferPool, new RagdollCallbacks { Masks = masks }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            var filters = new BodyProperty<SubgroupCollisionFilter>();
+            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks { CollisionFilters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             int ragdollIndex = 0;
             var spacing = new Vector3(1.7f, 1.8f, 0.5f);
@@ -41,7 +41,7 @@ namespace Demos.SpecializedTests
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        RagdollDemo.AddRagdoll(origin + spacing * new Vector3(i, j, k), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f), ragdollIndex++, masks, Simulation);
+                        RagdollDemo.AddRagdoll(origin + spacing * new Vector3(i, j, k), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f), ragdollIndex++, filters, Simulation);
                     }
                 }
             }
