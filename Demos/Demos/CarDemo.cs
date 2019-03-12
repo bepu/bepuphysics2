@@ -9,6 +9,7 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
@@ -300,9 +301,35 @@ namespace Demos.Demos
         }
     }
 
+    struct RaceTrack
+    {
+        public float QuadrantRadius;
+        public Vector2 Center;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetClosestPoint(in Vector2 point, out Vector2 closestPoint)
+        {
+            var localPoint = point - Center;
+            var quadrantCenter = new Vector2(localPoint.X < 0 ? -QuadrantRadius : QuadrantRadius, localPoint.Y < 0 ? -QuadrantRadius : QuadrantRadius);
+            var quadrantCenterToPoint = new Vector2(localPoint.X, localPoint.Y) - quadrantCenter;
+            var distanceToQuadrantCenter = quadrantCenterToPoint.Length();
+            var offsetFromQuadrantCircle = distanceToQuadrantCenter > 0 ? quadrantCenterToPoint * (QuadrantRadius / distanceToQuadrantCenter) : new Vector2(QuadrantRadius, 0);
+            closestPoint = quadrantCenter + offsetFromQuadrantCircle;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public float GetDistance(in Vector2 point)
+        {
+            GetClosestPoint(point, out var closest);
+            return Vector2.Distance(closest, point);
+        }
+    }
+
+
     public class CarDemo : Demo
     {
         SimpleCarController playerController;
+        Buffer<SimpleCarController> aiControllers;
+        RaceTrack raceTrack;
 
         static Key Forward = Key.W;
         static Key Backward = Key.S;
@@ -336,12 +363,36 @@ namespace Demos.Demos
             const float y = -0.15f;
             const float frontZ = 1.7f;
             const float backZ = -1.7f;
-            playerController = new SimpleCarController(SimpleCar.Create(Simulation, properties, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2.5f,
+            playerController = new SimpleCarController(SimpleCar.Create(Simulation, properties, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2.25f,
                 new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
                 new SpringSettings(5, 1), Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
                 forwardSpeed: 75, forwardForce: 6, zoomMultiplier: 2, backwardSpeed: 10, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 2.5f, maximumSteeringAngle: MathF.PI * 0.23f);
 
+            //Create a bunch of AI cars to race against.
+            const int aiCount = 1024;
+            BufferPool.Take<SimpleCarController>(aiCount, out var aiControllers);
+            aiControllers = aiControllers.Slice(0, aiCount);
+
+            Vector3 min = new Vector3(-256, 10, -256);
+            Vector3 span = new Vector3(512, 10, 512);
+            var random = new Random(5);
+
+            for (int i = 0; i < aiCount; ++i)
+            {
+                //The AI cars are very similar, except... we handicap them a little to make the player good about themselves.
+                var position = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                var orientation = Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * MathF.PI * 2);
+                aiControllers[i] = new SimpleCarController(SimpleCar.Create(Simulation, properties, new RigidPose(position, orientation), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2.25f,
+                    new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
+                    new SpringSettings(5, 1), Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
+                    forwardSpeed: 50, forwardForce: 5, zoomMultiplier: 2, backwardSpeed: 10, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 2.5f, maximumSteeringAngle: MathF.PI * 0.23f);
+            }
+
             const int planeWidth = 257;
+            const float scale = 3;
+            Vector2 terrainPosition = new Vector2(1 - planeWidth, 1 - planeWidth) * scale * 0.5f;
+            raceTrack = new RaceTrack { QuadrantRadius = (planeWidth - 32) * scale * 0.25f };
+
             MeshDemo.CreateDeformedPlane(planeWidth, planeWidth,
                 (int vX, int vY) =>
                 {
@@ -351,13 +402,21 @@ namespace Demos.Demos
                     var octave3 = (MathF.Sin((vX + 53) * 0.65f) + MathF.Sin((vY + 47) * 0.65f)) * 0.2f;
                     var octave4 = (MathF.Sin((vX + 67) * 1.50f) + MathF.Sin((vY + 13) * 1.5f)) * 0.125f;
                     var distanceToEdge = planeWidth / 2 - Math.Max(Math.Abs(vX - planeWidth / 2), Math.Abs(vY - planeWidth / 2));
-                    var edgeRamp = 15f / (distanceToEdge + 1);
-                    return new Vector3(vX, octave0 + octave1 + octave2 + octave3 + octave4 + edgeRamp, vY);
-                }, new Vector3(3, 1, 3), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-100, -15, 100), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
+                    var edgeRamp = 25f / (distanceToEdge + 1);
+                    var terrainHeight = octave0 + octave1 + octave2 + octave3 + octave4;
+                    var vertexPosition = new Vector2(vX * scale, vY * scale) + terrainPosition;
+                    var distanceToTrack = raceTrack.GetDistance(vertexPosition);
+                    var trackWeight = MathF.Min(1f, 3f / (distanceToTrack * 0.1f + 1f));
+                    var height = trackWeight * -10f + terrainHeight * (1 - trackWeight);
+                    return new Vector3(vertexPosition.X, height + edgeRamp, vertexPosition.Y);
+
+                }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
+
         }
+
         bool playerControlActive = true;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {

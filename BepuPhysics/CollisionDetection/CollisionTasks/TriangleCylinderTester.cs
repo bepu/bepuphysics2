@@ -387,6 +387,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, worldRB, out manifold.Normal);
+
+            //Mesh reductions rely on the contact positions being on the surface of the triangle. Push the offsets accordingly.
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth0, out var offset0);
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth1, out var offset1);
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth2, out var offset2);
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth3, out var offset3);
+            Vector3Wide.Subtract(manifold.OffsetA0, offset0, out manifold.OffsetA0);
+            Vector3Wide.Subtract(manifold.OffsetA1, offset1, out manifold.OffsetA1);
+            Vector3Wide.Subtract(manifold.OffsetA2, offset2, out manifold.OffsetA2);
+            Vector3Wide.Subtract(manifold.OffsetA3, offset3, out manifold.OffsetA3);
         }
 
 
