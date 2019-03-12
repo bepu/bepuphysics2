@@ -78,6 +78,18 @@ namespace Demos.Demos
             filterB.CollidableSubgroups &= (ushort)~filterA.SubgroupMembership;
         }
 
+        /// <summary>
+        /// Checks if the filters can collide by checking if b's membership can be collided by a's collidable groups.
+        /// </summary>
+        /// <param name="a">First filter to test.</param>
+        /// <param name="b">Second filter to test.</param>
+        /// <returns>True if the filters can collide, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool AllowCollision(in SubgroupCollisionFilter a, in SubgroupCollisionFilter b)
+        {
+            return a.GroupId != b.GroupId || (a.CollidableSubgroups & b.SubgroupMembership) > 0;
+        }
+
     }
 
     /// <summary>
@@ -86,32 +98,18 @@ namespace Demos.Demos
     struct SubgroupFilteredCallbacks : INarrowPhaseCallbacks
     {
         public BodyProperty<SubgroupCollisionFilter> CollisionFilters;
-        public PairMaterialProperties MaterialProperties;
         public void Initialize(Simulation simulation)
         {
             CollisionFilters.Initialize(simulation.Bodies);
-            //If no other material properties are assigned, use a default.
-            if (MaterialProperties.FrictionCoefficient == 0 && MaterialProperties.MaximumRecoveryVelocity == 0 &&
-                MaterialProperties.SpringSettings.AngularFrequency == 0 && MaterialProperties.SpringSettings.TwiceDampingRatio == 0)
-            {
-                MaterialProperties.FrictionCoefficient = 1;
-                MaterialProperties.MaximumRecoveryVelocity = 2f;
-                MaterialProperties.SpringSettings = new SpringSettings(30, 1);
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b)
         {
-            if (a.Mobility == CollidableMobility.Dynamic && b.Mobility == CollidableMobility.Dynamic)
+            //It's impossible for two statics to collide, and pairs are sorted such that bodies always come before statics.
+            if (b.Mobility != CollidableMobility.Static)
             {
-                ref var maskA = ref CollisionFilters[a.Handle];
-                ref var maskB = ref CollisionFilters[b.Handle];
-                //Different instances are always allowed to collide.
-                //Note that this only tests a's accepted groups against b's membership, instead of both directions.
-                return maskA.GroupId != maskB.GroupId || (maskA.CollidableSubgroups & maskB.SubgroupMembership) > 0;
-                //This demo will ensure symmetry for simplicity. Optionally, you could make use of the fact that collidable references obey an order;
-                //the lower valued handle will always be CollidableReference a. Static collidables will always be in CollidableReference b if they exist.
+                return SubgroupCollisionFilter.AllowCollision(CollisionFilters[a.Handle], CollisionFilters[b.Handle]);
             }
             return true;
         }
@@ -123,15 +121,23 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe void CreateMaterial(out PairMaterialProperties pairMaterial)
+        {
+            pairMaterial.FrictionCoefficient = 1;
+            pairMaterial.MaximumRecoveryVelocity = 2f;
+            pairMaterial.SpringSettings = new SpringSettings(30, 1);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
         {
-            pairMaterial = MaterialProperties;
+            CreateMaterial(out pairMaterial);
             return true;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
         {
-            pairMaterial = MaterialProperties;
+            CreateMaterial(out pairMaterial);
             return true;
         }
 

@@ -56,8 +56,8 @@ namespace Demos.Demos
             });
         }
 
-        public static WheelHandles CreateWheel(Simulation simulation, BodyProperty<SubgroupCollisionFilter> filters, in RigidPose bodyPose,
-            TypedIndex wheelShape, BodyInertia wheelInertia, int bodyHandle, ref SubgroupCollisionFilter bodyFilter, in Vector3 bodyToWheelSuspension, in Vector3 suspensionDirection, float suspensionLength,
+        public static WheelHandles CreateWheel(Simulation simulation, BodyProperty<CarBodyProperties> properties, in RigidPose bodyPose,
+            TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction, int bodyHandle, ref SubgroupCollisionFilter bodyFilter, in Vector3 bodyToWheelSuspension, in Vector3 suspensionDirection, float suspensionLength,
             in AngularHinge hingeDescription, in SpringSettings suspensionSettings, in Quaternion localWheelOrientation)
         {
             RigidPose wheelPose;
@@ -93,22 +93,22 @@ namespace Demos.Demos
             });
             handles.Hinge = simulation.Solver.Add(bodyHandle, handles.Wheel, hingeDescription);
             //The demos SubgroupCollisionFilter is pretty simple and only tests one direction, so we make the non-colliding relationship symmetric.
-            ref var wheelFilter = ref filters.Allocate(handles.Wheel);
-            wheelFilter = new SubgroupCollisionFilter(bodyHandle, 1);
-            SubgroupCollisionFilter.DisableCollision(ref wheelFilter, ref bodyFilter);
+            ref var wheelProperties = ref properties.Allocate(handles.Wheel);
+            wheelProperties = new CarBodyProperties { Filter = new SubgroupCollisionFilter(bodyHandle, 1), Friction = wheelFriction };
+            SubgroupCollisionFilter.DisableCollision(ref wheelProperties.Filter, ref bodyFilter);
 
             return handles;
         }
 
-        public static SimpleCar Create(Simulation simulation, BodyProperty<SubgroupCollisionFilter> filters, in RigidPose pose,
-            TypedIndex bodyShape, BodyInertia bodyInertia, TypedIndex wheelShape, BodyInertia wheelInertia,
+        public static SimpleCar Create(Simulation simulation, BodyProperty<CarBodyProperties> properties, in RigidPose pose,
+            TypedIndex bodyShape, BodyInertia bodyInertia, float bodyFriction, TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction,
             in Vector3 bodyToFrontLeftSuspension, in Vector3 bodyToFrontRightSuspension, in Vector3 bodyToBackLeftSuspension, in Vector3 bodyToBackRightSuspension,
             in Vector3 suspensionDirection, float suspensionLength, in SpringSettings suspensionSettings, in Quaternion localWheelOrientation)
         {
             SimpleCar car;
             car.Body = simulation.Bodies.Add(BodyDescription.CreateDynamic(pose, bodyInertia, new CollidableDescription(bodyShape, 0.1f), new BodyActivityDescription(0.01f)));
-            ref var bodyFilters = ref filters.Allocate(car.Body);
-            bodyFilters = new SubgroupCollisionFilter(car.Body, 0);
+            ref var bodyProperties = ref properties.Allocate(car.Body);
+            bodyProperties = new CarBodyProperties { Friction = bodyFriction, Filter = new SubgroupCollisionFilter(car.Body, 0) };
             Quaternion.TransformUnitY(localWheelOrientation, out var wheelAxis);
             car.hingeDescription = new AngularHinge
             {
@@ -117,10 +117,10 @@ namespace Demos.Demos
                 SpringSettings = new SpringSettings(30, 1)
             };
             car.suspensionDirection = suspensionDirection;
-            car.BackLeftWheel = CreateWheel(simulation, filters, pose, wheelShape, wheelInertia, car.Body, ref bodyFilters, bodyToBackLeftSuspension, suspensionDirection, suspensionLength, car.hingeDescription, suspensionSettings, localWheelOrientation);
-            car.BackRightWheel = CreateWheel(simulation, filters, pose, wheelShape, wheelInertia, car.Body, ref bodyFilters, bodyToBackRightSuspension, suspensionDirection, suspensionLength, car.hingeDescription, suspensionSettings, localWheelOrientation);
-            car.FrontLeftWheel = CreateWheel(simulation, filters, pose, wheelShape, wheelInertia, car.Body, ref bodyFilters, bodyToFrontLeftSuspension, suspensionDirection, suspensionLength, car.hingeDescription, suspensionSettings, localWheelOrientation);
-            car.FrontRightWheel = CreateWheel(simulation, filters, pose, wheelShape, wheelInertia, car.Body, ref bodyFilters, bodyToFrontRightSuspension, suspensionDirection, suspensionLength, car.hingeDescription, suspensionSettings, localWheelOrientation);
+            car.BackLeftWheel = CreateWheel(simulation, properties, pose, wheelShape, wheelInertia, wheelFriction, car.Body, ref bodyProperties.Filter, bodyToBackLeftSuspension, suspensionDirection, suspensionLength, car.hingeDescription, suspensionSettings, localWheelOrientation);
+            car.BackRightWheel = CreateWheel(simulation, properties, pose, wheelShape, wheelInertia, wheelFriction, car.Body, ref bodyProperties.Filter, bodyToBackRightSuspension, suspensionDirection, suspensionLength, car.hingeDescription, suspensionSettings, localWheelOrientation);
+            car.FrontLeftWheel = CreateWheel(simulation, properties, pose, wheelShape, wheelInertia, wheelFriction, car.Body, ref bodyProperties.Filter, bodyToFrontLeftSuspension, suspensionDirection, suspensionLength, car.hingeDescription, suspensionSettings, localWheelOrientation);
+            car.FrontRightWheel = CreateWheel(simulation, properties, pose, wheelShape, wheelInertia, wheelFriction, car.Body, ref bodyProperties.Filter, bodyToFrontRightSuspension, suspensionDirection, suspensionLength, car.hingeDescription, suspensionSettings, localWheelOrientation);
             return car;
         }
 
@@ -228,6 +228,77 @@ namespace Demos.Demos
         }
     }
 
+    struct CarBodyProperties
+    {
+        public SubgroupCollisionFilter Filter;
+        public float Friction;
+    }
+
+    /// <summary>
+    /// For the car demo, we want both wheel-body collision filtering and different friction for wheels versus the car body.
+    /// </summary>
+    struct CarCallbacks : INarrowPhaseCallbacks
+    {
+        public BodyProperty<CarBodyProperties> Properties;
+        public void Initialize(Simulation simulation)
+        {
+            Properties.Initialize(simulation.Bodies);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b)
+        {
+            //It's impossible for two statics to collide, and pairs are sorted such that bodies always come before statics.
+            if (b.Mobility != CollidableMobility.Static)
+            {
+                return SubgroupCollisionFilter.AllowCollision(Properties[a.Handle].Filter, Properties[b.Handle].Filter);
+            }
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool AllowContactGeneration(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB)
+        {
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe void CreateMaterial(CollidablePair pair, out PairMaterialProperties pairMaterial)
+        {
+            pairMaterial.FrictionCoefficient = Properties[pair.A.Handle].Friction;
+            if (pair.B.Mobility != CollidableMobility.Static)
+            {
+                //If two bodies collide, just average the friction.
+                pairMaterial.FrictionCoefficient = (pairMaterial.FrictionCoefficient + Properties[pair.B.Handle].Friction) * 0.5f;
+            }
+            pairMaterial.MaximumRecoveryVelocity = 2f;
+            pairMaterial.SpringSettings = new SpringSettings(30, 1);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
+        {
+            CreateMaterial(pair, out pairMaterial);
+            return true;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
+        {
+            CreateMaterial(pair, out pairMaterial);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ConvexContactManifold* manifold)
+        {
+            return true;
+        }
+
+        public void Dispose()
+        {
+            Properties.Dispose();
+        }
+    }
 
     public class CarDemo : Demo
     {
@@ -240,25 +311,15 @@ namespace Demos.Demos
         static Key Zoom = Key.LShift;
         static Key Brake = Key.Space;
         static Key BrakeAlternate = Key.BackSpace; //I have a weird keyboard.
+        static Key ToggleCar = Key.C;
         public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 5, 10);
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            var filters = new BodyProperty<SubgroupCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks()
-                {
-                    CollisionFilters = filters,
-                    //Bump up the friction over the default.
-                    MaterialProperties = new PairMaterialProperties
-                    {
-                        FrictionCoefficient = 2.5f,
-                        MaximumRecoveryVelocity = 2,
-                        SpringSettings = new SpringSettings(30, 1)
-                    },
-                },
-                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            var properties = new BodyProperty<CarBodyProperties>();
+            Simulation = Simulation.Create(BufferPool, new CarCallbacks() { Properties = properties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
             builder.Add(new Box(1.85f, 0.7f, 4.73f), RigidPose.Identity, 10);
@@ -275,44 +336,51 @@ namespace Demos.Demos
             const float y = -0.15f;
             const float frontZ = 1.7f;
             const float backZ = -1.7f;
-            playerController = new SimpleCarController(SimpleCar.Create(Simulation, filters, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), bodyShapeIndex, bodyInertia, wheelShapeIndex, wheelInertia,
+            playerController = new SimpleCarController(SimpleCar.Create(Simulation, properties, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2.5f,
                 new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
                 new SpringSettings(5, 1), Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
                 forwardSpeed: 75, forwardForce: 6, zoomMultiplier: 2, backwardSpeed: 10, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 2.5f, maximumSteeringAngle: MathF.PI * 0.23f);
 
-            const int planeWidth = 256;
-            const int planeHeight = 256;
-            MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
+            const int planeWidth = 257;
+            MeshDemo.CreateDeformedPlane(planeWidth, planeWidth,
                 (int vX, int vY) =>
                 {
-                    var octave0 = (MathF.Sin((vX + 5f) * 0.05f) + MathF.Sin((vY + 11) * 0.05f)) * 3f;
-                    var octave1 = (MathF.Sin((vX + 17) * 0.15f) + MathF.Sin((vY + 19) * 0.15f)) * 2f;
-                    var octave2 = (MathF.Sin((vX + 37) * 0.35f) + MathF.Sin((vY + 93) * 0.35f)) * 1f;
-                    var octave3 = (MathF.Sin((vX + 53) * 0.65f) + MathF.Sin((vY + 47) * 0.65f)) * 0.5f;
-                    var octave4 = (MathF.Sin((vX + 67) * 1.50f) + MathF.Sin((vY + 13) * 1.5f)) * 0.25f;
-                    return new Vector3(vX, octave0 + octave1 + octave2 + octave3 + octave4, vY);
-                }, new Vector3(4, 1, 4), BufferPool, out var planeMesh);
+                    var octave0 = (MathF.Sin((vX + 5f) * 0.05f) + MathF.Sin((vY + 11) * 0.05f)) * 1.8f;
+                    var octave1 = (MathF.Sin((vX + 17) * 0.15f) + MathF.Sin((vY + 19) * 0.15f)) * 0.9f;
+                    var octave2 = (MathF.Sin((vX + 37) * 0.35f) + MathF.Sin((vY + 93) * 0.35f)) * 0.4f;
+                    var octave3 = (MathF.Sin((vX + 53) * 0.65f) + MathF.Sin((vY + 47) * 0.65f)) * 0.2f;
+                    var octave4 = (MathF.Sin((vX + 67) * 1.50f) + MathF.Sin((vY + 13) * 1.5f)) * 0.125f;
+                    var distanceToEdge = planeWidth / 2 - Math.Max(Math.Abs(vX - planeWidth / 2), Math.Abs(vY - planeWidth / 2));
+                    var edgeRamp = 15f / (distanceToEdge + 1);
+                    return new Vector3(vX, octave0 + octave1 + octave2 + octave3 + octave4 + edgeRamp, vY);
+                }, new Vector3(3, 1, 3), BufferPool, out var planeMesh);
             Simulation.Statics.Add(new StaticDescription(new Vector3(-100, -15, 100), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
         }
+        bool playerControlActive = true;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            float steeringSum = 0;
-            if (input.IsDown(Left))
+            if (input.WasPushed(ToggleCar))
+                playerControlActive = !playerControlActive;
+            if (playerControlActive)
             {
-                steeringSum += 1;
+                float steeringSum = 0;
+                if (input.IsDown(Left))
+                {
+                    steeringSum += 1;
+                }
+                if (input.IsDown(Right))
+                {
+                    steeringSum -= 1;
+                }
+                //For control purposes, we'll match the fixed update rate of the simulation. Could decouple it- this dt isn't
+                //vulnerable to the same instabilities as the simulation itself with variable durations.
+                const float controlDt = 1 / 60f;
+                var targetSpeedFraction = input.IsDown(Forward) ? 1f : input.IsDown(Backward) ? -1f : 0;
+                var zoom = input.IsDown(Zoom);
+                playerController.Update(Simulation, controlDt, steeringSum, targetSpeedFraction, zoom, input.IsDown(Brake) || input.IsDown(BrakeAlternate));
             }
-            if (input.IsDown(Right))
-            {
-                steeringSum -= 1;
-            }
-            //For control purposes, we'll match the fixed update rate of the simulation. Could decouple it- this dt isn't
-            //vulnerable to the same instabilities as the simulation itself with variable durations.
-            const float controlDt = 1 / 60f;
-            var targetSpeedFraction = input.IsDown(Forward) ? 1f : input.IsDown(Backward) ? -1f : 0;
-            var zoom = input.IsDown(Zoom);
-            playerController.Update(Simulation, controlDt, steeringSum, targetSpeedFraction, zoom, input.IsDown(Brake) || input.IsDown(BrakeAlternate));
 
             base.Update(window, camera, input, dt);
         }
@@ -326,9 +394,12 @@ namespace Demos.Demos
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
-            var carBody = new BodyReference(playerController.Car.Body, Simulation.Bodies);
-            Quaternion.TransformUnitY(carBody.Pose.Orientation, out var carUp);
-            camera.Position = carBody.Pose.Position + carUp * 1.3f + camera.Backward * 8;
+            if (playerControlActive)
+            {
+                var carBody = new BodyReference(playerController.Car.Body, Simulation.Bodies);
+                Quaternion.TransformUnitY(carBody.Pose.Orientation, out var carUp);
+                camera.Position = carBody.Pose.Position + carUp * 1.3f + camera.Backward * 8;
+            }
 
             var textHeight = 16;
             var position = new Vector2(32, renderer.Surface.Resolution.Y - 128);
@@ -338,6 +409,7 @@ namespace Demos.Demos
             RenderControl(ref position, textHeight, nameof(Left), Left.ToString(), text, renderer.TextBatcher, font);
             RenderControl(ref position, textHeight, nameof(Zoom), Zoom.ToString(), text, renderer.TextBatcher, font);
             RenderControl(ref position, textHeight, nameof(Brake), Brake.ToString(), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(ToggleCar), ToggleCar.ToString(), text, renderer.TextBatcher, font);
             base.Render(renderer, camera, input, text, font);
         }
     }
