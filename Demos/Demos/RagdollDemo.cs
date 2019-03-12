@@ -86,9 +86,18 @@ namespace Demos.Demos
     struct SubgroupFilteredCallbacks : INarrowPhaseCallbacks
     {
         public BodyProperty<SubgroupCollisionFilter> CollisionFilters;
+        public PairMaterialProperties MaterialProperties;
         public void Initialize(Simulation simulation)
         {
             CollisionFilters.Initialize(simulation.Bodies);
+            //If no other material properties are assigned, use a default.
+            if (MaterialProperties.FrictionCoefficient == 0 && MaterialProperties.MaximumRecoveryVelocity == 0 &&
+                MaterialProperties.SpringSettings.AngularFrequency == 0 && MaterialProperties.SpringSettings.TwiceDampingRatio == 0)
+            {
+                MaterialProperties.FrictionCoefficient = 1;
+                MaterialProperties.MaximumRecoveryVelocity = 2f;
+                MaterialProperties.SpringSettings = new SpringSettings(30, 1);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -114,22 +123,15 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void ConfigureMaterial(out PairMaterialProperties pairMaterial)
-        {
-            pairMaterial.FrictionCoefficient = 1;
-            pairMaterial.MaximumRecoveryVelocity = 2f;
-            pairMaterial.SpringSettings = new SpringSettings(30, 1);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
         {
-            ConfigureMaterial(out pairMaterial);
+            pairMaterial = MaterialProperties;
             return true;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
         {
-            ConfigureMaterial(out pairMaterial);
+            pairMaterial = MaterialProperties;
             return true;
         }
 

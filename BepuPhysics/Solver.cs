@@ -584,7 +584,7 @@ namespace BepuPhysics
         public void ApplyDescription<TDescription>(int constraintHandle, TDescription description)
             where TDescription : IConstraintDescription<TDescription>
         {
-            ApplyDescriptionWithoutWaking(constraintHandle, ref description);
+            ApplyDescription(constraintHandle, ref description);
         }
 
         void Add<TDescription>(ref int bodyHandles, int bodyCount, ref TDescription description, out int handle)

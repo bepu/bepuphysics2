@@ -11,7 +11,9 @@ using BepuPhysics.Constraints;
 using BepuUtilities;
 using DemoContentLoader;
 using DemoRenderer;
+using DemoRenderer.UI;
 using DemoUtilities;
+using OpenTK.Input;
 using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos
@@ -104,7 +106,7 @@ namespace Demos.Demos
             in Vector3 suspensionDirection, float suspensionLength, in SpringSettings suspensionSettings, in Quaternion localWheelOrientation)
         {
             SimpleCar car;
-            car.Body = simulation.Bodies.Add(BodyDescription.CreateDynamic(pose, bodyInertia, new CollidableDescription(bodyShape, 0.1f), new BodyActivityDescription(-0.01f)));
+            car.Body = simulation.Bodies.Add(BodyDescription.CreateDynamic(pose, bodyInertia, new CollidableDescription(bodyShape, 0.1f), new BodyActivityDescription(0.01f)));
             ref var bodyFilters = ref filters.Allocate(car.Body);
             bodyFilters = new SubgroupCollisionFilter(car.Body, 0);
             Quaternion.TransformUnitY(localWheelOrientation, out var wheelAxis);
@@ -124,9 +126,120 @@ namespace Demos.Demos
 
     }
 
+    struct SimpleCarController
+    {
+        public SimpleCar Car;
+
+        private float steeringAngle;
+
+        public float SteeringAngle { get { return steeringAngle; } }
+
+        public float SteeringSpeed;
+        public float MaximumSteeringAngle;
+
+        public float ForwardSpeed;
+        public float ForwardForce;
+        public float ZoomMultiplier;
+        public float BackwardSpeed;
+        public float BackwardForce;
+        public float IdleForce;
+        public float BrakeForce;
+
+        //Track the previous state to force wakeups if the constraint targets have changed.
+        private float previousTargetSpeed;
+        private float previousTargetForce;
+
+        public SimpleCarController(SimpleCar car,
+            float forwardSpeed, float forwardForce, float zoomMultiplier, float backwardSpeed, float backwardForce, float idleForce, float brakeForce,
+            float steeringSpeed, float maximumSteeringAngle)
+        {
+            Car = car;
+            ForwardSpeed = forwardSpeed;
+            ForwardForce = forwardForce;
+            ZoomMultiplier = zoomMultiplier;
+            BackwardSpeed = backwardSpeed;
+            BackwardForce = backwardForce;
+            IdleForce = idleForce;
+            BrakeForce = brakeForce;
+            SteeringSpeed = steeringSpeed;
+            MaximumSteeringAngle = maximumSteeringAngle;
+
+            steeringAngle = 0;
+            previousTargetForce = 0;
+            previousTargetSpeed = 0;
+        }
+        public void Update(Simulation simulation, float dt, float targetSteeringAngle, float targetSpeedFraction, bool zoom, bool brake)
+        {
+            var steeringAngleDifference = targetSteeringAngle - steeringAngle;
+            var maximumChange = SteeringSpeed * dt;
+            var steeringAngleChange = MathF.Min(maximumChange, MathF.Max(-maximumChange, steeringAngleDifference));
+            var previousSteeringAngle = steeringAngle;
+            steeringAngle = MathF.Min(MaximumSteeringAngle, MathF.Max(-MaximumSteeringAngle, steeringAngle + steeringAngleChange));
+            if (steeringAngle != previousSteeringAngle)
+            {
+                //By guarding the constraint modifications behind a state test, we avoid waking up the car every single frame.
+                //(We could have also used the ApplyDescriptionWithoutWaking function and then explicitly woke the car up when changes occur.)
+                Car.Steer(simulation, Car.FrontLeftWheel, steeringAngle);
+                Car.Steer(simulation, Car.FrontRightWheel, steeringAngle);
+            }
+            float newTargetSpeed, newTargetForce;
+            bool allWheels;
+            if (brake)
+            {
+                newTargetSpeed = 0;
+                newTargetForce = BrakeForce;
+                allWheels = true;
+            }
+            else if (targetSpeedFraction > 0)
+            {
+                newTargetForce = zoom ? ForwardForce * ZoomMultiplier : ForwardForce;
+                newTargetSpeed = targetSpeedFraction * (zoom ? ForwardSpeed * ZoomMultiplier : ForwardSpeed);
+                allWheels = false;
+            }
+            else if (targetSpeedFraction < 0)
+            {
+                newTargetForce = BackwardForce;
+                newTargetSpeed = targetSpeedFraction * BackwardSpeed;
+                allWheels = false;
+            }
+            else
+            {
+                newTargetForce = IdleForce;
+                newTargetSpeed = 0;
+                allWheels = true;
+            }
+            if (previousTargetSpeed != newTargetSpeed || previousTargetForce != newTargetForce)
+            {
+                previousTargetSpeed = newTargetSpeed;
+                previousTargetForce = newTargetForce;
+                Car.SetSpeed(simulation, Car.FrontLeftWheel, newTargetSpeed, newTargetForce);
+                Car.SetSpeed(simulation, Car.FrontRightWheel, newTargetSpeed, newTargetForce);
+                if (allWheels)
+                {
+                    Car.SetSpeed(simulation, Car.BackLeftWheel, newTargetSpeed, newTargetForce);
+                    Car.SetSpeed(simulation, Car.BackRightWheel, newTargetSpeed, newTargetForce);
+                }
+                else
+                {
+                    Car.SetSpeed(simulation, Car.BackLeftWheel, 0, 0);
+                    Car.SetSpeed(simulation, Car.BackRightWheel, 0, 0);
+                }
+            }
+        }
+    }
+
+
     public class CarDemo : Demo
     {
-        SimpleCar car;
+        SimpleCarController playerController;
+
+        static Key Forward = Key.W;
+        static Key Backward = Key.S;
+        static Key Right = Key.D;
+        static Key Left = Key.A;
+        static Key Zoom = Key.LShift;
+        static Key Brake = Key.Space;
+        static Key BrakeAlternate = Key.BackSpace; //I have a weird keyboard.
         public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 5, 10);
@@ -134,84 +247,98 @@ namespace Demos.Demos
             camera.Pitch = 0;
 
             var filters = new BodyProperty<SubgroupCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks() { CollisionFilters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks()
+                {
+                    CollisionFilters = filters,
+                    //Bump up the friction over the default.
+                    MaterialProperties = new PairMaterialProperties
+                    {
+                        FrictionCoefficient = 2.5f,
+                        MaximumRecoveryVelocity = 2,
+                        SpringSettings = new SpringSettings(30, 1)
+                    },
+                },
+                new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
             builder.Add(new Box(1.85f, 0.7f, 4.73f), RigidPose.Identity, 10);
-            builder.Add(new Box(1.85f, 0.6f, 2.5f), new RigidPose(new Vector3(0, 0.65f, -0.35f)), 2);
+            builder.Add(new Box(1.85f, 0.6f, 2.5f), new RigidPose(new Vector3(0, 0.65f, -0.35f)), 0.5f);
             builder.BuildDynamicCompound(out var children, out var bodyInertia, out _);
             builder.Dispose();
             var bodyShape = new Compound(children);
             var bodyShapeIndex = Simulation.Shapes.Add(bodyShape);
-            var wheelShape = new Cylinder(0.70f, .18f);
+            var wheelShape = new Cylinder(0.4f, .18f);
             wheelShape.ComputeInertia(0.25f, out var wheelInertia);
             var wheelShapeIndex = Simulation.Shapes.Add(wheelShape);
 
-            const float x = 0.85f;
-            const float y = -0.4f;
+            const float x = 0.95f;
+            const float y = -0.15f;
             const float frontZ = 1.7f;
             const float backZ = -1.7f;
-            car = SimpleCar.Create(Simulation, filters, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), bodyShapeIndex, bodyInertia, wheelShapeIndex, wheelInertia,
+            playerController = new SimpleCarController(SimpleCar.Create(Simulation, filters, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), bodyShapeIndex, bodyInertia, wheelShapeIndex, wheelInertia,
                 new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
-                new SpringSettings(5, 1), Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f));
+                new SpringSettings(5, 1), Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
+                forwardSpeed: 75, forwardForce: 6, zoomMultiplier: 2, backwardSpeed: 10, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 2.5f, maximumSteeringAngle: MathF.PI * 0.23f);
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1000, 1, 1000)), 0.1f)));
+            const int planeWidth = 256;
+            const int planeHeight = 256;
+            MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
+                (int vX, int vY) =>
+                {
+                    var octave0 = (MathF.Sin((vX + 5f) * 0.05f) + MathF.Sin((vY + 11) * 0.05f)) * 3f;
+                    var octave1 = (MathF.Sin((vX + 17) * 0.15f) + MathF.Sin((vY + 19) * 0.15f)) * 2f;
+                    var octave2 = (MathF.Sin((vX + 37) * 0.35f) + MathF.Sin((vY + 93) * 0.35f)) * 1f;
+                    var octave3 = (MathF.Sin((vX + 53) * 0.65f) + MathF.Sin((vY + 47) * 0.65f)) * 0.5f;
+                    var octave4 = (MathF.Sin((vX + 67) * 1.50f) + MathF.Sin((vY + 13) * 1.5f)) * 0.25f;
+                    return new Vector3(vX, octave0 + octave1 + octave2 + octave3 + octave4, vY);
+                }, new Vector3(4, 1, 4), BufferPool, out var planeMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-100, -15, 100), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
+                new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
         }
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            const float steeringAngle = 0.5f;
             float steeringSum = 0;
-            if (input.IsDown(OpenTK.Input.Key.H))
+            if (input.IsDown(Left))
             {
-                steeringSum += steeringAngle;
+                steeringSum += 1;
             }
-            if (input.IsDown(OpenTK.Input.Key.K))
+            if (input.IsDown(Right))
             {
-                steeringSum -= steeringAngle;
+                steeringSum -= 1;
             }
-            car.Steer(Simulation, car.FrontLeftWheel, steeringSum);
-            car.Steer(Simulation, car.FrontRightWheel, steeringSum);
+            //For control purposes, we'll match the fixed update rate of the simulation. Could decouple it- this dt isn't
+            //vulnerable to the same instabilities as the simulation itself with variable durations.
+            const float controlDt = 1 / 60f;
+            var targetSpeedFraction = input.IsDown(Forward) ? 1f : input.IsDown(Backward) ? -1f : 0;
+            var zoom = input.IsDown(Zoom);
+            playerController.Update(Simulation, controlDt, steeringSum, targetSpeedFraction, zoom, input.IsDown(Brake) || input.IsDown(BrakeAlternate));
 
-            const float forwardSpeed = 40;
-            const float forwardForce = 5;
-            const float zoomMultiplier = 2;
-            const float backwardSpeed = -10;
-            const float backwardForce = 4;
-            const float idleForce = 0.5f;
-            const float brakeForce = 15;
-            if (input.IsDown(OpenTK.Input.Key.Space))
-            {
-                car.SetSpeed(Simulation, car.FrontLeftWheel, 0, brakeForce);
-                car.SetSpeed(Simulation, car.FrontRightWheel, 0, brakeForce);
-                car.SetSpeed(Simulation, car.BackLeftWheel, 0, brakeForce);
-                car.SetSpeed(Simulation, car.BackRightWheel, 0, brakeForce);
-            }
-            else if (input.IsDown(OpenTK.Input.Key.U))
-            {
-                var useZoom = input.IsDown(OpenTK.Input.Key.Enter);
-                var force = useZoom ? forwardForce * zoomMultiplier : forwardForce;
-                var speed = useZoom ? forwardSpeed * zoomMultiplier : forwardSpeed;
-                car.SetSpeed(Simulation, car.FrontLeftWheel, speed, force);
-                car.SetSpeed(Simulation, car.FrontRightWheel, speed, force);
-                car.SetSpeed(Simulation, car.BackLeftWheel, 0, 0);
-                car.SetSpeed(Simulation, car.BackRightWheel, 0, 0);
-            }
-            else if (input.IsDown(OpenTK.Input.Key.J))
-            {
-                car.SetSpeed(Simulation, car.FrontLeftWheel, backwardSpeed, backwardForce);
-                car.SetSpeed(Simulation, car.FrontRightWheel, backwardSpeed, backwardForce);
-                car.SetSpeed(Simulation, car.BackLeftWheel, 0, 0);
-                car.SetSpeed(Simulation, car.BackRightWheel, 0, 0);
-            }
-            else
-            {
-                car.SetSpeed(Simulation, car.FrontLeftWheel, 0, idleForce);
-                car.SetSpeed(Simulation, car.FrontRightWheel, 0, idleForce);
-                car.SetSpeed(Simulation, car.BackLeftWheel, 0, idleForce);
-                car.SetSpeed(Simulation, car.BackRightWheel, 0, idleForce);
-            }
             base.Update(window, camera, input, dt);
+        }
+
+        void RenderControl(ref Vector2 position, float textHeight, string controlName, string controlValue, TextBuilder text, TextBatcher textBatcher, Font font)
+        {
+            text.Clear().Append(controlName).Append(": ").Append(controlValue);
+            textBatcher.Write(text, position, textHeight, new Vector3(1), font);
+            position.Y += textHeight * 1.1f;
+        }
+
+        public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        {
+            var carBody = new BodyReference(playerController.Car.Body, Simulation.Bodies);
+            Quaternion.TransformUnitY(carBody.Pose.Orientation, out var carUp);
+            camera.Position = carBody.Pose.Position + carUp * 1.3f + camera.Backward * 8;
+
+            var textHeight = 16;
+            var position = new Vector2(32, renderer.Surface.Resolution.Y - 128);
+            RenderControl(ref position, textHeight, nameof(Forward), Forward.ToString(), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Backward), Backward.ToString(), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Right), Right.ToString(), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Left), Left.ToString(), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Zoom), Zoom.ToString(), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(Brake), Brake.ToString(), text, renderer.TextBatcher, font);
+            base.Render(renderer, camera, input, text, font);
         }
     }
 }
