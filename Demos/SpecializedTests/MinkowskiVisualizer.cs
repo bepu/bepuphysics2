@@ -1,5 +1,6 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuPhysics.CollisionDetection;
 using BepuPhysics.CollisionDetection.SweepTasks;
 using BepuUtilities;
 using BepuUtilities.Collections;

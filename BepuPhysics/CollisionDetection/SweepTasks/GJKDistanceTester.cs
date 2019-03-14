@@ -7,14 +7,6 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
-    public interface ISupportFinder<TShape, TShapeWide> where TShape : IConvexShape where TShapeWide : IShapeWide<TShape>
-    {
-        bool HasMargin { get; }
-        void GetMargin(in TShapeWide shape, out Vector<float> margin);
-        void ComputeLocalSupport(in TShapeWide shape, in Vector3Wide direction, out Vector3Wide support);
-        void ComputeSupport(in TShapeWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, out Vector3Wide support);
-    }
-
     public struct GJKDistanceTester<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB> : IPairDistanceTester<TShapeWideA, TShapeWideB>
         where TShapeA : IConvexShape where TShapeB : IConvexShape
         where TShapeWideA : IShapeWide<TShapeA> where TShapeWideB : IShapeWide<TShapeB>

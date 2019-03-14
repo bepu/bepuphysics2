@@ -52,7 +52,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //With any luck, the compiler will eventually get rid of these unnecessary zero inits. 
             //Might be able to get rid of manifoldWide and defaultPairTester with some megahacks, but it comes with significant forward danger and questionable benefit.
             var pairWide = default(TPairWide);
-            var manifoldWide = default(TManifoldWide);
+            TManifoldWide manifoldWide;
             var defaultPairTester = default(TPairTester);
             var manifold = default(ConvexContactManifold);
 

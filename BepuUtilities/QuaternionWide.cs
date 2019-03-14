@@ -21,6 +21,21 @@ namespace BepuUtilities
         }
 
         /// <summary>
+        /// Takes a slot from the source quaternion and broadcasts it into all slots of the target quaternion.
+        /// </summary>
+        /// <param name="source">Quaternion to pull values from.</param>
+        /// <param name="slotIndex">Slot in the source vectors to pull values from.</param>
+        /// <param name="broadcasted">Target quaternion to be filled with the selected data.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Rebroadcast(in QuaternionWide source, int slotIndex, out QuaternionWide broadcasted)
+        { 
+            broadcasted.X = new Vector<float>(source.X[slotIndex]);
+            broadcasted.Y = new Vector<float>(source.Y[slotIndex]);
+            broadcasted.Z = new Vector<float>(source.Z[slotIndex]);
+            broadcasted.W = new Vector<float>(source.W[slotIndex]);
+        }
+
+        /// <summary>
         /// Constructs a quaternion from a rotation matrix.
         /// </summary>
         /// <param name="r">Rotation matrix to create the quaternion from.</param>

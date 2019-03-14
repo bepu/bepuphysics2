@@ -19,14 +19,6 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Broadcast(in Vector3 source, out Vector3Wide broadcasted)
-        {
-            broadcasted.X = new Vector<float>(source.X);
-            broadcasted.Y = new Vector<float>(source.Y);
-            broadcasted.Z = new Vector<float>(source.Z);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Add(in Vector3Wide a, in Vector3Wide b, out Vector3Wide result)
         {
             result.X = a.X + b.X;
@@ -292,6 +284,62 @@ namespace BepuUtilities
             GatherScatter.GetFirst(ref targetSlot.X) = source.X;
             GatherScatter.GetFirst(ref targetSlot.Y) = source.Y;
             GatherScatter.GetFirst(ref targetSlot.Z) = source.Z;
+        }
+
+        /// <summary>
+        /// Writes a value into a slot of the target bundle.
+        /// </summary>
+        /// <param name="source">Source of the value to write.</param>
+        /// <param name="slotIndex">Index of the slot to write into.</param>
+        /// <param name="target">Bundle to write the value into.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteSlot(in Vector3 source, int slotIndex, ref Vector3Wide target)
+        {
+            WriteFirst(source, ref GatherScatter.GetOffsetInstance(ref target, slotIndex)); 
+        }
+
+        /// <summary>
+        /// Expands each scalar value to every slot of the bundle.
+        /// </summary>
+        /// <param name="source">Source value to write to every bundle slot.</param>
+        /// <param name="broadcasted">Bundle containing the source's components in every slot.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Broadcast(in Vector3 source, out Vector3Wide broadcasted)
+        {
+            broadcasted.X = new Vector<float>(source.X);
+            broadcasted.Y = new Vector<float>(source.Y);
+            broadcasted.Z = new Vector<float>(source.Z);
+        }
+
+        /// <summary>
+        /// Takes a slot from the source vector and broadcasts it into all slots of the target vector.
+        /// </summary>
+        /// <param name="source">Vector to pull values from.</param>
+        /// <param name="slotIndex">Slot in the source vectors to pull values from.</param>
+        /// <param name="broadcasted">Target vector to be filled with the selected data.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Rebroadcast(in Vector3Wide source, int slotIndex, out Vector3Wide broadcasted)
+        {
+            broadcasted.X = new Vector<float>(source.X[slotIndex]);
+            broadcasted.Y = new Vector<float>(source.Y[slotIndex]);
+            broadcasted.Z = new Vector<float>(source.Z[slotIndex]);
+        }
+
+        /// <summary>
+        /// Takes a slot from the source vector and places it into a slot of the target.
+        /// </summary>
+        /// <param name="source">Vector to pull values from.</param>
+        /// <param name="sourceSlotIndex">Slot in the source vectors to pull values from.</param>
+        /// <param name="target">Target vector whose slot will be filled with the selected data.</param>
+        /// <param name="targetSlotIndex">Slot in the target vectors to write values into.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CopySlot(ref Vector3Wide source, int sourceSlotIndex, ref Vector3Wide target, int targetSlotIndex)
+        {
+            ref var sourceSlot = ref GatherScatter.GetOffsetInstance(ref source, sourceSlotIndex);
+            ref var targetSlot = ref GatherScatter.GetOffsetInstance(ref target, sourceSlotIndex);
+            GatherScatter.GetFirst(ref targetSlot.X) = sourceSlot.X[0];
+            GatherScatter.GetFirst(ref targetSlot.Y) = sourceSlot.Y[0];
+            GatherScatter.GetFirst(ref targetSlot.Z) = sourceSlot.Z[0];
         }
 
         public override string ToString()
