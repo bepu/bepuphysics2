@@ -83,13 +83,25 @@ namespace BepuPhysics.Collidables
 
     public interface IShapeWide<TShape> where TShape : IShape
     {
+
+        /// <summary>
+        /// Gets whether this type supports accessing its memory by lane offsets. If false, WriteSlot must be used instead of WriteFirst.
+        /// </summary>
+        bool AllowOffsetMemoryAccess { get; }
+
         /// <summary>
         /// Places the specified AOS-formatted shape into the first lane of the wide 'this' reference.
         /// </summary>
         /// <remarks>Note that we are effectively using the TShapeWide as a stride.
         /// The base address is offset by the user of this function, so the implementation only ever considers the first slot.</remarks>
         /// <param name="source">AOS-formatted shape to gather from.</param>
-        void WriteFirst(ref TShape source);
+        void WriteFirst(in TShape source);
+        /// <summary>
+        /// Places the specified AOS-formatted shape into the selected slot of the wide 'this' reference.
+        /// </summary>
+        /// <param name="index">Index of the slot to put the data into.</param>
+        /// <param name="source">Source of the data to insert.</param>
+        void WriteSlot(int index, in TShape source);
         void Broadcast(in TShape shape);
 
         void GetBounds(ref QuaternionWide orientations, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max);

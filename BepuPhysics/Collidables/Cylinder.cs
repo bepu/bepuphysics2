@@ -200,10 +200,18 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteFirst(ref Cylinder source)
+        public void WriteFirst(in Cylinder source)
         {
             Unsafe.As<Vector<float>, float>(ref Radius) = source.Radius;
             Unsafe.As<Vector<float>, float>(ref HalfLength) = source.HalfLength;
+        }
+
+        public bool AllowOffsetMemoryAccess => true;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteSlot(int index, in Cylinder source)
+        {
+            GatherScatter.GetOffsetInstance(ref this, index).WriteFirst(source);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

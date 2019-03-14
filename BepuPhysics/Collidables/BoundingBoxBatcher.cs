@@ -134,7 +134,11 @@ namespace BepuPhysics
                 {
                     ref var instance = ref Unsafe.Add(ref bundleInstancesStart, innerIndex);
                     ref var targetInstanceSlot = ref GatherScatter.GetOffsetInstance(ref instanceBundle, innerIndex);
-                    targetInstanceSlot.Shape.WriteFirst(ref shapeBatch.shapes[instance.ShapeIndex]);
+                    //This property should be a constant value and the JIT has type knowledge, so this branch should optimize out.
+                    if (instanceBundle.Shape.AllowOffsetMemoryAccess)
+                        targetInstanceSlot.Shape.WriteFirst(shapeBatch.shapes[instance.ShapeIndex]);
+                    else
+                        instanceBundle.Shape.WriteSlot(innerIndex, shapeBatch.shapes[instance.ShapeIndex]);
                     Vector3Wide.WriteFirst(instance.Pose.Position, ref targetInstanceSlot.Pose.Position);
                     QuaternionWide.WriteFirst(instance.Pose.Orientation, ref targetInstanceSlot.Pose.Orientation);
                     Vector3Wide.WriteFirst(instance.Velocities.Linear, ref targetInstanceSlot.Velocities.Linear);
@@ -163,7 +167,7 @@ namespace BepuPhysics
                     {
                         var min = new Vector3(sourceBundleMin.X[0], sourceBundleMin.Y[0], sourceBundleMin.Z[0]);
                         var max = new Vector3(sourceBundleMax.X[0], sourceBundleMax.Y[0], sourceBundleMax.Z[0]);
-                        BoundingBox.CreateMerged(*minPointer, *maxPointer,  min, max, out *minPointer, out *maxPointer);
+                        BoundingBox.CreateMerged(*minPointer, *maxPointer, min, max, out *minPointer, out *maxPointer);
                     }
                     else
                     {
@@ -174,7 +178,7 @@ namespace BepuPhysics
             }
         }
 
-        public unsafe void ExecuteHomogeneousCompoundBatch<TShape, TChildShape, TChildShapeWide>(HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide> shapeBatch) 
+        public unsafe void ExecuteHomogeneousCompoundBatch<TShape, TChildShape, TChildShapeWide>(HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide> shapeBatch)
             where TShape : struct, IHomogeneousCompoundShape<TChildShape, TChildShapeWide>
             where TChildShape : IConvexShape
             where TChildShapeWide : IShapeWide<TChildShape>

@@ -72,7 +72,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.WriteFirst(pair.AngularVelocityB, ref GatherScatter.GetOffsetInstance(ref angularVelocityB, j));
                     Unsafe.Add(ref Unsafe.As<Vector<float>, float>(ref maximumAllowedExpansion), j) = pair.MaximumExpansion;
 
-                    GatherScatter.GetOffsetInstance(ref convexWide, j).WriteFirst(ref Unsafe.AsRef<TConvex>(pair.A));
+                    convexWide.WriteSlot(j, Unsafe.AsRef<TConvex>(pair.A));
                 }
 
                 QuaternionWide.Conjugate(orientationB, out var inverseOrientationB);

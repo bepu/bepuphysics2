@@ -123,9 +123,17 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteFirst(ref Sphere source)
+        public void WriteFirst(in Sphere source)
         {
             Unsafe.As<Vector<float>, float>(ref Radius) = source.Radius;
+        }
+
+        public bool AllowOffsetMemoryAccess => true;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteSlot(int index, in Sphere source)
+        {
+            Unsafe.Add(ref Unsafe.As<Vector<float>, float>(ref Radius), index) = source.Radius;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -176,11 +176,19 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteFirst(ref Box source)
+        public void WriteFirst(in Box source)
         {
             Unsafe.As<Vector<float>, float>(ref HalfWidth) = source.HalfWidth;
             Unsafe.As<Vector<float>, float>(ref HalfHeight) = source.HalfHeight;
             Unsafe.As<Vector<float>, float>(ref HalfLength) = source.HalfLength;
+        }
+
+        public bool AllowOffsetMemoryAccess => true;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteSlot(int index, in Box source)
+        {
+            GatherScatter.GetOffsetInstance(ref this, index).WriteFirst(source);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

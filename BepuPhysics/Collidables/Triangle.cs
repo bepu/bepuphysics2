@@ -172,11 +172,19 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteFirst(ref Triangle source)
+        public void WriteFirst(in Triangle source)
         {
             Vector3Wide.WriteFirst(source.A, ref A);
             Vector3Wide.WriteFirst(source.B, ref B);
             Vector3Wide.WriteFirst(source.C, ref C);
+        }
+
+        public bool AllowOffsetMemoryAccess => true;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteSlot(int index, in Triangle source)
+        {
+            GatherScatter.GetOffsetInstance(ref this, index).WriteFirst(source);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -66,10 +66,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //TODO: If we have gather intrinsics, they might be a win.
                 for (int j = 0; j < countInBundle; ++j)
                 {
-                    //Reposition the wide reference so that the first lane of the alias matches the target lane in the underlying memory.
-                    ref var offsetFloatStart = ref Unsafe.Add(ref Unsafe.As<TPairWide, float>(ref pairWide), j);
-                    ref var target = ref Unsafe.As<float, TPairWide>(ref offsetFloatStart);
-                    target.WriteFirst(ref Unsafe.Add(ref bundleStart, j));
+                    pairWide.WriteSlot(j, Unsafe.Add(ref bundleStart, j));
                 }
 
                 if (pairWide.OrientationCount == 2)

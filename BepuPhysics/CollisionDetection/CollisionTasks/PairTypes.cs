@@ -19,7 +19,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     /// <summary>
     /// Defines a type that holds scalar data for the collision batcher.
     /// </summary>
-    /// <typeparam name="TPair"></typeparam>
     public interface ICollisionPair<TPair> where TPair : ICollisionPair<TPair>
     {
         /// <summary>
@@ -28,7 +27,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         CollisionTaskPairType PairType { get; }
         ref PairContinuation GetContinuation(ref TPair pair);
     }
-    
+
     public unsafe struct CollisionPair : ICollisionPair<CollisionPair>
     {
         public void* A;
@@ -152,7 +151,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         ref QuaternionWide GetOrientationA(ref TPairWide pair);
         ref QuaternionWide GetOrientationB(ref TPairWide pair);
         ref Vector3Wide GetOffsetB(ref TPairWide pair);
-        void WriteFirst(ref TPair source);
+        void WriteSlot(int index, in TPair source);
 
     }
 
@@ -219,15 +218,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return ref pair.OrientationB;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WriteFirst(ref CollisionPair source)
+        public unsafe void WriteSlot(int index, in CollisionPair source)
         {
-            A.WriteFirst(ref Unsafe.AsRef<TShapeA>(source.A));
-            B.WriteFirst(ref Unsafe.AsRef<TShapeB>(source.B));
-            GetFirst(ref FlipMask) = source.FlipMask;
-            Vector3Wide.WriteFirst(source.OffsetB, ref OffsetB);
-            QuaternionWide.WriteFirst(source.OrientationA, ref OrientationA);
-            QuaternionWide.WriteFirst(source.OrientationB, ref OrientationB);
-            GetFirst(ref SpeculativeMargin) = source.SpeculativeMargin;
+            ref var offset = ref GetOffsetInstance(ref this, index);
+            if (A.AllowOffsetMemoryAccess)
+                offset.A.WriteFirst(Unsafe.AsRef<TShapeA>(source.A));
+            else
+                A.WriteSlot(index, Unsafe.AsRef<TShapeA>(source.A));
+            if (B.AllowOffsetMemoryAccess)
+                offset.B.WriteFirst(Unsafe.AsRef<TShapeB>(source.B));
+            else
+                B.WriteSlot(index, Unsafe.AsRef<TShapeB>(source.B));
+            GetFirst(ref offset.FlipMask) = source.FlipMask;
+            Vector3Wide.WriteFirst(source.OffsetB, ref offset.OffsetB);
+            QuaternionWide.WriteFirst(source.OrientationA, ref offset.OrientationA);
+            QuaternionWide.WriteFirst(source.OrientationB, ref offset.OrientationB);
+            GetFirst(ref offset.SpeculativeMargin) = source.SpeculativeMargin;
         }
     }
     public struct FliplessPairWide<TShape, TShapeWide> : ICollisionPairWide<TShape, TShapeWide, TShape, TShapeWide, FliplessPair, FliplessPairWide<TShape, TShapeWide>>
@@ -288,14 +294,23 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return ref pair.OrientationB;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WriteFirst(ref FliplessPair source)
+        public unsafe void WriteSlot(int index, in FliplessPair source)
         {
-            A.WriteFirst(ref Unsafe.AsRef<TShape>(source.A));
-            B.WriteFirst(ref Unsafe.AsRef<TShape>(source.B));
-            Vector3Wide.WriteFirst(source.OffsetB, ref OffsetB);
-            QuaternionWide.WriteFirst(source.OrientationA, ref OrientationA);
-            QuaternionWide.WriteFirst(source.OrientationB, ref OrientationB);
-            GetFirst(ref SpeculativeMargin) = source.SpeculativeMargin;
+            ref var offset = ref GetOffsetInstance(ref this, index);
+            if (A.AllowOffsetMemoryAccess)
+            {
+                offset.A.WriteFirst(Unsafe.AsRef<TShape>(source.A));
+                offset.B.WriteFirst(Unsafe.AsRef<TShape>(source.B));
+            }
+            else
+            {
+                A.WriteSlot(index, Unsafe.AsRef<TShape>(source.A));
+                B.WriteSlot(index, Unsafe.AsRef<TShape>(source.B));
+            }
+            Vector3Wide.WriteFirst(source.OffsetB, ref offset.OffsetB);
+            QuaternionWide.WriteFirst(source.OrientationA, ref offset.OrientationA);
+            QuaternionWide.WriteFirst(source.OrientationB, ref offset.OrientationB);
+            GetFirst(ref offset.SpeculativeMargin) = source.SpeculativeMargin;
         }
     }
     public struct SphereIncludingPairWide<TShape, TShapeWide> : ICollisionPairWide<Sphere, SphereWide, TShape, TShapeWide, SphereIncludingPair, SphereIncludingPairWide<TShape, TShapeWide>>
@@ -357,14 +372,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return ref pair.OrientationB;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WriteFirst(ref SphereIncludingPair source)
+        public unsafe void WriteSlot(int index, in SphereIncludingPair source)
         {
-            A.WriteFirst(ref source.A);
-            B.WriteFirst(ref Unsafe.AsRef<TShape>(source.B));
-            GetFirst(ref FlipMask) = source.FlipMask;
-            Vector3Wide.WriteFirst(source.OffsetB, ref OffsetB);
-            QuaternionWide.WriteFirst(source.OrientationB, ref OrientationB);
-            GetFirst(ref SpeculativeMargin) = source.SpeculativeMargin;
+            ref var offset = ref GetOffsetInstance(ref this, index);
+            offset.A.WriteFirst(source.A);
+            if (B.AllowOffsetMemoryAccess)
+                offset.B.WriteFirst(Unsafe.AsRef<TShape>(source.B));
+            else
+                B.WriteSlot(index, Unsafe.AsRef<TShape>(source.B));
+            GetFirst(ref offset.FlipMask) = source.FlipMask;
+            Vector3Wide.WriteFirst(source.OffsetB, ref offset.OffsetB);
+            QuaternionWide.WriteFirst(source.OrientationB, ref offset.OrientationB);
+            GetFirst(ref offset.SpeculativeMargin) = source.SpeculativeMargin;
         }
     }
     public struct SpherePairWide : ICollisionPairWide<Sphere, SphereWide, Sphere, SphereWide, SpherePair, SpherePairWide>
@@ -419,12 +438,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             throw new NotImplementedException();
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteFirst(ref SpherePair source)
+        public void WriteSlot(int index, in SpherePair source)
         {
-            A.WriteFirst(ref source.A);
-            B.WriteFirst(ref source.B);
-            Vector3Wide.WriteFirst(source.OffsetB, ref OffsetB);
-            GetFirst(ref SpeculativeMargin) = source.SpeculativeMargin;
+            ref var offset = ref GetOffsetInstance(ref this, index);
+            offset.A.WriteFirst(source.A);
+            offset.B.WriteFirst(source.B);
+            Vector3Wide.WriteFirst(source.OffsetB, ref offset.OffsetB);
+            GetFirst(ref offset.SpeculativeMargin) = source.SpeculativeMargin;
         }
-    }    
+    }
 }
