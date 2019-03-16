@@ -213,8 +213,19 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Distance(in Vector3Wide a, in Vector3Wide b, out Vector<float> distance)
         {
-            Subtract(b, a, out var offset);
-            Length(offset, out distance);
+            var x = b.X - a.X;
+            var y = b.Y - a.Y;
+            var z = b.Z - a.Z;
+            distance = Vector.SquareRoot(x * x + y * y + z * z);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void DistanceSquared(in Vector3Wide a, in Vector3Wide b, out Vector<float> distanceSquared)
+        {
+            var x = b.X - a.X;
+            var y = b.Y - a.Y;
+            var z = b.Z - a.Z;
+            distanceSquared = x * x + y * y + z * z;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
