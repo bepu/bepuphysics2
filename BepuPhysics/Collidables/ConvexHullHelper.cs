@@ -3,6 +3,7 @@ using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -84,8 +85,10 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        static int FindExtremeVertex(in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, in Buffer<Vector3Wide> points, in Vector<int> indexOffsets)
+        static void FindExtremeVertices(in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, ref Buffer<Vector3Wide> points, in Vector<int> indexOffsets,
+            ref Buffer<Vector<float>> projectedOnX, ref Buffer<Vector<float>> projectedOnY, in Vector<float> planeEpsilon, ref QuickList<int> vertexIndices, out Vector3 faceNormal)
         {
+            Debug.Assert(projectedOnX.Length >= points.Length && projectedOnY.Length >= points.Length && vertexIndices.Count == 0 && vertexIndices.Span.Length >= points.Length * Vector<float>.Count);
             //Find the candidate-basisOrigin which has the greatest angle with basisX when projected onto the plane spanned by basisX and basisY.
             //(Candidates which are on the wrong side of the basisX axis- that is, they have a negative dot product with basisY- are ignored.)
             //angle = acos(x / ||(x, y)||)
@@ -95,8 +98,10 @@ namespace BepuPhysics.Collidables
             //sign(x0) * x0^2 * ||(x1,y1)||^2 < sign(x1) * x1^2 * ||(x0,y0)||^2
             //with no divisions, square roots, or trigonometry.
             Vector3Wide.Subtract(points[0], basisOrigin, out var toCandidate);
-            Vector3Wide.Dot(basisX, toCandidate, out var x);
-            Vector3Wide.Dot(basisY, toCandidate, out var y);
+            ref var x = ref projectedOnX[0];
+            ref var y = ref projectedOnY[0];
+            Vector3Wide.Dot(basisX, toCandidate, out x);
+            Vector3Wide.Dot(basisY, toCandidate, out y);
             var bestNumerators = x * x;
             var bestDenominators = bestNumerators + y * y;
             bestNumerators = Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), -bestNumerators, bestNumerators);
@@ -109,6 +114,8 @@ namespace BepuPhysics.Collidables
             for (int i = 1; i < points.Length; ++i)
             {
                 Vector3Wide.Subtract(points[i], basisOrigin, out toCandidate);
+                x = ref projectedOnX[i];
+                y = ref projectedOnY[i];
                 Vector3Wide.Dot(basisX, toCandidate, out x);
                 Vector3Wide.Dot(basisY, toCandidate, out y);
                 var candidateNumerator = x * x;
@@ -135,7 +142,126 @@ namespace BepuPhysics.Collidables
                     bestIndex = bestIndices[i];
                 }
             }
+            //We now have the best index, but there may have been multiple vertices on the same plane. Capture all of them at once by doing a second pass over the results.
+            //The plane normal we want to examine is (-bestY, bestX) / ||(-bestY, bestX)||.
+            //(This isn't wonderfully fast, but it's fairly simple. The alternatives are things like incrementally combining coplanar triangles as they are discovered
+            //or using a postpass that looks for coplanar triangles after they've been created.)
+            BundleIndexing.GetBundleIndices(bestIndex, out var bestBundleIndex, out int bestInnerIndex);
+            var bestX = projectedOnX[bestBundleIndex][bestInnerIndex];
+            var bestY = projectedOnY[bestBundleIndex][bestInnerIndex];
+            var projectedPlaneNormalNarrow = Vector2.Normalize(new Vector2(-bestY, bestX));
+            Vector2Wide.Broadcast(projectedPlaneNormalNarrow, out var projectedPlaneNormal);
+            for (int i = 0; i < points.Length; ++i)
+            {
+                var dot = projectedOnX[i] * projectedPlaneNormal.X + projectedOnY[i] * projectedPlaneNormal.Y;
+                var coplanar = Vector.LessThanOrEqual(Vector.Abs(dot), planeEpsilon);
+                if (Vector.LessThanAny(coplanar, Vector<int>.Zero))
+                {
+                    for (int j = 0; j < Vector<int>.Count; ++j)
+                    {
+                        if (coplanar[j] < 0)
+                        {
+                            vertexIndices.AllocateUnsafely() = (i << BundleIndexing.VectorShift) + j;
+                        }
+                    }
+                }
+            }
+            Vector3Wide.ReadFirst(basisX, out var basisXNarrow);
+            Vector3Wide.ReadFirst(basisY, out var basisYNarrow);
+            faceNormal = basisXNarrow * projectedPlaneNormalNarrow.X + basisYNarrow * projectedPlaneNormalNarrow.Y;
+        }
+
+
+        static int FindNextIndexForFaceHull(in Vector2 start, int startIndex, in Vector2 previousEdgeDirection, ref QuickList<Vector2> facePoints)
+        {
+            //Use a AOS version since the number of points on a given face will tend to be very small in most cases.
+            //Same idea as the 3d version- find the next edge which is closest to the previous edge. Not going to worry about collinear points here for now.
+            var startToCandidate = facePoints[0] - start;
+            var dot = Vector2.Dot(startToCandidate, previousEdgeDirection);
+            var bestNumerator = dot * dot;
+            bestNumerator = dot < 0 ? -bestNumerator : bestNumerator;
+            var bestDenominator = startToCandidate.LengthSquared();
+            var bestIndex = 0;
+            if (startIndex == 0)
+            {
+                bestNumerator = -1;
+                bestDenominator = 1;
+            }
+            for (int i = 0; i < facePoints.Count; ++i)
+            {
+                startToCandidate = facePoints[0] - start;
+                dot = Vector2.Dot(startToCandidate, previousEdgeDirection);
+                var candidateNumerator = dot * dot;
+                candidateNumerator = dot < 0 ? -candidateNumerator : candidateNumerator;
+                var candidateDenominator = startToCandidate.LengthSquared();
+                if (candidateNumerator * bestDenominator > bestNumerator * candidateDenominator)
+                {
+                    bestNumerator = candidateNumerator;
+                    bestDenominator = candidateDenominator;
+                    bestIndex = i;
+                }
+            }
             return bestIndex;
+        }
+        static void ReduceFace(ref QuickList<int> faceVertexIndices, in Vector3 faceNormal, ref Buffer<Vector3> points, ref QuickList<Vector2> facePoints, ref QuickList<int> reducedIndices)
+        {
+            Debug.Assert(facePoints.Count == 0 && reducedIndices.Count == 0 && facePoints.Span.Length >= faceVertexIndices.Count && reducedIndices.Span.Length >= faceVertexIndices.Count);
+            if (faceVertexIndices.Count <= 3)
+            {
+                //Too small to require computing a hull. Copy directly.
+                for (int i = 0; i < faceVertexIndices.Count; ++i)
+                {
+                    reducedIndices.AllocateUnsafely() = faceVertexIndices[i];
+                }
+                return;
+            }
+            Helpers.BuildOrthnormalBasis(faceNormal, out var basisX, out var basisY);
+            Vector2 centroid = default;
+            for (int i = 0; i < faceVertexIndices.Count; ++i)
+            {
+                ref var source = ref points[faceVertexIndices[i]];
+                ref var facePoint = ref facePoints.AllocateUnsafely();
+                facePoint = new Vector2(Vector3.Dot(basisX, source), Vector3.Dot(basisY, source));
+                centroid += facePoint;
+            }
+            centroid /= faceVertexIndices.Count;
+            var greatestDistanceSquared = -1f;
+            var initialIndex = 0;
+            for (int i = 0; i < faceVertexIndices.Count; ++i)
+            {
+                ref var facePoint = ref facePoints[i];
+                var distanceSquared = (facePoint - centroid).LengthSquared();
+                if (greatestDistanceSquared < distanceSquared)
+                {
+                    greatestDistanceSquared = distanceSquared;
+                    initialIndex = i;
+                }
+            }
+
+            if (greatestDistanceSquared < 1e-14f)
+            {
+                //The face is degenerate.
+                reducedIndices.AllocateUnsafely() = faceVertexIndices[0];
+                return;
+            }
+            var initialOffsetDirection = (facePoints[initialIndex] - centroid) / (float)Math.Sqrt(greatestDistanceSquared);
+            var previousEdgeDirection = new Vector2(-initialOffsetDirection.Y, initialOffsetDirection.X);
+            reducedIndices.AllocateUnsafely() = initialIndex;
+
+            var previousIndex = initialIndex;
+            while (true)
+            {
+                var nextIndex = FindNextIndexForFaceHull(facePoints[previousIndex], previousIndex, previousEdgeDirection, ref facePoints);
+                if (nextIndex == initialIndex)
+                {
+                    //Found our way back to the start; exit.
+                    break;
+                }
+                reducedIndices.AllocateUnsafely() = nextIndex;
+                previousEdgeDirection = Vector2.Normalize(facePoints[nextIndex] - facePoints[previousIndex]);
+                previousIndex = nextIndex;
+            }
+
         }
 
         /// <summary>
@@ -176,6 +302,7 @@ namespace BepuPhysics.Collidables
                 return;
             }
             pool.Take<Vector3Wide>(BundleIndexing.GetBundleCount(points.Length), out var pointBundles);
+            pointBundles.Slice(0, points.Length >> BundleIndexing.VectorShift, out pointBundles);
             //While it's not asymptotically optimal in general, gift wrapping is simple and easy to productively vectorize.
             //As a first step, create an AOSOA version of the input data.
             Vector3 centroid = default;
@@ -240,12 +367,24 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Broadcast(initialVertex / initialDistance, out var initialBasisX);
             Helpers.FindPerpendicular(initialBasisX, out var initialBasisY); //(broadcasted before FindPerpendicular just because we didn't have a non-bundle version)
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
-            var secondVertexIndex = FindExtremeVertex(initialBasisX, initialBasisY, initialVertexBundle, pointBundles, indexOffsetBundle);
-                        
+            pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
+            pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
+            var planeEpsilon = new Vector<float>((float)Math.Sqrt(bestDistanceSquared) * 1e-7f);
+            var rawFaceVertexIndices = new QuickList<int>(points.Length, pool);
+            FindExtremeVertices(initialBasisX, initialBasisY, initialVertexBundle, ref pointBundles, indexOffsetBundle,
+               ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
+            Debug.Assert(rawFaceVertexIndices.Count >= 2);
+            var facePoints = new QuickList<Vector2>(points.Length, pool);
+            var reducedFaceIndices = new QuickList<int>(points.Length, pool);
+            ReduceFace(ref rawFaceVertexIndices, faceNormal, ref points, ref facePoints, ref reducedFaceIndices);
+
             var edgesToTest = new QuickList<Int2>(points.Length, pool);
-            ref var initialAB = ref edgesToTest.AllocateUnsafely();
-            initialAB.X = initialIndex;
-            initialAB.Y = secondVertexIndex;
+            for (int i = 1; i < reducedFaceIndices.Count; ++i)
+            {
+                ref var edgeToAdd = ref edgesToTest.Allocate(pool);
+                edgeToAdd.X = reducedFaceIndices[i - 1];
+                edgeToAdd.Y = reducedFaceIndices[i];
+            }
             var edgeFaceCounts = new QuickDictionary<Int2, int, Int2>(points.Length, pool);
 
             while (edgesToTest.Count > 0)
@@ -256,11 +395,6 @@ namespace BepuPhysics.Collidables
                 if (faceCountIndex >= 0 && edgeFaceCounts.Values[faceCountIndex] == 2)
                     continue;
 
-                //It is possible for the hull to have coplanar triangles. They need to be combined into one face.
-                //If the previous triangle and the new edge+sample triangle are coplanar, combine them.
-                //If the new edge+sample triangle and any other triangle connected to the sampled vertex is coplanar, combine them.
-                //When faces are combined, it is possible for vertices or previously pushed edges to be deleted if they are not on the
-                //2d hull of the face.
             }
 
 

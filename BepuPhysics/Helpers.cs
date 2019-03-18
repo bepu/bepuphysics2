@@ -42,5 +42,20 @@ namespace BepuPhysics
             perpendicular.Z = -normal.Y;
 
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void BuildOrthnormalBasis(in Vector3 normal, out Vector3 t1, out Vector3 t2)
+        {
+            var sign = normal.Z < 0 ? -1f : 1f;
+
+            var scale = -1f / (sign + normal.Z);
+            t1.X = normal.X * normal.Y * scale;
+            t1.Y = sign + normal.Y * normal.Y * scale;
+            t1.Z = -normal.Y;
+
+            t2.X = 1f + sign * normal.X * normal.X * scale;
+            t2.Y = sign * t1.X;
+            t2.Z = -sign * normal.X;
+        }
     }
 }
