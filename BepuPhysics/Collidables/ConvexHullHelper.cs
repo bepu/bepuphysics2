@@ -15,7 +15,7 @@ namespace BepuPhysics.Collidables
     /// </summary>
     public struct HullFace
     {
-        public Buffer<Vector3> Vertices;
+        public Buffer<int> OriginalVertexMapping;
         public Buffer<int> VertexIndices;
 
         /// <summary>
@@ -28,14 +28,14 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
-        /// Gets a reference to the vertex position associated with the given face vertex index.
+        /// Gets the index of the vertex associated with the given face vertex index in the source point set.
         /// </summary>
         /// <param name="index">Index into the face's vertex list.</param>
-        /// <returns>Reference to the vertex position associated with the given face vertex index.</returns>
-        public ref Vector3 this[int index]
+        /// <returns>Index of the vertex associated with the given face vertex index in the source point set.</returns>
+        public int this[int index]
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return ref Vertices[VertexIndices[index]]; }
+            get { return OriginalVertexMapping[VertexIndices[index]]; }
         }
     }
 
@@ -46,9 +46,9 @@ namespace BepuPhysics.Collidables
     public struct HullData
     {
         /// <summary>
-        /// Points on the surface of the convex hull.
+        /// Mapping of points on the convex hull back to the original point set.
         /// </summary>
-        public Buffer<Vector3> Vertices;
+        public Buffer<int> OriginalVertexMapping;
         /// <summary>
         /// List of indices composing the faces of the hull. Individual faces indexed by the FaceIndices.
         /// </summary>
@@ -65,7 +65,7 @@ namespace BepuPhysics.Collidables
             var start = FaceStartIndices[faceIndex];
             var end = nextFaceIndex == FaceStartIndices.Length ? FaceStartIndices.Length : FaceStartIndices[nextFaceIndex];
             FaceVertexIndices.Slice(start, end - start, out face.VertexIndices);
-            face.Vertices = Vertices;
+            face.OriginalVertexMapping = OriginalVertexMapping;
         }
     }
 
@@ -85,7 +85,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        static void FindExtremeVertices(in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, ref Buffer<Vector3Wide> points, in Vector<int> indexOffsets,
+        static void FindExtremeFace(in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, ref Buffer<Vector3Wide> points, in Vector<int> indexOffsets,
             ref Buffer<Vector<float>> projectedOnX, ref Buffer<Vector<float>> projectedOnY, in Vector<float> planeEpsilon, ref QuickList<int> vertexIndices, out Vector3 faceNormal)
         {
             Debug.Assert(projectedOnX.Length >= points.Length && projectedOnY.Length >= points.Length && vertexIndices.Count == 0 && vertexIndices.Span.Length >= points.Length * Vector<float>.Count);
@@ -149,7 +149,8 @@ namespace BepuPhysics.Collidables
             BundleIndexing.GetBundleIndices(bestIndex, out var bestBundleIndex, out int bestInnerIndex);
             var bestX = projectedOnX[bestBundleIndex][bestInnerIndex];
             var bestY = projectedOnY[bestBundleIndex][bestInnerIndex];
-            var projectedPlaneNormalNarrow = Vector2.Normalize(new Vector2(-bestY, bestX));
+            //Rotate the offset to point outwards.
+            var projectedPlaneNormalNarrow = Vector2.Normalize(new Vector2(bestY, -bestX));
             Vector2Wide.Broadcast(projectedPlaneNormalNarrow, out var projectedPlaneNormal);
             for (int i = 0; i < points.Length; ++i)
             {
@@ -264,6 +265,13 @@ namespace BepuPhysics.Collidables
 
         }
 
+        struct EdgeToTest
+        {
+            public Int2 Endpoints;
+            public Vector3 FaceNormal;
+        }
+
+
         /// <summary>
         /// Computes the convex hull of a set of points.
         /// </summary>
@@ -280,14 +288,18 @@ namespace BepuPhysics.Collidables
             if (points.Length <= 3)
             {
                 //If the input is too small to actually form a volumetric hull, just output the input directly.
-                pool.Take(points.Length, out hullData.Vertices);
-                points.CopyTo(0, ref hullData.Vertices, 0, points.Length);
-                hullData.Vertices.Slice(0, points.Length, out hullData.Vertices);
+                pool.Take(points.Length, out hullData.OriginalVertexMapping);
+                for (int i = 0; i < points.Length; ++i)
+                {
+                    hullData.OriginalVertexMapping[i] = i;
+                }
+                hullData.OriginalVertexMapping.Slice(0, points.Length, out hullData.OriginalVertexMapping);
                 if (points.Length == 3)
                 {
                     pool.Take(1, out hullData.FaceStartIndices);
                     pool.Take(3, out hullData.FaceVertexIndices);
                     hullData.FaceStartIndices[0] = 0;
+                    //No volume, so winding doesn't matter.
                     hullData.FaceVertexIndices[0] = 0;
                     hullData.FaceVertexIndices[1] = 1;
                     hullData.FaceVertexIndices[2] = 2;
@@ -346,10 +358,8 @@ namespace BepuPhysics.Collidables
                     initialIndex = mostDistantIndicesBundle[i];
                 }
             }
-            pool.Take<Vector3>(points.Length, out var vertices);
             BundleIndexing.GetBundleIndices(initialIndex, out var mostDistantBundleIndex, out var mostDistantInnerIndex);
-            ref var initialVertex = ref vertices[0];
-            Vector3Wide.ReadSlot(ref pointBundles[mostDistantBundleIndex], mostDistantInnerIndex, out initialVertex);
+            Vector3Wide.ReadSlot(ref pointBundles[mostDistantBundleIndex], mostDistantInnerIndex, out var initialVertex);
 
             //All further points will be found by picking an plane on which to project all vertices down onto, and then measuring the angle on that plane.
             //We pick to basis directions along which to measure. For the second point, we choose a perpendicular direction arbitrarily.
@@ -358,11 +368,12 @@ namespace BepuPhysics.Collidables
             if (initialDistance < 1e-7f)
             {
                 //The point set lacks any volume or area.
-                pool.Take(1, out hullData.Vertices);
-                hullData.Vertices[0] = points[0];
-                hullData.Vertices.Slice(0, 1, out hullData.Vertices);
+                pool.Take(1, out hullData.OriginalVertexMapping);
+                hullData.OriginalVertexMapping[0] = 0;
+                hullData.OriginalVertexMapping.Slice(0, 1, out hullData.OriginalVertexMapping);
                 hullData.FaceStartIndices = default;
                 hullData.FaceVertexIndices = default;
+                return;
             }
             Vector3Wide.Broadcast(initialVertex / initialDistance, out var initialBasisX);
             Helpers.FindPerpendicular(initialBasisX, out var initialBasisY); //(broadcasted before FindPerpendicular just because we didn't have a non-bundle version)
@@ -371,35 +382,150 @@ namespace BepuPhysics.Collidables
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
             var planeEpsilon = new Vector<float>((float)Math.Sqrt(bestDistanceSquared) * 1e-7f);
             var rawFaceVertexIndices = new QuickList<int>(points.Length, pool);
-            FindExtremeVertices(initialBasisX, initialBasisY, initialVertexBundle, ref pointBundles, indexOffsetBundle,
-               ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
+            FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, ref pointBundles, indexOffsetBundle,
+               ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var initialFaceNormal);
             Debug.Assert(rawFaceVertexIndices.Count >= 2);
             var facePoints = new QuickList<Vector2>(points.Length, pool);
             var reducedFaceIndices = new QuickList<int>(points.Length, pool);
-            ReduceFace(ref rawFaceVertexIndices, faceNormal, ref points, ref facePoints, ref reducedFaceIndices);
+            ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, ref points, ref facePoints, ref reducedFaceIndices);
 
-            var edgesToTest = new QuickList<Int2>(points.Length, pool);
-            for (int i = 1; i < reducedFaceIndices.Count; ++i)
-            {
-                ref var edgeToAdd = ref edgesToTest.Allocate(pool);
-                edgeToAdd.X = reducedFaceIndices[i - 1];
-                edgeToAdd.Y = reducedFaceIndices[i];
-            }
+            var earlyFaceIndices = new QuickList<int>(points.Length, pool);
+            var earlyFaceStartIndices = new QuickList<int>(points.Length / 3, pool);
+
+            var edgesToTest = new QuickList<EdgeToTest>(points.Length, pool);
             var edgeFaceCounts = new QuickDictionary<Int2, int, Int2>(points.Length, pool);
+            if (reducedFaceIndices.Count >= 3)
+            {
+                //The initial face search found an actual face! That's a bit surprising since we didn't start from an edge offset, but rather an arbitrary direction.
+                //Handle it anyway.
+                for (int i = 0; i < reducedFaceIndices.Count; ++i)
+                {
+                    ref var edgeToAdd = ref edgesToTest.Allocate(pool);
+                    edgeToAdd.Endpoints.X = reducedFaceIndices[i == 0 ? reducedFaceIndices.Count - 1 : i - 1];
+                    edgeToAdd.Endpoints.Y = reducedFaceIndices[i];
+                    edgeToAdd.FaceNormal = initialFaceNormal;
+                    edgeFaceCounts.Add(ref edgeToAdd.Endpoints, 1, pool);
+                }
+                //Since an actual face was found, we go ahead and output it into the face set.
+                earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
+                earlyFaceIndices.AddRange(ref reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
+            }
+            else
+            {
+                Debug.Assert(reducedFaceIndices.Count == 2,
+                    "The point set size was verified to be at least 4 earlier, so even in degenerate cases, a second point should be found by the face search.");
+                //No actual face was found. That's expected; the arbitrary direction we used for the basis doesn't likely line up with any edges.
+                ref var edgeToAdd = ref edgesToTest.Allocate(pool);
+                edgeToAdd.Endpoints.X = reducedFaceIndices[0];
+                edgeToAdd.Endpoints.Y = reducedFaceIndices[1];
+                edgeToAdd.FaceNormal = initialFaceNormal;
+            }
+
 
             while (edgesToTest.Count > 0)
             {
                 edgesToTest.Pop(out var edgeToTest);
                 //Make sure the new edge hasn't already been filled by another traversal.
-                var faceCountIndex = edgeFaceCounts.IndexOf(edgeToTest);
+                var faceCountIndex = edgeFaceCounts.IndexOf(edgeToTest.Endpoints);
                 if (faceCountIndex >= 0 && edgeFaceCounts.Values[faceCountIndex] == 2)
                     continue;
 
+                ref var edgeA = ref points[edgeToTest.Endpoints.X];
+                ref var edgeB = ref points[edgeToTest.Endpoints.Y];
+                var edgeOffset = edgeB - edgeA;
+                //The face normal points outward, and the edges should be wound counterclockwise.
+                //basisY should point away from the source face.
+                Vector3x.Cross(edgeOffset, edgeToTest.FaceNormal, out var basisY);
+                //basisX should point inward.
+                Vector3x.Cross(edgeOffset, basisY, out var basisX);
+                basisX = Vector3.Normalize(basisX);
+                basisY = Vector3.Normalize(basisY);
+                Vector3Wide.Broadcast(basisX, out var basisXBundle);
+                Vector3Wide.Broadcast(basisY, out var basisYBundle);
+                Vector3Wide.Broadcast(edgeA, out var basisOrigin);
+                rawFaceVertexIndices.Count = 0;
+                FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, ref pointBundles, indexOffsetBundle, ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
+
+                reducedFaceIndices.Count = 0;
+                facePoints.Count = 0;
+                ReduceFace(ref rawFaceVertexIndices, faceNormal, ref points, ref facePoints, ref reducedFaceIndices);
+
+                earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
+                earlyFaceIndices.AddRange(ref reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
+
+                edgeFaceCounts.EnsureCapacity(edgeFaceCounts.Count + reducedFaceIndices.Count, pool);
+                for (int i = 0; i < reducedFaceIndices.Count; ++i)
+                {
+                    EdgeToTest nextEdgeToTest;
+                    nextEdgeToTest.Endpoints.X = reducedFaceIndices[i == 0 ? reducedFaceIndices.Count - 1 : i - 1];
+                    nextEdgeToTest.Endpoints.Y = reducedFaceIndices[i];
+                    nextEdgeToTest.FaceNormal = initialFaceNormal;
+                    if (edgeFaceCounts.GetTableIndices(ref nextEdgeToTest.Endpoints, out var tableIndex, out var elementIndex))
+                    {
+                        //This edge was already claimed by another face, so given that the new face also claimed it and that an edge can only be associated with two faces,
+                        //no more work has to be done.
+                        Debug.Assert(edgeFaceCounts.Values[elementIndex] == 1);
+                        edgeFaceCounts.Values[elementIndex] = 2;
+                    }
+                    else
+                    {
+                        //This edge is not yet claimed by any edge. Claim it for the new face and add the edge for further testing.
+                        edgeFaceCounts.Keys[edgeFaceCounts.Count] = nextEdgeToTest.Endpoints;
+                        edgeFaceCounts.Values[edgeFaceCounts.Count] = 1;
+                        //Use the encoding- all indices are offset by 1 since 0 represents 'empty'.
+                        edgeFaceCounts.Table[tableIndex] = ++edgeFaceCounts.Count;
+                        edgesToTest.Allocate(pool) = nextEdgeToTest;
+                    }
+                }
             }
 
+            edgesToTest.Dispose(pool);
+            edgeFaceCounts.Dispose(pool);
+            facePoints.Dispose(pool);
+            rawFaceVertexIndices.Dispose(pool);
+            pool.Return(ref projectedOnX);
+            pool.Return(ref projectedOnY);
+            pool.Return(ref pointBundles);
 
+            //Create a reduced hull point set from the face vertex references.
+            pool.Take(earlyFaceStartIndices.Count, out hullData.FaceStartIndices);
+            pool.Take(earlyFaceIndices.Count, out hullData.FaceVertexIndices);
+            hullData.FaceStartIndices.Slice(0, earlyFaceStartIndices.Count, out hullData.FaceStartIndices);
+            earlyFaceStartIndices.Span.CopyTo(0, ref hullData.FaceStartIndices, 0, earlyFaceStartIndices.Count);
+            hullData.FaceStartIndices.Slice(0, earlyFaceIndices.Count, out hullData.FaceVertexIndices);
+            pool.Take<int>(points.Length, out var originalToHullIndexMapping);
+            var hullToOriginalIndexMapping = new QuickList<int>(points.Length, pool);
+            for (int i = 0; i < points.Length; ++i)
+            {
+                originalToHullIndexMapping[i] = -1;
+            }
+            for (int i = 0; i < earlyFaceStartIndices.Count; ++i)
+            {
+                var start = earlyFaceStartIndices[i];
+                var nextIndex = i + 1;
+                var end = earlyFaceStartIndices.Count == nextIndex ? earlyFaceIndices.Count : earlyFaceStartIndices[nextIndex];
+                for (int j = start; j < end; ++j)
+                {
+                    var originalVertexIndex = earlyFaceIndices[j];
+                    ref var originalToHull = ref originalToHullIndexMapping[originalVertexIndex];
+                    if (originalToHull < 0)
+                    {
+                        //This vertex hasn't been seen yet.
+                        originalToHull = hullToOriginalIndexMapping.Count;
+                        hullToOriginalIndexMapping.AllocateUnsafely() = originalVertexIndex;
+                    }
+                    hullData.FaceVertexIndices[j] = originalToHull;
+                }
+            }
 
-            hullData = default;
+            pool.Take(hullToOriginalIndexMapping.Count, out hullData.OriginalVertexMapping);
+            hullData.OriginalVertexMapping.Slice(0, hullToOriginalIndexMapping.Count, out hullData.OriginalVertexMapping);
+            hullToOriginalIndexMapping.Span.CopyTo(0, ref hullData.OriginalVertexMapping, 0, hullToOriginalIndexMapping.Count);
+
+            pool.Return(ref originalToHullIndexMapping);
+            hullToOriginalIndexMapping.Dispose(pool);
+            earlyFaceIndices.Dispose(pool);
+            earlyFaceStartIndices.Dispose(pool);
         }
 
 
