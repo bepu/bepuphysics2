@@ -39,6 +39,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<ConvexHullTestDemo>();
             AddOption<CarDemo>();
             AddOption<CylinderTestDemo>();
             AddOption<ContinuousCollisionDetectionDemo>();

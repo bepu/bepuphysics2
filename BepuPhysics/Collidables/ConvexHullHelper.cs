@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace BepuPhysics.Collidables
@@ -106,7 +107,7 @@ namespace BepuPhysics.Collidables
             var bestDenominators = bestNumerators + y * y;
             bestNumerators = Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), -bestNumerators, bestNumerators);
             //In addition to searching 'away' from the source face, make sure that the source edge doesn't get picked by numerical oddity. (Consider index based.)
-            var epsilon = new Vector<float>(1e-7f);
+            var epsilon = new Vector<float>(-1e-7f);
             var ignoreSlot = Vector.LessThan(y, epsilon);
             bestDenominators = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestDenominators);
             bestNumerators = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestNumerators);
@@ -149,8 +150,8 @@ namespace BepuPhysics.Collidables
             BundleIndexing.GetBundleIndices(bestIndex, out var bestBundleIndex, out int bestInnerIndex);
             var bestX = projectedOnX[bestBundleIndex][bestInnerIndex];
             var bestY = projectedOnY[bestBundleIndex][bestInnerIndex];
-            //Rotate the offset to point outwards.
-            var projectedPlaneNormalNarrow = Vector2.Normalize(new Vector2(bestY, -bestX));
+            //Rotate the offset to point outward.
+            var projectedPlaneNormalNarrow = Vector2.Normalize(new Vector2(-bestY, bestX));
             Vector2Wide.Broadcast(projectedPlaneNormalNarrow, out var projectedPlaneNormal);
             for (int i = 0; i < points.Length; ++i)
             {
@@ -214,6 +215,17 @@ namespace BepuPhysics.Collidables
                 {
                     reducedIndices.AllocateUnsafely() = faceVertexIndices[i];
                 }
+                if (faceVertexIndices.Count == 3)
+                {
+                    //No point in running a full reduction, but we do need to check the winding of the triangle.
+                    ref var a = ref points[reducedIndices[0]];
+                    ref var b = ref points[reducedIndices[1]];
+                    ref var c = ref points[reducedIndices[2]];
+                    //Counterclockwise should result in face normal pointing outward.
+                    Vector3x.Cross(b - a, c - a, out var uncalibratedNormal);
+                    if (Vector3.Dot(faceNormal, uncalibratedNormal) < 0)
+                        Helpers.Swap(ref reducedIndices[0], ref reducedIndices[1]);
+                }
                 return;
             }
             Helpers.BuildOrthnormalBasis(faceNormal, out var basisX, out var basisY);
@@ -265,9 +277,35 @@ namespace BepuPhysics.Collidables
 
         }
 
+        [StructLayout(LayoutKind.Explicit)]
+        struct EdgeEndpoints : IEqualityComparerRef<EdgeEndpoints>
+        {
+            [FieldOffset(0)]
+            public int A;
+            [FieldOffset(4)]
+            public int B;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Equals(ref EdgeEndpoints a, ref EdgeEndpoints b)
+            {
+                ref var longA = ref Unsafe.As<int, long>(ref a.A);
+                return longA == Unsafe.As<int, long>(ref b.A) || longA == (b.B | (b.A << 32));
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Hash(ref EdgeEndpoints item)
+            {
+                return item.A ^ item.B;
+            }
+
+            public override string ToString()
+            {
+                return $"({A}, {B})";
+            }
+        }
         struct EdgeToTest
         {
-            public Int2 Endpoints;
+            public EdgeEndpoints Endpoints;
             public Vector3 FaceNormal;
         }
 
@@ -352,7 +390,7 @@ namespace BepuPhysics.Collidables
             for (int i = 1; i < Vector<int>.Count; ++i)
             {
                 var distanceCandidate = distanceSquaredBundle[i];
-                if (bestDistanceSquared > distanceCandidate)
+                if (distanceCandidate > bestDistanceSquared)
                 {
                     bestDistanceSquared = distanceCandidate;
                     initialIndex = mostDistantIndicesBundle[i];
@@ -375,7 +413,7 @@ namespace BepuPhysics.Collidables
                 hullData.FaceVertexIndices = default;
                 return;
             }
-            Vector3Wide.Broadcast(initialVertex / initialDistance, out var initialBasisX);
+            Vector3Wide.Broadcast(initialToCentroid / initialDistance, out var initialBasisX);
             Helpers.FindPerpendicular(initialBasisX, out var initialBasisY); //(broadcasted before FindPerpendicular just because we didn't have a non-bundle version)
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
@@ -393,7 +431,7 @@ namespace BepuPhysics.Collidables
             var earlyFaceStartIndices = new QuickList<int>(points.Length / 3, pool);
 
             var edgesToTest = new QuickList<EdgeToTest>(points.Length, pool);
-            var edgeFaceCounts = new QuickDictionary<Int2, int, Int2>(points.Length, pool);
+            var edgeFaceCounts = new QuickDictionary<EdgeEndpoints, int, EdgeEndpoints>(points.Length, pool);
             if (reducedFaceIndices.Count >= 3)
             {
                 //The initial face search found an actual face! That's a bit surprising since we didn't start from an edge offset, but rather an arbitrary direction.
@@ -401,8 +439,8 @@ namespace BepuPhysics.Collidables
                 for (int i = 0; i < reducedFaceIndices.Count; ++i)
                 {
                     ref var edgeToAdd = ref edgesToTest.Allocate(pool);
-                    edgeToAdd.Endpoints.X = reducedFaceIndices[i == 0 ? reducedFaceIndices.Count - 1 : i - 1];
-                    edgeToAdd.Endpoints.Y = reducedFaceIndices[i];
+                    edgeToAdd.Endpoints.A = reducedFaceIndices[i == 0 ? reducedFaceIndices.Count - 1 : i - 1];
+                    edgeToAdd.Endpoints.B = reducedFaceIndices[i];
                     edgeToAdd.FaceNormal = initialFaceNormal;
                     edgeFaceCounts.Add(ref edgeToAdd.Endpoints, 1, pool);
                 }
@@ -416,9 +454,14 @@ namespace BepuPhysics.Collidables
                     "The point set size was verified to be at least 4 earlier, so even in degenerate cases, a second point should be found by the face search.");
                 //No actual face was found. That's expected; the arbitrary direction we used for the basis doesn't likely line up with any edges.
                 ref var edgeToAdd = ref edgesToTest.Allocate(pool);
-                edgeToAdd.Endpoints.X = reducedFaceIndices[0];
-                edgeToAdd.Endpoints.Y = reducedFaceIndices[1];
+                edgeToAdd.Endpoints.A = reducedFaceIndices[0];
+                edgeToAdd.Endpoints.B = reducedFaceIndices[1];
                 edgeToAdd.FaceNormal = initialFaceNormal;
+                var edgeOffset = points[edgeToAdd.Endpoints.B] - points[edgeToAdd.Endpoints.A];
+                Vector3x.Cross(edgeOffset, edgeToAdd.FaceNormal, out var basisY);
+                Vector3x.Cross(edgeOffset, basisY, out var basisX);
+                if (Vector3.Dot(basisX, edgeToAdd.FaceNormal) > 0)
+                    Helpers.Swap(ref edgeToAdd.Endpoints.A, ref edgeToAdd.Endpoints.B);
             }
 
 
@@ -430,8 +473,8 @@ namespace BepuPhysics.Collidables
                 if (faceCountIndex >= 0 && edgeFaceCounts.Values[faceCountIndex] == 2)
                     continue;
 
-                ref var edgeA = ref points[edgeToTest.Endpoints.X];
-                ref var edgeB = ref points[edgeToTest.Endpoints.Y];
+                ref var edgeA = ref points[edgeToTest.Endpoints.A];
+                ref var edgeB = ref points[edgeToTest.Endpoints.B];
                 var edgeOffset = edgeB - edgeA;
                 //The face normal points outward, and the edges should be wound counterclockwise.
                 //basisY should point away from the source face.
@@ -457,9 +500,9 @@ namespace BepuPhysics.Collidables
                 for (int i = 0; i < reducedFaceIndices.Count; ++i)
                 {
                     EdgeToTest nextEdgeToTest;
-                    nextEdgeToTest.Endpoints.X = reducedFaceIndices[i == 0 ? reducedFaceIndices.Count - 1 : i - 1];
-                    nextEdgeToTest.Endpoints.Y = reducedFaceIndices[i];
-                    nextEdgeToTest.FaceNormal = initialFaceNormal;
+                    nextEdgeToTest.Endpoints.A = reducedFaceIndices[i == 0 ? reducedFaceIndices.Count - 1 : i - 1];
+                    nextEdgeToTest.Endpoints.B = reducedFaceIndices[i];
+                    nextEdgeToTest.FaceNormal = faceNormal;
                     if (edgeFaceCounts.GetTableIndices(ref nextEdgeToTest.Endpoints, out var tableIndex, out var elementIndex))
                     {
                         //This edge was already claimed by another face, so given that the new face also claimed it and that an edge can only be associated with two faces,
@@ -492,7 +535,7 @@ namespace BepuPhysics.Collidables
             pool.Take(earlyFaceIndices.Count, out hullData.FaceVertexIndices);
             hullData.FaceStartIndices.Slice(0, earlyFaceStartIndices.Count, out hullData.FaceStartIndices);
             earlyFaceStartIndices.Span.CopyTo(0, ref hullData.FaceStartIndices, 0, earlyFaceStartIndices.Count);
-            hullData.FaceStartIndices.Slice(0, earlyFaceIndices.Count, out hullData.FaceVertexIndices);
+            hullData.FaceVertexIndices.Slice(0, earlyFaceIndices.Count, out hullData.FaceVertexIndices);
             pool.Take<int>(points.Length, out var originalToHullIndexMapping);
             var hullToOriginalIndexMapping = new QuickList<int>(points.Length, pool);
             for (int i = 0; i < points.Length; ++i)
