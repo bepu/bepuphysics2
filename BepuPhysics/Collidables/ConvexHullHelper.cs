@@ -64,7 +64,7 @@ namespace BepuPhysics.Collidables
         {
             var nextFaceIndex = faceIndex + 1;
             var start = FaceStartIndices[faceIndex];
-            var end = nextFaceIndex == FaceStartIndices.Length ? FaceStartIndices.Length : FaceStartIndices[nextFaceIndex];
+            var end = nextFaceIndex == FaceStartIndices.Length ? FaceVertexIndices.Length : FaceStartIndices[nextFaceIndex];
             FaceVertexIndices.Slice(start, end - start, out face.VertexIndices);
             face.OriginalVertexMapping = OriginalVertexMapping;
         }
@@ -86,31 +86,31 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        static void FindExtremeFace(in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, ref Buffer<Vector3Wide> points, in Vector<int> indexOffsets,
+        static void FindExtremeFace(in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, in EdgeEndpoints sourceEdgeEndpoints, ref Buffer<Vector3Wide> points, in Vector<int> indexOffsets,
             ref Buffer<Vector<float>> projectedOnX, ref Buffer<Vector<float>> projectedOnY, in Vector<float> planeEpsilon, ref QuickList<int> vertexIndices, out Vector3 faceNormal)
         {
             Debug.Assert(projectedOnX.Length >= points.Length && projectedOnY.Length >= points.Length && vertexIndices.Count == 0 && vertexIndices.Span.Length >= points.Length * Vector<float>.Count);
-            //Find the candidate-basisOrigin which has the greatest angle with basisX when projected onto the plane spanned by basisX and basisY.
-            //(Candidates which are on the wrong side of the basisX axis- that is, they have a negative dot product with basisY- are ignored.)
-            //angle = acos(x / ||(x, y)||)
-            //cosAngle = x / ||(x, y)||
-            //cosAngle^2 = x^2 / ||(x, y)||^2
+            //Find the candidate-basisOrigin which has the smallest angle with basisY when projected onto the plane spanned by basisX and basisY.
+            //angle = acos(y / ||(x, y)||)
+            //cosAngle = y / ||(x, y)||
+            //cosAngle^2 = y^2 / ||(x, y)||^2
             //We can then compare samples 0 and 1 using:
-            //sign(x0) * x0^2 * ||(x1,y1)||^2 < sign(x1) * x1^2 * ||(x0,y0)||^2
+            //sign(y0) * y0^2 * ||(x1,y1)||^2 > sign(y1) * y1^2 * ||(x0,y0)||^2
             //with no divisions, square roots, or trigonometry.
             Vector3Wide.Subtract(points[0], basisOrigin, out var toCandidate);
             ref var x = ref projectedOnX[0];
             ref var y = ref projectedOnY[0];
             Vector3Wide.Dot(basisX, toCandidate, out x);
             Vector3Wide.Dot(basisY, toCandidate, out y);
-            var bestNumerators = x * x;
-            var bestDenominators = bestNumerators + y * y;
-            bestNumerators = Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), -bestNumerators, bestNumerators);
-            //In addition to searching 'away' from the source face, make sure that the source edge doesn't get picked by numerical oddity. (Consider index based.)
-            var epsilon = new Vector<float>(-1e-7f);
-            var ignoreSlot = Vector.LessThan(y, epsilon);
+            var bestNumerators = y * y;
+            var bestDenominators = bestNumerators + x * x;
+            bestNumerators = Vector.ConditionalSelect(Vector.LessThan(y, Vector<float>.Zero), -bestNumerators, bestNumerators);
+            //Ignore the source edge.
+            var edgeIndexA = new Vector<int>(sourceEdgeEndpoints.A);
+            var edgeIndexB = new Vector<int>(sourceEdgeEndpoints.B);
+            var ignoreSlot = Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB));
             bestDenominators = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestDenominators);
-            bestNumerators = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestNumerators);
+            bestNumerators = Vector.ConditionalSelect(ignoreSlot, -Vector<float>.One, bestNumerators);
             var bestIndices = indexOffsets;
             for (int i = 1; i < points.Length; ++i)
             {
@@ -119,12 +119,13 @@ namespace BepuPhysics.Collidables
                 y = ref projectedOnY[i];
                 Vector3Wide.Dot(basisX, toCandidate, out x);
                 Vector3Wide.Dot(basisY, toCandidate, out y);
-                var candidateNumerator = x * x;
-                var candidateDenominator = bestNumerators + y * y;
+                var candidateNumerator = y * y;
+                var candidateDenominator = candidateNumerator + x * x;
                 candidateNumerator = Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), -candidateNumerator, candidateNumerator);
 
-                var useCandidate = Vector.BitwiseAnd(Vector.GreaterThan(y, epsilon), Vector.LessThan(candidateNumerator * bestDenominators, bestNumerators * candidateDenominator));
                 var candidateIndices = indexOffsets + new Vector<int>(i << BundleIndexing.VectorShift);
+                ignoreSlot = Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB));
+                var useCandidate = Vector.AndNot(Vector.GreaterThan(candidateNumerator * bestDenominators, bestNumerators * candidateDenominator), ignoreSlot);
                 bestIndices = Vector.ConditionalSelect(useCandidate, candidateIndices, bestIndices);
                 bestNumerators = Vector.ConditionalSelect(useCandidate, candidateNumerator, bestNumerators);
                 bestDenominators = Vector.ConditionalSelect(useCandidate, candidateDenominator, bestDenominators);
@@ -136,7 +137,7 @@ namespace BepuPhysics.Collidables
             {
                 var candidateNumerator = bestNumerators[i];
                 var candidateDenominator = bestDenominators[i];
-                if (candidateNumerator * bestDenominator < bestNumerator * candidateDenominator)
+                if (candidateNumerator * bestDenominator > bestNumerator * candidateDenominator)
                 {
                     bestNumerator = candidateNumerator;
                     bestDenominator = candidateDenominator;
@@ -221,7 +222,7 @@ namespace BepuPhysics.Collidables
                     ref var a = ref points[reducedIndices[0]];
                     ref var b = ref points[reducedIndices[1]];
                     ref var c = ref points[reducedIndices[2]];
-                    //Counterclockwise should result in face normal pointing outward.
+                    //Clockwise should result in face normal pointing outward.
                     Vector3x.Cross(b - a, c - a, out var uncalibratedNormal);
                     if (Vector3.Dot(faceNormal, uncalibratedNormal) < 0)
                         Helpers.Swap(ref reducedIndices[0], ref reducedIndices[1]);
@@ -288,8 +289,7 @@ namespace BepuPhysics.Collidables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(ref EdgeEndpoints a, ref EdgeEndpoints b)
             {
-                ref var longA = ref Unsafe.As<int, long>(ref a.A);
-                return longA == Unsafe.As<int, long>(ref b.A) || longA == (b.B | (b.A << 32));
+                return Unsafe.As<int, long>(ref a.A) == Unsafe.As<int, long>(ref b.A) || (a.A == b.B && a.B == b.A);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -420,7 +420,7 @@ namespace BepuPhysics.Collidables
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
             var planeEpsilon = new Vector<float>((float)Math.Sqrt(bestDistanceSquared) * 1e-7f);
             var rawFaceVertexIndices = new QuickList<int>(points.Length, pool);
-            FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, ref pointBundles, indexOffsetBundle,
+            FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, new EdgeEndpoints { A = initialIndex, B = initialIndex }, ref pointBundles, indexOffsetBundle,
                ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var initialFaceNormal);
             Debug.Assert(rawFaceVertexIndices.Count >= 2);
             var facePoints = new QuickList<Vector2>(points.Length, pool);
@@ -428,7 +428,7 @@ namespace BepuPhysics.Collidables
             ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, ref points, ref facePoints, ref reducedFaceIndices);
 
             var earlyFaceIndices = new QuickList<int>(points.Length, pool);
-            var earlyFaceStartIndices = new QuickList<int>(points.Length / 3, pool);
+            var earlyFaceStartIndices = new QuickList<int>(points.Length, pool);
 
             var edgesToTest = new QuickList<EdgeToTest>(points.Length, pool);
             var edgeFaceCounts = new QuickDictionary<EdgeEndpoints, int, EdgeEndpoints>(points.Length, pool);
@@ -487,7 +487,7 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.Broadcast(basisY, out var basisYBundle);
                 Vector3Wide.Broadcast(edgeA, out var basisOrigin);
                 rawFaceVertexIndices.Count = 0;
-                FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, ref pointBundles, indexOffsetBundle, ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
+                FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
 
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
