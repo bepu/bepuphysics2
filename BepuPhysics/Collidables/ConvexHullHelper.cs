@@ -226,7 +226,7 @@ namespace BepuPhysics.Collidables
                     ref var a = ref points[reducedIndices[0]];
                     ref var b = ref points[reducedIndices[1]];
                     ref var c = ref points[reducedIndices[2]];
-                    //Clockwise should result in face normal pointing outward.
+                    //Counterclockwise should result in face normal pointing outward.
                     Vector3x.Cross(b - a, c - a, out var uncalibratedNormal);
                     if (Vector3.Dot(faceNormal, uncalibratedNormal) < 0)
                         Helpers.Swap(ref reducedIndices[0], ref reducedIndices[1]);
@@ -262,7 +262,8 @@ namespace BepuPhysics.Collidables
                 reducedIndices.AllocateUnsafely() = faceVertexIndices[0];
                 return;
             }
-            var initialOffsetDirection = (facePoints[initialIndex] - centroid) / (float)Math.Sqrt(greatestDistanceSquared);
+            var greatestDistance = (float)Math.Sqrt(greatestDistanceSquared);
+            var initialOffsetDirection = (facePoints[initialIndex] - centroid) / greatestDistance;
             var previousEdgeDirection = new Vector2(initialOffsetDirection.Y, -initialOffsetDirection.X);
             reducedIndices.AllocateUnsafely() = faceVertexIndices[initialIndex];
 
@@ -423,7 +424,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
-            var planeEpsilon = new Vector<float>((float)Math.Sqrt(bestDistanceSquared) * 1e-7f);
+            var planeEpsilon = new Vector<float>((float)Math.Sqrt(bestDistanceSquared) * 1e-6f);
             var rawFaceVertexIndices = new QuickList<int>(points.Length, pool);
             FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, new EdgeEndpoints { A = initialIndex, B = initialIndex }, ref pointBundles, indexOffsetBundle,
                ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var initialFaceNormal);
