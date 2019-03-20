@@ -20,6 +20,9 @@ namespace Demos.SpecializedTests
             const int pointCount = 16;
             var points = new QuickList<Vector3>(pointCount, BufferPool);
             points.Allocate(BufferPool) = new Vector3(0, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(0, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(0, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(0, 0, 0);
             points.Allocate(BufferPool) = new Vector3(1, 0, 0);
             points.Allocate(BufferPool) = new Vector3(0, 1, 0);
             points.Allocate(BufferPool) = new Vector3(0, 0, 1);

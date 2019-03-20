@@ -108,9 +108,9 @@ namespace BepuPhysics.Collidables
             //Ignore the source edge.
             var edgeIndexA = new Vector<int>(sourceEdgeEndpoints.A);
             var edgeIndexB = new Vector<int>(sourceEdgeEndpoints.B);
-            var ignoreSlot = Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB));
+            var ignoreSlot = Vector.BitwiseOr(Vector.Equals(bestDenominators, Vector<float>.Zero), Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB)));
             bestDenominators = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestDenominators);
-            bestNumerators = Vector.ConditionalSelect(ignoreSlot, -Vector<float>.One, bestNumerators);
+            bestNumerators = Vector.ConditionalSelect(ignoreSlot, new Vector<float>(float.MinValue), bestNumerators);
             var bestIndices = indexOffsets;
             for (int i = 1; i < points.Length; ++i)
             {
@@ -121,10 +121,10 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.Dot(basisY, toCandidate, out y);
                 var candidateNumerator = y * y;
                 var candidateDenominator = candidateNumerator + x * x;
-                candidateNumerator = Vector.ConditionalSelect(Vector.LessThan(x, Vector<float>.Zero), -candidateNumerator, candidateNumerator);
+                candidateNumerator = Vector.ConditionalSelect(Vector.LessThan(y, Vector<float>.Zero), -candidateNumerator, candidateNumerator);
 
                 var candidateIndices = indexOffsets + new Vector<int>(i << BundleIndexing.VectorShift);
-                ignoreSlot = Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB));
+                ignoreSlot = Vector.BitwiseOr(Vector.Equals(candidateDenominator, Vector<float>.Zero), Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB)));
                 var useCandidate = Vector.AndNot(Vector.GreaterThan(candidateNumerator * bestDenominators, bestNumerators * candidateDenominator), ignoreSlot);
                 bestIndices = Vector.ConditionalSelect(useCandidate, candidateIndices, bestIndices);
                 bestNumerators = Vector.ConditionalSelect(useCandidate, candidateNumerator, bestNumerators);
@@ -175,35 +175,39 @@ namespace BepuPhysics.Collidables
         }
 
 
-        static int FindNextIndexForFaceHull(in Vector2 start, int startIndex, in Vector2 previousEdgeDirection, ref QuickList<Vector2> facePoints)
+        static int FindNextIndexForFaceHull(in Vector2 start, in Vector2 previousEdgeDirection, ref QuickList<Vector2> facePoints)
         {
             //Use a AOS version since the number of points on a given face will tend to be very small in most cases.
             //Same idea as the 3d version- find the next edge which is closest to the previous edge. Not going to worry about collinear points here for now.
+            var bestIndex = -1;
+            float bestNumerator = -float.MaxValue;
+            float bestDenominator = 1;
             var startToCandidate = facePoints[0] - start;
+            var candidateDenominator = startToCandidate.LengthSquared();
             var dot = Vector2.Dot(startToCandidate, previousEdgeDirection);
-            var bestNumerator = dot * dot;
-            bestNumerator = dot < 0 ? -bestNumerator : bestNumerator;
-            var bestDenominator = startToCandidate.LengthSquared();
-            var bestIndex = 0;
-            if (startIndex == 0)
+            var candidateNumerator = dot * dot;
+            candidateNumerator = dot < 0 ? -candidateNumerator : candidateNumerator;
+            if (candidateDenominator > 0)
             {
-                bestNumerator = -1;
-                bestDenominator = 1;
+                bestNumerator = candidateNumerator;
+                bestDenominator = candidateDenominator;
+                bestIndex = 0;
             }
             for (int i = 0; i < facePoints.Count; ++i)
             {
-                startToCandidate = facePoints[0] - start;
+                startToCandidate = facePoints[i] - start;
                 dot = Vector2.Dot(startToCandidate, previousEdgeDirection);
-                var candidateNumerator = dot * dot;
+                candidateNumerator = dot * dot;
                 candidateNumerator = dot < 0 ? -candidateNumerator : candidateNumerator;
-                var candidateDenominator = startToCandidate.LengthSquared();
-                if (candidateNumerator * bestDenominator > bestNumerator * candidateDenominator)
+                candidateDenominator = startToCandidate.LengthSquared();
+                if (candidateDenominator > 0 && candidateNumerator * bestDenominator > bestNumerator * candidateDenominator)
                 {
                     bestNumerator = candidateNumerator;
                     bestDenominator = candidateDenominator;
                     bestIndex = i;
                 }
             }
+            //Note that this can return -1 if all points were on top of the start.
             return bestIndex;
         }
         static void ReduceFace(ref QuickList<int> faceVertexIndices, in Vector3 faceNormal, ref Buffer<Vector3> points, ref QuickList<Vector2> facePoints, ref QuickList<int> reducedIndices)
@@ -259,21 +263,21 @@ namespace BepuPhysics.Collidables
                 return;
             }
             var initialOffsetDirection = (facePoints[initialIndex] - centroid) / (float)Math.Sqrt(greatestDistanceSquared);
-            var previousEdgeDirection = new Vector2(-initialOffsetDirection.Y, initialOffsetDirection.X);
-            reducedIndices.AllocateUnsafely() = initialIndex;
+            var previousEdgeDirection = new Vector2(initialOffsetDirection.Y, -initialOffsetDirection.X);
+            reducedIndices.AllocateUnsafely() = faceVertexIndices[initialIndex];
 
-            var previousIndex = initialIndex;
+            var previousEndIndex = initialIndex;
             while (true)
             {
-                var nextIndex = FindNextIndexForFaceHull(facePoints[previousIndex], previousIndex, previousEdgeDirection, ref facePoints);
-                if (nextIndex == initialIndex)
+                //This can return -1 in the event of a completely degenerate face.
+                var nextIndex = FindNextIndexForFaceHull(facePoints[previousEndIndex], previousEdgeDirection, ref facePoints);
+                if (nextIndex == -1 || nextIndex == initialIndex)
                 {
-                    //Found our way back to the start; exit.
                     break;
                 }
-                reducedIndices.AllocateUnsafely() = nextIndex;
-                previousEdgeDirection = Vector2.Normalize(facePoints[nextIndex] - facePoints[previousIndex]);
-                previousIndex = nextIndex;
+                reducedIndices.AllocateUnsafely() = faceVertexIndices[nextIndex];
+                previousEdgeDirection = Vector2.Normalize(facePoints[nextIndex] - facePoints[previousEndIndex]);
+                previousEndIndex = nextIndex;
             }
 
         }
@@ -351,8 +355,9 @@ namespace BepuPhysics.Collidables
                 }
                 return;
             }
-            pool.Take<Vector3Wide>(BundleIndexing.GetBundleCount(points.Length), out var pointBundles);
-            pointBundles.Slice(0, points.Length >> BundleIndexing.VectorShift, out pointBundles);
+            var pointBundleCount = BundleIndexing.GetBundleCount(points.Length);
+            pool.Take<Vector3Wide>(pointBundleCount, out var pointBundles);
+            pointBundles.Slice(0, pointBundleCount, out pointBundles);
             //While it's not asymptotically optimal in general, gift wrapping is simple and easy to productively vectorize.
             //As a first step, create an AOSOA version of the input data.
             Vector3 centroid = default;
