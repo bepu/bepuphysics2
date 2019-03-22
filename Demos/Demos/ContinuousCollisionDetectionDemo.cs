@@ -93,9 +93,9 @@ namespace Demos.Demos
         {
             //Scoot the spinners around.
             var servo = new OneBodyLinearServo { ServoSettings = ServoSettings.Default, SpringSettings = new SpringSettings(30, 1) };
-            servo.Target = new Vector3(-5 + 3.5f * (float)Math.Sin(time), 10, -5);
+            servo.Target = new Vector3(-5 - 3.5f * (float)Math.Sin(time), 10, -5);
             Simulation.Solver.ApplyDescription(spinnerMotorA, servo);
-            servo.Target = new Vector3(5 - 3.5f * (float)Math.Sin(time), 10, -5);
+            servo.Target = new Vector3(5 + 3.5f * (float)Math.Sin(time), 10, -5);
             Simulation.Solver.ApplyDescription(spinnerMotorB, servo);
             time += dt;
             base.Update(window, camera, input, dt);

@@ -2,6 +2,7 @@
 using DemoRenderer;
 using Demos.Demos;
 using Demos.SpecializedTests;
+using Demos.SpecializedTests.Media;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -39,7 +40,6 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<ConvexHullTestDemo>();
             AddOption<CarDemo>();
             AddOption<CylinderTestDemo>();
             AddOption<ContinuousCollisionDetectionDemo>();

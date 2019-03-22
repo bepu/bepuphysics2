@@ -15,19 +15,19 @@ namespace Demos.Demos
     /// <summary>
     /// A pyramid of boxes, because you can't have a physics engine without pyramids of boxes.
     /// </summary>
-    public class PyramidDemo : Demo
+    public class PyramidVideoDemo : Demo
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(-30, 8, -110);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Position = new Vector3(-70, 8, 318);
+            camera.Yaw = MathHelper.Pi * 1f / 4;
             camera.Pitch = 0;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var boxShape = new Box(1, 1, 1);
             boxShape.ComputeInertia(1, out var boxInertia);
             var boxIndex = Simulation.Shapes.Add(boxShape);
-            const int pyramidCount = 40;
+            const int pyramidCount = 120;
             for (int pyramidIndex = 0; pyramidIndex < pyramidCount; ++pyramidIndex)
             {
                 const int rowCount = 20;
@@ -57,7 +57,7 @@ namespace Demos.Demos
             if (input != null && input.WasPushed(OpenTK.Input.Key.Z))
             {
                 //Create the shape that we'll launch at the pyramids when the user presses a button.
-                var bulletShape = new Sphere(0.5f + 5 * (float)random.NextDouble());
+                var bulletShape = new Sphere(6);
                 //Note that the use of radius^3 for mass can produce some pretty serious mass ratios. 
                 //Observe what happens when a large ball sits on top of a few boxes with a fraction of the mass-
                 //the collision appears much squishier and less stable. For most games, if you want to maintain rigidity, you'll want to use some combination of:
@@ -68,7 +68,7 @@ namespace Demos.Demos
                 //Unfortunately, at the moment, bepuphysics v2 does not contain any alternative solvers, so if you can't afford to brute force the the problem away,
                 //the best solution is to cheat as much as possible to avoid the corner cases.
                 var bodyDescription = BodyDescription.CreateConvexDynamic(
-                    new Vector3(0, 8, -130), new BodyVelocity(new Vector3(0, 0, 150)), bulletShape.Radius * bulletShape.Radius * bulletShape.Radius, Simulation.Shapes, bulletShape);
+                    new Vector3(0, 8, -500), new BodyVelocity(new Vector3(0, 0, 110)), 50000, Simulation.Shapes, bulletShape);
                 Simulation.Bodies.Add(bodyDescription);
             }
             base.Update(window, camera, input, dt);

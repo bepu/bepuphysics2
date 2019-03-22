@@ -107,7 +107,7 @@ namespace Demos.Demos
             character.ViewDirection = viewDirection;
         }
 
-        public void UpdateCameraPosition(Camera camera)
+        public void UpdateCameraPosition(Camera camera, float cameraBackwardOffsetScale = 4)
         {
             //We'll override the demo harness's camera control by attaching the camera to the character controller body.
             ref var character = ref characters.GetCharacterByBodyHandle(bodyHandle);
@@ -116,7 +116,7 @@ namespace Demos.Demos
             //Makes mouselocked ray picking easier.
             camera.Position = characterBody.Pose.Position + new Vector3(0, shape.HalfLength, 0) +
                 camera.Up * (shape.Radius * 1.2f) -
-                camera.Forward * (shape.HalfLength + shape.Radius) * 4;
+                camera.Forward * (shape.HalfLength + shape.Radius) * cameraBackwardOffsetScale;
         }
 
         void RenderControl(ref Vector2 position, float textHeight, string controlName, string controlValue, TextBuilder text, TextBatcher textBatcher, Font font)
@@ -218,7 +218,6 @@ namespace Demos.Demos
             camera.Position = new Vector3(20, 10, 20);
             camera.Yaw = MathF.PI;
             camera.Pitch = 0;
-            var masks = new BodyProperty<ulong>();
             characters = new CharacterControllers(BufferPool);
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 

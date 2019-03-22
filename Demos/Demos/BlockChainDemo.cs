@@ -89,7 +89,7 @@ namespace Demos.Demos
             Simulation.Statics.Add(staticDescription);
 
             //Build the coin description for the ponz-I mean ICO.
-            var coinShape = new Sphere(1f); //TODO: Obviously, when cylinders get added, this needs to be changed.
+            var coinShape = new Cylinder(1.5f, 0.3f);
             coinShape.ComputeInertia(1, out var coinInertia);
             coinDescription = new BodyDescription
             {
