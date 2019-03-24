@@ -587,11 +587,80 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Processes raw hull data into a runtime usable convex hull shape.
         /// </summary>
+        /// <param name="points">Point array into which the hull data indexes.</param>
         /// <param name="hullData">Raw input data to process.</param>
+        /// <param name="pool">Pool used to allocate resources for the hullShape.</param>
         /// <param name="hullShape">Convex hull shape created from the input data.</param>
-        public static void ProcessHull(HullData hullData, out ConvexHull hullShape)
+        public static void ProcessHull(Buffer<Vector3> points, HullData hullData, BufferPool pool, out ConvexHull hullShape)
         {
-            hullShape = default;
+            if (hullData.OriginalVertexMapping.Length < 3)
+            {
+                hullShape = default;
+                return;
+            }
+            var pointBundleCount = BundleIndexing.GetBundleCount(hullData.OriginalVertexMapping.Length);
+            pool.Take(pointBundleCount, out hullShape.Points);
+            hullShape.Points.Slice(0, pointBundleCount, out hullShape.Points);
+
+            var lastIndex = hullData.OriginalVertexMapping.Length - 1;
+            for (int bundleIndex = 0; bundleIndex < hullShape.Points.Length; ++bundleIndex)
+            {
+                ref var bundle = ref hullShape.Points[bundleIndex];
+                for (int innerIndex = 0; innerIndex < Vector<float>.Count; ++innerIndex)
+                {
+                    var index = (bundleIndex << BundleIndexing.VectorShift) + innerIndex;
+                    //We duplicate the last vertices in the hull. It has no impact on performance; the vertex bundles are executed all or nothing.
+                    if (index > lastIndex)
+                        index = lastIndex;
+                    ref var point = ref points[hullData.OriginalVertexMapping[index]];
+                    Vector3Wide.WriteSlot(point, innerIndex, ref bundle);
+                }
+            }
+
+            pool.Take(hullData.FaceStartIndices.Length, out hullShape.FaceStartIndices);
+            hullShape.FaceStartIndices.Slice(0, hullData.FaceStartIndices.Length, out hullShape.FaceStartIndices);
+            hullData.FaceStartIndices.CopyTo(0, ref hullShape.FaceStartIndices, 0, hullShape.FaceStartIndices.Length);
+            pool.Take(hullData.FaceVertexIndices.Length, out hullShape.FaceVertexIndices);
+            hullShape.FaceVertexIndices.Slice(0, hullData.FaceVertexIndices.Length, out hullShape.FaceVertexIndices);
+            for (int i = 0; i < hullShape.FaceVertexIndices.Length; ++i)
+            {
+                BundleIndexing.GetBundleIndices(hullData.FaceVertexIndices[i], out var bundleIndex, out var innerIndex);
+                ref var faceVertex = ref hullShape.FaceVertexIndices[i];
+                faceVertex.BundleIndex = (ushort)bundleIndex;
+                faceVertex.InnerIndex = (ushort)innerIndex;
+            }
+            var faceBundleCount = BundleIndexing.GetBundleCount(hullShape.FaceStartIndices.Length);
+            pool.Take(faceBundleCount, out hullShape.BoundingPlanes);
+            hullShape.BoundingPlanes.Slice(0, faceBundleCount, out hullShape.BoundingPlanes);
+            for (int i = 0; i < hullShape.FaceStartIndices.Length; ++i)
+            {
+                hullShape.GetFaceVertexIndices(i, out var faceVertexIndices);
+                Debug.Assert(faceVertexIndices.Length >= 3, "We only allow the creation of convex hulls around point sets with, at minimum, some area, so all faces should have at least 3 points.");
+                //Note that we sum up contributions from all the constituent triangles.
+                //This avoids hitting any degenerate face triangles and smooths out small numerical deviations.
+                //(It's mathematically equivalent to taking a weighted average by area, since the magnitude of the cross product is proportional to area.)
+                Vector3 faceNormal = default;
+                hullShape.GetPoint(faceVertexIndices[0], out var facePivot);
+                hullShape.GetPoint(faceVertexIndices[1], out var faceVertex);
+                var previousOffset = faceVertex - facePivot;
+                for (int j = 2; j < faceVertexIndices.Length; ++j)
+                {
+                    //Normal points outward.
+                    hullShape.GetPoint(faceVertexIndices[j], out faceVertex);
+                    var offset = faceVertex - facePivot;
+                    Vector3x.Cross(previousOffset, offset, out var cross);
+                    faceNormal += cross;
+                    previousOffset = offset;
+                }
+                var length = faceNormal.Length();
+                Debug.Assert(length > 1e-10f, "Convex hull procedure should not output degenerate faces.");
+                faceNormal /= length;
+                BundleIndexing.GetBundleIndices(i, out var boundingPlaneBundleIndex, out var boundingPlaneInnerIndex);
+                ref var boundingBundle = ref hullShape.BoundingPlanes[boundingPlaneBundleIndex];
+                ref var boundingOffsetBundle = ref GatherScatter.GetOffsetInstance(ref boundingBundle, boundingPlaneInnerIndex);
+                Vector3Wide.WriteFirst(faceNormal, ref boundingOffsetBundle.Normal);
+                GatherScatter.GetFirst(ref boundingOffsetBundle.Offset) = Vector3.Dot(facePivot, faceNormal);
+            }
         }
     }
 }

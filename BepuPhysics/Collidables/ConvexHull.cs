@@ -7,10 +7,60 @@ using BepuUtilities.Memory;
 
 namespace BepuPhysics.Collidables
 {
+    public struct HullBoundingPlanes
+    {
+        /// <summary>
+        /// Normal of the bounding plane.
+        /// </summary>
+        public Vector3Wide Normal;
+        /// <summary>
+        /// Offset from the origin to a point on the plane along the normal. 
+        /// </summary>
+        public Vector<float> Offset;
+    }
+
+
+    public struct HullVertexIndex
+    {
+        //This means you can only have Vector<float>.Count * 65536 points in a convex hull. Oh no!
+        public ushort BundleIndex;
+        public ushort InnerIndex;
+    }
 
     public struct ConvexHull : IConvexShape
     {
         public Buffer<Vector3Wide> Points;
+        /// <summary>
+        /// Bundled bounding planes of the convex hull. 
+        /// </summary>
+        public Buffer<HullBoundingPlanes> BoundingPlanes;
+        public Buffer<HullVertexIndex> FaceVertexIndices;
+        //TODO: Consider separate unbundled points for clipping. Might be worth it.
+        public Buffer<int> FaceStartIndices;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetFaceVertexIndices(int faceIndex, out Buffer<HullVertexIndex> faceVertexIndices)
+        {
+            var start = FaceStartIndices[faceIndex];
+            var nextFaceIndex = faceIndex + 1;
+            var end = nextFaceIndex == FaceStartIndices.Length ? FaceStartIndices.Length : FaceStartIndices[nextFaceIndex];
+            var count = end - start;
+            FaceVertexIndices.Slice(start, count, out faceVertexIndices);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetPoint(HullVertexIndex pointIndex, out Vector3 point)
+        {
+            Vector3Wide.ReadSlot(ref Points[pointIndex.BundleIndex], pointIndex.InnerIndex, out point);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetPoint(int pointIndex, out Vector3 point)
+        {
+            BundleIndexing.GetBundleIndices(pointIndex, out var bundleIndex, out var innerIndex);
+            Vector3Wide.ReadSlot(ref Points[bundleIndex], innerIndex, out point);
+
+        }
 
         //TODO: With platform intrinsics, we could improve the 'horizontal' parts of these functions.
         public void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
