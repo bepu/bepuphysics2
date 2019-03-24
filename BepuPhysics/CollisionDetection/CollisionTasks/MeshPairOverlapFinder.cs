@@ -67,7 +67,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     {
                         meshA.GetLocalChild(j + innerIndex, ref GatherScatter.GetOffsetInstance(ref triangles, innerIndex));
                     }
-                    triangles.GetBounds(ref localOrientationA, out var maximumRadius, out var maximumAngularExpansion, out var min, out var max);
+                    triangles.GetBounds(ref localOrientationA, count, out var maximumRadius, out var maximumAngularExpansion, out var min, out var max);
 
                     QuaternionWide.TransformWithoutOverlap(relativeLinearVelocityA, toLocalB, out var localRelativeLinearVelocityA);
                     Vector3Wide.Length(localOffsetA, out var radiusA);

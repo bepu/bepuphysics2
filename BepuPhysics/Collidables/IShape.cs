@@ -88,6 +88,16 @@ namespace BepuPhysics.Collidables
         /// Gets whether this type supports accessing its memory by lane offsets. If false, WriteSlot must be used instead of WriteFirst.
         /// </summary>
         bool AllowOffsetMemoryAccess { get; }
+        /// <summary>
+        /// Gets the number of bytes required for allocations within the wide shape.
+        /// </summary>
+        int InternalAllocationSize { get; }
+        /// <summary>
+        /// For types with a nonzero internal allocation size, provides memory to the shape for internal allocations.
+        /// Memory should be assumed to be stack allocated.
+        /// </summary>
+        /// <param name="memory">Memory to use for internal allocations in the wide shape.</param>
+        void Initialize(in RawBuffer memory);
 
         /// <summary>
         /// Places the specified AOS-formatted shape into the first lane of the wide 'this' reference.
@@ -104,7 +114,7 @@ namespace BepuPhysics.Collidables
         void WriteSlot(int index, in TShape source);
         void Broadcast(in TShape shape);
 
-        void GetBounds(ref QuaternionWide orientations, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max);
+        void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max);
         /// <summary>
         /// Gets the lower bound on the number of rays to execute in a wide fashion. Ray bundles with fewer rays will fall back to the single ray code path.
         /// </summary>

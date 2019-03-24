@@ -181,6 +181,8 @@ namespace BepuPhysics.Collidables
         }
 
         public bool AllowOffsetMemoryAccess => true;
+        public int InternalAllocationSize => 0;
+        public void Initialize(in RawBuffer memory) { }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteSlot(int index, in Triangle source)
@@ -189,7 +191,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetBounds(ref QuaternionWide orientations, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
+        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientations, out var basis);
             Matrix3x3Wide.TransformWithoutOverlap(A, basis, out var worldA);

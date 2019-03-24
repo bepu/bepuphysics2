@@ -86,18 +86,6 @@ namespace DemoRenderer.ShapeDrawing
                         capsules.Add(instance, pool);
                     }
                     break;
-                case Cylinder.Id:
-                    {
-                        CylinderInstance instance;
-                        instance.Position = pose.Position;
-                        ref var cylinder = ref Unsafe.AsRef<Cylinder>(shapeData);
-                        instance.Radius = cylinder.Radius;
-                        instance.HalfLength = cylinder.HalfLength;
-                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
-                        instance.PackedColor = Helpers.PackColor(color);
-                        cylinders.Add(instance, pool);
-                    }
-                    break;
                 case Box.Id:
                     {
                         BoxInstance instance;
@@ -124,6 +112,61 @@ namespace DemoRenderer.ShapeDrawing
                         instance.Y = pose.Position.Y;
                         instance.Z = pose.Position.Z;
                         triangles.Add(instance, pool);
+                    }
+                    break;
+                case Cylinder.Id:
+                    {
+                        CylinderInstance instance;
+                        instance.Position = pose.Position;
+                        ref var cylinder = ref Unsafe.AsRef<Cylinder>(shapeData);
+                        instance.Radius = cylinder.Radius;
+                        instance.HalfLength = cylinder.HalfLength;
+                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
+                        instance.PackedColor = Helpers.PackColor(color);
+                        cylinders.Add(instance, pool);
+                    }
+                    break;
+                case ConvexHull.Id:
+                    {
+                        ref var hull = ref Unsafe.AsRef<ConvexHull>(shapeData);
+                        MeshInstance instance;
+                        instance.Position = pose.Position;
+                        instance.PackedColor = Helpers.PackColor(color);
+                        instance.PackedOrientation = Helpers.PackOrientationU64(ref pose.Orientation);
+                        instance.Scale = Vector3.One;
+                        var id = (ulong)hull.Points.Memory ^ (ulong)hull.Points.Length;
+                        if (!MeshCache.TryGetExistingMesh(id, out instance.VertexStart, out var vertices))
+                        {
+                            int triangleCount = 0;
+                            for (int i = 0; i < hull.FaceStartIndices.Length; ++i)
+                            {
+                                hull.GetFaceVertexIndices(i, out var faceVertexIndices);
+                                triangleCount += faceVertexIndices.Length - 2;
+                            }
+                            instance.VertexCount = triangleCount * 3;
+                            MeshCache.Allocate(id, instance.VertexCount, out instance.VertexStart, out vertices);
+                            //This is a fresh allocation, so we need to upload vertex data.
+                            int targetVertexIndex = 0;
+                            for (int i = 0; i < hull.FaceStartIndices.Length; ++i)
+                            {
+                                hull.GetFaceVertexIndices(i, out var faceVertexIndices);
+                                hull.GetPoint(faceVertexIndices[0], out var faceOrigin);
+                                hull.GetPoint(faceVertexIndices[1], out var previousEdgeEnd);
+                                for (int j = 2; j < faceVertexIndices.Length; ++j)
+                                {
+                                    vertices[targetVertexIndex++] = faceOrigin;
+                                    vertices[targetVertexIndex++] = previousEdgeEnd;
+                                    hull.GetPoint(faceVertexIndices[j], out previousEdgeEnd);
+                                    vertices[targetVertexIndex++] = previousEdgeEnd;
+
+                                }
+                            }
+                        }
+                        else
+                        {
+                            instance.VertexCount = vertices.Length;
+                        }
+                        meshes.Add(instance, pool);
                     }
                     break;
                 case Compound.Id:

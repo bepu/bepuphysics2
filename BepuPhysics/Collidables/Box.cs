@@ -182,6 +182,8 @@ namespace BepuPhysics.Collidables
         }
 
         public bool AllowOffsetMemoryAccess => true;
+        public int InternalAllocationSize => 0;
+        public void Initialize(in RawBuffer memory) { }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteSlot(int index, in Box source)
@@ -190,7 +192,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetBounds(ref QuaternionWide orientations, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
+        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientations, out var basis);
             max.X = Vector.Abs(HalfWidth * basis.X.X) + Vector.Abs(HalfHeight * basis.Y.X) + Vector.Abs(HalfLength * basis.Z.X);
@@ -202,7 +204,7 @@ namespace BepuPhysics.Collidables
             maximumRadius = Vector.SquareRoot(HalfWidth * HalfWidth + HalfHeight * HalfHeight + HalfLength * HalfLength);
             maximumAngularExpansion = maximumRadius - Vector.Min(HalfLength, Vector.Min(HalfHeight, HalfLength));
         }
-       
+
         public int MinimumWideRayCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

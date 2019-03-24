@@ -25,6 +25,11 @@ namespace BepuPhysics.Collidables
         //This means you can only have Vector<float>.Count * 65536 points in a convex hull. Oh no!
         public ushort BundleIndex;
         public ushort InnerIndex;
+
+        public override string ToString()
+        {
+            return $"({BundleIndex}, {InnerIndex})";
+        }
     }
 
     public struct ConvexHull : IConvexShape
@@ -43,7 +48,7 @@ namespace BepuPhysics.Collidables
         {
             var start = FaceStartIndices[faceIndex];
             var nextFaceIndex = faceIndex + 1;
-            var end = nextFaceIndex == FaceStartIndices.Length ? FaceStartIndices.Length : FaceStartIndices[nextFaceIndex];
+            var end = nextFaceIndex == FaceStartIndices.Length ? FaceVertexIndices.Length : FaceStartIndices[nextFaceIndex];
             var count = end - start;
             FaceVertexIndices.Slice(start, count, out faceVertexIndices);
         }
@@ -152,6 +157,12 @@ namespace BepuPhysics.Collidables
         public int MinimumWideRayCount => int.MaxValue; //'Wide' ray tests just fall through to scalar tests anyway.
 
         public bool AllowOffsetMemoryAccess => false;
+        public int InternalAllocationSize => Vector<float>.Count * Unsafe.SizeOf<ConvexHull>();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Initialize(in RawBuffer memory)
+        {
+            Hulls = memory.As<ConvexHull>();
+        }
 
         public void Broadcast(in ConvexHull shape)
         {
@@ -159,14 +170,15 @@ namespace BepuPhysics.Collidables
                 Hulls[i] = shape;
         }
 
-        public void GetBounds(ref QuaternionWide orientations, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
+        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
             Vector<float> minimumRadius;
-            for (int i = 0; i < Vector<float>.Count; ++i)
+            for (int i = 0; i < countInBundle; ++i)
             {
+                Vector3Wide.Broadcast(new Vector3(float.MaxValue), out var minWide);
+                Vector3Wide.Broadcast(new Vector3(float.MinValue), out var maxWide);
                 QuaternionWide.Rebroadcast(orientations, i, out var orientationWide);
                 Matrix3x3Wide.CreateFromQuaternion(orientationWide, out var orientationMatrix);
-                Vector3Wide minWide = default, maxWide = default;
                 Vector<float> maximumRadiusSquaredWide = default;
                 Vector<float> minimumRadiusSquaredWide = new Vector<float>(float.MaxValue);
                 ref var hull = ref Hulls[i];
@@ -190,7 +202,7 @@ namespace BepuPhysics.Collidables
                     var minCandidate = new Vector3(minWide.X[j], minWide.Y[j], minWide.Z[j]);
                     var maxCandidate = new Vector3(maxWide.X[j], maxWide.Y[j], maxWide.Z[j]);
                     minNarrow = Vector3.Min(minCandidate, minNarrow);
-                    maxNarrow = Vector3.Min(maxCandidate, maxNarrow);
+                    maxNarrow = Vector3.Max(maxCandidate, maxNarrow);
 
                     var maxRadiusCandidate = maximumRadiusSquaredWide[i];
                     var minRadiusCandidate = minimumRadiusSquaredWide[i];

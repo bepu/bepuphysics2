@@ -117,6 +117,11 @@ namespace BepuPhysics
         public unsafe void ExecuteConvexBatch<TShape, TShapeWide>(ConvexShapeBatch<TShape, TShapeWide> shapeBatch) where TShape : struct, IConvexShape where TShapeWide : struct, IShapeWide<TShape>
         {
             var instanceBundle = default(BoundingBoxInstanceWide<TShape, TShapeWide>);
+            if(instanceBundle.Shape.InternalAllocationSize > 0) //TODO: Check to make sure the JIT omits the branch.
+            {
+                var memory = stackalloc byte[instanceBundle.Shape.InternalAllocationSize];
+                instanceBundle.Shape.Initialize(new RawBuffer(memory, instanceBundle.Shape.InternalAllocationSize));
+            }
             ref var batch = ref batches[shapeBatch.TypeId];
             ref var instancesBase = ref batch[0];
             ref var activeSet = ref bodies.ActiveSet;
@@ -147,7 +152,7 @@ namespace BepuPhysics
                     GatherScatter.GetFirst(ref targetInstanceSlot.MaximumExpansion) =
                         collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : collidable.SpeculativeMargin;
                 }
-                instanceBundle.Shape.GetBounds(ref instanceBundle.Pose.Orientation, out var maximumRadius, out var maximumAngularExpansion, out var bundleMin, out var bundleMax);
+                instanceBundle.Shape.GetBounds(ref instanceBundle.Pose.Orientation, countInBundle, out var maximumRadius, out var maximumAngularExpansion, out var bundleMin, out var bundleMax);
                 BoundingBoxHelpers.ExpandBoundingBoxes(ref bundleMin, ref bundleMax, ref instanceBundle.Velocities, dt,
                     ref maximumRadius, ref maximumAngularExpansion, ref instanceBundle.MaximumExpansion);
                 //TODO: Note that this is an area that must be updated if you change the pose representation.

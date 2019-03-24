@@ -41,14 +41,23 @@ namespace DemoRenderer.ShapeDrawing
             previouslyAllocatedIds = new QuickSet<ulong, PrimitiveComparer<ulong>>(256, pool);
         }
 
-        public unsafe bool Allocate(ulong id, int vertexCount, out int start, out Buffer<Vector3> vertices)
+        public unsafe bool TryGetExistingMesh(ulong id, out int start, out Buffer<Vector3> vertices)
         {
             if (allocator.TryGetAllocationRegion(id, out var allocation))
             {
-                Debug.Assert(allocation.End - allocation.Start == vertexCount,
-                    "If you're trying to allocate room for a bunch of triangles and we found it already, it better match the expected size.");
                 start = (int)allocation.Start;
-                vertices = this.vertices.Slice(start, vertexCount);
+                vertices = this.vertices.Slice(start, (int)(allocation.End - start));
+                return true;
+            }
+            start = default;
+            vertices = default;
+            return false;
+        }
+
+        public unsafe bool Allocate(ulong id, int vertexCount, out int start, out Buffer<Vector3> vertices)
+        {
+            if (TryGetExistingMesh(id, out start, out vertices))
+            {
                 return false;
             }
             if (allocator.Allocate(id, vertexCount, out var longStart))
