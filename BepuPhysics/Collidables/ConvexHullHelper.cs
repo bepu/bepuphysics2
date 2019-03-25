@@ -202,11 +202,21 @@ namespace BepuPhysics.Collidables
             {
                 startToCandidate = facePoints[i] - start;
                 dot = Vector2.Dot(startToCandidate, previousEdgeDirection);
-                candidateNumerator = dot * dot;
-                candidateNumerator = dot < 0 ? -candidateNumerator : candidateNumerator;
+                var absCandidateNumerator = dot * dot;
+                candidateNumerator = dot < 0 ? -absCandidateNumerator : absCandidateNumerator;
                 candidateDenominator = startToCandidate.LengthSquared();
-                if (candidateDenominator > 0 && candidateNumerator * bestDenominator > bestNumerator * candidateDenominator)
+                //Watch out for collinear points. If the angle is the same, then pick the more distant point.
+                var candidate = candidateNumerator * bestDenominator;
+                var currentBest = bestNumerator * candidateDenominator;
+                var epsilon = 1e-6f * absCandidateNumerator * bestDenominator;
+                if (candidate > currentBest - epsilon)
                 {
+                    //Candidate and current best angle may be extremely similar.
+                    //Only use the candidate if it's further away.
+                    if (candidate < currentBest + epsilon && candidateDenominator <= bestDenominator)
+                    {
+                        continue;
+                    }
                     bestNumerator = candidateNumerator;
                     bestDenominator = candidateDenominator;
                     bestIndex = i;
@@ -215,9 +225,15 @@ namespace BepuPhysics.Collidables
             //Note that this can return -1 if all points were on top of the start.
             return bestIndex;
         }
-        static void ReduceFace(ref QuickList<int> faceVertexIndices, in Vector3 faceNormal, ref Buffer<Vector3> points, ref QuickList<Vector2> facePoints, ref QuickList<int> reducedIndices)
+
+        static void ReduceFace(ref QuickList<int> faceVertexIndices, in Vector3 faceNormal, ref Buffer<Vector3> points, ref QuickList<Vector2> facePoints, ref Buffer<bool> allowVertex, ref QuickList<int> reducedIndices)
         {
             Debug.Assert(facePoints.Count == 0 && reducedIndices.Count == 0 && facePoints.Span.Length >= faceVertexIndices.Count && reducedIndices.Span.Length >= faceVertexIndices.Count);
+            for (int i = faceVertexIndices.Count - 1; i >= 0; --i)
+            {
+                if (!allowVertex[faceVertexIndices[i]])
+                    faceVertexIndices.RemoveAt(i);
+            }
             if (faceVertexIndices.Count <= 3)
             {
                 //Too small to require computing a hull. Copy directly.
@@ -264,7 +280,10 @@ namespace BepuPhysics.Collidables
             if (greatestDistanceSquared < 1e-14f)
             {
                 //The face is degenerate.
-                reducedIndices.AllocateUnsafely() = faceVertexIndices[0];
+                for (int i = 0; i < faceVertexIndices.Count; ++i)
+                {
+                    allowVertex[faceVertexIndices[i]] = false;
+                }
                 return;
             }
             var greatestDistance = (float)Math.Sqrt(greatestDistanceSquared);
@@ -284,6 +303,16 @@ namespace BepuPhysics.Collidables
                 reducedIndices.AllocateUnsafely() = faceVertexIndices[nextIndex];
                 previousEdgeDirection = Vector2.Normalize(facePoints[nextIndex] - facePoints[previousEndIndex]);
                 previousEndIndex = nextIndex;
+            }
+
+            //Ignore any vertices which were not on the outer boundary of the face.
+            for (int i = 0; i < faceVertexIndices.Count; ++i)
+            {
+                var index = faceVertexIndices[i];
+                if (!reducedIndices.Contains(index))
+                {
+                    allowVertex[index] = false;
+                }
             }
 
         }
@@ -436,7 +465,11 @@ namespace BepuPhysics.Collidables
             Debug.Assert(rawFaceVertexIndices.Count >= 2);
             var facePoints = new QuickList<Vector2>(points.Length, pool);
             var reducedFaceIndices = new QuickList<int>(points.Length, pool);
-            ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, ref points, ref facePoints, ref reducedFaceIndices);
+            //Points found to not be on the face hull are ignored by future executions. 
+            pool.Take<bool>(points.Length, out var allowVertex);
+            for (int i = 0; i < points.Length; ++i)
+                allowVertex[i] = true;
+            ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, ref points, ref facePoints, ref allowVertex, ref reducedFaceIndices);
 
             var earlyFaceIndices = new QuickList<int>(points.Length, pool);
             var earlyFaceStartIndices = new QuickList<int>(points.Length, pool);
@@ -502,7 +535,7 @@ namespace BepuPhysics.Collidables
 
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
-                ReduceFace(ref rawFaceVertexIndices, faceNormal, ref points, ref facePoints, ref reducedFaceIndices);
+                ReduceFace(ref rawFaceVertexIndices, faceNormal, ref points, ref facePoints, ref allowVertex, ref reducedFaceIndices);
 
                 earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
                 earlyFaceIndices.AddRange(ref reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
@@ -537,6 +570,7 @@ namespace BepuPhysics.Collidables
             edgeFaceCounts.Dispose(pool);
             facePoints.Dispose(pool);
             rawFaceVertexIndices.Dispose(pool);
+            pool.Return(ref allowVertex);
             pool.Return(ref projectedOnX);
             pool.Return(ref projectedOnY);
             pool.Return(ref pointBundles);

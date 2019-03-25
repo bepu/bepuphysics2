@@ -117,7 +117,7 @@ namespace BepuPhysics
         public unsafe void ExecuteConvexBatch<TShape, TShapeWide>(ConvexShapeBatch<TShape, TShapeWide> shapeBatch) where TShape : struct, IConvexShape where TShapeWide : struct, IShapeWide<TShape>
         {
             var instanceBundle = default(BoundingBoxInstanceWide<TShape, TShapeWide>);
-            if(instanceBundle.Shape.InternalAllocationSize > 0) //TODO: Check to make sure the JIT omits the branch.
+            if (instanceBundle.Shape.InternalAllocationSize > 0) //TODO: Check to make sure the JIT omits the branch.
             {
                 var memory = stackalloc byte[instanceBundle.Shape.InternalAllocationSize];
                 instanceBundle.Shape.Initialize(new RawBuffer(memory, instanceBundle.Shape.InternalAllocationSize));
