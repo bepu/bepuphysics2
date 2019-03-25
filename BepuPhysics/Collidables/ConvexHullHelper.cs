@@ -348,6 +348,42 @@ namespace BepuPhysics.Collidables
             public Vector3 FaceNormal;
         }
 
+        public struct DebugStep
+        {
+            public List<int> Raw;
+            public List<int> Reduced;
+            public bool[] AllowVertex;
+            public Vector3 FaceNormal;
+
+
+            public DebugStep(ref QuickList<int> raw, in Vector3 faceNormal)
+            {
+                FaceNormal = faceNormal;
+                Raw = new List<int>();
+                for (int i = 0; i < raw.Count; ++i)
+                {
+                    Raw.Add(raw[i]);
+                }
+                Reduced = default;
+                AllowVertex = default;
+            }
+
+            public void AddReduced(ref QuickList<int> reduced, ref Buffer<bool> allowVertex)
+            {
+                Reduced = new List<int>();
+                for (int i = 0; i < reduced.Count; ++i)
+                {
+                    Reduced.Add(reduced[i]);
+                }
+                AllowVertex = new bool[allowVertex.Length];
+                for (int i = 0; i < allowVertex.Length; ++i)
+                {
+                    AllowVertex[i] = allowVertex[i];
+                }
+            }
+
+
+        }
 
         /// <summary>
         /// Computes the convex hull of a set of points.
@@ -355,11 +391,12 @@ namespace BepuPhysics.Collidables
         /// <param name="points">Point set to compute the convex hull of.</param>
         /// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
         /// <param name="hullData">Convex hull of the input point set.</param>
-        public static void ComputeHull(Buffer<Vector3> points, BufferPool pool, out HullData hullData)
+        public static void ComputeHull(Buffer<Vector3> points, BufferPool pool, out HullData hullData, out List<DebugStep> steps)
         {
             if (points.Length <= 0)
             {
                 hullData = default;
+                steps = new List<DebugStep>();
                 return;
             }
             if (points.Length <= 3)
@@ -388,6 +425,7 @@ namespace BepuPhysics.Collidables
                     hullData.FaceStartIndices = default;
                     hullData.FaceVertexIndices = default;
                 }
+                steps = new List<DebugStep>();
                 return;
             }
             var pointBundleCount = BundleIndexing.GetBundleCount(points.Length);
@@ -451,6 +489,7 @@ namespace BepuPhysics.Collidables
                 hullData.OriginalVertexMapping.Slice(0, 1, out hullData.OriginalVertexMapping);
                 hullData.FaceStartIndices = default;
                 hullData.FaceVertexIndices = default;
+                steps = new List<DebugStep>();
                 return;
             }
             Vector3Wide.Broadcast(initialToCentroid / initialDistance, out var initialBasisX);
@@ -469,7 +508,13 @@ namespace BepuPhysics.Collidables
             pool.Take<bool>(points.Length, out var allowVertex);
             for (int i = 0; i < points.Length; ++i)
                 allowVertex[i] = true;
+
+            steps = new List<DebugStep>();
+            var step = new DebugStep(ref rawFaceVertexIndices, initialFaceNormal);
+
             ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, ref points, ref facePoints, ref allowVertex, ref reducedFaceIndices);
+            step.AddReduced(ref reducedFaceIndices, ref allowVertex);
+            steps.Add(step);
 
             var earlyFaceIndices = new QuickList<int>(points.Length, pool);
             var earlyFaceStartIndices = new QuickList<int>(points.Length, pool);
@@ -532,10 +577,23 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.Broadcast(edgeA, out var basisOrigin);
                 rawFaceVertexIndices.Count = 0;
                 FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, points.Length, ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
-
+                step = new DebugStep(ref rawFaceVertexIndices, faceNormal);
+                for (int i = 0; i < rawFaceVertexIndices.Count; ++i)
+                {
+                    Console.Write($"{rawFaceVertexIndices[i]}, ");
+                }
+                Console.Write("-> ");
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
                 ReduceFace(ref rawFaceVertexIndices, faceNormal, ref points, ref facePoints, ref allowVertex, ref reducedFaceIndices);
+                step.AddReduced(ref reducedFaceIndices, ref allowVertex);
+                steps.Add(step);
+
+                for (int i = 0; i < reducedFaceIndices.Count; ++i)
+                {
+                    Console.Write($"{reducedFaceIndices[i]}, ");
+                }
+                Console.WriteLine($"face normal: {faceNormal}");
 
                 earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
                 earlyFaceIndices.AddRange(ref reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
@@ -551,6 +609,14 @@ namespace BepuPhysics.Collidables
                     {
                         //This edge was already claimed by another face, so given that the new face also claimed it and that an edge can only be associated with two faces,
                         //no more work has to be done.
+                        {
+                            //DEBUG!
+                            if (edgeFaceCounts.Values[elementIndex] != 1)
+                            {
+                                hullData = default;
+                                return;
+                            }
+                        }
                         Debug.Assert(edgeFaceCounts.Values[elementIndex] == 1);
                         edgeFaceCounts.Values[elementIndex] = 2;
                     }
