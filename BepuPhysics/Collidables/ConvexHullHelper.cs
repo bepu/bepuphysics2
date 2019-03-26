@@ -109,7 +109,11 @@ namespace BepuPhysics.Collidables
             var edgeIndexA = new Vector<int>(sourceEdgeEndpoints.A);
             var edgeIndexB = new Vector<int>(sourceEdgeEndpoints.B);
             var pointCountBundle = new Vector<int>(pointCount);
-            var ignoreSlot = Vector.BitwiseOr(Vector.BitwiseOr(Vector.GreaterThanOrEqual(indexOffsets, pointCountBundle), Vector.Equals(bestDenominators, Vector<float>.Zero)), Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB)));
+            const float minimumDistanceSquaredScalar = 1e-14f;
+            var minimumDistanceSquared = new Vector<float>(minimumDistanceSquaredScalar);
+            var ignoreSlot = Vector.BitwiseOr(
+                Vector.BitwiseOr(Vector.GreaterThanOrEqual(indexOffsets, pointCountBundle), Vector.LessThan(bestDenominators, minimumDistanceSquared)),
+                Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB)));
             bestDenominators = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestDenominators);
             bestNumerators = Vector.ConditionalSelect(ignoreSlot, new Vector<float>(float.MinValue), bestNumerators);
             var bestIndices = indexOffsets;
@@ -125,7 +129,9 @@ namespace BepuPhysics.Collidables
                 candidateNumerator = Vector.ConditionalSelect(Vector.LessThan(y, Vector<float>.Zero), -candidateNumerator, candidateNumerator);
 
                 var candidateIndices = indexOffsets + new Vector<int>(i << BundleIndexing.VectorShift);
-                ignoreSlot = Vector.BitwiseOr(Vector.BitwiseOr(Vector.GreaterThanOrEqual(candidateIndices, pointCountBundle), Vector.Equals(candidateDenominator, Vector<float>.Zero)), Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB)));
+                ignoreSlot = Vector.BitwiseOr(
+                    Vector.BitwiseOr(Vector.GreaterThanOrEqual(candidateIndices, pointCountBundle), Vector.LessThan(candidateDenominator, minimumDistanceSquared)),
+                    Vector.BitwiseOr(Vector.Equals(candidateIndices, edgeIndexA), Vector.Equals(candidateIndices, edgeIndexB)));
                 var useCandidate = Vector.AndNot(Vector.GreaterThan(candidateNumerator * bestDenominators, bestNumerators * candidateDenominator), ignoreSlot);
                 bestIndices = Vector.ConditionalSelect(useCandidate, candidateIndices, bestIndices);
                 bestNumerators = Vector.ConditionalSelect(useCandidate, candidateNumerator, bestNumerators);
@@ -248,9 +254,34 @@ namespace BepuPhysics.Collidables
                     ref var b = ref points[reducedIndices[1]];
                     ref var c = ref points[reducedIndices[2]];
                     //Counterclockwise should result in face normal pointing outward.
-                    Vector3x.Cross(b - a, c - a, out var uncalibratedNormal);
-                    if (Vector3.Dot(faceNormal, uncalibratedNormal) < 0)
-                        Helpers.Swap(ref reducedIndices[0], ref reducedIndices[1]);
+                    var ab = b - a;
+                    var ac = c - a;
+                    Vector3x.Cross(ab, ac, out var uncalibratedNormal);
+                    if (uncalibratedNormal.LengthSquared() < 1e-14f)
+                    {
+                        //The face is degenerate.
+                        if (ab.LengthSquared() > 1e-14f)
+                        {
+                            allowVertex[reducedIndices[2]] = false;
+                            reducedIndices.FastRemoveAt(2);
+                        }
+                        else if (ac.LengthSquared() > 1e-14f)
+                        {
+                            allowVertex[reducedIndices[1]] = false;
+                            reducedIndices.FastRemoveAt(1);
+                        }
+                        else
+                        {
+                            allowVertex[reducedIndices[1]] = false;
+                            allowVertex[reducedIndices[2]] = false;
+                            reducedIndices.Count = 1;
+                        }
+                    }
+                    else
+                    {
+                        if (Vector3.Dot(faceNormal, uncalibratedNormal) < 0)
+                            Helpers.Swap(ref reducedIndices[0], ref reducedIndices[1]);
+                    }
                 }
                 return;
             }
@@ -318,7 +349,7 @@ namespace BepuPhysics.Collidables
         }
 
         [StructLayout(LayoutKind.Explicit)]
-        struct EdgeEndpoints : IEqualityComparerRef<EdgeEndpoints>
+        public struct EdgeEndpoints : IEqualityComparerRef<EdgeEndpoints>
         {
             [FieldOffset(0)]
             public int A;
@@ -350,15 +381,20 @@ namespace BepuPhysics.Collidables
 
         public struct DebugStep
         {
+            public EdgeEndpoints SourceEdge;
             public List<int> Raw;
             public List<int> Reduced;
             public bool[] AllowVertex;
             public Vector3 FaceNormal;
+            public Vector3 BasisX;
+            public Vector3 BasisY;
 
-
-            public DebugStep(ref QuickList<int> raw, in Vector3 faceNormal)
+            public DebugStep(EdgeEndpoints sourceEdge, ref QuickList<int> raw, in Vector3 faceNormal, in Vector3 basisX, in Vector3 basisY)
             {
+                SourceEdge = sourceEdge;
                 FaceNormal = faceNormal;
+                BasisX = basisX;
+                BasisY = basisY;
                 Raw = new List<int>();
                 for (int i = 0; i < raw.Count; ++i)
                 {
@@ -460,8 +496,8 @@ namespace BepuPhysics.Collidables
             {
                 var bundleIndices = new Vector<int>(i << BundleIndexing.VectorShift) + indexOffsetBundle;
                 Vector3Wide.DistanceSquared(pointBundles[i], centroidBundle, out var distanceSquaredCandidate);
-                mostDistantIndicesBundle = Vector.ConditionalSelect(Vector.LessThan(distanceSquaredCandidate, distanceSquaredBundle), bundleIndices, mostDistantIndicesBundle);
-                distanceSquaredBundle = Vector.Min(distanceSquaredBundle, distanceSquaredCandidate);
+                mostDistantIndicesBundle = Vector.ConditionalSelect(Vector.GreaterThan(distanceSquaredCandidate, distanceSquaredBundle), bundleIndices, mostDistantIndicesBundle);
+                distanceSquaredBundle = Vector.Max(distanceSquaredBundle, distanceSquaredCandidate);
             }
             var bestDistanceSquared = distanceSquaredBundle[0];
             var initialIndex = 0;
@@ -499,7 +535,8 @@ namespace BepuPhysics.Collidables
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
             var planeEpsilon = new Vector<float>((float)Math.Sqrt(bestDistanceSquared) * 1e-6f);
             var rawFaceVertexIndices = new QuickList<int>(points.Length, pool);
-            FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, new EdgeEndpoints { A = initialIndex, B = initialIndex }, ref pointBundles, indexOffsetBundle, points.Length,
+            var initialSourceEdge = new EdgeEndpoints { A = initialIndex, B = initialIndex };
+            FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, initialSourceEdge, ref pointBundles, indexOffsetBundle, points.Length,
                ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var initialFaceNormal);
             Debug.Assert(rawFaceVertexIndices.Count >= 2);
             var facePoints = new QuickList<Vector2>(points.Length, pool);
@@ -510,7 +547,9 @@ namespace BepuPhysics.Collidables
                 allowVertex[i] = true;
 
             steps = new List<DebugStep>();
-            var step = new DebugStep(ref rawFaceVertexIndices, initialFaceNormal);
+            Vector3Wide.ReadFirst(initialBasisX, out var debugInitialBasisX);
+            Vector3Wide.ReadFirst(initialBasisY, out var debugInitialBasisY);
+            var step = new DebugStep(initialSourceEdge, ref rawFaceVertexIndices, initialFaceNormal, debugInitialBasisX, debugInitialBasisY);
 
             ReduceFace(ref rawFaceVertexIndices, initialFaceNormal, ref points, ref facePoints, ref allowVertex, ref reducedFaceIndices);
             step.AddReduced(ref reducedFaceIndices, ref allowVertex);
@@ -577,7 +616,8 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.Broadcast(edgeA, out var basisOrigin);
                 rawFaceVertexIndices.Count = 0;
                 FindExtremeFace(basisXBundle, basisYBundle, basisOrigin, edgeToTest.Endpoints, ref pointBundles, indexOffsetBundle, points.Length, ref projectedOnX, ref projectedOnY, planeEpsilon, ref rawFaceVertexIndices, out var faceNormal);
-                step = new DebugStep(ref rawFaceVertexIndices, faceNormal);
+                step = new DebugStep(edgeToTest.Endpoints, ref rawFaceVertexIndices, faceNormal, basisX, basisY);
+                Console.Write($"source edge {edgeToTest.Endpoints}: ");
                 for (int i = 0; i < rawFaceVertexIndices.Count; ++i)
                 {
                     Console.Write($"{rawFaceVertexIndices[i]}, ");
@@ -605,6 +645,11 @@ namespace BepuPhysics.Collidables
                     nextEdgeToTest.Endpoints.A = reducedFaceIndices[i == 0 ? reducedFaceIndices.Count - 1 : i - 1];
                     nextEdgeToTest.Endpoints.B = reducedFaceIndices[i];
                     nextEdgeToTest.FaceNormal = faceNormal;
+                    var test = new EdgeEndpoints { A = 5, B = 0 };
+                    if (nextEdgeToTest.Endpoints.Equals(ref nextEdgeToTest.Endpoints, ref test))
+                    {
+                        Console.WriteLine($"Pushing {nextEdgeToTest.Endpoints}");
+                    }
                     if (edgeFaceCounts.GetTableIndices(ref nextEdgeToTest.Endpoints, out var tableIndex, out var elementIndex))
                     {
                         //This edge was already claimed by another face, so given that the new face also claimed it and that an edge can only be associated with two faces,
@@ -622,6 +667,10 @@ namespace BepuPhysics.Collidables
                     }
                     else
                     {
+                        if (nextEdgeToTest.Endpoints.Equals(ref nextEdgeToTest.Endpoints, ref test))
+                        {
+                            Console.WriteLine($"Pushing new {nextEdgeToTest.Endpoints}");
+                        }
                         //This edge is not yet claimed by any edge. Claim it for the new face and add the edge for further testing.
                         edgeFaceCounts.Keys[edgeFaceCounts.Count] = nextEdgeToTest.Endpoints;
                         edgeFaceCounts.Values[edgeFaceCounts.Count] = 1;

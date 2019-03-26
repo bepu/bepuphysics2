@@ -10,6 +10,7 @@ using BepuPhysics;
 using DemoRenderer.UI;
 using DemoUtilities;
 using static BepuPhysics.Collidables.ConvexHullHelper;
+using DemoRenderer.Constraints;
 
 namespace Demos.SpecializedTests
 {
@@ -27,20 +28,20 @@ namespace Demos.SpecializedTests
 
             const int pointCount = 16;
             points = new QuickList<Vector3>(pointCount, BufferPool);
-            //points.Allocate(BufferPool) = new Vector3(0, 0, 0);
-            //points.Allocate(BufferPool) = new Vector3(1, 0, 0);
-            //points.Allocate(BufferPool) = new Vector3(0, 1, 0);
-            //points.Allocate(BufferPool) = new Vector3(0, 0, 1);
-            //points.Allocate(BufferPool) = new Vector3(1, 1, 1);
-            //points.Allocate(BufferPool) = new Vector3(-0.1f, 0.25f, 0.25f);
-            //points.Allocate(BufferPool) = new Vector3(1, 0.25f, -0.1f);
+            points.Allocate(BufferPool) = new Vector3(0, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(1, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(0, 1, 0);
+            points.Allocate(BufferPool) = new Vector3(0, 0, 1);
+            points.Allocate(BufferPool) = new Vector3(1, 1, 1);
+            points.Allocate(BufferPool) = new Vector3(-0.1f, 0.25f, 0.25f);
+            points.Allocate(BufferPool) = new Vector3(1, 0.25f, -0.1f);
 
             points.Allocate(BufferPool) = new Vector3(0, 0, 0);
             points.Allocate(BufferPool) = new Vector3(0, 0, 1);
             points.Allocate(BufferPool) = new Vector3(0, 0, 2);
             points.Allocate(BufferPool) = new Vector3(0, 1, 1);
             points.Allocate(BufferPool) = new Vector3(1, 0, 0);
-            //points.Allocate(BufferPool) = new Vector3(1, 0, 1);
+            points.Allocate(BufferPool) = new Vector3(1, 0, 1);
             points.Allocate(BufferPool) = new Vector3(1, 1, 0);
             points.Allocate(BufferPool) = new Vector3(1, 1, 1);
             points.Allocate(BufferPool) = new Vector3(2, 2, -2);
@@ -112,6 +113,9 @@ namespace Demos.SpecializedTests
 
                 }
             }
+            var edgeMidpoint = (points[step.SourceEdge.A] + points[step.SourceEdge.B]) * scale * 0.5f;
+            renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisX * scale * 0.5f, new Vector3(1, 1, 0), new Vector3());
+            renderer.Lines.Allocate() = new LineInstance(edgeMidpoint, edgeMidpoint + step.BasisY * scale * 0.5f, new Vector3(0, 1, 0), new Vector3());
             renderer.TextBatcher.Write(
                 text.Clear().Append($"Enumerate step with X and C. Current step: ").Append(stepIndex + 1).Append(" out of ").Append(debugSteps.Count),
                 new Vector2(32, renderer.Surface.Resolution.Y - 140), 20, new Vector3(1), font);
