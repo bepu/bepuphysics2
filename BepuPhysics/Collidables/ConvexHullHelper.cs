@@ -214,7 +214,7 @@ namespace BepuPhysics.Collidables
                 //Watch out for collinear points. If the angle is the same, then pick the more distant point.
                 var candidate = candidateNumerator * bestDenominator;
                 var currentBest = bestNumerator * candidateDenominator;
-                var epsilon = 1e-6f * absCandidateNumerator * bestDenominator;
+                var epsilon = 1e-7f * absCandidateNumerator * bestDenominator;
                 if (candidate > currentBest - epsilon)
                 {
                     //Candidate and current best angle may be extremely similar.
@@ -377,6 +377,7 @@ namespace BepuPhysics.Collidables
         {
             public EdgeEndpoints Endpoints;
             public Vector3 FaceNormal;
+            public int FaceIndex;
         }
 
         public struct DebugStep
@@ -500,7 +501,7 @@ namespace BepuPhysics.Collidables
                 distanceSquaredBundle = Vector.Max(distanceSquaredBundle, distanceSquaredCandidate);
             }
             var bestDistanceSquared = distanceSquaredBundle[0];
-            var initialIndex = 0;
+            var initialIndex = mostDistantIndicesBundle[0];
             for (int i = 1; i < Vector<int>.Count; ++i)
             {
                 var distanceCandidate = distanceSquaredBundle[i];
@@ -533,7 +534,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
-            var planeEpsilon = new Vector<float>((float)Math.Sqrt(bestDistanceSquared) * 1e-6f);
+            var planeEpsilon = new Vector<float>((float)Math.Sqrt(bestDistanceSquared) * 1e-7f);
             var rawFaceVertexIndices = new QuickList<int>(points.Length, pool);
             var initialSourceEdge = new EdgeEndpoints { A = initialIndex, B = initialIndex };
             FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, initialSourceEdge, ref pointBundles, indexOffsetBundle, points.Length,
@@ -570,6 +571,7 @@ namespace BepuPhysics.Collidables
                     edgeToAdd.Endpoints.A = reducedFaceIndices[i == 0 ? reducedFaceIndices.Count - 1 : i - 1];
                     edgeToAdd.Endpoints.B = reducedFaceIndices[i];
                     edgeToAdd.FaceNormal = initialFaceNormal;
+                    edgeToAdd.FaceIndex = 0;
                     edgeFaceCounts.Add(ref edgeToAdd.Endpoints, 1, pool);
                 }
                 //Since an actual face was found, we go ahead and output it into the face set.
@@ -585,6 +587,7 @@ namespace BepuPhysics.Collidables
                 edgeToAdd.Endpoints.A = reducedFaceIndices[0];
                 edgeToAdd.Endpoints.B = reducedFaceIndices[1];
                 edgeToAdd.FaceNormal = initialFaceNormal;
+                edgeToAdd.FaceIndex = -1;
                 var edgeOffset = points[edgeToAdd.Endpoints.B] - points[edgeToAdd.Endpoints.A];
                 Vector3x.Cross(edgeOffset, edgeToAdd.FaceNormal, out var basisY);
                 Vector3x.Cross(edgeOffset, basisY, out var basisX);
@@ -635,6 +638,7 @@ namespace BepuPhysics.Collidables
                 }
                 Console.WriteLine($"face normal: {faceNormal}");
 
+                var newFaceIndex = earlyFaceStartIndices.Count;
                 earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
                 earlyFaceIndices.AddRange(ref reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
 
@@ -645,11 +649,7 @@ namespace BepuPhysics.Collidables
                     nextEdgeToTest.Endpoints.A = reducedFaceIndices[i == 0 ? reducedFaceIndices.Count - 1 : i - 1];
                     nextEdgeToTest.Endpoints.B = reducedFaceIndices[i];
                     nextEdgeToTest.FaceNormal = faceNormal;
-                    var test = new EdgeEndpoints { A = 5, B = 0 };
-                    if (nextEdgeToTest.Endpoints.Equals(ref nextEdgeToTest.Endpoints, ref test))
-                    {
-                        Console.WriteLine($"Pushing {nextEdgeToTest.Endpoints}");
-                    }
+                    nextEdgeToTest.FaceIndex = newFaceIndex;
                     if (edgeFaceCounts.GetTableIndices(ref nextEdgeToTest.Endpoints, out var tableIndex, out var elementIndex))
                     {
                         //This edge was already claimed by another face, so given that the new face also claimed it and that an edge can only be associated with two faces,
@@ -658,6 +658,21 @@ namespace BepuPhysics.Collidables
                             //DEBUG!
                             if (edgeFaceCounts.Values[elementIndex] != 1)
                             {
+                                var sourceStart = earlyFaceStartIndices[edgeToTest.FaceIndex];
+                                var sourceEnd = edgeToTest.FaceIndex + 1 == earlyFaceStartIndices.Count ? earlyFaceIndices.Count : earlyFaceStartIndices[edgeToTest.FaceIndex + 1];
+                                var currentStart = earlyFaceStartIndices[newFaceIndex];
+                                var currentEnd = earlyFaceIndices.Count;
+                                Console.Write($"Source face vertices: ");
+                                for (int k = sourceStart; k < sourceEnd; ++k)
+                                {
+                                    Console.Write($"{earlyFaceIndices[k]}, ");
+                                }
+                                Console.WriteLine();
+                                Console.Write($"Current face vertices: ");
+                                for (int k = currentStart; k < currentEnd; ++k)
+                                {
+                                    Console.Write($"{earlyFaceIndices[k]}, ");
+                                }
                                 hullData = default;
                                 return;
                             }
@@ -667,10 +682,6 @@ namespace BepuPhysics.Collidables
                     }
                     else
                     {
-                        if (nextEdgeToTest.Endpoints.Equals(ref nextEdgeToTest.Endpoints, ref test))
-                        {
-                            Console.WriteLine($"Pushing new {nextEdgeToTest.Endpoints}");
-                        }
                         //This edge is not yet claimed by any edge. Claim it for the new face and add the edge for further testing.
                         edgeFaceCounts.Keys[edgeFaceCounts.Count] = nextEdgeToTest.Endpoints;
                         edgeFaceCounts.Values[edgeFaceCounts.Count] = 1;

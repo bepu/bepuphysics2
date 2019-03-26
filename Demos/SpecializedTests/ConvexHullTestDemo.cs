@@ -9,8 +9,8 @@ using DemoRenderer;
 using BepuPhysics;
 using DemoRenderer.UI;
 using DemoUtilities;
-using static BepuPhysics.Collidables.ConvexHullHelper;
 using DemoRenderer.Constraints;
+using static BepuPhysics.Collidables.ConvexHullHelper;
 
 namespace Demos.SpecializedTests
 {
@@ -26,32 +26,33 @@ namespace Demos.SpecializedTests
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
-            const int pointCount = 16;
+            const int pointCount = 32768;
             points = new QuickList<Vector3>(pointCount, BufferPool);
-            points.Allocate(BufferPool) = new Vector3(0, 0, 0);
-            points.Allocate(BufferPool) = new Vector3(1, 0, 0);
-            points.Allocate(BufferPool) = new Vector3(0, 1, 0);
-            points.Allocate(BufferPool) = new Vector3(0, 0, 1);
-            points.Allocate(BufferPool) = new Vector3(1, 1, 1);
-            points.Allocate(BufferPool) = new Vector3(-0.1f, 0.25f, 0.25f);
-            points.Allocate(BufferPool) = new Vector3(1, 0.25f, -0.1f);
+            //points.Allocate(BufferPool) = new Vector3(0, 0, 0);
+            //points.Allocate(BufferPool) = new Vector3(1, 0, 0);
+            //points.Allocate(BufferPool) = new Vector3(0, 1, 0);
+            //points.Allocate(BufferPool) = new Vector3(0, 0, 1);
+            //points.Allocate(BufferPool) = new Vector3(1, 1, 1);
+            //points.Allocate(BufferPool) = new Vector3(-0.1f, 0.25f, 0.25f);
+            //points.Allocate(BufferPool) = new Vector3(1, 0.25f, -0.1f);
 
-            points.Allocate(BufferPool) = new Vector3(0, 0, 0);
-            points.Allocate(BufferPool) = new Vector3(0, 0, 1);
-            points.Allocate(BufferPool) = new Vector3(0, 0, 2);
-            points.Allocate(BufferPool) = new Vector3(0, 1, 1);
-            points.Allocate(BufferPool) = new Vector3(1, 0, 0);
-            points.Allocate(BufferPool) = new Vector3(1, 0, 1);
-            points.Allocate(BufferPool) = new Vector3(1, 1, 0);
-            points.Allocate(BufferPool) = new Vector3(1, 1, 1);
-            points.Allocate(BufferPool) = new Vector3(2, 2, -2);
-            points.Allocate(BufferPool) = new Vector3(2, -2, -2);
-            points.Allocate(BufferPool) = new Vector3(2, 0, -2);
-            //var random = new Random(5);
-            //for (int i = 0; i < pointCount; ++i)
-            //{
-            //    points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
-            //}
+            //points.Allocate(BufferPool) = new Vector3(0, 0, 0);
+            //points.Allocate(BufferPool) = new Vector3(0, 0, 1);
+            //points.Allocate(BufferPool) = new Vector3(0, 0, 2);
+            //points.Allocate(BufferPool) = new Vector3(0, 1, 1);
+            //points.Allocate(BufferPool) = new Vector3(1, 0, 0);
+            //points.Allocate(BufferPool) = new Vector3(1, 0, 1);
+            //points.Allocate(BufferPool) = new Vector3(1, 1, 0);
+            //points.Allocate(BufferPool) = new Vector3(1, 1, 1);
+            //points.Allocate(BufferPool) = new Vector3(2, 2, -2);
+            //points.Allocate(BufferPool) = new Vector3(2, -2, -2);
+            //points.Allocate(BufferPool) = new Vector3(2, 0, -2);
+            var random = new Random(5);
+            for (int i = 0; i < pointCount; ++i)
+            {
+                //points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                points.AllocateUnsafely() = Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
+            }
 
             var pointsBuffer = points.Span.Slice(0, points.Count);
             ConvexHullHelper.ComputeHull(pointsBuffer, BufferPool, out var hullData, out debugSteps);
