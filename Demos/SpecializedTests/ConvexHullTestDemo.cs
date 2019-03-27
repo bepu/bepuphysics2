@@ -26,32 +26,21 @@ namespace Demos.SpecializedTests
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
-            const int pointCount = 32768;
+            const int pointCount = 50000;
             points = new QuickList<Vector3>(pointCount, BufferPool);
-            //points.Allocate(BufferPool) = new Vector3(0, 0, 0);
-            //points.Allocate(BufferPool) = new Vector3(1, 0, 0);
-            //points.Allocate(BufferPool) = new Vector3(0, 1, 0);
-            //points.Allocate(BufferPool) = new Vector3(0, 0, 1);
-            //points.Allocate(BufferPool) = new Vector3(1, 1, 1);
-            //points.Allocate(BufferPool) = new Vector3(-0.1f, 0.25f, 0.25f);
-            //points.Allocate(BufferPool) = new Vector3(1, 0.25f, -0.1f);
-
-            //points.Allocate(BufferPool) = new Vector3(0, 0, 0);
-            //points.Allocate(BufferPool) = new Vector3(0, 0, 1);
-            //points.Allocate(BufferPool) = new Vector3(0, 0, 2);
-            //points.Allocate(BufferPool) = new Vector3(0, 1, 1);
-            //points.Allocate(BufferPool) = new Vector3(1, 0, 0);
-            //points.Allocate(BufferPool) = new Vector3(1, 0, 1);
-            //points.Allocate(BufferPool) = new Vector3(1, 1, 0);
-            //points.Allocate(BufferPool) = new Vector3(1, 1, 1);
-            //points.Allocate(BufferPool) = new Vector3(2, 2, -2);
-            //points.Allocate(BufferPool) = new Vector3(2, -2, -2);
-            //points.Allocate(BufferPool) = new Vector3(2, 0, -2);
+            points.Allocate(BufferPool) = new Vector3(0, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(0, 0, 1);
+            points.Allocate(BufferPool) = new Vector3(0, 1, 0);
+            points.Allocate(BufferPool) = new Vector3(0, 1, 1);
+            points.Allocate(BufferPool) = new Vector3(1, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(1, 0, 1);
+            points.Allocate(BufferPool) = new Vector3(1, 1, 0);
+            points.Allocate(BufferPool) = new Vector3(1, 1, 1);
             var random = new Random(5);
             for (int i = 0; i < pointCount; ++i)
             {
-                //points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
-                points.AllocateUnsafely() = Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
+                points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), -0.01f + 0.01f * (float)random.NextDouble(), (float)random.NextDouble());
+                //points.AllocateUnsafely() = Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
             }
 
             var pointsBuffer = points.Span.Slice(0, points.Count);
@@ -85,7 +74,7 @@ namespace Demos.SpecializedTests
             for (int i = 0; i < points.Count; ++i)
             {
                 var pose = new RigidPose(points[i] * scale);
-                renderer.Shapes.AddShape(new Box(0.3f, 0.3f, 0.3f), Simulation.Shapes, ref pose, new Vector3(0.5f, 0.5f, 0.5f));
+                renderer.Shapes.AddShape(new Box(0.01f, 0.01f, 0.01f), Simulation.Shapes, ref pose, new Vector3(0.5f, 0.5f, 0.5f));
                 if (!step.AllowVertex[i])
                     renderer.Shapes.AddShape(new Box(0.6f, 0.25f, 0.25f), Simulation.Shapes, ref pose, new Vector3(1, 0, 0));
             }

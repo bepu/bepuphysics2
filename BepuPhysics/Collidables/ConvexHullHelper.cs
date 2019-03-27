@@ -101,6 +101,9 @@ namespace BepuPhysics.Collidables
             ref var x = ref projectedOnX[0];
             ref var y = ref projectedOnY[0];
             Vector3Wide.Dot(basisX, toCandidate, out x);
+            //If x is negative, that means some numerical issue has resulted in a point beyond the bounding plane that generated this face request.
+            //We'll treat it as if it's on the plane.
+            x = Vector.Max(Vector<float>.Zero, x);
             Vector3Wide.Dot(basisY, toCandidate, out y);
             var bestNumerators = y * y;
             var bestDenominators = bestNumerators + x * x;
@@ -123,6 +126,7 @@ namespace BepuPhysics.Collidables
                 x = ref projectedOnX[i];
                 y = ref projectedOnY[i];
                 Vector3Wide.Dot(basisX, toCandidate, out x);
+                x = Vector.Max(Vector<float>.Zero, x); //Same as earlier- protect against numerical error finding points beyond the bounding plane.
                 Vector3Wide.Dot(basisY, toCandidate, out y);
                 var candidateNumerator = y * y;
                 var candidateDenominator = candidateNumerator + x * x;
@@ -180,6 +184,8 @@ namespace BepuPhysics.Collidables
                     }
                 }
             }
+            if (bestX < 0)
+                Console.WriteLine($"BESTX IS NEGATIVE { bestX}");
             Vector3Wide.ReadFirst(basisX, out var basisXNarrow);
             Vector3Wide.ReadFirst(basisY, out var basisYNarrow);
             faceNormal = basisXNarrow * projectedPlaneNormalNarrow.X + basisYNarrow * projectedPlaneNormalNarrow.Y;
@@ -595,13 +601,22 @@ namespace BepuPhysics.Collidables
                     Helpers.Swap(ref edgeToAdd.Endpoints.A, ref edgeToAdd.Endpoints.B);
             }
 
-
+            int debugIterations = 0;
             while (edgesToTest.Count > 0)
             {
+                ++debugIterations;
+                if (debugIterations > 500)
+                {
+                    break;
+                }
                 edgesToTest.Pop(out var edgeToTest);
                 //Make sure the new edge hasn't already been filled by another traversal.
                 var faceCountIndex = edgeFaceCounts.IndexOf(edgeToTest.Endpoints);
-                if (faceCountIndex >= 0 && edgeFaceCounts.Values[faceCountIndex] == 2)
+                if (faceCountIndex >= 0)
+                    Console.WriteLine($"Face count for edge: {edgeFaceCounts.Values[faceCountIndex]}, recognized edge count {edgeFaceCounts.Count}, recognized face count {earlyFaceStartIndices.Count}");
+                else
+                    Console.WriteLine($"EDGE NEVER VISITED: {edgeToTest.Endpoints}");
+                if (faceCountIndex >= 0 && edgeFaceCounts.Values[faceCountIndex] >= 2)
                     continue;
 
                 ref var edgeA = ref points[edgeToTest.Endpoints.A];
@@ -654,31 +669,38 @@ namespace BepuPhysics.Collidables
                     {
                         //This edge was already claimed by another face, so given that the new face also claimed it and that an edge can only be associated with two faces,
                         //no more work has to be done.
+                        //{
+                        //    //DEBUG!
+                        //    if (edgeFaceCounts.Values[elementIndex] != 1)
+                        //    {
+                        //        var sourceStart = earlyFaceStartIndices[edgeToTest.FaceIndex];
+                        //        var sourceEnd = edgeToTest.FaceIndex + 1 == earlyFaceStartIndices.Count ? earlyFaceIndices.Count : earlyFaceStartIndices[edgeToTest.FaceIndex + 1];
+                        //        var currentStart = earlyFaceStartIndices[newFaceIndex];
+                        //        var currentEnd = earlyFaceIndices.Count;
+                        //        Console.Write($"Source face vertices: ");
+                        //        for (int k = sourceStart; k < sourceEnd; ++k)
+                        //        {
+                        //            Console.Write($"{earlyFaceIndices[k]}, ");
+                        //        }
+                        //        Console.WriteLine();
+                        //        Console.Write($"Current face vertices: ");
+                        //        for (int k = currentStart; k < currentEnd; ++k)
+                        //        {
+                        //            Console.Write($"{earlyFaceIndices[k]}, ");
+                        //        }
+                        //        hullData = default;
+                        //        return;
+                        //    }
+                        //}
+                        ref var edgeFaceCount = ref edgeFaceCounts.Values[elementIndex];
+                        if (edgeFaceCount > 1)
                         {
-                            //DEBUG!
-                            if (edgeFaceCounts.Values[elementIndex] != 1)
-                            {
-                                var sourceStart = earlyFaceStartIndices[edgeToTest.FaceIndex];
-                                var sourceEnd = edgeToTest.FaceIndex + 1 == earlyFaceStartIndices.Count ? earlyFaceIndices.Count : earlyFaceStartIndices[edgeToTest.FaceIndex + 1];
-                                var currentStart = earlyFaceStartIndices[newFaceIndex];
-                                var currentEnd = earlyFaceIndices.Count;
-                                Console.Write($"Source face vertices: ");
-                                for (int k = sourceStart; k < sourceEnd; ++k)
-                                {
-                                    Console.Write($"{earlyFaceIndices[k]}, ");
-                                }
-                                Console.WriteLine();
-                                Console.Write($"Current face vertices: ");
-                                for (int k = currentStart; k < currentEnd; ++k)
-                                {
-                                    Console.Write($"{earlyFaceIndices[k]}, ");
-                                }
-                                hullData = default;
-                                return;
-                            }
+                            Console.WriteLine($"BAD @@@@@@ {edgeFaceCount} @@@@@@ ");
                         }
-                        Debug.Assert(edgeFaceCounts.Values[elementIndex] == 1);
-                        edgeFaceCounts.Values[elementIndex] = 2;
+                        //Debug.Assert(edgeFaceCount == 1, 
+                        //    "While we let execution continue, this is an error condition and implies overlapping triangles are being generated." + 
+                        //    "This tends to happen when there are many near-coplanar vertices, so numerical tolerances across different faces cannot consistently agree.");
+                        ++edgeFaceCount;
                     }
                     else
                     {
