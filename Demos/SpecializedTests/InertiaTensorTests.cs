@@ -1,6 +1,8 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -129,6 +131,36 @@ namespace Demos.SpecializedTests
             return false;
         }
     }
+    public struct ConvexHullInertiaTester : IInertiaTester
+    {
+        public ConvexHull Hull;
+        public void ComputeAnalyticInertia(float mass, out BodyInertia inertia)
+        {
+            Hull.ComputeInertia(mass, out inertia);
+        }
+        public void ComputeBounds(out Vector3 min, out Vector3 max)
+        {
+            Hull.ComputeBounds(Quaternion.Identity, out min, out max);
+        }
+        public bool PointIsContained(ref Vector3 sampleSpacing, ref Vector3 point)
+        {
+            Vector3Wide.Broadcast(point, out var pointBundle);
+            var containmentEpsilon = new Vector<float>(sampleSpacing.Length() * 0.5f);
+            for (int i = 0; i < Hull.BoundingPlanes.Length; ++i)
+            {
+                ref var plane = ref Hull.BoundingPlanes[i];
+                Vector3Wide.Dot(plane.Normal, pointBundle, out var dot);
+                var contained = Vector.LessThan(dot - plane.Offset, containmentEpsilon);
+                var count = Math.Min(Hull.FaceStartIndices.Length - i * Vector<float>.Count, Vector<float>.Count);
+                for (int j = 0; j < count; ++j)
+                {
+                    if (contained[j] == 0)
+                        return false;
+                }
+            }
+            return true;
+        }
+    }
 
     public static class InertiaTensorTests
     {
@@ -177,6 +209,10 @@ namespace Demos.SpecializedTests
                 !ValuesAreSimilar(analyticInertia.InverseInertiaTensor.ZZ, numericalLocalInverseInertia.ZZ))
             {
                 Console.WriteLine("Excessive error in numerical vs analytic inertia tensor.");
+                Console.WriteLine($"ANALYTIC:   {analyticInertia.InverseInertiaTensor} vs ");
+                Console.WriteLine($"NUMERICAL:  {numericalLocalInverseInertia}");
+                Symmetric3x3.Subtract(analyticInertia.InverseInertiaTensor, numericalLocalInverseInertia, out var difference);
+                Console.WriteLine($"DIFFERENCE: {difference}");
             }
         }
 
@@ -222,6 +258,31 @@ namespace Demos.SpecializedTests
                 };
                 CheckInertia(ref tester);
             }
+            var pool = new BufferPool();
+            for (int i = 0; i < shapeTrials; ++i)
+            {
+                const int pointCount = 32;
+                var pointSet = new QuickList<Vector3>(pointCount, pool);
+                for (int j = 0; j < pointCount; ++j)
+                {
+                    pointSet.AllocateUnsafely() = new Vector3(-1 + 2 * (float)random.NextDouble(), -1 + 2 * (float)random.NextDouble(), -1 + 2 * (float)random.NextDouble());
+                }
+                for (int j = 0; j < pointSet.Count; ++j)
+                {
+                    pointSet[j] -= new Vector3(0, 1, 0);
+                }
+                var pointsBuffer = pointSet.Span.Slice(0, pointSet.Count);
+                ConvexHullHelper.ComputeHull(pointsBuffer, pool, out var hullData);
+                ConvexHullInertiaTester tester;
+                ConvexHullHelper.ProcessHull(pointsBuffer, hullData, pool, out tester.Hull);
+                hullData.Dispose(pool);
+
+                if (i > shapeTrials / 2)
+                    tester.Hull.Recenter(tester.Hull.ComputeCenterOfMass());
+                CheckInertia(ref tester);
+                tester.Hull.Dispose(pool);
+            }
+            pool.Clear();
         }
     }
 }

@@ -31,15 +31,10 @@ namespace BepuPhysics.Collidables
         /// <param name="a">Second vertex of the tetrahedron.</param>
         /// <param name="b">Third vertex of the tetrahedron.</param>
         /// <param name="c">Fourth vertex of the tetrahedron.</param>
-        /// <param name="xx">Contribution of this tetrahedron to the XX component of the inertia tensor.</param>
-        /// <param name="yy">Contribution of this tetrahedron to the YY component of the inertia tensor.</param>
-        /// <param name="zz">Contribution of this tetrahedron to the ZZ component of the inertia tensor.</param>
-        /// <param name="xy">Contribution of this tetrahedron to the XY component of the inertia tensor.</param>
-        /// <param name="xz">Contribution of this tetrahedron to the XZ component of the inertia tensor.</param>
-        /// <param name="yz">Contribution of this tetrahedron to the YZ component of the inertia tensor.</param>
+        /// <param name="scaledContribution">Scaled contribution of this tetrahedron to the inertia tensor.</param>
         /// <param name="scaledVolume">Six times the volume of the tetrahedron.</param>
         public static void IntegrateTetrahedron(in Vector3 a, in Vector3 b, in Vector3 c,
-            out float xx, out float yy, out float zz, out float xy, out float xz, out float yz,
+            out Symmetric3x3 scaledContribution,
             out float scaledVolume)
         {
             //This is just taken straight out of v1, derivation from Explicit Exact Formulas for the 3-D Tetrahedron Inertia Tensor in Terms of its Vertex Coordinates.
@@ -49,44 +44,39 @@ namespace BepuPhysics.Collidables
                            c.X * (a.Z * b.Y - a.Y * b.Z) +
                            b.X * (a.Z * c.Y - a.Y * c.Z);
 
-            xx = scaledVolume * (a.Y * a.Y + a.Y * c.Y + c.Y * c.Y + a.Y * b.Y + c.Y * b.Y + b.Y * b.Y +
-                                 a.Z * a.Z + a.Z * c.Z + c.Z * c.Z + a.Z * b.Z + c.Z * b.Z + b.Z * b.Z);
-            yy = scaledVolume * (a.X * a.X + a.X * c.X + c.X * c.X + a.X * b.X + c.X * b.X + b.X * b.X +
-                                 a.Z * a.Z + a.Z * c.Z + c.Z * c.Z + a.Z * b.Z + c.Z * b.Z + b.Z * b.Z);
-            zz = scaledVolume * (a.X * a.X + a.X * c.X + c.X * c.X + a.X * b.X + c.X * b.X + b.X * b.X +
-                                 a.Y * a.Y + a.Y * c.Y + c.Y * c.Y + a.Y * b.Y + c.Y * b.Y + b.Y * b.Y);
-            yz = scaledVolume * (2 * a.Y * a.Z + c.Y * a.Z + b.Y * a.Z + a.Y * c.Z + 2 * c.Y * c.Z + b.Y * c.Z + a.Y * b.Z + c.Y * b.Z + 2 * b.Y * b.Z);
-            xy = scaledVolume * (2 * a.X * a.Z + c.X * a.Z + b.X * a.Z + a.X * c.Z + 2 * c.X * c.Z + b.X * c.Z + a.X * b.Z + c.X * b.Z + 2 * b.X * b.Z);
-            xz = scaledVolume * (2 * a.X * a.Y + c.X * a.Y + b.X * a.Y + a.X * c.Y + 2 * c.X * c.Y + b.X * c.Y + a.X * b.Y + c.X * b.Y + 2 * b.X * b.Y);
+            scaledContribution.XX = scaledVolume * (a.Y * a.Y + a.Y * c.Y + c.Y * c.Y + a.Y * b.Y + c.Y * b.Y + b.Y * b.Y +
+                                                    a.Z * a.Z + a.Z * c.Z + c.Z * c.Z + a.Z * b.Z + c.Z * b.Z + b.Z * b.Z);
+            scaledContribution.YY = scaledVolume * (a.X * a.X + a.X * c.X + c.X * c.X + a.X * b.X + c.X * b.X + b.X * b.X +
+                                                    a.Z * a.Z + a.Z * c.Z + c.Z * c.Z + a.Z * b.Z + c.Z * b.Z + b.Z * b.Z);
+            scaledContribution.ZZ = scaledVolume * (a.X * a.X + a.X * c.X + c.X * c.X + a.X * b.X + c.X * b.X + b.X * b.X +
+                                                    a.Y * a.Y + a.Y * c.Y + c.Y * c.Y + a.Y * b.Y + c.Y * b.Y + b.Y * b.Y);
+            scaledContribution.YX = scaledVolume * (2 * a.X * a.Y + c.X * a.Y + b.X * a.Y + a.X * c.Y + 2 * c.X * c.Y + b.X * c.Y + a.X * b.Y + c.X * b.Y + 2 * b.X * b.Y);
+            scaledContribution.ZX = scaledVolume * (2 * a.X * a.Z + c.X * a.Z + b.X * a.Z + a.X * c.Z + 2 * c.X * c.Z + b.X * c.Z + a.X * b.Z + c.X * b.Z + 2 * b.X * b.Z);
+            scaledContribution.ZY = scaledVolume * (2 * a.Y * a.Z + c.Y * a.Z + b.Y * a.Z + a.Y * c.Z + 2 * c.Y * c.Z + b.Y * c.Z + a.Y * b.Z + c.Y * b.Z + 2 * b.Y * b.Z);
 
         }
 
         /// <summary>
         /// Finalizes the inertia tensor from tetrahedral integration.
         /// </summary>
-        /// <param name="xx">Scaled XX component of the inertia tensor.</param>
-        /// <param name="yy">Scaled YY component of the inertia tensor.</param>
-        /// <param name="zz">Scaled ZZ component of the inertia tensor.</param>
-        /// <param name="xy">Scaled XY component of the inertia tensor.</param>
-        /// <param name="xz">Scaled XZ component of the inertia tensor.</param>
-        /// <param name="yz">Scaled YZ component of the inertia tensor.</param>
+        /// <param name="summedContributions">Summed scaled tetrahedral contributions.</param>
         /// <param name="scaledVolume">Scaled volume of the mesh.</param>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
         /// <param name="volume">Computed volume of the mesh.</param>
         /// <param name="inertia">Computed inertia tensor of the mesh.</param>
-        public static void FinalizeInertia(float xx, float yy, float zz, float xy, float xz, float yz, float scaledVolume, float mass,
+        public static void FinalizeInertia(in Symmetric3x3 summedContributions, float scaledVolume, float mass,
             out float volume, out Symmetric3x3 inertia)
         {
             volume = scaledVolume / 6;
             float scaledDensity = mass / volume;
             float diagonalFactor = scaledDensity / 60;
             float offFactor = scaledDensity / -120;
-            inertia.XX = xx * diagonalFactor;
-            inertia.YX = xy * offFactor;
-            inertia.YY = yy * diagonalFactor;
-            inertia.ZX = xz * offFactor;
-            inertia.ZY = yz * offFactor;
-            inertia.ZZ = zz * diagonalFactor;
+            inertia.XX = summedContributions.XX * diagonalFactor;
+            inertia.YX = summedContributions.YX * offFactor;
+            inertia.YY = summedContributions.YY * diagonalFactor;
+            inertia.ZX = summedContributions.ZX * offFactor;
+            inertia.ZY = summedContributions.ZY * offFactor;
+            inertia.ZZ = summedContributions.ZZ * diagonalFactor;
         }
 
         /// <summary>
@@ -99,19 +89,15 @@ namespace BepuPhysics.Collidables
         /// <param name="inertia">Inertia tensor of the mesh.</param>
         public static void ComputeInertia<TTriangleSource>(ref TTriangleSource triangleSource, float mass, out float volume, out Symmetric3x3 inertia) where TTriangleSource : ITriangleSource
         {
-            float xx = 0, yy = 0, zz = 0, xy = 0, xz = 0, yz = 0, scaledVolume = 0;
+            float scaledVolume = 0;
+            Symmetric3x3 summedContributions = default;
             while (triangleSource.GetNextTriangle(out var a, out var b, out var c))
             {
-                IntegrateTetrahedron(a, b, c, out var txx, out var tyy, out var tzz, out var txy, out var txz, out var tyz, out var tScaledVolume);
-                xx += txx;
-                yy += tyy;
-                zz += tzz;
-                xy += txy;
-                xz += txz;
-                yz += tyz;
+                IntegrateTetrahedron(a, b, c, out var scaledContribution, out var tScaledVolume);
+                Symmetric3x3.Add(scaledContribution, summedContributions, out summedContributions);
                 scaledVolume += tScaledVolume;
             }
-            FinalizeInertia(xx, yy, zz, xy, xz, yz, scaledVolume, mass, out volume, out inertia);
+            FinalizeInertia(summedContributions, scaledVolume, mass, out volume, out inertia);
         }
 
         /// <summary>
@@ -125,22 +111,18 @@ namespace BepuPhysics.Collidables
         /// <param name="center">Center of mass of the mesh.</param>
         public static void ComputeInertia<TTriangleSource>(ref TTriangleSource triangleSource, float mass, out float volume, out Symmetric3x3 inertia, out Vector3 center) where TTriangleSource : ITriangleSource
         {
-            float xx = 0, yy = 0, zz = 0, xy = 0, xz = 0, yz = 0, scaledVolume = 0;
+            float scaledVolume = 0;
+            Symmetric3x3 summedContributions = default;
             center = default;
             while (triangleSource.GetNextTriangle(out var a, out var b, out var c))
             {
-                IntegrateTetrahedron(a, b, c, out var txx, out var tyy, out var tzz, out var txy, out var txz, out var tyz, out var tScaledVolume);
-                xx += txx;
-                yy += tyy;
-                zz += tzz;
-                xy += txy;
-                xz += txz;
-                yz += tyz;
+                IntegrateTetrahedron(a, b, c, out var scaledContribution, out var tScaledVolume);
+                Symmetric3x3.Add(scaledContribution, summedContributions, out summedContributions);
                 scaledVolume += tScaledVolume;
                 center += tScaledVolume * (a + b + c);
             }
             center /= scaledVolume * 4;
-            FinalizeInertia(xx, yy, zz, xy, xz, yz, scaledVolume, mass, out volume, out inertia);
+            FinalizeInertia(summedContributions, scaledVolume, mass, out volume, out inertia);
         }
 
         /// <summary>

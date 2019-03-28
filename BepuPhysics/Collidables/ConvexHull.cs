@@ -123,7 +123,7 @@ namespace BepuPhysics.Collidables
                 var minCandidate = new Vector3(minWide.X[i], minWide.Y[i], minWide.Z[i]);
                 var maxCandidate = new Vector3(maxWide.X[i], maxWide.Y[i], maxWide.Z[i]);
                 min = Vector3.Min(minCandidate, min);
-                max = Vector3.Min(maxCandidate, max);
+                max = Vector3.Max(maxCandidate, max);
             }
         }
 
@@ -332,6 +332,14 @@ namespace BepuPhysics.Collidables
             }
 
         }
+        public void Dispose(BufferPool bufferPool)
+        {
+            bufferPool.Return(ref Points);
+            bufferPool.Return(ref BoundingPlanes);
+            bufferPool.Return(ref FaceVertexIndices);
+            bufferPool.Return(ref FaceStartIndices);
+        }
+
 
         /// <summary>
         /// Type id of convex hull shapes.

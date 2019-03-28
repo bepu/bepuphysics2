@@ -265,5 +265,9 @@ namespace BepuPhysics
             result.Z = v.X * m.ZX + v.Y * m.ZY + v.Z * m.ZZ;
         }
 
+        public override string ToString()
+        {
+            return $"x: {XX}, y: {YX}, {YY}, z: {ZX}, {ZY}, {ZZ}";
+        }
     }
 }
