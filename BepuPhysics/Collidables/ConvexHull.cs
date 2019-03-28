@@ -133,10 +133,91 @@ namespace BepuPhysics.Collidables
             ComputeBounds(orientationWide, out min, out max);
         }
 
+        public struct ConvexHullTriangleSource : ITriangleSource
+        {
+            ConvexHull hull;
+            int faceIndex;
+            int subtriangleIndex;
+
+            public ConvexHullTriangleSource(in ConvexHull hull)
+            {
+                this.hull = hull;
+                faceIndex = 0;
+                subtriangleIndex = 2;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool GetNextTriangle(out Vector3 a, out Vector3 b, out Vector3 c)
+            {
+                //This isn't quite as direct or fast as it could be, but it's fairly simple without requiring a redundant implementation.
+                if (faceIndex < hull.FaceStartIndices.Length)
+                {
+                    hull.GetFaceVertexIndices(faceIndex, out var faceIndices);
+                    hull.GetPoint(faceIndices[0], out a);
+                    hull.GetPoint(faceIndices[subtriangleIndex - 1], out b);
+                    hull.GetPoint(faceIndices[subtriangleIndex], out c);
+                    ++subtriangleIndex;
+                    if (subtriangleIndex == faceIndices.Length)
+                    {
+                        subtriangleIndex = 2;
+                        ++faceIndex;
+                    }
+                    return true;
+                }
+                a = default;
+                b = default;
+                c = default;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Computes the inertia of the convex hull around its volumetric center and recenters the points of the convex hull around it.
+        /// </summary>
+        /// <param name="mass">Mass to scale the inertia tensor with.</param>
+        /// <param name="inertia">Inertia tensor of the convex hull.</param>
+        /// <param name="center">Center of the hull.</param>
+        public void ComputeInertia(float mass, out BodyInertia inertia, out Vector3 center)
+        {
+            var triangleSource = new ConvexHullTriangleSource(this);
+            MeshInertiaHelper.ComputeInertia(ref triangleSource, mass, out _, out inertia, out center);
+            Recenter(center);
+        }
+
+        /// <summary>
+        /// Computes the volume and center of mass of the convex hull.
+        /// </summary>
+        /// <param name="volume">Volume of the convex hull.</param>
+        /// <param name="center">Center of mass of the convex hull.</param>
+        public void ComputeCenterOfMass(out float volume, out Vector3 center)
+        {
+            var triangleSource = new ConvexHullTriangleSource(this);
+            MeshInertiaHelper.ComputeCenterOfMass(ref triangleSource, out volume, out center);
+        }
+
+        /// <summary>
+        /// Subtracts the newCenter from all points in the convex hull.
+        /// </summary>
+        /// <param name="newCenter">New center that all points will be made relative to.</param>
+        public void Recenter(in Vector3 newCenter)
+        {
+            Vector3Wide.Broadcast(newCenter, out var v);
+            for (int i = 0; i < Points.Length; ++i)
+            {
+                ref var p = ref Points[i];
+                Vector3Wide.Subtract(p, v, out p);
+            }
+        }
+
+        /// <summary>
+        /// computes the inertia of the convex hull.
+        /// </summary>
+        /// <param name="mass">Mass to scale the inertia tensor with.</param>
+        /// <param name="inertia">Inertia of the convex hull.</param>
         public void ComputeInertia(float mass, out BodyInertia inertia)
         {
-            //Consider each face as a set of triangles. Integrate over their volume to get the inertia. (The winding of the edges is consistent.)
-            inertia = default;
+            var triangleSource = new ConvexHullTriangleSource(this);
+            MeshInertiaHelper.ComputeInertia(ref triangleSource, mass, out _, out inertia);
         }
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
