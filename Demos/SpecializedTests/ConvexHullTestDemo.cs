@@ -62,7 +62,9 @@ namespace Demos.SpecializedTests
             ConvexHullHelper.ProcessHull(pointsBuffer, hullData, BufferPool, out var hullShape);
             hullData.Dispose(BufferPool);
 
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), new BodyInertia { InverseMass = 1, InverseInertiaTensor = default }, new CollidableDescription(Simulation.Shapes.Add(hullShape), 0.1f), new BodyActivityDescription(0.01f)));
+            hullShape.ComputeInertia(1, out var inertia, out var center);
+
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new CollidableDescription(Simulation.Shapes.Add(hullShape), 0.1f), new BodyActivityDescription(0.01f)));
         }
 
         int stepIndex = 0;

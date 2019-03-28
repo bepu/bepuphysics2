@@ -172,6 +172,27 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
+        /// Subtracts the newCenter from all points in the convex hull.
+        /// </summary>
+        /// <param name="newCenter">New center that all points will be made relative to.</param>
+        public void Recenter(in Vector3 newCenter)
+        {
+            Vector3Wide.Broadcast(newCenter, out var v);
+            for (int i = 0; i < Points.Length; ++i)
+            {
+                ref var p = ref Points[i];
+                Vector3Wide.Subtract(p, v, out p);
+            }
+
+            for (int i = 0; i < BoundingPlanes.Length; ++i)
+            {
+                ref var plane = ref BoundingPlanes[i];
+                Vector3Wide.Dot(plane.Normal, v, out var dot);
+                plane.Offset -= dot;
+            }
+        }
+
+        /// <summary>
         /// Computes the inertia of the convex hull around its volumetric center and recenters the points of the convex hull around it.
         /// </summary>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
@@ -196,18 +217,16 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
-        /// Subtracts the newCenter from all points in the convex hull.
+        /// Computes the center of mass of the convex hull.
         /// </summary>
-        /// <param name="newCenter">New center that all points will be made relative to.</param>
-        public void Recenter(in Vector3 newCenter)
+        /// <returns>Center of mass of the convex hull.</returns>
+        public Vector3 ComputeCenterOfMass()
         {
-            Vector3Wide.Broadcast(newCenter, out var v);
-            for (int i = 0; i < Points.Length; ++i)
-            {
-                ref var p = ref Points[i];
-                Vector3Wide.Subtract(p, v, out p);
-            }
+            var triangleSource = new ConvexHullTriangleSource(this);
+            MeshInertiaHelper.ComputeCenterOfMass(ref triangleSource, out _, out var center);
+            return center;
         }
+
 
         /// <summary>
         /// computes the inertia of the convex hull.
