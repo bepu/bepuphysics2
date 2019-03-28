@@ -138,7 +138,7 @@ namespace BepuPhysics.Collidables
             var scaledVolume = 0f;
             while (triangleSource.GetNextTriangle(out var a, out var b, out var c))
             {
-                Vector3x.Cross(c - a, b - a, out var n);
+                Vector3x.Cross(b - a, c - a, out var n);
                 var tScaledVolume = Vector3.Dot(n, a);
                 scaledVolume += tScaledVolume;
                 center += tScaledVolume * (a + b + c);
