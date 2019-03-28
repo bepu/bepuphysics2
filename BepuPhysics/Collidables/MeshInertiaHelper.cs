@@ -26,11 +26,11 @@ namespace BepuPhysics.Collidables
     public static class MeshInertiaHelper
     {
         /// <summary>
-        /// Integrates the inertia contribution of a tetrahedron with vertices at (0,0,0), v2, v3, and v4.
+        /// Integrates the inertia contribution of a tetrahedron with vertices at (0,0,0), a, b, and c.
         /// </summary>
-        /// <param name="v2">Second vertex of the tetrahedron.</param>
-        /// <param name="v3">Third vertex of the tetrahedron.</param>
-        /// <param name="v4">Fourth vertex of the tetrahedron.</param>
+        /// <param name="a">Second vertex of the tetrahedron.</param>
+        /// <param name="b">Third vertex of the tetrahedron.</param>
+        /// <param name="c">Fourth vertex of the tetrahedron.</param>
         /// <param name="xx">Contribution of this tetrahedron to the XX component of the inertia tensor.</param>
         /// <param name="yy">Contribution of this tetrahedron to the YY component of the inertia tensor.</param>
         /// <param name="zz">Contribution of this tetrahedron to the ZZ component of the inertia tensor.</param>
@@ -38,26 +38,26 @@ namespace BepuPhysics.Collidables
         /// <param name="xz">Contribution of this tetrahedron to the XZ component of the inertia tensor.</param>
         /// <param name="yz">Contribution of this tetrahedron to the YZ component of the inertia tensor.</param>
         /// <param name="scaledVolume">Six times the volume of the tetrahedron.</param>
-        public static void IntegrateTetrahedron(in Vector3 v2, in Vector3 v3, in Vector3 v4,
+        public static void IntegrateTetrahedron(in Vector3 a, in Vector3 b, in Vector3 c,
             out float xx, out float yy, out float zz, out float xy, out float xz, out float yz,
             out float scaledVolume)
         {
             //This is just taken straight out of v1, derivation from Explicit Exact Formulas for the 3-D Tetrahedron Inertia Tensor in Terms of its Vertex Coordinates.
             //Could do better than this; doesn't bother even trying to vectorize.
 
-            scaledVolume = v2.X * (v3.Z * v4.Y - v3.Y * v4.Z) -
-                           v3.X * (v2.Z * v4.Y - v2.Y * v4.Z) +
-                           v4.X * (v2.Z * v3.Y - v2.Y * v3.Z);
+            scaledVolume = a.X * (c.Z * b.Y - c.Y * b.Z) -
+                           c.X * (a.Z * b.Y - a.Y * b.Z) +
+                           b.X * (a.Z * c.Y - a.Y * c.Z);
 
-            xx = scaledVolume * (v2.Y * v2.Y + v2.Y * v3.Y + v3.Y * v3.Y + v2.Y * v4.Y + v3.Y * v4.Y + v4.Y * v4.Y +
-                                 v2.Z * v2.Z + v2.Z * v3.Z + v3.Z * v3.Z + v2.Z * v4.Z + v3.Z * v4.Z + v4.Z * v4.Z);
-            yy = scaledVolume * (v2.X * v2.X + v2.X * v3.X + v3.X * v3.X + v2.X * v4.X + v3.X * v4.X + v4.X * v4.X +
-                                 v2.Z * v2.Z + v2.Z * v3.Z + v3.Z * v3.Z + v2.Z * v4.Z + v3.Z * v4.Z + v4.Z * v4.Z);
-            zz = scaledVolume * (v2.X * v2.X + v2.X * v3.X + v3.X * v3.X + v2.X * v4.X + v3.X * v4.X + v4.X * v4.X +
-                                 v2.Y * v2.Y + v2.Y * v3.Y + v3.Y * v3.Y + v2.Y * v4.Y + v3.Y * v4.Y + v4.Y * v4.Y);
-            yz = scaledVolume * (2 * v2.Y * v2.Z + v3.Y * v2.Z + v4.Y * v2.Z + v2.Y * v3.Z + 2 * v3.Y * v3.Z + v4.Y * v3.Z + v2.Y * v4.Z + v3.Y * v4.Z + 2 * v4.Y * v4.Z);
-            xy = scaledVolume * (2 * v2.X * v2.Z + v3.X * v2.Z + v4.X * v2.Z + v2.X * v3.Z + 2 * v3.X * v3.Z + v4.X * v3.Z + v2.X * v4.Z + v3.X * v4.Z + 2 * v4.X * v4.Z);
-            xz = scaledVolume * (2 * v2.X * v2.Y + v3.X * v2.Y + v4.X * v2.Y + v2.X * v3.Y + 2 * v3.X * v3.Y + v4.X * v3.Y + v2.X * v4.Y + v3.X * v4.Y + 2 * v4.X * v4.Y);
+            xx = scaledVolume * (a.Y * a.Y + a.Y * c.Y + c.Y * c.Y + a.Y * b.Y + c.Y * b.Y + b.Y * b.Y +
+                                 a.Z * a.Z + a.Z * c.Z + c.Z * c.Z + a.Z * b.Z + c.Z * b.Z + b.Z * b.Z);
+            yy = scaledVolume * (a.X * a.X + a.X * c.X + c.X * c.X + a.X * b.X + c.X * b.X + b.X * b.X +
+                                 a.Z * a.Z + a.Z * c.Z + c.Z * c.Z + a.Z * b.Z + c.Z * b.Z + b.Z * b.Z);
+            zz = scaledVolume * (a.X * a.X + a.X * c.X + c.X * c.X + a.X * b.X + c.X * b.X + b.X * b.X +
+                                 a.Y * a.Y + a.Y * c.Y + c.Y * c.Y + a.Y * b.Y + c.Y * b.Y + b.Y * b.Y);
+            yz = scaledVolume * (2 * a.Y * a.Z + c.Y * a.Z + b.Y * a.Z + a.Y * c.Z + 2 * c.Y * c.Z + b.Y * c.Z + a.Y * b.Z + c.Y * b.Z + 2 * b.Y * b.Z);
+            xy = scaledVolume * (2 * a.X * a.Z + c.X * a.Z + b.X * a.Z + a.X * c.Z + 2 * c.X * c.Z + b.X * c.Z + a.X * b.Z + c.X * b.Z + 2 * b.X * b.Z);
+            xz = scaledVolume * (2 * a.X * a.Y + c.X * a.Y + b.X * a.Y + a.X * c.Y + 2 * c.X * c.Y + b.X * c.Y + a.X * b.Y + c.X * b.Y + 2 * b.X * b.Y);
 
         }
 
@@ -73,21 +73,20 @@ namespace BepuPhysics.Collidables
         /// <param name="scaledVolume">Scaled volume of the mesh.</param>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
         /// <param name="volume">Computed volume of the mesh.</param>
-        /// <param name="inverseInertia">Computed inverse inertia tensor of the mesh.</param>
+        /// <param name="inertia">Computed inertia tensor of the mesh.</param>
         public static void FinalizeInertia(float xx, float yy, float zz, float xy, float xz, float yz, float scaledVolume, float mass,
-            out float volume, out Symmetric3x3 inverseInertia)
+            out float volume, out Symmetric3x3 inertia)
         {
             volume = scaledVolume / 6;
             float scaledDensity = mass / volume;
             float diagonalFactor = scaledDensity / 60;
-            float offFactor = -scaledDensity / 120;
-            inverseInertia.XX = xx * diagonalFactor;
-            inverseInertia.YX = xy * diagonalFactor;
-            inverseInertia.YY = yy * diagonalFactor;
-            inverseInertia.ZX = xz * offFactor;
-            inverseInertia.ZY = yz * offFactor;
-            inverseInertia.ZZ = zz * offFactor;
-            Symmetric3x3.Invert(inverseInertia, out inverseInertia);
+            float offFactor = scaledDensity / -120;
+            inertia.XX = xx * diagonalFactor;
+            inertia.YX = xy * offFactor;
+            inertia.YY = yy * diagonalFactor;
+            inertia.ZX = xz * offFactor;
+            inertia.ZY = yz * offFactor;
+            inertia.ZZ = zz * diagonalFactor;
         }
 
         /// <summary>
@@ -97,8 +96,8 @@ namespace BepuPhysics.Collidables
         /// <param name="triangleSource">Source from which to retrieve a sequence of triangles.</param>
         /// <param name="mass">Mass of the mesh to scale the inertia tensor with.</param>
         /// <param name="volume">Volume of the mesh.</param>
-        /// <param name="inertia">Inertia of the mesh.</param>
-        public static void ComputeInertia<TTriangleSource>(ref TTriangleSource triangleSource, float mass, out float volume, out BodyInertia inertia) where TTriangleSource : ITriangleSource
+        /// <param name="inertia">Inertia tensor of the mesh.</param>
+        public static void ComputeInertia<TTriangleSource>(ref TTriangleSource triangleSource, float mass, out float volume, out Symmetric3x3 inertia) where TTriangleSource : ITriangleSource
         {
             float xx = 0, yy = 0, zz = 0, xy = 0, xz = 0, yz = 0, scaledVolume = 0;
             while (triangleSource.GetNextTriangle(out var a, out var b, out var c))
@@ -112,8 +111,7 @@ namespace BepuPhysics.Collidables
                 yz += tyz;
                 scaledVolume += tScaledVolume;
             }
-            inertia.InverseMass = 1f / mass;
-            FinalizeInertia(xx, yy, zz, xy, xz, yz, scaledVolume, mass, out volume, out inertia.InverseInertiaTensor);
+            FinalizeInertia(xx, yy, zz, xy, xz, yz, scaledVolume, mass, out volume, out inertia);
         }
 
         /// <summary>
@@ -123,9 +121,9 @@ namespace BepuPhysics.Collidables
         /// <param name="triangleSource">Source from which to retrieve a sequence of triangles.</param>
         /// <param name="mass">Mass of the mesh to scale the inertia tensor with.</param>
         /// <param name="volume">Volume of the mesh.</param>
-        /// <param name="inertia">Inertia of the mesh.</param>
+        /// <param name="inertia">Inertia tensor of the mesh.</param>
         /// <param name="center">Center of mass of the mesh.</param>
-        public static void ComputeInertia<TTriangleSource>(ref TTriangleSource triangleSource, float mass, out float volume, out BodyInertia inertia, out Vector3 center) where TTriangleSource : ITriangleSource
+        public static void ComputeInertia<TTriangleSource>(ref TTriangleSource triangleSource, float mass, out float volume, out Symmetric3x3 inertia, out Vector3 center) where TTriangleSource : ITriangleSource
         {
             float xx = 0, yy = 0, zz = 0, xy = 0, xz = 0, yz = 0, scaledVolume = 0;
             center = default;
@@ -142,8 +140,7 @@ namespace BepuPhysics.Collidables
                 center += tScaledVolume * (a + b + c);
             }
             center /= scaledVolume * 4;
-            inertia.InverseMass = 1f / mass;
-            FinalizeInertia(xx, yy, zz, xy, xz, yz, scaledVolume, mass, out volume, out inertia.InverseInertiaTensor);
+            FinalizeInertia(xx, yy, zz, xy, xz, yz, scaledVolume, mass, out volume, out inertia);
         }
 
         /// <summary>
@@ -166,6 +163,25 @@ namespace BepuPhysics.Collidables
             }
             center /= scaledVolume * 4;
             volume = scaledVolume / 6;
+        }
+
+        /// <summary>
+        /// Computes an offset for an inertia tensor based on an offset frame of reference.
+        /// </summary>
+        /// <param name="mass">Mass associated with the inertia tensor being moved.</param>
+        /// <param name="offset">Offset from the current inertia frame of reference to the new frame of reference.</param>
+        /// <param name="inertiaOffset">Modification to add to the inertia tensor to move it into the new reference frame.</param>
+        public static void GetInertiaOffset(float mass, in Vector3 offset, out Symmetric3x3 inertiaOffset)
+        {
+            //Just the parallel axis theorem.
+            var squared = offset * offset;
+            var diagonal = squared.X + squared.Y + squared.Z;
+            inertiaOffset.XX = mass * (squared.X - diagonal);
+            inertiaOffset.YX = mass * (offset.X * offset.Y);
+            inertiaOffset.YY = mass * (squared.Y - diagonal);
+            inertiaOffset.ZX = mass * (offset.X * offset.Z);
+            inertiaOffset.ZY = mass * (offset.Y * offset.Z);
+            inertiaOffset.ZZ = mass * (squared.Z - diagonal);
         }
 
     }

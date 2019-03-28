@@ -201,8 +201,12 @@ namespace BepuPhysics.Collidables
         public void ComputeInertia(float mass, out BodyInertia inertia, out Vector3 center)
         {
             var triangleSource = new ConvexHullTriangleSource(this);
-            MeshInertiaHelper.ComputeInertia(ref triangleSource, mass, out _, out inertia, out center);
+            MeshInertiaHelper.ComputeInertia(ref triangleSource, mass, out _, out var inertiaTensor, out center);
+            MeshInertiaHelper.GetInertiaOffset(mass, center, out var inertiaOffset);
+            Symmetric3x3.Add(inertiaTensor, inertiaOffset, out var recenteredInertia);
             Recenter(center);
+            Symmetric3x3.Invert(recenteredInertia, out inertia.InverseInertiaTensor);
+            inertia.InverseMass = 1f / mass;
         }
 
         /// <summary>
@@ -236,7 +240,9 @@ namespace BepuPhysics.Collidables
         public void ComputeInertia(float mass, out BodyInertia inertia)
         {
             var triangleSource = new ConvexHullTriangleSource(this);
-            MeshInertiaHelper.ComputeInertia(ref triangleSource, mass, out _, out inertia);
+            MeshInertiaHelper.ComputeInertia(ref triangleSource, mass, out _, out var inertiaTensor);
+            inertia.InverseMass = 1f / mass;
+            Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
         }
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)

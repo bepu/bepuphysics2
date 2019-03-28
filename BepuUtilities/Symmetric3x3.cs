@@ -127,6 +127,23 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Subtracts the components of b from a.
+        /// </summary>
+        /// <param name="a">Matrix to be subtracted from.</param>
+        /// <param name="b">Matrix to subtract from the first matrix..</param>
+        /// <param name="result">Matrix with subtracted components.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Subtract(in Symmetric3x3 a, in Symmetric3x3 b, out Symmetric3x3 result)
+        {
+            result.XX = a.XX - b.XX;
+            result.YX = a.YX - b.YX;
+            result.YY = a.YY - b.YY;
+            result.ZX = a.ZX - b.ZX;
+            result.ZY = a.ZY - b.ZY;
+            result.ZZ = a.ZZ - b.ZZ;
+        }
+
+        /// <summary>
         /// Adds the components of two matrices together.
         /// </summary>
         /// <param name="a">First matrix to add.</param>
