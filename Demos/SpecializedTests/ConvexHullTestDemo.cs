@@ -25,9 +25,9 @@ namespace Demos.SpecializedTests
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)));
 
-            const int pointCount = 1024;
+            const int pointCount = 128;
             points = new QuickList<Vector3>(pointCount * 2, BufferPool);
             //points.Allocate(BufferPool) = new Vector3(0, 0, 0);
             //points.Allocate(BufferPool) = new Vector3(0, 0, 1);
@@ -47,7 +47,7 @@ namespace Demos.SpecializedTests
             var pointsBuffer = points.Span.Slice(0, points.Count);
             ConvexHullHelper.ComputeHull(pointsBuffer, BufferPool, out var hullData);
             hullData.Dispose(BufferPool);
-            const int iterationCount = 100000;
+            const int iterationCount = 100;
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < iterationCount; ++i)
             {
@@ -62,7 +62,7 @@ namespace Demos.SpecializedTests
             ConvexHullHelper.ProcessHull(pointsBuffer, hullData, BufferPool, out var hullShape);
             hullData.Dispose(BufferPool);
 
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), default, new CollidableDescription(Simulation.Shapes.Add(hullShape), 0.1f), new BodyActivityDescription(0.01f)));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), new BodyInertia { InverseMass = 1, InverseInertiaTensor = default }, new CollidableDescription(Simulation.Shapes.Add(hullShape), 0.1f), new BodyActivityDescription(0.01f)));
         }
 
         int stepIndex = 0;

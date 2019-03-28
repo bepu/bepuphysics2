@@ -93,6 +93,13 @@ namespace BepuPhysics
             Vector3Wide.WriteFirst(pose.Position, ref poses.Position);
             QuaternionWide.WriteFirst(pose.Orientation, ref poses.Orientation);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ReadFirst(in RigidPoses poses, out RigidPose pose)
+        {
+            Vector3Wide.ReadFirst(poses.Position, out pose.Position);
+            QuaternionWide.ReadFirst(poses.Orientation, out pose.Orientation);
+        }
     }
 
     public struct BodyVelocities

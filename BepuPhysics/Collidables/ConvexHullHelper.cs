@@ -82,17 +82,6 @@ namespace BepuPhysics.Collidables
     /// </summary>
     public static class ConvexHullHelper
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void InitializeIndices(out Vector<int> indices)
-        {
-            ref var start = ref Unsafe.As<Vector<int>, int>(ref indices);
-            start = 0;
-            for (int i = 1; i < Vector<int>.Count; ++i)
-            {
-                Unsafe.Add(ref start, i) = i;
-            }
-        }
-
         static void FindExtremeFace(in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, in EdgeEndpoints sourceEdgeEndpoints, ref Buffer<Vector3Wide> pointBundles, in Vector<int> indexOffsets, int pointCount,
             ref Buffer<Vector<float>> projectedOnX, ref Buffer<Vector<float>> projectedOnY, in Vector<float> planeEpsilon, ref QuickList<int> vertexIndices, out Vector3 faceNormal)
         {
@@ -503,7 +492,7 @@ namespace BepuPhysics.Collidables
 
             //Find a starting point. We'll use the one furthest from the centroid.
             Vector3Wide.Broadcast(centroid, out var centroidBundle);
-            InitializeIndices(out var mostDistantIndicesBundle);
+            Helpers.FillVectorWithLaneIndices(out var mostDistantIndicesBundle);
             var indexOffsetBundle = mostDistantIndicesBundle;
             Vector3Wide.DistanceSquared(pointBundles[0], centroidBundle, out var distanceSquaredBundle);
             for (int i = 1; i < pointBundles.Length; ++i)

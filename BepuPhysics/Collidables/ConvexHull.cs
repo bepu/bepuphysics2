@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using BepuPhysics.CollisionDetection;
@@ -34,13 +35,22 @@ namespace BepuPhysics.Collidables
 
     public struct ConvexHull : IConvexShape
     {
+        /// <summary>
+        /// Bundled points of the convex hull.
+        /// </summary>
         public Buffer<Vector3Wide> Points;
         /// <summary>
         /// Bundled bounding planes of the convex hull. 
         /// </summary>
         public Buffer<HullBoundingPlanes> BoundingPlanes;
+        /// <summary>
+        /// Combined set of vertices used by each face. Use FaceStartIndices to index into this for a particular face.
+        /// </summary>
         public Buffer<HullVertexIndex> FaceVertexIndices;
         //TODO: Consider separate unbundled points for clipping. Might be worth it.
+        /// <summary>
+        /// Start indices of faces in the FaceVertexIndices.
+        /// </summary>
         public Buffer<int> FaceStartIndices;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -136,9 +146,85 @@ namespace BepuPhysics.Collidables
 
         public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)
         {
-            normal = default;
-            t = default;
-            return false;
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
+            var shapeToRay = origin - pose.Position;
+            Matrix3x3.TransformTranspose(shapeToRay, orientation, out var localOrigin);
+            Matrix3x3.TransformTranspose(direction, orientation, out var localDirection);
+            Vector3Wide.Broadcast(localOrigin, out var localOriginBundle);
+            Vector3Wide.Broadcast(localDirection, out var localDirectionBundle);
+
+            Helpers.FillVectorWithLaneIndices(out var indexOffsets);
+            //The interval of intersection on the ray is the time after it enters all bounding planes, and before it exits any of them.
+            //All face normals point outward.
+            var latestEntryNumeratorBundle = new Vector<float>(float.MaxValue);
+            var latestEntryDenominatorBundle = new Vector<float>(-1);
+            var latestEntryIndexBundle = new Vector<int>();
+            var earliestExitNumeratorBundle = new Vector<float>(float.MaxValue);
+            var earliestExitDenominatorBundle = new Vector<float>(1);
+            for (int i = 0; i < BoundingPlanes.Length; ++i)
+            {
+                ref var boundingPlane = ref BoundingPlanes[i];
+                var candidateIndices = new Vector<int>(i << BundleIndexing.VectorShift) + indexOffsets;
+                //t = dot(pointOnPlane - origin, planeNormal) / dot(planeNormal, rayDirection)
+                //Note that we can defer the division; we don't need to compute the exact t value of *all* planes.
+                Vector3Wide.Dot(localOriginBundle, boundingPlane.Normal, out var normalDotOrigin);
+                var numerator = boundingPlane.Offset - normalDotOrigin;
+                Vector3Wide.Dot(localDirectionBundle, boundingPlane.Normal, out var denominator);
+                //A bounding plane is being 'entered' if the ray direction opposes the face normal.
+                //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
+                //If the denominator is zero, just ignore the lane.
+                var useLatestEntryCandidate = Vector.BitwiseAnd(Vector.LessThan(denominator, Vector<float>.Zero), Vector.GreaterThan(numerator * latestEntryDenominatorBundle, latestEntryNumeratorBundle * denominator));
+                var useEarliestExitCandidate = Vector.BitwiseAnd(Vector.GreaterThan(denominator, Vector<float>.Zero), Vector.LessThan(numerator * earliestExitDenominatorBundle, earliestExitNumeratorBundle * denominator));
+                latestEntryNumeratorBundle = Vector.ConditionalSelect(useLatestEntryCandidate, numerator, latestEntryNumeratorBundle);
+                latestEntryDenominatorBundle = Vector.ConditionalSelect(useLatestEntryCandidate, denominator, latestEntryDenominatorBundle);
+                latestEntryIndexBundle = Vector.ConditionalSelect(useLatestEntryCandidate, candidateIndices, latestEntryIndexBundle);
+                earliestExitNumeratorBundle = Vector.ConditionalSelect(useEarliestExitCandidate, numerator, earliestExitNumeratorBundle);
+                earliestExitDenominatorBundle = Vector.ConditionalSelect(useEarliestExitCandidate, denominator, earliestExitDenominatorBundle);
+            }
+            var latestEntryNumerator = latestEntryNumeratorBundle[0];
+            var latestEntryDenominator = latestEntryDenominatorBundle[0];
+            var latestEntryIndex = latestEntryIndexBundle[0];
+            var earliestExitNumerator = earliestExitNumeratorBundle[0];
+            var earliestExitDenominator = earliestExitDenominatorBundle[0];
+            for (int i = 1; i < Vector<float>.Count; ++i)
+            {
+                var latestEntryNumeratorCandidate = latestEntryNumeratorBundle[i];
+                var latestEntryDenominatorCandidate = latestEntryDenominatorBundle[i];
+                var earliestExitNumeratorCandidate = earliestExitNumeratorBundle[i];
+                var earliestExitDenominatorCandidate = earliestExitDenominatorBundle[i];
+                if (latestEntryNumeratorCandidate * latestEntryDenominator > latestEntryNumerator * latestEntryDenominatorCandidate)
+                {
+                    latestEntryNumerator = latestEntryNumeratorCandidate;
+                    latestEntryDenominator = latestEntryDenominatorCandidate;
+                    latestEntryIndex = latestEntryIndexBundle[i];
+                }
+                if (earliestExitNumeratorCandidate * earliestExitDenominator < earliestExitNumerator * earliestExitDenominatorCandidate)
+                {
+                    earliestExitNumerator = earliestExitNumeratorCandidate;
+                    earliestExitDenominator = earliestExitDenominatorCandidate;
+                }
+            }
+            //If the earliest exit is behind the origin, there is no hit.
+            //If the earliest exit comes before the latest entry, there is no hit.
+            //Entry denominators negative, exit denominators positive. Requires comparison sign flip.
+            if (earliestExitNumerator < 0 ||
+                latestEntryNumerator * earliestExitDenominator < earliestExitNumerator * latestEntryDenominator)
+            {
+                t = default;
+                normal = default;
+                return false;
+            }
+            else
+            {
+                t = latestEntryNumerator / latestEntryDenominator;
+                if (t < 0)
+                    t = 0;
+                BundleIndexing.GetBundleIndices(latestEntryIndex, out var bundleIndex, out var innerIndex);
+                Vector3Wide.ReadSlot(ref BoundingPlanes[bundleIndex].Normal, innerIndex, out normal);
+                Matrix3x3.Transform(normal, orientation, out normal);
+                return true;
+            }
+
         }
 
         /// <summary>
@@ -223,6 +309,19 @@ namespace BepuPhysics.Collidables
 
         public void RayTest(ref RigidPoses poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
         {
+            Debug.Assert(Hulls.Length > 0 && Hulls.Length <= Vector<float>.Count);
+            for (int i = 0; i < Hulls.Length; ++i)
+            {
+                RigidPoses.ReadFirst(GatherScatter.GetOffsetInstance(ref poses, i), out var pose);
+                ref var offsetRay = ref GatherScatter.GetOffsetInstance(ref rayWide, i);
+                Vector3Wide.ReadFirst(offsetRay.Origin, out var origin);
+                Vector3Wide.ReadFirst(offsetRay.Direction, out var direction);
+                var intersectedNarrow = Hulls[i].RayTest(pose, origin, direction, out var tNarrow, out var normalNarrow);
+
+                GatherScatter.Get(ref intersected, i) = intersectedNarrow ? -1 : 0;
+                GatherScatter.Get(ref t, i) = tNarrow;
+                Vector3Wide.WriteSlot(normalNarrow, i, ref normal);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

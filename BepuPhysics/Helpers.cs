@@ -57,5 +57,16 @@ namespace BepuPhysics
             t2.Y = sign * t1.X;
             t2.Z = -sign * normal.X;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void FillVectorWithLaneIndices(out Vector<int> indices)
+        {
+            ref var start = ref Unsafe.As<Vector<int>, int>(ref indices);
+            start = 0;
+            for (int i = 1; i < Vector<int>.Count; ++i)
+            {
+                Unsafe.Add(ref start, i) = i;
+            }
+        }
     }
 }
