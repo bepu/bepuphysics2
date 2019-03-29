@@ -10,12 +10,12 @@ The big goals for the initial version are:
 
 Note that this release will lack many of v1's built in features, like:
 - Buoyancy.
-- Full featured character controller (though I will likely provide a simple example version in the demos, just without the full upstepping/downstepping/stance shifting feature set).
+- Full featured character controller (there is a simple character in the demos, just without the full upstepping/downstepping/stance shifting feature set).
 - Dedicated vehicle type.
 
 The initial version will be split into incremental stages: alpha, beta, and release. The alpha was released on March 31, 2018, and the beta on August 16, 2018.
 
-### Release (January-March 2019)
+### Release (April 2019)
 Should be able to support the core features required by physically complex games.
 - Better handling of some dangerous performance corner cases in the solver.
 - Fully enabled CCD.
@@ -23,6 +23,8 @@ Should be able to support the core features required by physically complex games
 - Additional ease of use features, especially for supplying custom body properties to collision filtering and velocity integration.
 - All of the (important) constraints from v1.
 - More educational demos, including some deeper dives like showing how to create a custom voxel world collidable.
+
+Of this list, only convex hulls remain incomplete.
 
 ### Nice-to-haves 
 There are a few features which aren't fundamentally required for a release, but which are still high value. These might get pulled into one of the above milestones if possible. If they don't make it into the first version, they might show up later.
