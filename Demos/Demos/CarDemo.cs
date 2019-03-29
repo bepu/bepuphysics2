@@ -424,7 +424,7 @@ namespace Demos.Demos
             }
 
 
-            MeshDemo.CreateDeformedPlane(planeWidth, planeWidth,
+            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeWidth,
                 (int vX, int vY) =>
                 {
                     var octave0 = (MathF.Sin((vX + 5f) * 0.05f) + MathF.Sin((vY + 11) * 0.05f)) * 1.8f;

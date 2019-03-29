@@ -87,7 +87,7 @@ namespace Demos.SpecializedTests
 
             const int planeWidth = 256;
             const int planeHeight = 256;
-            MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
+            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
                     Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);

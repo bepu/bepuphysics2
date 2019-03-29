@@ -267,7 +267,7 @@ namespace Demos.SpecializedTests
 
             const int planeWidth = 50;
             const int planeHeight = 50;
-            MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
+            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
                     var octave0 = (MathF.Sin((x + 5f) * 0.05f) + MathF.Sin((y + 11) * 0.05f)) * 3f;

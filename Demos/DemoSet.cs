@@ -49,7 +49,6 @@ namespace Demos
             AddOption<RagdollDemo>();
             AddOption<CharacterDemo>();
             AddOption<CompoundTestDemo>();
-            AddOption<MeshDemo>();
             AddOption<ClothDemo>();
             AddOption<NewtDemo>();
             AddOption<PlanetDemo>();

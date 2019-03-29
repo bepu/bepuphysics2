@@ -101,7 +101,7 @@ namespace Demos.Demos
 
             const int planeWidth = 64;
             const int planeHeight = 64;
-            MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
+            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
                     return new Vector3(x, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y);
@@ -280,7 +280,7 @@ namespace Demos.Demos
 
             const int planeWidth = 3;
             const int planeHeight = 3;
-            MeshDemo.CreateDeformedPlane(planeWidth, planeHeight,
+            DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
                     return new Vector3(x - 1.5f, 0.1f * MathF.Cos(x) * MathF.Sin(y), y - 1.5f);

@@ -328,9 +328,9 @@ namespace BepuPhysics.Collidables
                 if (triangleIndex < mesh.Triangles.Length)
                 {
                     ref var triangle = ref mesh.Triangles[triangleIndex++];
-                    a = triangle.A;
-                    b = triangle.B;
-                    c = triangle.C;
+                    a = triangle.A * mesh.scale;
+                    b = triangle.B * mesh.scale;
+                    c = triangle.C * mesh.scale;
                     return true;
                 }
                 a = default;
@@ -346,17 +346,21 @@ namespace BepuPhysics.Collidables
         /// <param name="newCenter">New center that all points will be made relative to.</param>
         public unsafe void Recenter(in Vector3 newCenter)
         {
-            Vector3Wide.Broadcast(newCenter, out var v);
+            var scaledOffset = newCenter * inverseScale;
             for (int i = 0; i < Triangles.Length; ++i)
             {
                 ref var triangle = ref Triangles[i];
-                triangle.A -= newCenter;
-                triangle.B -= newCenter;
-                triangle.C -= newCenter;
-                ref var leaf = ref Tree.Leaves[i];
-                ref var child = ref (&Tree.nodes[leaf.NodeIndex].A)[leaf.ChildIndex];
-                child.Min -= newCenter;
-                child.Max -= newCenter;
+                triangle.A -= scaledOffset;
+                triangle.B -= scaledOffset;
+                triangle.C -= scaledOffset;
+            }
+            for (int i = 0; i < Tree.NodeCount; ++i)
+            {
+                ref var node = ref Tree.nodes[i];
+                node.A.Min -= scaledOffset;
+                node.A.Max -= scaledOffset;
+                node.B.Min -= scaledOffset;
+                node.B.Max -= scaledOffset;
             }
         }
 
@@ -446,7 +450,7 @@ namespace BepuPhysics.Collidables
             inertia.InverseMass = 1f / mass;
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
         }
-        
+
         /// <summary>
         /// Computes the center of mass of the mesh.
         /// Assumes the mesh is open and should be treated as a triangle soup.
