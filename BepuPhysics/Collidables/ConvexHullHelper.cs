@@ -791,5 +791,31 @@ namespace BepuPhysics.Collidables
                 GatherScatter.GetFirst(ref boundingOffsetBundle.Offset) = Vector3.Dot(facePivot, faceNormal);
             }
         }
+
+        /// <summary>
+        /// Creates a convex hull shape out of an input point set.
+        /// </summary>
+        /// <param name="points">Points to use to create the hull.</param>
+        /// <param name="pool">Buffer pool used for temporary allocations and the output data structures.</param>
+        /// <param name="hullData">Intermediate hull data that got processed into the convex hull.</param>
+        /// <param name="convexHull">Convex hull shape of the input point set.</param>
+        public static void CreateShape(Buffer<Vector3> points, BufferPool pool, out HullData hullData, out ConvexHull convexHull)
+        {
+            ComputeHull(points, pool, out hullData);
+            ProcessHull(points, hullData, pool, out convexHull);
+        }
+
+        /// <summary>
+        /// Creates a convex hull shape out of an input point set.
+        /// </summary>
+        /// <param name="points">Points to use to create the hull.</param>
+        /// <param name="pool">Buffer pool used for temporary allocations and the output data structures.</param>
+        /// <param name="convexHull">Convex hull shape of the input point set.</param>
+        public static void CreateShape(Buffer<Vector3> points, BufferPool pool, out ConvexHull convexHull)
+        {
+            ComputeHull(points, pool, out var hullData);
+            ProcessHull(points, hullData, pool, out convexHull);
+            hullData.Dispose(pool);
+        }
     }
 }

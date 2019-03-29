@@ -57,12 +57,8 @@ namespace Demos.SpecializedTests
             var end = Stopwatch.GetTimestamp();
             Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
 
-            ConvexHullHelper.ComputeHull(pointsBuffer, BufferPool, out hullData);
+            ConvexHullHelper.CreateShape(pointsBuffer, BufferPool, out var hullShape);
 
-            ConvexHullHelper.ProcessHull(pointsBuffer, hullData, BufferPool, out var hullShape);
-            hullData.Dispose(BufferPool);
-
-            hullShape.ComputeCenterOfMass(out var volume, out var center0);
             hullShape.ComputeInertia(1, out var inertia, out var center);
 
             Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new CollidableDescription(Simulation.Shapes.Add(hullShape), 0.1f), new BodyActivityDescription(0.01f)));
