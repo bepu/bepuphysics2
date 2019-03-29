@@ -98,51 +98,12 @@ namespace BepuPhysics.Collidables
             return false;
         }
 
+        
         public void ComputeInertia(float mass, out BodyInertia inertia)
         {
-            //This follows the same logic as the tetrahedral inertia tensor calculation, but the transform is different.
-            //There are only two dimensions of interest, but if we wanted to express it as a 3x3 linear transform:
-            // [ B - A ]
-            // [   N   ]
-            // [ C - A ]
-            //where N = (ab x ac) / ||ab x ac||.
-            //In other words, this transform maintains the plane normal such that you can compute the scaled triangle area using (ab x ac) * N.
-            //In practice, that normal won't actually appear in our calculations because we were given the mass explicitly rather than integrating it from density across the area.
-            //So, putting that together and assuming the scaling term is pulled out, here's a chunk of code you can plop into wolfram cloud and whatnot to recreate the results:
-            //f[{x_, y_, z_}] := {{y^2 + z^2, -x * y, -x * z}, {-x * y, x^2 + z^2, -y * z}, {-x * z, -y * z, x^2 + y^2}}
-            //a = { ax, ay, az };
-            //b = { bx, by, bz };
-            //c = { cx, cy, cz };
-            //ab = b - a;
-            //ac = c - a;
-            //n = Cross[ab, ac] / Length[Cross[ab, ac]];
-            //A = { ab, n, ac };
-            //result = Integrate[Integrate[f[{ i, 0, k}.A + a], {k, 0, 1-i}], {i, 0, 1}];
-            inertia.InverseMass = 1f / mass;
-            var ab = B - A;
-            var ac = C - A;
-            //Revisiting the determinant, note that:
-            //density * abs(determinant) = density * volume * 2 = mass * 2
-            //So there's no need to actually compute the determinant/area since we were given the mass directly.
-            var diagonalScaling = mass * (2f / 12f);
-            Symmetric3x3 inertiaTensor;
-            inertiaTensor.XX = diagonalScaling * (
-                A.Y * A.Y + A.Z * A.Z + B.Y * B.Y + B.Z * B.Z + C.Y * C.Y + C.Z * C.Z +
-                A.Y * B.Y + A.Z * B.Z + A.Y * C.Y + B.Y * C.Y + A.Z * C.Z + B.Z * C.Z);
-            inertiaTensor.YY = diagonalScaling * (
-                A.X * A.X + A.Z * A.Z + B.X * B.X + B.Z * B.Z + C.X * C.X + C.Z * C.Z +
-                A.X * B.X + A.Z * B.Z + A.X * C.X + B.X * C.X + A.Z * C.Z + B.Z * C.Z);
-            inertiaTensor.ZZ = diagonalScaling * (
-                A.X * A.X + A.Y * A.Y + B.X * B.X + B.Y * B.Y + C.X * C.X + C.Y * C.Y +
-                A.X * B.X + A.Y * B.Y + A.X * C.X + B.X * C.X + A.Y * C.Y + B.Y * C.Y);
-            var offScaling = mass * (2f / 24f);
-            inertiaTensor.YX = offScaling * (-A.Y * (B.X + C.X) - B.Y * (2 * B.X + C.X) - (B.X + 2 * C.X) * C.Y - A.X * (2 * A.Y + B.Y + C.Y));
-            inertiaTensor.ZX = offScaling * (-A.Z * (B.X + C.X) - B.Z * (2 * B.X + C.X) - (B.X + 2 * C.X) * C.Z - A.X * (2 * A.Z + B.Z + C.Z));
-            inertiaTensor.ZY = offScaling * (-A.Z * (B.Y + C.Y) - B.Z * (2 * B.Y + C.Y) - (B.Y + 2 * C.Y) * C.Z - A.Y * (2 * A.Z + B.Z + C.Z));
-            //TODO: Note that the above implementation isn't exactly optimal. Assuming for now that the performance isn't going to be relevant.
-            //That could change given certain convex hull use cases, but in that situation you should probably just jump to vectorizing over multiple tetrahedra at a time.
-            //(Plus some basic term caching.)
+            MeshInertiaHelper.ComputeTriangleContribution(A, B, C, mass, out var inertiaTensor);
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
+            inertia.InverseMass = 1f / mass;
         }
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)

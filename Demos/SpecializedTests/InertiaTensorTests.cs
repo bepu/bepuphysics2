@@ -227,37 +227,37 @@ namespace Demos.SpecializedTests
         {
             var random = new Random(5);
             const int shapeTrials = 64;
-            for (int i = 0; i < shapeTrials; ++i)
-            {
-                var tester = new SphereInertiaTester { Sphere = new Sphere(0.01f + (float)random.NextDouble() * 10) };
-                CheckInertia(ref tester);
-            }
-            for (int i = 0; i < shapeTrials; ++i)
-            {
-                var tester = new CapsuleInertiaTester { Capsule = new Capsule(0.01f + (float)random.NextDouble() * 10, 0.01f + (float)random.NextDouble() * 10) };
-                CheckInertia(ref tester);
-            }
-            for (int i = 0; i < shapeTrials; ++i)
-            {
-                var tester = new CylinderInertiaTester { Cylinder = new Cylinder(0.01f + (float)random.NextDouble() * 10, 0.01f + (float)random.NextDouble() * 10) };
-                CheckInertia(ref tester);
-            }
-            for (int i = 0; i < shapeTrials; ++i)
-            {
-                var tester = new BoxInertiaTester { Box = new Box(0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble()) };
-                CheckInertia(ref tester);
-            }
-            for (int i = 0; i < shapeTrials; ++i)
-            {
-                var tester = new TriangleInertiaTester
-                {
-                    Triangle = new Triangle(
-                        new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble()),
-                        new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble()),
-                        new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble())),
-                };
-                CheckInertia(ref tester);
-            }
+            //for (int i = 0; i < shapeTrials; ++i)
+            //{
+            //    var tester = new SphereInertiaTester { Sphere = new Sphere(0.01f + (float)random.NextDouble() * 10) };
+            //    CheckInertia(ref tester);
+            //}
+            //for (int i = 0; i < shapeTrials; ++i)
+            //{
+            //    var tester = new CapsuleInertiaTester { Capsule = new Capsule(0.01f + (float)random.NextDouble() * 10, 0.01f + (float)random.NextDouble() * 10) };
+            //    CheckInertia(ref tester);
+            //}
+            //for (int i = 0; i < shapeTrials; ++i)
+            //{
+            //    var tester = new CylinderInertiaTester { Cylinder = new Cylinder(0.01f + (float)random.NextDouble() * 10, 0.01f + (float)random.NextDouble() * 10) };
+            //    CheckInertia(ref tester);
+            //}
+            //for (int i = 0; i < shapeTrials; ++i)
+            //{
+            //    var tester = new BoxInertiaTester { Box = new Box(0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble(), 0.01f + 10 * (float)random.NextDouble()) };
+            //    CheckInertia(ref tester);
+            //}
+            //for (int i = 0; i < shapeTrials; ++i)
+            //{
+            //    var tester = new TriangleInertiaTester
+            //    {
+            //        Triangle = new Triangle(
+            //            new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble()),
+            //            new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble()),
+            //            new Vector3(-2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble(), -2 + 4 * (float)random.NextDouble())),
+            //    };
+            //    CheckInertia(ref tester);
+            //}
             var pool = new BufferPool();
             for (int i = 0; i < shapeTrials; ++i)
             {

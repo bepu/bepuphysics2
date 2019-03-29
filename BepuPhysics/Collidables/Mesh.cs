@@ -311,6 +311,109 @@ namespace BepuPhysics.Collidables
             Tree.Sweep(scaledMin, scaledMax, scaledSweep, maximumT, ref enumerator);
         }
 
+        public struct MeshTriangleSource : ITriangleSource
+        {
+            Mesh mesh;
+            int triangleIndex;
+
+            public MeshTriangleSource(in Mesh mesh)
+            {
+                this.mesh = mesh;
+                triangleIndex = 0;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool GetNextTriangle(out Vector3 a, out Vector3 b, out Vector3 c)
+            {
+                if (triangleIndex < mesh.Triangles.Length)
+                {
+                    ref var triangle = ref mesh.Triangles[triangleIndex++];
+                    a = triangle.A;
+                    b = triangle.B;
+                    c = triangle.C;
+                    return true;
+                }
+                a = default;
+                b = default;
+                c = default;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Subtracts the newCenter from all points in the mesh hull.
+        /// </summary>
+        /// <param name="newCenter">New center that all points will be made relative to.</param>
+        public unsafe void Recenter(in Vector3 newCenter)
+        {
+            Vector3Wide.Broadcast(newCenter, out var v);
+            for (int i = 0; i < Triangles.Length; ++i)
+            {
+                ref var triangle = ref Triangles[i];
+                triangle.A -= newCenter;
+                triangle.B -= newCenter;
+                triangle.C -= newCenter;
+                ref var leaf = ref Tree.Leaves[i];
+                ref var child = ref (&Tree.nodes[leaf.NodeIndex].A)[leaf.ChildIndex];
+                child.Min -= newCenter;
+                child.Max -= newCenter;
+            }
+        }
+
+        /// <summary>
+        /// Computes the inertia of the mesh around its volumetric center and recenters the points of the mesh around it.
+        /// Assumes the mesh is closed and should be treated as solid.
+        /// </summary>
+        /// <param name="mass">Mass to scale the inertia tensor with.</param>
+        /// <param name="inertia">Inertia tensor of the closed mesh.</param>
+        /// <param name="center">Center of the closed mesh.</param>
+        public void ComputeClosedInertia(float mass, out BodyInertia inertia, out Vector3 center)
+        {
+            var triangleSource = new MeshTriangleSource(this);
+            MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor, out center);
+            MeshInertiaHelper.GetInertiaOffset(mass, center, out var inertiaOffset);
+            Symmetric3x3.Add(inertiaTensor, inertiaOffset, out var recenteredInertia);
+            Recenter(center);
+            Symmetric3x3.Invert(recenteredInertia, out inertia.InverseInertiaTensor);
+            inertia.InverseMass = 1f / mass;
+        }
+
+        /// <summary>
+        /// Computes the inertia of the mesh.
+        /// Assumes the mesh is closed and should be treated as solid.
+        /// </summary>
+        /// <param name="mass">Mass to scale the inertia tensor with.</param>
+        /// <param name="inertia">Inertia of the closed mesh.</param>
+        public void ComputeClosedInertia(float mass, out BodyInertia inertia)
+        {
+            var triangleSource = new MeshTriangleSource(this);
+            MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor);
+            inertia.InverseMass = 1f / mass;
+            Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
+        }
+
+        /// <summary>
+        /// Computes the volume and center of mass of the mesh. Assumes the mesh is closed and should be treated as solid.
+        /// </summary>
+        /// <param name="volume">Volume of the closed mesh.</param>
+        /// <param name="center">Center of mass of the closed mesh.</param>
+        public void ComputeClosedCenterOfMass(out float volume, out Vector3 center)
+        {
+            var triangleSource = new MeshTriangleSource(this);
+            MeshInertiaHelper.ComputeClosedCenterOfMass(ref triangleSource, out volume, out center);
+        }
+
+        /// <summary>
+        /// Computes the center of mass of the mesh.
+        /// Assumes the mesh is closed and should be treated as solid.
+        /// </summary>
+        /// <returns>Center of mass of the closed mesh.</returns>
+        public Vector3 ComputeClosedCenterOfMass()
+        {
+            var triangleSource = new MeshTriangleSource(this);
+            MeshInertiaHelper.ComputeClosedCenterOfMass(ref triangleSource, out _, out var center);
+            return center;
+        }
 
         public void Dispose(BufferPool bufferPool)
         {
