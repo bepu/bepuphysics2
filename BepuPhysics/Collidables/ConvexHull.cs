@@ -458,23 +458,28 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeLocalSupport(in ConvexHullWide shape, in Vector3Wide direction, out Vector3Wide support)
         {
+            Helpers.FillVectorWithLaneIndices(out var indexOffsets);
             for (int i = 0; i < Vector<float>.Count; ++i)
             {
                 ref var hull = ref shape.Hulls[i];
+                //Not every slot is guaranteed to be filled.
+                if (!hull.Points.Allocated)
+                    continue;
                 Vector3Wide.Rebroadcast(direction, i, out var slotDirection);
-                var slotSupport = hull.Points[0];
-                Vector3Wide.Dot(slotDirection, slotSupport, out var dot);
+                var bestIndices = indexOffsets;
+                Vector3Wide.Dot(slotDirection, hull.Points[0], out var dot);
                 for (int j = 1; j < hull.Points.Length; ++j)
                 {
                     ref var candidate = ref hull.Points[j];
                     Vector3Wide.Dot(slotDirection, candidate, out var dotCandidate);
-                    dot = Vector.Max(dot, dotCandidate);
-                    Vector3Wide.ConditionalSelect(Vector.GreaterThan(dotCandidate, dot), candidate, slotSupport, out slotSupport);
+                    var useCandidate = Vector.GreaterThan(dotCandidate, dot);
+                    bestIndices = Vector.ConditionalSelect(useCandidate, indexOffsets + new Vector<int>(j << BundleIndexing.VectorShift), bestIndices);
+                    dot = Vector.ConditionalSelect(useCandidate, dotCandidate, dot);
                 }
 
                 var bestSlotIndex = 0;
                 var bestSlotDot = dot[0];
-                for (int j = 1; i < Vector<float>.Count; ++j)
+                for (int j = 1; j < Vector<float>.Count; ++j)
                 {
                     var candidate = dot[j];
                     if (candidate > bestSlotDot)
@@ -483,7 +488,9 @@ namespace BepuPhysics.Collidables
                         bestSlotIndex = j;
                     }
                 }
-                Vector3Wide.CopySlot(ref slotSupport, bestSlotIndex, ref support, i);
+                BundleIndexing.GetBundleIndices(bestIndices[bestSlotIndex], out var bundleIndex, out var innerIndex);
+                Vector3Wide.ReadSlot(ref hull.Points[bundleIndex], innerIndex, out var bestSupport);
+                Vector3Wide.WriteSlot(bestSupport, i, ref support);
             }
         }
 

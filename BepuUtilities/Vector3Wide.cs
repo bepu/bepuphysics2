@@ -347,7 +347,7 @@ namespace BepuUtilities
         public static void CopySlot(ref Vector3Wide source, int sourceSlotIndex, ref Vector3Wide target, int targetSlotIndex)
         {
             ref var sourceSlot = ref GatherScatter.GetOffsetInstance(ref source, sourceSlotIndex);
-            ref var targetSlot = ref GatherScatter.GetOffsetInstance(ref target, sourceSlotIndex);
+            ref var targetSlot = ref GatherScatter.GetOffsetInstance(ref target, targetSlotIndex);
             GatherScatter.GetFirst(ref targetSlot.X) = sourceSlot.X[0];
             GatherScatter.GetFirst(ref targetSlot.Y) = sourceSlot.Y[0];
             GatherScatter.GetFirst(ref targetSlot.Z) = sourceSlot.Z[0];

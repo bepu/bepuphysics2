@@ -2,6 +2,7 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuUtilities;
+using BepuUtilities.Collections;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
@@ -23,6 +24,8 @@ namespace Demos.Demos
                 return true;
             }
         }
+
+        ConvexHull hull;
 
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
@@ -85,6 +88,16 @@ namespace Demos.Demos
                 }
             }
 
+            //Don't really want to regenerate a convex hull every frame; just cache one out.
+            const int pointCount = 32;
+            var points = new QuickList<Vector3>(pointCount, BufferPool);
+            var random = new Random(5);
+            for (int i = 0; i < pointCount; ++i)
+            {
+                points.AllocateUnsafely() = new Vector3((float)random.NextDouble() - 0.5f,  (float)random.NextDouble() - 0.5f, (float)random.NextDouble() - 0.5f);
+            }
+            ConvexHullHelper.CreateShape(points.Span.Slice(0, points.Count), BufferPool, out hull);
+            points.Dispose(BufferPool);
 
             //var staticShapeIndex = Simulation.Shapes.Add(new Box(100, 1, 100));
             //var staticDescription = new StaticDescription
@@ -295,49 +308,60 @@ namespace Demos.Demos
             var position = new Vector3(-90, 60, -75);
             StandardTestSweep(new Sphere(0.5f), new Sphere(.25f), ref position, worldA, worldB, renderer);
             StandardTestSweep(new Sphere(0.5f), new Capsule(.25f, 1f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Sphere(0.5f), new Cylinder(.25f, 1f), ref position, worldA, worldB, renderer);
             StandardTestSweep(new Sphere(0.5f), new Box(.5f, 1f, 1.5f), ref position, worldA, worldB, renderer);
             StandardTestSweep(new Sphere(0.5f), triangle, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Sphere(0.5f), new Cylinder(.25f, 1f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Sphere(0.5f), hull, ref position, worldA, worldB, renderer);
             StandardTestSweep(new Sphere(0.5f), compound, ref position, worldA, worldB, renderer);
             StandardTestSweep(new Sphere(0.5f), bigCompound, ref position, worldA, worldB, renderer);
             StandardTestSweep(new Sphere(0.5f), mesh, ref position, worldA, worldB, renderer);
 
             position = new Vector3(-60, 60, -75);
-            StandardTestSweep(new Capsule(0.5f, 0.5f), new Capsule(.25f, 1.5f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Capsule(0.5f, 0.5f), new Cylinder(.25f, 1.5f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Capsule(0.5f, 1), new Capsule(.25f, 1.5f), ref position, worldA, worldB, renderer);
             StandardTestSweep(new Capsule(0.5f, 1), new Box(.5f, 1f, 1.5f), ref position, worldA, worldB, renderer);
             StandardTestSweep(new Capsule(0.5f, 1), triangle, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Capsule(0.5f, 1), new Cylinder(.25f, 1.5f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Capsule(0.5f, 1), hull, ref position, worldA, worldB, renderer);
             StandardTestSweep(new Capsule(0.5f, 1), compound, ref position, worldA, worldB, renderer);
             StandardTestSweep(new Capsule(0.5f, 1), bigCompound, ref position, worldA, worldB, renderer);
             StandardTestSweep(new Capsule(0.5f, 1), mesh, ref position, worldA, worldB, renderer);
 
             position = new Vector3(-30, 60, -75);
-            StandardTestSweep(new Cylinder(0.5f, 0.5f), new Cylinder(.25f, 1.5f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Cylinder(0.5f, 1), new Box(.5f, 1f, 1.5f), ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Cylinder(0.5f, 1), triangle, ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Cylinder(0.5f, 1), compound, ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Cylinder(0.5f, 1), bigCompound, ref position, worldA, worldB, renderer);
-            StandardTestSweep(new Cylinder(0.5f, 1), mesh, ref position, worldA, worldB, renderer);
-
-            position = new Vector3(0, 60, -75);
             StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), new Box(.5f, 1f, 1.5f), ref position, worldA, worldB, renderer);
             StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), triangle, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), new Cylinder(.25f, 1.5f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), hull, ref position, worldA, worldB, renderer);
             StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), compound, ref position, worldA, worldB, renderer);
             StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), bigCompound, ref position, worldA, worldB, renderer);
             StandardTestSweep(new Box(0.5f, 0.5f, 0.5f), mesh, ref position, worldA, worldB, renderer);
 
-            position = new Vector3(30, 60, -75);
+            position = new Vector3(0, 60, -75);
             StandardTestSweep(triangle, triangle, ref position, worldA, worldB, renderer);
+            StandardTestSweep(triangle, new Cylinder(0.5f, 1), ref position, worldA, worldB, renderer);
+            StandardTestSweep(triangle, hull, ref position, worldA, worldB, renderer);
             StandardTestSweep(triangle, compound, ref position, worldA, worldB, renderer);
             StandardTestSweep(triangle, bigCompound, ref position, worldA, worldB, renderer);
             StandardTestSweep(triangle, mesh, ref position, worldA, worldB, renderer);
 
+            position = new Vector3(30, 60, -75);
+            StandardTestSweep(new Cylinder(0.5f, 1), new Cylinder(.25f, 1.5f), ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Cylinder(0.5f, 1), hull, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Cylinder(0.5f, 1), compound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Cylinder(0.5f, 1), bigCompound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(new Cylinder(0.5f, 1), mesh, ref position, worldA, worldB, renderer);
+
             position = new Vector3(60, 60, -75);
+            StandardTestSweep(hull, hull, ref position, worldA, worldB, renderer);
+            StandardTestSweep(hull, compound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(hull, bigCompound, ref position, worldA, worldB, renderer);
+            StandardTestSweep(hull, mesh, ref position, worldA, worldB, renderer);
+
+            position = new Vector3(90, 60, -75);
             StandardTestSweep(compound, compound, ref position, worldA, worldB, renderer);
             StandardTestSweep(compound, bigCompound, ref position, worldA, worldB, renderer);
             StandardTestSweep(compound, mesh, ref position, worldA, worldB, renderer);
 
-            position = new Vector3(90, 60, -75);
+            position = new Vector3(120, 60, -75);
             StandardTestSweep(bigCompound, bigCompound, ref position, worldA, worldB, renderer);
             StandardTestSweep(bigCompound, mesh, ref position, worldA, worldB, renderer);
 

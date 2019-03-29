@@ -282,6 +282,17 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //TODO: Would be nice to get rid of this pointless zero init (if the compiler doesn't eventually get rid of it).
             var wideA = default(TShapeWideA);
             var wideB = default(TShapeWideB);
+            //TODO: Check to make sure the JIT omits the branch.
+            if (wideA.InternalAllocationSize > 0)
+            {
+                var memory = stackalloc byte[wideA.InternalAllocationSize];
+                wideA.Initialize(new RawBuffer(memory, wideA.InternalAllocationSize));
+            }
+            if (wideB.InternalAllocationSize > 0)
+            {
+                var memory = stackalloc byte[wideB.InternalAllocationSize];
+                wideB.Initialize(new RawBuffer(memory, wideB.InternalAllocationSize));
+            }
             wideA.Broadcast(shapeA);
             wideB.Broadcast(shapeB);
             var pairTester = default(TPairDistanceTester);
