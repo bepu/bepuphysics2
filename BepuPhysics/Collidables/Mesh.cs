@@ -415,6 +415,53 @@ namespace BepuPhysics.Collidables
             return center;
         }
 
+        /// <summary>
+        /// Computes the inertia of the mesh around its volumetric center and recenters the points of the mesh around it.
+        /// Assumes the mesh is open and should be treated as a triangle soup.
+        /// </summary>
+        /// <param name="mass">Mass to scale the inertia tensor with.</param>
+        /// <param name="inertia">Inertia tensor of the closed mesh.</param>
+        /// <param name="center">Center of the open mesh.</param>
+        public void ComputeOpenInertia(float mass, out BodyInertia inertia, out Vector3 center)
+        {
+            var triangleSource = new MeshTriangleSource(this);
+            MeshInertiaHelper.ComputeOpenInertia(ref triangleSource, mass, out var inertiaTensor, out center);
+            MeshInertiaHelper.GetInertiaOffset(mass, center, out var inertiaOffset);
+            Symmetric3x3.Add(inertiaTensor, inertiaOffset, out var recenteredInertia);
+            Recenter(center);
+            Symmetric3x3.Invert(recenteredInertia, out inertia.InverseInertiaTensor);
+            inertia.InverseMass = 1f / mass;
+        }
+
+        /// <summary>
+        /// Computes the inertia of the mesh.
+        /// Assumes the mesh is open and should be treated as a triangle soup.
+        /// </summary>
+        /// <param name="mass">Mass to scale the inertia tensor with.</param>
+        /// <param name="inertia">Inertia of the open mesh.</param>
+        public void ComputeOpenInertia(float mass, out BodyInertia inertia)
+        {
+            var triangleSource = new MeshTriangleSource(this);
+            MeshInertiaHelper.ComputeOpenInertia(ref triangleSource, mass, out var inertiaTensor);
+            inertia.InverseMass = 1f / mass;
+            Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
+        }
+        
+        /// <summary>
+        /// Computes the center of mass of the mesh.
+        /// Assumes the mesh is open and should be treated as a triangle soup.
+        /// </summary>
+        /// <returns>Center of mass of the open mesh.</returns>
+        public Vector3 ComputeOpenCenterOfMass()
+        {
+            var triangleSource = new MeshTriangleSource(this);
+            return MeshInertiaHelper.ComputeOpenCenterOfMass(ref triangleSource);
+        }
+
+        /// <summary>
+        /// Returns the mesh's resources to a buffer pool.
+        /// </summary>
+        /// <param name="bufferPool">Pool to return the mesh's resources to.</param>
         public void Dispose(BufferPool bufferPool)
         {
             bufferPool.Return(ref Triangles);
