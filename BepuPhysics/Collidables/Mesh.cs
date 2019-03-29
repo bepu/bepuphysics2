@@ -102,9 +102,9 @@ namespace BepuPhysics.Collidables
         {
             //This inserts a triangle into the first slot of the given wide instance.
             ref var source = ref Triangles[triangleIndex];
-            Vector3Wide.WriteFirst(source.A, ref target.A);
-            Vector3Wide.WriteFirst(source.B, ref target.B);
-            Vector3Wide.WriteFirst(source.C, ref target.C);
+            Vector3Wide.WriteFirst(source.A * scale, ref target.A);
+            Vector3Wide.WriteFirst(source.B * scale, ref target.B);
+            Vector3Wide.WriteFirst(source.C * scale, ref target.C);
         }
 
         public void ComputeBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max)
