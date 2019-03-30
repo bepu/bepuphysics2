@@ -12,7 +12,7 @@ To build the source, you'll need a recent version of Visual Studio with the .NET
 
 ## Features
 
-- Spheres, capsules, boxes, triangles
+- Spheres, capsules, boxes, triangles, cylinders
 - Compounds of the above
 - Meshes
 - A [whole bunch of constraint types](BepuPhysics/Constraints/)
@@ -27,8 +27,7 @@ To build the source, you'll need a recent version of Visual Studio with the .NET
 - And a bunch of other miscellaneous stuff!
 
 It notably does *not* yet include:
-- Convex hulls, cylinders, or other more general convexes
-- Bounciness, other than the frequency/damping ratio tuning
+- Convex hulls that actually collide with things
 
 ## Links
 

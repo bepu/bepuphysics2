@@ -40,7 +40,6 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<MeshTestDemo>();
             AddOption<ConvexHullTestDemo>();
             AddOption<CarDemo>();
             AddOption<CylinderTestDemo>();
