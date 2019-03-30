@@ -643,7 +643,7 @@ namespace BepuPhysics.Collidables
                     if (edgeFaceCounts.GetTableIndices(ref nextEdgeToTest.Endpoints, out var tableIndex, out var elementIndex))
                     {
                         ref var edgeFaceCount = ref edgeFaceCounts.Values[elementIndex];
-                         //Debug.Assert(edgeFaceCount == 1, 
+                        //Debug.Assert(edgeFaceCount == 1, 
                         //    "While we let execution continue, this is an error condition and implies overlapping triangles are being generated." + 
                         //    "This tends to happen when there are many near-coplanar vertices, so numerical tolerances across different faces cannot consistently agree.");
                         ++edgeFaceCount;
@@ -711,25 +711,76 @@ namespace BepuPhysics.Collidables
             earlyFaceStartIndices.Dispose(pool);
         }
 
+        public struct RawHullTriangleSource : ITriangleSource
+        {
+            Buffer<Vector3> points;
+            HullData hullData;
+            int faceIndex;
+            int subtriangleIndex;
 
+            public RawHullTriangleSource(in Buffer<Vector3> points, in HullData hullData)
+            {
+                this.points = points;
+                this.hullData = hullData;
+                faceIndex = 0;
+                subtriangleIndex = 2;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool GetNextTriangle(out Vector3 a, out Vector3 b, out Vector3 c)
+            {
+                //This isn't quite as direct or fast as it could be, but it's fairly simple without requiring a redundant implementation.
+                if (faceIndex < hullData.FaceStartIndices.Length)
+                {
+                    hullData.GetFace(faceIndex, out var face);
+                    a = points[face[0]];
+                    b = points[face[subtriangleIndex - 1]];
+                    c = points[face[subtriangleIndex]];
+                    ++subtriangleIndex;
+                    if (subtriangleIndex == face.VertexIndices.Length)
+                    {
+                        subtriangleIndex = 2;
+                        ++faceIndex;
+                    }
+                    return true;
+                }
+                a = default;
+                b = default;
+                c = default;
+                return false;
+            }
+        }
 
         /// <summary>
-        /// Processes raw hull data into a runtime usable convex hull shape.
+        /// Processes hull data into a runtime usable convex hull shape. Recenters the convex hull's points around its center of mass.
         /// </summary>
         /// <param name="points">Point array into which the hull data indexes.</param>
         /// <param name="hullData">Raw input data to process.</param>
         /// <param name="pool">Pool used to allocate resources for the hullShape.</param>
         /// <param name="hullShape">Convex hull shape created from the input data.</param>
-        public static void ProcessHull(Buffer<Vector3> points, HullData hullData, BufferPool pool, out ConvexHull hullShape)
+        /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
+        public static void CreateShape(Buffer<Vector3> points, HullData hullData, BufferPool pool, out Vector3 center, out ConvexHull hullShape)
         {
             if (hullData.OriginalVertexMapping.Length < 3)
             {
                 hullShape = default;
+                center = default;
+                if (hullData.OriginalVertexMapping.Length > 0)
+                {
+                    for (int i = 0; i < hullData.OriginalVertexMapping.Length; ++i)
+                    {
+                        center += points[hullData.OriginalVertexMapping[i]];
+                    }
+                    center /= hullData.OriginalVertexMapping.Length;
+                }
                 return;
             }
             var pointBundleCount = BundleIndexing.GetBundleCount(hullData.OriginalVertexMapping.Length);
             pool.Take(pointBundleCount, out hullShape.Points);
             hullShape.Points.Slice(0, pointBundleCount, out hullShape.Points);
+
+            var triangleSource = new RawHullTriangleSource(points, hullData);
+            MeshInertiaHelper.ComputeClosedCenterOfMass(ref triangleSource, out _, out center);
 
             var lastIndex = hullData.OriginalVertexMapping.Length - 1;
             for (int bundleIndex = 0; bundleIndex < hullShape.Points.Length; ++bundleIndex)
@@ -742,7 +793,7 @@ namespace BepuPhysics.Collidables
                     if (index > lastIndex)
                         index = lastIndex;
                     ref var point = ref points[hullData.OriginalVertexMapping[index]];
-                    Vector3Wide.WriteSlot(point, innerIndex, ref bundle);
+                    Vector3Wide.WriteSlot(point - center, innerIndex, ref bundle);
                 }
             }
 
@@ -793,28 +844,30 @@ namespace BepuPhysics.Collidables
         }
 
         /// <summary>
-        /// Creates a convex hull shape out of an input point set.
+        /// Creates a convex hull shape out of an input point set. Recenters the convex hull's points around its center of mass.
         /// </summary>
         /// <param name="points">Points to use to create the hull.</param>
         /// <param name="pool">Buffer pool used for temporary allocations and the output data structures.</param>
         /// <param name="hullData">Intermediate hull data that got processed into the convex hull.</param>
+        /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
         /// <param name="convexHull">Convex hull shape of the input point set.</param>
-        public static void CreateShape(Buffer<Vector3> points, BufferPool pool, out HullData hullData, out ConvexHull convexHull)
+        public static void CreateShape(Buffer<Vector3> points, BufferPool pool, out HullData hullData, out Vector3 center, out ConvexHull convexHull)
         {
             ComputeHull(points, pool, out hullData);
-            ProcessHull(points, hullData, pool, out convexHull);
+            CreateShape(points, hullData, pool, out center, out convexHull);
         }
 
         /// <summary>
-        /// Creates a convex hull shape out of an input point set.
+        /// Creates a convex hull shape out of an input point set. Recenters the convex hull's points around its center of mass.
         /// </summary>
         /// <param name="points">Points to use to create the hull.</param>
         /// <param name="pool">Buffer pool used for temporary allocations and the output data structures.</param>
+        /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
         /// <param name="convexHull">Convex hull shape of the input point set.</param>
-        public static void CreateShape(Buffer<Vector3> points, BufferPool pool, out ConvexHull convexHull)
+        public static void CreateShape(Buffer<Vector3> points, BufferPool pool, out Vector3 center, out ConvexHull convexHull)
         {
             ComputeHull(points, pool, out var hullData);
-            ProcessHull(points, hullData, pool, out convexHull);
+            CreateShape(points, hullData, pool, out center, out convexHull);
             hullData.Dispose(pool);
         }
     }

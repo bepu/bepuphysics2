@@ -169,68 +169,7 @@ namespace BepuPhysics.Collidables
                 c = default;
                 return false;
             }
-        }
-
-        /// <summary>
-        /// Subtracts the newCenter from all points in the convex hull.
-        /// </summary>
-        /// <param name="newCenter">New center that all points will be made relative to.</param>
-        public void Recenter(in Vector3 newCenter)
-        {
-            Vector3Wide.Broadcast(newCenter, out var v);
-            for (int i = 0; i < Points.Length; ++i)
-            {
-                ref var p = ref Points[i];
-                Vector3Wide.Subtract(p, v, out p);
-            }
-
-            for (int i = 0; i < BoundingPlanes.Length; ++i)
-            {
-                ref var plane = ref BoundingPlanes[i];
-                Vector3Wide.Dot(plane.Normal, v, out var dot);
-                plane.Offset -= dot;
-            }
-        }
-
-        /// <summary>
-        /// Computes the inertia of the convex hull around its volumetric center and recenters the points of the convex hull around it.
-        /// </summary>
-        /// <param name="mass">Mass to scale the inertia tensor with.</param>
-        /// <param name="inertia">Inertia tensor of the convex hull.</param>
-        /// <param name="center">Center of the hull.</param>
-        public void ComputeInertia(float mass, out BodyInertia inertia, out Vector3 center)
-        {
-            var triangleSource = new ConvexHullTriangleSource(this);
-            MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor, out center);
-            MeshInertiaHelper.GetInertiaOffset(mass, center, out var inertiaOffset);
-            Symmetric3x3.Add(inertiaTensor, inertiaOffset, out var recenteredInertia);
-            Recenter(center);
-            Symmetric3x3.Invert(recenteredInertia, out inertia.InverseInertiaTensor);
-            inertia.InverseMass = 1f / mass;
-        }
-
-        /// <summary>
-        /// Computes the volume and center of mass of the convex hull.
-        /// </summary>
-        /// <param name="volume">Volume of the convex hull.</param>
-        /// <param name="center">Center of mass of the convex hull.</param>
-        public void ComputeCenterOfMass(out float volume, out Vector3 center)
-        {
-            var triangleSource = new ConvexHullTriangleSource(this);
-            MeshInertiaHelper.ComputeClosedCenterOfMass(ref triangleSource, out volume, out center);
-        }
-
-        /// <summary>
-        /// Computes the center of mass of the convex hull.
-        /// </summary>
-        /// <returns>Center of mass of the convex hull.</returns>
-        public Vector3 ComputeCenterOfMass()
-        {
-            var triangleSource = new ConvexHullTriangleSource(this);
-            MeshInertiaHelper.ComputeClosedCenterOfMass(ref triangleSource, out _, out var center);
-            return center;
-        }
-
+        }      
 
         /// <summary>
         /// Computes the inertia of the convex hull.

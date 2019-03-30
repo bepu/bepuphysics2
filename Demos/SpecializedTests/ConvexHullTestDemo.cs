@@ -45,21 +45,19 @@ namespace Demos.SpecializedTests
             }
 
             var pointsBuffer = points.Span.Slice(0, points.Count);
-            ConvexHullHelper.ComputeHull(pointsBuffer, BufferPool, out var hullData);
-            hullData.Dispose(BufferPool);
+            ConvexHullHelper.CreateShape(pointsBuffer, BufferPool, out _, out var hullShape);
             const int iterationCount = 100;
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < iterationCount; ++i)
             {
-                ConvexHullHelper.ComputeHull(pointsBuffer, BufferPool, out hullData);
-                hullData.Dispose(BufferPool);
+                ConvexHullHelper.CreateShape(pointsBuffer, BufferPool, out _, out var perfTestShape);
+                perfTestShape.Dispose(BufferPool);
             }
             var end = Stopwatch.GetTimestamp();
             Console.WriteLine($"Hull computation time (us): {(end - start) * 1e6 / (iterationCount * Stopwatch.Frequency)}");
 
-            ConvexHullHelper.CreateShape(pointsBuffer, BufferPool, out var hullShape);
 
-            hullShape.ComputeInertia(1, out var inertia, out var center);
+            hullShape.ComputeInertia(1, out var inertia);
 
             Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new CollidableDescription(Simulation.Shapes.Add(hullShape), 0.1f), new BodyActivityDescription(0.01f)));
         }
