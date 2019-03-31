@@ -62,7 +62,7 @@ namespace Demos.SpecializedTests
             Vector3Wide.Subtract(extremeA, extremeB, out support);
         }
 
-        public static Buffer<LineInstance> CreateLines<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB>(
+        public unsafe static Buffer<LineInstance> CreateLines<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB>(
             in TShapeA a, in TShapeB b, in RigidPose poseA, in RigidPose poseB, int sampleCount,
             float lineLength, in Vector3 lineColor,
             float originLength, in Vector3 originColor, in Vector3 backgroundColor, in Vector3 basePosition, BufferPool pool)
@@ -75,6 +75,16 @@ namespace Demos.SpecializedTests
         {
             var aWide = default(TShapeWideA);
             var bWide = default(TShapeWideB);
+            if(aWide.InternalAllocationSize > 0)
+            {
+                var memory = stackalloc byte[aWide.InternalAllocationSize];
+                aWide.Initialize(new RawBuffer(memory, aWide.InternalAllocationSize));
+            }
+            if (bWide.InternalAllocationSize > 0)
+            {
+                var memory = stackalloc byte[bWide.InternalAllocationSize];
+                bWide.Initialize(new RawBuffer(memory, bWide.InternalAllocationSize));
+            }
             aWide.Broadcast(a);
             bWide.Broadcast(b);
             var worldOffsetB = poseB.Position - poseA.Position;

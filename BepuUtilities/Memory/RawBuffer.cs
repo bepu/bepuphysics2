@@ -104,14 +104,14 @@ namespace BepuUtilities.Memory
         void ValidateRegion<T>(int startInElements, int countInElements)
         {
             Debug.Assert(startInElements * Unsafe.SizeOf<T>() >= 0, "The start of a region must be within the buffer's extent.");
-            Debug.Assert((startInElements + countInElements) * Unsafe.SizeOf<T>() < Length, "The end of a region must be within the buffer's extent.");
+            Debug.Assert((startInElements + countInElements) * Unsafe.SizeOf<T>() <= Length, "The end of a region must be within the buffer's extent.");
         }
 
         [Conditional("DEBUG")]
         void ValidateRegion(int start, int count)
         {
             Debug.Assert(start >= 0, "The start of a region must be within the buffer's extent.");
-            Debug.Assert(start + count < Length, "The end of a region must be within the buffer's extent.");
+            Debug.Assert(start + count <= Length, "The end of a region must be within the buffer's extent.");
         }
 
         //These are primarily used for debug purposes in the buffer pool.

@@ -148,7 +148,7 @@ namespace Demos.SpecializedTests
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Do()
             {
-                Matrix3x3Wide.Transform(v, symmetric, out var intermediate);
+                Matrix3x3Wide.TransformWithoutOverlap(v, symmetric, out var intermediate);
                 Vector3Wide.Dot(v, intermediate, out result);
             }
         }

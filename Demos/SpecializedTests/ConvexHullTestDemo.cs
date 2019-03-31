@@ -21,7 +21,7 @@ namespace Demos.SpecializedTests
         //List<DebugStep> debugSteps;
         public override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(0, 5, 10);
+            camera.Position = new Vector3(0, -2.5f, 10);
             camera.Yaw = 0;
             camera.Pitch = 0;
 
@@ -29,18 +29,18 @@ namespace Demos.SpecializedTests
 
             const int pointCount = 128;
             points = new QuickList<Vector3>(pointCount * 2, BufferPool);
-            //points.Allocate(BufferPool) = new Vector3(0, 0, 0);
-            //points.Allocate(BufferPool) = new Vector3(0, 0, 1);
-            //points.Allocate(BufferPool) = new Vector3(0, 1, 0);
-            //points.Allocate(BufferPool) = new Vector3(0, 1, 1);
-            //points.Allocate(BufferPool) = new Vector3(1, 0, 0);
-            //points.Allocate(BufferPool) = new Vector3(1, 0, 1);
-            //points.Allocate(BufferPool) = new Vector3(1, 1, 0);
-            //points.Allocate(BufferPool) = new Vector3(1, 1, 1);
+            points.Allocate(BufferPool) = new Vector3(0, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(0, 0, 1);
+            points.Allocate(BufferPool) = new Vector3(0, 1, 0);
+            points.Allocate(BufferPool) = new Vector3(0, 1, 1);
+            points.Allocate(BufferPool) = new Vector3(1, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(1, 0, 1);
+            points.Allocate(BufferPool) = new Vector3(1, 1, 0);
+            points.Allocate(BufferPool) = new Vector3(1, 1, 1);
             var random = new Random(5);
             for (int i = 0; i < pointCount; ++i)
             {
-                points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), 1 * (float)random.NextDouble(), (float)random.NextDouble());
+                //points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), 1 * (float)random.NextDouble(), (float)random.NextDouble());
                 //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
             }
 
@@ -62,6 +62,7 @@ namespace Demos.SpecializedTests
             Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new CollidableDescription(Simulation.Shapes.Add(hullShape), 0.1f), new BodyActivityDescription(0.01f)));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(2)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(5, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1)), 0.1f)));
         }
 
         int stepIndex = 0;

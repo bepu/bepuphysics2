@@ -34,7 +34,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var epsilonScale = Vector.Min(a.Radius, hullEpsilonScale);
             var depthThreshold = -speculativeMargin;
             DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Capsule, CapsuleWide, CapsuleSupportFinder>.FindMinimumDepth(
-                b, a, localOffsetA, identity, ref hullSupportFinder, ref capsuleSupportFinder, initialNormal, inactiveLanes, 1e-6f * epsilonScale, depthThreshold,
+                b, a, localOffsetA, hullLocalCapsuleOrientation, ref hullSupportFinder, ref capsuleSupportFinder, initialNormal, inactiveLanes, 1e-6f * epsilonScale, depthThreshold,
                 out var depth, out var localNormal);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, -speculativeMargin));
@@ -48,6 +48,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //To find the contact manifold, we'll clip the capsule axis against the face as usual, but we're dealing with potentially
             //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
+            Vector3Wide faceNormalBundle;
+            Vector3Wide pointOnFaceBundle;
+            Vector<float> latestEntryNumeratorBundle, latestEntryDenominatorBundle;
+            Vector<float> earliestExitNumeratorBundle, earliestExitDenominatorBundle;
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
             {
                 if (inactiveLanes[slotIndex] < 0)
@@ -57,7 +61,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Rebroadcast(localNormal, slotIndex, out var slotLocalNormalBundle);
                 Vector3Wide.Dot(hull.BoundingPlanes[0].Normal, slotLocalNormalBundle, out var bestFaceDotBundle);
                 var bestIndices = slotOffsetIndices;
-                for (int i = 0; i < hull.BoundingPlanes.Length; ++i)
+                for (int i = 1; i < hull.BoundingPlanes.Length; ++i)
                 {
                     var slotIndices = new Vector<int>(i << BundleIndexing.VectorShift) + slotOffsetIndices;
                     //Face normals point outward.
@@ -68,18 +72,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     bestIndices = Vector.ConditionalSelect(useCandidate, slotIndices, bestIndices);
                 }
                 var bestFaceDot = bestFaceDotBundle[0];
-                var bestIndex = slotOffsetIndices[0];
+                var bestIndex = bestIndices[0];
                 for (int i = 1; i < Vector<float>.Count; ++i)
                 {
                     var dot = bestFaceDotBundle[i];
                     if (dot > bestFaceDot)
                     {
                         bestFaceDot = dot;
-                        bestIndex = slotOffsetIndices[i];
+                        bestIndex = bestIndices[i];
                     }
                 }
                 BundleIndexing.GetBundleIndices(bestIndex, out var faceBundleIndex, out var faceInnerIndex);
-                Vector3Wide.ReadSlot(ref hull.BoundingPlanes[faceBundleIndex].Normal, faceInnerIndex, out var faceNormal);
+                Vector3Wide.CopySlot(ref hull.BoundingPlanes[faceBundleIndex].Normal, faceInnerIndex, ref faceNormalBundle, slotIndex);
 
                 //Test each face edge plane against the capsule edge.
                 //Note that we do not use the faceNormal x edgeOffset edge plane, but rather edgeOffset x localNormal.
@@ -89,10 +93,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var previousIndex = faceVertexIndices[faceVertexIndices.Length - 1];
                 Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var previousVertex);
                 Vector3Wide.ReadFirst(slotLocalNormalBundle, out var slotLocalNormal);
-                var latestEntryNumerator = new Vector<float>(float.MaxValue);
-                var latestEntryDenominator = new Vector<float>(-1);
-                var earliestExitNumerator = new Vector<float>(float.MaxValue);
-                var earliestExitDenominator = new Vector<float>(1);
+                Vector3Wide.ReadSlot(ref localCapsuleAxis, slotIndex, out var slotCapsuleAxis);
+                Vector3Wide.ReadSlot(ref localOffsetA, slotIndex, out var slotLocalOffsetA);
+                Vector3Wide.WriteSlot(previousVertex, slotIndex, ref pointOnFaceBundle);
+                var latestEntryNumerator = float.MaxValue;
+                var latestEntryDenominator = -1f;
+                var earliestExitNumerator = float.MaxValue;
+                var earliestExitDenominator = 1f;
                 for (int i = 0; i < faceVertexIndices.Length; ++i)
                 {
                     var index = faceVertexIndices[i];
@@ -100,38 +107,79 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                     var edgeOffset = vertex - previousVertex;
                     Vector3x.Cross(edgeOffset, slotLocalNormal, out var edgePlaneNormal);
-                    Vector3Wide.Broadcast(previousVertex, out var edgeStartBundle);
-                    Vector3Wide.Broadcast(edgePlaneNormal, out var edgePlaneNormalBundle);
-                    previousVertex = vertex;
 
                     //t = dot(pointOnPlane - capsuleCenter, planeNormal) / dot(planeNormal, rayDirection)
                     //Note that we can defer the division; we don't need to compute the exact t value of *all* planes.
-                    Vector3Wide.Subtract(edgeStartBundle, localOffsetA, out var capsuleToEdge);
-                    Vector3Wide.Dot(capsuleToEdge, edgePlaneNormalBundle, out var numerator);
-                    Vector3Wide.Dot(edgePlaneNormalBundle, localCapsuleAxis, out var denominator);
+                    var capsuleToEdge = previousVertex - slotLocalOffsetA;
+                    var numerator = Vector3.Dot(capsuleToEdge, edgePlaneNormal);
+                    var denominator = Vector3.Dot(edgePlaneNormal, slotCapsuleAxis);
+                    previousVertex = vertex;
 
                     //A plane is being 'entered' if the ray direction opposes the face normal.
                     //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
                     //If the denominator is zero, just ignore the lane.
-                    var useLatestEntryCandidate = Vector.BitwiseAnd(Vector.LessThan(denominator, Vector<float>.Zero), Vector.GreaterThan(numerator * latestEntryDenominator, latestEntryNumerator * denominator));
-                    var useEarliestExitCandidate = Vector.BitwiseAnd(Vector.GreaterThan(denominator, Vector<float>.Zero), Vector.LessThan(numerator * earliestExitDenominator, earliestExitNumerator * denominator));
-                    latestEntryNumerator = Vector.ConditionalSelect(useLatestEntryCandidate, numerator, latestEntryNumerator);
-                    latestEntryDenominator = Vector.ConditionalSelect(useLatestEntryCandidate, denominator, latestEntryDenominator);
-                    earliestExitNumerator = Vector.ConditionalSelect(useEarliestExitCandidate, numerator, earliestExitNumerator);
-                    earliestExitDenominator = Vector.ConditionalSelect(useEarliestExitCandidate, denominator, earliestExitDenominator);
+                    //if (denominator * denominator > 1e-3f * edgePlaneNormal.LengthSquared())
+                    //{
+                    if (denominator < 0)
+                    {
+                        if (numerator * latestEntryDenominator > latestEntryNumerator * denominator)
+                        {
+                            latestEntryNumerator = numerator;
+                            latestEntryDenominator = denominator;
+                        }
+                    }
+                    else if (denominator > 0)
+                    {
+                        if (numerator * earliestExitDenominator < earliestExitNumerator * denominator)
+                        {
+                            earliestExitNumerator = numerator;
+                            earliestExitDenominator = denominator;
+                        }
+                    }
+                    //}
                 }
-                var latestEntry = latestEntryNumerator / latestEntryDenominator;
-                var earliestExit = Vector.Max(latestEntry, earliestExitNumerator / earliestExitDenominator);
-                
 
+                GatherScatter.Get(ref latestEntryNumeratorBundle, slotIndex) = latestEntryNumerator;
+                GatherScatter.Get(ref latestEntryDenominatorBundle, slotIndex) = latestEntryDenominator;
+                GatherScatter.Get(ref earliestExitNumeratorBundle, slotIndex) = earliestExitNumerator;
+                GatherScatter.Get(ref earliestExitDenominatorBundle, slotIndex) = earliestExitDenominator;
             }
+            var tEntry = latestEntryNumeratorBundle / latestEntryDenominatorBundle;
+            var tExit = earliestExitNumeratorBundle / earliestExitDenominatorBundle;
+            var negatedHalfLength = -a.HalfLength;
+            tEntry = Vector.Max(negatedHalfLength, Vector.Min(a.HalfLength, tEntry));
+            tExit = Vector.Max(negatedHalfLength, Vector.Min(a.HalfLength, tExit));
 
+            Vector3Wide.Scale(localCapsuleAxis, tEntry, out var localOffset0);
+            Vector3Wide.Scale(localCapsuleAxis, tExit, out var localOffset1);
+
+            //Compute the depth of each contact based on the projection along the contact normal to the face.
+            //depth = dot(contactRelativeToA - pointOnFaceB, faceNormalB) / dot(faceNormalB, normal)
+            Vector3Wide.Add(localOffsetB, pointOnFaceBundle, out var aToPointOnHullFace);
+
+            Vector3Wide.Dot(faceNormalBundle, localNormal, out var depthDenominator);
+            var inverseDepthDenominator = Vector<float>.One / depthDenominator;
+            Vector3Wide.Subtract(aToPointOnHullFace, localOffset0, out var contact0ToHullFace);
+            Vector3Wide.Subtract(aToPointOnHullFace, localOffset1, out var contact1ToHullFace);
+            Vector3Wide.Dot(contact0ToHullFace, faceNormalBundle, out var depthNumerator0);
+            Vector3Wide.Dot(contact1ToHullFace, faceNormalBundle, out var depthNumerator1);
+            var unexpandedDepth0 = depthNumerator0 * inverseDepthDenominator;
+            var unexpandedDepth1 = depthNumerator1 * inverseDepthDenominator;
+            manifold.Depth0 = a.Radius + unexpandedDepth0;
+            manifold.Depth1 = a.Radius + unexpandedDepth1;
             manifold.FeatureId0 = Vector<int>.Zero;
-            manifold.FeatureId1 = Vector<int>.Zero;
-            manifold.Depth0 = depth;
-            manifold.Depth1 = depth;
+            manifold.FeatureId1 = Vector<int>.One;
             manifold.Contact0Exists = Vector.GreaterThanOrEqual(manifold.Depth0, depthThreshold);
-            manifold.Contact1Exists = Vector.GreaterThanOrEqual(manifold.Depth1, depthThreshold);
+            manifold.Contact1Exists = Vector.BitwiseAnd(Vector.GreaterThan(tExit, tEntry), Vector.GreaterThanOrEqual(manifold.Depth1, depthThreshold));
+
+            Matrix3x3Wide.TransformWithoutOverlap(localOffset0, hullOrientation, out manifold.OffsetA0);
+            Matrix3x3Wide.TransformWithoutOverlap(localOffset1, hullOrientation, out manifold.OffsetA1);
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, hullOrientation, out manifold.Normal);
+            //Push the contacts out to be on the surface of the capsule.
+            Vector3Wide.Scale(manifold.Normal, unexpandedDepth0, out var contactOffset0);
+            Vector3Wide.Scale(manifold.Normal, unexpandedDepth1, out var contactOffset1);
+            Vector3Wide.Add(manifold.OffsetA0, contactOffset0, out manifold.OffsetA0);
+            Vector3Wide.Add(manifold.OffsetA1, contactOffset1, out manifold.OffsetA1);
         }
 
         public void Test(ref CapsuleWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)

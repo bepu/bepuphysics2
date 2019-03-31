@@ -300,6 +300,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Initialize(in RawBuffer memory)
         {
+            Debug.Assert(memory.Length == InternalAllocationSize);
             Hulls = memory.As<ConvexHull>();
         }
 
@@ -456,7 +457,7 @@ namespace BepuPhysics.Collidables
         {
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(direction, orientation, out var localDirection);
             ComputeLocalSupport(shape, localDirection, terminatedLanes, out var localSupport);
-            Matrix3x3Wide.Transform(localSupport, orientation, out support);
+            Matrix3x3Wide.TransformWithoutOverlap(localSupport, orientation, out support);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

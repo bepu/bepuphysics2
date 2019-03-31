@@ -287,11 +287,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var worldRB);
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(worldRB, worldRA, out var rB);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, worldRA, out var localOffsetB);
-            Matrix3x3Wide.Transform(b.A, rB, out var vA);
+            Matrix3x3Wide.TransformWithoutOverlap(b.A, rB, out var vA);
             Vector3Wide.Add(vA, localOffsetB, out vA);
-            Matrix3x3Wide.Transform(b.B, rB, out var vB);
+            Matrix3x3Wide.TransformWithoutOverlap(b.B, rB, out var vB);
             Vector3Wide.Add(vB, localOffsetB, out vB);
-            Matrix3x3Wide.Transform(b.C, rB, out var vC);
+            Matrix3x3Wide.TransformWithoutOverlap(b.C, rB, out var vC);
             Vector3Wide.Add(vC, localOffsetB, out vC);
 
             Vector3Wide.Add(vA, vB, out var localTriangleCenter);

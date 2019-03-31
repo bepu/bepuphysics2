@@ -373,11 +373,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.FeatureId0 += faceFlag;
 
             //Transform contact positions into world space rotation, measured as offsets from the capsule (object A).
-            Matrix3x3Wide.Transform(b0, rB, out var contact0RelativeToB);
+            Matrix3x3Wide.TransformWithoutOverlap(b0, rB, out var contact0RelativeToB);
             Vector3Wide.Add(contact0RelativeToB, offsetB, out manifold.OffsetA0);
-            Matrix3x3Wide.Transform(b1, rB, out var contact1RelativeToB);
+            Matrix3x3Wide.TransformWithoutOverlap(b1, rB, out var contact1RelativeToB);
             Vector3Wide.Add(contact1RelativeToB, offsetB, out manifold.OffsetA1);
-            Matrix3x3Wide.Transform(localNormal, rB, out manifold.Normal);
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out manifold.Normal);
 
             //If the normal we found points away from the triangle normal, then it it's hitting the wrong side and should be ignored. (Note that we had an early out for this earlier.)
             contactCount = Vector.ConditionalSelect(Vector.GreaterThanOrEqual(localNormalDotFaceNormal, Vector<float>.Zero), contactCount, Vector<int>.Zero);
