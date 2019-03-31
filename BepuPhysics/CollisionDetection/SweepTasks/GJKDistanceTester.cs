@@ -23,11 +23,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         void SampleMinkowskiDifference(
             in TShapeWideA a, in Matrix3x3Wide rA, ref TSupportFinderA supportFinderA,
             in TShapeWideB b, in Matrix3x3Wide rB, ref TSupportFinderB supportFinderB, in Vector3Wide offsetB, in Vector3Wide direction,
-            out Vector3Wide supportA, out Vector3Wide support)
+            in Vector<int> terminatedLanes, out Vector3Wide supportA, out Vector3Wide support)
         {
-            supportFinderA.ComputeSupport(a, rA, direction, out supportA);
+            supportFinderA.ComputeSupport(a, rA, direction, terminatedLanes, out supportA);
             Vector3Wide.Negate(direction, out var negatedDirection);
-            supportFinderB.ComputeSupport(b, rB, negatedDirection, out var supportB);
+            supportFinderB.ComputeSupport(b, rB, negatedDirection, terminatedLanes, out var supportB);
             Vector3Wide.Add(supportB, offsetB, out supportB);
             Vector3Wide.Subtract(supportA, supportB, out support);
         }
@@ -341,7 +341,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             var supportFinderB = default(TSupportFinderB);
             Simplex simplex;
             //TODO: It would be pretty easy to initialize to a triangle or tetrahedron. Might be worth it.
-            SampleMinkowskiDifference(a, rA, ref supportFinderA, b, rB, ref supportFinderB, offsetB, offsetB, out simplex.AOnA, out simplex.A);
+            SampleMinkowskiDifference(a, rA, ref supportFinderA, b, rB, ref supportFinderB, offsetB, offsetB, inactiveLanes, out simplex.AOnA, out simplex.A);
             simplex.Count = new Vector<int>(1);
 
             //GJK is a pretty branchy algorithm that doesn't map perfectly to widely vectorized implementations. We'll be using an SPMD model- if any SIMD lane needs to continue 
@@ -400,7 +400,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     break;
 
                 Vector3Wide.Negate(simplexClosest, out var sampleDirection);
-                SampleMinkowskiDifference(a, rA, ref supportFinderA, b, rB, ref supportFinderB, offsetB, sampleDirection, out var vA, out var v);
+                SampleMinkowskiDifference(a, rA, ref supportFinderA, b, rB, ref supportFinderB, offsetB, sampleDirection, terminatedMask, out var vA, out var v);
 
                 //If the newly sampled is no better than the simplex-identified closest point, the lane is done.
                 Vector3Wide.Subtract(v, simplexClosest, out var progressOffset);

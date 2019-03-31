@@ -168,7 +168,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             localNormal.Z = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.Z);
             CylinderSupportFinder supportFinder;
             DepthRefiner.SimplexWithWitness simplex;
-            DepthRefiner.FindSupport(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, out simplex.A.Support, out simplex.A.SupportOnA);
+            DepthRefiner.FindSupport(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, Vector<int>.Zero, out simplex.A.Support, out simplex.A.SupportOnA);
             simplex.A.Exists = new Vector<int>(-1);
             Vector3Wide.Dot(simplex.A.Support, localNormal, out var depth);
 
@@ -180,7 +180,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Scale(normalCandidate, -a.HalfLength, out var supportA);
                 Vector3Wide.Add(supportA, localOffsetA, out supportA);
                 //A little confusing- DepthRefiner's A is our B and vice versa.
-                supportFinder.ComputeLocalSupport(b, normalCandidate, out simplex.B.SupportOnA);
+                supportFinder.ComputeLocalSupport(b, normalCandidate, Vector<int>.Zero, out simplex.B.SupportOnA);
                 Vector3Wide.Subtract(simplex.B.SupportOnA, supportA, out simplex.B.Support);
                 simplex.B.Exists = new Vector<int>(-1);
                 Vector3Wide.Dot(simplex.B.Support, normalCandidate, out var depthCandidate);
@@ -196,7 +196,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 negatedNormalCandidate.X = Vector<float>.Zero;
                 negatedNormalCandidate.Y = Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), new Vector<float>(-1), Vector<float>.One);
                 negatedNormalCandidate.Z = Vector<float>.Zero;
-                supportFinder.ComputeSupport(a, rA, negatedNormalCandidate, out var supportA);
+                supportFinder.ComputeSupport(a, rA, negatedNormalCandidate, Vector<int>.Zero, out var supportA);
                 Vector3Wide.Add(supportA, localOffsetA, out supportA);
                 //A little confusing- DepthRefiner's A is our B and vice versa.       
                 simplex.C.SupportOnA.X = Vector<float>.Zero;

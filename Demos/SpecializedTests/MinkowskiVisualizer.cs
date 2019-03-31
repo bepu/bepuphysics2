@@ -44,7 +44,8 @@ namespace Demos.SpecializedTests
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void FindSupport<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB>
-            (in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction, out Vector3Wide support)
+            (in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction,
+            in Vector<int> terminatedLanes, out Vector3Wide support)
             where TShapeA : IConvexShape
             where TShapeWideA : IShapeWide<TShapeA>
             where TSupportFinderA : ISupportFinder<TShapeA, TShapeWideA>
@@ -53,9 +54,9 @@ namespace Demos.SpecializedTests
             where TSupportFinderB : ISupportFinder<TShapeB, TShapeWideB>
         {
             //support(N, A) - support(-N, B)
-            supportFinderA.ComputeLocalSupport(a, direction, out var extremeA);
+            supportFinderA.ComputeLocalSupport(a, direction, terminatedLanes, out var extremeA);
             Vector3Wide.Negate(direction, out var negatedDirection);
-            supportFinderB.ComputeSupport(b, localOrientationB, negatedDirection, out var extremeB);
+            supportFinderB.ComputeSupport(b, localOrientationB, negatedDirection, terminatedLanes, out var extremeB);
             Vector3Wide.Add(extremeB, localOffsetB, out extremeB);
 
             Vector3Wide.Subtract(extremeA, extremeB, out support);
@@ -96,7 +97,7 @@ namespace Demos.SpecializedTests
                 var sampleDirection = new Vector3(MathF.Cos(theta) * sinPhi, MathF.Sin(theta) * sinPhi, MathF.Cos(phi));
                 Vector3Wide.Broadcast(sampleDirection, out var sampleDirectionWide);
                 //Could easily use the fact that this is vectorized, but it's marginally easier not to!
-                FindSupport<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB>(aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinderA, ref supportFinderB, sampleDirectionWide, out var supportWide);
+                FindSupport<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB>(aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinderA, ref supportFinderB, sampleDirectionWide, Vector<int>.Zero, out var supportWide);
                 Vector3Wide.ReadSlot(ref supportWide, 0, out var support);
                 lines[i] = new LineInstance(basePosition + support, basePosition + support - sampleDirection * lineLength, packedLineColor, packedBackgroundColor);
             }

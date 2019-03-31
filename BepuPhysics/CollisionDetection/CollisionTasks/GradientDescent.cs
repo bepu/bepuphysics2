@@ -19,12 +19,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TSupportFinderB : ISupportFinder<TShapeB, TShapeWideB>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void FindSupport(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction, out Vector3Wide support)
+        static void FindSupport(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction,
+            in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             //support(N, A) - support(-N, B)
-            supportFinderA.ComputeLocalSupport(a, direction, out var extremeA);
+            supportFinderA.ComputeLocalSupport(a, direction, terminatedLanes, out var extremeA);
             Vector3Wide.Negate(direction, out var negatedDirection);
-            supportFinderB.ComputeSupport(b, localOrientationB, negatedDirection, out var extremeB);
+            supportFinderB.ComputeSupport(b, localOrientationB, negatedDirection, terminatedLanes, out var extremeB);
             Vector3Wide.Add(extremeB, localOffsetB, out extremeB);
 
             Vector3Wide.Subtract(extremeA, extremeB, out support);
@@ -100,7 +101,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //This won't work well if the search ends up searching very far away, but we're expecting an initial guess within 60 degrees almost always (and often much closer than that).
             Helpers.BuildOrthnormalBasis(initialGuess, out var x, out var y);
 
-            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localNormal, out var minimumSupport);
+            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localNormal, inactiveLanes, out var minimumSupport);
             Vector2Wide gradient;
             Vector3Wide.Dot(minimumSupport, x, out gradient.X);
             Vector3Wide.Dot(minimumSupport, y, out gradient.Y);
@@ -145,11 +146,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //To ensure determinism, any lane which has completed cannot be refined further.
                 //To do otherwise would be to make the result sensitive to the lane neighbors which aren't guaranteed to be deterministic.
                 var ignoreSamples = completedLanes;
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, newNormal, out var supportForward);
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, newNormal, completedLanes, out var supportForward);
                 SampleDepth(newNormal, supportForward, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSampleForward);
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide0, out var supportSide0);
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide0, completedLanes, out var supportSide0);
                 SampleDepth(normalSide0, supportSide0, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSampleSide0);
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide1, out var supportSide1);
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normalSide1, completedLanes, out var supportSide1);
                 SampleDepth(normalSide1, supportSide1, ignoreSamples, ref minimumSupport, ref localNormal, ref minimumDepthNumerator, ref minimumNormalLengthSquared, out var usedNewSampleSide1);
                 var usedNewSample = Vector.BitwiseOr(usedNewSampleForward, Vector.BitwiseOr(usedNewSampleSide0, usedNewSampleSide1));
                 //FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, newNormal, out var supportForward);

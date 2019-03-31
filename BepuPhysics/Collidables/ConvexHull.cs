@@ -169,7 +169,7 @@ namespace BepuPhysics.Collidables
                 c = default;
                 return false;
             }
-        }      
+        }
 
         /// <summary>
         /// Computes the inertia of the convex hull.
@@ -395,15 +395,15 @@ namespace BepuPhysics.Collidables
         public bool HasMargin => false;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeLocalSupport(in ConvexHullWide shape, in Vector3Wide direction, out Vector3Wide support)
+        public void ComputeLocalSupport(in ConvexHullWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             Helpers.FillVectorWithLaneIndices(out var indexOffsets);
             for (int i = 0; i < Vector<float>.Count; ++i)
             {
-                ref var hull = ref shape.Hulls[i];
-                //Not every slot is guaranteed to be filled.
-                if (!hull.Points.Allocated)
+                if (terminatedLanes[0] < 0)
                     continue;
+                ref var hull = ref shape.Hulls[i];
+                Debug.Assert(hull.Points.Allocated, "If the lane isn't terminated, then the hull should actually exist. Did you forget to create a mask based on the bundle local count?");
                 Vector3Wide.Rebroadcast(direction, i, out var slotDirection);
                 var bestIndices = indexOffsets;
                 Vector3Wide.Dot(slotDirection, hull.Points[0], out var dot);
@@ -434,10 +434,10 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeSupport(in ConvexHullWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, out Vector3Wide support)
+        public void ComputeSupport(in ConvexHullWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(direction, orientation, out var localDirection);
-            ComputeLocalSupport(shape, localDirection, out var localSupport);
+            ComputeLocalSupport(shape, localDirection, terminatedLanes, out var localSupport);
             Matrix3x3Wide.Transform(localSupport, orientation, out support);
         }
 

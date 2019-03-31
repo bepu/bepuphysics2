@@ -27,12 +27,12 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void FindSupport(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction, 
-			out Vector3Wide support)
+			in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             //support(N, A) - support(-N, B)
-            supportFinderA.ComputeLocalSupport(a, direction, out var supportOnA);
+            supportFinderA.ComputeLocalSupport(a, direction, terminatedLanes, out var supportOnA);
             Vector3Wide.Negate(direction, out var negatedDirection);
-            supportFinderB.ComputeSupport(b, localOrientationB, negatedDirection, out var extremeB);
+            supportFinderB.ComputeSupport(b, localOrientationB, negatedDirection, terminatedLanes, out var extremeB);
             Vector3Wide.Add(extremeB, localOffsetB, out extremeB);
 
             Vector3Wide.Subtract(supportOnA, extremeB, out support);
@@ -302,7 +302,7 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.LengthSquared(initialNormal, out var initialNormalLengthSquared);
             Debug.Assert(Vector.LessThanAll(Vector.BitwiseOr(inactiveLanes, Vector.LessThan(Vector.Abs(initialNormalLengthSquared - Vector<float>.One), new Vector<float>(1e-6f))), Vector<int>.Zero));
 #endif
-            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialNormal, out var initialSupport);
+            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialNormal, inactiveLanes, out var initialSupport);
             Vector3Wide.Dot(initialSupport, initialNormal, out var initialDepth);
             Create(initialNormal, initialSupport, out Simplex simplex);
             FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, initialNormal, initialDepth, inactiveLanes, searchEpsilon, minimumDepthThreshold, out depth, out refinedNormal, maximumIterations);
@@ -329,7 +329,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normal, out var support);
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normal, terminatedLanes, out var support);
                 Vector3Wide.Dot(support, normal, out var depth);
 
                 var useNewDepth = Vector.AndNot(Vector.LessThan(depth, refinedDepth), terminatedLanes);
@@ -345,12 +345,12 @@ namespace BepuPhysics.CollisionDetection
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void FindSupport(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction, 
-			out Vector3Wide support, out Vector3Wide supportOnA)
+			in Vector<int> terminatedLanes, out Vector3Wide support, out Vector3Wide supportOnA)
         {
             //support(N, A) - support(-N, B)
-            supportFinderA.ComputeLocalSupport(a, direction, out supportOnA);
+            supportFinderA.ComputeLocalSupport(a, direction, terminatedLanes, out supportOnA);
             Vector3Wide.Negate(direction, out var negatedDirection);
-            supportFinderB.ComputeSupport(b, localOrientationB, negatedDirection, out var extremeB);
+            supportFinderB.ComputeSupport(b, localOrientationB, negatedDirection, terminatedLanes, out var extremeB);
             Vector3Wide.Add(extremeB, localOffsetB, out extremeB);
 
             Vector3Wide.Subtract(supportOnA, extremeB, out support);
@@ -639,7 +639,7 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.LengthSquared(initialNormal, out var initialNormalLengthSquared);
             Debug.Assert(Vector.LessThanAll(Vector.BitwiseOr(inactiveLanes, Vector.LessThan(Vector.Abs(initialNormalLengthSquared - Vector<float>.One), new Vector<float>(1e-6f))), Vector<int>.Zero));
 #endif
-            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialNormal, out var initialSupport, out var initialSupportOnA);
+            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialNormal, inactiveLanes, out var initialSupport, out var initialSupportOnA);
             Vector3Wide.Dot(initialSupport, initialNormal, out var initialDepth);
             Create(initialNormal, initialSupport, initialSupportOnA, out SimplexWithWitness simplex);
             FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, initialNormal, initialDepth, inactiveLanes, searchEpsilon, minimumDepthThreshold, out depth, out refinedNormal, out witnessOnA, maximumIterations);
@@ -667,7 +667,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normal, out var support, out var supportOnA);
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, normal, terminatedLanes, out var support, out var supportOnA);
                 Vector3Wide.Dot(support, normal, out var depth);
 
                 var useNewDepth = Vector.AndNot(Vector.LessThan(depth, refinedDepth), terminatedLanes);

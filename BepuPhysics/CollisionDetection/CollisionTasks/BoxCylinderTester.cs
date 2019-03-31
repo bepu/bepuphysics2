@@ -131,7 +131,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             BoxSupportFinder boxSupportFinder = default;
             CylinderSupportFinder cylinderSupportFinder = default;
             DepthRefiner.SimplexWithWitness simplex;
-            DepthRefiner.FindSupport(b, a, localOffsetA, rA, ref cylinderSupportFinder, ref boxSupportFinder, localNormal, out simplex.A.Support, out simplex.A.SupportOnA);
+            DepthRefiner.FindSupport(b, a, localOffsetA, rA, ref cylinderSupportFinder, ref boxSupportFinder, localNormal, Vector<int>.Zero, out simplex.A.Support, out simplex.A.SupportOnA);
             simplex.A.Exists = new Vector<int>(-1);
             Vector3Wide.Dot(simplex.A.Support, localNormal, out var depth);
 
@@ -142,7 +142,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 negatedNormalCandidate.X = Vector<float>.Zero;
                 negatedNormalCandidate.Y = Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), new Vector<float>(-1), Vector<float>.One);
                 negatedNormalCandidate.Z = Vector<float>.Zero;
-                boxSupportFinder.ComputeSupport(a, rA, negatedNormalCandidate, out var supportA);
+                boxSupportFinder.ComputeSupport(a, rA, negatedNormalCandidate, Vector<int>.Zero, out var supportA);
                 Vector3Wide.Add(supportA, localOffsetA, out supportA);
                 //A little confusing- DepthRefiner's A is our B and vice versa.       
                 simplex.B.SupportOnA.X = Vector<float>.Zero;

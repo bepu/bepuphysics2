@@ -325,7 +325,7 @@ namespace BepuPhysics.Collidables
             margin = shape.Radius;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeSupport(in CapsuleWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, out Vector3Wide support)
+        public void ComputeSupport(in CapsuleWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             Vector3Wide.Scale(orientation.Y, shape.HalfLength, out support);
             Vector3Wide.Negate(support, out var negated);
@@ -334,7 +334,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.ConditionalSelect(shouldNegate, negated, support, out support);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeLocalSupport(in CapsuleWide shape, in Vector3Wide direction, out Vector3Wide support)
+        public void ComputeLocalSupport(in CapsuleWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             support.X = Vector<float>.Zero;
             support.Y = Vector.ConditionalSelect(Vector.LessThan(direction.Y, Vector<float>.Zero), -shape.HalfLength, shape.HalfLength);

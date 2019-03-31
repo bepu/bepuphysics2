@@ -214,13 +214,13 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeSupport(in SphereWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, out Vector3Wide support)
+        public void ComputeSupport(in SphereWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             support = default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeLocalSupport(in SphereWide shape, in Vector3Wide direction, out Vector3Wide support)
+        public void ComputeLocalSupport(in SphereWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             support = default;
         }

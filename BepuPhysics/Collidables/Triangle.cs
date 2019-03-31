@@ -233,14 +233,14 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeSupport(in TriangleWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, out Vector3Wide support)
+        public void ComputeSupport(in TriangleWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(direction, orientation, out var localDirection);
-            ComputeLocalSupport(shape, localDirection, out var localSupport);
+            ComputeLocalSupport(shape, localDirection, terminatedLanes, out var localSupport);
             Matrix3x3Wide.TransformWithoutOverlap(localSupport, orientation, out support);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeLocalSupport(in TriangleWide shape, in Vector3Wide direction, out Vector3Wide support)
+        public void ComputeLocalSupport(in TriangleWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             Vector3Wide.Dot(shape.A, direction, out var a);
             Vector3Wide.Dot(shape.B, direction, out var b);

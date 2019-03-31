@@ -14,13 +14,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         public bool HasMargin => throw new NotImplementedException();
 
-        public void ComputeLocalSupport(in TriangleWide shape, in Vector3Wide direction, out Vector3Wide support)
+        public void ComputeLocalSupport(in TriangleWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             throw new NotImplementedException();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ComputeSupport(in TriangleWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, out Vector3Wide support)
+        public void ComputeSupport(in TriangleWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             Vector3Wide.Dot(shape.A, direction, out var a);
             Vector3Wide.Dot(shape.B, direction, out var b);
@@ -112,7 +112,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             PretransformedTriangleSupportFinder triangleSupportFinder = default;
             CylinderSupportFinder cylinderSupportFinder = default;
             DepthRefiner.SimplexWithWitness simplex;
-            DepthRefiner.FindSupport(b, triangle, localTriangleCenter, rA, ref cylinderSupportFinder, ref triangleSupportFinder, localNormal, out simplex.A.Support, out simplex.A.SupportOnA);
+            DepthRefiner.FindSupport(b, triangle, localTriangleCenter, rA, ref cylinderSupportFinder, ref triangleSupportFinder, localNormal, Vector<int>.Zero, out simplex.A.Support, out simplex.A.SupportOnA);
             simplex.A.Exists = new Vector<int>(-1);
             Vector3Wide.Dot(simplex.A.Support, localNormal, out var depth);
 
@@ -123,7 +123,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 negatedNormalCandidate.X = Vector<float>.Zero;
                 negatedNormalCandidate.Y = Vector.ConditionalSelect(Vector.GreaterThan(localTriangleCenter.Y, Vector<float>.Zero), new Vector<float>(-1), Vector<float>.One);
                 negatedNormalCandidate.Z = Vector<float>.Zero;
-                triangleSupportFinder.ComputeSupport(triangle, rA, negatedNormalCandidate, out var supportA);
+                triangleSupportFinder.ComputeSupport(triangle, rA, negatedNormalCandidate, Vector<int>.Zero, out var supportA);
                 Vector3Wide.Add(supportA, localTriangleCenter, out supportA);
                 //A little confusing- DepthRefiner's A is our B and vice versa.       
                 simplex.B.SupportOnA.X = Vector<float>.Zero;
@@ -150,7 +150,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Dot(localTriangleCenter, triangleNormal, out var offsetNormalDot);
                 Vector3Wide.ConditionallyNegate(Vector.LessThan(offsetNormalDot, Vector<float>.Zero), triangleNormal, out var localNormalCandidate);
                 //A little confusing- DepthRefiner's A is our B and vice versa.       
-                cylinderSupportFinder.ComputeLocalSupport(b, localNormalCandidate, out simplex.C.SupportOnA);
+                cylinderSupportFinder.ComputeLocalSupport(b, localNormalCandidate, Vector<int>.Zero, out simplex.C.SupportOnA);
                 Vector3Wide.Subtract(simplex.C.SupportOnA, triangleA, out simplex.C.Support);
                 simplex.C.Exists = new Vector<int>(-1);
                 Vector3Wide.Dot(simplex.C.Support, localNormalCandidate, out var depthCandidate);

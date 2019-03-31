@@ -10,8 +10,8 @@ namespace BepuPhysics.CollisionDetection
     {
         bool HasMargin { get; }
         void GetMargin(in TShapeWide shape, out Vector<float> margin);
-        void ComputeLocalSupport(in TShapeWide shape, in Vector3Wide direction, out Vector3Wide support);
-        void ComputeSupport(in TShapeWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, out Vector3Wide support);
+        void ComputeLocalSupport(in TShapeWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support);
+        void ComputeSupport(in TShapeWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support);
     }
 
 }

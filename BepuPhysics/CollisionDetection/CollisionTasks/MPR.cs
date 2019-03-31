@@ -19,12 +19,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TSupportFinderB : ISupportFinder<TShapeB, TShapeWideB>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void FindSupport(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction, out Vector3Wide support)
+        static void FindSupport(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction,
+            in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             //support(N, A) - support(-N, B)
-            supportFinderA.ComputeLocalSupport(a, direction, out var extremeA);
+            supportFinderA.ComputeLocalSupport(a, direction, terminatedLanes, out var extremeA);
             Vector3Wide.Negate(direction, out var negatedDirection);
-            supportFinderB.ComputeSupport(b, localOrientationB, negatedDirection, out var extremeB);
+            supportFinderB.ComputeSupport(b, localOrientationB, negatedDirection, terminatedLanes, out var extremeB);
             Vector3Wide.Add(extremeB, localOffsetB, out extremeB);
 
             Vector3Wide.Subtract(extremeA, extremeB, out support);
@@ -90,7 +91,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ReadSlot(ref v0, 0, out debugSimplex[0]);
             }
             //Find an initial portal through which the ray passes.
-            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localOffsetB, out var v1);
+            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localOffsetB, laneComplete, out var v1);
 
             if (simplexes != null)
             {
@@ -116,7 +117,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             laneComplete = Vector.BitwiseOr(laneComplete, shouldExitPreV2);
 
 
-            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var v2);
+            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, laneComplete, out var v2);
             Vector3Wide.Dot(n, v2, out var v2ExitDot);
             var shouldExitV2 = Vector.LessThan(v2ExitDot, Vector<float>.Zero);
             laneStateChanging = Vector.AndNot(shouldExitV2, laneComplete);
@@ -147,7 +148,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Subtract(v2, v0, out var v0v2);
                 Vector3Wide.CrossWithoutOverlap(v0v1, v0v2, out n);
 
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out v3);
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, laneComplete, out v3);
 
                 //If the origin is outside the plane defined by (v1, v0, v3) then the portal is invalid.
                 Vector3Wide.CrossWithoutOverlap(v1, v3, out var v1xv3);
@@ -195,7 +196,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 {
                     return;
                 }
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var v4);
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, laneComplete, out var v4);
 
                 if (simplexes != null)
                 {
@@ -270,7 +271,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //To do this, first guess a portal.
             //This implementation is similar to that of the original XenoCollide.
             //'n' will be the direction used to find supports throughout the algorithm.
-            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, direction, out var v1);
+            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, direction, inactiveLanes, out var v1);
 
             if (simplexes != null)
             {
@@ -294,7 +295,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 return;
             }
 
-            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var v2);
+            FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, completedLanes, out var v2);
 
             if (simplexes != null)
             {
@@ -332,7 +333,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 count++;
 
                 //Find a final extreme point using the normal of the plane defined by v0, v1, v2.
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var newV3);
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, completedLanes, out var newV3);
                 Vector3Wide.ConditionalSelect(preloopComplete, v3, newV3, out v3);
 
                 if (simplexes != null)
@@ -386,7 +387,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.CrossWithoutOverlap(v2v3, v2v1, out n);
 
                 //Keep working towards the surface.  Find the next extreme point.
-                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, out var v4);
+                FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, n, completedLanes, out var v4);
 
                 //If the plane which generated the normal is very close to the extreme point, then we're at the surface.
                 Vector3Wide.Dot(n, v1, out var v1DotN);
