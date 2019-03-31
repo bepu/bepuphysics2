@@ -60,6 +60,8 @@ namespace Demos.SpecializedTests
             hullShape.ComputeInertia(1, out var inertia);
 
             Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new CollidableDescription(Simulation.Shapes.Add(hullShape), 0.1f), new BodyActivityDescription(0.01f)));
+
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(2)), 0.1f)));
         }
 
         int stepIndex = 0;

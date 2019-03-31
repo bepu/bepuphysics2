@@ -1,5 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -35,7 +36,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             where TPair : struct, ICollisionPair<TPair>
             where TPairWide : struct, ICollisionPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB, TPair, TPairWide>
             where TPairTester : struct, IPairTester<TShapeWideA, TShapeWideB, TManifoldWide>
-            where TManifoldWide : IContactManifoldWide
+            where TManifoldWide : struct, IContactManifoldWide
     {
         public ConvexCollisionTask()
         {
@@ -52,6 +53,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //With any luck, the compiler will eventually get rid of these unnecessary zero inits. 
             //Might be able to get rid of manifoldWide and defaultPairTester with some megahacks, but it comes with significant forward danger and questionable benefit.
             var pairWide = default(TPairWide);
+            ref var aWide = ref pairWide.GetShapeA(ref pairWide);
+            ref var bWide = ref pairWide.GetShapeB(ref pairWide);
+            //TODO: Check for JIT time branch elision.
+            if (aWide.InternalAllocationSize > 0)
+            {
+                var memory = stackalloc byte[aWide.InternalAllocationSize];
+                aWide.Initialize(new RawBuffer(memory, aWide.InternalAllocationSize));
+            }
+            if (bWide.InternalAllocationSize > 0)
+            {
+                var memory = stackalloc byte[bWide.InternalAllocationSize];
+                bWide.Initialize(new RawBuffer(memory, bWide.InternalAllocationSize));
+            }
             TManifoldWide manifoldWide;
             var defaultPairTester = default(TPairTester);
             var manifold = default(ConvexContactManifold);
@@ -72,8 +86,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 if (pairWide.OrientationCount == 2)
                 {
                     defaultPairTester.Test(
-                        ref pairWide.GetShapeA(ref pairWide),
-                        ref pairWide.GetShapeB(ref pairWide),
+                        ref aWide,
+                        ref bWide,
                         ref pairWide.GetSpeculativeMargin(ref pairWide),
                         ref pairWide.GetOffsetB(ref pairWide),
                         ref pairWide.GetOrientationA(ref pairWide),
@@ -87,8 +101,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //The only shape that doesn't need orientation is a sphere, and it will be in slot A by convention.
                     Debug.Assert(typeof(TShapeWideA) == typeof(SphereWide));
                     defaultPairTester.Test(
-                        ref pairWide.GetShapeA(ref pairWide),
-                        ref pairWide.GetShapeB(ref pairWide),
+                        ref aWide,
+                        ref bWide,
                         ref pairWide.GetSpeculativeMargin(ref pairWide),
                         ref pairWide.GetOffsetB(ref pairWide),
                         ref pairWide.GetOrientationB(ref pairWide),
@@ -101,8 +115,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Debug.Assert(typeof(TShapeWideA) == typeof(SphereWide) && typeof(TShapeWideB) == typeof(SphereWide), "No orientation implies a special case involving two spheres.");
                     //Really, this could be made into a direct special case, but eh.
                     defaultPairTester.Test(
-                        ref pairWide.GetShapeA(ref pairWide),
-                        ref pairWide.GetShapeB(ref pairWide),
+                        ref aWide,
+                        ref bWide,
                         ref pairWide.GetSpeculativeMargin(ref pairWide),
                         ref pairWide.GetOffsetB(ref pairWide),
                         countInBundle,
@@ -117,11 +131,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 for (int j = 0; j < countInBundle; ++j)
                 {
-                    //TODO: You could just use the vector indexer here. Far more likely to work in the long run; use it if the performance is comparable.
-                    ref var manifoldAsFloat = ref Unsafe.Add(ref Unsafe.As<TManifoldWide, float>(ref manifoldWide), j);
-                    ref var manifoldSource = ref Unsafe.As<float, TManifoldWide>(ref manifoldAsFloat);
-                    ref var offsetAsFloat = ref Unsafe.Add(ref Unsafe.As<Vector3Wide, float>(ref pairWide.GetOffsetB(ref pairWide)), j);
-                    ref var offsetSource = ref Unsafe.As<float, Vector3Wide>(ref offsetAsFloat);
+                    ref var manifoldSource = ref GetOffsetInstance(ref manifoldWide, j);
+                    ref var offsetSource = ref GetOffsetInstance(ref pairWide.GetOffsetB(ref pairWide), j);
                     manifoldSource.ReadFirst(offsetSource, ref manifold);
                     ref var pair = ref Unsafe.Add(ref bundleStart, j);
                     batcher.ProcessConvexResult(&manifold, ref pair.GetContinuation(ref pair));

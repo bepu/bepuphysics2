@@ -34,6 +34,20 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CreateIdentity(out Matrix3x3Wide identity)
+        {
+            identity.X.X = Vector<float>.One;
+            identity.X.Y = Vector<float>.Zero;
+            identity.X.Z = Vector<float>.Zero;
+            identity.Y.X = Vector<float>.Zero;
+            identity.Y.Y = Vector<float>.One;
+            identity.Y.Z = Vector<float>.Zero;
+            identity.Z.X = Vector<float>.Zero;
+            identity.Z.Y = Vector<float>.Zero;
+            identity.Z.Z = Vector<float>.One;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void MultiplyWithoutOverlap(in Matrix3x3Wide a, in Matrix3x3Wide b, out Matrix3x3Wide result)
         {
             result.X.X = a.X.X * b.X.X + a.X.Y * b.Y.X + a.X.Z * b.Z.X;

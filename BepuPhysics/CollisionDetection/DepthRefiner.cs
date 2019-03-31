@@ -313,7 +313,18 @@ namespace BepuPhysics.CollisionDetection
             in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, 
 			out Vector<float> refinedDepth, out Vector3Wide refinedNormal, int maximumIterations = 50)
         {
-            var depthBelowThreshold = Vector.LessThan(initialDepth, minimumDepthThreshold);
+			Vector<float> depthThreshold = minimumDepthThreshold;
+            if (supportFinderA.HasMargin)
+            {
+                supportFinderA.GetMargin(a, out var margin);
+                depthThreshold -= margin;
+            }
+            if (supportFinderB.HasMargin)
+            {
+                supportFinderB.GetMargin(b, out var margin);
+			    depthThreshold -= margin;
+            }
+            var depthBelowThreshold = Vector.LessThan(initialDepth, depthThreshold);
             var terminatedLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
 
             refinedNormal = initialNormal;
@@ -335,12 +346,22 @@ namespace BepuPhysics.CollisionDetection
                 var useNewDepth = Vector.AndNot(Vector.LessThan(depth, refinedDepth), terminatedLanes);
                 refinedDepth = Vector.ConditionalSelect(useNewDepth, depth, refinedDepth);
                 Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
-                terminatedLanes = Vector.BitwiseOr(Vector.LessThanOrEqual(refinedDepth, minimumDepthThreshold), terminatedLanes);
+                terminatedLanes = Vector.BitwiseOr(Vector.LessThanOrEqual(refinedDepth, depthThreshold), terminatedLanes);
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
 
                 GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out normal);
 				
+            }
+            if (supportFinderA.HasMargin)
+            {
+                supportFinderA.GetMargin(a, out var margin);
+                refinedDepth += margin;
+            }
+            if (supportFinderB.HasMargin)
+            {
+                supportFinderB.GetMargin(b, out var margin);
+                refinedDepth += margin;
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -650,7 +671,18 @@ namespace BepuPhysics.CollisionDetection
             in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, 
 			out Vector<float> refinedDepth, out Vector3Wide refinedNormal, out Vector3Wide witnessOnA, int maximumIterations = 50)
         {
-            var depthBelowThreshold = Vector.LessThan(initialDepth, minimumDepthThreshold);
+			Vector<float> depthThreshold = minimumDepthThreshold;
+            if (supportFinderA.HasMargin)
+            {
+                supportFinderA.GetMargin(a, out var margin);
+                depthThreshold -= margin;
+            }
+            if (supportFinderB.HasMargin)
+            {
+                supportFinderB.GetMargin(b, out var margin);
+			    depthThreshold -= margin;
+            }
+            var depthBelowThreshold = Vector.LessThan(initialDepth, depthThreshold);
             var terminatedLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
 
             refinedNormal = initialNormal;
@@ -673,12 +705,22 @@ namespace BepuPhysics.CollisionDetection
                 var useNewDepth = Vector.AndNot(Vector.LessThan(depth, refinedDepth), terminatedLanes);
                 refinedDepth = Vector.ConditionalSelect(useNewDepth, depth, refinedDepth);
                 Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
-                terminatedLanes = Vector.BitwiseOr(Vector.LessThanOrEqual(refinedDepth, minimumDepthThreshold), terminatedLanes);
+                terminatedLanes = Vector.BitwiseOr(Vector.LessThanOrEqual(refinedDepth, depthThreshold), terminatedLanes);
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
 
                 GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, supportOnA, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out normal);
 				
+            }
+            if (supportFinderA.HasMargin)
+            {
+                supportFinderA.GetMargin(a, out var margin);
+                refinedDepth += margin;
+            }
+            if (supportFinderB.HasMargin)
+            {
+                supportFinderB.GetMargin(b, out var margin);
+                refinedDepth += margin;
             }
 			//For simplexes terminating in a triangle state, we deferred the division for converting plane tests to barycentric coordinates until now.
 			var inverseDenominator = Vector<float>.One / simplex.WeightDenominator;
@@ -686,7 +728,13 @@ namespace BepuPhysics.CollisionDetection
 			Vector3Wide.Scale(simplex.B.SupportOnA, simplex.B.Weight * inverseDenominator, out var weightedB);
 			Vector3Wide.Scale(simplex.C.SupportOnA, simplex.C.Weight * inverseDenominator, out var weightedC);
 			Vector3Wide.Add(weightedA, weightedB, out witnessOnA);
-			Vector3Wide.Add(weightedC, witnessOnA, out witnessOnA);			
+			Vector3Wide.Add(weightedC, witnessOnA, out witnessOnA);		
+			if (supportFinderA.HasMargin)
+            {
+                supportFinderA.GetMargin(a, out var margin);
+				Vector3Wide.Scale(refinedNormal, margin, out var witnessOffset);
+				Vector3Wide.Add(witnessOffset, witnessOnA, out witnessOnA);
+            }
         }
     }
 }

@@ -377,6 +377,24 @@ namespace BepuPhysics.Collidables
             }
         }
 
+        /// <summary>
+        /// Provides an estimate of the scale of a shape. 
+        /// </summary>
+        /// <param name="terminatedLanes">Mask of lanes which are inactive.</param>
+        /// <param name="epsilonScale">Approximate scale of the shape for use in epsilons.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void EstimateEpsilonScale(in Vector<int> terminatedLanes, out Vector<float> epsilonScale)
+        {
+            Vector3Wide bundle;
+            for (int i = 0; i < Hulls.Length; ++i)
+            {
+                if (terminatedLanes[i] < 0)
+                    continue;
+                Vector3Wide.CopySlot(ref Hulls[i].Points[0], 0, ref bundle, i);
+            }
+            epsilonScale = (Vector.Abs(bundle.X) + Vector.Abs(bundle.Y) + Vector.Abs(bundle.Z)) * new Vector<float>(1f / 3f);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteFirst(in ConvexHull source)
         {
@@ -400,7 +418,7 @@ namespace BepuPhysics.Collidables
             Helpers.FillVectorWithLaneIndices(out var indexOffsets);
             for (int i = 0; i < Vector<float>.Count; ++i)
             {
-                if (terminatedLanes[0] < 0)
+                if (terminatedLanes[i] < 0)
                     continue;
                 ref var hull = ref shape.Hulls[i];
                 Debug.Assert(hull.Points.Allocated, "If the lane isn't terminated, then the hull should actually exist. Did you forget to create a mask based on the bundle local count?");
