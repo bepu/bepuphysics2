@@ -55,7 +55,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var pairWide = default(TPairWide);
             ref var aWide = ref pairWide.GetShapeA(ref pairWide);
             ref var bWide = ref pairWide.GetShapeB(ref pairWide);
-            //TODO: Check for JIT time branch elision.
             if (aWide.InternalAllocationSize > 0)
             {
                 var memory = stackalloc byte[aWide.InternalAllocationSize];
