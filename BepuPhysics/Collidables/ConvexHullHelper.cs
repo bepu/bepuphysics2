@@ -841,6 +841,15 @@ namespace BepuPhysics.Collidables
                 Vector3Wide.WriteFirst(faceNormal, ref boundingOffsetBundle.Normal);
                 GatherScatter.GetFirst(ref boundingOffsetBundle.Offset) = Vector3.Dot(facePivot, faceNormal);
             }
+            //Clear any trailing bounding plane data to keep it from contributing.
+            var boundingPlaneCapacity = hullShape.BoundingPlanes.Length * Vector<float>.Count;
+            for (int i = hullShape.FaceStartIndices.Length; i < boundingPlaneCapacity; ++i)
+            {
+                BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
+                ref var offsetInstance = ref GatherScatter.GetOffsetInstance(ref hullShape.BoundingPlanes[bundleIndex], innerIndex);
+                Vector3Wide.WriteFirst(default, ref offsetInstance.Normal);
+                GatherScatter.GetFirst(ref offsetInstance.Offset) = 0f;
+            }
         }
 
         /// <summary>
