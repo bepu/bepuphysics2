@@ -304,10 +304,6 @@ namespace BepuPhysics.CollisionDetection
 #endif
             FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialNormal, inactiveLanes, out var initialSupport);
             Vector3Wide.Dot(initialSupport, initialNormal, out var initialDepth);
-            if (supportFinderA.HasCache)
-                supportFinderA.CacheLastSample(new Vector<int>(-1));
-			if (supportFinderB.HasCache)
-                supportFinderB.CacheLastSample(new Vector<int>(-1));
             Create(initialNormal, initialSupport, out Simplex simplex);
             FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, initialNormal, initialDepth, inactiveLanes, searchEpsilon, minimumDepthThreshold, out depth, out refinedNormal, maximumIterations);
         }
@@ -348,10 +344,6 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.Dot(support, normal, out var depth);
 
                 var useNewDepth = Vector.AndNot(Vector.LessThan(depth, refinedDepth), terminatedLanes);
-                if (supportFinderA.HasCache)
-                    supportFinderA.CacheLastSample(useNewDepth);
-			    if (supportFinderB.HasCache)
-                    supportFinderB.CacheLastSample(useNewDepth);
                 refinedDepth = Vector.ConditionalSelect(useNewDepth, depth, refinedDepth);
                 Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
                 terminatedLanes = Vector.BitwiseOr(Vector.LessThanOrEqual(refinedDepth, depthThreshold), terminatedLanes);
@@ -670,10 +662,6 @@ namespace BepuPhysics.CollisionDetection
 #endif
             FindSupport(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, initialNormal, inactiveLanes, out var initialSupport, out var initialSupportOnA);
             Vector3Wide.Dot(initialSupport, initialNormal, out var initialDepth);
-            if (supportFinderA.HasCache)
-                supportFinderA.CacheLastSample(new Vector<int>(-1));
-			if (supportFinderB.HasCache)
-                supportFinderB.CacheLastSample(new Vector<int>(-1));
             Create(initialNormal, initialSupport, initialSupportOnA, out SimplexWithWitness simplex);
             FindMinimumDepth(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, ref simplex, initialNormal, initialDepth, inactiveLanes, searchEpsilon, minimumDepthThreshold, out depth, out refinedNormal, out witnessOnA, maximumIterations);
         }
@@ -715,10 +703,6 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.Dot(support, normal, out var depth);
 
                 var useNewDepth = Vector.AndNot(Vector.LessThan(depth, refinedDepth), terminatedLanes);
-                if (supportFinderA.HasCache)
-                    supportFinderA.CacheLastSample(useNewDepth);
-			    if (supportFinderB.HasCache)
-                    supportFinderB.CacheLastSample(useNewDepth);
                 refinedDepth = Vector.ConditionalSelect(useNewDepth, depth, refinedDepth);
                 Vector3Wide.ConditionalSelect(useNewDepth, normal, refinedNormal, out refinedNormal);
                 terminatedLanes = Vector.BitwiseOr(Vector.LessThanOrEqual(refinedDepth, depthThreshold), terminatedLanes);

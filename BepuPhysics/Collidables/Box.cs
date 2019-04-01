@@ -296,11 +296,5 @@ namespace BepuPhysics.Collidables
             support.Y = Vector.ConditionalSelect(Vector.LessThan(direction.Y, Vector<float>.Zero), -shape.HalfHeight, shape.HalfHeight);
             support.Z = Vector.ConditionalSelect(Vector.LessThan(direction.Z, Vector<float>.Zero), -shape.HalfLength, shape.HalfLength);
         }
-
-        public bool HasCache => false;
-        public void CacheLastSample(in Vector<int> shouldCache)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

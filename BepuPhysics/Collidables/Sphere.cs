@@ -225,12 +225,6 @@ namespace BepuPhysics.Collidables
         {
             support = default;
         }
-
-        public bool HasCache => false;
-        public void CacheLastSample(in Vector<int> shouldCache)
-        {
-            throw new NotImplementedException();
-        }
     }
 
 }
