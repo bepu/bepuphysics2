@@ -47,11 +47,29 @@ namespace BepuPhysics.Collidables
         /// Combined set of vertices used by each face. Use FaceStartIndices to index into this for a particular face.
         /// </summary>
         public Buffer<HullVertexIndex> FaceVertexIndices;
-        //TODO: Consider separate unbundled points for clipping. Might be worth it.
         /// <summary>
         /// Start indices of faces in the FaceVertexIndices.
         /// </summary>
         public Buffer<int> FaceStartIndices;
+        /// <summary>
+        /// Combined set of face indices touching each vertex. Use VertexToFaceIndicesStart to index into this for a particular vertex.
+        /// </summary>
+        public Buffer<int> VertexFaceIndices;
+        /// <summary>
+        /// Mapping from vertex indices to the start location of a list of face indices that involve the vertex.
+        /// </summary>
+        public Buffer<int> VertexToFaceIndicesStart;
+
+        /// <summary>
+        /// Creates a convex hull from a point set.
+        /// </summary>
+        /// <param name="points">Points to compute the convex hull of.</param>
+        /// <param name="pool">Pool in which to allocate the convex hull and any temporary resources needed to compute the hull.</param>
+        /// <param name="center">Computed center of the convex hull before the hull was recentered.</param>
+        public ConvexHull(Buffer<Vector3> points, BufferPool pool, out Vector3 center)
+        {
+            ConvexHullHelper.CreateShape(points, pool, out center, out this);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetFaceVertexIndices(int faceIndex, out Buffer<HullVertexIndex> faceVertexIndices)
@@ -61,6 +79,16 @@ namespace BepuPhysics.Collidables
             var end = nextFaceIndex == FaceStartIndices.Length ? FaceVertexIndices.Length : FaceStartIndices[nextFaceIndex];
             var count = end - start;
             FaceVertexIndices.Slice(start, count, out faceVertexIndices);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetFaceIndicesForVertex(int vertexIndex, out Buffer<int> faceIndices)
+        {
+            var start = VertexToFaceIndicesStart[vertexIndex];
+            var nextFaceIndex = vertexIndex + 1;
+            var end = nextFaceIndex == VertexToFaceIndicesStart.Length ? VertexFaceIndices.Length : FaceStartIndices[nextFaceIndex];
+            var count = end - start;
+            VertexFaceIndices.Slice(start, count, out faceIndices);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -277,6 +305,8 @@ namespace BepuPhysics.Collidables
             bufferPool.Return(ref BoundingPlanes);
             bufferPool.Return(ref FaceVertexIndices);
             bufferPool.Return(ref FaceStartIndices);
+            bufferPool.Return(ref VertexFaceIndices);
+            bufferPool.Return(ref VertexToFaceIndicesStart);
         }
 
 

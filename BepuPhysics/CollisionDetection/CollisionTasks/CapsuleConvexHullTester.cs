@@ -20,7 +20,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, hullOrientation, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
-            Matrix3x3Wide.CreateIdentity(out var identity);
             Vector3Wide.Length(localOffsetA, out var centerDistance);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / centerDistance, out var initialNormal);
             var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-8f));
@@ -196,14 +195,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformWithoutOverlap(localOffset0, hullOrientation, out manifold.OffsetA0);
             Matrix3x3Wide.TransformWithoutOverlap(localOffset1, hullOrientation, out manifold.OffsetA1);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, hullOrientation, out manifold.Normal);
-            //Push the contacts out to be on the surface of the capsule.
-            Vector3Wide.Scale(manifold.Normal, a.Radius, out var contactOffset);
-            Vector3Wide.Subtract(manifold.OffsetA0, contactOffset, out manifold.OffsetA0);
-            Vector3Wide.Subtract(manifold.OffsetA1, contactOffset, out manifold.OffsetA1);
-            //Vector3Wide.Scale(manifold.Normal, unexpandedDepth0, out var contactOffset0);
-            //Vector3Wide.Scale(manifold.Normal, unexpandedDepth1, out var contactOffset1);
-            //Vector3Wide.Add(manifold.OffsetA0, contactOffset0, out manifold.OffsetA0);
-            //Vector3Wide.Add(manifold.OffsetA1, contactOffset1, out manifold.OffsetA1);
+            //Push the contacts out to be on the surface of the convex hull.
+            //(Capsule vs hull surface doesn't really matter, but we choose hull because we may later build a system similar to MeshReduction that relies on contacts being on the hull surface.)
+            Vector3Wide.Scale(manifold.Normal, unexpandedDepth0, out var contactOffset0);
+            Vector3Wide.Scale(manifold.Normal, unexpandedDepth1, out var contactOffset1);
+            Vector3Wide.Add(manifold.OffsetA0, contactOffset0, out manifold.OffsetA0);
+            Vector3Wide.Add(manifold.OffsetA1, contactOffset1, out manifold.OffsetA1);
         }
 
         public void Test(ref CapsuleWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)
