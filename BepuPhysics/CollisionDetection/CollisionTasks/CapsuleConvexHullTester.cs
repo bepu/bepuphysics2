@@ -27,13 +27,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
             initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
-            var hullSupportFinder = default(ConvexHullSupportFinder);
+            var hullSupportFinder = default(CachingConvexHullSupportFinder);
             var capsuleSupportFinder = default(CapsuleSupportFinder);
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
             b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
             var epsilonScale = Vector.Min(a.Radius, hullEpsilonScale);
             var depthThreshold = -speculativeMargin;
-            DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Capsule, CapsuleWide, CapsuleSupportFinder>.FindMinimumDepth(
+            DepthRefiner<ConvexHull, ConvexHullWide, CachingConvexHullSupportFinder, Capsule, CapsuleWide, CapsuleSupportFinder>.FindMinimumDepth(
                 b, a, localOffsetA, hullLocalCapsuleOrientation, ref hullSupportFinder, ref capsuleSupportFinder, initialNormal, inactiveLanes, 1e-6f * epsilonScale, depthThreshold,
                 out var depth, out var localNormal);
 
