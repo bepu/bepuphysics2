@@ -151,7 +151,7 @@ namespace Demos.SpecializedTests
                 ref var plane = ref Hull.BoundingPlanes[i];
                 Vector3Wide.Dot(plane.Normal, pointBundle, out var dot);
                 var contained = Vector.LessThan(dot - plane.Offset, containmentEpsilon);
-                var count = Math.Min(Hull.FaceStartIndices.Length - i * Vector<float>.Count, Vector<float>.Count);
+                var count = Math.Min(Hull.FaceToVertexIndicesStart.Length - i * Vector<float>.Count, Vector<float>.Count);
                 for (int j = 0; j < count; ++j)
                 {
                     if (contained[j] == 0)

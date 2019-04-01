@@ -138,18 +138,18 @@ namespace DemoRenderer.ShapeDrawing
                         if (!MeshCache.TryGetExistingMesh(id, out instance.VertexStart, out var vertices))
                         {
                             int triangleCount = 0;
-                            for (int i = 0; i < hull.FaceStartIndices.Length; ++i)
+                            for (int i = 0; i < hull.FaceToVertexIndicesStart.Length; ++i)
                             {
-                                hull.GetFaceVertexIndices(i, out var faceVertexIndices);
+                                hull.GetVertexIndicesForFace(i, out var faceVertexIndices);
                                 triangleCount += faceVertexIndices.Length - 2;
                             }
                             instance.VertexCount = triangleCount * 3;
                             MeshCache.Allocate(id, instance.VertexCount, out instance.VertexStart, out vertices);
                             //This is a fresh allocation, so we need to upload vertex data.
                             int targetVertexIndex = 0;
-                            for (int i = 0; i < hull.FaceStartIndices.Length; ++i)
+                            for (int i = 0; i < hull.FaceToVertexIndicesStart.Length; ++i)
                             {
-                                hull.GetFaceVertexIndices(i, out var faceVertexIndices);
+                                hull.GetVertexIndicesForFace(i, out var faceVertexIndices);
                                 hull.GetPoint(faceVertexIndices[0], out var faceOrigin);
                                 hull.GetPoint(faceVertexIndices[1], out var previousEdgeEnd);
                                 for (int j = 2; j < faceVertexIndices.Length; ++j)

@@ -56,42 +56,62 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 if (inactiveLanes[slotIndex] < 0)
                     continue;
                 ref var hull = ref b.Hulls[slotIndex];
-                //Pick the representative face.
-                Vector3Wide.Rebroadcast(localNormal, slotIndex, out var slotLocalNormalBundle);
-                Vector3Wide.Dot(hull.BoundingPlanes[0].Normal, slotLocalNormalBundle, out var bestFaceDotBundle);
-                var bestIndices = slotOffsetIndices;
-                for (int i = 1; i < hull.BoundingPlanes.Length; ++i)
+                //Pick the representative face from the set of faces touching the best sampled support point.
+                hull.GetFaceIndicesForVertex(hullSupportFinder.BestSupportIndex[slotIndex], out var faceIndices);
+                Vector3Wide.ReadSlot(ref localNormal, slotIndex, out var slotLocalNormal);
+                var bestFaceDot = -float.MaxValue;
+                var bestFaceIndex = -1;
+                Vector3 bestFaceNormal = default;
+                for (int i = 0; i < faceIndices.Length; ++i)
                 {
-                    var slotIndices = new Vector<int>(i << BundleIndexing.VectorShift) + slotOffsetIndices;
-                    //Face normals point outward.
-                    //(Bundle slots beyond actual face count contain dummy data chosen to avoid being picked.)
-                    Vector3Wide.Dot(hull.BoundingPlanes[i].Normal, slotLocalNormalBundle, out var dot);
-                    var useCandidate = Vector.GreaterThan(dot, bestFaceDotBundle);
-                    bestFaceDotBundle = Vector.ConditionalSelect(useCandidate, dot, bestFaceDotBundle);
-                    bestIndices = Vector.ConditionalSelect(useCandidate, slotIndices, bestIndices);
-                }
-                var bestFaceDot = bestFaceDotBundle[0];
-                var bestIndex = bestIndices[0];
-                for (int i = 1; i < Vector<float>.Count; ++i)
-                {
-                    var dot = bestFaceDotBundle[i];
-                    if (dot > bestFaceDot)
+                    BundleIndexing.GetBundleIndices(faceIndices[i], out var faceBundleCandidateIndex, out var faceInnerCandidateIndex);
+                    Vector3Wide.ReadSlot(ref hull.BoundingPlanes[faceBundleCandidateIndex].Normal, faceInnerCandidateIndex, out var faceNormalCandidate);
+                    var dotCandidate = Vector3.Dot(faceNormalCandidate, slotLocalNormal);
+                    if (dotCandidate > bestFaceDot)
                     {
-                        bestFaceDot = dot;
-                        bestIndex = bestIndices[i];
+                        bestFaceDot = dotCandidate;
+                        bestFaceIndex = faceIndices[i];
+                        bestFaceNormal = faceNormalCandidate;
                     }
                 }
-                BundleIndexing.GetBundleIndices(bestIndex, out var faceBundleIndex, out var faceInnerIndex);
-                Vector3Wide.CopySlot(ref hull.BoundingPlanes[faceBundleIndex].Normal, faceInnerIndex, ref faceNormalBundle, slotIndex);
+                Console.WriteLine($"support:    {hullSupportFinder.BestSupportIndex[slotIndex]}");
+                Console.WriteLine($"face index: {bestFaceIndex}");
+                Console.WriteLine($"best dot:   {bestFaceDot}");
+                Vector3Wide.WriteSlot(bestFaceNormal, slotIndex, ref faceNormalBundle);
+                //Vector3Wide.Rebroadcast(localNormal, slotIndex, out var slotLocalNormalBundle);
+                //Vector3Wide.Dot(hull.BoundingPlanes[0].Normal, slotLocalNormalBundle, out var bestFaceDotBundle);
+                //var bestIndices = slotOffsetIndices;
+                //for (int i = 1; i < hull.BoundingPlanes.Length; ++i)
+                //{
+                //    var slotIndices = new Vector<int>(i << BundleIndexing.VectorShift) + slotOffsetIndices;
+                //    //Face normals point outward.
+                //    //(Bundle slots beyond actual face count contain dummy data chosen to avoid being picked.)
+                //    Vector3Wide.Dot(hull.BoundingPlanes[i].Normal, slotLocalNormalBundle, out var dot);
+                //    var useCandidate = Vector.GreaterThan(dot, bestFaceDotBundle);
+                //    bestFaceDotBundle = Vector.ConditionalSelect(useCandidate, dot, bestFaceDotBundle);
+                //    bestIndices = Vector.ConditionalSelect(useCandidate, slotIndices, bestIndices);
+                //}
+                //var bestFaceDot = bestFaceDotBundle[0];
+                //var bestIndex = bestIndices[0];
+                //for (int i = 1; i < Vector<float>.Count; ++i)
+                //{
+                //    var dot = bestFaceDotBundle[i];
+                //    if (dot > bestFaceDot)
+                //    {
+                //        bestFaceDot = dot;
+                //        bestIndex = bestIndices[i];
+                //    }
+                //}
+                //BundleIndexing.GetBundleIndices(bestIndex, out var faceBundleIndex, out var faceInnerIndex);
+                //Vector3Wide.CopySlot(ref hull.BoundingPlanes[faceBundleIndex].Normal, faceInnerIndex, ref faceNormalBundle, slotIndex);
 
                 //Test each face edge plane against the capsule edge.
                 //Note that we do not use the faceNormal x edgeOffset edge plane, but rather edgeOffset x localNormal.
                 //(In other words, testing the *projected* capsule axis on the surface of the convex hull face.)
                 //The faces are wound counterclockwise.
-                hull.GetFaceVertexIndices(bestIndex, out var faceVertexIndices);
+                hull.GetVertexIndicesForFace(bestFaceIndex, out var faceVertexIndices);
                 var previousIndex = faceVertexIndices[faceVertexIndices.Length - 1];
                 Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var previousVertex);
-                Vector3Wide.ReadFirst(slotLocalNormalBundle, out var slotLocalNormal);
                 Vector3Wide.ReadSlot(ref localCapsuleAxis, slotIndex, out var slotCapsuleAxis);
                 Vector3Wide.ReadSlot(ref localOffsetA, slotIndex, out var slotLocalOffsetA);
                 Vector3Wide.WriteSlot(previousVertex, slotIndex, ref pointOnFaceBundle);

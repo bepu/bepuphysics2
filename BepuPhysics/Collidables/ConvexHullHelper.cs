@@ -798,9 +798,9 @@ namespace BepuPhysics.Collidables
             }
 
             //Create the face->vertex mapping.
-            pool.Take(hullData.FaceStartIndices.Length, out hullShape.FaceStartIndices);
-            hullShape.FaceStartIndices.Slice(0, hullData.FaceStartIndices.Length, out hullShape.FaceStartIndices);
-            hullData.FaceStartIndices.CopyTo(0, ref hullShape.FaceStartIndices, 0, hullShape.FaceStartIndices.Length);
+            pool.Take(hullData.FaceStartIndices.Length, out hullShape.FaceToVertexIndicesStart);
+            hullShape.FaceToVertexIndicesStart.Slice(0, hullData.FaceStartIndices.Length, out hullShape.FaceToVertexIndicesStart);
+            hullData.FaceStartIndices.CopyTo(0, ref hullShape.FaceToVertexIndicesStart, 0, hullShape.FaceToVertexIndicesStart.Length);
             pool.Take(hullData.FaceVertexIndices.Length, out hullShape.FaceVertexIndices);
             hullShape.FaceVertexIndices.Slice(0, hullData.FaceVertexIndices.Length, out hullShape.FaceVertexIndices);
             for (int i = 0; i < hullShape.FaceVertexIndices.Length; ++i)
@@ -815,9 +815,9 @@ namespace BepuPhysics.Collidables
             pool.Take(hullData.OriginalVertexMapping.Length, out var vertexFaceCounts);
             vertexFaceCounts.Clear(0, hullData.OriginalVertexMapping.Length);
             var vertexToFaceMappingSize = 0;
-            for (int i = 0; i < hullShape.FaceStartIndices.Length; ++i)
+            for (int i = 0; i < hullShape.FaceToVertexIndicesStart.Length; ++i)
             {
-                hullShape.GetFaceVertexIndices(i, out var faceVertexIndices);
+                hullShape.GetVertexIndicesForFace(i, out var faceVertexIndices);
                 for (int j = 0; j < faceVertexIndices.Length; ++j)
                 {
                     ref var index = ref faceVertexIndices[j];
@@ -837,9 +837,9 @@ namespace BepuPhysics.Collidables
                 previousSum += vertexFaceCounts[i];
             }
             vertexFaceCounts.Clear(0, hullData.OriginalVertexMapping.Length);
-            for (int faceIndex = 0; faceIndex < hullShape.FaceStartIndices.Length; ++faceIndex)
+            for (int faceIndex = 0; faceIndex < hullShape.FaceToVertexIndicesStart.Length; ++faceIndex)
             {
-                hullShape.GetFaceVertexIndices(faceIndex, out var faceVertexIndices);
+                hullShape.GetVertexIndicesForFace(faceIndex, out var faceVertexIndices);
                 for (int j = 0; j < faceVertexIndices.Length; ++j)
                 {
                     ref var index = ref faceVertexIndices[j];
@@ -852,12 +852,12 @@ namespace BepuPhysics.Collidables
             pool.Return(ref vertexFaceCounts);
 
             //Create bounding planes.
-            var faceBundleCount = BundleIndexing.GetBundleCount(hullShape.FaceStartIndices.Length);
+            var faceBundleCount = BundleIndexing.GetBundleCount(hullShape.FaceToVertexIndicesStart.Length);
             pool.Take(faceBundleCount, out hullShape.BoundingPlanes);
             hullShape.BoundingPlanes.Slice(0, faceBundleCount, out hullShape.BoundingPlanes);
-            for (int i = 0; i < hullShape.FaceStartIndices.Length; ++i)
+            for (int i = 0; i < hullShape.FaceToVertexIndicesStart.Length; ++i)
             {
-                hullShape.GetFaceVertexIndices(i, out var faceVertexIndices);
+                hullShape.GetVertexIndicesForFace(i, out var faceVertexIndices);
                 Debug.Assert(faceVertexIndices.Length >= 3, "We only allow the creation of convex hulls around point sets with, at minimum, some area, so all faces should have at least 3 points.");
                 //Note that we sum up contributions from all the constituent triangles.
                 //This avoids hitting any degenerate face triangles and smooths out small numerical deviations.
@@ -887,7 +887,7 @@ namespace BepuPhysics.Collidables
 
             //Clear any trailing bounding plane data to keep it from contributing.
             var boundingPlaneCapacity = hullShape.BoundingPlanes.Length * Vector<float>.Count;
-            for (int i = hullShape.FaceStartIndices.Length; i < boundingPlaneCapacity; ++i)
+            for (int i = hullShape.FaceToVertexIndicesStart.Length; i < boundingPlaneCapacity; ++i)
             {
                 BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
                 ref var offsetInstance = ref GatherScatter.GetOffsetInstance(ref hullShape.BoundingPlanes[bundleIndex], innerIndex);

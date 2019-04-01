@@ -44,13 +44,13 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public Buffer<HullBoundingPlanes> BoundingPlanes;
         /// <summary>
-        /// Combined set of vertices used by each face. Use FaceStartIndices to index into this for a particular face.
+        /// Combined set of vertices used by each face. Use FaceToVertexIndicesStart to index into this for a particular face.
         /// </summary>
         public Buffer<HullVertexIndex> FaceVertexIndices;
         /// <summary>
         /// Start indices of faces in the FaceVertexIndices.
         /// </summary>
-        public Buffer<int> FaceStartIndices;
+        public Buffer<int> FaceToVertexIndicesStart;
         /// <summary>
         /// Combined set of face indices touching each vertex. Use VertexToFaceIndicesStart to index into this for a particular vertex.
         /// </summary>
@@ -72,11 +72,11 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetFaceVertexIndices(int faceIndex, out Buffer<HullVertexIndex> faceVertexIndices)
+        public void GetVertexIndicesForFace(int faceIndex, out Buffer<HullVertexIndex> faceVertexIndices)
         {
-            var start = FaceStartIndices[faceIndex];
+            var start = FaceToVertexIndicesStart[faceIndex];
             var nextFaceIndex = faceIndex + 1;
-            var end = nextFaceIndex == FaceStartIndices.Length ? FaceVertexIndices.Length : FaceStartIndices[nextFaceIndex];
+            var end = nextFaceIndex == FaceToVertexIndicesStart.Length ? FaceVertexIndices.Length : FaceToVertexIndicesStart[nextFaceIndex];
             var count = end - start;
             FaceVertexIndices.Slice(start, count, out faceVertexIndices);
         }
@@ -86,7 +86,7 @@ namespace BepuPhysics.Collidables
         {
             var start = VertexToFaceIndicesStart[vertexIndex];
             var nextFaceIndex = vertexIndex + 1;
-            var end = nextFaceIndex == VertexToFaceIndicesStart.Length ? VertexFaceIndices.Length : FaceStartIndices[nextFaceIndex];
+            var end = nextFaceIndex == VertexToFaceIndicesStart.Length ? VertexFaceIndices.Length : VertexToFaceIndicesStart[nextFaceIndex];
             var count = end - start;
             VertexFaceIndices.Slice(start, count, out faceIndices);
         }
@@ -178,9 +178,9 @@ namespace BepuPhysics.Collidables
             public bool GetNextTriangle(out Vector3 a, out Vector3 b, out Vector3 c)
             {
                 //This isn't quite as direct or fast as it could be, but it's fairly simple without requiring a redundant implementation.
-                if (faceIndex < hull.FaceStartIndices.Length)
+                if (faceIndex < hull.FaceToVertexIndicesStart.Length)
                 {
-                    hull.GetFaceVertexIndices(faceIndex, out var faceIndices);
+                    hull.GetVertexIndicesForFace(faceIndex, out var faceIndices);
                     hull.GetPoint(faceIndices[0], out a);
                     hull.GetPoint(faceIndices[subtriangleIndex - 1], out b);
                     hull.GetPoint(faceIndices[subtriangleIndex], out c);
@@ -304,7 +304,7 @@ namespace BepuPhysics.Collidables
             bufferPool.Return(ref Points);
             bufferPool.Return(ref BoundingPlanes);
             bufferPool.Return(ref FaceVertexIndices);
-            bufferPool.Return(ref FaceStartIndices);
+            bufferPool.Return(ref FaceToVertexIndicesStart);
             bufferPool.Return(ref VertexFaceIndices);
             bufferPool.Return(ref VertexToFaceIndicesStart);
         }
