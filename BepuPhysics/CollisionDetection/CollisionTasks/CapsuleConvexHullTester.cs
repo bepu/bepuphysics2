@@ -1,6 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -33,7 +34,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var epsilonScale = Vector.Min(a.Radius, hullEpsilonScale);
             var depthThreshold = -speculativeMargin;
             DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Capsule, CapsuleWide, CapsuleSupportFinder>.FindMinimumDepth(
-                b, a, localOffsetA, hullLocalCapsuleOrientation, ref hullSupportFinder, ref capsuleSupportFinder, initialNormal, inactiveLanes, 1e-6f * epsilonScale, depthThreshold,
+                b, a, localOffsetA, hullLocalCapsuleOrientation, ref hullSupportFinder, ref capsuleSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,
                 out var depth, out var localNormal, out var closestOnHull);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, -speculativeMargin));
@@ -43,7 +44,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 manifold = default;
                 return;
             }
-
+            
             //To find the contact manifold, we'll clip the capsule axis against the face as usual, but we're dealing with potentially
             //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
@@ -212,6 +213,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(manifold.Normal, unexpandedDepth1, out var contactOffset1);
             Vector3Wide.Add(manifold.OffsetA0, contactOffset0, out manifold.OffsetA0);
             Vector3Wide.Add(manifold.OffsetA1, contactOffset1, out manifold.OffsetA1);
+
         }
 
         public void Test(ref CapsuleWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)

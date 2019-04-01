@@ -51,14 +51,6 @@ namespace BepuPhysics.Collidables
         /// Start indices of faces in the FaceVertexIndices.
         /// </summary>
         public Buffer<int> FaceToVertexIndicesStart;
-        /// <summary>
-        /// Combined set of face indices touching each vertex. Use VertexToFaceIndicesStart to index into this for a particular vertex.
-        /// </summary>
-        public Buffer<int> VertexFaceIndices;
-        /// <summary>
-        /// Mapping from vertex indices to the start location of a list of face indices that involve the vertex.
-        /// </summary>
-        public Buffer<int> VertexToFaceIndicesStart;
 
         /// <summary>
         /// Creates a convex hull from a point set.
@@ -79,16 +71,6 @@ namespace BepuPhysics.Collidables
             var end = nextFaceIndex == FaceToVertexIndicesStart.Length ? FaceVertexIndices.Length : FaceToVertexIndicesStart[nextFaceIndex];
             var count = end - start;
             FaceVertexIndices.Slice(start, count, out faceVertexIndices);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetFaceIndicesForVertex(int vertexIndex, out Buffer<int> faceIndices)
-        {
-            var start = VertexToFaceIndicesStart[vertexIndex];
-            var nextFaceIndex = vertexIndex + 1;
-            var end = nextFaceIndex == VertexToFaceIndicesStart.Length ? VertexFaceIndices.Length : VertexToFaceIndicesStart[nextFaceIndex];
-            var count = end - start;
-            VertexFaceIndices.Slice(start, count, out faceIndices);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -305,8 +287,6 @@ namespace BepuPhysics.Collidables
             bufferPool.Return(ref BoundingPlanes);
             bufferPool.Return(ref FaceVertexIndices);
             bufferPool.Return(ref FaceToVertexIndicesStart);
-            bufferPool.Return(ref VertexFaceIndices);
-            bufferPool.Return(ref VertexToFaceIndicesStart);
         }
 
 

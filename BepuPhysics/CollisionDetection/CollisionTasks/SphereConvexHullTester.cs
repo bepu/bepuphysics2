@@ -34,7 +34,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
             var epsilonScale = Vector.Min(a.Radius, hullEpsilonScale);
             DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Sphere, SphereWide, SphereSupportFinder>.FindMinimumDepth(
-                b, a, localOffsetA, identity, ref hullSupportFinder, ref sphereSupportFinder, initialNormal, inactiveLanes, 1e-6f * epsilonScale, -speculativeMargin, 
+                b, a, localOffsetA, identity, ref hullSupportFinder, ref sphereSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, -speculativeMargin, 
                 out var depth, out var localNormal, out var closestOnHull);
 
             Matrix3x3Wide.TransformWithoutOverlap(closestOnHull, hullOrientation, out var hullToContact);
