@@ -343,5 +343,11 @@ namespace BepuPhysics.Collidables
             support.X = Vector.ConditionalSelect(useHorizontal, direction.X * normalizeScale, Vector<float>.Zero);
             support.Z = Vector.ConditionalSelect(useHorizontal, direction.Z * normalizeScale, Vector<float>.Zero);
         }
+
+        public bool HasCache => false;
+        public void CacheLastSample(in Vector<int> shouldCache)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

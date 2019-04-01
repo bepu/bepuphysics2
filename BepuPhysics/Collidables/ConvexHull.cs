@@ -409,6 +409,81 @@ namespace BepuPhysics.Collidables
         }
     }
 
+    public struct CachingConvexHullSupportFinder : ISupportFinder<ConvexHull, ConvexHullWide>
+    {
+        public Vector<int> LastSupportIndex;
+        public Vector<int> BestSupportIndex;
+
+        public bool HasMargin => false;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetMargin(in ConvexHullWide shape, out Vector<float> margin)
+        {
+            margin = default;
+        }
+
+        public bool HasCache => true;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void CacheLastSample(in Vector<int> shouldCache)
+        {
+            BestSupportIndex = Vector.ConditionalSelect(shouldCache, LastSupportIndex, BestSupportIndex);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ComputeLocalSupport(ref ConvexHull hull, int slotIndex, in Vector3Wide direction, in Vector<int> indexOffsets)
+        {
+            Debug.Assert(hull.Points.Allocated, "If the lane isn't terminated, then the hull should actually exist. Did you forget to create a mask based on the bundle local count?");
+            Vector3Wide.Rebroadcast(direction, slotIndex, out var slotDirection);
+            var bestIndices = indexOffsets;
+            Vector3Wide.Dot(slotDirection, hull.Points[0], out var dot);
+            for (int j = 1; j < hull.Points.Length; ++j)
+            {
+                ref var candidate = ref hull.Points[j];
+                Vector3Wide.Dot(slotDirection, candidate, out var dotCandidate);
+                var useCandidate = Vector.GreaterThan(dotCandidate, dot);
+                bestIndices = Vector.ConditionalSelect(useCandidate, indexOffsets + new Vector<int>(j << BundleIndexing.VectorShift), bestIndices);
+                dot = Vector.ConditionalSelect(useCandidate, dotCandidate, dot);
+            }
+
+            var bestSlotIndex = 0;
+            var bestSlotDot = dot[0];
+            for (int j = 1; j < Vector<float>.Count; ++j)
+            {
+                var candidate = dot[j];
+                if (candidate > bestSlotDot)
+                {
+                    bestSlotDot = candidate;
+                    bestSlotIndex = j;
+                }
+            }
+            return bestIndices[bestSlotIndex];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ComputeLocalSupport(in ConvexHullWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
+        {
+            Helpers.FillVectorWithLaneIndices(out var indexOffsets);
+            for (int i = 0; i < Vector<float>.Count; ++i)
+            {
+                if (terminatedLanes[i] < 0)
+                    continue;
+                ref var hull = ref shape.Hulls[i];
+                var supportIndex = ComputeLocalSupport(ref hull, i, direction, indexOffsets);
+                BundleIndexing.GetBundleIndices(supportIndex, out var bundleIndex, out var innerIndex);
+                Vector3Wide.CopySlot(ref hull.Points[bundleIndex], innerIndex, ref support, i);
+                GatherScatter.Get(ref LastSupportIndex, i) = supportIndex;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ComputeSupport(in ConvexHullWide shape, in Matrix3x3Wide orientation, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
+        {
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(direction, orientation, out var localDirection);
+            ComputeLocalSupport(shape, localDirection, terminatedLanes, out var localSupport);
+            Matrix3x3Wide.TransformWithoutOverlap(localSupport, orientation, out support);
+        }
+    }
+
     public struct ConvexHullSupportFinder : ISupportFinder<ConvexHull, ConvexHullWide>
     {
         public bool HasMargin => false;
@@ -422,33 +497,9 @@ namespace BepuPhysics.Collidables
                 if (terminatedLanes[i] < 0)
                     continue;
                 ref var hull = ref shape.Hulls[i];
-                Debug.Assert(hull.Points.Allocated, "If the lane isn't terminated, then the hull should actually exist. Did you forget to create a mask based on the bundle local count?");
-                Vector3Wide.Rebroadcast(direction, i, out var slotDirection);
-                var bestIndices = indexOffsets;
-                Vector3Wide.Dot(slotDirection, hull.Points[0], out var dot);
-                for (int j = 1; j < hull.Points.Length; ++j)
-                {
-                    ref var candidate = ref hull.Points[j];
-                    Vector3Wide.Dot(slotDirection, candidate, out var dotCandidate);
-                    var useCandidate = Vector.GreaterThan(dotCandidate, dot);
-                    bestIndices = Vector.ConditionalSelect(useCandidate, indexOffsets + new Vector<int>(j << BundleIndexing.VectorShift), bestIndices);
-                    dot = Vector.ConditionalSelect(useCandidate, dotCandidate, dot);
-                }
-
-                var bestSlotIndex = 0;
-                var bestSlotDot = dot[0];
-                for (int j = 1; j < Vector<float>.Count; ++j)
-                {
-                    var candidate = dot[j];
-                    if (candidate > bestSlotDot)
-                    {
-                        bestSlotDot = candidate;
-                        bestSlotIndex = j;
-                    }
-                }
-                BundleIndexing.GetBundleIndices(bestIndices[bestSlotIndex], out var bundleIndex, out var innerIndex);
-                Vector3Wide.ReadSlot(ref hull.Points[bundleIndex], innerIndex, out var bestSupport);
-                Vector3Wide.WriteSlot(bestSupport, i, ref support);
+                var supportIndex = CachingConvexHullSupportFinder.ComputeLocalSupport(ref hull, i, direction, indexOffsets);
+                BundleIndexing.GetBundleIndices(supportIndex, out var bundleIndex, out var innerIndex);
+                Vector3Wide.CopySlot(ref hull.Points[bundleIndex], innerIndex, ref support, i);
             }
         }
 
@@ -465,7 +516,11 @@ namespace BepuPhysics.Collidables
         {
             margin = default;
         }
+
+        public bool HasCache => false;
+        public void CacheLastSample(in Vector<int> shouldCache)
+        {
+            throw new NotImplementedException();
+        }
     }
-
-
 }

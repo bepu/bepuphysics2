@@ -12,7 +12,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
     internal struct PretransformedTriangleSupportFinder : ISupportFinder<Triangle, TriangleWide>
     {
-        public bool HasMargin => throw new NotImplementedException();
 
         public void ComputeLocalSupport(in TriangleWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
@@ -30,7 +29,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(Vector.Equals(max, c), shape.C, support, out support);
         }
 
+        public bool HasMargin => false;
         public void GetMargin(in TriangleWide shape, out Vector<float> margin)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool HasCache => false;
+        public void CacheLastSample(in Vector<int> shouldCache)
         {
             throw new NotImplementedException();
         }

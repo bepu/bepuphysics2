@@ -207,6 +207,7 @@ namespace BepuPhysics.Collidables
             get { return true; }
         }
 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetMargin(in SphereWide shape, out Vector<float> margin)
         {
@@ -223,6 +224,12 @@ namespace BepuPhysics.Collidables
         public void ComputeLocalSupport(in SphereWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             support = default;
+        }
+
+        public bool HasCache => false;
+        public void CacheLastSample(in Vector<int> shouldCache)
+        {
+            throw new NotImplementedException();
         }
     }
 

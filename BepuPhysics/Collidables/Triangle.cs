@@ -249,5 +249,11 @@ namespace BepuPhysics.Collidables
             Vector3Wide.ConditionalSelect(Vector.Equals(max, a), shape.A, shape.B, out support);
             Vector3Wide.ConditionalSelect(Vector.Equals(max, c), shape.C, support, out support);
         }
+
+        public bool HasCache => false;
+        public void CacheLastSample(in Vector<int> shouldCache)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
