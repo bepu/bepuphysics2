@@ -117,26 +117,46 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                     //A plane is being 'entered' if the ray direction opposes the face normal.
                     //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
-                    //If the denominator is zero, just ignore the lane.
-                    //if (denominator * denominator > 1e-3f * edgePlaneNormal.LengthSquared())
-                    //{
-                    if (denominator < 0)
+                    var edgePlaneNormalLengthSquared = edgePlaneNormal.LengthSquared();
+                    var denominatorSquared = denominator * denominator;
+
+                    const float min = 1e-5f;
+                    const float max = 3e-4f;
+                    const float inverseSpan = 1f / (max - min);
+                    if (denominatorSquared > min * edgePlaneNormalLengthSquared)
                     {
-                        if (numerator * latestEntryDenominator > latestEntryNumerator * denominator)
+                        if (denominatorSquared < max * edgePlaneNormalLengthSquared)
                         {
-                            latestEntryNumerator = numerator;
-                            latestEntryDenominator = denominator;
+                            //As the angle between the axis and edge plane approaches zero, the axis should unrestrict.
+                            //angle between capsule axis and edge plane normal = asin(dot(edgePlaneNormal / ||edgePlaneNormal||, capsuleAxis))
+                            //sin(angle)^2 * ||edgePlaneNormal||^2 = dot(edgePlaneNormal, capsuleAxis)^2
+                            var restrictWeight = (denominatorSquared / edgePlaneNormalLengthSquared - min) * inverseSpan;
+                            if (restrictWeight < 0)
+                                restrictWeight = 0;
+                            else if (restrictWeight > 1)
+                                restrictWeight = 1;
+                            var unrestrictedNumerator = a.HalfLength[slotIndex] * denominator;
+                            if (denominator < 0)
+                                unrestrictedNumerator = -unrestrictedNumerator;
+                            numerator = restrictWeight * numerator + (1 - restrictWeight) * unrestrictedNumerator;
+                        }
+                        if (denominator < 0)
+                        {
+                            if (numerator * latestEntryDenominator > latestEntryNumerator * denominator)
+                            {
+                                latestEntryNumerator = numerator;
+                                latestEntryDenominator = denominator;
+                            }
+                        }
+                        else // if (denominator > 0)
+                        {
+                            if (numerator * earliestExitDenominator < earliestExitNumerator * denominator)
+                            {
+                                earliestExitNumerator = numerator;
+                                earliestExitDenominator = denominator;
+                            }
                         }
                     }
-                    else if (denominator > 0)
-                    {
-                        if (numerator * earliestExitDenominator < earliestExitNumerator * denominator)
-                        {
-                            earliestExitNumerator = numerator;
-                            earliestExitDenominator = denominator;
-                        }
-                    }
-                    //}
                 }
 
                 GatherScatter.Get(ref latestEntryNumeratorBundle, slotIndex) = latestEntryNumerator;
@@ -144,6 +164,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 GatherScatter.Get(ref earliestExitNumeratorBundle, slotIndex) = earliestExitNumerator;
                 GatherScatter.Get(ref earliestExitDenominatorBundle, slotIndex) = earliestExitDenominator;
             }
+
             var tEntry = latestEntryNumeratorBundle / latestEntryDenominatorBundle;
             var tExit = earliestExitNumeratorBundle / earliestExitDenominatorBundle;
             var negatedHalfLength = -a.HalfLength;
@@ -169,17 +190,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.Depth1 = a.Radius + unexpandedDepth1;
             manifold.FeatureId0 = Vector<int>.Zero;
             manifold.FeatureId1 = Vector<int>.One;
-            manifold.Contact0Exists = Vector.GreaterThanOrEqual(manifold.Depth0, depthThreshold);
-            manifold.Contact1Exists = Vector.BitwiseAnd(Vector.GreaterThan(tExit, tEntry), Vector.GreaterThanOrEqual(manifold.Depth1, depthThreshold));
+            manifold.Contact0Exists = Vector.AndNot(Vector.GreaterThanOrEqual(manifold.Depth0, depthThreshold), inactiveLanes);
+            manifold.Contact1Exists = Vector.AndNot(Vector.BitwiseAnd(Vector.GreaterThan(tExit - tEntry, a.HalfLength * 1e-3f), Vector.GreaterThanOrEqual(manifold.Depth1, depthThreshold)), inactiveLanes);
 
             Matrix3x3Wide.TransformWithoutOverlap(localOffset0, hullOrientation, out manifold.OffsetA0);
             Matrix3x3Wide.TransformWithoutOverlap(localOffset1, hullOrientation, out manifold.OffsetA1);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, hullOrientation, out manifold.Normal);
             //Push the contacts out to be on the surface of the capsule.
-            Vector3Wide.Scale(manifold.Normal, unexpandedDepth0, out var contactOffset0);
-            Vector3Wide.Scale(manifold.Normal, unexpandedDepth1, out var contactOffset1);
-            Vector3Wide.Add(manifold.OffsetA0, contactOffset0, out manifold.OffsetA0);
-            Vector3Wide.Add(manifold.OffsetA1, contactOffset1, out manifold.OffsetA1);
+            Vector3Wide.Scale(manifold.Normal, a.Radius, out var contactOffset);
+            Vector3Wide.Subtract(manifold.OffsetA0, contactOffset, out manifold.OffsetA0);
+            Vector3Wide.Subtract(manifold.OffsetA1, contactOffset, out manifold.OffsetA1);
         }
 
         public void Test(ref CapsuleWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)

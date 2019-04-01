@@ -33,10 +33,10 @@ namespace Demos.SpecializedTests
             points.Allocate(BufferPool) = new Vector3(0, 0, 1);
             points.Allocate(BufferPool) = new Vector3(0, 1, 0);
             points.Allocate(BufferPool) = new Vector3(0, 1, 1);
-            points.Allocate(BufferPool) = new Vector3(1, 0, 0);
-            points.Allocate(BufferPool) = new Vector3(1, 0, 1);
-            points.Allocate(BufferPool) = new Vector3(1, 1, 0);
-            points.Allocate(BufferPool) = new Vector3(1, 1, 1);
+            points.Allocate(BufferPool) = new Vector3(2, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(2, 0, 1);
+            points.Allocate(BufferPool) = new Vector3(2, 1, 0);
+            points.Allocate(BufferPool) = new Vector3(2, 1, 1);
             var random = new Random(5);
             for (int i = 0; i < pointCount; ++i)
             {
@@ -62,7 +62,7 @@ namespace Demos.SpecializedTests
             Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new CollidableDescription(Simulation.Shapes.Add(hullShape), 0.1f), new BodyActivityDescription(0.01f)));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(2)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(5, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(5, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 2)), 0.1f)));
         }
 
         int stepIndex = 0;
