@@ -61,8 +61,9 @@ namespace Demos.SpecializedTests
 
             Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new CollidableDescription(Simulation.Shapes.Add(hullShape), 10.1f), new BodyActivityDescription(0.01f)));
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(2)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(5, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 2)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-10, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(2)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-5, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 2)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(1f, 1.5f, 2f)), 0.1f)));
         }
 
         int stepIndex = 0;

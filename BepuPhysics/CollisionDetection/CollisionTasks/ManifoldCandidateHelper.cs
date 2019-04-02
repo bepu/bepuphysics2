@@ -9,6 +9,12 @@ using static BepuUtilities.GatherScatter;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
+    public struct ManifoldCandidateScalar
+    {
+        public float X;
+        public float Y;
+        public int FeatureId;
+    }
     public struct ManifoldCandidate
     {
         public Vector<float> X;
@@ -25,7 +31,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref var laneMasks = ref Unsafe.As<Vector<int>, int>(ref inactiveLanes);
             for (int i = Vector<int>.Count - 1; i >= pairCount; --i)
             {
-                Unsafe.Add(ref laneMasks, i) = -1; 
+                Unsafe.Add(ref laneMasks, i) = -1;
             }
         }
 
@@ -237,6 +243,201 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Note that these epsilons capture the case where there are two or less raw contacts.
             contact2Exists = Vector.GreaterThan(minSignedArea * minSignedArea, epsilon);
             contact3Exists = Vector.GreaterThan(maxSignedArea * maxSignedArea, epsilon);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        unsafe static void PlaceCandidateInSlot(in ManifoldCandidateScalar candidate, int contactIndex,
+            in Vector3 faceCenterB, in Vector3 faceBX, in Vector3 faceBY, float depth,
+            in Matrix3x3 orientationB, in Vector3 offsetB, ref Convex4ContactManifoldWide manifoldSlot)
+        {
+            var localPosition = candidate.X * faceBX + candidate.Y * faceBY + faceCenterB;
+            Matrix3x3.Transform(localPosition, orientationB, out var position);
+            position += offsetB;
+            Vector3Wide.WriteFirst(position, ref Unsafe.Add(ref manifoldSlot.OffsetA0, contactIndex));
+            GetFirst(ref Unsafe.Add(ref manifoldSlot.Depth0, contactIndex)) = depth;
+            GetFirst(ref Unsafe.Add(ref manifoldSlot.FeatureId0, contactIndex)) = candidate.FeatureId;
+            GetFirst(ref Unsafe.Add(ref manifoldSlot.Contact0Exists, contactIndex)) = -1;
+
+        }
+
+        public unsafe static void Reduce(ManifoldCandidateScalar* candidates, int candidateCount,
+            in Vector3 faceNormalA, in Vector3 localNormal, in Vector3 faceCenterA, in Vector3 faceCenterB, in Vector3 tangentBX, in Vector3 tangentBY,
+            float epsilonScale, float minimumDepth, in Matrix3x3 orientationB, in Vector3 offsetB, int slotIndex, ref Convex4ContactManifoldWide manifoldWide)
+        {
+            ref var manifoldSlot = ref GetOffsetInstance(ref manifoldWide, slotIndex);
+            if (candidateCount == 0)
+            {
+                GetFirst(ref manifoldSlot.Contact0Exists) = 0;
+                GetFirst(ref manifoldSlot.Contact1Exists) = 0;
+                GetFirst(ref manifoldSlot.Contact2Exists) = 0;
+                GetFirst(ref manifoldSlot.Contact3Exists) = 0;
+                return;
+            }
+            Matrix3x3.Transform(localNormal, orientationB, out var normal);
+            Vector3Wide.WriteFirst(normal, ref manifoldSlot.Normal);
+
+            //Calculate the depths of all candidates.
+            //It's important to keep the deepest contact if there's any significant depth disparity, so we need to calculate depths before reduction.
+            //Conceptually, we cast a ray from the point on face B toward the plane of face A along the contact normal:
+            //depth = dot(pointOnFaceB - faceCenterA, faceNormalA) / dot(faceNormalA, normal)
+            //dotAxis = faceNormalA / dot(faceNormalA, normal)
+            //depth = dot(pointOnFaceB - faceCenterA, dotAxis)
+            //depth = dot(faceCenterB + tangentBX * candidate.X + tangentBY * candidate.Y - faceCenterA, dotAxis)
+            //depth = dot(faceCenterB - faceCenterA, dotAxis) + dot(tangentBX, dotAxis) * candidate.X + dot(tangentBY, dotAxis) * candidate.Y
+            var dotAxis = faceNormalA / Vector3.Dot(faceNormalA, localNormal);
+            var faceCenterAToFaceCenterB = faceCenterB - faceCenterA;
+            var baseDot = Vector3.Dot(faceCenterAToFaceCenterB, dotAxis);
+            var xDot = Vector3.Dot(tangentBX, dotAxis);
+            var yDot = Vector3.Dot(tangentBY, dotAxis);
+            var candidateDepths = stackalloc float[candidateCount];
+            for (int i = candidateCount - 1; i >= 0; --i)
+            {
+                ref var candidate = ref candidates[i];
+                ref var candidateDepth = ref candidateDepths[i];
+                candidateDepth = baseDot + candidate.X * xDot + candidate.Y * yDot;
+                //Prune out contacts below the depth threshold.
+                if (candidateDepth < minimumDepth)
+                {
+                    var lastIndex = candidateCount - 1;
+                    if (i < lastIndex)
+                    {
+                        candidate = candidates[lastIndex];
+                        candidateDepth = candidateDepths[lastIndex];
+                    }
+                    --candidateCount;
+                }
+            }
+
+            if (candidateCount <= 4)
+            {
+                //No reduction is necessary; just place the contacts into the manifold.
+                for (int i = 0; i < candidateCount; ++i)
+                {
+                    PlaceCandidateInSlot(candidates[i], i, faceCenterB, tangentBX, tangentBY, candidateDepths[i], orientationB, offsetB, ref manifoldSlot);
+                }
+                for (int i = candidateCount; i < 4; ++i)
+                {
+                    GetFirst(ref Unsafe.Add(ref manifoldSlot.Contact0Exists, i)) = 0;
+                }
+                return;
+            }
+
+            //minor todo: don't really need to waste time initializing to an invalid value.
+            var bestScore0 = float.MinValue;
+            var bestIndex0 = 0;
+            //While depth is the dominant heuristic, extremity is used as a bias to keep initial contact selection a little more consistent in near-equal cases.
+            var extremityScale = epsilonScale * 1e-2f;
+            for (int i = 0; i < candidateCount; ++i)
+            {
+                ref var candidate = ref candidates[i];
+                ref var candidateDepth = ref candidateDepths[i];
+                //Note extremity heuristic. We want a few properties:
+                //1) Somewhat resilient to collisions in common cases.
+                //2) Cheap.
+                //3) Incapable of resulting in a speculative contact over an active contact.
+                //While conditionally using a scaled abs(candidate.X) works fine for 2 and 3, many use cases result in ties along the x axis alone.
+                //X and Y added together is slightly better, but 45 degree angles are not uncommon and can result in the same problem.
+                //So we just use a dot product with an arbitrary direction.
+                //This is a pretty small detail, but it is cheap enough that there's no reason not to take advantage of it.
+                var extremity = candidate.X * 0.7946897654f + candidate.Y * 0.60701579614f;
+                if (extremity < 0)
+                    extremity = -extremity;
+                var candidateScore = candidateDepth;
+                if (candidateDepth >= 0)
+                    candidateScore += extremity * extremityScale;
+                if (candidateScore > bestScore0)
+                {
+                    bestScore0 = candidateScore;
+                    bestIndex0 = i;
+                }
+            }
+            var candidate0 = candidates[bestIndex0];
+            var depth0 = candidateDepths[bestIndex0];
+            PlaceCandidateInSlot(candidate0, 0, faceCenterB, tangentBX, tangentBY, depth0, orientationB, offsetB, ref manifoldSlot);
+
+            //Find the most distant point from the starting contact.
+            var maximumDistanceSquared = -1f;
+            var bestIndex1 = 0;
+            for (int i = 0; i < candidateCount; ++i)
+            {
+                ref var candidate = ref candidates[i];
+                var offsetX = candidate.X - candidate0.X;
+                var offsetY = candidate.Y - candidate0.Y;
+                var distanceSquared = offsetX * offsetX + offsetY * offsetY;
+                //Penalize speculative contacts; they are not as important in general.
+                distanceSquared = candidateDepths[i] < 0 ? 0.125f * distanceSquared : distanceSquared;
+                if (distanceSquared > maximumDistanceSquared)
+                {
+                    maximumDistanceSquared = distanceSquared;
+                    bestIndex1 = i;
+                }
+            }
+            if (maximumDistanceSquared < 1e-6f * epsilonScale * epsilonScale)
+            {
+                //There's no point in additional contacts if the distance between the first and second candidates is zero. 
+                GetFirst(ref manifoldSlot.Contact1Exists) = 0;
+                GetFirst(ref manifoldSlot.Contact2Exists) = 0;
+                GetFirst(ref manifoldSlot.Contact3Exists) = 0;
+                return;
+            }
+            var candidate1 = candidates[bestIndex1];
+            var depth1 = candidateDepths[bestIndex1];
+            PlaceCandidateInSlot(candidate1, 1, faceCenterB, tangentBX, tangentBY, depth1, orientationB, offsetB, ref manifoldSlot);
+
+
+            //Now identify two more points. Using the two existing contacts as a starting edge, pick the points which, when considered as a triangle with the edge,
+            //have the largest magnitude negative and positive signed areas.
+            var edgeOffsetX = candidate1.X - candidate0.X;
+            var edgeOffsetY = candidate1.Y - candidate0.Y;
+            var minSignedArea = 0f;
+            var maxSignedArea = 0f;
+            var bestIndex2 = 0;
+            var bestIndex3 = 0;
+            for (int i = 0; i < candidateCount; ++i)
+            {
+                if (i == bestIndex0 || i == bestIndex1)
+                    continue;
+                //The area of a triangle is proportional to the magnitude of the cross product of two of its edge offsets. 
+                //To retain sign, we will conceptually dot against the face's normal. Since we're working on the surface of face B, the arithmetic simplifies heavily to a perp-dot product.
+                ref var candidate = ref candidates[i];
+                var candidateOffsetX = candidate.X - candidate0.X;
+                var candidateOffsetY = candidate.Y - candidate0.Y;
+                var signedArea = candidateOffsetX * edgeOffsetY - candidateOffsetY * edgeOffsetX;
+                //Penalize speculative contacts; they are not as important in general.
+                if (candidateDepths[i] < 0)
+                    signedArea *= 0.25f;
+
+                if (signedArea < minSignedArea)
+                {
+                    minSignedArea = signedArea;
+                    bestIndex2 = i;
+                }
+                if (signedArea > maxSignedArea)
+                {
+                    maxSignedArea = signedArea;
+                    bestIndex3 = i;
+                }
+            }
+
+            //Area can be approximated as a box for the purposes of an epsilon test: (edgeLength0 * span)^2 = (edgeLength0 * edgeLength0 * span * span).
+            //This comparison is basically checking if 'span' is irrelevantly small, so we can change this to:
+            //edgeLength0 * edgeLength0 * (edgeLength0 * tinyNumber) * (edgeLength0 * tinyNumber) = (edgeLength0^2) * (edgelength0^2) * (tinyNumber^2)
+            var areaEpsilon = maximumDistanceSquared * maximumDistanceSquared * 1e-6f;
+            int nextContactIndex;
+            if (minSignedArea * minSignedArea > areaEpsilon)
+            {
+                PlaceCandidateInSlot(candidates[bestIndex2], 2, faceCenterB, tangentBX, tangentBY, candidateDepths[bestIndex2], orientationB, offsetB, ref manifoldSlot);
+                nextContactIndex = 3;
+            }
+            else
+            {
+                nextContactIndex = 2;
+            }
+            if (maxSignedArea * maxSignedArea > areaEpsilon)
+            {
+                PlaceCandidateInSlot(candidates[bestIndex3], nextContactIndex, faceCenterB, tangentBX, tangentBY, candidateDepths[bestIndex3], orientationB, offsetB, ref manifoldSlot);
+            }
+
         }
     }
 }

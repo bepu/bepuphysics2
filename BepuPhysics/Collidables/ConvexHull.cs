@@ -444,7 +444,7 @@ namespace BepuPhysics.Collidables
                     bestIndices = Vector.ConditionalSelect(useCandidate, indexOffsets + new Vector<int>(j << BundleIndexing.VectorShift), bestIndices);
                     dot = Vector.ConditionalSelect(useCandidate, dotCandidate, dot);
                 }
-
+                //This horizontal phase is actually a nontrivial cost; platform intrinsics may offer some potential improvements.
                 var bestSlotIndex = 0;
                 var bestSlotDot = dot[0];
                 for (int j = 1; j < Vector<float>.Count; ++j)

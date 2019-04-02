@@ -105,7 +105,7 @@ namespace BepuUtilities
             result.Z.Y = a.Z.X * b.Y.X + a.Z.Y * b.Y.Y + a.Z.Z * b.Y.Z;
             result.Z.Z = a.Z.X * b.Z.X + a.Z.Y * b.Z.Y + a.Z.Z * b.Z.Z;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void TransformWithoutOverlap(in Vector3Wide v, in Matrix3x3Wide m, out Vector3Wide result)
         {
@@ -154,7 +154,7 @@ namespace BepuUtilities
             inverse.Y.Z = m23 * determinantInverse;
             inverse.Z.Z = m33 * determinantInverse;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CreateCrossProduct(in Vector3Wide v, out Matrix3x3Wide skew)
         {
@@ -237,5 +237,30 @@ namespace BepuUtilities
             result.Z.Z = Vector<float>.One - XX - YY;
         }
 
+        /// <summary>
+        /// Pulls one lane out of the wide representation.
+        /// </summary>
+        /// <param name="source">Source of the lane.</param>
+        /// <param name="target">Non-SIMD type to store the lane in.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ReadFirst(in Matrix3x3Wide source, out Matrix3x3 target)
+        {
+            Vector3Wide.ReadFirst(source.X, out target.X);
+            Vector3Wide.ReadFirst(source.Y, out target.Y);
+            Vector3Wide.ReadFirst(source.Z, out target.Z);
+        }
+
+        /// <summary>
+        /// Pulls one lane out of the wide representation.
+        /// </summary>
+        /// <param name="wide">Source of the lane.</param>
+        /// <param name="slotIndex">Index of the lane within the wide representation to read.</param>
+        /// <param name="narrow">Non-SIMD type to store the lane in.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ReadSlot(ref Matrix3x3Wide wide, int slotIndex, out Matrix3x3 narrow)
+        {
+            ref var offset = ref GatherScatter.GetOffsetInstance(ref wide, slotIndex);
+            ReadFirst(offset, out narrow);
+        }
     }
 }

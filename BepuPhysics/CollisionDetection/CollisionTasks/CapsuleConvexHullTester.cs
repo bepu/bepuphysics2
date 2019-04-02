@@ -49,7 +49,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
             Vector3Wide faceNormalBundle;
-            Vector3Wide pointOnFaceBundle;
             var boundingPlaneEpsilon = 1e-4f * epsilonScale;
             Vector<float> latestEntryNumeratorBundle, latestEntryDenominatorBundle;
             Vector<float> earliestExitNumeratorBundle, earliestExitDenominatorBundle;
@@ -58,44 +57,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 if (inactiveLanes[slotIndex] < 0)
                     continue;
                 ref var hull = ref b.Hulls[slotIndex];
-                //Pick the representative face from the set of faces touching the best sampled support point.
-                //The representative face is chosen based on:
-                //1) the closest hull point is on the face's plane and 
-                //2) of all faces touching the hull point, the face's normal is most aligned with the contact normal.
-                Vector3Wide.ReadSlot(ref localNormal, slotIndex, out var slotLocalNormal);
-                Vector3Wide.Broadcast(slotLocalNormal, out var slotLocalNormalBundle);
-                ref var boundingPlaneBundle = ref hull.BoundingPlanes[0];
-                var slotBoundingPlaneEpsilon = new Vector<float>(boundingPlaneEpsilon[slotIndex]);
-                Vector3Wide.Rebroadcast(closestOnHull, slotIndex, out var slotClosestOnHull);
-                Vector3Wide.Dot(boundingPlaneBundle.Normal, slotLocalNormalBundle, out var bestFaceDotBundle);
-                Vector3Wide.Dot(boundingPlaneBundle.Normal, slotClosestOnHull, out var closestOnHullDot);
-                bestFaceDotBundle = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(closestOnHullDot - boundingPlaneBundle.Offset), slotBoundingPlaneEpsilon), bestFaceDotBundle, new Vector<float>(float.MinValue));
-                var bestIndices = slotOffsetIndices;
-                for (int i = 1; i < hull.BoundingPlanes.Length; ++i)
-                {
-                    var slotIndices = new Vector<int>(i << BundleIndexing.VectorShift) + slotOffsetIndices;
-                    //Face normals point outward.
-                    //(Bundle slots beyond actual face count contain dummy data chosen to avoid being picked.)
-                    boundingPlaneBundle = ref hull.BoundingPlanes[i];
-                    Vector3Wide.Dot(boundingPlaneBundle.Normal, slotLocalNormalBundle, out var dot);
-                    Vector3Wide.Dot(boundingPlaneBundle.Normal, slotClosestOnHull, out closestOnHullDot);
-                    var useCandidate = Vector.BitwiseAnd(Vector.GreaterThan(dot, bestFaceDotBundle), Vector.LessThan(Vector.Abs(closestOnHullDot - boundingPlaneBundle.Offset), slotBoundingPlaneEpsilon));
-                    bestFaceDotBundle = Vector.ConditionalSelect(useCandidate, dot, bestFaceDotBundle);
-                    bestIndices = Vector.ConditionalSelect(useCandidate, slotIndices, bestIndices);
-                }
-                var bestFaceDot = bestFaceDotBundle[0];
-                var bestFaceIndex = bestIndices[0];
-                for (int i = 1; i < Vector<float>.Count; ++i)
-                {
-                    var dot = bestFaceDotBundle[i];
-                    if (dot > bestFaceDot)
-                    {
-                        bestFaceDot = dot;
-                        bestFaceIndex = bestIndices[i];
-                    }
-                }
-                BundleIndexing.GetBundleIndices(bestFaceIndex, out var faceBundleIndex, out var faceInnerIndex);
-                Vector3Wide.CopySlot(ref hull.BoundingPlanes[faceBundleIndex].Normal, faceInnerIndex, ref faceNormalBundle, slotIndex);
+                ConvexHullTestHelper.PickRepresentativeFace(ref hull, slotIndex, ref localNormal, closestOnHull, slotOffsetIndices, ref boundingPlaneEpsilon, out var slotFaceNormal, out var slotLocalNormal, out var bestFaceIndex);
+                Vector3Wide.WriteSlot(slotFaceNormal, slotIndex, ref faceNormalBundle);
 
                 //Test each face edge plane against the capsule edge.
                 //Note that we do not use the faceNormal x edgeOffset edge plane, but rather edgeOffset x localNormal.
@@ -106,7 +69,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var previousVertex);
                 Vector3Wide.ReadSlot(ref localCapsuleAxis, slotIndex, out var slotCapsuleAxis);
                 Vector3Wide.ReadSlot(ref localOffsetA, slotIndex, out var slotLocalOffsetA);
-                Vector3Wide.WriteSlot(previousVertex, slotIndex, ref pointOnFaceBundle);
                 var latestEntryNumerator = float.MaxValue;
                 var latestEntryDenominator = -1f;
                 var earliestExitNumerator = float.MaxValue;
@@ -187,7 +149,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //Compute the depth of each contact based on the projection along the contact normal to the face.
             //depth = dot(contactRelativeToA - pointOnFaceB, faceNormalB) / dot(faceNormalB, normal)
-            Vector3Wide.Add(localOffsetB, pointOnFaceBundle, out var aToPointOnHullFace);
+            Vector3Wide.Add(localOffsetB, closestOnHull, out var aToPointOnHullFace);
 
             Vector3Wide.Dot(faceNormalBundle, localNormal, out var depthDenominator);
             var inverseDepthDenominator = Vector<float>.One / depthDenominator;
