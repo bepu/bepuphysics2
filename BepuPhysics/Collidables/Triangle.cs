@@ -98,7 +98,7 @@ namespace BepuPhysics.Collidables
             return false;
         }
 
-        
+
         public void ComputeInertia(float mass, out BodyInertia inertia)
         {
             MeshInertiaHelper.ComputeTriangleContribution(A, B, C, mass, out var inertiaTensor);
@@ -144,6 +144,23 @@ namespace BepuPhysics.Collidables
         public bool AllowOffsetMemoryAccess => true;
         public int InternalAllocationSize => 0;
         public void Initialize(in RawBuffer memory) { }
+
+        /// <summary>
+        /// Provides an estimate of the scale of a shape. 
+        /// </summary>
+        /// <param name="epsilonScale">Approximate scale of the shape for use in epsilons.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void EstimateEpsilonScale(out Vector<float> epsilonScale)
+        {
+            var minX = Vector.Min(A.X, Vector.Min(B.X, C.X));
+            var maxX = Vector.Max(A.X, Vector.Max(B.X, C.X));
+            var minY = Vector.Min(A.Y, Vector.Min(B.Y, C.Y));
+            var maxY = Vector.Max(A.Y, Vector.Max(B.Y, C.Y));
+            var minZ = Vector.Min(A.Z, Vector.Min(B.Z, C.Z));
+            var maxZ = Vector.Max(A.Z, Vector.Max(B.Z, C.Z));
+            epsilonScale = Vector.Max(maxX - minX, Vector.Max(maxY - minY, maxZ - minZ));
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteSlot(int index, in Triangle source)

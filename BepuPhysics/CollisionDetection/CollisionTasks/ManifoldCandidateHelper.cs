@@ -260,6 +260,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static unsafe void RemoveCandidateAt(ManifoldCandidateScalar* candidates, float* depths, int removalIndex, ref int candidateCount)
+        {
+            var lastIndex = candidateCount - 1;
+            if (removalIndex < lastIndex)
+            {
+                candidates[removalIndex] = candidates[lastIndex];
+                depths[removalIndex] = depths[lastIndex];
+            }
+            --candidateCount;
+        }
+
         public unsafe static void Reduce(ManifoldCandidateScalar* candidates, int candidateCount,
             in Vector3 faceNormalA, in Vector3 localNormal, in Vector3 faceCenterA, in Vector3 faceCenterB, in Vector3 tangentBX, in Vector3 tangentBY,
             float epsilonScale, float minimumDepth, in Matrix3x3 orientationB, in Vector3 offsetB, int slotIndex, ref Convex4ContactManifoldWide manifoldWide)
@@ -298,13 +310,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Prune out contacts below the depth threshold.
                 if (candidateDepth < minimumDepth)
                 {
-                    var lastIndex = candidateCount - 1;
-                    if (i < lastIndex)
-                    {
-                        candidate = candidates[lastIndex];
-                        candidateDepth = candidateDepths[lastIndex];
-                    }
-                    --candidateCount;
+                    RemoveCandidateAt(candidates, candidateDepths, i, ref candidateCount);
                 }
             }
 
@@ -331,20 +337,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             {
                 ref var candidate = ref candidates[i];
                 ref var candidateDepth = ref candidateDepths[i];
-                //Note extremity heuristic. We want a few properties:
-                //1) Somewhat resilient to collisions in common cases.
-                //2) Cheap.
-                //3) Incapable of resulting in a speculative contact over an active contact.
-                //While conditionally using a scaled abs(candidate.X) works fine for 2 and 3, many use cases result in ties along the x axis alone.
-                //X and Y added together is slightly better, but 45 degree angles are not uncommon and can result in the same problem.
-                //So we just use a dot product with an arbitrary direction.
-                //This is a pretty small detail, but it is cheap enough that there's no reason not to take advantage of it.
-                var extremity = candidate.X * 0.7946897654f + candidate.Y * 0.60701579614f;
-                if (extremity < 0)
-                    extremity = -extremity;
-                var candidateScore = candidateDepth;
+                float candidateScore = candidateDepth;
                 if (candidateDepth >= 0)
+                {
+                    //Note extremity heuristic. We want a few properties:
+                    //1) Somewhat resilient to collisions in common cases.
+                    //2) Cheap.
+                    //3) Incapable of resulting in a speculative contact over an active contact.
+                    //While conditionally using a scaled abs(candidate.X) works fine for 2 and 3, many use cases result in ties along the x axis alone.
+                    //X and Y added together is slightly better, but 45 degree angles are not uncommon and can result in the same problem.
+                    //So we just use a dot product with an arbitrary direction.
+                    //This is a pretty small detail, but it is cheap enough that there's no reason not to take advantage of it.
+                    var extremity = candidate.X * 0.7946897654f + candidate.Y * 0.60701579614f;
+                    if (extremity < 0)
+                        extremity = -extremity;
                     candidateScore += extremity * extremityScale;
+                }
                 if (candidateScore > bestScore0)
                 {
                     bestScore0 = candidateScore;
@@ -354,6 +362,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var candidate0 = candidates[bestIndex0];
             var depth0 = candidateDepths[bestIndex0];
             PlaceCandidateInSlot(candidate0, 0, faceCenterB, tangentBX, tangentBY, depth0, orientationB, offsetB, ref manifoldSlot);
+            RemoveCandidateAt(candidates, candidateDepths, bestIndex0, ref candidateCount);
 
             //Find the most distant point from the starting contact.
             var maximumDistanceSquared = -1f;
@@ -383,6 +392,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var candidate1 = candidates[bestIndex1];
             var depth1 = candidateDepths[bestIndex1];
             PlaceCandidateInSlot(candidate1, 1, faceCenterB, tangentBX, tangentBY, depth1, orientationB, offsetB, ref manifoldSlot);
+            RemoveCandidateAt(candidates, candidateDepths, bestIndex1, ref candidateCount);
 
 
             //Now identify two more points. Using the two existing contacts as a starting edge, pick the points which, when considered as a triangle with the edge,
@@ -395,8 +405,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var bestIndex3 = 0;
             for (int i = 0; i < candidateCount; ++i)
             {
-                if (i == bestIndex0 || i == bestIndex1)
-                    continue;
+                //if (i == bestIndex0 || i == bestIndex1)
+                //    continue;
                 //The area of a triangle is proportional to the magnitude of the cross product of two of its edge offsets. 
                 //To retain sign, we will conceptually dot against the face's normal. Since we're working on the surface of face B, the arithmetic simplifies heavily to a perp-dot product.
                 ref var candidate = ref candidates[i];

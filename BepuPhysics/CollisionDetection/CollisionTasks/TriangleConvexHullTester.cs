@@ -7,16 +7,16 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public struct BoxConvexHullTester : IPairTester<BoxWide, ConvexHullWide, Convex4ContactManifoldWide>
+    public struct TriangleConvexHullTester : IPairTester<TriangleWide, ConvexHullWide, Convex4ContactManifoldWide>
     {
         public int BatchSize => 32;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public unsafe void Test(ref TriangleWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
-            Matrix3x3Wide.CreateFromQuaternion(orientationA, out var boxOrientation);
+            Matrix3x3Wide.CreateFromQuaternion(orientationA, out var triangleOrientation);
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var hullOrientation);
-            Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(boxOrientation, hullOrientation, out var hullLocalBoxOrientation);
+            Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(triangleOrientation, hullOrientation, out var hullLocalTriangleOrientation);
 
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, hullOrientation, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
@@ -27,16 +27,42 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
             initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
             var hullSupportFinder = default(ConvexHullSupportFinder);
-            var boxSupportFinder = default(BoxSupportFinder);
+            var triangleSupportFinder = default(PretransformedTriangleSupportFinder);
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            a.EstimateEpsilonScale(out var triangleEpsilonScale);
             b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
-            var epsilonScale = Vector.Min(Vector.Max(a.HalfWidth, Vector.Max(a.HalfHeight, a.HalfLength)), hullEpsilonScale);
+            var epsilonScale = Vector.Min(triangleEpsilonScale, hullEpsilonScale);
             var depthThreshold = -speculativeMargin;
-            DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
-                b, a, localOffsetA, hullLocalBoxOrientation, ref hullSupportFinder, ref boxSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,
+
+            TriangleWide triangle;
+            Matrix3x3Wide.TransformWithoutOverlap(a.A, hullLocalTriangleOrientation, out triangle.A);
+            Matrix3x3Wide.TransformWithoutOverlap(a.B, hullLocalTriangleOrientation, out triangle.B);
+            Matrix3x3Wide.TransformWithoutOverlap(a.C, hullLocalTriangleOrientation, out triangle.C);
+            Vector3Wide.Add(triangle.A, triangle.B, out var centroid);
+            Vector3Wide.Add(triangle.C, centroid, out centroid);
+            Vector3Wide.Scale(centroid, new Vector<float>(1f / 3f), out centroid);
+            Vector3Wide.Subtract(triangle.A, centroid, out triangle.A);
+            Vector3Wide.Subtract(triangle.B, centroid, out triangle.B);
+            Vector3Wide.Subtract(triangle.C, centroid, out triangle.C);
+            Vector3Wide.Subtract(centroid, localOffsetB, out var localTriangleCenter);
+            Vector3Wide.Subtract(triangle.B, triangle.A, out var triangleAB);
+            Vector3Wide.Subtract(triangle.C, triangle.B, out var triangleBC);
+            Vector3Wide.Subtract(triangle.A, triangle.C, out var triangleCA);
+            //We'll be using B-local triangle vertices quite a bit, so cache them.
+            Vector3Wide.Add(triangle.A, localTriangleCenter, out var triangleA);
+            Vector3Wide.Add(triangle.B, localTriangleCenter, out var triangleB);
+            Vector3Wide.Add(triangle.C, localTriangleCenter, out var triangleC);
+            Vector3Wide.CrossWithoutOverlap(triangleAB, triangleCA, out var triangleNormal);
+            Vector3Wide.Length(triangleNormal, out var triangleNormalLength);
+            Vector3Wide.Scale(triangleNormal, Vector<float>.One / triangleNormalLength, out triangleNormal);
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(triangleNormalLength, epsilonScale * 1e-6f));
+
+            DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.FindMinimumDepth(
+                b, triangle, localTriangleCenter, hullLocalTriangleOrientation, ref hullSupportFinder, ref triangleSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,
                 out var depth, out var localNormal, out var closestOnHull);
 
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
+            Vector3Wide.Dot(triangleNormal, localNormal, out var triangleNormalDotLocalNormal);
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThan(triangleNormalDotLocalNormal, Vector<float>.Zero), Vector.LessThan(depth, depthThreshold)));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //No contacts generated.
@@ -44,45 +70,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 return;
             }
 
-
-            //Identify the box face.
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, hullLocalBoxOrientation, out var localNormalInA);
-            Vector3Wide.Abs(localNormalInA, out var absLocalNormalInA);
-            var useX = Vector.BitwiseAnd(Vector.GreaterThan(absLocalNormalInA.X, absLocalNormalInA.Y), Vector.GreaterThan(absLocalNormalInA.X, absLocalNormalInA.Z));
-            var useY = Vector.AndNot(Vector.GreaterThan(absLocalNormalInA.Y, absLocalNormalInA.Z), useX);
-            Vector3Wide.ConditionalSelect(useX, hullLocalBoxOrientation.X, hullLocalBoxOrientation.Z, out var boxFaceNormal);
-            Vector3Wide.ConditionalSelect(useY, hullLocalBoxOrientation.Y, boxFaceNormal, out boxFaceNormal);
-            Vector3Wide.ConditionalSelect(useX, hullLocalBoxOrientation.Y, hullLocalBoxOrientation.X, out var boxFaceX);
-            Vector3Wide.ConditionalSelect(useY, hullLocalBoxOrientation.Z, boxFaceX, out boxFaceX);
-            Vector3Wide.ConditionalSelect(useX, hullLocalBoxOrientation.Z, hullLocalBoxOrientation.Y, out var boxFaceY);
-            Vector3Wide.ConditionalSelect(useY, hullLocalBoxOrientation.X, boxFaceY, out boxFaceY);
-            var negateFace =
-                Vector.ConditionalSelect(useX, Vector.GreaterThan(localNormalInA.X, Vector<float>.Zero),
-                Vector.ConditionalSelect(useY, Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), Vector.GreaterThan(localNormalInA.Z, Vector<float>.Zero)));
-            Vector3Wide.ConditionallyNegate(negateFace, ref boxFaceNormal);
-            //Winding is important; flip the face bases if necessary.
-            Vector3Wide.ConditionallyNegate(Vector.OnesComplement(negateFace), ref boxFaceX);
-            var boxFaceHalfWidth = Vector.ConditionalSelect(useX, a.HalfHeight, Vector.ConditionalSelect(useY, a.HalfLength, a.HalfWidth));
-            var boxFaceHalfHeight = Vector.ConditionalSelect(useX, a.HalfLength, Vector.ConditionalSelect(useY, a.HalfWidth, a.HalfHeight));
-            var boxFaceNormalOffset = Vector.ConditionalSelect(useX, a.HalfWidth, Vector.ConditionalSelect(useY, a.HalfHeight, a.HalfLength));
-            Vector3Wide.Scale(boxFaceNormal, boxFaceNormalOffset, out var boxFaceCenterOffset);
-            Vector3Wide.Add(boxFaceCenterOffset, localOffsetA, out var boxFaceCenter);
-            Vector3Wide.Scale(boxFaceX, boxFaceHalfWidth, out var boxFaceXOffset);
-            Vector3Wide.Scale(boxFaceY, boxFaceHalfHeight, out var boxFaceYOffset);
-            Vector3Wide.Subtract(boxFaceCenter, boxFaceXOffset, out var v0);
-            Vector3Wide.Add(boxFaceCenter, boxFaceXOffset, out var v1);
-            Vector3Wide.Subtract(v0, boxFaceYOffset, out var v00);
-            Vector3Wide.Add(v0, boxFaceYOffset, out var v01);
-            Vector3Wide.Subtract(v1, boxFaceYOffset, out var v10);
-            Vector3Wide.Add(v1, boxFaceYOffset, out var v11);
-
-            //To find the contact manifold, we'll clip the box edges against the hull face as usual, but we're dealing with potentially
+            //To find the contact manifold, we'll clip the triangle edges against the hull face as usual, but we're dealing with potentially
             //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
             Vector3Wide pointOnFaceBundle;
             var boundingPlaneEpsilon = 1e-4f * epsilonScale;
-            //There can be no more than 8 contacts (provided there are no numerical errors); 2 per box edge.
-            var candidates = stackalloc ManifoldCandidateScalar[8];
+            //There can be no more than 6 contacts (provided there are no numerical errors); 2 per triangle edge.
+            var candidates = stackalloc ManifoldCandidateScalar[6];
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
             {
                 if (inactiveLanes[slotIndex] < 0)
@@ -90,31 +84,32 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ref var hull = ref b.Hulls[slotIndex];
                 ConvexHullTestHelper.PickRepresentativeFace(ref hull, slotIndex, ref localNormal, closestOnHull, slotOffsetIndices, ref boundingPlaneEpsilon, out var slotFaceNormal, out var slotLocalNormal, out var bestFaceIndex);
 
-                //Test each face edge plane against the box face.
+                //Test each triangle edge against the hull face.
                 //Note that we do not use the faceNormal x edgeOffset edge plane, but rather edgeOffset x localNormal.
                 //The faces are wound counterclockwise.
-                //X is 00->10; Y is 10->11; Z is 11->01; W is 01->00.
-                ref var v00Slot = ref GatherScatter.GetOffsetInstance(ref v00, slotIndex);
-                ref var v10Slot = ref GatherScatter.GetOffsetInstance(ref v10, slotIndex);
-                ref var v11Slot = ref GatherScatter.GetOffsetInstance(ref v11, slotIndex);
-                ref var v01Slot = ref GatherScatter.GetOffsetInstance(ref v01, slotIndex);
-                ref var slotFaceX = ref GatherScatter.GetOffsetInstance(ref boxFaceX, slotIndex);
-                ref var slotFaceY = ref GatherScatter.GetOffsetInstance(ref boxFaceY, slotIndex);
-                var boxEdgeStartX = new Vector4(v00Slot.X[0], v10Slot.X[0], v11Slot.X[0], v01Slot.X[0]);
-                var boxEdgeStartY = new Vector4(v00Slot.Y[0], v10Slot.Y[0], v11Slot.Y[0], v01Slot.Y[0]);
-                var boxEdgeStartZ = new Vector4(v00Slot.Z[0], v10Slot.Z[0], v11Slot.Z[0], v01Slot.Z[0]);
-                var edgeDirectionX = new Vector4(slotFaceX.X[0], slotFaceY.X[0], -slotFaceX.X[0], -slotFaceY.X[0]);
-                var edgeDirectionY = new Vector4(slotFaceX.Y[0], slotFaceY.Y[0], -slotFaceX.Y[0], -slotFaceY.Y[0]);
-                var edgeDirectionZ = new Vector4(slotFaceX.Z[0], slotFaceY.Z[0], -slotFaceX.Z[0], -slotFaceY.Z[0]);
+                //Note that the triangle edges are packed into a Vector4. Historically, there were some minor codegen issues with Vector3.
+                //May not matter anymore, but it costs ~nothing to use a dead slot.
+                ref var aSlot = ref GatherScatter.GetOffsetInstance(ref triangleA, slotIndex);
+                ref var bSlot = ref GatherScatter.GetOffsetInstance(ref triangleB, slotIndex);
+                ref var cSlot = ref GatherScatter.GetOffsetInstance(ref triangleC, slotIndex);
+                ref var abSlot = ref GatherScatter.GetOffsetInstance(ref triangleAB, slotIndex);
+                ref var bcSlot = ref GatherScatter.GetOffsetInstance(ref triangleBC, slotIndex);
+                ref var caSlot = ref GatherScatter.GetOffsetInstance(ref triangleCA, slotIndex);
+                var triangleEdgeStartX = new Vector4(aSlot.X[0], bSlot.X[0], cSlot.X[0], 0);
+                var triangleEdgeStartY = new Vector4(aSlot.Y[0], bSlot.Y[0], cSlot.Y[0], 0);
+                var triangleEdgeStartZ = new Vector4(aSlot.Z[0], bSlot.Z[0], cSlot.Z[0], 0);
+                var edgeDirectionX = new Vector4(abSlot.X[0], bcSlot.X[0], caSlot.X[0], 0);
+                var edgeDirectionY = new Vector4(abSlot.Y[0], bcSlot.Y[0], caSlot.Y[0], 0);
+                var edgeDirectionZ = new Vector4(abSlot.Z[0], bcSlot.Z[0], caSlot.Z[0], 0);
 
                 var slotLocalNormalX = new Vector4(slotLocalNormal.X);
                 var slotLocalNormalY = new Vector4(slotLocalNormal.Y);
                 var slotLocalNormalZ = new Vector4(slotLocalNormal.Z);
 
                 //edgePlaneNormal = edgeDirection x localNormal
-                var edgePlaneNormalX = edgeDirectionY * slotLocalNormalZ - edgeDirectionZ * slotLocalNormalY;
-                var edgePlaneNormalY = edgeDirectionZ * slotLocalNormalX - edgeDirectionX * slotLocalNormalZ;
-                var edgePlaneNormalZ = edgeDirectionX * slotLocalNormalY - edgeDirectionY * slotLocalNormalX;
+                var triangleEdgePlaneNormalX = edgeDirectionY * slotLocalNormalZ - edgeDirectionZ * slotLocalNormalY;
+                var triangleEdgePlaneNormalY = edgeDirectionZ * slotLocalNormalX - edgeDirectionX * slotLocalNormalZ;
+                var triangleEdgePlaneNormalZ = edgeDirectionX * slotLocalNormalY - edgeDirectionY * slotLocalNormalX;
 
                 hull.GetVertexIndicesForFace(bestFaceIndex, out var faceVertexIndices);
                 var previousIndex = faceVertexIndices[faceVertexIndices.Length - 1];
@@ -137,22 +132,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var hullEdgeOffsetX = new Vector4(hullEdgeOffset.X);
                     var hullEdgeOffsetY = new Vector4(hullEdgeOffset.Y);
                     var hullEdgeOffsetZ = new Vector4(hullEdgeOffset.Z);
-                    //Containment of a box vertex is tested by checking the sign of the box vertex against the hull's edge plane normal.
+                    //Containment of a triangle vertex is tested by checking the sign of the triangle vertex against the hull's edge plane normal.
                     //Hull edges wound counterclockwise; edge plane normal points outward.
-                    //vertexOutsideEdgePlane = dot(hullEdgeOffset x slotLocalNormal, boxVertex - hullEdgeStart) > 0
+                    //vertexOutsideEdgePlane = dot(hullEdgeOffset x slotLocalNormal, triangleVertex - hullEdgeStart) > 0
                     Vector3x.Cross(hullEdgeOffset, slotLocalNormal, out var hullEdgePlaneNormal);
                     var hullEdgePlaneNormalX = new Vector4(hullEdgePlaneNormal.X);
                     var hullEdgePlaneNormalY = new Vector4(hullEdgePlaneNormal.Y);
                     var hullEdgePlaneNormalZ = new Vector4(hullEdgePlaneNormal.Z);
-                    var hullEdgeStartToBoxEdgeX = boxEdgeStartX - hullEdgeStartX;
-                    var hullEdgeStartToBoxEdgeY = boxEdgeStartY - hullEdgeStartY;
-                    var hullEdgeStartToBoxEdgeZ = boxEdgeStartZ - hullEdgeStartZ;
-                    var boxVertexContainmentDots = hullEdgePlaneNormalX * hullEdgeStartToBoxEdgeX + hullEdgePlaneNormalY * hullEdgeStartToBoxEdgeY + hullEdgePlaneNormalZ * hullEdgeStartToBoxEdgeZ;
-                    maximumVertexContainmentDots = Vector4.Max(maximumVertexContainmentDots, boxVertexContainmentDots);
-                    //t = dot(pointOnBoxEdge - hullEdgeStart, edgePlaneNormal) / dot(edgePlaneNormal, hullEdgeOffset)
-                    var numerator = hullEdgeStartToBoxEdgeX * edgePlaneNormalX + hullEdgeStartToBoxEdgeY * edgePlaneNormalY + hullEdgeStartToBoxEdgeZ * edgePlaneNormalZ;
-                    //Since we're sensitive to the sign of the denominator, the winding of the box edges matters.
-                    var denominator = edgePlaneNormalX * hullEdgeOffsetX + edgePlaneNormalY * hullEdgeOffsetY + edgePlaneNormalZ * hullEdgeOffsetZ;
+                    var hullEdgeStartToTriangleEdgeX = triangleEdgeStartX - hullEdgeStartX;
+                    var hullEdgeStartToTriangleEdgeY = triangleEdgeStartY - hullEdgeStartY;
+                    var hullEdgeStartToTriangleEdgeZ = triangleEdgeStartZ - hullEdgeStartZ;
+                    var triangleVertexContainmentDots = hullEdgePlaneNormalX * hullEdgeStartToTriangleEdgeX + hullEdgePlaneNormalY * hullEdgeStartToTriangleEdgeY + hullEdgePlaneNormalZ * hullEdgeStartToTriangleEdgeZ;
+                    maximumVertexContainmentDots = Vector4.Max(maximumVertexContainmentDots, triangleVertexContainmentDots);
+                    //t = dot(pointOnTriangleEdge - hullEdgeStart, edgePlaneNormal) / dot(edgePlaneNormal, hullEdgeOffset)
+                    var numerator = hullEdgeStartToTriangleEdgeX * triangleEdgePlaneNormalX + hullEdgeStartToTriangleEdgeY * triangleEdgePlaneNormalY + hullEdgeStartToTriangleEdgeZ * triangleEdgePlaneNormalZ;
+                    //Since we're sensitive to the sign of the denominator, the winding of the triangle edges matters.
+                    var denominator = triangleEdgePlaneNormalX * hullEdgeOffsetX + triangleEdgePlaneNormalY * hullEdgeOffsetY + triangleEdgePlaneNormalZ * hullEdgeOffsetZ;
                     var edgeIntersections = numerator / denominator;
 
 
@@ -194,26 +189,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         if (edgeIntersections.Z < earliestExit)
                             earliestExit = edgeIntersections.Z;
                     }
-                    if (denominator.W < 0)
-                    {
-                        if (edgeIntersections.W > latestEntry)
-                            latestEntry = edgeIntersections.W;
-                    }
-                    else if (denominator.W > 0)
-                    {
-                        if (edgeIntersections.W < earliestExit)
-                            earliestExit = edgeIntersections.W;
-                    }
 
                     //We now have a convex hull edge interval. Add contacts for it.
                     latestEntry = latestEntry < 0 ? 0 : latestEntry;
                     earliestExit = earliestExit > 1 ? 1 : earliestExit;
                     //Create max contact if max >= min.
-                    //Create min if min < max and min > 0.
+                    //Create min if min < max and min > 0.  
                     var startId = (previousIndex.BundleIndex << BundleIndexing.VectorShift) + previousIndex.InnerIndex;
                     var endId = (index.BundleIndex << BundleIndexing.VectorShift) + index.InnerIndex;
                     var baseFeatureId = (startId ^ endId) << 8;
-                    if (earliestExit >= latestEntry && candidateCount < 8)
+                    if (earliestExit >= latestEntry && candidateCount < 6)
                     {
                         //Create max contact.
                         var point = hullEdgeOffset * earliestExit + previousVertex - slotClosestOnHull;
@@ -224,7 +209,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         candidate.FeatureId = baseFeatureId + endId;
 
                     }
-                    if (latestEntry < earliestExit && latestEntry > 0 && candidateCount < 8)
+                    if (latestEntry < earliestExit && latestEntry > 0 && candidateCount < 6)
                     {
                         //Create min contact.
                         var point = hullEdgeOffset * latestEntry + previousVertex - slotClosestOnHull;
@@ -239,26 +224,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     previousIndex = index;
                     previousVertex = vertex;
                 }
-                if (candidateCount < 8)
+                if (candidateCount < 6)
                 {
-                    //Try adding the box vertex contacts. Project each vertex onto the hull face.
-                    //t = dot(boxVertex - hullFaceVertex, hullFacePlaneNormal) / dot(hullFacePlaneNormal, localNormal) 
+                    //Try adding the triangle vertex contacts. Project each vertex onto the hull face.
+                    //t = dot(triangleVertex - hullFaceVertex, hullFacePlaneNormal) / dot(hullFacePlaneNormal, localNormal) 
                     var closestOnHullX = new Vector4(slotClosestOnHull.X);
                     var closestOnHullY = new Vector4(slotClosestOnHull.Y);
                     var closestOnHullZ = new Vector4(slotClosestOnHull.Z);
                     var hullFaceNormalX = new Vector4(slotFaceNormal.X);
                     var hullFaceNormalY = new Vector4(slotFaceNormal.Y);
                     var hullFaceNormalZ = new Vector4(slotFaceNormal.Z);
-                    var closestOnHullToBoxEdgeStartX = boxEdgeStartX - closestOnHullX;
-                    var closestOnHullToBoxEdgeStartY = boxEdgeStartY - closestOnHullY;
-                    var closestOnHullToBoxEdgeStartZ = boxEdgeStartZ - closestOnHullZ;
-                    var vertexProjectionNumerator = (closestOnHullToBoxEdgeStartX) * hullFaceNormalX + (closestOnHullToBoxEdgeStartY) * hullFaceNormalY + (closestOnHullToBoxEdgeStartZ) * hullFaceNormalZ;
+                    var closestOnHullToTriangleEdgeStartX = triangleEdgeStartX - closestOnHullX;
+                    var closestOnHullToTriangleEdgeStartY = triangleEdgeStartY - closestOnHullY;
+                    var closestOnHullToTriangleEdgeStartZ = triangleEdgeStartZ - closestOnHullZ;
+                    var vertexProjectionNumerator = (closestOnHullToTriangleEdgeStartX) * hullFaceNormalX + (closestOnHullToTriangleEdgeStartY) * hullFaceNormalY + (closestOnHullToTriangleEdgeStartZ) * hullFaceNormalZ;
                     var vertexProjectionDenominator = new Vector4(Vector3.Dot(slotFaceNormal, slotLocalNormal));
                     var vertexProjectionT = vertexProjectionNumerator / vertexProjectionDenominator;
                     //Normal points from B to A.
-                    var projectedVertexX = closestOnHullToBoxEdgeStartX - vertexProjectionT * slotLocalNormalX;
-                    var projectedVertexY = closestOnHullToBoxEdgeStartY - vertexProjectionT * slotLocalNormalY;
-                    var projectedVertexZ = closestOnHullToBoxEdgeStartZ - vertexProjectionT * slotLocalNormalZ;
+                    var projectedVertexX = closestOnHullToTriangleEdgeStartX - vertexProjectionT * slotLocalNormalX;
+                    var projectedVertexY = closestOnHullToTriangleEdgeStartY - vertexProjectionT * slotLocalNormalY;
+                    var projectedVertexZ = closestOnHullToTriangleEdgeStartZ - vertexProjectionT * slotLocalNormalZ;
                     var hullFaceXX = new Vector4(hullFaceX.X);
                     var hullFaceXY = new Vector4(hullFaceX.Y);
                     var hullFaceXZ = new Vector4(hullFaceX.Z);
@@ -267,7 +252,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var hullFaceYZ = new Vector4(hullFaceY.Z);
                     var projectedTangentX = projectedVertexX * hullFaceXX + projectedVertexY * hullFaceXY + projectedVertexZ * hullFaceXZ;
                     var projectedTangentY = projectedVertexX * hullFaceYX + projectedVertexY * hullFaceYY + projectedVertexZ * hullFaceYZ;
-                    //We took the maximum of all boxvertex-hulledgeplane tests; if a vertex is outside any edge plane, the maximum dot will be positive.
+                    //We took the maximum of all trianglevertex-hulledgeplane tests; if a vertex is outside any edge plane, the maximum dot will be positive.
                     if (maximumVertexContainmentDots.X <= 0)
                     {
                         ref var candidate = ref candidates[candidateCount++];
@@ -275,7 +260,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         candidate.Y = projectedTangentY.X;
                         candidate.FeatureId = 0;
                     }
-                    if (candidateCount == 8)
+                    if (candidateCount == 6)
                         goto SkipVertexCandidates;
                     if (maximumVertexContainmentDots.Y <= 0)
                     {
@@ -284,40 +269,31 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         candidate.Y = projectedTangentY.Y;
                         candidate.FeatureId = 1;
                     }
-                    if (candidateCount == 8)
-                        goto SkipVertexCandidates;
-                    if (maximumVertexContainmentDots.Z <= 0)
+                    if (candidateCount < 6 && maximumVertexContainmentDots.Z <= 0)
                     {
                         ref var candidate = ref candidates[candidateCount++];
                         candidate.X = projectedTangentX.Z;
                         candidate.Y = projectedTangentY.Z;
                         candidate.FeatureId = 2;
                     }
-                    if (candidateCount < 8 && maximumVertexContainmentDots.W <= 0)
-                    {
-                        ref var candidate = ref candidates[candidateCount++];
-                        candidate.X = projectedTangentX.W;
-                        candidate.Y = projectedTangentY.W;
-                        candidate.FeatureId = 3;
-                    }
                 SkipVertexCandidates:;
                 }
                 //We have found all contacts for this hull slot. There may be more contacts than we want (4), so perform a reduction.
-                Vector3Wide.ReadSlot(ref boxFaceCenter, slotIndex, out var slotBoxFaceCenter);
-                Vector3Wide.ReadSlot(ref boxFaceNormal, slotIndex, out var slotBoxFaceNormal);
+                Vector3Wide.ReadSlot(ref localTriangleCenter, slotIndex, out var slotTriangleCenter);
+                Vector3Wide.ReadSlot(ref triangleNormal, slotIndex, out var slotTriangleFaceNormal);
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
                 Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
-                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotBoxFaceNormal, slotLocalNormal, slotBoxFaceCenter, slotClosestOnHull, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotTriangleFaceNormal, slotLocalNormal, slotTriangleCenter, slotClosestOnHull, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                    slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
             }
         }
 
-        public void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref TriangleWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref TriangleWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
