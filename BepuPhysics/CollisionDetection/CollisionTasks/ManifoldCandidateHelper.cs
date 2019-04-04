@@ -274,7 +274,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public unsafe static void Reduce(ManifoldCandidateScalar* candidates, int candidateCount,
             in Vector3 faceNormalA, in Vector3 localNormal, in Vector3 faceCenterA, in Vector3 faceCenterB, in Vector3 tangentBX, in Vector3 tangentBY,
-            float epsilonScale, float minimumDepth, in Matrix3x3 orientationB, in Vector3 offsetB, int slotIndex, ref Convex4ContactManifoldWide manifoldWide)
+            float epsilonScale, float minimumDepth, in Matrix3x3 rotationToWorld, in Vector3 worldOffsetB, int slotIndex, ref Convex4ContactManifoldWide manifoldWide)
         {
             ref var manifoldSlot = ref GetOffsetInstance(ref manifoldWide, slotIndex);
             if (candidateCount == 0)
@@ -317,7 +317,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //No reduction is necessary; just place the contacts into the manifold.
                 for (int i = 0; i < candidateCount; ++i)
                 {
-                    PlaceCandidateInSlot(candidates[i], i, faceCenterB, tangentBX, tangentBY, candidateDepths[i], orientationB, offsetB, ref manifoldSlot);
+                    PlaceCandidateInSlot(candidates[i], i, faceCenterB, tangentBX, tangentBY, candidateDepths[i], rotationToWorld, worldOffsetB, ref manifoldSlot);
                 }
                 for (int i = candidateCount; i < 4; ++i)
                 {
@@ -359,7 +359,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             var candidate0 = candidates[bestIndex0];
             var depth0 = candidateDepths[bestIndex0];
-            PlaceCandidateInSlot(candidate0, 0, faceCenterB, tangentBX, tangentBY, depth0, orientationB, offsetB, ref manifoldSlot);
+            PlaceCandidateInSlot(candidate0, 0, faceCenterB, tangentBX, tangentBY, depth0, rotationToWorld, worldOffsetB, ref manifoldSlot);
             RemoveCandidateAt(candidates, candidateDepths, bestIndex0, ref candidateCount);
 
             //Find the most distant point from the starting contact.
@@ -389,7 +389,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             var candidate1 = candidates[bestIndex1];
             var depth1 = candidateDepths[bestIndex1];
-            PlaceCandidateInSlot(candidate1, 1, faceCenterB, tangentBX, tangentBY, depth1, orientationB, offsetB, ref manifoldSlot);
+            PlaceCandidateInSlot(candidate1, 1, faceCenterB, tangentBX, tangentBY, depth1, rotationToWorld, worldOffsetB, ref manifoldSlot);
             RemoveCandidateAt(candidates, candidateDepths, bestIndex1, ref candidateCount);
 
 
@@ -434,7 +434,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             int nextContactIndex;
             if (minSignedArea * minSignedArea > areaEpsilon)
             {
-                PlaceCandidateInSlot(candidates[bestIndex2], 2, faceCenterB, tangentBX, tangentBY, candidateDepths[bestIndex2], orientationB, offsetB, ref manifoldSlot);
+                PlaceCandidateInSlot(candidates[bestIndex2], 2, faceCenterB, tangentBX, tangentBY, candidateDepths[bestIndex2], rotationToWorld, worldOffsetB, ref manifoldSlot);
                 nextContactIndex = 3;
             }
             else
@@ -445,7 +445,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             if (maxSignedArea * maxSignedArea > areaEpsilon)
             {
-                PlaceCandidateInSlot(candidates[bestIndex3], nextContactIndex, faceCenterB, tangentBX, tangentBY, candidateDepths[bestIndex3], orientationB, offsetB, ref manifoldSlot);
+                PlaceCandidateInSlot(candidates[bestIndex3], nextContactIndex, faceCenterB, tangentBX, tangentBY, candidateDepths[bestIndex3], rotationToWorld, worldOffsetB, ref manifoldSlot);
             }
         }
     }

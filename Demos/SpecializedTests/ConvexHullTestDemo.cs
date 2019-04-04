@@ -25,7 +25,7 @@ namespace Demos.SpecializedTests
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -2, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)));
 
             const int pointCount = 128;
             points = new QuickList<Vector3>(pointCount * 2, BufferPool);
@@ -61,10 +61,11 @@ namespace Demos.SpecializedTests
 
             Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 0), inertia, new CollidableDescription(Simulation.Shapes.Add(hullShape), 10.1f), new BodyActivityDescription(0.01f)));
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-15, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(2)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-10, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 2)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-5, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(2f, 2f, 2f)), 0.1f)));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 5), new CollidableDescription(Simulation.Shapes.Add(new Triangle { A = new Vector3(0, 0, -5), B = new Vector3(2, 0, -5), C = new Vector3(0, 0, -3) }), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-20, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Sphere(2)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-15, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 2)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-10, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(2f, 2f, 2f)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-5, -5, 5), new CollidableDescription(Simulation.Shapes.Add(new Triangle { A = new Vector3(0, 0, -5), B = new Vector3(2, 0, -5), C = new Vector3(0, 0, -3) }), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 1)), 0.1f)));
         }
 
         int stepIndex = 0;

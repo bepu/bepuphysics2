@@ -59,6 +59,32 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void InsertContact(bool exists, in Vector3 slotSideEdgeCenter, in Vector3 slotCylinderEdgeAxis, float t,
+            in Vector3 hullFaceOrigin, in Vector3 slotHullFaceNormal, float inverseDepthDenominator,
+            in Vector3 slotLocalNormal, in Matrix3x3 slotHullOrientation, in Vector3 slotOffsetB,
+            ref Vector3Wide contactOffsetAWide, ref Vector<float> contactDepthWide, ref Vector<int> contactFeatureIdWide, ref Vector<int> contactExistsWide)
+        {
+            if (exists)
+            {
+                //Create max contact.
+                var localPoint = slotSideEdgeCenter + slotCylinderEdgeAxis * t;
+                //depth = dot(faceCenterB - pointOnFaceA, faceNormalB) / dot(faceNormalB, normal)
+                var contactDepth = Vector3.Dot(hullFaceOrigin - localPoint, slotHullFaceNormal) * inverseDepthDenominator;
+                localPoint += contactDepth * slotLocalNormal;
+                Matrix3x3.Transform(localPoint, slotHullOrientation, out var contactOffsetA);
+                contactOffsetA += slotOffsetB;
+                Vector3Wide.WriteFirst(contactOffsetA, ref contactOffsetAWide);
+                GatherScatter.GetFirst(ref contactDepthWide) = contactDepth;
+                GatherScatter.GetFirst(ref contactFeatureIdWide) = 0;
+                GatherScatter.GetFirst(ref contactExistsWide) = -1;
+            }
+            else
+            {
+                GatherScatter.GetFirst(ref contactExistsWide) = 0;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Test(ref CylinderWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var cylinderOrientation);
@@ -137,7 +163,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //The cap is the representative feature. Clip the hull's edges against the cap's circle, and test the cylinder's heuristically chosen 'vertices' against the hull edges for containment.
                     //Note that we work on the surface of the cap and post-project back onto the hull.
                     Vector3Wide.ReadSlot(ref capCenter, slotIndex, out var slotCapCenter);
-                    Vector3Wide.ReadSlot(ref capNormal, slotIndex, out var slotCapNormal);
                     Matrix3x3Wide.ReadSlot(ref cylinderOrientation, slotIndex, out var slotCylinderOrientation);
                     var slotInverseNDotAY = inverseNormalDotAY[slotIndex];
 
@@ -243,14 +268,103 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
                         Vector3Wide.ReadSlot(ref hullLocalCylinderOrientation.X, slotIndex, out var slotCylinderFaceX);
                         Vector3Wide.ReadSlot(ref hullLocalCylinderOrientation.Z, slotIndex, out var slotCylinderFaceY);
+                        Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
                         //Note that we're working on the cylinder's cap, so the parameters get flipped around. Gets pushed back onto the hull in the postpass.
                         ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotHullFaceNormal, -slotLocalNormal, hullFaceOrigin, slotCapCenter, slotCylinderFaceX, slotCylinderFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
-                           slotCylinderOrientation, -slotOffsetB, slotIndex, ref manifold);
+                           slotHullOrientation, -slotOffsetB, slotIndex, ref manifold);
                     }
                 }
                 else
                 {
                     //The side edge is the representative feature. Clip the cylinder's side edge against the hull edges; similar to capsule-hull. 
+                    Vector3Wide.ReadSlot(ref hullLocalCylinderOrientation.Y, slotIndex, out var slotCylinderEdgeAxis);
+                    Vector3Wide.ReadSlot(ref cylinderSideEdgeCenter, slotIndex, out var slotSideEdgeCenter);
+                    var previousIndex = faceVertexIndices[faceVertexIndices.Length - 1];
+                    Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var hullFaceOrigin);
+                    var previousVertex = hullFaceOrigin;
+                    var latestEntryNumerator = float.MaxValue;
+                    var latestEntryDenominator = -1f;
+                    var earliestExitNumerator = float.MaxValue;
+                    var earliestExitDenominator = 1f;
+                    for (int i = 0; i < faceVertexIndices.Length; ++i)
+                    {
+                        var index = faceVertexIndices[i];
+                        Vector3Wide.ReadSlot(ref hull.Points[index.BundleIndex], index.InnerIndex, out var vertex);
+
+                        var edgeOffset = vertex - previousVertex;
+                        Vector3x.Cross(edgeOffset, slotLocalNormal, out var edgePlaneNormal);
+
+                        //t = dot(pointOnPlane - capsuleCenter, planeNormal) / dot(planeNormal, rayDirection)
+                        //Note that we can defer the division; we don't need to compute the exact t value of *all* planes.
+                        var cylinderSideToHullEdgeStart = previousVertex - slotSideEdgeCenter;
+                        var numerator = Vector3.Dot(cylinderSideToHullEdgeStart, edgePlaneNormal);
+                        var denominator = Vector3.Dot(edgePlaneNormal, slotCylinderEdgeAxis);
+                        previousVertex = vertex;
+
+                        //A plane is being 'entered' if the ray direction opposes the face normal.
+                        //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
+                        var edgePlaneNormalLengthSquared = edgePlaneNormal.LengthSquared();
+                        var denominatorSquared = denominator * denominator;
+
+                        const float min = 1e-5f;
+                        const float max = 3e-4f;
+                        const float inverseSpan = 1f / (max - min);
+                        if (denominatorSquared > min * edgePlaneNormalLengthSquared)
+                        {
+                            if (denominatorSquared < max * edgePlaneNormalLengthSquared)
+                            {
+                                //As the angle between the axis and edge plane approaches zero, the axis should unrestrict.
+                                //angle between capsule axis and edge plane normal = asin(dot(edgePlaneNormal / ||edgePlaneNormal||, capsuleAxis))
+                                //sin(angle)^2 * ||edgePlaneNormal||^2 = dot(edgePlaneNormal, capsuleAxis)^2
+                                var restrictWeight = (denominatorSquared / edgePlaneNormalLengthSquared - min) * inverseSpan;
+                                if (restrictWeight < 0)
+                                    restrictWeight = 0;
+                                else if (restrictWeight > 1)
+                                    restrictWeight = 1;
+                                var unrestrictedNumerator = a.HalfLength[slotIndex] * denominator;
+                                if (denominator < 0)
+                                    unrestrictedNumerator = -unrestrictedNumerator;
+                                numerator = restrictWeight * numerator + (1 - restrictWeight) * unrestrictedNumerator;
+                            }
+                            if (denominator < 0)
+                            {
+                                if (numerator * latestEntryDenominator > latestEntryNumerator * denominator)
+                                {
+                                    latestEntryNumerator = numerator;
+                                    latestEntryDenominator = denominator;
+                                }
+                            }
+                            else // if (denominator > 0)
+                            {
+                                if (numerator * earliestExitDenominator < earliestExitNumerator * denominator)
+                                {
+                                    earliestExitNumerator = numerator;
+                                    earliestExitDenominator = denominator;
+                                }
+                            }
+                        }
+                    }
+                    var slotSideEdgeHalfLength = a.HalfLength[slotIndex];
+                    var latestEntry = latestEntryNumerator / latestEntryDenominator;
+                    var earliestExit = earliestExitNumerator / earliestExitDenominator;
+                    var inverseDepthDenominator = 1f / Vector3.Dot(slotHullFaceNormal, slotLocalNormal);
+                    latestEntry = latestEntry < -slotSideEdgeHalfLength ? -slotSideEdgeHalfLength : latestEntry;
+                    earliestExit = earliestExit > slotSideEdgeHalfLength ? slotSideEdgeHalfLength : earliestExit;
+                    Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
+                    Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
+                    ref var slotManifold = ref GatherScatter.GetOffsetInstance(ref manifold, slotIndex);
+                    //Create max contact if max >= min.
+                    //Create min if min < max and min > 0.
+                    InsertContact(earliestExit > latestEntry + slotSideEdgeHalfLength * 1e-3f, 
+                        slotSideEdgeCenter, slotCylinderEdgeAxis, earliestExit,
+                        hullFaceOrigin, slotHullFaceNormal, inverseDepthDenominator, slotLocalNormal, slotHullOrientation, slotOffsetB,
+                        ref manifold.OffsetA0, ref manifold.Depth0, ref manifold.FeatureId0, ref manifold.Contact0Exists);
+                    InsertContact(latestEntry <= earliestExit, 
+                        slotSideEdgeCenter, slotCylinderEdgeAxis, earliestExit,
+                        hullFaceOrigin, slotHullFaceNormal, inverseDepthDenominator, slotLocalNormal, slotHullOrientation, slotOffsetB,
+                        ref manifold.OffsetA1, ref manifold.Depth1, ref manifold.FeatureId1, ref manifold.Contact1Exists);
+                    GatherScatter.GetFirst(ref slotManifold.Contact2Exists) = 0;
+                    GatherScatter.GetFirst(ref slotManifold.Contact3Exists) = 0;
                 }
             }
             //Push the manifold onto the hull. This is useful if we ever end up building a 'HullReduction' like we have for MeshReduction, consistent with the other hull-(nottriangle) pairs.
