@@ -63,29 +63,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void InsertContact(bool exists, in Vector3 slotSideEdgeCenter, in Vector3 slotCylinderEdgeAxis, float t,
+        static void InsertContact(in Vector3 slotSideEdgeCenter, in Vector3 slotCylinderEdgeAxis, float t,
             in Vector3 hullFaceOrigin, in Vector3 slotHullFaceNormal, float inverseDepthDenominator,
-            in Vector3 slotLocalNormal, in Matrix3x3 slotHullOrientation, in Vector3 slotOffsetB,
+            in Matrix3x3 slotHullOrientation, in Vector3 slotOffsetB, int featureId,
             ref Vector3Wide contactOffsetAWide, ref Vector<float> contactDepthWide, ref Vector<int> contactFeatureIdWide, ref Vector<int> contactExistsWide)
         {
-            if (exists)
-            {
-                //Create max contact.
-                var localPoint = slotSideEdgeCenter + slotCylinderEdgeAxis * t;
-                //depth = dot(faceCenterB - pointOnFaceA, faceNormalB) / dot(faceNormalB, normal)
-                var contactDepth = Vector3.Dot(hullFaceOrigin - localPoint, slotHullFaceNormal) * inverseDepthDenominator;
-                localPoint += contactDepth * slotLocalNormal;
-                Matrix3x3.Transform(localPoint, slotHullOrientation, out var contactOffsetA);
-                contactOffsetA += slotOffsetB;
-                Vector3Wide.WriteFirst(contactOffsetA, ref contactOffsetAWide);
-                GatherScatter.GetFirst(ref contactDepthWide) = contactDepth;
-                GatherScatter.GetFirst(ref contactFeatureIdWide) = 0;
-                GatherScatter.GetFirst(ref contactExistsWide) = -1;
-            }
-            else
-            {
-                GatherScatter.GetFirst(ref contactExistsWide) = 0;
-            }
+            //Create max contact.
+            var localPoint = slotSideEdgeCenter + slotCylinderEdgeAxis * t;
+            //depth = dot(faceCenterB - pointOnFaceA, faceNormalB) / dot(faceNormalB, normal)
+            var contactDepth = Vector3.Dot(hullFaceOrigin - localPoint, slotHullFaceNormal) * inverseDepthDenominator;
+            Matrix3x3.Transform(localPoint, slotHullOrientation, out var contactOffsetA);
+            contactOffsetA += slotOffsetB;
+            Vector3Wide.WriteFirst(contactOffsetA, ref contactOffsetAWide);
+            GatherScatter.GetFirst(ref contactDepthWide) = contactDepth;
+            GatherScatter.GetFirst(ref contactFeatureIdWide) = featureId;
+            GatherScatter.GetFirst(ref contactExistsWide) = -1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -123,7 +115,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //Identify the cylinder feature.
             Vector3Wide.Scale(localNormal, depth, out var closestOnCylinderOffset);
-            Vector3Wide.Add(closestOnHull, closestOnCylinderOffset, out var closestOnCylinder);
+            Vector3Wide.Subtract(closestOnHull, closestOnCylinderOffset, out var closestOnCylinder);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, hullLocalCylinderOrientation, out var localNormalInA);
             var inverseNormalDotAY = Vector<float>.One / localNormalInA.Y;
             var useCap = Vector.GreaterThan(Vector.Abs(localNormalInA.Y), new Vector<float>(0.70710678118f));
@@ -141,7 +133,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             Vector3Wide cylinderSideEdgeCenter;
-            if (Vector.GreaterThanAny(useCap, Vector<int>.Zero))
+            if (Vector.EqualsAny(useCap, Vector<int>.Zero))
             {
                 //If the contact is on the cylinder's side, use the closestOnHull-derived position rather than resampling the support function with the local normal to avoid numerical noise.
                 Vector3Wide.Subtract(closestOnCylinder, localOffsetA, out var cylinderToClosestOnCylinder);
@@ -270,15 +262,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             candidate.FeatureId = 3;
                         }
                     SkipVertexCandidates:;
-                        //We have found all contacts for this hull slot. There may be more contacts than we want (4), so perform a reduction.
-                        Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
-                        Vector3Wide.ReadSlot(ref hullLocalCylinderOrientation.X, slotIndex, out var slotCylinderFaceX);
-                        Vector3Wide.ReadSlot(ref hullLocalCylinderOrientation.Z, slotIndex, out var slotCylinderFaceY);
-                        Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
-                        //Note that we're working on the cylinder's cap, so the parameters get flipped around. Gets pushed back onto the hull in the postpass.
-                        ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotHullFaceNormal, -slotLocalNormal, hullFaceOrigin, slotCapCenter, slotCylinderFaceX, slotCylinderFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
-                           slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
                     }
+                    //We have found all contacts for this hull slot. There may be more contacts than we want (4), so perform a reduction.
+                    Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
+                    Vector3Wide.ReadSlot(ref hullLocalCylinderOrientation.X, slotIndex, out var slotCylinderFaceX);
+                    Vector3Wide.ReadSlot(ref hullLocalCylinderOrientation.Z, slotIndex, out var slotCylinderFaceY);
+                    Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
+                    //Note that we're working on the cylinder's cap, so the parameters get flipped around. Gets pushed back onto the hull in the postpass.
+                    ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotHullFaceNormal, -slotLocalNormal, hullFaceOrigin, slotCapCenter, slotCylinderFaceX, slotCylinderFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
+                       slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
                 }
                 else
                 {
@@ -354,21 +346,33 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var latestEntry = latestEntryNumerator / latestEntryDenominator;
                     var earliestExit = earliestExitNumerator / earliestExitDenominator;
                     var inverseDepthDenominator = 1f / Vector3.Dot(slotHullFaceNormal, slotLocalNormal);
-                    latestEntry = latestEntry < -slotSideEdgeHalfLength ? -slotSideEdgeHalfLength : latestEntry;
-                    earliestExit = earliestExit > slotSideEdgeHalfLength ? slotSideEdgeHalfLength : earliestExit;
+                    var negatedEdgeLength = -slotSideEdgeHalfLength;
+                    if (latestEntry < negatedEdgeLength)
+                        latestEntry = negatedEdgeLength;
+                    if (latestEntry > slotSideEdgeHalfLength)
+                        latestEntry = slotSideEdgeHalfLength;
+                    if (earliestExit < negatedEdgeLength)
+                        earliestExit = negatedEdgeLength;
+                    if (earliestExit > slotSideEdgeHalfLength)
+                        earliestExit = slotSideEdgeHalfLength;
                     Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
                     Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
                     ref var slotManifold = ref GatherScatter.GetOffsetInstance(ref manifold, slotIndex);
-                    //Create max contact if max >= min.
-                    //Create min if min < max and min > 0.
-                    InsertContact(earliestExit > latestEntry + slotSideEdgeHalfLength * 1e-3f, 
+                    InsertContact(
                         slotSideEdgeCenter, slotCylinderEdgeAxis, earliestExit,
-                        hullFaceOrigin, slotHullFaceNormal, inverseDepthDenominator, slotLocalNormal, slotHullOrientation, slotOffsetB,
+                        hullFaceOrigin, slotHullFaceNormal, inverseDepthDenominator, slotHullOrientation, slotOffsetB, 0,
                         ref manifold.OffsetA0, ref manifold.Depth0, ref manifold.FeatureId0, ref manifold.Contact0Exists);
-                    InsertContact(latestEntry <= earliestExit, 
-                        slotSideEdgeCenter, slotCylinderEdgeAxis, earliestExit,
-                        hullFaceOrigin, slotHullFaceNormal, inverseDepthDenominator, slotLocalNormal, slotHullOrientation, slotOffsetB,
-                        ref manifold.OffsetA1, ref manifold.Depth1, ref manifold.FeatureId1, ref manifold.Contact1Exists);
+                    if (earliestExit - latestEntry > slotSideEdgeHalfLength * 1e-3f)
+                    {
+                        InsertContact(
+                            slotSideEdgeCenter, slotCylinderEdgeAxis, latestEntry,
+                            hullFaceOrigin, slotHullFaceNormal, inverseDepthDenominator, slotHullOrientation, slotOffsetB, 1,
+                            ref manifold.OffsetA1, ref manifold.Depth1, ref manifold.FeatureId1, ref manifold.Contact1Exists);
+                    }
+                    else
+                    {
+                        GatherScatter.GetFirst(ref slotManifold.Contact1Exists) = 0;
+                    }
                     GatherScatter.GetFirst(ref slotManifold.Contact2Exists) = 0;
                     GatherScatter.GetFirst(ref slotManifold.Contact3Exists) = 0;
                 }
@@ -376,14 +380,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Push the manifold onto the hull. This is useful if we ever end up building a 'HullReduction' like we have for MeshReduction, consistent with the other hull-(nottriangle) pairs.
             //The reduction does not assign the normal. Fill it in.
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, hullOrientation, out manifold.Normal);
-            //Vector3Wide.Scale(manifold.Normal, manifold.Depth0, out var offset0);
-            //Vector3Wide.Scale(manifold.Normal, manifold.Depth1, out var offset1);
-            //Vector3Wide.Scale(manifold.Normal, manifold.Depth2, out var offset2);
-            //Vector3Wide.Scale(manifold.Normal, manifold.Depth3, out var offset3);
-            //Vector3Wide.Subtract(manifold.OffsetA0, offset0, out manifold.OffsetA0);
-            //Vector3Wide.Subtract(manifold.OffsetA1, offset1, out manifold.OffsetA1);
-            //Vector3Wide.Subtract(manifold.OffsetA2, offset2, out manifold.OffsetA2);
-            //Vector3Wide.Subtract(manifold.OffsetA3, offset3, out manifold.OffsetA3);
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth0, out var offset0);
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth1, out var offset1);
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth2, out var offset2);
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth3, out var offset3);
+            Vector3Wide.Add(manifold.OffsetA0, offset0, out manifold.OffsetA0);
+            Vector3Wide.Add(manifold.OffsetA1, offset1, out manifold.OffsetA1);
+            Vector3Wide.Add(manifold.OffsetA2, offset2, out manifold.OffsetA2);
+            Vector3Wide.Add(manifold.OffsetA3, offset3, out manifold.OffsetA3);
         }
 
         public void Test(ref CylinderWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
