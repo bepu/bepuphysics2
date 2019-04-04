@@ -313,7 +313,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     RemoveCandidateAt(candidates, candidateDepths, i, ref candidateCount);
                 }
             }
-
             if (candidateCount <= 4)
             {
                 //No reduction is necessary; just place the contacts into the manifold.
@@ -442,12 +441,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             else
             {
                 nextContactIndex = 2;
+                //Clear out the last slot since it won't be used.
+                GetFirst(ref manifoldSlot.Contact3Exists) = 0;
             }
             if (maxSignedArea * maxSignedArea > areaEpsilon)
             {
                 PlaceCandidateInSlot(candidates[bestIndex3], nextContactIndex, faceCenterB, tangentBX, tangentBY, candidateDepths[bestIndex3], orientationB, offsetB, ref manifoldSlot);
             }
-
         }
     }
 }

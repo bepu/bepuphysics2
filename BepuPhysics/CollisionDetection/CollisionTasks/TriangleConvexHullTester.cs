@@ -284,6 +284,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotTriangleFaceNormal, slotLocalNormal, slotTriangleCenter, hullFaceOrigin, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                    slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
             }
+            //Push contacts to the triangle for the sake of MeshReduction. 
+            //This means that future hull collection boundary smoothers that assume contacts on the hull won't work properly with triangles, but that's fine- triangles should be exclusively used for static content anyway.
+            //(We did this rather than clip the triangle's edges against hull planes because hulls have variable vertex counts; projecting hull vertices to the triangle would create more reduction overhead.)
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth0, out var offset0);
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth1, out var offset1);
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth2, out var offset2);
+            Vector3Wide.Scale(manifold.Normal, manifold.Depth3, out var offset3);
+            Vector3Wide.Subtract(manifold.OffsetA0, offset0, out manifold.OffsetA0);
+            Vector3Wide.Subtract(manifold.OffsetA1, offset1, out manifold.OffsetA1);
+            Vector3Wide.Subtract(manifold.OffsetA2, offset2, out manifold.OffsetA2);
+            Vector3Wide.Subtract(manifold.OffsetA3, offset3, out manifold.OffsetA3);
         }
 
         public void Test(ref TriangleWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
