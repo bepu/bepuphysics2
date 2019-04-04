@@ -287,6 +287,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Push contacts to the triangle for the sake of MeshReduction. 
             //This means that future hull collection boundary smoothers that assume contacts on the hull won't work properly with triangles, but that's fine- triangles should be exclusively used for static content anyway.
             //(We did this rather than clip the triangle's edges against hull planes because hulls have variable vertex counts; projecting hull vertices to the triangle would create more reduction overhead.)
+            //The reduction does not assign the normal. Fill it in.
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, hullOrientation, out manifold.Normal);
             Vector3Wide.Scale(manifold.Normal, manifold.Depth0, out var offset0);
             Vector3Wide.Scale(manifold.Normal, manifold.Depth1, out var offset1);
             Vector3Wide.Scale(manifold.Normal, manifold.Depth2, out var offset2);

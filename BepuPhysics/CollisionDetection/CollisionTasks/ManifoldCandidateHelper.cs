@@ -285,8 +285,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 GetFirst(ref manifoldSlot.Contact3Exists) = 0;
                 return;
             }
-            Matrix3x3.Transform(localNormal, orientationB, out var normal);
-            Vector3Wide.WriteFirst(normal, ref manifoldSlot.Normal);
+            //Note that this does NOT assign the world normal in the manifold.
 
             //Calculate the depths of all candidates.
             //It's important to keep the deepest contact if there's any significant depth disparity, so we need to calculate depths before reduction.

@@ -241,15 +241,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 {
                     //Try adding the box vertex contacts. Project each vertex onto the hull face.
                     //t = dot(boxVertex - hullFaceVertex, hullFacePlaneNormal) / dot(hullFacePlaneNormal, localNormal) 
-                    var closestOnHullX = new Vector4(hullFaceOrigin.X);
-                    var closestOnHullY = new Vector4(hullFaceOrigin.Y);
-                    var closestOnHullZ = new Vector4(hullFaceOrigin.Z);
+                    var hullFaceOriginX = new Vector4(hullFaceOrigin.X);
+                    var hullFaceOriginY = new Vector4(hullFaceOrigin.Y);
+                    var hullFaceOriginZ = new Vector4(hullFaceOrigin.Z);
                     var hullFaceNormalX = new Vector4(slotFaceNormal.X);
                     var hullFaceNormalY = new Vector4(slotFaceNormal.Y);
                     var hullFaceNormalZ = new Vector4(slotFaceNormal.Z);
-                    var closestOnHullToBoxEdgeStartX = boxEdgeStartX - closestOnHullX;
-                    var closestOnHullToBoxEdgeStartY = boxEdgeStartY - closestOnHullY;
-                    var closestOnHullToBoxEdgeStartZ = boxEdgeStartZ - closestOnHullZ;
+                    var closestOnHullToBoxEdgeStartX = boxEdgeStartX - hullFaceOriginX;
+                    var closestOnHullToBoxEdgeStartY = boxEdgeStartY - hullFaceOriginY;
+                    var closestOnHullToBoxEdgeStartZ = boxEdgeStartZ - hullFaceOriginZ;
                     var vertexProjectionNumerator = (closestOnHullToBoxEdgeStartX) * hullFaceNormalX + (closestOnHullToBoxEdgeStartY) * hullFaceNormalY + (closestOnHullToBoxEdgeStartZ) * hullFaceNormalZ;
                     var vertexProjectionDenominator = new Vector4(Vector3.Dot(slotFaceNormal, slotLocalNormal));
                     var vertexProjectionT = vertexProjectionNumerator / vertexProjectionDenominator;
@@ -308,6 +308,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotBoxFaceNormal, slotLocalNormal, slotBoxFaceCenter, hullFaceOrigin, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                    slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
             }
+            //The reduction does not assign the normal. Fill it in.
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, hullOrientation, out manifold.Normal);
         }
 
         public void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
