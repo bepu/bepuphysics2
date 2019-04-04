@@ -73,7 +73,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //To find the contact manifold, we'll clip the triangle edges against the hull face as usual, but we're dealing with potentially
             //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
-            Vector3Wide pointOnFaceBundle;
             var boundingPlaneEpsilon = 1e-4f * epsilonScale;
             //There can be no more than 6 contacts (provided there are no numerical errors); 2 per triangle edge.
             var candidates = stackalloc ManifoldCandidateScalar[6];
@@ -113,11 +112,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 hull.GetVertexIndicesForFace(bestFaceIndex, out var faceVertexIndices);
                 var previousIndex = faceVertexIndices[faceVertexIndices.Length - 1];
-                Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var previousVertex);
-                Vector3Wide.WriteSlot(previousVertex, slotIndex, ref pointOnFaceBundle);
+                Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var hullFaceOrigin);
+                var previousVertex = hullFaceOrigin;
                 var candidateCount = 0;
                 Helpers.BuildOrthnormalBasis(slotFaceNormal, out var hullFaceX, out var hullFaceY);
-                Vector3Wide.ReadSlot(ref closestOnHull, slotIndex, out var slotClosestOnHull);
                 Vector4 maximumVertexContainmentDots = Vector4.Zero;
                 for (int i = 0; i < faceVertexIndices.Length; ++i)
                 {
@@ -201,7 +199,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     if (earliestExit >= latestEntry && candidateCount < 6)
                     {
                         //Create max contact.
-                        var point = hullEdgeOffset * earliestExit + previousVertex - slotClosestOnHull;
+                        var point = hullEdgeOffset * earliestExit + previousVertex - hullFaceOrigin;
                         var newContactIndex = candidateCount++;
                         ref var candidate = ref candidates[newContactIndex];
                         candidate.X = Vector3.Dot(point, hullFaceX);
@@ -212,7 +210,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     if (latestEntry < earliestExit && latestEntry > 0 && candidateCount < 6)
                     {
                         //Create min contact.
-                        var point = hullEdgeOffset * latestEntry + previousVertex - slotClosestOnHull;
+                        var point = hullEdgeOffset * latestEntry + previousVertex - hullFaceOrigin;
                         var newContactIndex = candidateCount++;
                         ref var candidate = ref candidates[newContactIndex];
                         candidate.X = Vector3.Dot(point, hullFaceX);
@@ -228,9 +226,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 {
                     //Try adding the triangle vertex contacts. Project each vertex onto the hull face.
                     //t = dot(triangleVertex - hullFaceVertex, hullFacePlaneNormal) / dot(hullFacePlaneNormal, localNormal) 
-                    var closestOnHullX = new Vector4(slotClosestOnHull.X);
-                    var closestOnHullY = new Vector4(slotClosestOnHull.Y);
-                    var closestOnHullZ = new Vector4(slotClosestOnHull.Z);
+                    var closestOnHullX = new Vector4(hullFaceOrigin.X);
+                    var closestOnHullY = new Vector4(hullFaceOrigin.Y);
+                    var closestOnHullZ = new Vector4(hullFaceOrigin.Z);
                     var hullFaceNormalX = new Vector4(slotFaceNormal.X);
                     var hullFaceNormalY = new Vector4(slotFaceNormal.Y);
                     var hullFaceNormalZ = new Vector4(slotFaceNormal.Z);
@@ -283,7 +281,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ReadSlot(ref triangleNormal, slotIndex, out var slotTriangleFaceNormal);
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
                 Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
-                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotTriangleFaceNormal, slotLocalNormal, slotTriangleCenter, slotClosestOnHull, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotTriangleFaceNormal, slotLocalNormal, slotTriangleCenter, hullFaceOrigin, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                    slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
             }
         }
