@@ -44,7 +44,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             var tOffset = (float)Math.Sqrt(d) * inverseA;
             var tBase = -b * inverseA;
-            if (a < 1e-12f && a > 1e-12f)
+            if (a < 1e-12f && a > -1e-12f)
             {
                 //If the projected line direction is zero, just compress the interval to tBase.
                 tMin = tBase;
@@ -55,6 +55,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 tMin = tBase - tOffset;
                 tMax = tBase + tOffset;
             }
+            if (tMin < 0)
+                tMin = 0;
+            if (tMax > 1)
+                tMax = 1;
             return true;
         }
 
@@ -127,11 +131,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector2Wide interior0, interior1, interior2, interior3;
             if (Vector.LessThanAny(useCap, Vector<int>.Zero))
             {
-                Vector3Wide.ConditionallyNegate(Vector.LessThan(localNormalInA.Y, Vector<float>.Zero), hullLocalCylinderOrientation.Y, out capNormal);
+                Vector3Wide.ConditionallyNegate(Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), hullLocalCylinderOrientation.Y, out capNormal);
                 Vector3Wide.Scale(capNormal, a.HalfLength, out capCenter);
                 Vector3Wide.Add(capCenter, localOffsetA, out capCenter);
 
-                BoxCylinderTester.GenerateInteriorPoints(a, localNormal, closestOnCylinder, out interior0, out interior1, out interior2, out interior3);
+                Vector3Wide.Subtract(closestOnCylinder, localOffsetA, out var hullLocalCylinderToClosestOnCylinder);
+                Matrix3x3Wide.TransformByTransposedWithoutOverlap(hullLocalCylinderToClosestOnCylinder, hullLocalCylinderOrientation, out var cylinderLocalCylinderToClosestOnCylinder);
+                BoxCylinderTester.GenerateInteriorPoints(a, localNormalInA, cylinderLocalCylinderToClosestOnCylinder, out interior0, out interior1, out interior2, out interior3);
             }
 
             Vector3Wide cylinderSideEdgeCenter;
@@ -163,7 +169,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //The cap is the representative feature. Clip the hull's edges against the cap's circle, and test the cylinder's heuristically chosen 'vertices' against the hull edges for containment.
                     //Note that we work on the surface of the cap and post-project back onto the hull.
                     Vector3Wide.ReadSlot(ref capCenter, slotIndex, out var slotCapCenter);
-                    Matrix3x3Wide.ReadSlot(ref cylinderOrientation, slotIndex, out var slotCylinderOrientation);
+                    Matrix3x3Wide.ReadSlot(ref hullLocalCylinderOrientation, slotIndex, out var slotCylinderOrientation);
                     var slotInverseNDotAY = inverseNormalDotAY[slotIndex];
 
                     ref var interior0Slot = ref GatherScatter.GetOffsetInstance(ref interior0, slotIndex);
@@ -182,7 +188,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     for (int i = 0; i < faceVertexIndices.Length; ++i)
                     {
                         var index = faceVertexIndices[i];
-                        Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var hullVertex);
+                        Vector3Wide.ReadSlot(ref hull.Points[index.BundleIndex], index.InnerIndex, out var hullVertex);
                         ProjectOntoCap(slotCapCenter, slotCylinderOrientation, slotInverseNDotAY, slotLocalNormal, hullVertex, out var vertex);
 
                         //Test all the cap's interior points against this edge's plane normal (which, since we've projected the vertex, is just a perp dot product).
@@ -271,7 +277,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
                         //Note that we're working on the cylinder's cap, so the parameters get flipped around. Gets pushed back onto the hull in the postpass.
                         ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotHullFaceNormal, -slotLocalNormal, hullFaceOrigin, slotCapCenter, slotCylinderFaceX, slotCylinderFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
-                           slotHullOrientation, -slotOffsetB, slotIndex, ref manifold);
+                           slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
                     }
                 }
                 else
@@ -370,14 +376,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Push the manifold onto the hull. This is useful if we ever end up building a 'HullReduction' like we have for MeshReduction, consistent with the other hull-(nottriangle) pairs.
             //The reduction does not assign the normal. Fill it in.
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, hullOrientation, out manifold.Normal);
-            Vector3Wide.Scale(manifold.Normal, manifold.Depth0, out var offset0);
-            Vector3Wide.Scale(manifold.Normal, manifold.Depth1, out var offset1);
-            Vector3Wide.Scale(manifold.Normal, manifold.Depth2, out var offset2);
-            Vector3Wide.Scale(manifold.Normal, manifold.Depth3, out var offset3);
-            Vector3Wide.Subtract(manifold.OffsetA0, offset0, out manifold.OffsetA0);
-            Vector3Wide.Subtract(manifold.OffsetA1, offset1, out manifold.OffsetA1);
-            Vector3Wide.Subtract(manifold.OffsetA2, offset2, out manifold.OffsetA2);
-            Vector3Wide.Subtract(manifold.OffsetA3, offset3, out manifold.OffsetA3);
+            //Vector3Wide.Scale(manifold.Normal, manifold.Depth0, out var offset0);
+            //Vector3Wide.Scale(manifold.Normal, manifold.Depth1, out var offset1);
+            //Vector3Wide.Scale(manifold.Normal, manifold.Depth2, out var offset2);
+            //Vector3Wide.Scale(manifold.Normal, manifold.Depth3, out var offset3);
+            //Vector3Wide.Subtract(manifold.OffsetA0, offset0, out manifold.OffsetA0);
+            //Vector3Wide.Subtract(manifold.OffsetA1, offset1, out manifold.OffsetA1);
+            //Vector3Wide.Subtract(manifold.OffsetA2, offset2, out manifold.OffsetA2);
+            //Vector3Wide.Subtract(manifold.OffsetA3, offset3, out manifold.OffsetA3);
         }
 
         public void Test(ref CylinderWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)

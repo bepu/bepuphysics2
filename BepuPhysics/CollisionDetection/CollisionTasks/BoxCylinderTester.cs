@@ -60,7 +60,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static unsafe void GenerateInteriorPoints(in CylinderWide cylinder, in Vector3Wide localNormal, in Vector3Wide closestOnCylinder, out Vector2Wide interior0, out Vector2Wide interior1, out Vector2Wide interior2, out Vector2Wide interior3)
+        internal static unsafe void GenerateInteriorPoints(in CylinderWide cylinder, in Vector3Wide cylinderLocalNormal, in Vector3Wide localClosestOnCylinder, out Vector2Wide interior0, out Vector2Wide interior1, out Vector2Wide interior2, out Vector2Wide interior3)
         {
             //We need representative points on the cylinder to cover the case where the cap is not touching edges.
             //We'll create 4 candidates on the edges of the cylinder and test them against the already-projected edge planes.
@@ -70,11 +70,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Interpolate between the two choices based on the dot product to avoid instantaneous changes.
             var interpolationMin = new Vector<float>(0.9995f);
             var inverseInterpolationSpan = new Vector<float>(1f / 0.00025f);
-            var parallelWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(localNormal.Y) - interpolationMin) * inverseInterpolationSpan));
+            var parallelWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(cylinderLocalNormal.Y) - interpolationMin) * inverseInterpolationSpan));
             var deepestWeight = Vector<float>.One - parallelWeight;
             Vector2Wide initialPoint;
-            initialPoint.X = closestOnCylinder.X * deepestWeight + parallelWeight;
-            initialPoint.Y = closestOnCylinder.Z * deepestWeight;
+            initialPoint.X = localClosestOnCylinder.X * deepestWeight + parallelWeight;
+            initialPoint.Y = localClosestOnCylinder.Z * deepestWeight;
             Vector2Wide.Length(initialPoint, out var initialLength);
             var useFallbackInitialPoint = Vector.LessThan(initialLength, new Vector<float>(1e-10f));
             initialLength = Vector.ConditionalSelect(useFallbackInitialPoint, Vector<float>.One, initialLength);

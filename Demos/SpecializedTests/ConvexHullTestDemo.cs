@@ -29,18 +29,18 @@ namespace Demos.SpecializedTests
 
             const int pointCount = 128;
             points = new QuickList<Vector3>(pointCount * 2, BufferPool);
-            //points.Allocate(BufferPool) = new Vector3(0, 0, 0);
-            //points.Allocate(BufferPool) = new Vector3(0, 0, 2);
-            //points.Allocate(BufferPool) = new Vector3(0, 1, 0);
-            //points.Allocate(BufferPool) = new Vector3(0, 1, 2);
-            //points.Allocate(BufferPool) = new Vector3(2, 0, 0);
-            //points.Allocate(BufferPool) = new Vector3(2, 0, 2);
-            //points.Allocate(BufferPool) = new Vector3(2, 1, 0);
-            //points.Allocate(BufferPool) = new Vector3(2, 1, 2);
+            points.Allocate(BufferPool) = new Vector3(0, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(0, 0, 1);
+            points.Allocate(BufferPool) = new Vector3(0, 1, 0);
+            points.Allocate(BufferPool) = new Vector3(0, 1, 1);
+            points.Allocate(BufferPool) = new Vector3(1, 0, 0);
+            points.Allocate(BufferPool) = new Vector3(1, 0, 1);
+            points.Allocate(BufferPool) = new Vector3(1, 1, 0);
+            points.Allocate(BufferPool) = new Vector3(1, 1, 1);
             var random = new Random(5);
             for (int i = 0; i < pointCount; ++i)
             {
-                points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), 1 * (float)random.NextDouble(), (float)random.NextDouble());
+                //points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), 1 * (float)random.NextDouble(), (float)random.NextDouble());
                 //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
             }
 
