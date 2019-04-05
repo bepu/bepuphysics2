@@ -1,0 +1,230 @@
+﻿using BepuPhysics.Collidables;
+using BepuUtilities;
+using System;
+using System.Diagnostics;
+using System.Numerics;
+using System.Runtime.CompilerServices;
+
+namespace BepuPhysics.CollisionDetection.CollisionTasks
+{
+    public struct ConvexHullPairTester : IPairTester<ConvexHullWide, ConvexHullWide, Convex4ContactManifoldWide>
+    {
+        public int BatchSize => 32;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        {
+            Matrix3x3Wide.CreateFromQuaternion(orientationA, out var rA);
+            Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
+            Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(rA, rB, out var bLocalOrientationA);
+            ref var localCapsuleAxis = ref bLocalOrientationA.Y;
+
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, rB, out var localOffsetB);
+            Vector3Wide.Negate(localOffsetB, out var localOffsetA);
+            Vector3Wide.Length(localOffsetA, out var centerDistance);
+            Vector3Wide.Scale(localOffsetA, Vector<float>.One / centerDistance, out var initialNormal);
+            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-8f));
+            initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
+            initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
+            initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
+            var hullSupportFinder = default(ConvexHullSupportFinder);
+            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            a.EstimateEpsilonScale(inactiveLanes, out var aEpsilonScale);
+            b.EstimateEpsilonScale(inactiveLanes, out var bEpsilonScale);
+            var epsilonScale = Vector.Min(aEpsilonScale, bEpsilonScale);
+            var depthThreshold = -speculativeMargin;
+            DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, ConvexHull, ConvexHullWide, ConvexHullSupportFinder>.FindMinimumDepth(
+                b, a, localOffsetA, bLocalOrientationA, ref hullSupportFinder, ref hullSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,
+                out var depth, out var localNormal, out var closestOnB);
+
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
+            if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
+            {
+                //No contacts generated.
+                manifold = default;
+                return;
+            }
+
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, bLocalOrientationA, out var localNormalInA);
+            Vector3Wide.Scale(localNormal, depth, out var negatedOffsetToClosestOnA);
+            Vector3Wide.Subtract(closestOnB, negatedOffsetToClosestOnA, out var closestOnA);
+            Vector3Wide.Subtract(closestOnA, localOffsetA, out var aToClosestOnA);
+            Matrix3x3Wide.TransformByTransposedWithoutOverlap(aToClosestOnA, bLocalOrientationA, out var closestOnAInA);
+
+            //To find the contact manifold, we'll clip the capsule axis against the face as usual, but we're dealing with potentially
+            //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
+            Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
+            var boundingPlaneEpsilon = 1e-3f * epsilonScale;
+            for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
+            {
+                if (inactiveLanes[slotIndex] < 0)
+                    continue;
+                ref var aSlot = ref a.Hulls[slotIndex];
+                ref var bSlot = ref b.Hulls[slotIndex];
+                ConvexHullTestHelper.PickRepresentativeFace(ref aSlot, slotIndex, ref localNormalInA, closestOnAInA, slotOffsetIndices, ref boundingPlaneEpsilon, out var slotFaceNormalAInA, out var slotLocalNormalInA, out var bestFaceIndexA);
+                Matrix3x3Wide.ReadSlot(ref bLocalOrientationA, slotIndex, out var slotBLocalOrientationA);
+                Matrix3x3.Transform(slotFaceNormalAInA, slotBLocalOrientationA, out var slotFaceNormalA);
+                Vector3Wide.ReadSlot(ref localOffsetA, slotIndex, out var slotLocalOffsetA);
+                ConvexHullTestHelper.PickRepresentativeFace(ref bSlot, slotIndex, ref localNormal, closestOnB, slotOffsetIndices, ref boundingPlaneEpsilon, out var slotFaceNormalB, out var slotLocalNormal, out var bestFaceIndexB);
+                Helpers.BuildOrthnormalBasis(slotFaceNormalB, out var bFaceX, out var bFaceY);
+
+                //Test each face edge plane against the capsule edge.
+                //Note that we do not use the faceNormal x edgeOffset edge plane, but rather edgeOffset x localNormal.
+                //(In other words, testing the *projected* capsule axis on the surface of the convex hull face.)
+                //The faces are wound counterclockwise.
+                aSlot.GetVertexIndicesForFace(bestFaceIndexA, out var faceVertexIndicesA);
+                bSlot.GetVertexIndicesForFace(bestFaceIndexB, out var faceVertexIndicesB);
+                var maximumCandidateCount = faceVertexIndicesB.Length * 2; //Two contacts per edge.
+                var candidates = stackalloc ManifoldCandidateScalar[maximumCandidateCount];
+                var candidateCount = 0;
+                var previousIndexB = faceVertexIndicesB[faceVertexIndicesB.Length - 1];
+                //Clip face B's edges against A's face, and test A's vertices against B's face.
+                //We use B's face as the contact surface to be consistent with the other pairs in case we end up implementing a HullCollectionReduction similar to MeshReduction.
+                Vector3Wide.ReadSlot(ref bSlot.Points[previousIndexB.BundleIndex], previousIndexB.InnerIndex, out var bFaceOrigin);
+                var previousVertexB = bFaceOrigin;
+                var maximumVertexContainmentDots = stackalloc float[faceVertexIndicesA.Length];
+                for (int i = 0; i < faceVertexIndicesA.Length; ++i)
+                {
+                    maximumVertexContainmentDots[i] = float.MinValue;
+                }
+                var latestEntryNumerator = float.MaxValue;
+                var latestEntryDenominator = -1f;
+                var earliestExitNumerator = float.MaxValue;
+                var earliestExitDenominator = 1f;
+                for (int faceVertexIndexB = 0; faceVertexIndexB < faceVertexIndicesB.Length; ++faceVertexIndexB)
+                {
+                    var indexB = faceVertexIndicesB[faceVertexIndexB];
+                    Vector3Wide.ReadSlot(ref bSlot.Points[indexB.BundleIndex], indexB.InnerIndex, out var vertexB);
+
+                    var edgeOffsetB = vertexB - previousVertexB;
+                    Vector3x.Cross(edgeOffsetB, slotLocalNormal, out var edgePlaneNormalB);
+
+                    var previousIndexA = faceVertexIndicesA[faceVertexIndicesA.Length - 1];
+                    //TODO: Precache and reuse slot extracted values for A. Can pretransform/compute edge planes once. Consider vectorization.
+                    Vector3Wide.ReadSlot(ref aSlot.Points[previousIndexA.BundleIndex], previousIndexA.InnerIndex, out var previousVertexA);
+                    previousVertexA += slotLocalOffsetA;
+                    Matrix3x3.Transform(previousVertexA, slotBLocalOrientationA, out previousVertexA);
+                    for (int faceVertexIndexA = 0; faceVertexIndexA < faceVertexIndicesA.Length; ++faceVertexIndexA)
+                    {
+                        var indexA = faceVertexIndicesA[faceVertexIndexA];
+                        Vector3Wide.ReadSlot(ref aSlot.Points[indexA.BundleIndex], indexA.InnerIndex, out var vertexA);
+                        Matrix3x3.Transform(vertexA, slotBLocalOrientationA, out vertexA);
+                        vertexA += slotLocalOffsetA;
+
+                        //Check containment in this B edge.
+                        var containmentDot = Vector3.Dot(vertexA - previousVertexB, edgePlaneNormalB);
+                        ref var maximumContainmentDot = ref maximumVertexContainmentDots[faceVertexIndexA];
+                        if (maximumContainmentDot < containmentDot)
+                            maximumContainmentDot = containmentDot;
+
+                        var edgeOffsetA = vertexA - previousVertexA;
+                        Vector3x.Cross(edgeOffsetA, slotLocalNormal, out var edgePlaneNormalA);
+                        //t = dot(pointOnEdgeB - pointOnEdgeA, edgePlaneNormalA) / dot(edgePlaneNormalA, edgeOffsetB)
+                        //Note that we can defer the division; we don't need to compute the exact t value of *all* planes.
+                        var edgeAToEdgeB = previousVertexB - previousVertexA;
+                        var numerator = Vector3.Dot(edgeAToEdgeB, edgePlaneNormalB);
+                        var denominator = Vector3.Dot(edgePlaneNormalA, edgeOffsetB);
+                        previousVertexA = vertexA;
+
+                        //A plane is being 'entered' if the ray direction opposes the face normal.
+                        //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
+                        if (denominator < 0)
+                        {
+                            if (numerator * latestEntryDenominator > latestEntryNumerator * denominator)
+                            {
+                                latestEntryNumerator = numerator;
+                                latestEntryDenominator = denominator;
+                            }
+                        }
+                        else if (denominator > 0)
+                        {
+                            if (numerator * earliestExitDenominator < earliestExitNumerator * denominator)
+                            {
+                                earliestExitNumerator = numerator;
+                                earliestExitDenominator = denominator;
+                            }
+                        }
+                    }
+                    //We now have bounds on B's edge.
+                    if (earliestExitNumerator * latestEntryDenominator >= latestEntryNumerator * earliestExitDenominator)
+                    {
+                        //This edge of B was actually contained in A's face. Add contacts for it.
+                        var latestEntry = latestEntryNumerator / latestEntryDenominator;
+                        var earliestExit = earliestExitNumerator / earliestExitDenominator;
+                        latestEntry = latestEntry < 0 ? 0 : latestEntry;
+                        earliestExit = earliestExit > 1 ? 1 : earliestExit;
+                        //Create max contact if max >= min.
+                        //Create min if min < max and min > 0.
+                        var startId = (previousIndexB.BundleIndex << BundleIndexing.VectorShift) + previousIndexB.InnerIndex;
+                        var endId = (indexB.BundleIndex << BundleIndexing.VectorShift) + indexB.InnerIndex;
+                        var baseFeatureId = (startId ^ endId) << 8;
+                        if (earliestExit >= latestEntry && candidateCount < maximumCandidateCount)
+                        {
+                            //Create max contact.
+                            var point = edgeOffsetB * earliestExit + previousVertexB - bFaceOrigin;
+                            var newContactIndex = candidateCount++;
+                            ref var candidate = ref candidates[newContactIndex];
+                            candidate.X = Vector3.Dot(point, bFaceX);
+                            candidate.Y = Vector3.Dot(point, bFaceY);
+                            candidate.FeatureId = baseFeatureId + endId;
+
+                        }
+                        if (latestEntry < earliestExit && latestEntry > 0 && candidateCount < maximumCandidateCount)
+                        {
+                            //Create min contact.
+                            var point = edgeOffsetB * latestEntry + previousVertexB - bFaceOrigin;
+                            var newContactIndex = candidateCount++;
+                            ref var candidate = ref candidates[newContactIndex];
+                            candidate.X = Vector3.Dot(point, bFaceX);
+                            candidate.Y = Vector3.Dot(point, bFaceY);
+                            candidate.FeatureId = baseFeatureId + startId;
+
+                        }
+                    }
+                    previousIndexB = indexB;
+                    previousVertexB = vertexB;
+                }
+                //We've now analyzed every edge of B. Check for vertices from A to add.
+                var inverseFaceNormalADotFaceNormalB = 1f / Vector3.Dot(slotFaceNormalA, slotFaceNormalB);
+                for (int i = 0; i < faceVertexIndicesA.Length && candidateCount < maximumCandidateCount; ++i)
+                {
+                    if (maximumVertexContainmentDots[i] <= 0)
+                    {
+                        //This vertex was contained by all b edge plane normals. Include it.
+                        //Project it onto B's surface:
+                        //vertexA - localNormal * dot(vertexA - faceOriginB, faceNormalB) / dot(faceNormalA, faceNormalB); 
+                        var index = faceVertexIndicesA[i];
+                        Vector3Wide.ReadSlot(ref aSlot.Points[index.BundleIndex], index.InnerIndex, out var vertexA);
+                        Matrix3x3.Transform(vertexA, slotBLocalOrientationA, out vertexA);
+                        vertexA += slotLocalOffsetA;
+                        var bFaceToVertexA = vertexA - bFaceOrigin;
+                        var distance = Vector3.Dot(bFaceToVertexA, slotFaceNormalB) * inverseFaceNormalADotFaceNormalB;
+                        var bFaceToProjectedVertexA = bFaceToVertexA - slotLocalNormal * distance;
+
+                        var newContactIndex = candidateCount++;
+                        ref var candidate = ref candidates[newContactIndex];
+                        candidate.X = Vector3.Dot(bFaceX, bFaceToProjectedVertexA);
+                        candidate.Y = Vector3.Dot(bFaceY, bFaceToProjectedVertexA);
+                        candidate.FeatureId = i;
+                    }
+                }
+                var originIndexA = faceVertexIndicesA[0];
+                Vector3Wide.ReadSlot(ref aSlot.Points[originIndexA.BundleIndex], originIndexA.InnerIndex, out var aFaceOrigin);
+                Matrix3x3.Transform(aFaceOrigin, slotBLocalOrientationA, out aFaceOrigin);
+                Matrix3x3Wide.ReadSlot(ref rB, slotIndex, out var slotOrientationB);
+                Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, slotLocalNormal, aFaceOrigin, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
+            }
+        }
+
+        public void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
+        {
+            throw new NotImplementedException();
+        }
+    }
+}
