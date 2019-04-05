@@ -46,6 +46,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, bLocalOrientationA, out var localNormalInA);
+            Vector3Wide.Negate(localNormalInA, out var negatedLocalNormalInA);
             Vector3Wide.Scale(localNormal, depth, out var negatedOffsetToClosestOnA);
             Vector3Wide.Subtract(closestOnB, negatedOffsetToClosestOnA, out var closestOnA);
             Vector3Wide.Subtract(closestOnA, localOffsetA, out var aToClosestOnA);
@@ -61,7 +62,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     continue;
                 ref var aSlot = ref a.Hulls[slotIndex];
                 ref var bSlot = ref b.Hulls[slotIndex];
-                ConvexHullTestHelper.PickRepresentativeFace(ref aSlot, slotIndex, ref localNormalInA, closestOnAInA, slotOffsetIndices, ref boundingPlaneEpsilon, out var slotFaceNormalAInA, out var slotLocalNormalInA, out var bestFaceIndexA);
+                ConvexHullTestHelper.PickRepresentativeFace(ref aSlot, slotIndex, ref negatedLocalNormalInA, closestOnAInA, slotOffsetIndices, ref boundingPlaneEpsilon, out var slotFaceNormalAInA, out _, out var bestFaceIndexA);
                 Matrix3x3Wide.ReadSlot(ref bLocalOrientationA, slotIndex, out var slotBLocalOrientationA);
                 Matrix3x3.Transform(slotFaceNormalAInA, slotBLocalOrientationA, out var slotFaceNormalA);
                 Vector3Wide.ReadSlot(ref localOffsetA, slotIndex, out var slotLocalOffsetA);
@@ -87,10 +88,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 {
                     maximumVertexContainmentDots[i] = float.MinValue;
                 }
-                var latestEntryNumerator = float.MaxValue;
-                var latestEntryDenominator = -1f;
-                var earliestExitNumerator = float.MaxValue;
-                var earliestExitDenominator = 1f;
                 for (int faceVertexIndexB = 0; faceVertexIndexB < faceVertexIndicesB.Length; ++faceVertexIndexB)
                 {
                     var indexB = faceVertexIndicesB[faceVertexIndexB];
@@ -102,8 +99,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var previousIndexA = faceVertexIndicesA[faceVertexIndicesA.Length - 1];
                     //TODO: Precache and reuse slot extracted values for A. Can pretransform/compute edge planes once. Consider vectorization.
                     Vector3Wide.ReadSlot(ref aSlot.Points[previousIndexA.BundleIndex], previousIndexA.InnerIndex, out var previousVertexA);
-                    previousVertexA += slotLocalOffsetA;
                     Matrix3x3.Transform(previousVertexA, slotBLocalOrientationA, out previousVertexA);
+                    previousVertexA += slotLocalOffsetA;
+                    var latestEntryNumerator = float.MaxValue;
+                    var latestEntryDenominator = -1f;
+                    var earliestExitNumerator = float.MaxValue;
+                    var earliestExitDenominator = 1f;
                     for (int faceVertexIndexA = 0; faceVertexIndexA < faceVertexIndicesA.Length; ++faceVertexIndexA)
                     {
                         var indexA = faceVertexIndicesA[faceVertexIndexA];
@@ -118,11 +119,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                             maximumContainmentDot = containmentDot;
 
                         var edgeOffsetA = vertexA - previousVertexA;
-                        Vector3x.Cross(edgeOffsetA, slotLocalNormal, out var edgePlaneNormalA);
-                        //t = dot(pointOnEdgeB - pointOnEdgeA, edgePlaneNormalA) / dot(edgePlaneNormalA, edgeOffsetB)
+                        //Note flipped cross order; local normal points from B to A.
+                        Vector3x.Cross(slotLocalNormal, edgeOffsetA, out var edgePlaneNormalA);
+                        //t = dot(pointOnEdgeA - pointOnEdgeB, edgePlaneNormalA) / dot(edgePlaneNormalA, edgeOffsetB)
                         //Note that we can defer the division; we don't need to compute the exact t value of *all* planes.
-                        var edgeAToEdgeB = previousVertexB - previousVertexA;
-                        var numerator = Vector3.Dot(edgeAToEdgeB, edgePlaneNormalB);
+                        var edgeBToEdgeA = previousVertexA - previousVertexB;
+                        var numerator = Vector3.Dot(edgeBToEdgeA, edgePlaneNormalA);
                         var denominator = Vector3.Dot(edgePlaneNormalA, edgeOffsetB);
                         previousVertexA = vertexA;
 
@@ -146,7 +148,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         }
                     }
                     //We now have bounds on B's edge.
-                    if (earliestExitNumerator * latestEntryDenominator >= latestEntryNumerator * earliestExitDenominator)
+                    //Denominator signs are opposed; comparison flipped.
+                    if (earliestExitNumerator * latestEntryDenominator <= latestEntryNumerator * earliestExitDenominator)
                     {
                         //This edge of B was actually contained in A's face. Add contacts for it.
                         var latestEntry = latestEntryNumerator / latestEntryDenominator;
@@ -185,14 +188,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     previousVertexB = vertexB;
                 }
                 //We've now analyzed every edge of B. Check for vertices from A to add.
-                var inverseFaceNormalADotFaceNormalB = 1f / Vector3.Dot(slotFaceNormalA, slotFaceNormalB);
+                var inverseFaceNormalADotFaceNormalB = 1f / Vector3.Dot(slotLocalNormal, slotFaceNormalB);
                 for (int i = 0; i < faceVertexIndicesA.Length && candidateCount < maximumCandidateCount; ++i)
                 {
                     if (maximumVertexContainmentDots[i] <= 0)
                     {
                         //This vertex was contained by all b edge plane normals. Include it.
                         //Project it onto B's surface:
-                        //vertexA - localNormal * dot(vertexA - faceOriginB, faceNormalB) / dot(faceNormalA, faceNormalB); 
+                        //vertexA - localNormal * dot(vertexA - faceOriginB, faceNormalB) / dot(localNormal, faceNormalB); 
                         var index = faceVertexIndicesA[i];
                         Vector3Wide.ReadSlot(ref aSlot.Points[index.BundleIndex], index.InnerIndex, out var vertexA);
                         Matrix3x3.Transform(vertexA, slotBLocalOrientationA, out vertexA);
@@ -211,10 +214,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var originIndexA = faceVertexIndicesA[0];
                 Vector3Wide.ReadSlot(ref aSlot.Points[originIndexA.BundleIndex], originIndexA.InnerIndex, out var aFaceOrigin);
                 Matrix3x3.Transform(aFaceOrigin, slotBLocalOrientationA, out aFaceOrigin);
+                aFaceOrigin += slotLocalOffsetA;
                 Matrix3x3Wide.ReadSlot(ref rB, slotIndex, out var slotOrientationB);
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
                 ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, slotLocalNormal, aFaceOrigin, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
             }
+            //Manifold reduction does not assign the normal.
+            Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out manifold.Normal);
         }
 
         public void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
