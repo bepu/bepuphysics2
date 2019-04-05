@@ -123,18 +123,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var earliestExitDenominator = 1f;
                     for (int faceVertexIndexA = 0; faceVertexIndexA < faceVertexIndicesA.Length; ++faceVertexIndexA)
                     {
-                        ref var edge = ref cachedEdges[faceVertexIndexA];
+                        ref var edgeA = ref cachedEdges[faceVertexIndexA];
 
                         //Check containment in this B edge.
-                        var containmentDot = Vector3.Dot(edge.Vertex - previousVertexB, edgePlaneNormalB);
-                        if (edge.MaximumContainmentDot < containmentDot)
-                            edge.MaximumContainmentDot = containmentDot;
+                        var containmentDot = Vector3.Dot(edgeA.Vertex - previousVertexB, edgePlaneNormalB);
+                        if (edgeA.MaximumContainmentDot < containmentDot)
+                            edgeA.MaximumContainmentDot = containmentDot;
 
                         //t = dot(pointOnEdgeA - pointOnEdgeB, edgePlaneNormalA) / dot(edgePlaneNormalA, edgeOffsetB)
                         //Note that we can defer the division; we don't need to compute the exact t value of *all* planes.
-                        var edgeBToEdgeA = edge.PreviousVertex - previousVertexB;
-                        var numerator = Vector3.Dot(edgeBToEdgeA, edge.EdgePlaneNormal);
-                        var denominator = Vector3.Dot(edge.EdgePlaneNormal, edgeOffsetB);
+                        var edgeBToEdgeA = edgeA.Vertex - previousVertexB;
+                        var numerator = Vector3.Dot(edgeBToEdgeA, edgeA.EdgePlaneNormal);
+                        var denominator = Vector3.Dot(edgeA.EdgePlaneNormal, edgeOffsetB);
 
                         //A plane is being 'entered' if the ray direction opposes the face normal.
                         //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.

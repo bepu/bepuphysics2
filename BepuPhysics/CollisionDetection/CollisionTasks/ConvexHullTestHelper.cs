@@ -20,6 +20,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref var boundingPlaneBundle = ref hull.BoundingPlanes[0];
             var slotBoundingPlaneEpsilon = boundingPlaneEpsilon[slotIndex];
             var slotBoundingPlaneEpsilonBundle = new Vector<float>(slotBoundingPlaneEpsilon);
+            var negatedSlotBoundingPlaneEpsilonBundle = -slotBoundingPlaneEpsilonBundle;
             Vector3Wide.Rebroadcast(closestOnHull, slotIndex, out var slotClosestOnHull);
             Vector3Wide.Dot(boundingPlaneBundle.Normal, slotLocalNormalBundle, out var bestFaceDotBundle);
             Vector3Wide.Dot(boundingPlaneBundle.Normal, slotClosestOnHull, out var closestOnHullDot);
@@ -41,7 +42,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //If the plane error improvement is significant, use it.
                     Vector.GreaterThanOrEqual(errorImprovement, slotBoundingPlaneEpsilonBundle), 
                     //If the plane error improvement is small, then only use the candidate if it has a better aligned normal.
-                    Vector.BitwiseAnd(Vector.LessThan(candidateError, slotBoundingPlaneEpsilonBundle), Vector.GreaterThan(dot, bestFaceDotBundle)));
+                    Vector.BitwiseAnd(
+                        Vector.GreaterThan(errorImprovement, negatedSlotBoundingPlaneEpsilonBundle), 
+                        Vector.GreaterThan(dot, bestFaceDotBundle)));
                 bestFaceDotBundle = Vector.ConditionalSelect(useCandidate, dot, bestFaceDotBundle);
                 bestPlaneErrorBundle = Vector.ConditionalSelect(useCandidate, candidateError, bestPlaneErrorBundle);
                 bestIndices = Vector.ConditionalSelect(useCandidate, slotIndices, bestIndices);
@@ -49,12 +52,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var bestFaceDot = bestFaceDotBundle[0];
             var bestPlaneError = bestPlaneErrorBundle[0];
             bestFaceIndex = bestIndices[0];
+            var negatedSlotBoundingPlaneEpsilon = -slotBoundingPlaneEpsilon;
             for (int i = 1; i < Vector<float>.Count; ++i)
             {
                 var dot = bestFaceDotBundle[i];
                 var error = bestPlaneErrorBundle[i];
                 var improvement = bestPlaneError - error;
-                if ((improvement < slotBoundingPlaneEpsilon && dot > bestFaceDot) || improvement >= slotBoundingPlaneEpsilon)
+                if (improvement >= slotBoundingPlaneEpsilon || (improvement >= negatedSlotBoundingPlaneEpsilon && dot > bestFaceDot))
                 {
                     bestFaceDot = dot;
                     bestPlaneError = error;
