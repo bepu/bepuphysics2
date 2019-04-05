@@ -852,7 +852,7 @@ namespace BepuPhysics.Collidables
                 BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
                 ref var offsetInstance = ref GatherScatter.GetOffsetInstance(ref hullShape.BoundingPlanes[bundleIndex], innerIndex);
                 Vector3Wide.WriteFirst(default, ref offsetInstance.Normal);
-                GatherScatter.GetFirst(ref offsetInstance.Offset) = 0f;
+                GatherScatter.GetFirst(ref offsetInstance.Offset) = float.MinValue;
             }
         }
 

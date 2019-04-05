@@ -143,7 +143,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
-            var boundingPlaneEpsilon = 1e-4f * epsilonScale;
+            var boundingPlaneEpsilon = 1e-3f * epsilonScale;
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
             {
                 if (inactiveLanes[slotIndex] < 0)

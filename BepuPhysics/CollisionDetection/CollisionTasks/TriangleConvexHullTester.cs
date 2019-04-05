@@ -73,7 +73,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //To find the contact manifold, we'll clip the triangle edges against the hull face as usual, but we're dealing with potentially
             //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
-            var boundingPlaneEpsilon = 1e-4f * epsilonScale;
+            var boundingPlaneEpsilon = 1e-3f * epsilonScale;
             //There can be no more than 6 contacts (provided there are no numerical errors); 2 per triangle edge.
             var candidates = stackalloc ManifoldCandidateScalar[6];
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)

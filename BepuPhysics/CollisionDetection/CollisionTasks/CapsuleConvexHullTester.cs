@@ -49,7 +49,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
             Vector3Wide faceNormalBundle;
-            var boundingPlaneEpsilon = 1e-4f * epsilonScale;
+            var boundingPlaneEpsilon = 1e-3f * epsilonScale;
             Vector<float> latestEntryNumeratorBundle, latestEntryDenominatorBundle;
             Vector<float> earliestExitNumeratorBundle, earliestExitDenominatorBundle;
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)

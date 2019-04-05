@@ -18,11 +18,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ReadSlot(ref localNormal, slotIndex, out slotLocalNormal);
             Vector3Wide.Broadcast(slotLocalNormal, out var slotLocalNormalBundle);
             ref var boundingPlaneBundle = ref hull.BoundingPlanes[0];
-            var slotBoundingPlaneEpsilon = new Vector<float>(boundingPlaneEpsilon[slotIndex]);
+            var slotBoundingPlaneEpsilon = boundingPlaneEpsilon[slotIndex];
+            var slotBoundingPlaneEpsilonBundle = new Vector<float>(slotBoundingPlaneEpsilon);
             Vector3Wide.Rebroadcast(closestOnHull, slotIndex, out var slotClosestOnHull);
             Vector3Wide.Dot(boundingPlaneBundle.Normal, slotLocalNormalBundle, out var bestFaceDotBundle);
             Vector3Wide.Dot(boundingPlaneBundle.Normal, slotClosestOnHull, out var closestOnHullDot);
-            bestFaceDotBundle = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(closestOnHullDot - boundingPlaneBundle.Offset), slotBoundingPlaneEpsilon), bestFaceDotBundle, new Vector<float>(float.MinValue));
+            //Note that we primarily search to minimize plane error. Even if it doesn't have great normal alignment, we must terminate with some valid result.
+            //(It's numerically possible, though rare, for the bounding plane epsilon to fail to match any face, so we use the minimal error in that case.)
+            var bestPlaneErrorBundle = Vector.Abs(closestOnHullDot - boundingPlaneBundle.Offset);
             var bestIndices = slotOffsetIndices;
             for (int i = 1; i < hull.BoundingPlanes.Length; ++i)
             {
@@ -32,18 +35,29 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 boundingPlaneBundle = ref hull.BoundingPlanes[i];
                 Vector3Wide.Dot(boundingPlaneBundle.Normal, slotLocalNormalBundle, out var dot);
                 Vector3Wide.Dot(boundingPlaneBundle.Normal, slotClosestOnHull, out closestOnHullDot);
-                var useCandidate = Vector.BitwiseAnd(Vector.GreaterThan(dot, bestFaceDotBundle), Vector.LessThan(Vector.Abs(closestOnHullDot - boundingPlaneBundle.Offset), slotBoundingPlaneEpsilon));
+                var candidateError = Vector.Abs(closestOnHullDot - boundingPlaneBundle.Offset);
+                var errorImprovement = bestPlaneErrorBundle - candidateError;
+                var useCandidate = Vector.BitwiseOr(
+                    //If the plane error improvement is significant, use it.
+                    Vector.GreaterThanOrEqual(errorImprovement, slotBoundingPlaneEpsilonBundle), 
+                    //If the plane error improvement is small, then only use the candidate if it has a better aligned normal.
+                    Vector.BitwiseAnd(Vector.LessThan(candidateError, slotBoundingPlaneEpsilonBundle), Vector.GreaterThan(dot, bestFaceDotBundle)));
                 bestFaceDotBundle = Vector.ConditionalSelect(useCandidate, dot, bestFaceDotBundle);
+                bestPlaneErrorBundle = Vector.ConditionalSelect(useCandidate, candidateError, bestPlaneErrorBundle);
                 bestIndices = Vector.ConditionalSelect(useCandidate, slotIndices, bestIndices);
             }
             var bestFaceDot = bestFaceDotBundle[0];
+            var bestPlaneError = bestPlaneErrorBundle[0];
             bestFaceIndex = bestIndices[0];
             for (int i = 1; i < Vector<float>.Count; ++i)
             {
                 var dot = bestFaceDotBundle[i];
-                if (dot > bestFaceDot)
+                var error = bestPlaneErrorBundle[i];
+                var improvement = bestPlaneError - error;
+                if ((improvement < slotBoundingPlaneEpsilon && dot > bestFaceDot) || improvement >= slotBoundingPlaneEpsilon)
                 {
                     bestFaceDot = dot;
+                    bestPlaneError = error;
                     bestFaceIndex = bestIndices[i];
                 }
             }
