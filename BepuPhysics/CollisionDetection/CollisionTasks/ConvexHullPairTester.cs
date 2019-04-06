@@ -73,13 +73,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
             var boundingPlaneEpsilon = 1e-3f * epsilonScale;
 
-
-            //TODO: If you end up using vectorized postpass, this has to be updated.
-            var wideCandidatesBytes = stackalloc byte[4096];
-            ref var wideCandidates = ref Unsafe.As<byte, ManifoldCandidate>(ref *wideCandidatesBytes);
-            Vector<int> wideCandidateCount = default;
-            Vector3Wide bFaceXBundle = default, bFaceYBundle = default, faceNormalABundle = default, aFaceOriginBundle = default, bFaceOriginBundle = default;
-
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
             {
                 if (inactiveLanes[slotIndex] < 0)
@@ -232,47 +225,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         candidate.FeatureId = i;
                     }
                 }
-                //Store the slot's data for vectorized post processing.
-                GatherScatter.GetFirst(ref wideCandidateCount) = candidateCount;
-
-                ref var baseWideCandidate = ref GatherScatter.GetOffsetInstance(ref wideCandidates, slotIndex);
-                for (int i = 0; i < candidateCount; ++i)
-                {
-                    ref var candidateWide = ref Unsafe.Add(ref baseWideCandidate, i);
-                    ref var candidate = ref candidates[i];
-                    GatherScatter.GetFirst(ref candidateWide.X) = candidate.X;
-                    GatherScatter.GetFirst(ref candidateWide.Y) = candidate.Y;
-                    GatherScatter.GetFirst(ref candidateWide.FeatureId) = candidate.FeatureId;
-                }
-                Vector3Wide.WriteSlot(slotFaceNormalA, slotIndex, ref faceNormalABundle);
-                Vector3Wide.WriteSlot(cachedEdges[0].Vertex, slotIndex, ref aFaceOriginBundle);
-                Vector3Wide.WriteSlot(bFaceOrigin, slotIndex, ref bFaceOriginBundle);
-                Vector3Wide.WriteSlot(bFaceX, slotIndex, ref bFaceXBundle);
-                Vector3Wide.WriteSlot(bFaceY, slotIndex, ref bFaceYBundle);
-
-
-                //Matrix3x3Wide.ReadSlot(ref rB, slotIndex, out var slotOrientationB);
-                //Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
-                //ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, slotLocalNormal, cachedEdges[0].Vertex, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
+                Matrix3x3Wide.ReadSlot(ref rB, slotIndex, out var slotOrientationB);
+                Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, slotLocalNormal, cachedEdges[0].Vertex, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
 
             }
-
-            var maximumCandidateCountAcrossAllSlots = wideCandidateCount[0];
-            for (int i = 1; i < Vector<float>.Count; ++i)
-            {
-                var candidateCount = wideCandidateCount[i];
-                if (maximumCandidateCountAcrossAllSlots < candidateCount)
-                    maximumCandidateCountAcrossAllSlots = candidateCount;
-            }
-            Vector3Wide.Subtract(aFaceOriginBundle, bFaceOriginBundle, out var faceCenterBToFaceCenterABundle);
-            ManifoldCandidateHelper.Reduce(ref wideCandidates, wideCandidateCount, maximumCandidateCountAcrossAllSlots, faceNormalABundle, localNormal, faceCenterBToFaceCenterABundle, bFaceXBundle, bFaceYBundle, epsilonScale, depthThreshold, pairCount,
-                out var contact0, out var contact1, out var contact2, out var contact3, out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
-
-            TransformContact(bFaceOriginBundle, bFaceXBundle, bFaceYBundle, localOffsetA, rB, contact0, out manifold.OffsetA0, out manifold.Depth0, out manifold.FeatureId0);
-            TransformContact(bFaceOriginBundle, bFaceXBundle, bFaceYBundle, localOffsetA, rB, contact1, out manifold.OffsetA1, out manifold.Depth1, out manifold.FeatureId1);
-            TransformContact(bFaceOriginBundle, bFaceXBundle, bFaceYBundle, localOffsetA, rB, contact2, out manifold.OffsetA2, out manifold.Depth2, out manifold.FeatureId2);
-            TransformContact(bFaceOriginBundle, bFaceXBundle, bFaceYBundle, localOffsetA, rB, contact3, out manifold.OffsetA3, out manifold.Depth3, out manifold.FeatureId3);
-
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out manifold.Normal);
         }
 
