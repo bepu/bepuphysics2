@@ -57,7 +57,7 @@ namespace BepuUtilities
             result.Y = matrix.Y * scale;
             result.Z = matrix.Z * scale;
         }
-        
+
         /// <summary>
         /// Subtracts the components of one matrix from another.
         /// </summary>
@@ -125,9 +125,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float Determinant()
         {
-            //Current implementation of cross far from optimal without shuffles. This assumes it'll eventually be accelerated.
-            Vector3x.Cross(Y, Z, out var cross);
-            return Vector3.Dot(X, cross);
+            return Vector3.Dot(X, Vector3.Cross(Y, Z));
         }
 
         /// <summary>
@@ -140,9 +138,9 @@ namespace BepuUtilities
         {
             //Current implementation of cross far from optimal without shuffles, and even then this has some room for improvement.
             //Inverts should be really rare, so it's not too concerning. Use the scalar version when possible until ryujit improves (and we improve this implementation).
-            Vector3x.Cross(m.Y, m.Z, out var yz);
-            Vector3x.Cross(m.Z, m.X, out var zx);
-            Vector3x.Cross(m.X, m.Y, out var xy);
+            var yz = Vector3.Cross(m.Y, m.Z);
+            var zx = Vector3.Cross(m.Z, m.X);
+            var xy = Vector3.Cross(m.X, m.Y);
             var inverseDeterminant = 1f / Vector3.Dot(m.X, yz);
             inverse.X = yz * inverseDeterminant;
             inverse.Y = zx * inverseDeterminant;

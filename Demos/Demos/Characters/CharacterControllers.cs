@@ -507,7 +507,7 @@ namespace Demos.Demos.Characters
                             ref var supportingBodyLocation = ref Simulation.Bodies.HandleToLocation[character.Support.Handle];
                             Debug.Assert(supportingBodyLocation.SetIndex == 0, "If the character is active, any support should be too.");
                             ref var supportVelocity = ref Simulation.Bodies.ActiveSet.Velocities[supportingBodyLocation.Index];
-                            Vector3x.Cross(supportVelocity.Angular, supportCandidate.OffsetFromSupport, out var wxr);
+                            var wxr = Vector3.Cross(supportVelocity.Angular, supportCandidate.OffsetFromSupport);
                             var supportContactVelocity = supportVelocity.Linear + wxr;
                             var supportUpVelocity = Vector3.Dot(supportContactVelocity, characterUp);
 
@@ -563,7 +563,7 @@ namespace Demos.Demos.Characters
                             Quaternion.GetQuaternionBetweenNormalizedVectors(Vector3.UnitY, surfaceBasis.Y, out var rotation);
                             Quaternion.TransformUnitZ(rotation, out surfaceBasis.Z);
                         }
-                        Vector3x.Cross(surfaceBasis.Y, surfaceBasis.Z, out surfaceBasis.X);
+                        surfaceBasis.X = Vector3.Cross(surfaceBasis.Y, surfaceBasis.Z);
                         Quaternion.CreateFromRotationMatrix(surfaceBasis, out var surfaceBasisQuaternion);
                         if (supportCandidate.Support.Mobility != CollidableMobility.Static)
                         {

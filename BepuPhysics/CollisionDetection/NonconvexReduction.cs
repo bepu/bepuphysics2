@@ -235,11 +235,11 @@ namespace BepuPhysics.CollisionDetection
                     if (scaledDepth < -1)
                         scaledDepth = -1;
                     Vector3 linear = (-1 - scaledDepth) * child.Manifold.Normal;
-                    Vector3x.Cross(contact.Offset, linear, out var angular);
+                    var angular = Vector3.Cross(contact.Offset, linear);
                     for (int i = 0; i < manifold->Count; ++i)
                     {
                         ref var reducedContact = ref reducedContacts[i];
-                        Vector3x.Cross(reducedContact.Offset, reducedContact.Normal, out var angularJacobian);
+                        var angularJacobian = Vector3.Cross(reducedContact.Offset, reducedContact.Normal);
                         var velocityAtContact = Vector3.Dot(linear, reducedContact.Normal) + Vector3.Dot(angularJacobian, angular);
                         if (velocityAtContact < 0)
                         {

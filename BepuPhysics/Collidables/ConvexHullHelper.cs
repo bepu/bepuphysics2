@@ -258,7 +258,7 @@ namespace BepuPhysics.Collidables
                     //Counterclockwise should result in face normal pointing outward.
                     var ab = b - a;
                     var ac = c - a;
-                    Vector3x.Cross(ab, ac, out var uncalibratedNormal);
+                    var uncalibratedNormal = Vector3.Cross(ab, ac);
                     if (uncalibratedNormal.LengthSquared() < 1e-14f)
                     {
                         //The face is degenerate.
@@ -592,8 +592,8 @@ namespace BepuPhysics.Collidables
                 edgeToAdd.FaceNormal = initialFaceNormal;
                 edgeToAdd.FaceIndex = -1;
                 var edgeOffset = points[edgeToAdd.Endpoints.B] - points[edgeToAdd.Endpoints.A];
-                Vector3x.Cross(edgeOffset, edgeToAdd.FaceNormal, out var basisY);
-                Vector3x.Cross(edgeOffset, basisY, out var basisX);
+                var basisY = Vector3.Cross(edgeOffset, edgeToAdd.FaceNormal);
+                var basisX = Vector3.Cross(edgeOffset, basisY);
                 if (Vector3.Dot(basisX, edgeToAdd.FaceNormal) > 0)
                     Helpers.Swap(ref edgeToAdd.Endpoints.A, ref edgeToAdd.Endpoints.B);
             }
@@ -611,9 +611,9 @@ namespace BepuPhysics.Collidables
                 var edgeOffset = edgeB - edgeA;
                 //The face normal points outward, and the edges should be wound counterclockwise.
                 //basisY should point away from the source face.
-                Vector3x.Cross(edgeOffset, edgeToTest.FaceNormal, out var basisY);
+                var basisY = Vector3.Cross(edgeOffset, edgeToTest.FaceNormal);
                 //basisX should point inward.
-                Vector3x.Cross(edgeOffset, basisY, out var basisX);
+                var basisX = Vector3.Cross(edgeOffset, basisY);
                 basisX = Vector3.Normalize(basisX);
                 basisY = Vector3.Normalize(basisY);
                 Vector3Wide.Broadcast(basisX, out var basisXBundle);
@@ -809,7 +809,7 @@ namespace BepuPhysics.Collidables
                 ref var faceVertex = ref hullShape.FaceVertexIndices[i];
                 faceVertex.BundleIndex = (ushort)bundleIndex;
                 faceVertex.InnerIndex = (ushort)innerIndex;
-            }           
+            }
 
             //Create bounding planes.
             var faceBundleCount = BundleIndexing.GetBundleCount(hullShape.FaceToVertexIndicesStart.Length);
@@ -831,8 +831,7 @@ namespace BepuPhysics.Collidables
                     //Normal points outward.
                     hullShape.GetPoint(faceVertexIndices[j], out faceVertex);
                     var offset = faceVertex - facePivot;
-                    Vector3x.Cross(previousOffset, offset, out var cross);
-                    faceNormal += cross;
+                    faceNormal += Vector3.Cross(previousOffset, offset);
                     previousOffset = offset;
                 }
                 var length = faceNormal.Length();

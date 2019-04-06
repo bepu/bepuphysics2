@@ -245,8 +245,7 @@ namespace BepuPhysics
                 Symmetric3x3.Invert(localInertia.InverseInertiaTensor, out var localInertiaTensor);
                 
                 Symmetric3x3.TransformWithoutOverlap(localAngularVelocity, localInertiaTensor, out var localAngularMomentum);
-                Vector3x.Cross(localAngularMomentum, localAngularVelocity, out var cross);
-                var residual = dt * cross;
+                var residual = dt * Vector3.Cross(localAngularMomentum, localAngularVelocity);
 
                 Matrix3x3.CreateCrossProduct(localAngularMomentum, out var skewMomentum);
                 Matrix3x3.CreateCrossProduct(localAngularVelocity, out var skewVelocity);

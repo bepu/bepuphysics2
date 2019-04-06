@@ -110,9 +110,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float ComputeTetrahedronVolume(in Vector3 a, in Vector3 b, in Vector3 c)
         {
-            Vector3x.Cross(a, b, out var n);
-            var volume = (1f / 6f) * Vector3.Dot(n, c);
-            return volume;
+            return (1f / 6f) * Vector3.Dot(Vector3.Cross(a, b), c);
         }
 
         /// <summary>
@@ -257,8 +255,7 @@ namespace BepuPhysics.Collidables
         /// <returns>Area of the triangle.</returns>
         public static float ComputeTriangleArea(in Vector3 a, in Vector3 b, in Vector3 c)
         {
-            Vector3x.Cross(b - a, c - a, out var n);
-            return 0.5f * n.Length(); //Not exactly fast, but again, we're assuming performance is irrelevant for the mesh inertia helper.
+            return 0.5f * Vector3.Cross(b - a, c - a).Length(); //Not exactly fast, but again, we're assuming performance is irrelevant for the mesh inertia helper.
         }
 
         /// <summary>

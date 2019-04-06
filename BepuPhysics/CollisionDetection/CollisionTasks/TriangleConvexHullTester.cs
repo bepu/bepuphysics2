@@ -136,7 +136,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //Containment of a triangle vertex is tested by checking the sign of the triangle vertex against the hull's edge plane normal.
                     //Hull edges wound counterclockwise; edge plane normal points outward.
                     //vertexOutsideEdgePlane = dot(hullEdgeOffset x slotLocalNormal, triangleVertex - hullEdgeStart) > 0
-                    Vector3x.Cross(hullEdgeOffset, slotLocalNormal, out var hullEdgePlaneNormal);
+                    var hullEdgePlaneNormal = Vector3.Cross(hullEdgeOffset, slotLocalNormal);
                     var hullEdgePlaneNormalX = new Vector4(hullEdgePlaneNormal.X);
                     var hullEdgePlaneNormalY = new Vector4(hullEdgePlaneNormal.Y);
                     var hullEdgePlaneNormalZ = new Vector4(hullEdgePlaneNormal.Z);

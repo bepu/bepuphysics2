@@ -155,8 +155,8 @@ namespace BepuPhysics.CollisionDetection
                                 for (int i = 0; i < manifold.Count; ++i)
                                 {
                                     ref var contact = ref Unsafe.Add(ref manifold.Contact0, i);
-                                    Vector3x.Cross(continuation.AngularA, contact.Offset, out var angularContributionA);
-                                    Vector3x.Cross(continuation.AngularB, contact.Offset - manifold.OffsetB, out var angularContributionB);
+                                    var angularContributionA = Vector3.Cross(continuation.AngularA, contact.Offset);
+                                    var angularContributionB = Vector3.Cross(continuation.AngularB, contact.Offset - manifold.OffsetB);
                                     var velocityAtContact = Vector3.Dot(angularContributionB - angularContributionA + continuation.RelativeLinearVelocity, manifold.Normal);
                                     contact.Depth -= velocityAtContact * continuation.T;
                                 }
@@ -168,8 +168,8 @@ namespace BepuPhysics.CollisionDetection
                                 for (int i = 0; i < manifold.Count; ++i)
                                 {
                                     ref var contact = ref Unsafe.Add(ref manifold.Contact0, i);
-                                    Vector3x.Cross(continuation.AngularA, contact.Offset, out var angularContributionA);
-                                    Vector3x.Cross(continuation.AngularB, contact.Offset - manifold.OffsetB, out var angularContributionB);
+                                    var angularContributionA = Vector3.Cross(continuation.AngularA, contact.Offset);
+                                    var angularContributionB = Vector3.Cross(continuation.AngularB, contact.Offset - manifold.OffsetB);
                                     var velocityAtContact = Vector3.Dot(angularContributionB - angularContributionA + continuation.RelativeLinearVelocity, contact.Normal);
                                     contact.Depth -= velocityAtContact * continuation.T;
                                 }

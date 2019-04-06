@@ -225,10 +225,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             {
                 //The tangent velocity magnitude doesn't change over the course of the sweep. Compute and cache it as an upper bound on the contribution from the offset.
                 Quaternion.TransformWithoutOverlap(LocalPoseA.Position, orientationA, out var rA);
-                Vector3x.Cross(rA, angularVelocityA, out var tangentA);
+                var tangentA = Vector3.Cross(rA, angularVelocityA);
                 TangentSpeedA = tangentA.Length();
                 Quaternion.TransformWithoutOverlap(LocalPoseB.Position, orientationB, out var rB);
-                Vector3x.Cross(rB, angularVelocityB, out var tangentB);
+                var tangentB = Vector3.Cross(rB, angularVelocityB);
                 TangentSpeedB = tangentB.Length();
                 TwiceRadiusA = 2 * LocalPoseA.Position.Length();
                 TwiceRadiusB = 2 * LocalPoseB.Position.Length();

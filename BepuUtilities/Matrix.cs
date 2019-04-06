@@ -564,9 +564,9 @@ namespace BepuUtilities
         {
             float length = forward.Length();
             var z = forward / -length;
-            Vector3x.Cross(upVector, z, out Vector3 x);
+            var x = Vector3.Cross(upVector, z);
             x = Vector3.Normalize(x);
-            Vector3x.Cross(z, x, out Vector3 y);
+            var y = Vector3.Cross(z, x);
 
             viewMatrix.X = new Vector4(x.X, y.X, z.X, 0);
             viewMatrix.Y = new Vector4(x.Y, y.Y, z.Y, 0);

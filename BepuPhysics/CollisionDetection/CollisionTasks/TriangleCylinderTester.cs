@@ -39,7 +39,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
     public struct TriangleCylinderTester : IPairTester<TriangleWide, CylinderWide, Convex4ContactManifoldWide>
     {
-        public int BatchSize => 32;
+        public int BatchSize => 16;
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TryAddInteriorPoint(in Vector2Wide point, in Vector<int> featureId,

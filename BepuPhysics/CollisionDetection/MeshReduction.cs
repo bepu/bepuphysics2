@@ -104,11 +104,11 @@ namespace BepuPhysics.CollisionDetection
                 var ca = triangle.A - triangle.C;
                 //TODO: This threshold might result in bumps when dealing with small triangles. May want to include a different source of scale information, like from the original convex test.
                 DistanceThreshold = 1e-4f * (float)Math.Sqrt(MathHelper.Max(ab.LengthSquared(), bc.LengthSquared()));
-                Vector3x.Cross(ab, ca, out var n);
+                var n = Vector3.Cross(ab, ca);
                 //Edge normals point outward.
-                Vector3x.Cross(n, ab, out var edgeNormalAB);
-                Vector3x.Cross(n, bc, out var edgeNormalBC);
-                Vector3x.Cross(n, ca, out var edgeNormalCA);
+                var edgeNormalAB = Vector3.Cross(n, ab);
+                var edgeNormalBC = Vector3.Cross(n, bc);
+                var edgeNormalCA = Vector3.Cross(n, ca);
 
                 NX = new Vector4(n.X, edgeNormalAB.X, edgeNormalBC.X, edgeNormalCA.X);
                 NY = new Vector4(n.Y, edgeNormalAB.Y, edgeNormalBC.Y, edgeNormalCA.Y);

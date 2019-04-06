@@ -190,9 +190,8 @@ namespace Demos.Demos
             //For ease of use, don't assume that x is perpendicular to z, nor that either input is normalized.
             Matrix3x3 basis;
             basis.Z = Vector3.Normalize(z);
-            Vector3x.Cross(basis.Z, x, out basis.Y);
-            basis.Y = Vector3.Normalize(basis.Y);
-            Vector3x.Cross(basis.Y, basis.Z, out basis.X);
+            basis.Y = Vector3.Normalize(Vector3.Cross(basis.Z, x));
+            basis.X = Vector3.Cross(basis.Y, basis.Z);
             Quaternion.CreateFromRotationMatrix(basis, out var toReturn);
             return toReturn;
         }

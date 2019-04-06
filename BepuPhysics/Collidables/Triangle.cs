@@ -51,7 +51,7 @@ namespace BepuPhysics.Collidables
             //Note that this assumes clockwise winding. Rays coming from the opposite direction pass through; triangles are one sided.
             var ab = b - a;
             var ac = c - a;
-            Vector3x.Cross(ac, ab, out normal);
+            normal = Vector3.Cross(ac, ab);
             var dn = -Vector3.Dot(direction, normal);
             if (dn <= 0)
             {
@@ -66,7 +66,7 @@ namespace BepuPhysics.Collidables
                 //Impact occurred before the start of the ray.
                 return false;
             }
-            Vector3x.Cross(ao, direction, out var aoxd);
+            var aoxd = Vector3.Cross(ao, direction);
             var v = -Vector3.Dot(ac, aoxd);
             if (v < 0 || v > dn)
             {

@@ -78,7 +78,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.ReadSlot(ref hull.Points[index.BundleIndex], index.InnerIndex, out var vertex);
 
                     var edgeOffset = vertex - previousVertex;
-                    Vector3x.Cross(edgeOffset, slotLocalNormal, out var edgePlaneNormal);
+                    var edgePlaneNormal = Vector3.Cross(edgeOffset, slotLocalNormal);
 
                     //t = dot(pointOnPlane - capsuleCenter, planeNormal) / dot(planeNormal, rayDirection)
                     //Note that we can defer the division; we don't need to compute the exact t value of *all* planes.

@@ -181,7 +181,7 @@ namespace BepuPhysics
             PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out var inverseInertiaTensor);
             
             velocity.Linear += impulse * localInertia.InverseMass;
-            Vector3x.Cross(impulseOffset, impulse, out var angularImpulse);
+            var angularImpulse = Vector3.Cross(impulseOffset, impulse);
             Symmetric3x3.TransformWithoutOverlap(angularImpulse, inverseInertiaTensor, out var angularVelocityChange);
             velocity.Angular += angularVelocityChange;
         }
