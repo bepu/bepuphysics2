@@ -106,10 +106,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 out var depth, out var localNormal, out var closestOnHull);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
+            //Not every lane will generate contacts. Rather than requiring every lane to carefully clear all contactExists states, just clear them up front.
+            manifold.Contact0Exists = default;
+            manifold.Contact1Exists = default;
+            manifold.Contact2Exists = default;
+            manifold.Contact3Exists = default;
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //No contacts generated.
-                manifold = default;
                 return;
             }
 

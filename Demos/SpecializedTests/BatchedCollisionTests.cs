@@ -151,6 +151,14 @@ namespace Demos.SpecializedTests
 
             const int pointCount = 32;
             var points = new QuickList<Vector3>(pointCount, pool);
+            //points.Allocate(pool) = new Vector3(0, 0, 0);
+            //points.Allocate(pool) = new Vector3(0, 0, 1);
+            //points.Allocate(pool) = new Vector3(0, 1, 0);
+            //points.Allocate(pool) = new Vector3(0, 1, 1);
+            //points.Allocate(pool) = new Vector3(1, 0, 0);
+            //points.Allocate(pool) = new Vector3(1, 0, 1);
+            //points.Allocate(pool) = new Vector3(1, 1, 0);
+            //points.Allocate(pool) = new Vector3(1, 1, 1);
             for (int i = 0; i < pointCount; ++i)
             {
                 points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), 1 * (float)random.NextDouble(), (float)random.NextDouble());

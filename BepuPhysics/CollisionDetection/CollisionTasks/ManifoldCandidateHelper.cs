@@ -279,10 +279,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ref var manifoldSlot = ref GetOffsetInstance(ref manifoldWide, slotIndex);
             if (candidateCount == 0)
             {
-                GetFirst(ref manifoldSlot.Contact0Exists) = 0;
-                GetFirst(ref manifoldSlot.Contact1Exists) = 0;
-                GetFirst(ref manifoldSlot.Contact2Exists) = 0;
-                GetFirst(ref manifoldSlot.Contact3Exists) = 0;
+                //No contacts, no work. Note that we assume the user has set all ContactExists to 0 for all slots.
                 return;
             }
             //Note that this does NOT assign the world normal in the manifold.
@@ -318,10 +315,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 for (int i = 0; i < candidateCount; ++i)
                 {
                     PlaceCandidateInSlot(candidates[i], i, faceCenterB, tangentBX, tangentBY, candidateDepths[i], rotationToWorld, worldOffsetB, ref manifoldSlot);
-                }
-                for (int i = candidateCount; i < 4; ++i)
-                {
-                    GetFirst(ref Unsafe.Add(ref manifoldSlot.Contact0Exists, i)) = 0;
                 }
                 return;
             }
@@ -382,9 +375,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             if (maximumDistanceSquared < 1e-6f * epsilonScale * epsilonScale)
             {
                 //There's no point in additional contacts if the distance between the first and second candidates is zero. 
-                GetFirst(ref manifoldSlot.Contact1Exists) = 0;
-                GetFirst(ref manifoldSlot.Contact2Exists) = 0;
-                GetFirst(ref manifoldSlot.Contact3Exists) = 0;
                 return;
             }
             var candidate1 = candidates[bestIndex1];
@@ -440,8 +430,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             else
             {
                 nextContactIndex = 2;
-                //Clear out the last slot since it won't be used.
-                GetFirst(ref manifoldSlot.Contact3Exists) = 0;
             }
             if (maxSignedArea * maxSignedArea > areaEpsilon)
             {

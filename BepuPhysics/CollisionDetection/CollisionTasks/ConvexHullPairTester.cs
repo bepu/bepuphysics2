@@ -11,10 +11,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         struct CachedEdge
         {
-            public Vector3 PreviousVertex;
             public Vector3 Vertex;
             public Vector3 EdgePlaneNormal;
             public float MaximumContainmentDot;
+        }
+        struct CachedEdgeWide
+        {
+            public Vector3Wide Vertex;
+            public Vector3Wide EdgePlaneNormal;
+            public Vector<float> MaximumContainmentDot;
         }
         public int BatchSize => 32;
 
@@ -45,10 +50,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 out var depth, out var localNormal, out var closestOnB);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
+            //Not every lane will generate contacts. Rather than requiring every lane to carefully clear all contactExists states, just clear them up front.
+            manifold.Contact0Exists = default;
+            manifold.Contact1Exists = default;
+            manifold.Contact2Exists = default;
+            manifold.Contact3Exists = default;
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //No contacts generated.
-                manifold = default;
                 return;
             }
 
@@ -82,6 +91,184 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //The faces are wound counterclockwise.
                 aSlot.GetVertexIndicesForFace(bestFaceIndexA, out var faceVertexIndicesA);
                 bSlot.GetVertexIndicesForFace(bestFaceIndexB, out var faceVertexIndicesB);
+
+
+                ////Create cached edge data for A.
+                //var edgeABundleCount = BundleIndexing.GetBundleCount(faceVertexIndicesA.Length);
+                //var cachedEdgesBytes = stackalloc byte[Unsafe.SizeOf<CachedEdgeWide>() * edgeABundleCount];
+                //for (int i = 0; i < Unsafe.SizeOf<CachedEdgeWide>() * edgeABundleCount; ++i)
+                //{
+                //    cachedEdgesBytes[i] = 0;
+                //}
+                //ref var cachedEdges = ref Unsafe.As<byte, CachedEdgeWide>(ref *cachedEdgesBytes);
+                //var previousIndexA = faceVertexIndicesA[faceVertexIndicesA.Length - 1];
+                //Vector3Wide.ReadSlot(ref aSlot.Points[previousIndexA.BundleIndex], previousIndexA.InnerIndex, out var aFaceOrigin);
+                //Matrix3x3.Transform(aFaceOrigin, slotBLocalOrientationA, out aFaceOrigin);
+                //aFaceOrigin += slotLocalOffsetA;
+                //var previousVertexA = aFaceOrigin;
+                //for (int i = 0; i < edgeABundleCount; ++i)
+                //{
+                //    Unsafe.Add(ref cachedEdges, i).MaximumContainmentDot = new Vector<float>(float.MinValue);
+                //}
+                //for (int i = 0; i < faceVertexIndicesA.Length; ++i)
+                //{
+                //    BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
+                //    ref var edgeWide = ref Unsafe.Add(ref cachedEdges, bundleIndex);
+                //    ref var edgeWideSlot = ref GatherScatter.GetOffsetInstance(ref edgeWide, innerIndex);
+                //    var indexA = faceVertexIndicesA[i];
+                //    Vector3Wide.ReadSlot(ref aSlot.Points[indexA.BundleIndex], indexA.InnerIndex, out var vertex);
+                //    Matrix3x3.Transform(vertex, slotBLocalOrientationA, out vertex);
+                //    vertex += slotLocalOffsetA;
+                //    //Note flipped cross order; local normal points from B to A.
+                //    Vector3x.Cross(slotLocalNormal, vertex - previousVertexA, out var edgePlaneNormal);
+                //    previousVertexA = vertex;
+                //    Vector3Wide.WriteFirst(vertex, ref edgeWideSlot.Vertex);
+                //    Vector3Wide.WriteFirst(edgePlaneNormal, ref edgeWideSlot.EdgePlaneNormal);
+                //    //TODO: Platform intrinsics would give us the ability to rotate the vertex set and compute the cross product widely, rather than tracking previousVertex.
+                //}
+                //var vertexCountABundle = new Vector<int>(faceVertexIndicesA.Length);
+                //var maximumCandidateCount = faceVertexIndicesB.Length * 2; //Two contacts per edge.
+                //var candidates = stackalloc ManifoldCandidateScalar[maximumCandidateCount];
+                //var candidateCount = 0;
+                //var previousIndexB = faceVertexIndicesB[faceVertexIndicesB.Length - 1];
+                ////Clip face B's edges against A's face, and test A's vertices against B's face.
+                ////We use B's face as the contact surface to be consistent with the other pairs in case we end up implementing a HullCollectionReduction similar to MeshReduction.
+                //Vector3Wide.ReadSlot(ref bSlot.Points[previousIndexB.BundleIndex], previousIndexB.InnerIndex, out var bFaceOrigin);
+                //var previousVertexB = bFaceOrigin;
+                //for (int faceVertexIndexB = 0; faceVertexIndexB < faceVertexIndicesB.Length; ++faceVertexIndexB)
+                //{
+                //    var indexB = faceVertexIndicesB[faceVertexIndexB];
+                //    Vector3Wide.ReadSlot(ref bSlot.Points[indexB.BundleIndex], indexB.InnerIndex, out var vertexB);
+
+                //    var edgeOffsetB = vertexB - previousVertexB;
+                //    Vector3x.Cross(edgeOffsetB, slotLocalNormal, out var edgePlaneNormalB);
+
+                //    Vector3Wide.Broadcast(previousVertexB, out var previousVertexBBundle);
+                //    Vector3Wide.Broadcast(edgeOffsetB, out var edgeOffsetBBundle);
+                //    Vector3Wide.Broadcast(edgePlaneNormalB, out var edgePlaneNormalBBundle);
+
+                //    var latestEntryNumeratorBundle = new Vector<float>(float.MaxValue);
+                //    var latestEntryDenominatorBundle = new Vector<float>(-1f);
+                //    var earliestExitNumeratorBundle = new Vector<float>(float.MaxValue);
+                //    var earliestExitDenominatorBundle = new Vector<float>(1f);
+                //    for (int faceVertexBundleIndexA = 0; faceVertexBundleIndexA < edgeABundleCount; ++faceVertexBundleIndexA)
+                //    {
+                //        ref var edgeABundle = ref Unsafe.Add(ref cachedEdges, faceVertexBundleIndexA);
+
+                //        //Check containment in this B edge.
+                //        Vector3Wide.Subtract(edgeABundle.Vertex, previousVertexBBundle, out var edgeBToEdgeA);
+                //        Vector3Wide.Dot(edgeBToEdgeA, edgePlaneNormalBBundle, out var containmentDot);
+                //        edgeABundle.MaximumContainmentDot = Vector.Max(containmentDot, edgeABundle.MaximumContainmentDot);
+
+                //        //t = dot(pointOnEdgeA - pointOnEdgeB, edgePlaneNormalA) / dot(edgePlaneNormalA, edgeOffsetB)
+                //        //Note that we can defer the division; we don't need to compute the exact t value of *all* planes.
+                //        Vector3Wide.Dot(edgeBToEdgeA, edgeABundle.EdgePlaneNormal, out var numerator);
+                //        Vector3Wide.Dot(edgeABundle.EdgePlaneNormal, edgeOffsetBBundle, out var denominator);
+
+                //        //A plane is being 'entered' if the ray direction opposes the face normal.
+                //        //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
+                //        var slotIndices = new Vector<int>(faceVertexBundleIndexA << BundleIndexing.VectorShift) + slotOffsetIndices;
+                //        var allowSlot = Vector.LessThan(slotIndices, vertexCountABundle);
+                //        var useCandidateForEntry = Vector.BitwiseAnd(Vector.BitwiseAnd(allowSlot, Vector.LessThan(denominator, Vector<float>.Zero)), Vector.GreaterThan(numerator * latestEntryDenominatorBundle, latestEntryNumeratorBundle * denominator));
+                //        var useCandidateForExit = Vector.BitwiseAnd(Vector.BitwiseAnd(allowSlot, Vector.GreaterThan(denominator, Vector<float>.Zero)), Vector.LessThan(numerator * earliestExitDenominatorBundle, earliestExitNumeratorBundle * denominator));
+                //        latestEntryNumeratorBundle = Vector.ConditionalSelect(useCandidateForEntry, numerator, latestEntryNumeratorBundle);
+                //        latestEntryDenominatorBundle = Vector.ConditionalSelect(useCandidateForEntry, denominator, latestEntryDenominatorBundle);
+                //        earliestExitNumeratorBundle = Vector.ConditionalSelect(useCandidateForExit, numerator, earliestExitNumeratorBundle);
+                //        earliestExitDenominatorBundle = Vector.ConditionalSelect(useCandidateForExit, denominator, earliestExitDenominatorBundle);
+                //    }
+                //    //Perform the division while still in bundles to avoid the need for the comparison multiplications in the scalar phase.
+                //    var latestEntryBundle = latestEntryNumeratorBundle / latestEntryDenominatorBundle;
+                //    var earliestExitBundle = earliestExitNumeratorBundle / earliestExitDenominatorBundle;
+                //    var latestEntry = latestEntryBundle[0];
+                //    var earliestExit = earliestExitBundle[0];
+                //    for (int i = 1; i < Vector<float>.Count; ++i)
+                //    {
+                //        var entryCandidate = latestEntryBundle[i];
+                //        var exitCandidate = earliestExitBundle[i];
+                //        if (latestEntry < entryCandidate)
+                //            latestEntry = entryCandidate;
+                //        if (earliestExit > exitCandidate)
+                //            earliestExit = exitCandidate;
+                //    }
+                //    //We now have bounds on B's edge.
+                //    if (earliestExit >= latestEntry)
+                //    {
+                //        //This edge of B was actually contained in A's face. Add contacts for it.
+                //        latestEntry = latestEntry < 0 ? 0 : latestEntry;
+                //        earliestExit = earliestExit > 1 ? 1 : earliestExit;
+                //        //Create max contact if max >= min.
+                //        //Create min if min < max and min > 0.
+                //        var startId = (previousIndexB.BundleIndex << BundleIndexing.VectorShift) + previousIndexB.InnerIndex;
+                //        var endId = (indexB.BundleIndex << BundleIndexing.VectorShift) + indexB.InnerIndex;
+                //        var baseFeatureId = (startId ^ endId) << 8;
+                //        if (earliestExit >= latestEntry && candidateCount < maximumCandidateCount)
+                //        {
+                //            //Create max contact.
+                //            var point = edgeOffsetB * earliestExit + previousVertexB - bFaceOrigin;
+                //            var newContactIndex = candidateCount++;
+                //            ref var candidate = ref candidates[newContactIndex];
+                //            candidate.X = Vector3.Dot(point, bFaceX);
+                //            candidate.Y = Vector3.Dot(point, bFaceY);
+                //            candidate.FeatureId = baseFeatureId + endId;
+                //        }
+                //        if (latestEntry < earliestExit && latestEntry > 0 && candidateCount < maximumCandidateCount)
+                //        {
+                //            //Create min contact.
+                //            var point = edgeOffsetB * latestEntry + previousVertexB - bFaceOrigin;
+                //            var newContactIndex = candidateCount++;
+                //            ref var candidate = ref candidates[newContactIndex];
+                //            candidate.X = Vector3.Dot(point, bFaceX);
+                //            candidate.Y = Vector3.Dot(point, bFaceY);
+                //            candidate.FeatureId = baseFeatureId + startId;
+                //        }
+                //    }
+                //    previousIndexB = indexB;
+                //    previousVertexB = vertexB;
+                //}
+                ////We've now analyzed every edge of B. Check for vertices from A to add.
+                //var inverseFaceNormalADotFaceNormalB = new Vector<float>(1f / Vector3.Dot(slotLocalNormal, slotFaceNormalB));
+                //Vector3Wide.Broadcast(bFaceOrigin, out var bFaceOriginBundle);
+                //Vector3Wide.Broadcast(slotFaceNormalB, out var slotFaceNormalBBundle);
+                //Vector3Wide.Broadcast(slotLocalNormal, out var slotLocalNormalBundle);
+                //Vector3Wide.Broadcast(bFaceX, out var bFaceXBundle);
+                //Vector3Wide.Broadcast(bFaceY, out var bFaceYBundle);
+                //for (int bundleIndex = 0; bundleIndex < edgeABundleCount && candidateCount < maximumCandidateCount; ++bundleIndex)
+                //{
+                //    ref var edgeBundle = ref Unsafe.Add(ref cachedEdges, bundleIndex);
+                //    if (Vector.LessThanOrEqualAny(edgeBundle.MaximumContainmentDot, Vector<float>.Zero))
+                //    {
+                //        //This vertex was contained by all b edge plane normals. Include it.
+                //        //Project it onto B's surface:
+                //        //vertexA - localNormal * dot(vertexA - faceOriginB, faceNormalB) / dot(localNormal, faceNormalB); 
+                //        Vector3Wide.Subtract(edgeBundle.Vertex, bFaceOriginBundle, out var bFaceToVertexA);
+                //        Vector3Wide.Dot(bFaceToVertexA, slotFaceNormalBBundle, out var distanceNumerator);
+                //        var distance = distanceNumerator * inverseFaceNormalADotFaceNormalB;
+                //        Vector3Wide.Scale(slotLocalNormalBundle, distance, out var offset);
+                //        Vector3Wide.Subtract(bFaceToVertexA, offset, out var bFaceToProjectedVertexA);
+
+                //        Vector3Wide.Dot(bFaceToProjectedVertexA, bFaceXBundle, out var candidateX);
+                //        Vector3Wide.Dot(bFaceToProjectedVertexA, bFaceYBundle, out var candidateY);
+
+                //        for (int innerIndex = 0; innerIndex < Vector<float>.Count; ++innerIndex)
+                //        {
+                //            var index = (bundleIndex << BundleIndexing.VectorShift) + innerIndex;
+                //            if (index >= faceVertexIndicesA.Length)
+                //                break;
+                //            if (edgeBundle.MaximumContainmentDot[innerIndex] <= 0)
+                //            {
+                //                var newContactIndex = candidateCount++;
+                //                ref var candidate = ref candidates[newContactIndex];
+                //                candidate.X = candidateX[innerIndex];
+                //                candidate.Y = candidateY[innerIndex];
+                //                candidate.FeatureId = index;
+                //            }
+                //        }
+                //    }
+                //}
+                //Matrix3x3Wide.ReadSlot(ref rB, slotIndex, out var slotOrientationB);
+                //Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
+                //ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, slotLocalNormal, aFaceOrigin, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
+
                 //Create cached edge data for A.
                 var cachedEdges = stackalloc CachedEdge[faceVertexIndicesA.Length];
                 var previousIndexA = faceVertexIndicesA[faceVertexIndicesA.Length - 1];
@@ -92,13 +279,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 {
                     ref var edge = ref cachedEdges[i];
                     edge.MaximumContainmentDot = float.MinValue;
-                    edge.PreviousVertex = previousVertexA;
                     var indexA = faceVertexIndicesA[i];
                     Vector3Wide.ReadSlot(ref aSlot.Points[indexA.BundleIndex], indexA.InnerIndex, out edge.Vertex);
                     Matrix3x3.Transform(edge.Vertex, slotBLocalOrientationA, out edge.Vertex);
                     edge.Vertex += slotLocalOffsetA;
                     //Note flipped cross order; local normal points from B to A.
-                    Vector3x.Cross(slotLocalNormal, edge.Vertex - edge.PreviousVertex, out edge.EdgePlaneNormal);
+                    Vector3x.Cross(slotLocalNormal, edge.Vertex - previousVertexA, out edge.EdgePlaneNormal);
                     previousVertexA = edge.Vertex;
                 }
                 var maximumCandidateCount = faceVertexIndicesB.Length * 2; //Two contacts per edge.
@@ -116,7 +302,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                     var edgeOffsetB = vertexB - previousVertexB;
                     Vector3x.Cross(edgeOffsetB, slotLocalNormal, out var edgePlaneNormalB);
-           
+
                     var latestEntryNumerator = float.MaxValue;
                     var latestEntryDenominator = -1f;
                     var earliestExitNumerator = float.MaxValue;
@@ -126,13 +312,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         ref var edgeA = ref cachedEdges[faceVertexIndexA];
 
                         //Check containment in this B edge.
-                        var containmentDot = Vector3.Dot(edgeA.Vertex - previousVertexB, edgePlaneNormalB);
+                        var edgeBToEdgeA = edgeA.Vertex - previousVertexB;
+                        var containmentDot = Vector3.Dot(edgeBToEdgeA, edgePlaneNormalB);
                         if (edgeA.MaximumContainmentDot < containmentDot)
                             edgeA.MaximumContainmentDot = containmentDot;
 
                         //t = dot(pointOnEdgeA - pointOnEdgeB, edgePlaneNormalA) / dot(edgePlaneNormalA, edgeOffsetB)
                         //Note that we can defer the division; we don't need to compute the exact t value of *all* planes.
-                        var edgeBToEdgeA = edgeA.Vertex - previousVertexB;
+
                         var numerator = Vector3.Dot(edgeBToEdgeA, edgeA.EdgePlaneNormal);
                         var denominator = Vector3.Dot(edgeA.EdgePlaneNormal, edgeOffsetB);
 

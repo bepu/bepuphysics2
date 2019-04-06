@@ -1,5 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -65,6 +66,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     bestFaceIndex = bestIndices[i];
                 }
             }
+            Debug.Assert(bestFaceIndex >= 0 && bestFaceIndex < hull.FaceToVertexIndicesStart.Length);
             BundleIndexing.GetBundleIndices(bestFaceIndex, out var faceBundleIndex, out var faceInnerIndex);
             Vector3Wide.ReadSlot(ref hull.BoundingPlanes[faceBundleIndex].Normal, faceInnerIndex, out slotFaceNormal);
         }
