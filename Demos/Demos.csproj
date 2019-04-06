@@ -15,26 +15,19 @@
     <Exec Condition="'$(Configuration)'!='Debug'" Command="dotnet &quot;$(ProjectDir)..\DemoContentBuilder\bin\x64\Release\netcoreapp2.1\DemoContentBuilder.dll&quot; &quot;$(ProjectDir)$(ProjectName).content&quot;" />
   </Target>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" />
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <Optimize>true</Optimize>
     <DefineConstants>TRACE;RELEASE</DefineConstants>
-    <DebugType>full</DebugType>
+    <DebugType>embedded</DebugType>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseStrip|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)'=='ReleaseStrip'">
     <Optimize>true</Optimize>
     <DefineConstants>TRACE;RELEASE</DefineConstants>
-    <DebugType>full</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <Optimize>true</Optimize>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <Optimize>false</Optimize>
   </PropertyGroup>
 
