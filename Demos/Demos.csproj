@@ -6,7 +6,7 @@
     <!--<RuntimeFrameworkVersion>2.2.0-preview1-26620-03</RuntimeFrameworkVersion>-->
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <Configurations>Debug;Release;ReleaseStrip</Configurations>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>latest</LangVersion>
     <!--<TieredCompilation>false</TieredCompilation>-->
   </PropertyGroup>
 

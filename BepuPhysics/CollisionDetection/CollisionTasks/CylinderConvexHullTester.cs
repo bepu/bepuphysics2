@@ -9,7 +9,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct CylinderConvexHullTester : IPairTester<CylinderWide, ConvexHullWide, Convex4ContactManifoldWide>
     {
-        public int BatchSize => 32;
+        public int BatchSize => 16;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ProjectOntoCap(in Vector3 capCenter, in Matrix3x3 cylinderOrientation, float inverseNDotAY, in Vector3 localNormal, in Vector3 point, out Vector2 projected)
@@ -80,7 +80,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             GatherScatter.GetFirst(ref contactExistsWide) = -1;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Test(ref CylinderWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var cylinderOrientation);

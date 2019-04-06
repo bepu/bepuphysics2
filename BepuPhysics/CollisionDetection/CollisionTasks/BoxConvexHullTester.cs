@@ -9,9 +9,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct BoxConvexHullTester : IPairTester<BoxWide, ConvexHullWide, Convex4ContactManifoldWide>
     {
-        public int BatchSize => 32;
+        public int BatchSize => 16;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var boxOrientation);

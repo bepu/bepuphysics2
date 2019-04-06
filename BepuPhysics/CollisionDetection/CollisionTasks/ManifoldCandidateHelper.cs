@@ -276,13 +276,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             in Vector3 faceNormalA, in Vector3 localNormal, in Vector3 faceCenterA, in Vector3 faceCenterB, in Vector3 tangentBX, in Vector3 tangentBY,
             float epsilonScale, float minimumDepth, in Matrix3x3 rotationToWorld, in Vector3 worldOffsetB, int slotIndex, ref Convex4ContactManifoldWide manifoldWide)
         {
-            ref var manifoldSlot = ref GetOffsetInstance(ref manifoldWide, slotIndex);
             if (candidateCount == 0)
             {
                 //No contacts, no work. Note that we assume the user has set all ContactExists to 0 for all slots.
                 return;
             }
             //Note that this does NOT assign the world normal in the manifold.
+            ref var manifoldSlot = ref GetOffsetInstance(ref manifoldWide, slotIndex);
 
             //Calculate the depths of all candidates.
             //It's important to keep the deepest contact if there's any significant depth disparity, so we need to calculate depths before reduction.

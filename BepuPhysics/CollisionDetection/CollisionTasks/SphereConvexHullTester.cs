@@ -8,14 +8,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct SphereConvexHullTester : IPairTester<SphereWide, ConvexHullWide, Convex1ContactManifoldWide>
     {
-        public int BatchSize => 32;
+        public int BatchSize => 16;
 
         public void Test(ref SphereWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(ref SphereWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var hullOrientation);

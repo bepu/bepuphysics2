@@ -31,7 +31,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
     public struct CylinderPairTester : IPairTester<CylinderWide, CylinderWide, Convex4ContactManifoldWide>
     {
-        public int BatchSize => 32;
+        public int BatchSize => 16;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ProjectOntoCapA(in Vector<float> capCenterBY, in Vector3Wide capCenterA, in Matrix3x3Wide rA, in Vector<float> inverseNDotAY, in Vector3Wide localNormal, in Vector2Wide point, out Vector2Wide projected)

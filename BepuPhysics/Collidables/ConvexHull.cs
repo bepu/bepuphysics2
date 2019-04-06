@@ -423,7 +423,7 @@ namespace BepuPhysics.Collidables
     {
         public bool HasMargin => false;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeLocalSupport(in ConvexHullWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
             Helpers.FillVectorWithLaneIndices(out var indexOffsets);

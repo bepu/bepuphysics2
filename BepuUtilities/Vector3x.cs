@@ -10,6 +10,7 @@ namespace BepuUtilities
     /// <remarks>Hopefully, all of this should eventually go away as the System.Numerics.Vectors improves.</remarks>
     public struct Vector3x
     {
+        //TODO: Should definitely double check usages of this. It's been years; the numerics version is probably fine now.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Cross(in Vector3 a, in Vector3 b, out Vector3 result)
         {
@@ -17,12 +18,6 @@ namespace BepuUtilities
                 a.Y * b.Z - a.Z * b.Y,
                 a.Z * b.X - a.X * b.Z,
                 a.X * b.Y - a.Y * b.X);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Lerp(in Vector3 a, in Vector3 b, float t, out Vector3 result)
-        {
-            result = a * (1f - t) + b * t;
         }
     }
 }

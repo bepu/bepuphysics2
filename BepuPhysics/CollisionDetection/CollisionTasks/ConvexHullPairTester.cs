@@ -15,21 +15,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             public Vector3 EdgePlaneNormal;
             public float MaximumContainmentDot;
         }
-        struct CachedEdgeWide
-        {
-            public Vector3Wide Vertex;
-            public Vector3Wide EdgePlaneNormal;
-            public Vector<float> MaximumContainmentDot;
-        }
-        public int BatchSize => 32;
+        public int BatchSize => 16;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var rA);
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
             Matrix3x3Wide.MultiplyByTransposeWithoutOverlap(rA, rB, out var bLocalOrientationA);
-            ref var localCapsuleAxis = ref bLocalOrientationA.Y;
 
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, rB, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
@@ -108,7 +100,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Matrix3x3.Transform(edge.Vertex, slotBLocalOrientationA, out edge.Vertex);
                     edge.Vertex += slotLocalOffsetA;
                     //Note flipped cross order; local normal points from B to A.
-                    Vector3x.Cross(slotLocalNormal, edge.Vertex - previousVertexA, out edge.EdgePlaneNormal);
+                    edge.EdgePlaneNormal = Vector3.Cross(slotLocalNormal, edge.Vertex - previousVertexA);
                     previousVertexA = edge.Vertex;
                 }
                 var maximumCandidateCount = faceVertexIndicesB.Length * 2; //Two contacts per edge.
@@ -125,7 +117,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.ReadSlot(ref bSlot.Points[indexB.BundleIndex], indexB.InnerIndex, out var vertexB);
 
                     var edgeOffsetB = vertexB - previousVertexB;
-                    Vector3x.Cross(edgeOffsetB, slotLocalNormal, out var edgePlaneNormalB);
+                    var edgePlaneNormalB = Vector3.Cross(edgeOffsetB, slotLocalNormal);
 
                     var latestEntryNumerator = float.MaxValue;
                     var latestEntryDenominator = -1f;
@@ -228,23 +220,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Matrix3x3Wide.ReadSlot(ref rB, slotIndex, out var slotOrientationB);
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
                 ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, slotLocalNormal, cachedEdges[0].Vertex, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
-
             }
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out manifold.Normal);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void TransformContact(in Vector3Wide bFaceOrigin, in Vector3Wide bFaceX, in Vector3Wide bFaceY, in Vector3Wide localOffsetA, in Matrix3x3Wide rB, in ManifoldCandidate candidate,
-            out Vector3Wide offsetA, out Vector<float> depth, out Vector<int> featureId)
-        {
-            Vector3Wide.Scale(bFaceX, candidate.X, out var x);
-            Vector3Wide.Scale(bFaceY, candidate.Y, out var y);
-            Vector3Wide.Add(x, y, out var offsetFromFaceOriginB);
-            Vector3Wide.Add(offsetFromFaceOriginB, bFaceOrigin, out var localContact);
-            Vector3Wide.Subtract(localContact, localOffsetA, out localContact);
-            Matrix3x3Wide.TransformWithoutOverlap(localContact, rB, out offsetA);
-            depth = candidate.Depth;
-            featureId = candidate.FeatureId;
         }
 
         public void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)

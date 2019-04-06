@@ -11,7 +11,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     using DepthRefiner = DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Box, BoxWide, BoxSupportFinder>;
     public struct BoxCylinderTester : IPairTester<BoxWide, CylinderWide, Convex4ContactManifoldWide>
     {
-        public int BatchSize => 32;
+        public int BatchSize => 16;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void IntersectLineCircle(in Vector2Wide linePosition, in Vector2Wide lineDirection, in Vector<float> radius, out Vector<float> tMin, out Vector<float> tMax, out Vector<int> intersected)

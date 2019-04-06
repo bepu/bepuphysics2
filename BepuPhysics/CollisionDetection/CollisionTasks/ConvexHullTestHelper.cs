@@ -8,7 +8,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public static class ConvexHullTestHelper
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void PickRepresentativeFace(ref ConvexHull hull, int slotIndex, ref Vector3Wide localNormal, in Vector3Wide closestOnHull, in Vector<int> slotOffsetIndices,
             ref Vector<float> boundingPlaneEpsilon, out Vector3 slotFaceNormal, out Vector3 slotLocalNormal, out int bestFaceIndex)
         {
