@@ -113,6 +113,40 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             contactExists = Vector.BitwiseAnd(contactExists, Vector.GreaterThanOrEqual(depth, negativeSpeculativeMargin));
         }
 
+        /// <summary>
+        /// Creates an initial point on the edge of a cylinder cap that is extreme with respect to a depth/extremity heuristic. May be minimum or maximum.
+        /// </summary>
+        /// <param name="faceNormalA">Face normal of the opposing face. Expected to point against the local normal by convention.</param>
+        /// <param name="capRadius">Radius of the cylinder cap having an point created.</param>
+        /// <param name="inverseFaceNormalADotLocalNormal">Cached inverse of the dot product of faceNormalA and localNormal.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CreateInitialCapEdgePoint(in Vector3Wide faceNormalA, in Vector<float> capRadius, in Vector<float> inverseFaceNormalADotLocalNormal, out Vector2Wide point)
+        {
+            //This attempts to mirror how the ManifoldCandidateHelper functions. 
+            //During reduction, it scores all contact candidates by their depth and an extra 'extremity' heuristic.
+            //The extremity heuristic acts as a tiebreaker when all depths are similar to prevent manifold noise.
+            //We can do the same by analytically solving for zeroes of the score function derivative across the cylinder cap's edge.
+            //So, represent the point with an angle x.
+            //score(x) = (1 + dot(extremityDirection, cylinderPointDirection(x))) * extremityScale + 
+            //           dot(cylinderPointDirection(x) * cylinderRadius - pointOnBoxFace, boxFaceNormal) / dot(boxFaceNormal, localNormal)
+            //where cylinderPointDirection(x) = (cos(x), sin(x)).
+            //Taking the derivative and solving for zero yields:
+            //x = atan( 
+            //(extremityScale * extremityDirection.Y + dot(tangentY, boxFaceNormal) * cylinderRadius / dot(boxFaceNormal, localNormal)) /
+            //(extremityScale * extremityDirection.X + dot(tangentX, boxFaceNormal) * cylinderRadius / dot(boxFaceNormal, localNormal)))
+            //Swapping over to atan2 and then constructing our final point components using cos(x) and sin(x) poofs the trigonometry.
+            const float extremityScale = 0.01f;
+            var scaledRadius = capRadius * inverseFaceNormalADotLocalNormal;
+            var x = new Vector<float>(0.7946897654f * extremityScale) + faceNormalA.X * scaledRadius;
+            var y = new Vector<float>(0.60701579614f * extremityScale) + faceNormalA.Z * scaledRadius;
+            var scale = capRadius / Vector.SquareRoot(x * x + y * y);
+            point.X = x * scale;
+            point.Y = y * scale;
+            //Note that this will always be on the edge of the cap being analyzed and isn't suitable for use as a 'closest point' in general.
+            //Also note that we didn't solve specifically for a minimum or maximum- just one or the other.
+            //This function is designed with the idea that the negated point will *also* be considered, and if this point is the minimum, the negated point will be the maximum.
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(
             ref CylinderWide a, ref CylinderWide b, ref Vector<float> speculativeMargin,
@@ -287,7 +321,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 //Instead, we'll start with extreme points, use them to draw a line, test that line against the caps, 
                 //and then use a perpendicular line at the midpoint of the first line's intersection interval.
-
                 const float parallelThresholdScalar = 0.999f;
                 const float parallelInterpolationMaxScalar = 0.9995f;
                 const float inverseParallelInterpolationSpanScalar = 1f / (parallelInterpolationMaxScalar - parallelThresholdScalar);
@@ -298,16 +331,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var aCapNotParallel = Vector.LessThan(absADot, parallelThreshold);
                 var bCapNotParallel = Vector.LessThan(absBDot, parallelThreshold);
 
-                //The first contact should be chosen from the deepest points. This comes from one of three cases:
-                //1) capNormalA is NOT parallel with localNormal; use the extreme point on A along -localNormal.
-
-                //Project extreme A down onto capB.
-                //No division by zero guard; we only use cap-cap for a lane if the local normal is well beyond perpendicular with the local cap normal.
-                ProjectOntoCapB(capCenterBY, inverseLocalNormalY, localNormal, extremeA, out var capContact0BParallel);
-
-                //2) capNormalB is NOT parallel with localNormal and capNormalA IS parallel with localNormal; use the extreme point on B along localNormal.
-
-                //3) Both capNormalA and capNormalB are parallel with localNormal; use min(b.Radius, ||ba|| + a.Radius) * ba / ||ba||.
+                //The first contact should be the deepest point (extremeB) if the caps aren't parallel.
+                //If both caps are parallel, use a fallback to avoid ambiguous depth noise.
+                //Use min(b.Radius, ||ba|| + a.Radius) * ba / ||ba||.
                 ProjectOntoCapB(capCenterBY, inverseLocalNormalY, localNormal, capCenterA, out var capCenterAOnB);
                 Vector2Wide.Length(capCenterAOnB, out var horizontalOffsetLength);
                 var inverseHorizontalOffsetLength = Vector<float>.One / horizontalOffsetLength;
@@ -316,27 +342,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 capContact0BothParallel.X = Vector.ConditionalSelect(useBothParallelFallback, b.Radius, capContact0BothParallel.X);
                 capContact0BothParallel.Y = Vector.ConditionalSelect(useBothParallelFallback, Vector<float>.Zero, capContact0BothParallel.Y);
 
-                //Choose which extreme point to start the manifold from by creating weights from the dots.
-                //Square with four corners: 0,0, 0,1, 1,0, and 1,1.
-                //0,0: extremeB
-                //0,1: capContact0BParallel
-                //1,0: extremeB
-                //1,1: capContact0BothParallel
-                //0,0 weight: (1-a) * (1-b)
-                //0,1 weight: (1-a) * b
-                //1,0 weight: a * (1-b)
-                //1,1 weight: a * b
-                //extremeB weight = (1-a) * (1-b) + a * (1-b) = (1 - a + a) * (1-b) = 1-b
-                //capContact0BParallel weight: (1-a) * b
-                //capContact0BothParallel weight: a * b
+                //Choose whether to use the extreme point or the fallback based on the localNormal * Y dot products.
                 var weightAParallel = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (absADot - parallelThreshold) * inverseParallelInterpolationSpan));
                 var weightBParallel = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (absBDot - parallelThreshold) * inverseParallelInterpolationSpan));
-                var extremeBWeight = Vector<float>.One - weightBParallel;
-                var capContact0ParallelWeight = (Vector<float>.One - weightAParallel) * weightBParallel;
-                var capContact0BothParallelWeight = weightAParallel * weightBParallel;
+                var parallelWeight = weightAParallel * weightBParallel;
+                var extremeWeight = Vector<float>.One - parallelWeight;
                 Vector2Wide capContact0;
-                capContact0.X = extremeB.X * extremeBWeight + capContact0BParallel.X * capContact0ParallelWeight + capContact0BothParallel.X * capContact0BothParallelWeight;
-                capContact0.Y = extremeB.Y * extremeBWeight + capContact0BParallel.Y * capContact0ParallelWeight + capContact0BothParallel.Y * capContact0BothParallelWeight;
+                capContact0.X = extremeB.X * extremeWeight + capContact0BothParallel.X * parallelWeight;
+                capContact0.Y = extremeB.Y * extremeWeight + capContact0BothParallel.Y * parallelWeight;
 
                 //Only use one contact if neither cap face is involved.
                 FromCapBTo3D(capContact0, capCenterBY, out contact0);
@@ -477,7 +490,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //This is similar to capsule-capsule; we have two line segments and we want a contact interval on B.
                 //Note that we test the line on the side of A against the line *in the center of* B. We then use its interval on the side of B.
                 //(Using the side of B to detect the interval can result in issues in medium-depth penetration where the deepest point is ignored in favor of the closest point between the side lines.)
-                Vector3Wide.Negate(sideCenterA, out var sideCenterAToLineB);                          
+                Vector3Wide.Negate(sideCenterA, out var sideCenterAToLineB);
                 var horizontalNormalLengthSquaredB = localNormal.X * localNormal.X + localNormal.Z * localNormal.Z;
                 var inverseHorizontalNormalLengthSquaredB = Vector<float>.One / horizontalNormalLengthSquaredB;
                 CapsuleCylinderTester.GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, rA.Y, localNormal, inverseHorizontalNormalLengthSquaredB, sideCenterAToLineB, out var contactTMin, out var contactTMax);

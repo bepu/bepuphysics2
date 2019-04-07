@@ -175,23 +175,23 @@ namespace Demos.SpecializedTests
             camera.Pitch = 0;
             camera.Yaw = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10f, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0f, 0)));
 
-            var cylinder = BodyDescription.CreateConvexDynamic(new Vector3(10f, 3, 0), 1f, Simulation.Shapes, new Cylinder(1f, 1));
-            //cylinder.Activity.SleepThreshold = -1f;
-            //cylinder.Collidable.SpeculativeMargin = float.MaxValue;
+            var cylinderShape = new Cylinder(1f, 1);
+            cylinderShape.ComputeInertia(1, out var cylinderInertia);
+            var cylinder = BodyDescription.CreateDynamic(new Vector3(10f, 3, 0), cylinderInertia, new CollidableDescription(Simulation.Shapes.Add(cylinderShape), 1000), new BodyActivityDescription(0.01f));
             Simulation.Bodies.Add(cylinder);
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(0, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Sphere(2)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(5, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Capsule(0.5f, 1f)));
-            Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(10, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Cylinder(0.5f, 1f)));
+            Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(10, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Cylinder(1f, 1f)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(15, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Box(3f, 4f, 5f)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(25, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes,
                 new Triangle(new Vector3(10f, 0, 10f), new Vector3(14f, 0, 10f), new Vector3(10f, 0, 14f))));
 
 
-            var cylinderShape = new Cylinder(1f, 2);
+            cylinderShape = new Cylinder(1f, 2);
             var cylinderShapeIndex = Simulation.Shapes.Add(cylinderShape);
-            cylinderShape.ComputeInertia(1, out var cylinderInertia);
+            cylinderShape.ComputeInertia(1, out cylinderInertia);
             //const int rowCount = 15;
             //for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex)
             //{

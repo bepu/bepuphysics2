@@ -199,8 +199,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var offsetX = candidate.X - contact0.X;
                 var offsetY = candidate.Y - contact0.Y;
                 var distanceSquared = offsetX * offsetX + offsetY * offsetY;
-                //Penalize speculative contacts; they are not as important in general.
-                distanceSquared = Vector.ConditionalSelect(Vector.LessThan(candidate.Depth, Vector<float>.Zero), 0.125f * distanceSquared, distanceSquared);
+                ////Penalize speculative contacts; they are not as important in general.
+                //distanceSquared = Vector.ConditionalSelect(Vector.LessThan(candidate.Depth, Vector<float>.Zero), 0.125f * distanceSquared, distanceSquared);
                 CandidateExists(candidate, minimumDepth, maskedContactCount, i, out var candidateExists);
                 var candidateIsMostDistant = Vector.BitwiseAnd(Vector.GreaterThan(distanceSquared, maxDistanceSquared), candidateExists);
                 maxDistanceSquared = Vector.ConditionalSelect(candidateIsMostDistant, distanceSquared, maxDistanceSquared);
@@ -364,8 +364,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var offsetX = candidate.X - candidate0.X;
                 var offsetY = candidate.Y - candidate0.Y;
                 var distanceSquared = offsetX * offsetX + offsetY * offsetY;
-                //Penalize speculative contacts; they are not as important in general.
-                distanceSquared = candidateDepths[i] < 0 ? 0.125f * distanceSquared : distanceSquared;
+                ////Penalize speculative contacts; they are not as important in general.
+                //distanceSquared = candidateDepths[i] < 0 ? 0.125f * distanceSquared : distanceSquared;
                 if (distanceSquared > maximumDistanceSquared)
                 {
                     maximumDistanceSquared = distanceSquared;
