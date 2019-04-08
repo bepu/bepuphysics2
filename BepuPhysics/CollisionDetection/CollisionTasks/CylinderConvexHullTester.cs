@@ -124,7 +124,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useCap = Vector.GreaterThan(Vector.Abs(localNormalInA.Y), new Vector<float>(0.70710678118f));
             Vector3Wide capNormal, capCenter;
             Vector2Wide interior0, interior1, interior2, interior3;
-            if (Vector.LessThanAny(useCap, Vector<int>.Zero))
+            if (Vector.LessThanAny(Vector.AndNot(useCap, inactiveLanes), Vector<int>.Zero))
             {
                 Vector3Wide.ConditionallyNegate(Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), hullLocalCylinderOrientation.Y, out capNormal);
                 Vector3Wide.Scale(capNormal, a.HalfLength, out capCenter);
@@ -136,7 +136,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             Vector3Wide cylinderSideEdgeCenter;
-            if (Vector.EqualsAny(useCap, Vector<int>.Zero))
+            if (Vector.EqualsAny(Vector.BitwiseOr(useCap, inactiveLanes), Vector<int>.Zero))
             {
                 //If the contact is on the cylinder's side, use the closestOnHull-derived position rather than resampling the support function with the local normal to avoid numerical noise.
                 Vector3Wide.Subtract(closestOnCylinder, localOffsetA, out var cylinderToClosestOnCylinder);
@@ -364,13 +364,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     InsertContact(
                         slotSideEdgeCenter, slotCylinderEdgeAxis, earliestExit,
                         hullFaceOrigin, slotHullFaceNormal, inverseDepthDenominator, slotHullOrientation, slotOffsetB, 0,
-                        ref manifold.OffsetA0, ref manifold.Depth0, ref manifold.FeatureId0, ref manifold.Contact0Exists);
+                        ref slotManifold.OffsetA0, ref slotManifold.Depth0, ref slotManifold.FeatureId0, ref slotManifold.Contact0Exists);
                     if (earliestExit - latestEntry > slotSideEdgeHalfLength * 1e-3f)
                     {
                         InsertContact(
                             slotSideEdgeCenter, slotCylinderEdgeAxis, latestEntry,
                             hullFaceOrigin, slotHullFaceNormal, inverseDepthDenominator, slotHullOrientation, slotOffsetB, 1,
-                            ref manifold.OffsetA1, ref manifold.Depth1, ref manifold.FeatureId1, ref manifold.Contact1Exists);
+                            ref slotManifold.OffsetA1, ref slotManifold.Depth1, ref slotManifold.FeatureId1, ref slotManifold.Contact1Exists);
                     }
                     else
                     {
