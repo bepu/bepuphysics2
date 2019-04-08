@@ -112,42 +112,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformWithoutOverlap(localAToContact, orientationB, out aToContact);
             contactExists = Vector.BitwiseAnd(contactExists, Vector.GreaterThanOrEqual(depth, negativeSpeculativeMargin));
         }
-
-        /// <summary>
-        /// Creates an initial point on the edge of a cylinder cap that is extreme with respect to a depth/extremity heuristic. May be minimum or maximum.
-        /// </summary>
-        /// <param name="faceNormalA">Face normal of the opposing face. Expected to point against the local normal by convention.</param>
-        /// <param name="capRadius">Radius of the cylinder cap having an point created.</param>
-        /// <param name="inverseFaceNormalADotLocalNormal">Cached inverse of the dot product of faceNormalA and localNormal.</param>
-        /// <param name="point">Minimum or maximum heuristic point on the edge of the cylinder cap.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateInitialCapEdgePoint(in Vector3Wide faceNormalA, in Vector<float> capRadius, in Vector<float> inverseFaceNormalADotLocalNormal, out Vector2Wide point)
-        {
-            //This attempts to mirror how the ManifoldCandidateHelper functions. 
-            //During reduction, it scores all contact candidates by their depth and an extra 'extremity' heuristic.
-            //The extremity heuristic acts as a tiebreaker when all depths are similar to prevent manifold noise.
-            //We can do the same by analytically solving for zeroes of the score function derivative across the cylinder cap's edge.
-            //So, represent the point with an angle x.
-            //score(x) = (1 + dot(extremityDirection, cylinderPointDirection(x))) * extremityScale + 
-            //           dot(cylinderPointDirection(x) * cylinderRadius - pointOnFaceA, faceNormalA) / dot(faceNormalA, localNormal)
-            //where cylinderPointDirection(x) = (cos(x), sin(x)).
-            //Taking the derivative and solving for zero yields:
-            //x = atan( 
-            //(extremityScale * extremityDirection.Y + dot(tangentY, boxFaceNormal) * cylinderRadius / dot(boxFaceNormal, localNormal)) /
-            //(extremityScale * extremityDirection.X + dot(tangentX, boxFaceNormal) * cylinderRadius / dot(boxFaceNormal, localNormal)))
-            //Swapping over to atan2 and then constructing our final point components using cos(x) and sin(x) poofs the trigonometry.
-            const float extremityScale = 0.01f;
-            var scaledRadius = capRadius * inverseFaceNormalADotLocalNormal;
-            var x = new Vector<float>(0.7946897654f * extremityScale) + faceNormalA.X * scaledRadius;
-            var y = new Vector<float>(0.60701579614f * extremityScale) + faceNormalA.Z * scaledRadius;
-            var scale = capRadius / Vector.SquareRoot(x * x + y * y);
-            point.X = x * scale;
-            point.Y = y * scale;
-            //Note that this will always be on the edge of the cap being analyzed and isn't suitable for use as a 'closest point' in general.
-            //Also note that we didn't solve specifically for a minimum or maximum- just one or the other.
-            //This function is designed with the idea that the negated point will *also* be considered, and if this point is the minimum, the negated point will be the maximum.
-        }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(
             ref CylinderWide a, ref CylinderWide b, ref Vector<float> speculativeMargin,
