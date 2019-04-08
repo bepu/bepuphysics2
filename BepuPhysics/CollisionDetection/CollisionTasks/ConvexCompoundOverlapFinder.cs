@@ -51,6 +51,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide angularVelocityB = default;
             Vector<float> maximumAllowedExpansion = default;
             TConvexWide convexWide = default;
+            if (convexWide.InternalAllocationSize > 0)
+            {
+                var memory = stackalloc byte[convexWide.InternalAllocationSize];
+                convexWide.Initialize(new RawBuffer(memory, convexWide.InternalAllocationSize));
+            }
             for (int i = 0; i < pairCount; i += Vector<float>.Count)
             {
                 var count = pairCount - i;

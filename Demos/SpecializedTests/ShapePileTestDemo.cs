@@ -10,9 +10,9 @@ using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using DemoContentLoader;
 
-namespace Demos.Demos
+namespace Demos.SpecializedTests
 {
-    public class ShapePileDemo : Demo
+    public class ShapePileTestDemo : Demo
     {
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
@@ -22,15 +22,37 @@ namespace Demos.Demos
             //camera.Pitch = MathHelper.PiOver2 * 0.999f;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
-            var box = new Box(1f, 3f, 2f);
-            var capsule = new Capsule(1f, 1f);
             var sphere = new Sphere(1.5f);
+            var capsule = new Capsule(1f, 1f);
+            var box = new Box(1f, 3f, 2f);
+            var cylinder = new Cylinder(1.5f, 0.3f);
+            const int pointCount = 32;
+            var points = new QuickList<Vector3>(pointCount, BufferPool);
+            //points.Allocate(BufferPool) = new Vector3(0, 0, 0);
+            //points.Allocate(BufferPool) = new Vector3(0, 0, 1);
+            //points.Allocate(BufferPool) = new Vector3(0, 1, 0);
+            //points.Allocate(BufferPool) = new Vector3(0, 1, 1);
+            //points.Allocate(BufferPool) = new Vector3(1, 0, 0);
+            //points.Allocate(BufferPool) = new Vector3(1, 0, 1);
+            //points.Allocate(BufferPool) = new Vector3(1, 1, 0);
+            //points.Allocate(BufferPool) = new Vector3(1, 1, 1);
+            var random = new Random(5);
+            for (int i = 0; i < pointCount; ++i)
+            {
+                points.AllocateUnsafely() = new Vector3(3 * (float)random.NextDouble(), 1 * (float)random.NextDouble(), 3 * (float)random.NextDouble());
+                //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
+            }
+            var convexHull = new ConvexHull(points.Span.Slice(0, points.Count), BufferPool, out _);
             box.ComputeInertia(1, out var boxInertia);
             capsule.ComputeInertia(1, out var capsuleInertia);
             sphere.ComputeInertia(1, out var sphereInertia);
+            cylinder.ComputeInertia(1, out var cylinderInertia);
+            convexHull.ComputeInertia(1, out var hullInertia);
             var boxIndex = Simulation.Shapes.Add(box);
             var capsuleIndex = Simulation.Shapes.Add(capsule);
             var sphereIndex = Simulation.Shapes.Add(sphere);
+            var cylinderIndex = Simulation.Shapes.Add(cylinder);
+            var hullIndex = Simulation.Shapes.Add(convexHull);
             const int width = 8;
             const int height = 16;
             const int length = 8;
@@ -55,19 +77,27 @@ namespace Demos.Demos
                                 SpeculativeMargin = 0.1f
                             }
                         };
-                        switch (j % 3)
+                        switch (j % 5)
                         {
                             case 0:
-                                bodyDescription.Collidable.Shape = boxIndex;
-                                bodyDescription.LocalInertia = boxInertia;
+                                bodyDescription.Collidable.Shape = sphereIndex;
+                                bodyDescription.LocalInertia = sphereInertia;
                                 break;
                             case 1:
                                 bodyDescription.Collidable.Shape = capsuleIndex;
                                 bodyDescription.LocalInertia = capsuleInertia;
                                 break;
                             case 2:
-                                bodyDescription.Collidable.Shape = sphereIndex;
-                                bodyDescription.LocalInertia = sphereInertia;
+                                bodyDescription.Collidable.Shape = boxIndex;
+                                bodyDescription.LocalInertia = boxInertia;
+                                break;
+                            case 3:
+                                bodyDescription.Collidable.Shape = cylinderIndex;
+                                bodyDescription.LocalInertia = cylinderInertia;
+                                break;
+                            case 4:
+                                bodyDescription.Collidable.Shape = hullIndex;
+                                bodyDescription.LocalInertia = hullInertia;
                                 break;
                         }
                         Simulation.Bodies.Add(bodyDescription);
@@ -75,40 +105,9 @@ namespace Demos.Demos
                     }
                 }
             }
-            
 
-            var staticShape = new Box(1, 1, 1);
-            var staticShapeIndex = Simulation.Shapes.Add(staticShape);
-            const int staticGridWidth = 100;
-            const float staticSpacing = 1.2f;
-            var gridOffset = -0.5f * staticGridWidth * staticSpacing;
-            for (int i = 0; i < staticGridWidth; ++i)
-            {
-                for (int j = 0; j < staticGridWidth; ++j)
-                {
-                    var staticDescription = new StaticDescription
-                    {
-                        Collidable = new CollidableDescription
-                        {
-                            Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
-                            Shape = staticShapeIndex,
-                            SpeculativeMargin = 0.1f
-                        },
-                        Pose = new RigidPose
-                        {
-                            Position = new Vector3(
-                                1 + gridOffset + i * staticSpacing,
-                                -0.707f,
-                                0.5f + gridOffset + j * staticSpacing),
-                            //Orientation = BepuUtilities.Quaternion.Identity
-                            Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1 + i, i * j % 10, -10 + -j)), (i ^ j) * 0.5f * (MathHelper.PiOver4))
-                            //Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0, 0, 1)), MathHelper.Pi)
-                        }
-                    };
-                    Simulation.Statics.Add(staticDescription);
-                }
-            }
-
+            DemoMeshHelper.CreateDeformedPlane(128, 128, (x, y) => new Vector3(x - 64, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - 64), new Vector3(4, 1, 4), BufferPool, out var mesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
         }
 
     }

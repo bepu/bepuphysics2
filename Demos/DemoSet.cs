@@ -40,7 +40,7 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<CylinderTestDemo>();
+            AddOption<ShapePileTestDemo>();
             AddOption<ConvexHullTestDemo>();
             AddOption<CarDemo>();
             AddOption<ContinuousCollisionDetectionDemo>();
@@ -57,12 +57,8 @@ namespace Demos
             AddOption<BlockChainDemo>();
             AddOption<RayCastingDemo>();
             AddOption<SweepDemo>();
-            AddOption<ShapePileDemo>();
             AddOption<ContactEventsDemo>();
             AddOption<CustomVoxelCollidableDemo>();
-            AddOption<FountainStressTestDemo>();
-            AddOption<SolverBatchTestDemo>();
-            AddOption<ConstraintTestDemo>();
         }
 
         public int Count { get { return options.Count; } }
