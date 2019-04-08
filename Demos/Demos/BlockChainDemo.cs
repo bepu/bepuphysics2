@@ -18,7 +18,7 @@ namespace Demos.Demos
     /// Shows how to build a decentralized ledger of transactions out of a sequence of connected blocks which could be used to revolutionize the backbone of finance while offering
     /// a new form of trust management that can be applied to a wide range of industry problems to achieve a more #secure and sustainable network of verifiable #future connections
     /// on which the accelerated development of #blockchain #solutions on the #cloud to magnify your business impact to imagine what could be achieve more by taking advantage of 
-    /// truly #BigData with modern analytics augmented by #blockchain #technology #to make some boxes act like a multipendulum.
+    /// truly #BigData with modern AI analytics augmented by deep-learned #blockchain #technology #to make some boxes act like a multipendulum.
     /// </summary>
     public class BlockChainDemo : Demo
     {
@@ -113,9 +113,6 @@ namespace Demos.Demos
 
                     coinDescription.Pose.Position = origin + direction * 10 * (float)random.NextDouble();
                     coinDescription.Velocity.Linear = direction * (5 + 30 * (float)random.NextDouble());
-                    //var shape = new Cylinder((float)random.NextDouble() * 2 + 1, 0.2f);
-                    //coinDescription.Collidable.Shape = Simulation.Shapes.Add(shape);
-                    //shape.ComputeInertia(1, out coinDescription.LocalInertia);
                     Simulation.Bodies.Add(coinDescription);
                 }
             }            

@@ -62,31 +62,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe void GenerateInteriorPoints(in CylinderWide cylinder, in Vector3Wide cylinderLocalNormal, in Vector3Wide localClosestOnCylinder, out Vector2Wide interior0, out Vector2Wide interior1, out Vector2Wide interior2, out Vector2Wide interior3)
         {
-            //We need representative points on the cylinder to cover the case where the cap is not touching edges.
-            //We'll create 4 candidates on the edges of the cylinder and test them against the already-projected edge planes.
-            //Start with a seed and then generate three more sample points by rotating it by 90 degrees 3 times.
-            //It's important to keep the deepest contact, so in the non parallel case, start with the witness point on B.
-            //In the parallel case, arbitrarily choose a direction- here we'll use (1, 0).
-            //Interpolate between the two choices based on the dot product to avoid instantaneous changes.
+            //Assume we can just use the 4 local extreme points of the cylinder at first.
+            //Then, if there is sufficient tilt, replace the closest extreme point to the extreme point with the extreme point.
             var interpolationMin = new Vector<float>(0.9999f);
             var inverseInterpolationSpan = new Vector<float>(1f / 0.00005f);
             var parallelWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(cylinderLocalNormal.Y) - interpolationMin) * inverseInterpolationSpan));
             var deepestWeight = Vector<float>.One - parallelWeight;
-            Vector2Wide initialPoint;
-            initialPoint.X = localClosestOnCylinder.X * deepestWeight + parallelWeight;
-            initialPoint.Y = localClosestOnCylinder.Z * deepestWeight;
-            Vector2Wide.Length(initialPoint, out var initialLength);
-            var useFallbackInitialPoint = Vector.LessThan(initialLength, new Vector<float>(1e-10f));
-            initialLength = Vector.ConditionalSelect(useFallbackInitialPoint, Vector<float>.One, initialLength);
-            initialPoint.X = Vector.ConditionalSelect(useFallbackInitialPoint, Vector<float>.One, initialPoint.X);
-            initialPoint.Y = Vector.ConditionalSelect(useFallbackInitialPoint, Vector<float>.Zero, initialPoint.Y);
-            Vector2Wide.Scale(initialPoint, cylinder.Radius / initialLength, out interior0);
-            interior1.X = interior0.Y;
-            interior1.Y = -interior0.X;
-            interior2.X = -interior0.X;
-            interior2.Y = -interior0.Y;
-            interior3.X = -interior0.Y;
-            interior3.Y = interior0.X;
+            var replaceX = Vector.GreaterThan(Vector.Abs(localClosestOnCylinder.X), Vector.Abs(localClosestOnCylinder.Z));
+            var replace0 = Vector.BitwiseAnd(Vector.GreaterThan(localClosestOnCylinder.X, Vector<float>.Zero), replaceX);
+            var replace1 = Vector.BitwiseAnd(Vector.LessThanOrEqual(localClosestOnCylinder.X, Vector<float>.Zero), replaceX);
+            var replace2 = Vector.AndNot(Vector.GreaterThan(localClosestOnCylinder.Z, Vector<float>.Zero), replaceX);
+            var replace3 = Vector.AndNot(Vector.LessThanOrEqual(localClosestOnCylinder.Z, Vector<float>.Zero), replaceX);
+            var scaledRadius = parallelWeight * cylinder.Radius;
+            interior0.X = Vector.ConditionalSelect(replace0, deepestWeight * localClosestOnCylinder.X + scaledRadius, cylinder.Radius);
+            interior0.Y = Vector.ConditionalSelect(replace0, deepestWeight * localClosestOnCylinder.Z, Vector<float>.Zero);
+            interior1.X = Vector.ConditionalSelect(replace1, deepestWeight * localClosestOnCylinder.X - scaledRadius, -cylinder.Radius);
+            interior1.Y = Vector.ConditionalSelect(replace1, deepestWeight * localClosestOnCylinder.Z, Vector<float>.Zero);
+            interior2.X = Vector.ConditionalSelect(replace2, deepestWeight * localClosestOnCylinder.X, Vector<float>.Zero);
+            interior2.Y = Vector.ConditionalSelect(replace2, deepestWeight * localClosestOnCylinder.Z + scaledRadius, cylinder.Radius);
+            interior3.X = Vector.ConditionalSelect(replace3, deepestWeight * localClosestOnCylinder.X, Vector<float>.Zero);
+            interior3.Y = Vector.ConditionalSelect(replace3, deepestWeight * localClosestOnCylinder.Z - scaledRadius, -cylinder.Radius);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
