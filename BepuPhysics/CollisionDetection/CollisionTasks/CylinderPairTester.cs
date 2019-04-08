@@ -323,7 +323,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Instead, we'll start with extreme points, use them to draw a line, test that line against the caps, 
                 //and then use a perpendicular line at the midpoint of the first line's intersection interval.
                 const float parallelThresholdScalar = 0.9999f;
-                const float parallelInterpolationMaxScalar = 0.999995f;
+                const float parallelInterpolationMaxScalar = 0.99995f;
                 const float inverseParallelInterpolationSpanScalar = 1f / (parallelInterpolationMaxScalar - parallelThresholdScalar);
                 var parallelThreshold = new Vector<float>(parallelThresholdScalar);
                 var inverseParallelInterpolationSpan = new Vector<float>(inverseParallelInterpolationSpanScalar);
@@ -340,29 +340,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 if (Vector.LessThanAny(Vector.AndNot(Vector.OnesComplement(bothNotParallel), inactiveLanes), Vector<int>.Zero))
                 {
                     //The local normal is aligned with at least one of the two cap normals.     
-                    //The first contact should be the deepest point (extremeB) if the caps aren't parallel.
-                    //If both caps are parallel, use a fallback to avoid ambiguous depth noise.
-                    //Use min(b.Radius, ||ba|| + a.Radius) * ba / ||ba||.
                     ProjectOntoCapB(capCenterBY, inverseLocalNormalY, localNormal, capCenterA, out var capCenterAOnB);
                     Vector2Wide.Length(capCenterAOnB, out var horizontalOffsetLength);
                     var inverseHorizontalOffsetLength = Vector<float>.One / horizontalOffsetLength;
                     Vector2Wide.Scale(capCenterAOnB, inverseHorizontalOffsetLength, out var horizontalOffsetDirection);
-                    Vector2Wide.Scale(horizontalOffsetDirection, Vector.Min(b.Radius, horizontalOffsetLength + a.Radius), out var capContact0BothParallel);
                     var useBothParallelFallback = Vector.LessThan(horizontalOffsetLength, new Vector<float>(1e-14f));
                     horizontalOffsetDirection.X = Vector.ConditionalSelect(useBothParallelFallback, Vector<float>.One, horizontalOffsetDirection.X);
                     horizontalOffsetDirection.Y = Vector.ConditionalSelect(useBothParallelFallback, Vector<float>.Zero, horizontalOffsetDirection.Y);
-                    capContact0BothParallel.X = Vector.ConditionalSelect(useBothParallelFallback, b.Radius, capContact0BothParallel.X);
-                    capContact0BothParallel.Y = Vector.ConditionalSelect(useBothParallelFallback, Vector<float>.Zero, capContact0BothParallel.Y);
-
-                    //Choose whether to use the extreme point or the fallback based on the localNormal * Y dot products.
-                    var weightAParallel = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (absADot - parallelThreshold) * inverseParallelInterpolationSpan));
-                    var weightBParallel = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (absBDot - parallelThreshold) * inverseParallelInterpolationSpan));
-                    var parallelWeight = weightAParallel * weightBParallel;
-                    var extremeWeight = Vector<float>.One - parallelWeight;
-                    Vector2Wide initialLineStart;
-                    initialLineStart.X = extremeB.X * extremeWeight + capContact0BothParallel.X * parallelWeight;
-                    initialLineStart.Y = extremeB.Y * extremeWeight + capContact0BothParallel.Y * parallelWeight;
-
+                    Vector2Wide.Scale(horizontalOffsetDirection, b.Radius, out var initialLineStart);
+                                       
                     Vector2Wide.Negate(initialLineStart, out var contact1LineEndpoint);
                     //The above created a line stating at contact0 and pointing to the other side of the cap that contact0 was generated from.
                     //That is, if the extreme point from A was used, then the line direction is localNormal projected on capA.
@@ -371,19 +357,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector2Wide.Subtract(lineEndOnA, lineStartOnA, out var lineDirectionOnA);
                     Vector2Wide.Subtract(contact1LineEndpoint, initialLineStart, out var contact1LineDirectionOnB);
                     IntersectLineCircle(lineStartOnA, lineDirectionOnA, a.Radius, out var contact1TMinA, out var contact1TMaxA);
-                    IntersectLineCircle(initialLineStart, contact1LineDirectionOnB, b.Radius, out var contact1TMinB, out var contact1TMaxB);
-                    var firstLineTMin = Vector.Max(contact1TMinA, contact1TMinB);
-                    var firstLineTMax = Vector.Min(contact1TMaxA, contact1TMaxB);
+                    var firstLineTMin = Vector.Max(contact1TMinA, Vector<float>.Zero);
+                    var firstLineTMax = Vector.Min(contact1TMaxA, Vector<float>.One);
                     Vector2Wide.Scale(contact1LineDirectionOnB, firstLineTMin, out capContact0);
-                    Vector2Wide.Scale(contact1LineDirectionOnB, firstLineTMax, out var capContact1);
                     Vector2Wide.Add(initialLineStart, capContact0, out capContact0);
+                    Vector2Wide.Scale(contact1LineDirectionOnB, firstLineTMax, out var capContact1);
                     Vector2Wide.Add(initialLineStart, capContact1, out capContact1);
 
                     //Just use a perpendicular direction to the centerB->centerA offset and position it to get a decent cross section of the contact manifold- 
                     //at point where it would find the A-B circle intersections, or at the midpoint of A if the circle intersections are further out.
                     //Note that for not-entirely-parallel faces, it won't quite match up with the true intersections since the projected cap of A is an ellipse.
                     var circleIntersectionT = 0.5f * (horizontalOffsetLength + (b.Radius * b.Radius - a.Radius * a.Radius) * inverseHorizontalOffsetLength);
-                    var secondLineStartT = Vector.Min(horizontalOffsetLength, Vector.Max(-horizontalOffsetLength, circleIntersectionT));
+                    var secondLineStartT = Vector.Min(horizontalOffsetLength, Vector.Max(Vector<float>.Zero, circleIntersectionT));
                     Vector2Wide.Scale(horizontalOffsetDirection, secondLineStartT, out var secondLineStartOnB);
                     Vector2Wide secondLineDirectionOnB;
                     secondLineDirectionOnB.X = horizontalOffsetDirection.Y;
@@ -403,6 +388,31 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector2Wide.Scale(secondLineDirectionOnB, secondLineTMax, out var capContact3);
                     Vector2Wide.Add(secondLineStartOnB, capContact2, out capContact2);
                     Vector2Wide.Add(secondLineStartOnB, capContact3, out capContact3);
+
+                    //We've built everything assuming perfectly parallel caps. The manifold we have so far may not include the deepest points.
+                    //Replace one of the four points with the deepest point (extremeB) if necessary.
+                    var weightAParallel = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (absADot - parallelThreshold) * inverseParallelInterpolationSpan));
+                    var weightBParallel = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (absBDot - parallelThreshold) * inverseParallelInterpolationSpan));
+                    var parallelWeight = weightAParallel * weightBParallel;
+                    var extremeWeight = Vector<float>.One - parallelWeight;
+                    Vector2Wide.Subtract(extremeB, secondLineStartOnB, out var manifoldCenterToExtremeB);
+                    var replaceDot0 = horizontalOffsetDirection.X * manifoldCenterToExtremeB.X + horizontalOffsetDirection.Y * manifoldCenterToExtremeB.Y;
+                    var replaceDot2 = secondLineDirectionOnB.X * manifoldCenterToExtremeB.X + secondLineDirectionOnB.Y * manifoldCenterToExtremeB.Y;
+                    var replace0Or1 = Vector.GreaterThan(Vector.Abs(replaceDot0), Vector.Abs(replaceDot2));
+                    //var replace0 = Vector.BitwiseAnd(Vector.GreaterThan(replaceDot0, Vector<float>.Zero), replace0Or1);
+                    var replace0 = Vector.BitwiseOr(bothNotParallel, Vector.BitwiseAnd(Vector.GreaterThan(replaceDot0, Vector<float>.Zero), replace0Or1));
+                    var replace1 = Vector.BitwiseAnd(Vector.LessThanOrEqual(replaceDot0, Vector<float>.Zero), replace0Or1);
+                    var replace2 = Vector.AndNot(Vector.LessThan(replaceDot2, Vector<float>.Zero), replace0Or1);
+                    var replace3 = Vector.AndNot(Vector.GreaterThanOrEqual(replaceDot2, Vector<float>.Zero), replace0Or1);
+                    capContact0.X = Vector.ConditionalSelect(replace0, extremeB.X * extremeWeight + capContact0.X * parallelWeight, capContact0.X);
+                    capContact0.Y = Vector.ConditionalSelect(replace0, extremeB.Y * extremeWeight + capContact0.Y * parallelWeight, capContact0.Y);
+                    capContact1.X = Vector.ConditionalSelect(replace1, extremeB.X * extremeWeight + capContact1.X * parallelWeight, capContact1.X);
+                    capContact1.Y = Vector.ConditionalSelect(replace1, extremeB.Y * extremeWeight + capContact1.Y * parallelWeight, capContact1.Y);
+                    capContact2.X = Vector.ConditionalSelect(replace2, extremeB.X * extremeWeight + capContact2.X * parallelWeight, capContact2.X);
+                    capContact2.Y = Vector.ConditionalSelect(replace2, extremeB.Y * extremeWeight + capContact2.Y * parallelWeight, capContact2.Y);
+                    capContact3.X = Vector.ConditionalSelect(replace3, extremeB.X * extremeWeight + capContact3.X * parallelWeight, capContact3.X);
+                    capContact3.Y = Vector.ConditionalSelect(replace3, extremeB.Y * extremeWeight + capContact3.Y * parallelWeight, capContact3.Y);
+
 
                     FromCapBTo3D(capContact1, capCenterBY, out contact1);
                     FromCapBTo3D(capContact2, capCenterBY, out contact2);

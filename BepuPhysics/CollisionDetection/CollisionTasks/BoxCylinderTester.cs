@@ -68,8 +68,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //It's important to keep the deepest contact, so in the non parallel case, start with the witness point on B.
             //In the parallel case, arbitrarily choose a direction- here we'll use (1, 0).
             //Interpolate between the two choices based on the dot product to avoid instantaneous changes.
-            var interpolationMin = new Vector<float>(0.9995f);
-            var inverseInterpolationSpan = new Vector<float>(1f / 0.00025f);
+            var interpolationMin = new Vector<float>(0.9999f);
+            var inverseInterpolationSpan = new Vector<float>(1f / 0.00005f);
             var parallelWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(cylinderLocalNormal.Y) - interpolationMin) * inverseInterpolationSpan));
             var deepestWeight = Vector<float>.One - parallelWeight;
             Vector2Wide initialPoint;

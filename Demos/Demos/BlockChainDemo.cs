@@ -91,16 +91,7 @@ namespace Demos.Demos
             //Build the coin description for the ponz-I mean ICO.
             var coinShape = new Cylinder(1.5f, 0.3f);
             coinShape.ComputeInertia(1, out var coinInertia);
-            coinDescription = new BodyDescription
-            {
-                LocalInertia = coinInertia,
-                Pose = new RigidPose
-                {
-                    Orientation = BepuUtilities.Quaternion.Identity
-                },
-                Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = .01f },
-                Collidable = new CollidableDescription { Shape = Simulation.Shapes.Add(coinShape), SpeculativeMargin = .1f },
-            };
+            coinDescription = BodyDescription.CreateDynamic(RigidPose.Identity, coinInertia, new CollidableDescription(Simulation.Shapes.Add(coinShape), 0.1f), new BodyActivityDescription(0.01f));
         }
 
         BodyDescription coinDescription;
@@ -122,6 +113,9 @@ namespace Demos.Demos
 
                     coinDescription.Pose.Position = origin + direction * 10 * (float)random.NextDouble();
                     coinDescription.Velocity.Linear = direction * (5 + 30 * (float)random.NextDouble());
+                    //var shape = new Cylinder((float)random.NextDouble() * 2 + 1, 0.2f);
+                    //coinDescription.Collidable.Shape = Simulation.Shapes.Add(shape);
+                    //shape.ComputeInertia(1, out coinDescription.LocalInertia);
                     Simulation.Bodies.Add(coinDescription);
                 }
             }            
