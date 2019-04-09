@@ -30,10 +30,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     public struct ConvexCompoundTaskOverlaps : ICollisionTaskOverlaps<ConvexCompoundOverlaps>
     {
         Buffer<ConvexCompoundOverlaps> overlaps;
+        internal Buffer<OverlapQueryForPair> subpairQueries;
         public ConvexCompoundTaskOverlaps(BufferPool pool, int pairCount)
         {
             pool.Take(pairCount, out overlaps);
+            pool.Take(pairCount, out subpairQueries);
             overlaps.Slice(0, pairCount, out overlaps);
+            subpairQueries.Slice(0, pairCount, out subpairQueries);
             //We rely on the length being zero to begin with for lazy initialization.
             overlaps.Clear(0, pairCount);
         }
@@ -43,6 +46,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             return ref overlaps[pairIndex];
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref OverlapQueryForPair GetQueryForPair(int pairIndex)
+        {
+            return ref subpairQueries[pairIndex];
+        }
 
         public void Dispose(BufferPool pool)
         {
@@ -50,6 +58,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             {
                 overlaps[i].Dispose(pool);
             }
+            pool.Return(ref subpairQueries);
             pool.Return(ref overlaps);
         }
 

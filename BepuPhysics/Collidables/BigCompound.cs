@@ -160,7 +160,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
         {
@@ -169,7 +169,7 @@ namespace BepuPhysics.Collidables
             //using the fact that we have lots of independent queries to ensure the CPU always has something to do.
             Enumerator<TSubpairOverlaps> enumerator;
             enumerator.Pool = pool;
-            for (int i = 0; i < count; ++i)
+            for (int i = 0; i < pairs.Length; ++i)
             {
                 ref var pair = ref pairs[i];
                 enumerator.Overlaps = Unsafe.AsPointer(ref overlaps.GetOverlapsForPair(i));

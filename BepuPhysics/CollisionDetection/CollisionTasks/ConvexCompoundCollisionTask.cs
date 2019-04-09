@@ -14,7 +14,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         CollisionContinuationType CollisionContinuationType { get; }
 
-        ref TContinuation CreateContinuation<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, out int continuationIndex)
+        ref TContinuation CreateContinuation<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, in OverlapQueryForPair queryForPair, out int continuationIndex)
             where TCallbacks : struct, ICollisionCallbacks;
 
         void ConfigureContinuationChild<TCallbacks>(
@@ -50,11 +50,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             for (int i = 0; i < batch.Count; ++i)
             {
                 ref var pairOverlaps = ref overlaps.GetOverlapsForPair(i);
+                ref var pairQuery = ref overlaps.GetQueryForPair(i);
                 if (pairOverlaps.Count > 0)
                 {
                     ref var pair = ref pairs[i];
                     ref var compound = ref Unsafe.AsRef<TCompound>(pair.B);
-                    ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, pairOverlaps.Count, pair, out var continuationIndex);
+                    ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, pairOverlaps.Count, pair, pairQuery, out var continuationIndex);
 
                     int nextContinuationChildIndex = 0;
                     for (int j = 0; j < pairOverlaps.Count; ++j)

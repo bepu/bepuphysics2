@@ -12,7 +12,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref NonconvexReduction CreateContinuation<TCallbacks>(
-            ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, out int continuationIndex)
+            ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, in OverlapQueryForPair pairQuery, out int continuationIndex)
             where TCallbacks : struct, ICollisionCallbacks
         {
             return ref collisionBatcher.NonconvexReductions.CreateContinuation(childCount, collisionBatcher.Pool, out continuationIndex);

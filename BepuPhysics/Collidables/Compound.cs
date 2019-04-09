@@ -149,11 +149,11 @@ namespace BepuPhysics.Collidables
             return ref Children[compoundChildIndex];
         }
 
-        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
         {
-            for (int pairIndex = 0; pairIndex < count; ++pairIndex)
+            for (int pairIndex = 0; pairIndex < pairs.Length; ++pairIndex)
             {
                 ref var pair = ref pairs[pairIndex];
                 ref var compound = ref Unsafe.AsRef<Compound>(pair.Container);

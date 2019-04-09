@@ -1,5 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities.Memory;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
@@ -14,7 +15,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref CompoundMeshReduction CreateContinuation<TCallbacks>(
-            ref CollisionBatcher<TCallbacks> collisionBatcher, int totalChildCount, ref Buffer<ChildOverlapsCollection> pairOverlaps, in BoundsTestedPair pair, out int continuationIndex)
+            ref CollisionBatcher<TCallbacks> collisionBatcher, int totalChildCount, ref Buffer<ChildOverlapsCollection> pairOverlaps, ref Buffer<OverlapQueryForPair> pairQueries, in BoundsTestedPair pair, out int continuationIndex)
             where TCallbacks : struct, ICollisionCallbacks
         {
             ref var continuation = ref collisionBatcher.CompoundMeshReductions.CreateContinuation(totalChildCount, collisionBatcher.Pool, out continuationIndex);
@@ -23,6 +24,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             triangleAStartIndex = totalChildCount;
             collisionBatcher.Pool.Take(totalChildCount + pairOverlaps.Length, out continuation.Triangles);
             collisionBatcher.Pool.Take(pairOverlaps.Length, out continuation.ChildManifoldRegions);
+            collisionBatcher.Pool.Take(pairOverlaps.Length, out continuation.QueryBounds);
             continuation.RegionCount = pairOverlaps.Length;
             continuation.MeshOrientation = pair.OrientationB;
             //A flip is required in mesh reduction whenever contacts are being generated as if the triangle is in slot B, which is whenever this pair has *not* been flipped.
@@ -31,11 +33,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //All regions must be assigned ahead of time. Some trailing regions may be empty, so the dispatch may occur before all children are visited in the later loop.
             //That would result in potentially uninitialized values in region counts.
             int nextContinuationChildIndex = 0;
+            Debug.Assert(pairOverlaps.Length == pairQueries.Length);
             for (int j = 0; j < pairOverlaps.Length; ++j)
             {
                 ref var childOverlaps = ref pairOverlaps[j];
                 continuation.ChildManifoldRegions[j] = (nextContinuationChildIndex, childOverlaps.Count);
                 nextContinuationChildIndex += childOverlaps.Count;
+                ref var continuationBounds = ref continuation.QueryBounds[j];
+                ref var sourceBounds = ref pairQueries[j];
+                continuationBounds.Min = sourceBounds.Min;
+                continuationBounds.Max = sourceBounds.Max;
             }
             return ref continuation;
         }

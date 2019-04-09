@@ -5,6 +5,7 @@ using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
@@ -18,7 +19,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         CollisionContinuationType CollisionContinuationType { get; }
 
-        ref TContinuation CreateContinuation<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, ref Buffer<ChildOverlapsCollection> pairOverlaps, in BoundsTestedPair pair, out int continuationIndex)
+        ref TContinuation CreateContinuation<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, ref Buffer<ChildOverlapsCollection> pairOverlaps, ref Buffer<OverlapQueryForPair> pairQueries, in BoundsTestedPair pair, out int continuationIndex)
             where TCallbacks : struct, ICollisionCallbacks;
 
         void GetChildAData<TCallbacks>(ref CollisionBatcher<TCallbacks> collisionBatcher, ref TContinuation continuation, in BoundsTestedPair pair, int childIndexA, out RigidPose childPoseA, out int childTypeA, out void* childShapeDataA)
@@ -57,7 +58,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             overlapFinder.FindLocalOverlaps(ref pairs, batch.Count, batcher.Pool, batcher.Shapes, batcher.Dt, out var overlaps);
             for (int pairIndex = 0; pairIndex < batch.Count; ++pairIndex)
             {
-                overlaps.GetPairOverlaps(pairIndex, out var pairOverlaps);
+                overlaps.GetPairOverlaps(pairIndex, out var pairOverlaps, out var subpairQueries);
                 var totalOverlapCountForPair = pairOverlaps[0].Count;
                 for (int j = 1; j < pairOverlaps.Length; ++j)
                 {
@@ -66,7 +67,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 if (totalOverlapCountForPair > 0)
                 {
                     ref var pair = ref pairs[pairIndex];
-                    ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, totalOverlapCountForPair, ref pairOverlaps, pair, out var continuationIndex);
+                    ref var continuation = ref continuationHandler.CreateContinuation(ref batcher, totalOverlapCountForPair, ref pairOverlaps, ref subpairQueries, pair, out var continuationIndex);
 
                     var nextContinuationChildIndex = 0;
                     for (int j = 0; j < pairOverlaps.Length; ++j)

@@ -202,7 +202,8 @@ namespace Demos.Demos
         }
 
 
-        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
              where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
              where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps
         {
@@ -213,7 +214,7 @@ namespace Demos.Demos
             //All this enumerator does is take an overlap reported by the GetOverlaps function and add it to the overlaps list.
             ShapeTreeOverlapEnumerator<TSubpairOverlaps> enumerator;
             enumerator.Pool = pool;
-            for (int i = 0; i < count; ++i)
+            for (int i = 0; i < pairs.Length; ++i)
             {
                 ref var pair = ref pairs[i];
                 ref var voxelsSet = ref Unsafe.AsRef<Voxels>(pair.Container);
@@ -253,7 +254,7 @@ namespace Demos.Demos
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref NonconvexReduction CreateContinuation<TCallbacks>(
-            ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, out int continuationIndex)
+            ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, in OverlapQueryForPair pairQuery, out int continuationIndex)
             where TCallbacks : struct, ICollisionCallbacks
         {
             return ref collisionBatcher.NonconvexReductions.CreateContinuation(childCount, collisionBatcher.Pool, out continuationIndex);
@@ -316,7 +317,7 @@ namespace Demos.Demos
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref NonconvexReduction CreateContinuation<TCallbacks>(
-            ref CollisionBatcher<TCallbacks> collisionBatcher, int totalChildCount, ref Buffer<ChildOverlapsCollection> pairOverlaps, in BoundsTestedPair pair, out int continuationIndex)
+            ref CollisionBatcher<TCallbacks> collisionBatcher, int totalChildCount, ref Buffer<ChildOverlapsCollection> pairOverlaps, ref Buffer<OverlapQueryForPair> pairQueries, in BoundsTestedPair pair, out int continuationIndex)
             where TCallbacks : struct, ICollisionCallbacks
         {
             return ref collisionBatcher.NonconvexReductions.CreateContinuation(totalChildCount, collisionBatcher.Pool, out continuationIndex);

@@ -25,7 +25,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public Buffer<int> Overlaps;
         public int Count;
         public int ChildIndex;
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe ref int Allocate(BufferPool pool)
         {
@@ -47,6 +47,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     public struct CompoundPairOverlaps : ICollisionTaskOverlaps<ChildOverlapsCollection>
     {
         Buffer<ChildOverlapsCollection> childOverlaps;
+        internal Buffer<OverlapQueryForPair> pairQueries;
         Buffer<(int start, int count)> pairRegions;
         int pairCount;
         int subpairCount;
@@ -55,13 +56,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             this.pairCount = 0;
             this.subpairCount = 0;
             pool.Take(subpairCapacity, out childOverlaps);
+            pool.Take(subpairCapacity, out pairQueries);
+            pairQueries.Slice(0, subpairCapacity, out pairQueries);
             //We rely on the length being zero to begin with for lazy initialization.
             childOverlaps.Clear(0, subpairCapacity);
             pool.Take(pairCapacity, out pairRegions);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void CreatePairOverlaps(int childrenInPair, BufferPool pool)
+        public void CreatePairOverlaps(int childrenInPair)
         {
             pairRegions[pairCount++] = (subpairCount, childrenInPair);
             subpairCount += childrenInPair;
@@ -75,10 +78,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return ref childOverlaps[subpairIndex];
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetPairOverlaps(int pairIndex, out Buffer<ChildOverlapsCollection> pairOverlaps)
+        public void GetPairOverlaps(int pairIndex, out Buffer<ChildOverlapsCollection> pairOverlaps, out Buffer<OverlapQueryForPair> pairQueries)
         {
             ref var region = ref pairRegions[pairIndex];
             childOverlaps.Slice(region.start, region.count, out pairOverlaps);
+            this.pairQueries.Slice(region.start, region.count, out pairQueries);
         }
 
         public void Dispose(BufferPool pool)
@@ -87,6 +91,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             {
                 childOverlaps[i].Dispose(pool);
             }
+            pool.Return(ref pairQueries);
             pool.Return(ref childOverlaps);
             pool.Return(ref pairRegions);
         }

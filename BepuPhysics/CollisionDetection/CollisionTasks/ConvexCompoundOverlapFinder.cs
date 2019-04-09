@@ -11,7 +11,7 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
-    public unsafe struct PairsToTestForOverlap
+    public unsafe struct OverlapQueryForPair
     {
         public void* Container;
         public Vector3 Min;
@@ -20,7 +20,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
     public unsafe interface IBoundsQueryableCompound
     {
-        unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(PairsToTestForOverlap* pairs, int count, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
+        unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps;
 
@@ -41,8 +41,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps)
         {
             overlaps = new ConvexCompoundTaskOverlaps(pool, pairCount);
-            var pairsToTest = stackalloc PairsToTestForOverlap[pairCount];
-
+            ref var pairsToTest = ref overlaps.subpairQueries;
             Vector3Wide offsetB = default;
             QuaternionWide orientationA = default;
             QuaternionWide orientationB = default;
@@ -100,7 +99,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             //The choice of instance here is irrelevant.
-            Unsafe.AsRef<TCompound>(pairsToTest->Container).FindLocalOverlaps<ConvexCompoundTaskOverlaps, ConvexCompoundOverlaps>(pairsToTest, pairCount, pool, shapes, ref overlaps);
+            Unsafe.AsRef<TCompound>(pairsToTest[0].Container).FindLocalOverlaps<ConvexCompoundTaskOverlaps, ConvexCompoundOverlaps>(ref pairsToTest, pool, shapes, ref overlaps);
 
         }
 

@@ -20,13 +20,14 @@ namespace BepuPhysics.CollisionDetection
         /// <summary>
         /// Minimum dot product between a triangle face and the contact normal for a collision to be considered a triangle face contact.
         /// </summary>
-        public const float MinimumDotForFaceCollision = 0.99f;
+        public const float MinimumDotForFaceCollision = 0.999f;
         public Buffer<Triangle> Triangles;
         //MeshReduction relies on all of a mesh's triangles being in slot B, as they appear in the mesh collision tasks.
         //However, the original user may have provided this pair in unknown order and triggered a flip. We'll compensate for that when examining contact positions.
         public bool RequiresFlip;
         //The triangles array is in the mesh's local space. In order to test any contacts against them, we need to be able to transform contacts.
         public BepuUtilities.Quaternion MeshOrientation;
+        public BoundingBox QueryBounds;
         //This uses all of the nonconvex reduction's logic, so we just nest it.
         public NonconvexReduction Inner;
 

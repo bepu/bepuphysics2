@@ -15,6 +15,7 @@ namespace BepuPhysics.CollisionDetection
     {
         public int RegionCount;
         public Buffer<(int Start, int Count)> ChildManifoldRegions;
+        public Buffer<BoundingBox> QueryBounds;
         public Buffer<Triangle> Triangles;
         //MeshReduction relies on all of a mesh's triangles being in slot B, as they appear in the mesh collision tasks.
         //However, the original user may have provided this pair in unknown order and triggered a flip. We'll compensate for that when examining contact positions.
@@ -59,9 +60,10 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
 
-                //Now that boundary smoothing analysis is done, we no longer need the triangle list or regions.
+                //Now that boundary smoothing analysis is done, we can safely clean up the continuation resources.
                 batcher.Pool.Return(ref Triangles);
                 batcher.Pool.Return(ref ChildManifoldRegions);
+                batcher.Pool.Return(ref QueryBounds);
                 Inner.Flush(pairId, ref batcher);
                 return true;
             }

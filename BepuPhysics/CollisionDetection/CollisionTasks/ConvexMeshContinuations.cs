@@ -12,7 +12,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref MeshReduction CreateContinuation<TCallbacks>(
-            ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, out int continuationIndex)
+            ref CollisionBatcher<TCallbacks> collisionBatcher, int childCount, in BoundsTestedPair pair, in OverlapQueryForPair pairQuery, out int continuationIndex)
             where TCallbacks : struct, ICollisionCallbacks
         {
             ref var continuation = ref collisionBatcher.MeshReductions.CreateContinuation(childCount, collisionBatcher.Pool, out continuationIndex);
@@ -21,6 +21,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             continuation.MeshOrientation = pair.OrientationB;
             //A flip is required in mesh reduction whenever contacts are being generated as if the triangle is in slot B, which is whenever this pair has *not* been flipped.
             continuation.RequiresFlip = pair.FlipMask == 0;
+            continuation.QueryBounds.Min = pairQuery.Min;
+            continuation.QueryBounds.Max = pairQuery.Max;
             return ref continuation;
         }
 
