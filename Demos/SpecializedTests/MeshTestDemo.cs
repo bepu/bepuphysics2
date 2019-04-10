@@ -77,7 +77,7 @@ namespace Demos.SpecializedTests
 
             var testShape = new Cylinder(1, 0.2f);
             testShape.ComputeInertia(1, out var testInertia);
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(10, 10, 10), testInertia, new CollidableDescription(Simulation.Shapes.Add(testShape), 0.1f), new BodyActivityDescription(-0.01f)));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(10, 10, 10), testInertia, new CollidableDescription(Simulation.Shapes.Add(testShape), 10.1f), new BodyActivityDescription(-0.01f)));
 
 
             //DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(5, 5, 5), out var newtMesh);

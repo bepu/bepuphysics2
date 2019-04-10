@@ -201,10 +201,20 @@ namespace BepuPhysics.CollisionDetection
                         //then it is infringing.
                         var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
                         const float infringementEpsilon = 5e-3f;
-                        //if ((onAB && normalDot.Y > infringementEpsilon) || (onBC && normalDot.Z > infringementEpsilon) || (onCA && normalDot.W > infringementEpsilon))
-                        if ((!onAB || normalDot.Y > infringementEpsilon) && (!onBC || normalDot.Z > infringementEpsilon) && (!onCA || normalDot.W > infringementEpsilon))
+                        //In order to block a contact, it must be infringing on every edge that it is on top of.
+                        //In other words, when a contact is on a vertex, it's not good enough to infringe only one of the edges; in that case, the contact normal isn't 
+                        //actually infringing on the triangle face.
+                        //Further, note that we require nonzero positive infringement; otherwise, we'd end up blocking the contacts of a flat neighbor.
+                        //But we are a little more aggressive about blocking the *second* edge infringement- if it's merely parallel, we count it as infringing.
+                        //Otherwise you could get into situations where a contact on the vertex of a bunch of different triangles isn't blocked by any of them because
+                        //the normal is alinged with an edge.
+                        if ((onAB && normalDot.Y > infringementEpsilon) || (onBC && normalDot.Z > infringementEpsilon) || (onCA && normalDot.W > infringementEpsilon))
                         {
-                            return true;
+                            //At least one edge is infringed. Are all contact-touched edges at least nearly infringed?
+                            if ((!onAB || normalDot.Y > -infringementEpsilon) && (!onBC || normalDot.Z > -infringementEpsilon) && (!onCA || normalDot.W > -infringementEpsilon))
+                            {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -262,12 +272,6 @@ namespace BepuPhysics.CollisionDetection
                 //Can't correct contacts that were created by face collisions.
                 if ((sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) == 0)
                 {
-                    //Clear the face flags. This isn't *required* since they're coherent enough anyway and the accumulated impulse redistributor is a decent fallback,
-                    //but it costs basically nothing to do this.
-                    for (int k = 0; k < sourceChild.Manifold.Count; ++k)
-                    {
-                        Unsafe.Add(ref sourceChild.Manifold.Contact0, k).FeatureId &= ~FaceCollisionFlag;
-                    }
                     ComputeMeshSpaceContacts(ref sourceChild.Manifold, meshInverseOrientation, requiresFlip, meshSpaceContacts, out var meshSpaceNormal);
                     for (int j = 0; j < activeChildCount; ++j)
                     {
@@ -290,6 +294,15 @@ namespace BepuPhysics.CollisionDetection
                     for (int j = 0; j < sourceChild.Manifold.Count; ++j)
                     {
                         RemoveIfOutsideBounds(ref sourceChild.Manifold, ref j, meshSpaceContacts[j], queryBounds);
+                    }
+                }
+                else
+                {
+                    //Clear the face flags. This isn't *required* since they're coherent enough anyway and the accumulated impulse redistributor is a decent fallback,
+                    //but it costs basically nothing to do this.
+                    for (int k = 0; k < sourceChild.Manifold.Count; ++k)
+                    {
+                        Unsafe.Add(ref sourceChild.Manifold.Contact0, k).FeatureId &= ~FaceCollisionFlag;
                     }
                 }
             }
