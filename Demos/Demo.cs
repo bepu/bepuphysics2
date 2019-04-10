@@ -46,7 +46,30 @@ namespace Demos
             //(In either case, you'd also want to interpolate or extrapolate simulation results during rendering for smoothness.)
             //Note that taking steps of variable length can reduce stability. Gradual or one-off changes can work reasonably well.
             Simulation.Timestep(1 / 60f, ThreadDispatcher);
+
+            ////Here's an example of how it would look to use more frequent updates, but still with a fixed amount of time simulated per update call:
+            //const float timeToSimulate = 1 / 60f;
+            //const int timestepsPerUpdate = 2;
+            //const float timePerTimestep = timeToSimulate / timestepsPerUpdate;
+            //for (int i = 0; i < timestepsPerUpdate; ++i)
+            //{
+            //    Simulation.Timestep(timePerTimestep, ThreadDispatcher);
+            //}
+
+            ////And here's an example of how to use an accumulator to take a number of timesteps of fixed length in response to variable update dt:
+            //timeAccumulator += dt;
+            //var targetTimestepDuration = 1 / 120f;
+            //while (timeAccumulator >= targetTimestepDuration)
+            //{
+            //    Simulation.Timestep(targetTimestepDuration, ThreadDispatcher);
+            //    timeAccumulator -= targetTimestepDuration;
+            //}
+            ////If you wanted to smooth out the positions of rendered objects to avoid the 'jitter' that an unpredictable number of time steps per update would cause,
+            ////you can just interpolate the previous and current states using a weight based on the time remaining in the accumulator:
+            //var interpolationWeight = timeAccumulator / targetTimestepDuration;
         }
+        //If you're using the accumulator-based timestep approach above, you'll need this field.
+        //float timeAccumulator;
 
         public virtual void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
