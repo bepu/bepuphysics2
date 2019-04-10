@@ -321,7 +321,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //If the local normal points against either triangle normal, then it's on the backside and should not collide.
             Vector3Wide.Dot(localNormal, faceNormalA, out var normalDotA);
             Vector3Wide.Dot(localNormal, faceNormalB, out var normalDotB);
-            var allowContacts = Vector.BitwiseAnd(Vector.LessThanOrEqual(normalDotA, Vector<float>.Zero), Vector.GreaterThanOrEqual(normalDotB, Vector<float>.Zero));
+            var allowContacts = Vector.BitwiseAnd(Vector.LessThan(normalDotA, Vector<float>.Zero), Vector.GreaterThan(normalDotB, Vector<float>.Zero));
             manifold.Contact0Exists = Vector.BitwiseAnd(manifold.Contact0Exists, allowContacts);
             manifold.Contact1Exists = Vector.BitwiseAnd(manifold.Contact1Exists, allowContacts);
             manifold.Contact2Exists = Vector.BitwiseAnd(manifold.Contact2Exists, allowContacts);

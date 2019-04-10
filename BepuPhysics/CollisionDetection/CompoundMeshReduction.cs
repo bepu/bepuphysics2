@@ -56,7 +56,7 @@ namespace BepuPhysics.CollisionDetection
                     ref var region = ref ChildManifoldRegions[i];
                     if (region.Count > 0)
                     {
-                        MeshReduction.ReduceManifolds(ref Triangles, ref Inner.Children, region.Start, region.Count, RequiresFlip, meshOrientation, meshInverseOrientation);
+                        MeshReduction.ReduceManifolds(ref Triangles, ref Inner.Children, region.Start, region.Count, RequiresFlip, QueryBounds[i], meshOrientation, meshInverseOrientation);
                     }
                 }
 

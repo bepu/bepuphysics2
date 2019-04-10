@@ -61,7 +61,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 out var depth, out var localNormal, out var closestOnHull);
 
             Vector3Wide.Dot(triangleNormal, localNormal, out var triangleNormalDotLocalNormal);
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThan(triangleNormalDotLocalNormal, Vector<float>.Zero), Vector.LessThan(depth, depthThreshold)));
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThanOrEqual(triangleNormalDotLocalNormal, Vector<float>.Zero), Vector.LessThan(depth, depthThreshold)));
             //Not every lane will generate contacts. Rather than requiring every lane to carefully clear all contactExists states, just clear them up front.
             manifold.Contact0Exists = default;
             manifold.Contact1Exists = default;
@@ -300,6 +300,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(manifold.OffsetA1, offset1, out manifold.OffsetA1);
             Vector3Wide.Subtract(manifold.OffsetA2, offset2, out manifold.OffsetA2);
             Vector3Wide.Subtract(manifold.OffsetA3, offset3, out manifold.OffsetA3);
+            //Mesh reductions also make use of a face contact flag in the feature id.
+            var faceCollisionFlag = Vector.ConditionalSelect(
+                Vector.LessThan(triangleNormalDotLocalNormal, new Vector<float>(-MeshReduction.MinimumDotForFaceCollision)), new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
+            manifold.FeatureId0 += faceCollisionFlag;
         }
 
         public void Test(ref TriangleWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)

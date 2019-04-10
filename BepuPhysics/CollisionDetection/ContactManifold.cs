@@ -239,13 +239,12 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void FastRemoveAt(ConvexContactManifold* manifold, int index)
+        public static void FastRemoveAt(ref ConvexContactManifold manifold, int index)
         {
-            --manifold->Count;
-            if (index < manifold->Count)
+            --manifold.Count;
+            if (index < manifold.Count)
             {
-                var contacts = &manifold->Contact0;
-                contacts[index] = contacts[manifold->Count];
+                Unsafe.Add(ref manifold.Contact0, index) = Unsafe.Add(ref manifold.Contact0, manifold.Count);
             }
         }
     }

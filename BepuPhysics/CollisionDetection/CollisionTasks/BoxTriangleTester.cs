@@ -428,7 +428,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(positiveX, boxEdgeOffsetY, out var boxVertex11);
             //If the local normal points against the triangle normal, then it's on the backside and should not collide.
             Vector3Wide.Dot(localNormal, triangleNormal, out var normalDot);
-            var allowContacts = Vector.GreaterThanOrEqual(normalDot, Vector<float>.Zero);
+            var allowContacts = Vector.GreaterThan(normalDot, Vector<float>.Zero);
             AddBoxVertices(vA, vB, ab, bc, ca, triangleNormal, localNormal, boxVertex00, boxVertex01, boxVertex10, boxVertex11,
                 localTriangleCenter, triangleTangentX, triangleTangentY, axisIdNormal, axisIdTangentX, axisIdTangentY, allowContacts, ref candidates, ref candidateCount, pairCount);
 

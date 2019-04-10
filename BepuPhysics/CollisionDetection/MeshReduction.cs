@@ -50,6 +50,23 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static unsafe void RemoveIfOutsideBounds(ref ConvexContactManifold manifold, ref int contactIndex, in Vector3 meshSpaceContact, in BoundingBox queryBounds)
+        {
+            //If a contact is outside of the mesh space bounding box that found the triangles to test, then two things are true:
+            //1) The contact is almost certainly not productive; the bounding box included a frame of integrated motion and this contact was outside of it.
+            //2) The contact may have been created with a triangle whose neighbor was not in the query bounds, and so the neighbor won't contribute any blocking.
+            //The result is that such contacts have a tendency to cause ghost collisions. We'd rather not force the use of very small speculative margins,
+            //so instead we explicitly kill off contacts which are outside the queried bounds.
+            if (Vector3.Min(meshSpaceContact, queryBounds.Min) != queryBounds.Min ||
+                Vector3.Max(meshSpaceContact, queryBounds.Max) != queryBounds.Max)
+            {
+                ConvexContactManifold.FastRemoveAt(ref manifold, contactIndex);
+                --contactIndex;
+            }
+
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe void ComputeMeshSpaceContacts(ref ConvexContactManifold manifold, in Matrix3x3 inverseMeshOrientation, bool requiresFlip, Vector3* meshSpaceContacts, out Vector3 meshSpaceNormal)
         {
             //First, if the manifold considers the mesh and its triangles to be shape B, then we need to flip it.
@@ -197,7 +214,7 @@ namespace BepuPhysics.CollisionDetection
 
 
         public unsafe static void ReduceManifolds(ref Buffer<Triangle> continuationTriangles, ref Buffer<NonconvexReductionChild> continuationChildren, int start, int count,
-            bool requiresFlip, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation)
+            bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation)
         {
             //Before handing responsibility off to the nonconvex reduction, make sure that no contacts create nasty 'bumps' at the border of triangles.
             //Bumps can occur when an isolated triangle test detects a contact pointing outward, like when a box hits the side. This is fine when the triangle truly is isolated,
@@ -268,6 +285,12 @@ namespace BepuPhysics.CollisionDetection
                             }
                         }
                     }
+                    //Note that the removal had to be deferred until after blocking analysis.
+                    //This manifold will not be considered for the remainder of this loop, so modifying it is fine.
+                    for (int j = 0; j < sourceChild.Manifold.Count; ++j)
+                    {
+                        RemoveIfOutsideBounds(ref sourceChild.Manifold, ref j, meshSpaceContacts[j], queryBounds);
+                    }
                 }
             }
             for (int i = 0; i < activeChildCount; ++i)
@@ -304,7 +327,7 @@ namespace BepuPhysics.CollisionDetection
                 Matrix3x3.CreateFromQuaternion(MeshOrientation, out var meshOrientation);
                 Matrix3x3.Transpose(meshOrientation, out var meshInverseOrientation);
 
-                ReduceManifolds(ref Triangles, ref Inner.Children, 0, Inner.ChildCount, RequiresFlip, meshOrientation, meshInverseOrientation);
+                ReduceManifolds(ref Triangles, ref Inner.Children, 0, Inner.ChildCount, RequiresFlip, QueryBounds, meshOrientation, meshInverseOrientation);
 
                 //Now that boundary smoothing analysis is done, we no longer need the triangle list.
                 batcher.Pool.Return(ref Triangles);

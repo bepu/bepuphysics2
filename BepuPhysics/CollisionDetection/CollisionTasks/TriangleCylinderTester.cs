@@ -40,7 +40,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     public struct TriangleCylinderTester : IPairTester<TriangleWide, CylinderWide, Convex4ContactManifoldWide>
     {
         public int BatchSize => 16;
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TryAddInteriorPoint(in Vector2Wide point, in Vector<int> featureId,
             in Vector2Wide projectedA, Vector2Wide projectedAB, in Vector2Wide projectedB, Vector2Wide projectedBC, in Vector2Wide projectedC, Vector2Wide projectedCA,
@@ -171,7 +171,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //If the cylinder is too far away or if it's on the backside of the triangle, don't generate any contacts.
             Vector3Wide.Dot(triangleNormal, localNormal, out var faceNormalADotNormal);
-            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThan(faceNormalADotNormal, Vector<float>.Zero), Vector.LessThan(depth, depthThreshold)));
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThanOrEqual(faceNormalADotNormal, Vector<float>.Zero), Vector.LessThan(depth, depthThreshold)));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //All lanes are either inactive or were found to have a depth lower than the speculative margin, so we can just quit early.
@@ -291,15 +291,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Center of the side line is just (closestOnB.X, 0, closestOnB.Z), sideLineDirection is just (0, 1, 0).
                 //t = dot(sideLineStart - pointOnFaceEdge, edgeNormal) / dot(sideLineDirection, edgeNormal)
                 var negativeOne = new Vector<float>(-1f);
-                var abDenominator = negativeOne / edgeNormalAB.Y;
-                var bcDenominator = negativeOne / edgeNormalBC.Y;
-                var caDenominator = negativeOne / edgeNormalCA.Y;
+                //Guard against divisions by zero to avoid NaN infection.
+                var minValue = new Vector<float>(float.MinValue);
+                var maxValue = new Vector<float>(float.MaxValue);
+                var abDenominator = Vector.ConditionalSelect(Vector.Equals(edgeNormalAB.Y, Vector<float>.Zero), minValue, negativeOne / edgeNormalAB.Y);
+                var bcDenominator = Vector.ConditionalSelect(Vector.Equals(edgeNormalBC.Y, Vector<float>.Zero), minValue, negativeOne / edgeNormalBC.Y);
+                var caDenominator = Vector.ConditionalSelect(Vector.Equals(edgeNormalCA.Y, Vector<float>.Zero), minValue, negativeOne / edgeNormalCA.Y);
                 Vector3Wide.LengthSquared(edgeNormalAB, out var edgeNormalABLengthSquared);
                 Vector3Wide.LengthSquared(edgeNormalBC, out var edgeNormalBCLengthSquared);
                 Vector3Wide.LengthSquared(edgeNormalCA, out var edgeNormalCALengthSquared);
-                var inverseEdgeNormalABLengthSquared = Vector<float>.One / edgeNormalABLengthSquared;
-                var inverseEdgeNormalBCLengthSquared = Vector<float>.One / edgeNormalBCLengthSquared;
-                var inverseEdgeNormalCALengthSquared = Vector<float>.One / edgeNormalCALengthSquared;
+                var inverseEdgeNormalABLengthSquared = Vector.ConditionalSelect(Vector.Equals(edgeNormalABLengthSquared, Vector<float>.Zero), maxValue, Vector<float>.One / edgeNormalABLengthSquared);
+                var inverseEdgeNormalBCLengthSquared = Vector.ConditionalSelect(Vector.Equals(edgeNormalBCLengthSquared, Vector<float>.Zero), maxValue, Vector<float>.One / edgeNormalBCLengthSquared);
+                var inverseEdgeNormalCALengthSquared = Vector.ConditionalSelect(Vector.Equals(edgeNormalCALengthSquared, Vector<float>.Zero), maxValue, Vector<float>.One / edgeNormalCALengthSquared);
                 Vector3Wide aToSideLine, bToSideLine, cToSideLine;
                 aToSideLine.X = closestOnB.X - triangleA.X;
                 aToSideLine.Y = -triangleA.Y;
@@ -314,8 +317,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Dot(edgeNormalAB, aToSideLine, out var abNumerator);
                 Vector3Wide.Dot(edgeNormalBC, bToSideLine, out var bcNumerator);
                 Vector3Wide.Dot(edgeNormalCA, cToSideLine, out var caNumerator);
-                var minValue = new Vector<float>(float.MinValue);
-                var maxValue = new Vector<float>(float.MaxValue);
                 var tAB = abNumerator * abDenominator;
                 var tBC = bcNumerator * bcDenominator;
                 var tCA = caNumerator * caDenominator;
@@ -396,6 +397,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(manifold.OffsetA1, offset1, out manifold.OffsetA1);
             Vector3Wide.Subtract(manifold.OffsetA2, offset2, out manifold.OffsetA2);
             Vector3Wide.Subtract(manifold.OffsetA3, offset3, out manifold.OffsetA3);
+            //Mesh reductions also make use of a face contact flag in the feature id.
+            var faceCollisionFlag = Vector.ConditionalSelect(
+                Vector.LessThan(faceNormalADotNormal, new Vector<float>(-MeshReduction.MinimumDotForFaceCollision)), new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
+            manifold.FeatureId0 += faceCollisionFlag;
         }
 
 
