@@ -183,7 +183,10 @@ namespace BepuPhysics.CollisionDetection
                     //This occurs when:
                     //1) The contact is near an edge, and the normal points inward along the edge normal.
                     //2) The contact is on the inside of the triangle.
-                    var negativeThreshold = -triangle.DistanceThreshold;
+                    //Note that we are stricter about being on the edge than we were about being nearby.
+                    //That's because infringement checks require a normal infringement along every edge that the contact is on;
+                    //being too aggressive about edge classification would cause infringements to sometimes be ignored.
+                    var negativeThreshold = triangle.DistanceThreshold * -1e-2f;
                     var onAB = distanceAlongNormal.Y >= negativeThreshold;
                     var onBC = distanceAlongNormal.Z >= negativeThreshold;
                     var onCA = distanceAlongNormal.W >= negativeThreshold;
@@ -270,8 +273,6 @@ namespace BepuPhysics.CollisionDetection
             {
                 ref var sourceTriangle = ref activeTriangles[i];
                 ref var sourceChild = ref children[sourceTriangle.ChildIndex];
-                //if (sourceChild.Manifold.Count == 0)
-                //    continue;
                 //Can't correct contacts that were created by face collisions.
                 if ((sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) == 0)
                 {
@@ -292,18 +293,6 @@ namespace BepuPhysics.CollisionDetection
                             }
                         }
                     }
-                    //if (meshSpaceNormal.Y > -0.99999f && !sourceTriangle.Blocked)
-                    //{
-                    //    Console.WriteLine($"triangles:");
-                    //    for (int p = 0; p < count; ++p)
-                    //    {
-                    //        Console.WriteLine($"Triangle {p}:");
-                    //        Console.WriteLine($"A: {triangles[p].A}");
-                    //        Console.WriteLine($"B: {triangles[p].B}");
-                    //        Console.WriteLine($"C: {triangles[p].C}");
-                    //    }
-                    //    Console.WriteLine($"huh");
-                    //}
                     //Note that the removal had to be deferred until after blocking analysis.
                     //This manifold will not be considered for the remainder of this loop, so modifying it is fine.
                     for (int j = 0; j < sourceChild.Manifold.Count; ++j)
@@ -361,22 +350,6 @@ namespace BepuPhysics.CollisionDetection
 
                     }
                 }
-                //{
-                //    ref var manifold = ref children[triangle.ChildIndex].Manifold;
-                //    var highestDepth = float.MinValue;
-                //    for (int j = 0; j < manifold.Count; ++j)
-                //    {
-                //        ref var contact = ref Unsafe.Add(ref manifold.Contact0, j);
-                //        if (contact.Depth > highestDepth)
-                //        {
-                //            highestDepth = contact.Depth;
-                //        }
-                //    }
-                //    if (manifold.Count > 0 && manifold.Normal.Y < 0.99999f)
-                //    {
-                //        Console.WriteLine($"huh, {manifold.Count}, {manifold.Normal.Y}, highest depth {highestDepth}, blocked: {triangle.Blocked}");
-                //    }
-                //}
             }
         }
 

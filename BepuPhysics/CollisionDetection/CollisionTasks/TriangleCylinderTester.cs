@@ -10,7 +10,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     using DepthRefiner = DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>;
 
-    internal struct PretransformedTriangleSupportFinder : ISupportFinder<Triangle, TriangleWide>
+    public struct PretransformedTriangleSupportFinder : ISupportFinder<Triangle, TriangleWide>
     {
 
         public void ComputeLocalSupport(in TriangleWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)

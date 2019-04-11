@@ -82,7 +82,7 @@ namespace BepuPhysics.CollisionDetection
             simplex.C.Exists = Vector<int>.Zero;
         }
 
-        static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide localOffsetB, in Vector3Wide support, ref Vector<int> terminatedLanes,
+        static void GetNextNormal<T>(ref Simplex simplex, in Vector3Wide support, ref Vector<int> terminatedLanes,
             in Vector3Wide bestNormal, in Vector<float> bestDepth, in Vector<float> convergenceThreshold,
             out Vector3Wide nextNormal)
         {
@@ -170,7 +170,7 @@ namespace BepuPhysics.CollisionDetection
             var simplexIsAVertex = Vector.LessThan(longestEdgeLengthSquared, degeneracyEpsilon);
             var simplexIsAnEdge = Vector.AndNot(simplexDegenerate, simplexIsAVertex);
 
-            Vector3Wide.Dot(triangleNormal, localOffsetB, out var calibrationDot);
+            Vector3Wide.Dot(triangleNormal, bestNormal, out var calibrationDot);
             Vector3Wide.ConditionallyNegate(Vector.LessThan(calibrationDot, Vector<float>.Zero), ref triangleNormal);
 
             var targetOutsideTriangleEdges = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideBC, outsideCA));
@@ -296,7 +296,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
             in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> searchEpsilon, in Vector<float> minimumDepthThreshold, 
-			out Vector<float> depth, out Vector3Wide refinedNormal, int maximumIterations = 50)
+			out Vector<float> depth, out Vector3Wide refinedNormal, int maximumIterations = 25)
         {
 #if DEBUG
             Vector3Wide.LengthSquared(initialNormal, out var initialNormalLengthSquared);
@@ -309,7 +309,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
-            ref Simplex simplex, Vector3Wide initialNormal, in Vector<float> initialDepth,
+            ref Simplex simplex, in Vector3Wide initialNormal, in Vector<float> initialDepth,
             in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, 
 			out Vector<float> refinedDepth, out Vector3Wide refinedNormal, int maximumIterations = 50)
         {
@@ -334,7 +334,7 @@ namespace BepuPhysics.CollisionDetection
                 return;
             }
 
-            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out var normal);			
+            GetNextNormal<HasNoNewSupport>(ref simplex, default, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out var normal);			
 
             for (int i = 0; i < maximumIterations; ++i)
             {
@@ -350,7 +350,7 @@ namespace BepuPhysics.CollisionDetection
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
 
-                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out normal);
+                GetNextNormal<HasNewSupport>(ref simplex, support, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out normal);
 				
             }
             if (supportFinderA.HasMargin)
@@ -429,7 +429,7 @@ namespace BepuPhysics.CollisionDetection
             simplex.C.Exists = Vector<int>.Zero;
         }
 
-        static void GetNextNormal<T>(ref SimplexWithWitness simplex, in Vector3Wide localOffsetB, in Vector3Wide support, in Vector3Wide supportOnA, ref Vector<int> terminatedLanes,
+        static void GetNextNormal<T>(ref SimplexWithWitness simplex, in Vector3Wide support, in Vector3Wide supportOnA, ref Vector<int> terminatedLanes,
             in Vector3Wide bestNormal, in Vector<float> bestDepth, in Vector<float> convergenceThreshold,
             out Vector3Wide nextNormal)
         {
@@ -517,7 +517,7 @@ namespace BepuPhysics.CollisionDetection
             var simplexIsAVertex = Vector.LessThan(longestEdgeLengthSquared, degeneracyEpsilon);
             var simplexIsAnEdge = Vector.AndNot(simplexDegenerate, simplexIsAVertex);
 
-            Vector3Wide.Dot(triangleNormal, localOffsetB, out var calibrationDot);
+            Vector3Wide.Dot(triangleNormal, bestNormal, out var calibrationDot);
             Vector3Wide.ConditionallyNegate(Vector.LessThan(calibrationDot, Vector<float>.Zero), ref triangleNormal);
 
             var targetOutsideTriangleEdges = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideBC, outsideCA));
@@ -654,7 +654,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
             in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> searchEpsilon, in Vector<float> minimumDepthThreshold, 
-			out Vector<float> depth, out Vector3Wide refinedNormal, out Vector3Wide witnessOnA, int maximumIterations = 50)
+			out Vector<float> depth, out Vector3Wide refinedNormal, out Vector3Wide witnessOnA, int maximumIterations = 25)
         {
 #if DEBUG
             Vector3Wide.LengthSquared(initialNormal, out var initialNormalLengthSquared);
@@ -667,7 +667,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
-            ref SimplexWithWitness simplex, Vector3Wide initialNormal, in Vector<float> initialDepth,
+            ref SimplexWithWitness simplex, in Vector3Wide initialNormal, in Vector<float> initialDepth,
             in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, 
 			out Vector<float> refinedDepth, out Vector3Wide refinedNormal, out Vector3Wide witnessOnA, int maximumIterations = 50)
         {
@@ -693,7 +693,7 @@ namespace BepuPhysics.CollisionDetection
                 return;
             }
 
-            GetNextNormal<HasNoNewSupport>(ref simplex, localOffsetB, default, default, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out var normal);			
+            GetNextNormal<HasNoNewSupport>(ref simplex, default, default, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out var normal);			
 
             for (int i = 0; i < maximumIterations; ++i)
             {
@@ -709,7 +709,7 @@ namespace BepuPhysics.CollisionDetection
                 if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
                     break;
 
-                GetNextNormal<HasNewSupport>(ref simplex, localOffsetB, support, supportOnA, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out normal);
+                GetNextNormal<HasNewSupport>(ref simplex, support, supportOnA, ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out normal);
 				
             }
             if (supportFinderA.HasMargin)
