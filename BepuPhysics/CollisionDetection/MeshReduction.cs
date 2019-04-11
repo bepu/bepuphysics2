@@ -108,7 +108,7 @@ namespace BepuPhysics.CollisionDetection
             /// <summary>
             /// True if the triangle did not act as a blocker for any other manifold and so can be removed if it is blocked, false otherwise.
             /// </summary>
-            public bool AllowDeletion;
+            public bool ForceDeletionOnBlock;
             /// <summary>
             /// Normal of a triangle detected as being infringed by the manifold associated with this triangle in mesh space.
             /// </summary>
@@ -121,7 +121,7 @@ namespace BepuPhysics.CollisionDetection
                 var bc = triangle.C - triangle.B;
                 var ca = triangle.A - triangle.C;
                 //TODO: This threshold might result in bumps when dealing with small triangles. May want to include a different source of scale information, like from the original convex test.
-                DistanceThreshold = 1e-4f * (float)Math.Sqrt(MathHelper.Max(ab.LengthSquared(), bc.LengthSquared()));
+                DistanceThreshold = 1e-3f * (float)Math.Sqrt(MathHelper.Max(triangle.A.LengthSquared() * 1e-4f, MathHelper.Max(ab.LengthSquared(), ca.LengthSquared())));
                 var n = Vector3.Cross(ab, ca);
                 //Edge normals point outward.
                 var edgeNormalAB = Vector3.Cross(n, ab);
@@ -142,7 +142,7 @@ namespace BepuPhysics.CollisionDetection
 
                 ChildIndex = sourceChildIndex;
                 Blocked = false;
-                AllowDeletion = true;
+                ForceDeletionOnBlock = true;
                 CorrectedNormal = default;
             }
         }
@@ -200,7 +200,7 @@ namespace BepuPhysics.CollisionDetection
                         //The edge plane normals point outward from the triangle, so if the contact normal is detected as pointing along the edge plane normal,
                         //then it is infringing.
                         var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
-                        const float infringementEpsilon = 5e-3f;
+                        const float infringementEpsilon = 1e-6f;
                         //In order to block a contact, it must be infringing on every edge that it is on top of.
                         //In other words, when a contact is on a vertex, it's not good enough to infringe only one of the edges; in that case, the contact normal isn't 
                         //actually infringing on the triangle face.
@@ -210,8 +210,9 @@ namespace BepuPhysics.CollisionDetection
                         //the normal is alinged with an edge.
                         if ((onAB && normalDot.Y > infringementEpsilon) || (onBC && normalDot.Z > infringementEpsilon) || (onCA && normalDot.W > infringementEpsilon))
                         {
+                            const float secondaryInfringementEpsilon = -1e-3f;
                             //At least one edge is infringed. Are all contact-touched edges at least nearly infringed?
-                            if ((!onAB || normalDot.Y > -infringementEpsilon) && (!onBC || normalDot.Z > -infringementEpsilon) && (!onCA || normalDot.W > -infringementEpsilon))
+                            if ((!onAB || normalDot.Y > secondaryInfringementEpsilon) && (!onBC || normalDot.Z > secondaryInfringementEpsilon) && (!onCA || normalDot.W > secondaryInfringementEpsilon))
                             {
                                 return true;
                             }
@@ -269,6 +270,8 @@ namespace BepuPhysics.CollisionDetection
             {
                 ref var sourceTriangle = ref activeTriangles[i];
                 ref var sourceChild = ref children[sourceTriangle.ChildIndex];
+                //if (sourceChild.Manifold.Count == 0)
+                //    continue;
                 //Can't correct contacts that were created by face collisions.
                 if ((sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) == 0)
                 {
@@ -283,12 +286,24 @@ namespace BepuPhysics.CollisionDetection
                             {
                                 sourceTriangle.Blocked = true;
                                 sourceTriangle.CorrectedNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
-                                //Even if the target manifold gets blocked, it should not be deleted. We made use of it as a blocker.
-                                targetTriangle.AllowDeletion = false;
+                                //Even if the target manifold gets blocked, it should not necessarily be deleted. We made use of it as a blocker.
+                                targetTriangle.ForceDeletionOnBlock = false;
                                 break;
                             }
                         }
                     }
+                    //if (meshSpaceNormal.Y > -0.99999f && !sourceTriangle.Blocked)
+                    //{
+                    //    Console.WriteLine($"triangles:");
+                    //    for (int p = 0; p < count; ++p)
+                    //    {
+                    //        Console.WriteLine($"Triangle {p}:");
+                    //        Console.WriteLine($"A: {triangles[p].A}");
+                    //        Console.WriteLine($"B: {triangles[p].B}");
+                    //        Console.WriteLine($"C: {triangles[p].C}");
+                    //    }
+                    //    Console.WriteLine($"huh");
+                    //}
                     //Note that the removal had to be deferred until after blocking analysis.
                     //This manifold will not be considered for the remainder of this loop, so modifying it is fine.
                     for (int j = 0; j < sourceChild.Manifold.Count; ++j)
@@ -311,23 +326,57 @@ namespace BepuPhysics.CollisionDetection
                 ref var triangle = ref activeTriangles[i];
                 if (triangle.Blocked)
                 {
-                    if (triangle.AllowDeletion)
+                    ref var manifold = ref children[triangle.ChildIndex].Manifold;
+                    if (triangle.ForceDeletionOnBlock)
                     {
                         //The manifold was infringing, and no other manifold infringed upon it. Can safely just ignore the manifold completely.
-                        children[triangle.ChildIndex].Manifold.Count = 0;
+                        manifold.Count = 0;
                     }
                     else
                     {
-                        //The manifold was infringing, but another manifold was infringing upon it. We can't safely delete such a manifold since it's likely a mutually infringing 
-                        //case- consider what happens when an objects wedges itself into an edge between two triangles.                            
-                        Matrix3x3.Transform(requiresFlip ? triangle.CorrectedNormal : -triangle.CorrectedNormal, meshOrientation, out children[triangle.ChildIndex].Manifold.Normal);
+                        var manifoldHasPositiveDepth = false;
+                        for (int j = 0; j < manifold.Count; ++j)
+                        {
+                            if (Unsafe.Add(ref manifold.Contact0, j).Depth > 0)
+                            {
+                                manifoldHasPositiveDepth = true;
+                                break;
+                            }
+                        }
+                        if (manifoldHasPositiveDepth)
+                        {
+                            //The manifold was infringing, but another manifold was infringing upon it. We can't safely delete such a manifold since it's likely a mutually infringing 
+                            //case- consider what happens when an objects wedges itself into an edge between two triangles.                            
+                            Matrix3x3.Transform(requiresFlip ? triangle.CorrectedNormal : -triangle.CorrectedNormal, meshOrientation, out manifold.Normal);
+                            //Note that we do not modify the depth.
+                            //The only time this situation should occur is when an object has somehow wedged between adjacent triangles such that the detected
+                            //depths are *less* than the triangle face depths. So, using those depths is guaranteed not to introduce excessive energy.
+                        }
+                        else
+                        {
+                            //The manifold has zero or negative depth; it's clearly not a case where a shape is wedged between triangles. Just get rid of it.
+                            manifold.Count = 0;
+                        }
 
-                        //Note that we do not modify the depth.
-                        //The only time this situation should occur is when an object has somehow wedged between adjacent triangles such that the detected
-                        //depths are *less* than the triangle face depths. So, using those depths is guaranteed not to introduce excessive energy.
 
                     }
                 }
+                //{
+                //    ref var manifold = ref children[triangle.ChildIndex].Manifold;
+                //    var highestDepth = float.MinValue;
+                //    for (int j = 0; j < manifold.Count; ++j)
+                //    {
+                //        ref var contact = ref Unsafe.Add(ref manifold.Contact0, j);
+                //        if (contact.Depth > highestDepth)
+                //        {
+                //            highestDepth = contact.Depth;
+                //        }
+                //    }
+                //    if (manifold.Count > 0 && manifold.Normal.Y < 0.99999f)
+                //    {
+                //        Console.WriteLine($"huh, {manifold.Count}, {manifold.Normal.Y}, highest depth {highestDepth}, blocked: {triangle.Blocked}");
+                //    }
+                //}
             }
         }
 
