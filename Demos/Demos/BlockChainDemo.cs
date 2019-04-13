@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
+using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos
 {
@@ -26,6 +27,7 @@ namespace Demos.Demos
         {
             camera.Position = new Vector3(-30, 8, -60);
             camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Pitch = 0;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
@@ -49,7 +51,7 @@ namespace Demos.Demos
                             Position = new Vector3(0,
                                 5 + blockIndex * (boxShape.Height + 1),
                                 (forkIndex - forkCount * 0.5f) * (boxShape.Length + 4)),
-                            Orientation = BepuUtilities.Quaternion.Identity
+                            Orientation = Quaternion.Identity
                         },
                         Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = .01f },
                         Collidable = new CollidableDescription { Shape = boxIndex, SpeculativeMargin = .1f },
@@ -83,13 +85,13 @@ namespace Demos.Demos
                 Pose = new RigidPose
                 {
                     Position = new Vector3(1, -0.5f, 1),
-                    Orientation = BepuUtilities.Quaternion.Identity
+                    Orientation = Quaternion.Identity
                 }
             };
             Simulation.Statics.Add(staticDescription);
 
             //Build the coin description for the ponz-I mean ICO.
-            var coinShape = new Cylinder(1.5f, 0.3f);
+            var coinShape = new Cylinder(1.5f, 0.2f);
             coinShape.ComputeInertia(1, out var coinInertia);
             coinDescription = BodyDescription.CreateDynamic(RigidPose.Identity, coinInertia, new CollidableDescription(Simulation.Shapes.Add(coinShape), 0.1f), new BodyActivityDescription(0.01f));
         }
@@ -102,7 +104,7 @@ namespace Demos.Demos
             {
                 //INVEST TODAY FOR INCREDIBLE RETURNS DON'T MISS OUT LOOK AT THE COINS THERE ARE A LOT OF THEM AND THEY COULD BE YOURS
                 var origin = new Vector3(-30, 5, -30) + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()) * new Vector3(60, 30, 60);
-                for (int i = 0; i < 250; ++i)
+                for (int i = 0; i < 128; ++i)
                 {
                     var direction = new Vector3(-1) + 2 * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
                     var length = direction.Length();
@@ -112,6 +114,7 @@ namespace Demos.Demos
                         direction = new Vector3(0, 1, 0);
 
                     coinDescription.Pose.Position = origin + direction * 10 * (float)random.NextDouble();
+                    coinDescription.Pose.Orientation = Quaternion.Normalize(new Quaternion(0.01f + (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()));
                     coinDescription.Velocity.Linear = direction * (5 + 30 * (float)random.NextDouble());
                     Simulation.Bodies.Add(coinDescription);
                 }
