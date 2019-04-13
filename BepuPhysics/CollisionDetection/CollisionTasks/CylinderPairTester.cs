@@ -158,8 +158,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //Here, we'll make a few guesses at the best normal, then hand off the result to a minkowski based depth refiner.
 
-            //First, we'll try a few easy known normal candidates.
-            //1) Offset from B to A
             Vector3Wide.Length(localOffsetA, out var length);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / length, out var localNormal);
             var useInitialSampleFallback = Vector.LessThan(length, new Vector<float>(1e-10f));
@@ -167,51 +165,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             localNormal.Y = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.One, localNormal.Y);
             localNormal.Z = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.Z);
             CylinderSupportFinder supportFinder;
-            DepthRefiner.SimplexWithWitness simplex;
-            DepthRefiner.FindSupport(b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, Vector<int>.Zero, out simplex.A.Support, out simplex.A.SupportOnA);
-            simplex.A.Exists = new Vector<int>(-1);
-            Vector3Wide.Dot(simplex.A.Support, localNormal, out var depth);
-
-            //2) Cap normal A
-            {
-                //Use the sign that points rA.Y from B to A. Using B-A minkowski difference.
-                Vector3Wide.Dot(rA.Y, localOffsetA, out var rAYDot);
-                Vector3Wide.ConditionallyNegate(Vector.LessThan(rAYDot, Vector<float>.Zero), rA.Y, out var normalCandidate);
-                Vector3Wide.Scale(normalCandidate, -a.HalfLength, out var supportA);
-                Vector3Wide.Add(supportA, localOffsetA, out supportA);
-                //A little confusing- DepthRefiner's A is our B and vice versa.
-                supportFinder.ComputeLocalSupport(b, normalCandidate, Vector<int>.Zero, out simplex.B.SupportOnA);
-                Vector3Wide.Subtract(simplex.B.SupportOnA, supportA, out simplex.B.Support);
-                simplex.B.Exists = new Vector<int>(-1);
-                Vector3Wide.Dot(simplex.B.Support, normalCandidate, out var depthCandidate);
-                var useCandidate = Vector.LessThan(depthCandidate, depth);
-                depth = Vector.ConditionalSelect(useCandidate, depthCandidate, depth);
-                Vector3Wide.ConditionalSelect(useCandidate, normalCandidate, localNormal, out localNormal);
-            }
-
-            //3) Cap normal B
-            {
-                //Use the local Y axis sign that points from B to A.
-                Vector3Wide negatedNormalCandidate;
-                negatedNormalCandidate.X = Vector<float>.Zero;
-                negatedNormalCandidate.Y = Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), new Vector<float>(-1), Vector<float>.One);
-                negatedNormalCandidate.Z = Vector<float>.Zero;
-                supportFinder.ComputeSupport(a, rA, negatedNormalCandidate, Vector<int>.Zero, out var supportA);
-                Vector3Wide.Add(supportA, localOffsetA, out supportA);
-                //A little confusing- DepthRefiner's A is our B and vice versa.       
-                simplex.C.SupportOnA.X = Vector<float>.Zero;
-                simplex.C.SupportOnA.Y = negatedNormalCandidate.Y * -b.HalfLength;
-                simplex.C.SupportOnA.Z = Vector<float>.Zero;
-                Vector3Wide.Subtract(simplex.C.SupportOnA, supportA, out simplex.C.Support);
-                Vector3Wide.Dot(simplex.C.Support, negatedNormalCandidate, out var negatedDepthCandidate);
-                simplex.C.Exists = new Vector<int>(-1);
-                var depthCandidate = -negatedDepthCandidate;
-                var useCandidate = Vector.LessThan(depthCandidate, depth);
-                depth = Vector.ConditionalSelect(useCandidate, depthCandidate, depth);
-                localNormal.X = Vector.ConditionalSelect(useCandidate, Vector<float>.Zero, localNormal.X);
-                localNormal.Y = Vector.ConditionalSelect(useCandidate, -negatedNormalCandidate.Y, localNormal.Y);
-                localNormal.Z = Vector.ConditionalSelect(useCandidate, Vector<float>.Zero, localNormal.Z);
-            }
 
             //There are some other axes we could try, like axisA x axisB, but they tend to be far less relevant for stacking.
             //Also, keep in mind that feature pairs which form faces, edges, or vertices in minkowski space tend to converge extremely quickly.
@@ -223,8 +176,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var depthThreshold = -speculativeMargin;
             var epsilonScale = Vector.Min(Vector.Max(a.HalfLength, a.Radius), Vector.Max(b.HalfLength, b.Radius));
             DepthRefiner.FindMinimumDepth(
-                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, ref simplex, localNormal, depth, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
-                out depth, out localNormal, out var closestOnB, maximumIterations: 25);
+                b, a, localOffsetA, rA, ref supportFinder, ref supportFinder, localNormal, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
+                out var depth, out localNormal, out var closestOnB, maximumIterations: 25);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))

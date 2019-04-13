@@ -100,8 +100,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(triangleNormal, Vector<float>.One / triangleNormalLength, out triangleNormal);
             //Note that degenerate triangles (triangleNormalLength near zero) are ignored completely by the later inactiveLanes mask.
 
-            //First, we'll try a few easy known normal candidates.
-            //1) Offset from B to A
             Vector3Wide.Length(localTriangleCenter, out var length);
             Vector3Wide.Scale(localTriangleCenter, Vector<float>.One / length, out var localNormal);
             var useInitialSampleFallback = Vector.LessThan(length, new Vector<float>(1e-10f));
@@ -110,53 +108,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             localNormal.Z = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.Z);
             PretransformedTriangleSupportFinder triangleSupportFinder = default;
             CylinderSupportFinder cylinderSupportFinder = default;
-            DepthRefiner.SimplexWithWitness simplex;
-            DepthRefiner.FindSupport(b, triangle, localTriangleCenter, rA, ref cylinderSupportFinder, ref triangleSupportFinder, localNormal, Vector<int>.Zero, out simplex.A.Support, out simplex.A.SupportOnA);
-            simplex.A.Exists = new Vector<int>(-1);
-            Vector3Wide.Dot(simplex.A.Support, localNormal, out var depth);
-
-            //2) Cap normal B
-            {
-                //Use the local Y axis sign that points from B to A.
-                Vector3Wide negatedNormalCandidate;
-                negatedNormalCandidate.X = Vector<float>.Zero;
-                negatedNormalCandidate.Y = Vector.ConditionalSelect(Vector.GreaterThan(localTriangleCenter.Y, Vector<float>.Zero), new Vector<float>(-1), Vector<float>.One);
-                negatedNormalCandidate.Z = Vector<float>.Zero;
-                triangleSupportFinder.ComputeSupport(triangle, rA, negatedNormalCandidate, Vector<int>.Zero, out var supportA);
-                Vector3Wide.Add(supportA, localTriangleCenter, out supportA);
-                //A little confusing- DepthRefiner's A is our B and vice versa.       
-                simplex.B.SupportOnA.X = Vector<float>.Zero;
-                simplex.B.SupportOnA.Y = negatedNormalCandidate.Y * -b.HalfLength;
-                simplex.B.SupportOnA.Z = Vector<float>.Zero;
-                Vector3Wide.Subtract(simplex.B.SupportOnA, supportA, out simplex.B.Support);
-                Vector3Wide.Dot(simplex.B.Support, negatedNormalCandidate, out var negatedDepthCandidate);
-                simplex.B.Exists = new Vector<int>(-1);
-                var depthCandidate = -negatedDepthCandidate;
-                var useCandidate = Vector.LessThan(depthCandidate, depth);
-                depth = Vector.ConditionalSelect(useCandidate, depthCandidate, depth);
-                localNormal.X = Vector.ConditionalSelect(useCandidate, Vector<float>.Zero, localNormal.X);
-                localNormal.Y = Vector.ConditionalSelect(useCandidate, -negatedNormalCandidate.Y, localNormal.Y);
-                localNormal.Z = Vector.ConditionalSelect(useCandidate, Vector<float>.Zero, localNormal.Z);
-            }
-
-
-
-            //3) Triangle face
-            {
-                //While extra sampling in polytopes is a little iffy, triangle face collisions are so common that it's not quite so silly.
-                //Note that we still calibrate the direction against the offset, even though we reject collisions against the backside of the triangle-
-                //if we sample the frontface when the collision is actually against the backface, the sample will just slow down the depth refiner convergence.
-                Vector3Wide.Dot(localTriangleCenter, triangleNormal, out var offsetNormalDot);
-                Vector3Wide.ConditionallyNegate(Vector.LessThan(offsetNormalDot, Vector<float>.Zero), triangleNormal, out var localNormalCandidate);
-                //A little confusing- DepthRefiner's A is our B and vice versa.       
-                cylinderSupportFinder.ComputeLocalSupport(b, localNormalCandidate, Vector<int>.Zero, out simplex.C.SupportOnA);
-                Vector3Wide.Subtract(simplex.C.SupportOnA, triangleA, out simplex.C.Support);
-                simplex.C.Exists = new Vector<int>(-1);
-                Vector3Wide.Dot(simplex.C.Support, localNormalCandidate, out var depthCandidate);
-                var useCandidate = Vector.LessThan(depthCandidate, depth);
-                depth = Vector.ConditionalSelect(useCandidate, depthCandidate, depth);
-                Vector3Wide.ConditionalSelect(useCandidate, localNormalCandidate, localNormal, out localNormal);
-            }
 
             //We now have a decent estimate for the local normal and an initial simplex to work from. Refine it to a local minimum.
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
@@ -166,8 +117,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var depthThreshold = -speculativeMargin;
             var epsilonScale = Vector.Max(b.HalfLength, b.Radius);
             DepthRefiner.FindMinimumDepth(
-                b, triangle, localTriangleCenter, rA, ref cylinderSupportFinder, ref triangleSupportFinder, ref simplex, localNormal, depth, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
-                out depth, out localNormal, out var closestOnB, maximumIterations: 25);
+                b, triangle, localTriangleCenter, rA, ref cylinderSupportFinder, ref triangleSupportFinder, localNormal, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
+                out var depth, out localNormal, out var closestOnB, maximumIterations: 25);
 
             //If the cylinder is too far away or if it's on the backside of the triangle, don't generate any contacts.
             Vector3Wide.Dot(triangleNormal, localNormal, out var faceNormalADotNormal);

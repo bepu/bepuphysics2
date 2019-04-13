@@ -115,8 +115,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, worldRB, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
 
-            //First, we'll try a few easy known normal candidates.
-            //1) Offset from B to A
             Vector3Wide.Length(localOffsetA, out var length);
             Vector3Wide.Scale(localOffsetA, Vector<float>.One / length, out var localNormal);
             var useInitialSampleFallback = Vector.LessThan(length, new Vector<float>(1e-10f));
@@ -125,37 +123,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             localNormal.Z = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.Z);
             BoxSupportFinder boxSupportFinder = default;
             CylinderSupportFinder cylinderSupportFinder = default;
-            DepthRefiner.SimplexWithWitness simplex;
-            DepthRefiner.FindSupport(b, a, localOffsetA, rA, ref cylinderSupportFinder, ref boxSupportFinder, localNormal, Vector<int>.Zero, out simplex.A.Support, out simplex.A.SupportOnA);
-            simplex.A.Exists = new Vector<int>(-1);
-            Vector3Wide.Dot(simplex.A.Support, localNormal, out var depth);
-
-            //2) Cap normal B
-            {
-                //Use the local Y axis sign that points from B to A.
-                Vector3Wide negatedNormalCandidate;
-                negatedNormalCandidate.X = Vector<float>.Zero;
-                negatedNormalCandidate.Y = Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), new Vector<float>(-1), Vector<float>.One);
-                negatedNormalCandidate.Z = Vector<float>.Zero;
-                boxSupportFinder.ComputeSupport(a, rA, negatedNormalCandidate, Vector<int>.Zero, out var supportA);
-                Vector3Wide.Add(supportA, localOffsetA, out supportA);
-                //A little confusing- DepthRefiner's A is our B and vice versa.       
-                simplex.B.SupportOnA.X = Vector<float>.Zero;
-                simplex.B.SupportOnA.Y = negatedNormalCandidate.Y * -b.HalfLength;
-                simplex.B.SupportOnA.Z = Vector<float>.Zero;
-                Vector3Wide.Subtract(simplex.B.SupportOnA, supportA, out simplex.B.Support);
-                Vector3Wide.Dot(simplex.B.Support, negatedNormalCandidate, out var negatedDepthCandidate);
-                simplex.B.Exists = new Vector<int>(-1);
-                var depthCandidate = -negatedDepthCandidate;
-                var useCandidate = Vector.LessThan(depthCandidate, depth);
-                depth = Vector.ConditionalSelect(useCandidate, depthCandidate, depth);
-                localNormal.X = Vector.ConditionalSelect(useCandidate, Vector<float>.Zero, localNormal.X);
-                localNormal.Y = Vector.ConditionalSelect(useCandidate, -negatedNormalCandidate.Y, localNormal.Y);
-                localNormal.Z = Vector.ConditionalSelect(useCandidate, Vector<float>.Zero, localNormal.Z);
-            }
-            //We'll leave the last entry unfilled- sampling a box face normal would have limited value; the depth refiner tends to do a very good job with polytope features.
-            //(Even sampling the cylinder cap is a little questionable.)
-            simplex.C = default;
 
             //We now have a decent estimate for the local normal and an initial simplex to work from. Refine it to a local minimum.
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
@@ -163,8 +130,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var depthThreshold = -speculativeMargin;
             var epsilonScale = Vector.Min(Vector.Max(a.HalfWidth, Vector.Max(a.HalfHeight, a.HalfLength)), Vector.Max(b.HalfLength, b.Radius));
             DepthRefiner.FindMinimumDepth(
-                b, a, localOffsetA, rA, ref cylinderSupportFinder, ref boxSupportFinder, ref simplex, localNormal, depth, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
-                out depth, out localNormal, out var closestOnB, maximumIterations: 25);
+                b, a, localOffsetA, rA, ref cylinderSupportFinder, ref boxSupportFinder, localNormal, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
+                out var depth, out localNormal, out var closestOnB, maximumIterations: 25);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
