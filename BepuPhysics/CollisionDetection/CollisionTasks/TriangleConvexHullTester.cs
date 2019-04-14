@@ -19,19 +19,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, hullOrientation, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
-            Vector3Wide.Length(localOffsetA, out var centerDistance);
-            Vector3Wide.Scale(localOffsetA, Vector<float>.One / centerDistance, out var initialNormal);
-            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-8f));
-            initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
-            initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
-            initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
-            var hullSupportFinder = default(ConvexHullSupportFinder);
-            var triangleSupportFinder = default(PretransformedTriangleSupportFinder);
-            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
-            a.EstimateEpsilonScale(out var triangleEpsilonScale);
-            b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
-            var epsilonScale = Vector.Min(triangleEpsilonScale, hullEpsilonScale);
-            var depthThreshold = -speculativeMargin;
 
             TriangleWide triangle;
             Matrix3x3Wide.TransformWithoutOverlap(a.A, hullLocalTriangleOrientation, out triangle.A);
@@ -44,6 +31,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(triangle.B, centroid, out triangle.B);
             Vector3Wide.Subtract(triangle.C, centroid, out triangle.C);
             Vector3Wide.Subtract(centroid, localOffsetB, out var localTriangleCenter);
+
+            //Note the use of the triangle center as the initial normal rather than the localOffsetA. 
+            //Triangles are not guaranteed to be centered on their center of mass, and the DepthRefiner
+            //will converge to a depth which does not oppose the so-far best normal- which, on the early iterations,
+            //could be the initial normal.
+            Vector3Wide.Length(localTriangleCenter, out var centerDistance);
+            Vector3Wide.Scale(localTriangleCenter, Vector<float>.One / centerDistance, out var initialNormal);
+            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-10f));
+            initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
+            initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
+            initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
+
             Vector3Wide.Subtract(triangle.B, triangle.A, out var triangleAB);
             Vector3Wide.Subtract(triangle.C, triangle.B, out var triangleBC);
             Vector3Wide.Subtract(triangle.A, triangle.C, out var triangleCA);
@@ -54,7 +53,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.CrossWithoutOverlap(triangleAB, triangleCA, out var triangleNormal);
             Vector3Wide.Length(triangleNormal, out var triangleNormalLength);
             Vector3Wide.Scale(triangleNormal, Vector<float>.One / triangleNormalLength, out triangleNormal);
+
+            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            a.EstimateEpsilonScale(out var triangleEpsilonScale);
+            b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
+            var epsilonScale = Vector.Min(triangleEpsilonScale, hullEpsilonScale);
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(triangleNormalLength, epsilonScale * 1e-6f));
+            var depthThreshold = -speculativeMargin;
+
+            var hullSupportFinder = default(ConvexHullSupportFinder);
+            var triangleSupportFinder = default(PretransformedTriangleSupportFinder);
 
             DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.FindMinimumDepth(
                 b, triangle, localTriangleCenter, hullLocalTriangleOrientation, ref hullSupportFinder, ref triangleSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,

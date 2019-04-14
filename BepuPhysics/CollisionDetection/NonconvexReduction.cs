@@ -171,6 +171,8 @@ namespace BepuPhysics.CollisionDetection
             //Not enough to significantly change the outcome under any circumstance- just enough to avoid swapping between two numerically near-identical starting points over and over.
             var biasPerIndex = maximumDistance * 1e-4f;
             var extremityScale = maximumDistance * 5e-3f;
+            var minimumDepth = float.MaxValue;
+            var maximumDepth = float.MinValue;
             for (int i = 0; i < ChildCount; ++i)
             {
                 ref var child = ref Children[i];
@@ -198,6 +200,10 @@ namespace BepuPhysics.CollisionDetection
                         initialBestScore = candidateScore;
                         initialBestScoreIndex = remainingChildren.Count;
                     }
+                    if (contact.Depth > maximumDepth)
+                        maximumDepth = contact.Depth;
+                    if (contact.Depth < minimumDepth)
+                        minimumDepth = contact.Depth;
                     ref var indices = ref remainingChildren.AllocateUnsafely();
                     indices.X = i;
                     indices.Y = j;
@@ -213,6 +219,8 @@ namespace BepuPhysics.CollisionDetection
 
             //TODO: This could be significantly optimized. Many approximations would get 95% of the benefit, and even the full version could be vectorized in a few different ways.
             var depthScale = 15f / maximumDistance;
+            var depthSpan = maximumDepth - minimumDepth;
+            //var inverseDepthSpan = depthSpan > 0 ? 1f / depthSpan : 0;
             var reducedContacts = &manifold->Contact0;
             while (remainingChildren.Count > 0 && manifold->Count < NonconvexContactManifold.MaximumContactCount)
             {
@@ -227,17 +235,24 @@ namespace BepuPhysics.CollisionDetection
                     //potential addition. This can be thought of as an approximate constraint solve.
                     ref var contact = ref Unsafe.Add(ref child.Manifold.Contact0, childIndex.Y);
                     //We give contacts of higher depth greater impulses, so they'll tend to be chosen over low depth contacts.
-                    var scaledDepth = contact.Depth * depthScale;
-                    //Don't let speculative contacts wrap around into larger impulses.
-                    if (scaledDepth < -1)
-                        scaledDepth = -1;
-                    Vector3 linear = (-1 - scaledDepth) * child.Manifold.Normal;
+                    //var scaledDepth = contact.Depth * depthScale;
+                    ////Don't let speculative contacts wrap around into larger impulses.
+                    //if (scaledDepth < -1)
+                    //    scaledDepth = -1;
+                    //Vector3 linear = (-1 - scaledDepth) * child.Manifold.Normal;
+                    //var depthT = (contact.Depth - minimumDepth) * inverseDepthSpan;
+                    var depthImpulse = (contact.Depth - minimumDepth) * -0.95f - 0.05f * depthSpan;
+                    var linear = depthImpulse * child.Manifold.Normal;
                     var angular = Vector3.Cross(contact.Offset, linear);
                     for (int i = 0; i < manifold->Count; ++i)
                     {
                         ref var reducedContact = ref reducedContacts[i];
                         var angularJacobian = Vector3.Cross(reducedContact.Offset, reducedContact.Normal);
                         var velocityAtContact = Vector3.Dot(linear, reducedContact.Normal) + Vector3.Dot(angularJacobian, angular);
+                        //Note the inclusion of the depth in the velocity calculation. This allows contacts to be speculative; they may not actually apply any corrective impulse
+                        //if the incoming contact impulse isn't large enough (along this contact's jacobians).
+                        if (reducedContact.Depth < 0)
+                            velocityAtContact += reducedContact.Depth;
                         if (velocityAtContact < 0)
                         {
                             //Note that we're assuming unit mass and inertia here.
@@ -248,9 +263,9 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                     var score = linear.LengthSquared() + angular.LengthSquared();
-                    //Heavily penalize speculative contacts. They can sometimes be worth it, but active contacts are almost always the priority unless they're redundant.
-                    if (contact.Depth < 0)
-                        score *= 0.2f;
+                    ////Heavily penalize speculative contacts. They can sometimes be worth it, but active contacts are almost always the priority unless they're redundant.
+                    //if (contact.Depth < 0)
+                    //    score *= 0.2f;
                     if (score > bestScore)
                     {
                         bestScore = score;

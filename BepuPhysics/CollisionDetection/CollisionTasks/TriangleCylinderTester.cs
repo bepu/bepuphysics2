@@ -88,6 +88,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(triangle.B, centroid, out triangle.B);
             Vector3Wide.Subtract(triangle.C, centroid, out triangle.C);
             Vector3Wide.Subtract(centroid, localOffsetB, out var localTriangleCenter);
+
+            Vector3Wide.Length(localTriangleCenter, out var length);
+            Vector3Wide.Scale(localTriangleCenter, Vector<float>.One / length, out var localNormal);
+            var useInitialSampleFallback = Vector.LessThan(length, new Vector<float>(1e-10f));
+            localNormal.X = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.X);
+            localNormal.Y = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.One, localNormal.Y);
+            localNormal.Z = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.Z);
+
             Vector3Wide.Subtract(triangle.B, triangle.A, out var triangleAB);
             Vector3Wide.Subtract(triangle.C, triangle.B, out var triangleBC);
             Vector3Wide.Subtract(triangle.A, triangle.C, out var triangleCA);
@@ -97,22 +105,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(triangle.C, localTriangleCenter, out var triangleC);
             Vector3Wide.CrossWithoutOverlap(triangleAB, triangleCA, out var triangleNormal);
             Vector3Wide.Length(triangleNormal, out var triangleNormalLength);
+            //Note that degenerate triangles (triangleNormalLength near zero) are ignored completely by the inactiveLanes mask.
             Vector3Wide.Scale(triangleNormal, Vector<float>.One / triangleNormalLength, out triangleNormal);
-            //Note that degenerate triangles (triangleNormalLength near zero) are ignored completely by the later inactiveLanes mask.
-
-            Vector3Wide.Length(localTriangleCenter, out var length);
-            Vector3Wide.Scale(localTriangleCenter, Vector<float>.One / length, out var localNormal);
-            var useInitialSampleFallback = Vector.LessThan(length, new Vector<float>(1e-10f));
-            localNormal.X = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.X);
-            localNormal.Y = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.One, localNormal.Y);
-            localNormal.Z = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.Z);
-            PretransformedTriangleSupportFinder triangleSupportFinder = default;
-            CylinderSupportFinder cylinderSupportFinder = default;
 
             //We now have a decent estimate for the local normal and an initial simplex to work from. Refine it to a local minimum.
+
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
             var degenerate = Vector.LessThan(triangleNormalLength, new Vector<float>(1e-10f));
             inactiveLanes = Vector.BitwiseOr(degenerate, inactiveLanes);
+
+            PretransformedTriangleSupportFinder triangleSupportFinder = default;
+            CylinderSupportFinder cylinderSupportFinder = default;
 
             var depthThreshold = -speculativeMargin;
             var epsilonScale = Vector.Max(b.HalfLength, b.Radius);
