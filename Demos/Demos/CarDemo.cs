@@ -377,7 +377,7 @@ namespace Demos.Demos
             const float backZ = -1.7f;
             playerController = new SimpleCarController(SimpleCar.Create(Simulation, properties, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2f,
                 new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
-                new SpringSettings(5, 1), Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
+                new SpringSettings(5f, 0.7f), Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
                 forwardSpeed: 75, forwardForce: 6, zoomMultiplier: 2, backwardSpeed: 30, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 1.5f, maximumSteeringAngle: MathF.PI * 0.23f);
 
             //Create a bunch of AI cars to race against.
@@ -418,7 +418,7 @@ namespace Demos.Demos
                 var orientation = Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * MathF.PI * 2);
                 aiControllers[i].Controller = new SimpleCarController(SimpleCar.Create(Simulation, properties, new RigidPose(position, orientation), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2f,
                     new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
-                    new SpringSettings(5, 1), Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
+                    new SpringSettings(5, 0.7f), Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
                     forwardSpeed: 50, forwardForce: 5, zoomMultiplier: 2, backwardSpeed: 10, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 1.5f, maximumSteeringAngle: MathF.PI * 0.23f);
                 aiControllers[i].LaneOffset = (float)random.NextDouble() * 20 - 10;
             }

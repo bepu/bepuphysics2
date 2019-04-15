@@ -81,22 +81,22 @@ namespace Demos.SpecializedTests
                         var index = shapeCount++;
                         switch ((index) % 5)
                         {
-                            //case 0:
-                            //    bodyDescription.Collidable.Shape = sphereIndex;
-                            //    bodyDescription.LocalInertia = sphereInertia;
-                            //    break;
-                            //case 1:
-                            //    bodyDescription.Collidable.Shape = capsuleIndex;
-                            //    bodyDescription.LocalInertia = capsuleInertia;
-                            //    break;
-                            //case 2:
-                            //    bodyDescription.Collidable.Shape = boxIndex;
-                            //    bodyDescription.LocalInertia = boxInertia;
-                            //    break;
-                            //case 3:
-                            //    bodyDescription.Collidable.Shape = cylinderIndex;
-                            //    bodyDescription.LocalInertia = cylinderInertia;
-                            //    break;
+                            case 0:
+                                bodyDescription.Collidable.Shape = sphereIndex;
+                                bodyDescription.LocalInertia = sphereInertia;
+                                break;
+                            case 1:
+                                bodyDescription.Collidable.Shape = capsuleIndex;
+                                bodyDescription.LocalInertia = capsuleInertia;
+                                break;
+                            case 2:
+                                bodyDescription.Collidable.Shape = boxIndex;
+                                bodyDescription.LocalInertia = boxInertia;
+                                break;
+                            case 3:
+                                bodyDescription.Collidable.Shape = cylinderIndex;
+                                bodyDescription.LocalInertia = cylinderInertia;
+                                break;
                             case 4:
                                 bodyDescription.Collidable.Shape = hullIndex;
                                 bodyDescription.LocalInertia = hullInertia;

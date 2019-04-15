@@ -58,6 +58,7 @@ namespace Demos
             AddOption<ContactEventsDemo>();
             AddOption<CustomVoxelCollidableDemo>();
             AddOption<ShapePileTestDemo>();
+            AddOption<CylinderTestDemo>();
             AddOption<ConvexHullTestDemo>();
             AddOption<FountainStressTestDemo>();
         }

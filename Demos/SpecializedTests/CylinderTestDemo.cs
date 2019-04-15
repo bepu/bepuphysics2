@@ -183,7 +183,7 @@ namespace Demos.SpecializedTests
             Simulation.Bodies.Add(cylinder);
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(0, -6, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Sphere(2)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(7, -6, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Capsule(0.5f, 1f)));
-            Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(21, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Box(300f, 1f, 300f)));
+            Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(21, -3, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Box(3f, 1f, 3f)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(28, -6, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes,
                 new Triangle(new Vector3(10f, 0, 10f), new Vector3(14f, 0, 10f), new Vector3(10f, 0, 14f))));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new RigidPose(new Vector3(14, -6, 0), Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Cylinder(3f, .2f)));
