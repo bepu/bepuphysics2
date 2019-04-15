@@ -54,11 +54,43 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Length(triangleNormal, out var triangleNormalLength);
             Vector3Wide.Scale(triangleNormal, Vector<float>.One / triangleNormalLength, out triangleNormal);
 
+
+            //Check if the hull's position is within the triangle and below the triangle plane. If so, we can ignore it.
+            Vector3Wide.Dot(triangleNormal, localTriangleCenter, out var hullToTriangleCenterDot);
+            var hullBelowPlane = Vector.GreaterThanOrEqual(hullToTriangleCenterDot, Vector<float>.Zero);
+            Vector<int> hullInsideAndBelowTriangle;
+            if (Vector.LessThanAny(hullBelowPlane, Vector<int>.Zero))
+            {
+                //Is the hull position within the triangle bounds?
+                Vector3Wide.CrossWithoutOverlap(triangleAB, triangleNormal, out var edgePlaneAB);
+                Vector3Wide.CrossWithoutOverlap(triangleBC, triangleNormal, out var edgePlaneBC);
+                Vector3Wide.CrossWithoutOverlap(triangleCA, triangleNormal, out var edgePlaneCA);
+                Vector3Wide.Dot(edgePlaneAB, triangleA, out var abPlaneTest);
+                Vector3Wide.Dot(edgePlaneBC, triangleB, out var bcPlaneTest);
+                Vector3Wide.Dot(edgePlaneCA, triangleC, out var caPlaneTest);
+                hullInsideAndBelowTriangle = Vector.BitwiseAnd(Vector.LessThanOrEqual(abPlaneTest, Vector<float>.Zero), Vector.BitwiseAnd(Vector.LessThanOrEqual(bcPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(caPlaneTest, Vector<float>.Zero)));
+            }
+            else
+            {
+                hullInsideAndBelowTriangle = Vector<int>.Zero;
+            }
+
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
             a.EstimateEpsilonScale(out var triangleEpsilonScale);
             b.EstimateEpsilonScale(inactiveLanes, out var hullEpsilonScale);
             var epsilonScale = Vector.Min(triangleEpsilonScale, hullEpsilonScale);
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(triangleNormalLength, epsilonScale * 1e-6f));
+            inactiveLanes = Vector.BitwiseOr(inactiveLanes, hullInsideAndBelowTriangle);
+            //Not every lane will generate contacts. Rather than requiring every lane to carefully clear all contactExists states, just clear them up front.
+            manifold.Contact0Exists = default;
+            manifold.Contact1Exists = default;
+            manifold.Contact2Exists = default;
+            manifold.Contact3Exists = default;
+            if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
+            {
+                //No contacts generated.
+                return;
+            }
             var depthThreshold = -speculativeMargin;
 
             var hullSupportFinder = default(ConvexHullSupportFinder);
@@ -70,11 +102,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Vector3Wide.Dot(triangleNormal, localNormal, out var triangleNormalDotLocalNormal);
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.BitwiseOr(Vector.GreaterThanOrEqual(triangleNormalDotLocalNormal, Vector<float>.Zero), Vector.LessThan(depth, depthThreshold)));
-            //Not every lane will generate contacts. Rather than requiring every lane to carefully clear all contactExists states, just clear them up front.
-            manifold.Contact0Exists = default;
-            manifold.Contact1Exists = default;
-            manifold.Contact2Exists = default;
-            manifold.Contact3Exists = default;
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //No contacts generated.

@@ -34,7 +34,7 @@ namespace Demos.Demos
                 ShapesPerType = 1,
                 Statics = 1
             });
-            
+
             Simulation.Deterministic = false;
 
             const int planeWidth = 8;
@@ -119,6 +119,20 @@ namespace Demos.Demos
             convex.ComputeInertia(1, out inertia);
         }
 
+        ConvexHull CreateRandomHull()
+        {
+            const int pointCount = 32;
+            var points = new QuickList<Vector3>(pointCount, BufferPool);
+            var random = new Random(5);
+            for (int i = 0; i < pointCount; ++i)
+            {
+                points.AllocateUnsafely() = new Vector3(1 * (float)random.NextDouble(), 0.5f * (float)random.NextDouble(), 1.5f * (float)random.NextDouble());
+            }
+            var hull = new ConvexHull(points.Span.Slice(0, points.Count), BufferPool, out _);
+            points.Dispose(BufferPool);
+            return hull;
+        }
+
         void CreateRandomCompound(out Buffer<CompoundChild> children, out BodyInertia inertia)
         {
             using (var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 6))
@@ -128,7 +142,7 @@ namespace Demos.Demos
                 {
                     TypedIndex shapeIndex;
                     BodyInertia childInertia;
-                    switch (random.Next(0, 3))
+                    switch (random.Next(0, 5))
                     {
                         default:
                             AddConvexShape(new Sphere(0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out childInertia);
@@ -143,6 +157,12 @@ namespace Demos.Demos
                                 0.35f + 0.35f * (float)random.NextDouble(),
                                 0.35f + 0.35f * (float)random.NextDouble(),
                                 0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out childInertia);
+                            break;
+                        case 3:
+                            AddConvexShape(new Cylinder(0.1f + (float)random.NextDouble(), 0.2f + (float)random.NextDouble()), out shapeIndex, out childInertia);
+                            break;
+                        case 4:
+                            AddConvexShape(CreateRandomHull(), out shapeIndex, out childInertia);
                             break;
                     }
                     RigidPose localPose;
@@ -244,7 +264,7 @@ namespace Demos.Demos
                 //For the sake of the stress test, every single body has its own shape that gets removed when the body is removed.
                 TypedIndex shapeIndex;
                 BodyInertia inertia;
-                switch (random.Next(0, 5))
+                switch (random.Next(0, 7))
                 {
                     default:
                         {
@@ -268,11 +288,22 @@ namespace Demos.Demos
                         break;
                     case 3:
                         {
+                            AddConvexShape(new Cylinder(0.1f + 0.5f * (float)random.NextDouble(), 0.2f + (float)random.NextDouble()), out shapeIndex, out inertia);
+                        }
+                        break;
+                    case 4:
+                        {
+
+                            AddConvexShape(CreateRandomHull(), out shapeIndex, out inertia);
+                        }
+                        break;
+                    case 5:
+                        {
                             CreateRandomCompound(out var children, out inertia);
                             shapeIndex = Simulation.Shapes.Add(new Compound(children));
                         }
                         break;
-                    case 4:
+                    case 6:
                         {
                             CreateRandomCompound(out var children, out inertia);
                             shapeIndex = Simulation.Shapes.Add(new BigCompound(children, Simulation.Shapes, BufferPool));

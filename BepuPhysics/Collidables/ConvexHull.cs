@@ -196,7 +196,7 @@ namespace BepuPhysics.Collidables
 
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapeBatches)
         {
-            return new ConvexShapeBatch<ConvexHull, ConvexHullWide>(pool, initialCapacity);
+            return new ConvexHullShapeBatch(pool, initialCapacity);
         }
 
         public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, out float t, out Vector3 normal)

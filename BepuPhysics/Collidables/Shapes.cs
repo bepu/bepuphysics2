@@ -129,7 +129,7 @@ namespace BepuPhysics.Collidables
             InternalResize(initialShapeCount, 0);
             IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialShapeCount, out idPool);
         }
-        
+
         //Note that shapes cannot be moved; there is no reference to the collidables using them, so we can't correct their indices.
         //But that's fine- we never directly iterate over the shapes set anyway.
         //(This doesn't mean that it's impossible to compact the shape set- it just requires doing so by iterating over collidables.)
@@ -211,7 +211,7 @@ namespace BepuPhysics.Collidables
 
         protected override void Dispose(int index, BufferPool pool)
         {
-            //Any convex shape with an associated Wide type doesn't have any internal resources to dispose.
+            //Most convex shapes with an associated Wide type doesn't have any internal resources to dispose.
         }
 
         protected override void RemoveAndDisposeChildren(int index, Shapes shapes, BufferPool pool)
@@ -256,6 +256,19 @@ namespace BepuPhysics.Collidables
             }
         }
     }
+
+    public class ConvexHullShapeBatch : ConvexShapeBatch<ConvexHull, ConvexHullWide>
+    {
+        public ConvexHullShapeBatch(BufferPool pool, int initialShapeCount) : base(pool, initialShapeCount)
+        {
+        }
+
+        protected override void Dispose(int index, BufferPool pool)
+        {
+            shapes[index].Dispose(pool);
+        }
+    }
+
 
     public class HomogeneousCompoundShapeBatch<TShape, TChildShape, TChildShapeWide> : ShapeBatch<TShape> where TShape : struct, IHomogeneousCompoundShape<TChildShape, TChildShapeWide>
         where TChildShape : IConvexShape

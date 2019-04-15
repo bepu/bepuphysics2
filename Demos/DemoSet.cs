@@ -59,6 +59,7 @@ namespace Demos
             AddOption<CustomVoxelCollidableDemo>();
             AddOption<ShapePileTestDemo>();
             AddOption<ConvexHullTestDemo>();
+            AddOption<FountainStressTestDemo>();
         }
 
         public int Count { get { return options.Count; } }
