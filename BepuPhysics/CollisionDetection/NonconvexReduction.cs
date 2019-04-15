@@ -116,15 +116,42 @@ namespace BepuPhysics.CollisionDetection
             //Mix the convex-generated feature id with the child indices.
             target.FeatureId = contact.FeatureId ^ ((child.ChildIndexA << 8) ^ (child.ChildIndexB << 16));
         }
+        struct RemainingCandidate
+        {
+            public int ChildIndex;
+            public int ContactIndex;
+            public float Uniqueness;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void UseContact(ref QuickList<Int2> remainingChildren, int index, ref Buffer<NonconvexReductionChild> children, NonconvexContactManifold* targetManifold)
+        unsafe static void UseContact(ref QuickList<RemainingCandidate> remainingCandidates, int index, ref Buffer<NonconvexReductionChild> children, NonconvexContactManifold* targetManifold)
         {
-            ref var childIndex = ref remainingChildren[index];
-            ref var child = ref children[childIndex.X];
-            AddContact(ref children[childIndex.X], childIndex.Y, targetManifold);
-            remainingChildren.FastRemoveAt(index);
+            ref var candidate = ref remainingCandidates[index];
+            AddContact(ref children[candidate.ChildIndex], candidate.ContactIndex, targetManifold);
+            remainingCandidates.FastRemoveAt(index);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static float ComputeUniqueness(in Vector3 contactPosition, in Vector3 contactNormal, in NonconvexContact reducedContact, float distanceSquaredInterpolationMin, float inverseDistanceSquaredInterpolationSpan)
+        {
+            //A contact is considered unique if either:
+            //1) The normal is sufficiently different, or
+            //2) the contact is far enough away.
+            //A fully unique contact should get a uniqueness of 1, while a redundant contact should get a 0.
+            var normalDot = Vector3.Dot(contactNormal, reducedContact.Normal);
+            const float normalInterpolationSpan = -0.01f;
+            var normalUniqueness = (normalDot - 0.99999f) * (1f / normalInterpolationSpan);
+
+            var offsetUniqueness = ((reducedContact.Offset - contactPosition).LengthSquared() - distanceSquaredInterpolationMin) * inverseDistanceSquaredInterpolationSpan;
+            var uniqueness = offsetUniqueness > normalUniqueness ? offsetUniqueness : normalUniqueness;
+
+            if (uniqueness > 1)
+                uniqueness = 1;
+            if (uniqueness < 0)
+                uniqueness = 0;
+            return uniqueness;
+        }
+
         unsafe void ChooseMostConstraining(NonconvexContactManifold* manifold, BufferPool pool)
         {
             //The end goal of contact reduction is to choose a reasonably stable subset of contacts which offer the greatest degree of constraint.
@@ -166,20 +193,17 @@ namespace BepuPhysics.CollisionDetection
             var maximumDistance = (float)Math.Sqrt(maximumDistanceSquared);
             float initialBestScore = -float.MaxValue;
             int initialBestScoreIndex = 0;
-            var remainingChildren = new QuickList<Int2>(ChildCount * 4, pool);
-            //To reliably break the tie between multiple contacts in the same location (which often happens on triangle meshes), add a little bit extra to later contacts.
-            //Not enough to significantly change the outcome under any circumstance- just enough to avoid swapping between two numerically near-identical starting points over and over.
-            var biasPerIndex = maximumDistance * 1e-4f;
+            var remainingContacts = new QuickList<RemainingCandidate>(ChildCount * 4, pool);
             var extremityScale = maximumDistance * 5e-3f;
             var minimumDepth = float.MaxValue;
             var maximumDepth = float.MinValue;
-            for (int i = 0; i < ChildCount; ++i)
+            for (int childIndex = 0; childIndex < ChildCount; ++childIndex)
             {
-                ref var child = ref Children[i];
+                ref var child = ref Children[childIndex];
                 ref var childContactsBase = ref child.Manifold.Contact0;
-                for (int j = 0; j < child.Manifold.Count; ++j)
+                for (int contactIndex = 0; contactIndex < child.Manifold.Count; ++contactIndex)
                 {
-                    ref var contact = ref Unsafe.Add(ref childContactsBase, j);
+                    ref var contact = ref Unsafe.Add(ref childContactsBase, contactIndex);
                     //Note that we only consider 'extreme' contacts that have positive depth to avoid selecting purely speculative contacts as a starting point.
                     //If there are no contacts with positive depth, it's fine to just rely on the 'deepest' speculative contact. 
                     //Feature id stability doesn't matter much if there is no stable contact.
@@ -188,7 +212,7 @@ namespace BepuPhysics.CollisionDetection
                     {
                         //Note that we assume that the contact offsets have already been moved into the parent's space in compound pairs so that we can validly compare extents across manifolds.
                         var extent = Vector3.Dot(contact.Offset, extentAxis) - minimumExtent;
-                        candidateScore = contact.Depth + extent * extremityScale + remainingChildren.Count * biasPerIndex;
+                        candidateScore = contact.Depth + extent * extremityScale;
                     }
                     else
                     {
@@ -198,61 +222,70 @@ namespace BepuPhysics.CollisionDetection
                     if (candidateScore > initialBestScore)
                     {
                         initialBestScore = candidateScore;
-                        initialBestScoreIndex = remainingChildren.Count;
+                        initialBestScoreIndex = remainingContacts.Count;
                     }
                     if (contact.Depth > maximumDepth)
                         maximumDepth = contact.Depth;
                     if (contact.Depth < minimumDepth)
                         minimumDepth = contact.Depth;
-                    ref var indices = ref remainingChildren.AllocateUnsafely();
-                    indices.X = i;
-                    indices.Y = j;
+                    ref var indices = ref remainingContacts.AllocateUnsafely();
+                    indices.ChildIndex = childIndex;
+                    indices.ContactIndex = contactIndex;
                 }
             }
 
-            Debug.Assert(remainingChildren.Count > 0, "This function should only be called when there are populated manifolds.");
+            Debug.Assert(remainingContacts.Count > 0, "This function should only be called when there are populated manifolds.");
 
-            UseContact(ref remainingChildren, initialBestScoreIndex, ref Children, manifold);
+            UseContact(ref remainingContacts, initialBestScoreIndex, ref Children, manifold);
+            var reducedContacts = &manifold->Contact0;
+            var distanceSquaredInterpolationMin = maximumDistance * maximumDistance * (1e-3f * 1e-3f);
+            var distanceInterpolationSpan = maximumDistance * 1e-1f;
+            var inverseDistanceSquaredInterpolationSpan = 1f / (distanceInterpolationSpan * distanceInterpolationSpan);
+            //Each time we add a contact to the manifold, we'll update the remaining contact uniqueness scores. Redundant or near redundant contacts get ignored.
+            for (int i = remainingContacts.Count - 1; i >= 0; --i)
+            {
+                ref var remainingContact = ref remainingContacts[i];
+                ref var childManifold = ref Children[remainingContact.ChildIndex].Manifold;
+                ref var childContact = ref Unsafe.Add(ref childManifold.Contact0, remainingContact.ContactIndex);
+                remainingContact.Uniqueness = ComputeUniqueness(childContact.Offset, childManifold.Normal, manifold->Contact0, distanceSquaredInterpolationMin, inverseDistanceSquaredInterpolationSpan);
+                if (remainingContact.Uniqueness <= 0)
+                {
+                    //This contact is fully redundant.
+                    remainingContacts.FastRemoveAt(i);
+                }
+            }
 
             //We now have a decent starting point. Now, incrementally search for contacts which expand the manifold as much as possible.
             //This is going to be a greedy and nonoptimal search, but being consistent and good enough is more important than true optimality.
 
             //TODO: This could be significantly optimized. Many approximations would get 95% of the benefit, and even the full version could be vectorized in a few different ways.
-            var depthScale = 15f / maximumDistance;
             var depthSpan = maximumDepth - minimumDepth;
+            var inverseDepthSpan = depthSpan > 0 ? 1f / depthSpan : 0;
             //var inverseDepthSpan = depthSpan > 0 ? 1f / depthSpan : 0;
-            var reducedContacts = &manifold->Contact0;
-            while (remainingChildren.Count > 0 && manifold->Count < NonconvexContactManifold.MaximumContactCount)
+            var reducedAngularJacobians = stackalloc Vector3[NonconvexContactManifold.MaximumContactCount];
+            *reducedAngularJacobians = Vector3.Cross(manifold->Contact0.Offset, manifold->Contact0.Normal);
+            while (remainingContacts.Count > 0 && manifold->Count < NonconvexContactManifold.MaximumContactCount)
             {
                 float bestScore = -1;
                 int bestScoreIndex = 0;
-                for (int remainingChildrenIndex = 0; remainingChildrenIndex < remainingChildren.Count; ++remainingChildrenIndex)
+                for (int remainingChildrenIndex = 0; remainingChildrenIndex < remainingContacts.Count; ++remainingChildrenIndex)
                 {
-                    ref var childIndex = ref remainingChildren[remainingChildrenIndex];
-                    ref var child = ref Children[childIndex.X];
+                    ref var remainingContactIndices = ref remainingContacts[remainingChildrenIndex];
+                    ref var child = ref Children[remainingContactIndices.ChildIndex];
                     //Consider each candidate contact as an impulse to test against the so-far accumulated manifold.
                     //The candidate which has the greatest remaining impulse after applying the existing manifold's constraints is considered to be the most 'constraining' 
                     //potential addition. This can be thought of as an approximate constraint solve.
-                    ref var contact = ref Unsafe.Add(ref child.Manifold.Contact0, childIndex.Y);
-                    //We give contacts of higher depth greater impulses, so they'll tend to be chosen over low depth contacts.
-                    //var scaledDepth = contact.Depth * depthScale;
-                    ////Don't let speculative contacts wrap around into larger impulses.
-                    //if (scaledDepth < -1)
-                    //    scaledDepth = -1;
-                    //Vector3 linear = (-1 - scaledDepth) * child.Manifold.Normal;
-                    //var depthT = (contact.Depth - minimumDepth) * inverseDepthSpan;
-                    var depthImpulse = (contact.Depth - minimumDepth) * -0.95f - 0.05f * depthSpan;
+                    ref var remainingContact = ref Unsafe.Add(ref child.Manifold.Contact0, remainingContactIndices.ContactIndex);
+                    var n = remainingContact.Depth - minimumDepth;
+                    var depthImpulse = remainingContact.Depth < 0 ? -0.2f : -1f - (remainingContact.Depth - minimumDepth) * inverseDepthSpan;
+
                     var linear = depthImpulse * child.Manifold.Normal;
-                    var angular = Vector3.Cross(contact.Offset, linear);
+                    var angular = Vector3.Cross(remainingContact.Offset, linear);
                     for (int i = 0; i < manifold->Count; ++i)
                     {
                         ref var reducedContact = ref reducedContacts[i];
-                        var angularJacobian = Vector3.Cross(reducedContact.Offset, reducedContact.Normal);
+                        ref var angularJacobian = ref reducedAngularJacobians[i];
                         var velocityAtContact = Vector3.Dot(linear, reducedContact.Normal) + Vector3.Dot(angularJacobian, angular);
-                        //Note the inclusion of the depth in the velocity calculation. This allows contacts to be speculative; they may not actually apply any corrective impulse
-                        //if the incoming contact impulse isn't large enough (along this contact's jacobians).
-                        if (reducedContact.Depth < 0)
-                            velocityAtContact += reducedContact.Depth;
                         if (velocityAtContact < 0)
                         {
                             //Note that we're assuming unit mass and inertia here.
@@ -263,8 +296,11 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                     var score = linear.LengthSquared() + angular.LengthSquared();
-                    ////Heavily penalize speculative contacts. They can sometimes be worth it, but active contacts are almost always the priority unless they're redundant.
-                    //if (contact.Depth < 0)
+                    //Apply the uniqueness score. Near-redundant contacts should be suppressed.
+                    //(They should have *already* been suppressed by using a mini-solver, but without converging the solve solution, 
+                    //it's possible for the order of contact evaluation to allow redundants.)
+                    score *= remainingContactIndices.Uniqueness;
+                    //if (remainingContact.Depth < 0)
                     //    score *= 0.2f;
                     if (score > bestScore)
                     {
@@ -272,12 +308,35 @@ namespace BepuPhysics.CollisionDetection
                         bestScoreIndex = remainingChildrenIndex;
                     }
                 }
-                //TODO: Could probably detect redundant contacts in here using the constraint solve results, but the value is unclear versus the cost of testing.
-                //Can't reliably just use a score threshold.
-                UseContact(ref remainingChildren, bestScoreIndex, ref Children, manifold);
+                var lastContactIndex = manifold->Count;
+                UseContact(ref remainingContacts, bestScoreIndex, ref Children, manifold);
+                {
+                    //Cache the angular jacobian so we don't recompute it for every candidate.
+                    var reducedContact = (&manifold->Contact0) + lastContactIndex;
+                    reducedAngularJacobians[lastContactIndex] = Vector3.Cross(reducedContact->Offset, reducedContact->Normal);
+                    //Update the uniqueness scores for all remaining contacts.
+                    for (int i = remainingContacts.Count - 1; i >= 0; --i)
+                    {
+                        ref var remainingContact = ref remainingContacts[i];
+                        ref var childManifold = ref Children[remainingContact.ChildIndex].Manifold;
+                        ref var childContact = ref Unsafe.Add(ref childManifold.Contact0, remainingContact.ContactIndex);
+                        var uniqueness = ComputeUniqueness(childContact.Offset, childManifold.Normal, *reducedContact, distanceSquaredInterpolationMin, inverseDistanceSquaredInterpolationSpan);
+                        if (uniqueness <= 0)
+                        {
+                            //This contact is fully redundant.
+                            remainingContacts.FastRemoveAt(i);
+                        }
+                        else
+                        {
+                            //The contact wasn't fully redundant. Update its uniqueness score; we choose the lowest uniqueness score across all tested contacts.
+                            if (uniqueness < remainingContact.Uniqueness)
+                                remainingContact.Uniqueness = uniqueness;
+                        }
+                    }
+                }
             }
 
-            remainingChildren.Dispose(pool);
+            remainingContacts.Dispose(pool);
         }
 
         public unsafe void Flush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
