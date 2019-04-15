@@ -89,14 +89,35 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void AddChildBoundsToBatcher(ref Buffer<CompoundChild> children, ref BoundingBoxBatcher batcher, in RigidPose pose, in BodyVelocity velocity, int bodyIndex)
+        {
+            //Note that this approximates the velocity of the child using a piecewise extrapolation using the parent's angular velocity.
+            //For significant angular velocities, this is actually wrong, but this is how v1 worked forever and it's cheap.
+            //May want to revisit this later- it would likely require that the BoundingBoxBatcher have a continuation, or to include more information
+            //for the convex path to condition on.
+            BodyVelocity childVelocity;
+            childVelocity.Angular = velocity.Angular;
+            for (int i = 0; i < children.Length; ++i)
+            {
+                ref var child = ref children[i];
+                GetRotatedChildPose(child.LocalPose, pose.Orientation, out var childPose);
+                var angularContributionToChildLinear = Vector3.Cross(velocity.Angular, childPose.Position);
+                var contributionLengthSquared = angularContributionToChildLinear.LengthSquared();
+                var localPoseRadiusSquared = childPose.Position.LengthSquared();
+                if (contributionLengthSquared > localPoseRadiusSquared)
+                {
+                    angularContributionToChildLinear *= (float)(Math.Sqrt(localPoseRadiusSquared) / Math.Sqrt(contributionLengthSquared));
+                }
+                childVelocity.Linear = velocity.Linear + angularContributionToChildLinear;
+                childPose.Position += pose.Position;
+                batcher.AddCompoundChild(bodyIndex, children[i].ShapeIndex, childPose, childVelocity);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddChildBoundsToBatcher(ref BoundingBoxBatcher batcher, in RigidPose pose, in BodyVelocity velocity, int bodyIndex)
         {
-            for (int i = 0; i < Children.Length; ++i)
-            {
-                ref var child = ref Children[i];
-                GetWorldPose(child.LocalPose, pose, out var childPose);
-                batcher.AddCompoundChild(bodyIndex, Children[i].ShapeIndex, childPose, velocity);
-            }
+            AddChildBoundsToBatcher(ref Children, ref batcher, pose, velocity, bodyIndex);
         }
 
         public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, Shapes shapeBatches, out float t, out Vector3 normal)

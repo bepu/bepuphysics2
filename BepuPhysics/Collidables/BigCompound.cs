@@ -53,12 +53,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddChildBoundsToBatcher(ref BoundingBoxBatcher batcher, in RigidPose pose, in BodyVelocity velocity, int bodyIndex)
         {
-            for (int i = 0; i < Children.Length; ++i)
-            {
-                ref var child = ref Children[i];
-                Compound.GetWorldPose(child.LocalPose, pose, out var childPose);
-                batcher.AddCompoundChild(bodyIndex, Children[i].ShapeIndex, childPose, velocity);
-            }
+            Compound.AddChildBoundsToBatcher(ref Children, ref batcher, pose, velocity, bodyIndex);
         }
 
         unsafe struct LeafTester : IRayLeafTester
@@ -80,8 +75,8 @@ namespace BepuPhysics.Collidables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
             {
-                ref var child = ref Children[leafIndex];                
-                if (Shapes[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, child.LocalPose, rayData->Origin, rayData->Direction, *maximumT, out var t, out var normal) && 
+                ref var child = ref Children[leafIndex];
+                if (Shapes[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, child.LocalPose, rayData->Origin, rayData->Direction, *maximumT, out var t, out var normal) &&
                     t < MinimumT && t <= *maximumT)
                 {
                     MinimumT = t;

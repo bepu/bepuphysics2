@@ -16,7 +16,7 @@ namespace Demos.Demos
             camera.Position = new Vector3(-13f, 6, -13f);
             camera.Yaw = MathHelper.Pi * 3f / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10f, 0)));
 
             using (var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 8))
             {
@@ -246,8 +246,6 @@ namespace Demos.Demos
                     {
                         Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 4 + 5 * i, 32), inertia, new CollidableDescription(compoundIndex, 0.1f), new BodyActivityDescription(0.01f)));
                     }
-
-
                 }
             }
 

@@ -276,7 +276,6 @@ namespace BepuPhysics.CollisionDetection
                     //The candidate which has the greatest remaining impulse after applying the existing manifold's constraints is considered to be the most 'constraining' 
                     //potential addition. This can be thought of as an approximate constraint solve.
                     ref var remainingContact = ref Unsafe.Add(ref child.Manifold.Contact0, remainingContactIndices.ContactIndex);
-                    var n = remainingContact.Depth - minimumDepth;
                     var depthImpulse = remainingContact.Depth < 0 ? -0.2f : -1f - (remainingContact.Depth - minimumDepth) * inverseDepthSpan;
 
                     var linear = depthImpulse * child.Manifold.Normal;
