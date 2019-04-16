@@ -34,6 +34,8 @@ Visit the [forums](https://forum.bepuentertainment.com) for discussion and quest
 
 Check the [roadmap](Documentation/roadmap.md) for a high level look at where things are going.
 
+[Building](Documentation/Building.md)
+
 [Q&A](Documentation/QuestionsAndAnswers.md)
 
 [Stability Tips](Documentation/StabilityTips.md)

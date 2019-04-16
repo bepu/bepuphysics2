@@ -35,7 +35,7 @@ namespace Demos.Demos
                 Statics = 1
             });
 
-            Simulation.Deterministic = false;
+            Simulation.Deterministic = true;
 
             const int planeWidth = 8;
             const int planeHeight = 8;
