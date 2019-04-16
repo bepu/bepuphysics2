@@ -322,7 +322,6 @@ namespace BepuPhysics.Collidables
 
         public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
-            Vector<float> minimumRadius;
             for (int i = 0; i < countInBundle; ++i)
             {
                 Vector3Wide.Broadcast(new Vector3(float.MaxValue), out var minWide);
@@ -330,7 +329,6 @@ namespace BepuPhysics.Collidables
                 QuaternionWide.Rebroadcast(orientations, i, out var orientationWide);
                 Matrix3x3Wide.CreateFromQuaternion(orientationWide, out var orientationMatrix);
                 Vector<float> maximumRadiusSquaredWide = default;
-                Vector<float> minimumRadiusSquaredWide = default;
                 ref var hull = ref Hulls[i];
                 for (int j = 0; j < hull.Points.Length; ++j)
                 {
@@ -338,14 +336,12 @@ namespace BepuPhysics.Collidables
                     Matrix3x3Wide.TransformWithoutOverlap(localPoint, orientationMatrix, out var p);
                     Vector3Wide.LengthSquared(localPoint, out var lengthSquared);
                     maximumRadiusSquaredWide = Vector.Max(lengthSquared, maximumRadiusSquaredWide);
-                    minimumRadiusSquaredWide = Vector.Min(lengthSquared, minimumRadiusSquaredWide);
                     Vector3Wide.Min(minWide, p, out minWide);
                     Vector3Wide.Max(maxWide, p, out maxWide);
                 }
                 Vector3Wide.ReadFirst(minWide, out var minNarrow);
                 Vector3Wide.ReadFirst(maxWide, out var maxNarrow);
                 float maximumRadiusSquared = maximumRadiusSquaredWide[0];
-                float minimumRadiusSquared = minimumRadiusSquaredWide[0];
                 for (int j = 1; j < Vector<float>.Count; ++j)
                 {
                     //TODO: Check codegen. Bounds checks elided?
@@ -354,21 +350,18 @@ namespace BepuPhysics.Collidables
                     minNarrow = Vector3.Min(minCandidate, minNarrow);
                     maxNarrow = Vector3.Max(maxCandidate, maxNarrow);
 
-                    var maxRadiusCandidate = maximumRadiusSquaredWide[i];
-                    var minRadiusCandidate = minimumRadiusSquaredWide[i];
+                    var maxRadiusCandidate = maximumRadiusSquaredWide[j];
                     if (maxRadiusCandidate > maximumRadiusSquared)
                         maximumRadiusSquared = maxRadiusCandidate;
-                    if (minRadiusCandidate < minimumRadiusSquared)
-                        minimumRadiusSquared = minRadiusCandidate;
                 }
                 GatherScatter.Get(ref maximumRadius, i) = maximumRadiusSquared;
-                GatherScatter.Get(ref minimumRadius, i) = minimumRadiusSquared;
                 Vector3Wide.WriteSlot(minNarrow, i, ref min);
                 Vector3Wide.WriteSlot(maxNarrow, i, ref max);
             }
-            minimumRadius = Vector.SquareRoot(minimumRadius);
             maximumRadius = Vector.SquareRoot(maximumRadius);
-            maximumAngularExpansion = maximumRadius - minimumRadius;
+            //Note that this is a very conservative choice. You could enumerate the set of face planes to get the true minimum radius.
+            //This function didn't bother- it may be worth caching it and the maximum radius in the shape itself.
+            maximumAngularExpansion = maximumRadius;
         }
 
         public void RayTest(ref RigidPoses poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
