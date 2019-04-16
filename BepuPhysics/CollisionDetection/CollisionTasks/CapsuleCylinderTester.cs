@@ -62,7 +62,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
                 //Deactivated lanes should not be updated; if iteration counts are sensitive to the behavior of a bundle, it creates a dependency on bundle order and kills determinism.
                 t = Vector.ConditionalSelect(laneDeactivated, t, newT);
-        
+
             }
             Bounce(lineOrigin, lineDirection, t, b, radiusSquared, out var pointOnLine, out var clampedToCylinder);
             Vector3Wide.Subtract(pointOnLine, clampedToCylinder, out offsetFromCylinderToLineSegment);
@@ -223,34 +223,31 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Segment-side case is handled in the same way as capsule-capsule- create an interval by projecting the segment onto the cylinder segment and then narrow the interval in response to noncoplanarity.
             //Segment-cap is easy too; project the segment down onto the cap plane. Clip it against the cap circle (solve a quadratic).
 
-            Vector3Wide contact0 = default, contact1 = default;
-            Vector<int> contactCount = default;
             var useCapContacts = Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f));
-            if (Vector.EqualsAny(Vector.BitwiseOr(useCapContacts, inactiveLanes), Vector<int>.Zero))
-            {
-                //At least one lane requires a non-cap contact.
-                //Phrase the problem as a segment-segment test.
-                //For any lane that needs side contacts, we know the projected normal will be nonzero length based on the condition above.
-                var inverseHorizontalNormalLengthSquared = Vector<float>.One / (localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
-                var scale = b.Radius * Vector.SquareRoot(inverseHorizontalNormalLengthSquared);
-                var cylinderSegmentOffsetX = localNormal.X * scale;
-                var cylinderSegmentOffsetZ = localNormal.Z * scale;
-                Vector3Wide aToSideSegmentCenter;
-                aToSideSegmentCenter.X = localOffsetB.X + cylinderSegmentOffsetX;
-                aToSideSegmentCenter.Y = localOffsetB.Y;
-                aToSideSegmentCenter.Z = localOffsetB.Z + cylinderSegmentOffsetZ;
-                GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, capsuleAxis, localNormal, inverseHorizontalNormalLengthSquared, aToSideSegmentCenter, out var contactTMin, out var contactTMax);
 
-                contact0.X = cylinderSegmentOffsetX;
-                contact0.Y = contactTMin;
-                contact0.Z = cylinderSegmentOffsetZ;
-                contact1.X = cylinderSegmentOffsetX;
-                contact1.Y = contactTMax;
-                contact1.Z = cylinderSegmentOffsetZ;
+            //First, assume non-cap contacts.
+            //Phrase the problem as a segment-segment test.
+            //For any lane that needs side contacts, we know the projected normal will be nonzero length based on the condition above.
+            var inverseHorizontalNormalLengthSquared = Vector<float>.One / (localNormal.X * localNormal.X + localNormal.Z * localNormal.Z);
+            var scale = b.Radius * Vector.SquareRoot(inverseHorizontalNormalLengthSquared);
+            var cylinderSegmentOffsetX = localNormal.X * scale;
+            var cylinderSegmentOffsetZ = localNormal.Z * scale;
+            Vector3Wide aToSideSegmentCenter;
+            aToSideSegmentCenter.X = localOffsetB.X + cylinderSegmentOffsetX;
+            aToSideSegmentCenter.Y = localOffsetB.Y;
+            aToSideSegmentCenter.Z = localOffsetB.Z + cylinderSegmentOffsetZ;
+            GetContactIntervalBetweenSegments(a.HalfLength, b.HalfLength, capsuleAxis, localNormal, inverseHorizontalNormalLengthSquared, aToSideSegmentCenter, out var contactTMin, out var contactTMax);
 
-                contactCount = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(contactTMax - contactTMin), b.HalfLength * new Vector<float>(1e-5f)), Vector<int>.One, new Vector<int>(2));
+            Vector3Wide contact0, contact1;
+            contact0.X = cylinderSegmentOffsetX;
+            contact0.Y = contactTMin;
+            contact0.Z = cylinderSegmentOffsetZ;
+            contact1.X = cylinderSegmentOffsetX;
+            contact1.Y = contactTMax;
+            contact1.Z = cylinderSegmentOffsetZ;
 
-            }
+            var contactCount = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(contactTMax - contactTMin), b.HalfLength * new Vector<float>(1e-5f)), Vector<int>.One, new Vector<int>(2));
+
             if (Vector.LessThanAny(Vector.AndNot(useCapContacts, inactiveLanes), Vector<int>.Zero))
             {
                 //At least one lane requires a cap contact.

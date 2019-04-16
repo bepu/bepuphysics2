@@ -155,7 +155,7 @@ namespace Demos.SpecializedTests
             ConvexHullHelper.CreateShape(pointsBuffer, pool, out _, out var convexHull);
 
             var shapes = new Shapes(pool, 2);
-            const float speculativeMargin = float.MaxValue;
+            const float speculativeMargin = 0.1f;
             var sphereCollidable = new CollidableDescription(shapes.Add(sphere), speculativeMargin);
             var capsuleCollidable = new CollidableDescription(shapes.Add(capsule), speculativeMargin);
             var boxCollidable = new CollidableDescription(shapes.Add(box), speculativeMargin);
@@ -163,8 +163,8 @@ namespace Demos.SpecializedTests
             var cylinderCollidable = new CollidableDescription(shapes.Add(cylinder), speculativeMargin);
             var hullCollidable = new CollidableDescription(shapes.Add(convexHull), speculativeMargin);
             const int pairCount = 31;
-            const int poseIterations = 65536;
-            const int remapIterations = 32;
+            const int poseIterations = 8192;
+            const int remapIterations = 64;
             var bounds = new BoundingBox(new Vector3(-6), new Vector3(6));
             const int randomSeed = 5;
 
