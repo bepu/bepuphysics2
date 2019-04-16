@@ -69,7 +69,7 @@ namespace Demos.SpecializedTests
             Simulation.Statics.Add(new StaticDescription(new Vector3(-5, -5, 5), new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 1)), 0.1f)));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(hullShape), 0.1f)));
         }
-
+ 
         int stepIndex = 0;
 
         public override void Update(Window window, Camera camera, Input input, float dt)

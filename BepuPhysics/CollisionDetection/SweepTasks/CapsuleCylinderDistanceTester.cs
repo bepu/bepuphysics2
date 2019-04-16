@@ -18,7 +18,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             QuaternionWide.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
 
-            CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(localOffsetA, capsuleAxis, a.HalfLength, b, out var t, out var offsetFromCylinderToLineSegment);
+            CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(localOffsetA, capsuleAxis, a.HalfLength, b, Vector<int>.Zero, out var t, out var offsetFromCylinderToLineSegment);
 
             Vector3Wide.Length(offsetFromCylinderToLineSegment, out distance);
             Vector3Wide.Scale(offsetFromCylinderToLineSegment, Vector<float>.One / distance, out var localNormal);

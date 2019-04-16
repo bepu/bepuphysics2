@@ -330,7 +330,7 @@ namespace BepuPhysics.Collidables
                 QuaternionWide.Rebroadcast(orientations, i, out var orientationWide);
                 Matrix3x3Wide.CreateFromQuaternion(orientationWide, out var orientationMatrix);
                 Vector<float> maximumRadiusSquaredWide = default;
-                Vector<float> minimumRadiusSquaredWide = new Vector<float>(float.MaxValue);
+                Vector<float> minimumRadiusSquaredWide = default;
                 ref var hull = ref Hulls[i];
                 for (int j = 0; j < hull.Points.Length; ++j)
                 {
@@ -397,10 +397,11 @@ namespace BepuPhysics.Collidables
         public void EstimateEpsilonScale(in Vector<int> terminatedLanes, out Vector<float> epsilonScale)
         {
             Vector3Wide bundle;
-            for (int i = 0; i < Hulls.Length; ++i)
+            for (int i = 0; i < Vector<float>.Count; ++i)
             {
                 if (terminatedLanes[i] < 0)
                     continue;
+                Debug.Assert(Hulls.Length > i);
                 Vector3Wide.CopySlot(ref Hulls[i].Points[0], 0, ref bundle, i);
             }
             epsilonScale = (Vector.Abs(bundle.X) + Vector.Abs(bundle.Y) + Vector.Abs(bundle.Z)) * new Vector<float>(1f / 3f);

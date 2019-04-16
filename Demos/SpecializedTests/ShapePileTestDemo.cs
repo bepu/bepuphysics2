@@ -21,6 +21,7 @@ namespace Demos.SpecializedTests
             camera.Yaw = MathHelper.Pi * 3f / 4;
             //camera.Pitch = MathHelper.PiOver2 * 0.999f;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            Simulation.Deterministic = true;
 
             var sphere = new Sphere(1.5f);
             var capsule = new Capsule(1f, 1f);
@@ -53,9 +54,9 @@ namespace Demos.SpecializedTests
             var sphereIndex = Simulation.Shapes.Add(sphere);
             var cylinderIndex = Simulation.Shapes.Add(cylinder);
             var hullIndex = Simulation.Shapes.Add(convexHull);
-            const int width = 64;
-            const int height = 1;
-            const int length = 64;
+            const int width = 5;
+            const int height = 5;
+            const int length = 5;
             var shapeCount = 0;
             for (int i = 0; i < width; ++i)
             {
@@ -63,7 +64,7 @@ namespace Demos.SpecializedTests
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        var location = new Vector3(3, 3, 3) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 2.5f, -length * 1.5f);
+                        var location = new Vector3(6, 3, 6) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 2.5f, -length * 1.5f);
                         var bodyDescription = new BodyDescription
                         {
                             Activity = new BodyActivityDescription(-0.01f),
@@ -79,24 +80,25 @@ namespace Demos.SpecializedTests
                             }
                         };
                         var index = shapeCount++;
-                        switch ((index) % 5)
+                        switch (index % 5)
                         {
-                            case 0:
-                                bodyDescription.Collidable.Shape = sphereIndex;
-                                bodyDescription.LocalInertia = sphereInertia;
-                                break;
-                            case 1:
-                                bodyDescription.Collidable.Shape = capsuleIndex;
-                                bodyDescription.LocalInertia = capsuleInertia;
-                                break;
-                            case 2:
-                                bodyDescription.Collidable.Shape = boxIndex;
-                                bodyDescription.LocalInertia = boxInertia;
-                                break;
-                            case 3:
-                                bodyDescription.Collidable.Shape = cylinderIndex;
-                                bodyDescription.LocalInertia = cylinderInertia;
-                                break;
+                            //case 0:
+                            //    bodyDescription.Collidable.Shape = sphereIndex;
+                            //    bodyDescription.LocalInertia = sphereInertia;
+                            //    break;
+                            //case 1:
+                            //    bodyDescription.Collidable.Shape = capsuleIndex;
+                            //    bodyDescription.LocalInertia = capsuleInertia;
+                            //    break;
+                            //case 2:
+                            //    bodyDescription.Collidable.Shape = boxIndex;
+                            //    bodyDescription.LocalInertia = boxInertia;
+                            //    break;
+                            //case 3:
+                            //    bodyDescription.Collidable.Shape = cylinderIndex;
+                            //    bodyDescription.LocalInertia = cylinderInertia;
+                            //    break;
+                            default:
                             case 4:
                                 bodyDescription.Collidable.Shape = hullIndex;
                                 bodyDescription.LocalInertia = hullInertia;
@@ -108,8 +110,9 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            DemoMeshHelper.CreateDeformedPlane(128, 128, (x, y) => new Vector3(x - 64, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - 64), new Vector3(4, 1, 4), BufferPool, out var mesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Box(1000, 1, 1000)), 0.1f));
+            //DemoMeshHelper.CreateDeformedPlane(128, 128, (x, y) => new Vector3(x - 64, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - 64), new Vector3(4, 1, 4), BufferPool, out var mesh);
+            //Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
         }
 
     }

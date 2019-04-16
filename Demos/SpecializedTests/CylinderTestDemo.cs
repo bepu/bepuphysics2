@@ -113,7 +113,7 @@ namespace Demos.SpecializedTests
                 var innerStart = Stopwatch.GetTimestamp();
                 for (int j = 0; j < innerIterations; ++j)
                 {
-                    CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<float>(capsule.HalfLength), cylinderWide, out t, out offsetFromCylinderToLineSegment);
+                    CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<float>(capsule.HalfLength), cylinderWide, Vector<int>.Zero, out t, out offsetFromCylinderToLineSegment);
                 }
                 var innerStop = Stopwatch.GetTimestamp();
                 if (i > warmupCount)

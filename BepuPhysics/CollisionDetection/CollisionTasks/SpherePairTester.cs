@@ -39,6 +39,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var negativeOffsetFromA = manifold.Depth * 0.5f - a.Radius;
             Vector3Wide.Scale(manifold.Normal, negativeOffsetFromA, out manifold.OffsetA);
             manifold.ContactExists = Vector.GreaterThan(manifold.Depth, -speculativeMargin);
+            manifold.FeatureId = default;
         }
     }
 }

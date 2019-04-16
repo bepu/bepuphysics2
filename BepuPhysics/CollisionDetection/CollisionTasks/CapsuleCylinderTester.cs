@@ -28,22 +28,29 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetClosestPointBetweenLineSegmentAndCylinder(in Vector3Wide lineOrigin, in Vector3Wide lineDirection, in Vector<float> halfLength, in CylinderWide b,
-            out Vector<float> t, out Vector3Wide offsetFromCylinderToLineSegment)
+            in Vector<int> inactiveLanes, out Vector<float> t, out Vector3Wide offsetFromCylinderToLineSegment)
         {
             var min = -halfLength;
             var max = halfLength;
             t = Vector<float>.Zero;
             var radiusSquared = b.Radius * b.Radius;
-            var negativeCylinderHalfLength = -b.HalfLength;
             Vector3Wide.Dot(lineDirection, lineOrigin, out var originDot);
             var epsilon = halfLength * 1e-7f;
-            var laneDeactivated = Vector<int>.Zero;
+            var laneDeactivated = inactiveLanes;
             for (int i = 0; i < 12; ++i)
             {
                 Bounce(lineOrigin, lineDirection, t, b, radiusSquared, out _, out var clamped);
                 Vector3Wide.Dot(clamped, lineDirection, out var conservativeNewT);
                 conservativeNewT = Vector.Max(min, Vector.Min(max, conservativeNewT - originDot));
                 var change = conservativeNewT - t;
+                //Check for deactivated lanes and see if we can exit early.
+                var laneShouldDeactivate = Vector.LessThan(Vector.Abs(change), epsilon);
+                laneDeactivated = Vector.BitwiseOr(laneDeactivated, laneShouldDeactivate);
+                if (Vector.LessThanAll(laneDeactivated, Vector<int>.Zero))
+                {
+                    //All lanes are done; early out.
+                    break;
+                }
 
                 //The bounced projection can be thought of as conservative advancement. The sign of the change tells us which way the advancement moved; we can use that to update the bounds.
                 var movedUp = Vector.GreaterThan(change, Vector<float>.Zero);
@@ -53,16 +60,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //Bisect the remaining interval.
                 var newT = 0.5f * (min + max);
 
-                //Check for deactivated lanes and see if we can exit early.
-                var laneShouldDeactivate = Vector.LessThan(Vector.Abs(change), epsilon);
-                laneDeactivated = Vector.BitwiseOr(laneDeactivated, laneShouldDeactivate);
                 //Deactivated lanes should not be updated; if iteration counts are sensitive to the behavior of a bundle, it creates a dependency on bundle order and kills determinism.
                 t = Vector.ConditionalSelect(laneDeactivated, t, newT);
-                if (Vector.LessThanAll(laneDeactivated, Vector<int>.Zero))
-                {
-                    //All lanes are done; early out.
-                    break;
-                }
+        
             }
             Bounce(lineOrigin, lineDirection, t, b, radiusSquared, out var pointOnLine, out var clampedToCylinder);
             Vector3Wide.Subtract(pointOnLine, clampedToCylinder, out offsetFromCylinderToLineSegment);
@@ -159,7 +159,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, worldRB, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
 
-            GetClosestPointBetweenLineSegmentAndCylinder(localOffsetA, capsuleAxis, a.HalfLength, b, out var t, out var localNormal);
+            ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
+            GetClosestPointBetweenLineSegmentAndCylinder(localOffsetA, capsuleAxis, a.HalfLength, b, inactiveLanes, out var t, out var localNormal);
             Vector3Wide.LengthSquared(localNormal, out var distanceFromCylinderToLineSegmentSquared);
             var internalLineSegmentIntersected = Vector.LessThan(distanceFromCylinderToLineSegmentSquared, new Vector<float>(1e-12f));
             var distanceFromCylinderToLineSegment = Vector.SquareRoot(distanceFromCylinderToLineSegmentSquared);
@@ -167,12 +168,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(localNormal, Vector<float>.One / distanceFromCylinderToLineSegment, out localNormal);
             var depth = Vector.ConditionalSelect(internalLineSegmentIntersected, new Vector<float>(float.MaxValue), -distanceFromCylinderToLineSegment);
 
-            if (Vector.EqualsAny(internalLineSegmentIntersected, new Vector<int>(-1)))
+            if (Vector.LessThanAny(Vector.AndNot(internalLineSegmentIntersected, inactiveLanes), Vector<int>.Zero))
             {
                 //At least one lane is intersecting deeply, so we need to examine the other possible normals.
                 var endpointVsCapDepth = b.HalfLength + Vector.Abs(capsuleAxis.Y * a.HalfLength) - Vector.Abs(localOffsetA.Y);
-                var useEndpointCapDepth = Vector.LessThan(endpointVsCapDepth, depth);
-                depth = Vector.Min(endpointVsCapDepth, depth);
+                var useEndpointCapDepth = Vector.BitwiseAnd(internalLineSegmentIntersected, Vector.LessThan(endpointVsCapDepth, depth));
+                depth = Vector.ConditionalSelect(useEndpointCapDepth, endpointVsCapDepth, depth);
                 localNormal.X = Vector.ConditionalSelect(useEndpointCapDepth, Vector<float>.Zero, localNormal.X);
                 //Normal calibrated to point from B to A.
                 localNormal.Y = Vector.ConditionalSelect(useEndpointCapDepth, Vector.ConditionalSelect(Vector.GreaterThan(localOffsetA.Y, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f)), localNormal.Y);
@@ -200,13 +201,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var capsuleContribution = Vector.Abs(capsuleAxisDotNormal) * a.HalfLength;
                 var internalEdgeDepth = cylinderContribution + capsuleContribution - centerSeparationAlongNormal;
 
-                var useInternalEdgeDepth = Vector.LessThan(internalEdgeDepth, depth);
-                depth = Vector.Min(internalEdgeDepth, depth);
+                var useInternalEdgeDepth = Vector.BitwiseAnd(internalLineSegmentIntersected, Vector.LessThan(internalEdgeDepth, depth));
+                depth = Vector.ConditionalSelect(useInternalEdgeDepth, internalEdgeDepth, depth);
                 Vector3Wide.ConditionalSelect(useInternalEdgeDepth, internalEdgeNormal, localNormal, out localNormal);
             }
             //All of the above excluded any consideration of the capsule's radius. Include it now.
             depth += a.Radius;
-            if (Vector.LessThanAll(depth, -speculativeMargin))
+            inactiveLanes = Vector.BitwiseOr(Vector.LessThan(depth, -speculativeMargin), inactiveLanes);
+            if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //All lanes have a depth which cannot create any contacts due to the speculative margin. We can early out.
                 //This is determinism-safe; even if execution continued, there would be no contacts created and the manifold would be equivalent for all lanes.
@@ -224,7 +226,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide contact0 = default, contact1 = default;
             Vector<int> contactCount = default;
             var useCapContacts = Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f));
-            if (Vector.EqualsAny(useCapContacts, Vector<int>.Zero))
+            if (Vector.EqualsAny(Vector.BitwiseOr(useCapContacts, inactiveLanes), Vector<int>.Zero))
             {
                 //At least one lane requires a non-cap contact.
                 //Phrase the problem as a segment-segment test.
@@ -249,7 +251,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 contactCount = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(contactTMax - contactTMin), b.HalfLength * new Vector<float>(1e-5f)), Vector<int>.One, new Vector<int>(2));
 
             }
-            if (Vector.LessThanAny(useCapContacts, Vector<int>.Zero))
+            if (Vector.LessThanAny(Vector.AndNot(useCapContacts, inactiveLanes), Vector<int>.Zero))
             {
                 //At least one lane requires a cap contact.
                 //An important note: for highest quality, all clipping takes place on the *normal plane*. So segment-cap doesn't merely set the y component to zero (projecting along B's Y axis).

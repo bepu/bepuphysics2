@@ -47,6 +47,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.Contact1Exists = default;
             manifold.Contact2Exists = default;
             manifold.Contact3Exists = default;
+
             if (Vector.LessThanAll(inactiveLanes, Vector<int>.Zero))
             {
                 //No contacts generated.
