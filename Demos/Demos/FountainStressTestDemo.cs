@@ -123,7 +123,6 @@ namespace Demos.Demos
         {
             const int pointCount = 32;
             var points = new QuickList<Vector3>(pointCount, BufferPool);
-            var random = new Random(5);
             for (int i = 0; i < pointCount; ++i)
             {
                 points.AllocateUnsafely() = new Vector3(1 * (float)random.NextDouble(), 0.5f * (float)random.NextDouble(), 1.5f * (float)random.NextDouble());
@@ -343,7 +342,7 @@ namespace Demos.Demos
             }
             base.Update(window, camera, input, dt);
 
-            if (input.WasPushed(OpenTK.Input.Key.P))
+            if (input != null && input.WasPushed(OpenTK.Input.Key.P))
                 GC.Collect(int.MaxValue, GCCollectionMode.Forced, true, true);
 
         }

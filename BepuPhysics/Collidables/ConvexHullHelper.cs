@@ -180,8 +180,6 @@ namespace BepuPhysics.Collidables
                     }
                 }
             }
-            if (bestX < 0)
-                Console.WriteLine($"BESTX IS NEGATIVE { bestX}");
             Vector3Wide.ReadFirst(basisX, out var basisXNarrow);
             Vector3Wide.ReadFirst(basisY, out var basisYNarrow);
             faceNormal = basisXNarrow * projectedPlaneNormalNarrow.X + basisYNarrow * projectedPlaneNormalNarrow.Y;
@@ -347,7 +345,6 @@ namespace BepuPhysics.Collidables
                     allowVertex[index] = false;
                 }
             }
-
         }
 
         [StructLayout(LayoutKind.Explicit)]
@@ -537,7 +534,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
             pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
-            var planeEpsilon = new Vector<float>((float)Math.Sqrt(bestDistanceSquared) * 1e-7f);
+            var planeEpsilon = new Vector<float>((float)Math.Sqrt(bestDistanceSquared) * 1e-6f);
             var rawFaceVertexIndices = new QuickList<int>(points.Length, pool);
             var initialSourceEdge = new EdgeEndpoints { A = initialIndex, B = initialIndex };
             FindExtremeFace(initialBasisX, initialBasisY, initialVertexBundle, initialSourceEdge, ref pointBundles, indexOffsetBundle, points.Length,
@@ -625,6 +622,11 @@ namespace BepuPhysics.Collidables
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
                 ReduceFace(ref rawFaceVertexIndices, faceNormal, ref points, ref facePoints, ref allowVertex, ref reducedFaceIndices);
+                if(reducedFaceIndices.Count < 3)
+                {
+                    //Degenerate face found; don't bother creating work for it.
+                    continue;
+                }
                 //step.AddReduced(ref reducedFaceIndices, ref allowVertex);
                 //steps.Add(step);
 

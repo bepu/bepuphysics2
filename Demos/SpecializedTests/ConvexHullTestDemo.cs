@@ -69,7 +69,26 @@ namespace Demos.SpecializedTests
             Simulation.Statics.Add(new StaticDescription(new Vector3(-5, -5, 5), new CollidableDescription(Simulation.Shapes.Add(new Cylinder(1, 1)), 0.1f)));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), new CollidableDescription(Simulation.Shapes.Add(hullShape), 0.1f)));
         }
- 
+
+        void TestConvexHullCreation()
+        {
+            var random = new Random(5);
+            for (int iterationIndex = 0; iterationIndex < 100000; ++iterationIndex)
+            {
+                const int pointCount = 32;
+                var points = new QuickList<Vector3>(pointCount, BufferPool);
+                for (int i = 0; i < pointCount; ++i)
+                {
+                    points.AllocateUnsafely() = new Vector3(1 * (float)random.NextDouble(), 2 * (float)random.NextDouble(), 3 * (float)random.NextDouble());
+                }
+
+                var pointsBuffer = points.Span.Slice(0, points.Count);
+                ConvexHullHelper.CreateShape(pointsBuffer, BufferPool, out _, out var hullShape);
+
+                hullShape.Dispose(BufferPool);
+            }
+        }
+
         int stepIndex = 0;
 
         public override void Update(Window window, Camera camera, Input input, float dt)
