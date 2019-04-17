@@ -20,7 +20,7 @@ Examples:
 1. [`DemoCallbacks`](../Demos/DemoCallbacks.cs) shows the frequently used callbacks, including damping and unidirectional gravity and a basic passthrough `INarrowPhaseCallbacks`.
 2. [`PlanetDemo`](../Demos/Demos/PlanetDemo.cs) shows how to create a planet-like gravity source.
 3. [`RagdollDemo`](../Demos/Demos/RagdollDemo.cs) contains a slightly more advanced `INarrowPhaseCallbacks` collision filtering approach based on bitfields. Used to stop connected pieces of the ragdolls from colliding.
-4. [`ContactEventsDemo`](..Demos/Demos/ContactEventsDemo.cs) shows one possible way to collect contact data from the `INarrowPhaseCallbacks` and use it to generate contact events.
+4. [`ContactEventsDemo`](../Demos/Demos/ContactEventsDemo.cs) shows one possible way to collect contact data from the `INarrowPhaseCallbacks` and use it to generate contact events.
 
 Note that `TNarrowPhaseCallbacks` and `TPoseIntegratorCallbacks` are required to be structs and are provided with generic parameters rather than directly as interfaces. This is because the compiler has enough knowledge (and is forced) to avoid virtual dispatch and, when appropriate, inline the callbacks. Given that many of the callbacks are called with extremely high frequency, this can add up.
 
@@ -41,7 +41,7 @@ The default `ITimeStepper` is the `PositionFirstTimestepper`.
 
 The `Simulation` does not do anything fancy internally with temporal accumulation or anything else. Each `Timestep` simulates exactly the amount of time specified.
 
-Examples of other timestepping strategies, like accumulating time and simulating as many Timesteps of a fixed duration as necessary, are shown in [`Demo.Update`](../Demos/Demo.cs#L40).
+Examples of other timestepping strategies, like accumulating time and simulating as many timesteps of a fixed duration as necessary, are shown in [`Demo.Update`](../Demos/Demo.cs#L40).
 
 It is recommended that the time step duration provided to `Simulation.Timestep` is always the same. Wildly varying timesteps can introduce instability. One-off changes or gradual changes can work well enough, but try to avoid jumping around constantly. 
 
@@ -61,7 +61,7 @@ The `CollidableDescription` takes a reference to a shape allocated in the `Simul
 
 Note that there is no internal list of `BodyDescription` instances, nor a single "Body" type anywhere. Instead, all body properties are split across several buffers. Further, there are multiple `BodySet` instances, each with their own set of buffers. These buffers are set up for efficient internal access, with the first `BodySet` storing all active bodies and the later sets containing inactive body data. The `BodyDescription` is decomposed into these separate pieces upon being added.
 
-To access an existing body's data, the body's current memory location must be looked up using the handle returned by the `Add` call. The `BodyReference` convenience type can help make this a little more convenient by hiding the lookup process.
+To access an existing body's data, the body's current memory location must be looked up using the handle returned by the `Add` call. The `BodyReference` convenience type can make this a little easier by hiding the lookup process.
 
 Bodies may move around in memory during execution or when other bodies are added, removed, awoken, or slept. Holding onto the raw memory location through one of these changes may result in the pointer pointing to undefined data; the handle should be used to perform a fresh lookup any time the memory location could have been invalidated.
 
@@ -92,7 +92,7 @@ Note that `Simulation.Solver.Add` has a few overloads for different body counts,
 
 The engine supports scene-wide queries through `Simulation.RayCast` and `Simulation.Sweep`. Sweeps support both linear and angular motion for convex shapes. Both functions make use of hit handlers- `IRayHitHandler` and `ISweepHitHandler`. The handlers can filter out objects and respond to found impacts.
 
-The [`Grabber`](../Demos/Grabber.cs), [`RayCastingDemo`](../Demos/Demos/RayCastingDemo.cs) and [`SweepDemo`](../Demos/Demos/SweepDemo) have some examples of these queries, plus some other more advanced cases.
+The [`Grabber`](../Demos/Grabber.cs), [`RayCastingDemo`](../Demos/Demos/RayCastingDemo.cs) and [`SweepDemo`](../Demos/Demos/SweepDemo.cs) have some examples of these queries, plus some other more advanced cases.
 
 The broad phase acceleration structures can be [directly queried](../BepuPhysics/CollisionDetection/BroadPhase_Queries.cs) by ray casts, bounding boxes, and swept bounding boxes. 
 
