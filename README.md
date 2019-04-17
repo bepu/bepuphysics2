@@ -8,7 +8,7 @@ The BepuPhysics and BepuUtilities libraries target .NET Standard 2.0 and should 
 
 The physics engine heavily uses System.Numerics.Vectors types, so to get good performance, you'll need a compiler which can consume those types (like RyuJIT).
 
-To build the source, you'll need a recent version of Visual Studio with the .NET Core workload installed. Demos.sln references all relevant projects.
+To build the source, you'll need a recent version of Visual Studio with the .NET Core workload installed. Demos.sln references all relevant projects. For more information, see [Building](Documentation/Building.md).
 
 ## Features
 
@@ -32,9 +32,9 @@ Report bugs [here on github](../../issues).
 
 Visit the [forums](https://forum.bepuentertainment.com) for discussion and questions.
 
-Check the [roadmap](Documentation/roadmap.md) for a high level look at where things are going.
-
 [Building](Documentation/Building.md)
+
+[Getting Started](Documentation/GettingStarted.md)
 
 [Q&A](Documentation/QuestionsAndAnswers.md)
 
@@ -43,6 +43,8 @@ Check the [roadmap](Documentation/roadmap.md) for a high level look at where thi
 [Performance Tips](Documentation/PerformanceTips.md)
 
 [Packaging and Versioning](Documentation/PackagingAndVersioning.md)
+
+Check the [roadmap](Documentation/roadmap.md) for a high level look at where things are going.
 
 If you have too many dollars, we are willing to consume them on [patreon](https://www.patreon.com/bepu).
 

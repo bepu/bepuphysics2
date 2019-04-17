@@ -1,8 +1,7 @@
 # Performance Tips
 
-*This is an early work in progress. More will show up over time as I remember to write them down.*
 ## Shape Optimization
--Use simple shapes whenever possible. Spheres and capsules are fastest followed by (TODO: measurement required) cylinders, cones, boxes, and finally convex hulls. While convex hulls are not slow in an absolute sense, convex hull contact generation can be an order of magnitude slower than some of the extremely fast simpler shapes.
+-Use simple shapes whenever possible. Spheres and capsules are fastest followed by boxes, triangles, cylinders, and finally convex hulls. While cylinders and convex hulls are not slow in an absolute sense, they can be an order of magnitude slower than spheres and capsules.
 
 -If you need to use a convex hull, use the minimum number of vertices needed to approximate the shape. The cost of hull collision detection is proportional to their complexity.
 
@@ -12,10 +11,12 @@
 
 -Okay, so maybe you actually truly really seriously need an actual mobile mesh. Keep the number of triangles to the minimum necessary to approximate the desired shape, and try to keep the triangles fairly uniform in size. Long sliver-like triangles can end up with large and inefficient bounding boxes. Static meshes follow the same optimization guidelines. Don't be surprised when you run into behavioral issues associated with infinitely thin one sided triangles not colliding with each other and relatively crappy performance.
 
--Reuse shapes when convenient. In particular, avoid creating tons of duplicate convex hulls. They are much larger than the other types. Both the required memory bandwidth and cache size can become a bottleneck during the narrow phase.
+-Reuse shapes when convenient. In particular, avoid creating tons of duplicate convex hulls and meshes. They are much larger than the other types. Both the required memory bandwidth and cache size can become a bottleneck during the narrow phase.
 
 -Prefer using the same shape types when convenient. The narrow phase works on batches of same-type collision pairs at a time. By using a lot of the same types, the narrow phase can get better SIMD efficiency. (This is a fairly minor effect. If you kinda want to use a cylinder for something even though you haven't used them anywhere else, don't feel too bad about it.)
 
 
 ## Solver Optimization
 -Try using the minimum number of iterations sufficient to retain stability. The cost of the solver stage is linear with the number of iterations, and some simulations can get by with very few.
+
+-For some simulations with very complex constraint configurations, there may be no practical number of solver iterations. In these cases, you may need to instead use a shorter time step duration for the entire simulation or use the `SubsteppingTimestepper`. See the [`SubsteppingDemo`](../Demos/SubsteppingDemo.cs) for an example.

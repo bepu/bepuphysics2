@@ -37,7 +37,7 @@ namespace BepuPhysics
         /// Gets or sets the fraction of the active set to target as the number of bodies traversed for sleeping in a given frame.
         /// This is only a goal; the actual number of traversed bodies may be more or less.
         /// </summary>
-        public float TargetTraversedFraction { get; set; } = 0.02f;
+        public float TargetTraversedFraction { get; set; } = 0.01f;
 
         public IslandSleeper(Bodies bodies, Solver solver, BroadPhase broadPhase, ConstraintRemover constraintRemover, BufferPool pool)
         {
@@ -274,7 +274,6 @@ namespace BepuPhysics
             Debug.Assert(workerTraversalResults.Allocated && workerTraversalResults.Length > workerIndex);
             ref var results = ref workerTraversalResults[workerIndex];
             results.Islands = new QuickList<IslandScaffold>(64, threadPool);
-
             var bodyIndices = new QuickList<int>(Math.Min(InitialIslandBodyCapacity, bodies.ActiveSet.Count), threadPool);
             var constraintHandles = new QuickList<int>(Math.Min(InitialIslandConstraintCapacity, solver.HandlePool.HighestPossiblyClaimedId + 1), threadPool);
 
@@ -590,8 +589,7 @@ namespace BepuPhysics
         }
 
 
-        void Sleep(ref QuickList<int> traversalStartBodyIndices, IThreadDispatcher threadDispatcher, bool deterministic,
-            int targetSleptBodyCountPerThread, int targetTraversedBodyCountPerThread, bool forceSleep)
+        void Sleep(ref QuickList<int> traversalStartBodyIndices, IThreadDispatcher threadDispatcher, bool deterministic, int targetSleptBodyCount, int targetTraversedBodyCount, bool forceSleep)
         {
             //There are four threaded phases to sleep:
             //1) Traversing the constraint graph to identify 'simulation islands' that satisfy the sleep conditions.
@@ -609,19 +607,22 @@ namespace BepuPhysics
             if (bodies.ActiveSet.Count == 0 || traversalStartBodyIndices.Count == 0)
                 return;
 
+            int threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
+            //The multithreaded island search is currently nondeterministic due to the unpredictable termination conditions.
+            var workerTraversalThreadCount = deterministic ? 1 : threadCount;
+
+            targetSleptBodyCountPerThread = Math.Max(1, targetSleptBodyCount / workerTraversalThreadCount);
+            targetTraversedBodyCountPerThread = Math.Max(1, targetTraversedBodyCount / workerTraversalThreadCount);
 
             //1) TRAVERSAL      
             this.traversalStartBodyIndices = traversalStartBodyIndices;
-            this.targetSleptBodyCountPerThread = targetSleptBodyCountPerThread;
-            this.targetTraversedBodyCountPerThread = targetSleptBodyCountPerThread;
 
-            int threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
-            pool.SpecializeFor<WorkerTraversalResults>().Take(threadCount, out workerTraversalResults);
+            pool.SpecializeFor<WorkerTraversalResults>().Take(workerTraversalThreadCount, out workerTraversalResults);
             //Note that all resources within a worker's results set are allocate on the worker's pool since the thread may need to resize things.
             this.threadDispatcher = threadDispatcher;
             jobIndex = -1;
             this.forceSleep = forceSleep;
-            if (threadCount > 1)
+            if (workerTraversalThreadCount > 1)
             {
                 threadDispatcher.DispatchWorkers(findIslandsDelegate);
             }
@@ -634,16 +635,16 @@ namespace BepuPhysics
 
             //In the event that no islands are available for sleeping, early out to avoid the later dispatches.
             int totalIslandCount = 0;
-            for (int i = 0; i < threadCount; ++i)
+            for (int i = 0; i < workerTraversalThreadCount; ++i)
             {
                 totalIslandCount += workerTraversalResults[i].Islands.Count;
             }
             void DisposeWorkerTraversalResults()
             {
-                if (threadCount > 1)
+                if (workerTraversalThreadCount > 1)
                 {
                     //The source of traversal worker resources is a per-thread pool.
-                    for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
+                    for (int workerIndex = 0; workerIndex < workerTraversalThreadCount; ++workerIndex)
                     {
                         workerTraversalResults[workerIndex].Dispose(threadDispatcher.GetThreadMemoryPool(workerIndex));
                     }
@@ -673,7 +674,7 @@ namespace BepuPhysics
             //(Note that a body can only belong to one island. If two threads find the same body, it means they found the exact same island, just using different paths. They are fully redundant.)
             newInactiveSets = new QuickList<InactiveSetReference>(32, pool);
             var sleptBodyCount = 0;
-            for (int workerIndex = 0; workerIndex < threadCount; ++workerIndex)
+            for (int workerIndex = 0; workerIndex < workerTraversalThreadCount; ++workerIndex)
             {
                 ref var workerIslands = ref workerTraversalResults[workerIndex].Islands;
                 for (int j = 0; j < workerIslands.Count; ++j)
@@ -975,10 +976,7 @@ namespace BepuPhysics
                 }
                 pool.SpecializeFor<int>().Return(ref sortedIndices);
             }
-            var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
-            var targetSleptBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetSleptFraction / threadCount);
-            var targetTraversedBodyCountPerThread = (int)Math.Max(1, bodies.ActiveSet.Count * TargetTraversedFraction / threadCount);
-            Sleep(ref traversalStartBodyIndices, threadDispatcher, deterministic, targetSleptBodyCountPerThread, targetTraversedBodyCountPerThread, false);
+            Sleep(ref traversalStartBodyIndices, threadDispatcher, deterministic, (int)Math.Ceiling(bodies.ActiveSet.Count * TargetSleptFraction), (int)Math.Ceiling(bodies.ActiveSet.Count * TargetTraversedFraction), false);
 
             traversalStartBodyIndices.Dispose(pool);
         }

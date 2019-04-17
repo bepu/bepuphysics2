@@ -46,11 +46,11 @@ namespace Demos.Demos
                     return new Vector3(offsetFromCenter.X, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.2f * offsetFromCenter.LengthSquared(), offsetFromCenter.Y);
                 }, new Vector3(2, 1, 2), BufferPool, out var staticShape);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
-            const int staticGridWidthInSpheres = 128;
+            const int staticGridWidthInInstances = 128;
             const float staticSpacing = 8;
-            for (int i = 0; i < staticGridWidthInSpheres; ++i)
+            for (int i = 0; i < staticGridWidthInInstances; ++i)
             {
-                for (int j = 0; j < staticGridWidthInSpheres; ++j)
+                for (int j = 0; j < staticGridWidthInInstances; ++j)
                 {
                     var staticDescription = new StaticDescription
                     {
@@ -63,9 +63,9 @@ namespace Demos.Demos
                         Pose = new RigidPose
                         {
                             Position = new Vector3(
-                            -staticGridWidthInSpheres * staticSpacing * 0.5f + i * staticSpacing,
+                            -staticGridWidthInInstances * staticSpacing * 0.5f + i * staticSpacing,
                             -4 + 4 * (float)Math.Cos(i * 0.3) + 4 * (float)Math.Cos(j * 0.3),
-                            -staticGridWidthInSpheres * staticSpacing * 0.5f + j * staticSpacing),
+                            -staticGridWidthInInstances * staticSpacing * 0.5f + j * staticSpacing),
                             Orientation = BepuUtilities.Quaternion.Identity
                         }
                     };
@@ -292,7 +292,6 @@ namespace Demos.Demos
                         break;
                     case 4:
                         {
-
                             AddConvexShape(CreateRandomHull(), out shapeIndex, out inertia);
                         }
                         break;
@@ -318,7 +317,6 @@ namespace Demos.Demos
                     Activity = new BodyActivityDescription(0.1f),
                     Velocity = new BodyVelocity(new Vector3(-30 + 60 * (float)random.NextDouble(), 75, -30 + 60 * (float)random.NextDouble()), default)
                 };
-
 
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(description), BufferPool);
 

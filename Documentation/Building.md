@@ -8,7 +8,7 @@ The library tends to use the latest C# language features. At the time of writing
 
 BepuPhysics.csproj uses T4 templates for code generation in a few places. If changes are made to the templates, you'll need a build pipeline that can process them (like Visual Studio). The repository contains the original generated .cs files, so if no changes are made, the templates do not need to be evaluated.
 
-The libraries currently target .NET Standard 2.0. They currently do some [unusual/questionable things](https://github.com/bepu/bepuphysics2/issues/59) that make building the library directly targeting .NET Core difficult. Sorry. (Note that .NET Core applications can still consume the library- the library itself just has to be built for .NET Standard 2.0.)
+The libraries target .NET Standard 2.0. They currently do some [unusual/questionable things](https://github.com/bepu/bepuphysics2/issues/59) that make building the library directly targeting .NET Core difficult. Sorry. (Note that .NET Core applications can still consume the library- the library itself just has to be built for .NET Standard 2.0.)
 
 ## Demos
 
