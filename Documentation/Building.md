@@ -2,17 +2,17 @@
 
 ## Library
 
-The easiest way to build the library is using the latest version of Visual Studio to open and build the Library.sln.
+The easiest way to build the library is using the latest version of Visual Studio with the .NET Core workload installed to open and build the `Library.sln`.
 
 The library tends to use the latest C# language features. At the time of writing, it requires C# 7.3. 8.0 will likely be adopted soon after its stable release.
 
-BepuPhysics.csproj uses T4 templates for code generation in a few places. If changes are made to the templates, you'll need a build pipeline that can process them (like Visual Studio). The repository contains the original generated .cs files, so if no changes are made, the templates do not need to be evaluated.
+`BepuPhysics.csproj` uses T4 templates for code generation in a few places. If changes are made to the templates, you'll need a build pipeline that can process them (like Visual Studio). The repository contains the original generated .cs files, so if no changes are made, the templates do not need to be evaluated.
 
 The libraries target .NET Standard 2.0. They currently do some [unusual/questionable things](https://github.com/bepu/bepuphysics2/issues/59) that make building the library directly targeting .NET Core difficult. Sorry. (Note that .NET Core applications can still consume the library- the library itself just has to be built for .NET Standard 2.0.)
 
 ## Demos
 
-Demos.sln contains all the projects necessary to build and run the demos application. The demo renderer uses DX11, and the content pipeline's shader compiler requires the Windows SDK. The demos application targets .NET Core 2.1.
+`Demos.sln` contains all the projects necessary to build and run the demos application. The demo renderer uses DX11, and the content pipeline's shader compiler requires the Windows SDK. The demos application targets .NET Core 2.1.
 
 ## Build Configurations
 
@@ -20,7 +20,7 @@ The library has the usual `Debug` and `Release` build configurations, but also h
 
 Both 'strip' variants remove memory initialization flags from methods in the library. This can save noticeable time at runtime due to the library's heavy reliance on stack allocation.
 
-ReleaseStripNoProfiling removes the library's profiling functionality; any attempt to request profiling data will just return zeroes.
+`ReleaseStripNoProfiling` removes the library's profiling functionality; any attempt to request profiling data will just return zeroes.
 
 For production use, `ReleaseStrip` or `ReleaseStripNoProfiling` is recommended.
 
