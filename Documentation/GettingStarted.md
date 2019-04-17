@@ -10,7 +10,7 @@ The [`SimpleSelfContainedDemo`](../Demos/Demos/SimpleSelfContainedDemo.cs) shows
 
 ## Building a Simulation
 
-`Simulation.Create` builds a `Simulation` instance, but has some unusual callback parameters. The callbacks are required and take the form of interface-implementing structs.
+`Simulation.Create` builds a `Simulation` instance, but has some unusual callback parameters- they take the form of interface-implementing structs.
 
 The `TNarrowPhaseCallbacks` parameter handles collision-related callbacks, giving the user a way to control collision filtering, contact manifolds, materials, and a path to implementing things like collision events.
 
