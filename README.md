@@ -36,6 +36,8 @@ Visit the [forums](https://forum.bepuentertainment.com) for discussion and quest
 
 [Getting Started](Documentation/GettingStarted.md)
 
+[Upgrading from v1, concept mapping](Documentation/UpgradingFromV1.md)
+
 [Q&A](Documentation/QuestionsAndAnswers.md)
 
 [Stability Tips](Documentation/StabilityTips.md)
