@@ -1,7 +1,5 @@
 # Simulation Quality and Stability Tips
 
-*This is an early work in progress. More will show up over time as I remember to write them down.*
-
 ## Constraint Stabilization
 If you are observing ununsual oscillations, bouncing, or outright explosions, constraints are likely related. 
 
@@ -25,9 +23,9 @@ If you can, avoid using a constraint frequency greater than half of your solver 
 
 Sometimes, though, you can't use tricks or hacks (as admirable as they are) to stabilize a simulation, or you just want very stiff and stable response. Sometimes you don't have enough control over the simulation to add specific countermeasures- user generated content is rarely simulation friendly. At this point, the solver just needs to run more frequently to compensate.
 
-The obvious way to increase the solver's execution rate is to call `Simulation.Timestep' more frequently with a smaller `dt` parameter. If you can afford it, this is the highest quality option since it also performs collision detection more frequently.
+The obvious way to increase the solver's execution rate is to call `Simulation.Timestep` more frequently with a smaller `dt` parameter. If you can afford it, this is the highest quality option since it also performs collision detection more frequently.
 
-If you're only concerned about solver stability, then you can instead use the `SubsteppingTimestepper` or another custom ITimestepper that works similarly. When calling `Simulation.Create`, pass the SubsteppingTimestepper with the desired number of substeps. For example, if the SubsteppingTimestepper uses 4 substeps and Simulation.Timestep is called at a rate of 60hz, then the solver and integrator will actually run at 240hz. Notably, because increasing the update rate is such a powerful stabilizer, you can usually drop the number of solver velocity iterations to save some simulation time.
+If you're only concerned about solver stability, then you can instead use the `SubsteppingTimestepper` or another custom `ITimestepper` that works similarly. When calling `Simulation.Create`, pass the SubsteppingTimestepper with the desired number of substeps. For example, if the SubsteppingTimestepper uses 4 substeps and Simulation.Timestep is called at a rate of 60hz, then the solver and integrator will actually run at 240hz. Notably, because increasing the update rate is such a powerful stabilizer, you can usually drop the number of solver velocity iterations to save some simulation time.
 
 Using higher update rates can enable the simulation of otherwise impossible mass ratios, like 1000:1, even with fairly low velocity iterations. Here's a rope connected by 240hz frequency constraints with a 1000:1 mass ratio wrecking ball at the end, showing how the number of substeps affects quality:
 
@@ -46,14 +44,14 @@ Some general guidelines:
 2. The "mass ratios" problem: avoid making heavy objects depend on light objects. A tiny box can sit on top of a tank without any issues at all, but a tank would squish a tiny box. Larger mass ratios yield larger stability problems.
 3. If constraints are taking too many iterations to converge and the design allows it, try softening the constraints. A little bit of softness can significantly stabilize a constraint system and avoid the need for higher update rates.
 4. Avoid configuring constraints to 'fight' each other. Opposing constraints tend to require more iterations to converge, and if they're extremely rigid, it can require shorter timesteps or substepping.
-5. When tuning the SpringSettings.Frequency of constraints, prefer values smaller than 0.5 / timeStepDuration. Higher values increase the risk of instability.
+5. When tuning the `SpringSettings.Frequency` of constraints, prefer values smaller than `0.5 / timeStepDuration`. Higher values increase the risk of instability.
 6. If your simulation requires a lot of solver velocity iterations to be stable, try using substepping with lower velocity iteration counts. It might end up more stable *and* faster!
 
 ## Contact Generation
 
--While nonzero speculative margins are required for stable contact, overly large margins can sometimes cause 'ghost' contacts when objects are moving quickly relative to each other. It might look like one object is bouncing off the air a foot away from the other shape. To avoid this, use a smaller speculative margin and consider explicitly enabling continuous collision detection for the shape.
+While nonzero speculative margins are required for stable contact, overly large margins can sometimes cause 'ghost' contacts when objects are moving quickly relative to each other. It might look like one object is bouncing off the air a foot away from the other shape. To avoid this, use a smaller speculative margin and consider explicitly enabling continuous collision detection for the shape.
 
--Prefer simpler shapes. In particular, avoid highly complex convex hulls with a bunch of faces separated by only a few degrees. The solver likes temporally coherent contacts, and excess complexity can cause the set of generated contacts to vary significantly with small rotations. Also, complicated hulls are slow!
+Prefer simpler shapes. In particular, avoid highly complex convex hulls with a bunch of faces separated by only a few degrees. The solver likes temporally coherent contacts, and excess complexity can cause the set of generated contacts to vary significantly with small rotations. Also, complicated hulls are slower!
 
 
 

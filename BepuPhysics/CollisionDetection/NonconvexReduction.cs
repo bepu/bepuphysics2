@@ -61,10 +61,10 @@ namespace BepuPhysics.CollisionDetection
                 {
                     ref var contact = ref Unsafe.Add(ref contactBase, j);
                     AddContact(reducedManifold, ref child, ref contact.Offset, contact.Depth, ref child.Manifold.Normal, contact.FeatureId);
-                    if (reducedManifold->Count == 8)
+                    if (reducedManifold->Count == NonconvexContactManifold.MaximumContactCount)
                         break;
                 }
-                if (reducedManifold->Count == 8)
+                if (reducedManifold->Count == NonconvexContactManifold.MaximumContactCount)
                     break;
             }
 
@@ -92,7 +92,7 @@ namespace BepuPhysics.CollisionDetection
 
             var comparer = default(PrimitiveComparer<float>);
             QuickSort.Sort(ref *depths, ref *indices, 0, contactCount - 1, ref comparer);
-            var newCount = contactCount < 8 ? contactCount : 8;
+            var newCount = contactCount < NonconvexContactManifold.MaximumContactCount ? contactCount : NonconvexContactManifold.MaximumContactCount;
             var minimumIndex = contactCount - newCount;
             for (int i = contactCount - 1; i >= minimumIndex; --i)
             {
