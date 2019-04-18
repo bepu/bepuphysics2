@@ -14,9 +14,9 @@ Some of this might look way more complicated, and it might seem like features we
 | Collision filtering | `e.CollisionInformation.CollisionRules` and `CollisionRules` static functions | `INarrowPhaseCallbacks` has `AllowContactGeneration` and `ConfigureContactManifold` which return a boolean that controls whether narrow phase testing and constraint generation should proceed. See [`RagdollDemo`](../Demos/Demos/RagdollDemo.cs) for an example of collision filtering. |
 | Custom gravity | `entity.Gravity` | `IPoseIntegratorCallbacks` can be used to implement any form of gravity or other per-body velocity influence. See [PlanetDemo](../Demos/Demos/PlanetDemo.cs) for an example. | 
 | Object velocity damping | `entity.LinearDamping` and `entity.AngularDamping` | `IPoseIntegratorCallbacks` again- damping is just a velocity influence. See [DemoCallbacks](../Demos/DemoCallbacks.cs) for an example. |
-| Scene-wide ray casts | `Space.RayCast` or Space.BroadPhase.QueryAccelerator.RayCast for AABB-only testing | `Simulation.RayCast` or `Simulation.BroadPhase.RayCast` for AABB-only testing |
+| Scene-wide ray casts | `Space.RayCast` or `s.BroadPhase.QueryAccelerator.RayCast` for AABB-only testing | `Simulation.RayCast` or `Simulation.BroadPhase.RayCast` for AABB-only testing |
 | Scene-wide sweep tests | `Space.ConvexCast` | `Simulation.Sweep`, which supports angular motion in the sweep as well, or `Simulation.BroadPhase.Sweep` for AABB-only testing |
-| Bounding box queries | Space.BroadPhase.QueryAccelerator.GetEntries | `Simulation.BroadPhase.GetOverlaps` |
+| Bounding box queries | `s.BroadPhase.QueryAccelerator.GetEntries` | `Simulation.BroadPhase.GetOverlaps` |
 | Collidable composed of a bunch of triangles | `StaticMesh` or `InstancedMesh` | `Mesh` |
 | Triangulated heightmap collidable | `Terrain` | There is no dedicated heightmap type at the moment, so just `Mesh` |
 | Sphere collision shape | `SphereShape` | `Sphere` |
