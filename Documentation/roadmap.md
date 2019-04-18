@@ -24,15 +24,16 @@ Should be able to support the core features required by physically complex games
 - All of the (important) constraints from v1.
 - More educational demos, including some deeper dives like showing how to create a custom voxel world collidable.
 
-Of this list, only convex hulls remain incomplete.
+As of this writing, these features are done and the release is being finalized.
 
 ### Nice-to-haves 
 There are a few features which aren't fundamentally required for a release, but which are still high value. These might get pulled into one of the above milestones if possible. If they don't make it into the first version, they might show up later.
 - Further broad phase improvements.
+- Warm starting depth refinement for some expensive convex pair types.
 - Experimental general convex boundary smoothing.
 - Cones.
  
-## Medium term (Q3-Q4 2019)
+## Medium term (Q3 2019-Q3 2020)
 
 Once the initial version is ready, most of my time will move to things other than core engine development. Much of that time will be spent actually using the engine, so expect to see incremental enhancements and fixes driven by practical use.
 

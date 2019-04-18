@@ -57,6 +57,7 @@ namespace BepuPhysics.CollisionDetection
             //hard to notice compared to penetration impulses. TODO: We should, however, test this assumption.
             BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var inner);
             ref var buffer = ref constraintReference.TypeBatch.AccumulatedImpulses;
+            Debug.Assert(constraintReference.TypeBatch.TypeId == ConstraintTypeId);
             if (Convex)
             {
                 //Note that we assume that the tangent friction impulses always come first. This should be safe for now, but it is important to keep in mind for later.
@@ -183,6 +184,7 @@ namespace BepuPhysics.CollisionDetection
             description = default;
             //TODO: Check codegen. This should be a compilation time constant. If it's not, just use the ContactCount that we cached.
             var contactCount = constraintCache.CacheTypeId + 1;
+            Debug.Assert(contactCount == manifold.Count, "Relying on generic specialization; should be the same value!");
             //Contact data comes first in the constraint description memory layout.
             ref var targetContacts = ref Unsafe.As<TConstraintDescription, ConstraintContactData>(ref description);
             ref var targetFeatureIds = ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1);
@@ -199,6 +201,7 @@ namespace BepuPhysics.CollisionDetection
         {
             //TODO: Check codegen. This should be a compilation time constant. If it's not, just use the ContactCount that we cached.
             var contactCount = constraintCache.CacheTypeId + 1;
+            Debug.Assert(contactCount == manifold.Count, "Relying on generic specialization; should be the same value!");
             ref var targetFeatureIds = ref Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1);
             for (int i = 0; i < contactCount; ++i)
             {
@@ -209,7 +212,7 @@ namespace BepuPhysics.CollisionDetection
                 targetContact.Normal = sourceContact.Normal;
                 targetContact.PenetrationDepth = sourceContact.Depth;
             }
-        }        
+        }
     }
     public class ConvexOneBodyAccessor<TConstraintDescription, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
         ContactConstraintAccessor<TConstraintDescription, int, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
@@ -220,6 +223,7 @@ namespace BepuPhysics.CollisionDetection
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
+            Debug.Assert(typeof(TCallBodyHandles) == typeof(int));
             ref var manifold = ref Unsafe.As<TContactManifold, ConvexContactManifold>(ref manifoldPointer);
             CopyContactData(ref manifold, out var constraintCache, out var description);
             description.CopyManifoldWideProperties(ref manifold.Normal, ref material);
@@ -236,6 +240,7 @@ namespace BepuPhysics.CollisionDetection
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
+            Debug.Assert(typeof(TCallBodyHandles) == typeof(TwoBodyHandles));
             ref var manifold = ref Unsafe.As<TContactManifold, ConvexContactManifold>(ref manifoldPointer);
             CopyContactData(ref manifold, out var constraintCache, out var description);
             description.CopyManifoldWideProperties(ref manifold.OffsetB, ref manifold.Normal, ref material);
@@ -252,6 +257,7 @@ namespace BepuPhysics.CollisionDetection
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
+            Debug.Assert(typeof(TCallBodyHandles) == typeof(int));
             ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
             //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
             TConstraintCache constraintCache = default;
@@ -271,6 +277,7 @@ namespace BepuPhysics.CollisionDetection
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
+            Debug.Assert(typeof(TCallBodyHandles) == typeof(TwoBodyHandles));
             ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
             //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
             TConstraintCache constraintCache = default;

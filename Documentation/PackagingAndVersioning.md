@@ -4,7 +4,7 @@ This project does not use semantic versioning. When upgrading to a newer version
 
 Breaking changes should be obvious and appear as compile errors. "Sneaky" breaking changes that significantly change behavior without a compile error will be avoided if at all possible. One notable exception to this is determinism- do not expect different versions of the library to produce identical simulation results.
 
-NuGet packages will be made available, but they will not cover all possible features and packaged releases may sometimes fall considerably behind. The main branch should be kept in a relatively stable state; in the event of bugs or missing features, cloning the source is often a good choice. (TODO: If you're reading this prior to the first big 2.0 release, that bit about staying in a relatively stable state is... not at all true. But it should be better in the future!)
+NuGet packages will be made available, but they will not cover all possible features and packaged releases may sometimes fall considerably behind. The main branch should be kept in a relatively stable state; in the event of bugs or missing features, cloning the source is often a good choice.
 
 The library has a variety of conditional compilation symbols. Rather than publishing a combinatorial mess to NuGet, the expectation is that users of any conditional logic will clone the source.
 

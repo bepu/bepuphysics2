@@ -419,7 +419,7 @@ namespace BepuPhysics.CollisionDetection
             *(int*)NextWorkerCaches[constraintCacheIndex.Cache].GetConstraintCachePointer(constraintCacheIndex) = constraintHandle;
             solver.GetConstraintReference(constraintHandle, out var reference);
             Debug.Assert(reference.IndexInTypeBatch >= 0 && reference.IndexInTypeBatch < reference.TypeBatch.ConstraintCount);
-            narrowPhase.contactConstraintAccessors[constraintCacheIndex.Type].ScatterNewImpulses(ref reference, ref impulses);
+            narrowPhase.contactConstraintAccessors[reference.TypeBatch.TypeId].ScatterNewImpulses(ref reference, ref impulses);
             //This mapping entry had to be deferred until now because no constraint handle was known until now. Now that we have it,
             //we can fill in the pointers back to the overlap mapping.
             ConstraintHandleToPair[constraintHandle].Pair = pair;

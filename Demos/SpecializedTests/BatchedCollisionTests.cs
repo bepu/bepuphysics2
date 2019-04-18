@@ -72,6 +72,7 @@ namespace Demos.SpecializedTests
             var end = Stopwatch.GetTimestamp();
             var time = (end - start) / (double)Stopwatch.Frequency;
             Console.WriteLine($"Completed {count} {typeof(TA).Name}-{typeof(TB).Name} pairs, time (ms): {1e3 * time}, time per pair (ns): {1e9 * time / *callbacks.Count}");
+            //Console.WriteLine($"{typeof(TA).Name}-{typeof(TB).Name} {1e9 * time / *callbacks.Count}");
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]

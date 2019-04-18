@@ -190,8 +190,6 @@ namespace BepuPhysics
         {
             ref var batch = ref batches[shapeBatch.TypeId];
             ref var activeSet = ref bodies.ActiveSet;
-            var minValue = new Vector3(float.MaxValue);
-            var maxValue = new Vector3(-float.MaxValue);
             for (int i = 0; i < batch.Count; ++i)
             {
                 ref var instance = ref batch[i];

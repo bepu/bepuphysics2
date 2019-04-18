@@ -45,12 +45,12 @@ namespace Demos.SpecializedTests
             }
 
             var pointsBuffer = points.Span.Slice(0, points.Count);
-            ConvexHullHelper.CreateShape(pointsBuffer, BufferPool, out _, out var hullShape);
+            CreateShape(pointsBuffer, BufferPool, out _, out var hullShape);
             const int iterationCount = 100;
             var start = Stopwatch.GetTimestamp();
             for (int i = 0; i < iterationCount; ++i)
             {
-                ConvexHullHelper.CreateShape(pointsBuffer, BufferPool, out _, out var perfTestShape);
+                CreateShape(pointsBuffer, BufferPool, out _, out var perfTestShape);
                 perfTestShape.Dispose(BufferPool);
             }
             var end = Stopwatch.GetTimestamp();
@@ -83,7 +83,7 @@ namespace Demos.SpecializedTests
                 }
 
                 var pointsBuffer = points.Span.Slice(0, points.Count);
-                ConvexHullHelper.CreateShape(pointsBuffer, BufferPool, out _, out var hullShape);
+                CreateShape(pointsBuffer, BufferPool, out _, out var hullShape);
 
                 hullShape.Dispose(BufferPool);
             }

@@ -99,8 +99,6 @@ namespace BepuPhysics.CollisionDetection
             ref var newImpulses = ref Unsafe.As<TContactImpulses, float>(ref newImpulsesContainer);
             //Note that the pointer casts below are not actually GC holes:
             //contact manifolds passed down here from the collision batcher and friends are all stored either on the stack or in pinned buffers.
-
-
             int unmatchedCount = 0;
             for (int i = 0; i < newContactCount; ++i)
             {
