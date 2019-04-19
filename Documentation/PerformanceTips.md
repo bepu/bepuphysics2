@@ -3,7 +3,9 @@
 ## Shape Optimization
 -Use simple shapes whenever possible. Spheres and capsules are fastest followed by boxes, triangles, cylinders, and finally convex hulls. While cylinders and convex hulls are not slow in an absolute sense, they can be an order of magnitude slower than spheres and capsules.
 
-The following chart shows the differences in convex collision pairs for a couple of different processors. The 4790K uses 8-wide instructions under RyuJIT, while the 3770K only uses 4-wide SIMD operations. This affects the relative performance on some pairs.
+The following chart shows the differences in convex collision pairs for a couple of different processors. The 4790K uses 8-wide instructions under RyuJIT, while the 3770K only uses 4-wide SIMD operations; this affects the relative performance of some pairs that are able to more fully take advantage of the greater throughput.
+
+(Note that the times are measured relative to the processor's *own* sphere-sphere result. In absolute terms, the 4790K dramatically outperforms the 3770K, sometimes approaching twice as fast.)
 
 <p align="center"><img src="images/collisionPairRelativePerformance.png"></p>
 
