@@ -5,6 +5,7 @@
 
 The following chart shows the differences in convex collision pairs for a couple of different processors. The 4790K uses 8-wide instructions under RyuJIT, while the 3770K only uses 4-wide SIMD operations. This affects the relative performance on some pairs.
 
+<p align="center"><img src="images/collisionPairRelativePerformance.png"></p>
 ![](images/collisionPairRelativePerformance.png)
 
 The convex hulls in this test had 23 points and 42 faces. While you shouldn't be too afraid of cylinders and convex hulls (they're still pretty fast), it's hard to beat the simpler shapes. Many of the simpler pairs take less than 100 nanoseconds to evaluate.
@@ -13,7 +14,7 @@ Note that cylinders and convex hulls will likely [become faster](https://github.
 
 -If you need to use a convex hull, use the minimum number of vertices needed to approximate the shape. The cost of hull collision detection is proportional to their complexity.
 
-![](images/hullComplexityCost.png)
+<p align="center"><img src="images/hullComplexityCost.png"></p>
 
 -For mobile concave shapes, first make sure they *really* need to be concave. Whenever you can get away with a simple convex shape, do so. If there's no choice, prefer using a compound of a minimum number of simple shapes like spheres and capsules rather than convex hulls (as per the earlier tip).
 
