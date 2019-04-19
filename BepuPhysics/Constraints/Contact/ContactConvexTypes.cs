@@ -132,7 +132,7 @@ namespace BepuPhysics.Constraints.Contact
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var target = ref GetOffsetInstance(ref Buffer<Contact1PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var target = ref GetOffsetInstance(ref Buffer<Contact1OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
             
@@ -149,7 +149,7 @@ namespace BepuPhysics.Constraints.Contact
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact1OneBody description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var source = ref GetOffsetInstance(ref Buffer<Contact4OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var source = ref GetOffsetInstance(ref Buffer<Contact1OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
             
@@ -290,7 +290,7 @@ namespace BepuPhysics.Constraints.Contact
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var target = ref GetOffsetInstance(ref Buffer<Contact2PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var target = ref GetOffsetInstance(ref Buffer<Contact2OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
             Vector3Wide.WriteFirst(Contact1.OffsetA, ref target.OffsetA1);
@@ -309,7 +309,7 @@ namespace BepuPhysics.Constraints.Contact
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact2OneBody description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var source = ref GetOffsetInstance(ref Buffer<Contact4OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var source = ref GetOffsetInstance(ref Buffer<Contact2OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
             Vector3Wide.ReadFirst(source.OffsetA1, out description.Contact1.OffsetA);
@@ -465,7 +465,7 @@ namespace BepuPhysics.Constraints.Contact
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var target = ref GetOffsetInstance(ref Buffer<Contact3PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var target = ref GetOffsetInstance(ref Buffer<Contact3OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
             Vector3Wide.WriteFirst(Contact1.OffsetA, ref target.OffsetA1);
@@ -486,7 +486,7 @@ namespace BepuPhysics.Constraints.Contact
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact3OneBody description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var source = ref GetOffsetInstance(ref Buffer<Contact4OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var source = ref GetOffsetInstance(ref Buffer<Contact3OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
             Vector3Wide.ReadFirst(source.OffsetA1, out description.Contact1.OffsetA);
@@ -656,7 +656,7 @@ namespace BepuPhysics.Constraints.Contact
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var target = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var target = ref GetOffsetInstance(ref Buffer<Contact4OneBodyPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(Contact0.OffsetA, ref target.OffsetA0);
             GetFirst(ref target.PenetrationDepth0) = Contact0.PenetrationDepth;
             Vector3Wide.WriteFirst(Contact1.OffsetA, ref target.OffsetA1);
@@ -876,7 +876,7 @@ namespace BepuPhysics.Constraints.Contact
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact1 description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var source = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var source = ref GetOffsetInstance(ref Buffer<Contact1PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
             
@@ -1039,7 +1039,7 @@ namespace BepuPhysics.Constraints.Contact
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact2 description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var source = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var source = ref GetOffsetInstance(ref Buffer<Contact2PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
             Vector3Wide.ReadFirst(source.OffsetA1, out description.Contact1.OffsetA);
@@ -1219,7 +1219,7 @@ namespace BepuPhysics.Constraints.Contact
         public void BuildDescription(ref TypeBatch batch, int bundleIndex, int innerIndex, out Contact3 description)
         {    
             Debug.Assert(batch.TypeId == ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
-            ref var source = ref GetOffsetInstance(ref Buffer<Contact4PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
+            ref var source = ref GetOffsetInstance(ref Buffer<Contact3PrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.ReadFirst(source.OffsetA0, out description.Contact0.OffsetA);
             description.Contact0.PenetrationDepth = GetFirst(ref source.PenetrationDepth0);
             Vector3Wide.ReadFirst(source.OffsetA1, out description.Contact1.OffsetA);

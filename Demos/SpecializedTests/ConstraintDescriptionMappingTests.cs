@@ -137,11 +137,11 @@ namespace Demos.SpecializedTests
             Test<AngularServo>(pool, random, 2);
             Test<AngularMotor>(pool, random, 2);
             Test<Weld>(pool, random, 2);
-            Test<VolumeConstraint>(pool, random, 2);
+            Test<VolumeConstraint>(pool, random, 4);
             Test<DistanceServo>(pool, random, 2);
             Test<DistanceLimit>(pool, random, 2);
             Test<CenterDistanceConstraint>(pool, random, 2);
-            Test<AreaConstraint>(pool, random, 2);
+            Test<AreaConstraint>(pool, random, 3);
             Test<PointOnLineServo>(pool, random, 2);
             Test<LinearAxisServo>(pool, random, 2);
             Test<LinearAxisMotor>(pool, random, 2);
