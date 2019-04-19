@@ -150,7 +150,7 @@ namespace Demos.SpecializedTests
             var triangle = new Triangle(new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1));
             var cylinder = new Cylinder(0.5f, 1f);
 
-            const int pointCount = 32;
+            const int pointCount = 8192;
             var points = new QuickList<Vector3>(pointCount, pool);
             //points.Allocate(pool) = new Vector3(0, 0, 0);
             //points.Allocate(pool) = new Vector3(0, 0, 1);
@@ -165,7 +165,7 @@ namespace Demos.SpecializedTests
                 points.AllocateUnsafely() = new Vector3((float)random.NextDouble(), 1 * (float)random.NextDouble(), (float)random.NextDouble());
                 //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
             }
-
+            
             var pointsBuffer = points.Span.Slice(0, points.Count);
             ConvexHullHelper.CreateShape(pointsBuffer, pool, out _, out var convexHull);
 
@@ -199,11 +199,11 @@ namespace Demos.SpecializedTests
             //Test(ref box, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref box, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref triangle, ref triangle, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            Test(ref triangle, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            //Test(ref triangle, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref triangle, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref cylinder, ref cylinder, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
             //Test(ref cylinder, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
-            //Test(ref convexHull, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
+            Test(ref convexHull, ref convexHull, ref posesA, ref posesB, pool, shapes, registry, iterationCount);
 
 
             //Test<Sphere, SphereWide, Sphere, SphereWide, SpherePairDistanceTester>(sphere, sphere, ref posesA, ref posesB, iterationCount);
