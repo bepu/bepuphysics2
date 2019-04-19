@@ -6,7 +6,6 @@
 The following chart shows the differences in convex collision pairs for a couple of different processors. The 4790K uses 8-wide instructions under RyuJIT, while the 3770K only uses 4-wide SIMD operations. This affects the relative performance on some pairs.
 
 <p align="center"><img src="images/collisionPairRelativePerformance.png"></p>
-![](images/collisionPairRelativePerformance.png)
 
 The convex hulls in this test had 23 points and 42 faces. While you shouldn't be too afraid of cylinders and convex hulls (they're still pretty fast), it's hard to beat the simpler shapes. Many of the simpler pairs take less than 100 nanoseconds to evaluate.
 
