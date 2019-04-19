@@ -9,25 +9,6 @@ using System.Runtime.CompilerServices;
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     using DepthRefiner = BepuPhysics.CollisionDetection.DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>;
-    public struct CylinderPairDepthTester : IDepthTester<Cylinder, CylinderWide, Cylinder, CylinderWide>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Test(in CylinderWide a, in CylinderWide b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, in Vector3Wide normal, out Vector<float> scaledDepth)
-        {
-            //dot(extremeA - extremeB, N) for a potentially non-unit N.
-            //extremeA = (N.X, 0, N.Z) * radiusA / sqrt(N.X^2 + N.Z^2) + (0, N.Y > 0 ? a.HalfLength : -a.HalfLength, 0)
-            //extremeB = localOffsetB + (dot(-N, B.X) * B.X + dot(-N, B.Z) * B.Z) * radiusB / sqrt(dot(-N, B.X)^2 + dot(-N, B.Z)^2) + B.Y * (dot(-N, B.Y) > 0 ? b.HalfLength : -b.HalfLength)
-            //dot(N, extremeA) = horizontalNormalLengthA * radiusA + N.Y * (N.Y > 0 ? a.HalfLength : -a.HalfLength)
-            //dot(N, extremeB) = dot(localOffsetB, N) - horizontalNormalLengthB * radiusB + dot(N, B.Y) * (dot(-N, B.Y) > 0 ? b.HalfLength : -b.HalfLength)
-            var horizontalNormalLengthA = Vector.SquareRoot(normal.X * normal.X + normal.Z * normal.Z);
-            var contributionA = horizontalNormalLengthA * a.Radius + normal.Y * Vector.ConditionalSelect(Vector.LessThan(normal.Y, Vector<float>.Zero), -a.HalfLength, a.HalfLength);
-            Matrix3x3Wide.TransformByTransposedWithoutOverlap(normal, localOrientationB, out var localNormalB);
-            var horizontalNormalLengthB = Vector.SquareRoot(localNormalB.X * localNormalB.X + localNormalB.Z * localNormalB.Z);
-            Vector3Wide.Dot(localOffsetB, normal, out var offsetDotN);
-            var contributionB = offsetDotN - horizontalNormalLengthB * b.Radius + localNormalB.Y * Vector.ConditionalSelect(Vector.GreaterThan(localNormalB.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
-            scaledDepth = contributionA - contributionB;
-        }
-    }
 
     public struct CylinderPairTester : IPairTester<CylinderWide, CylinderWide, Convex4ContactManifoldWide>
     {
