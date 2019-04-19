@@ -438,7 +438,7 @@ namespace BepuPhysics.CollisionDetection
                     ref var aTree = ref aInStaticTree ? ref Simulation.BroadPhase.StaticTree : ref Simulation.BroadPhase.ActiveTree;
                     ref var bTree = ref bInStaticTree ? ref Simulation.BroadPhase.StaticTree : ref Simulation.BroadPhase.ActiveTree;
                     BroadPhase.GetBoundsPointers(aCollidable.BroadPhaseIndex, ref aTree, out var aMin, out var aMax);
-                    BroadPhase.GetBoundsPointers(aCollidable.BroadPhaseIndex, ref bTree, out var bMin, out var bMax);
+                    BroadPhase.GetBoundsPointers(bCollidable.BroadPhaseIndex, ref bTree, out var bMin, out var bMax);
                     var maximumRadiusA = (*aMax - *aMin).Length() * 0.5f;
                     var maximumRadiusB = (*bMax - *bMin).Length() * 0.5f;
                     if ((velocityA.Angular.Length() * maximumRadiusA + velocityB.Angular.Length() * maximumRadiusB + (velocityB.Linear - velocityA.Linear).Length()) * timestepDuration > speculativeMargin)

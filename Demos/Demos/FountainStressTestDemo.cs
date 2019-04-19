@@ -313,11 +313,16 @@ namespace Demos.Demos
                 {
                     Pose = new RigidPose(spawnLocation),
                     LocalInertia = inertia,
-                    Collidable = new CollidableDescription(shapeIndex, 5),
+                    Collidable = new CollidableDescription(shapeIndex, 5f),
                     Activity = new BodyActivityDescription(0.1f),
                     Velocity = new BodyVelocity(new Vector3(-30 + 60 * (float)random.NextDouble(), 75, -30 + 60 * (float)random.NextDouble()), default)
                 };
-
+                switch (random.Next(3))
+                {
+                    case 0: description.Collidable.Continuity = ContinuousDetectionSettings.Discrete; break;
+                    case 1: description.Collidable.Continuity = ContinuousDetectionSettings.Passive; break;
+                    case 2: description.Collidable.Continuity = ContinuousDetectionSettings.Continuous(1e-3f, 1e-3f); break;
+                }
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(description), BufferPool);
 
             }

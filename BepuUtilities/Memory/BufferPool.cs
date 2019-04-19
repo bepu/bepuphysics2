@@ -527,7 +527,10 @@ namespace BepuUtilities.Memory
                 for (int i = 0; i < pools.Length; ++i)
                 {
                     if (pools[i].BlockCount > 0)
+                    {
                         pinned = pools[i].Blocks[0].Pinned;
+                        break;
+                    }
                 }
                 ValidatePinnedState(pinned);
                 return pinned;
