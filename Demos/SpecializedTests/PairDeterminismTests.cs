@@ -74,7 +74,7 @@ namespace Demos.SpecializedTests
             }
             batcher.Flush();
         }
-        static RigidPose CreateRandomPose(Random random, BoundingBox positionBounds)
+        public static RigidPose CreateRandomPose(Random random, BoundingBox positionBounds)
         {
             RigidPose pose;
             var span = positionBounds.Max - positionBounds.Min;

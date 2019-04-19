@@ -666,24 +666,25 @@ namespace Demos.Demos
             return 6;
         }
 
-        private unsafe void CreateDeformable(in Vector3 position, in Quaternion orientation, float density, float cellSize, in SpringSettings weldSpringiness, in SpringSettings volumeSpringiness, int instanceId, BodyProperty<DeformableCollisionFilter> filters,
+        internal unsafe static void CreateDeformable(Simulation simulation, in Vector3 position, in Quaternion orientation, float density, float cellSize, in SpringSettings weldSpringiness, in SpringSettings volumeSpringiness, int instanceId, BodyProperty<DeformableCollisionFilter> filters,
             ref Buffer<Vector3> vertices, ref CellSet vertexSpatialIndices, ref Buffer<CellVertexIndices> cellVertexIndices, ref Buffer<TetrahedronVertices> tetrahedraVertexIndices)
         {
-            BufferPool.Take<int>(vertices.Length, out var vertexEdgeCounts);
+            var pool = simulation.BufferPool;
+            pool.Take<int>(vertices.Length, out var vertexEdgeCounts);
             vertexEdgeCounts.Clear(0, vertices.Length);
-            var edges = new QuickSet<Edge, Edge>(vertices.Length * 3, BufferPool);
-            var edgeCountForInternalVertex = CreateHexahedralUniqueEdgesList(ref cellVertexIndices, ref vertexEdgeCounts, BufferPool, ref edges);
+            var edges = new QuickSet<Edge, Edge>(vertices.Length * 3, pool);
+            var edgeCountForInternalVertex = CreateHexahedralUniqueEdgesList(ref cellVertexIndices, ref vertexEdgeCounts, pool, ref edges);
             //var edgeCountForInternalVertex = CreateTetrahedralUniqueEdgesList(ref tetrahedraVertexIndices, ref vertexEdgeCounts, ref cellEdgePool, ref intPool, ref edges);
 
-            BufferPool.Take<int>(vertices.Length, out var vertexHandles);
+            pool.Take<int>(vertices.Length, out var vertexHandles);
             var vertexShape = new Sphere(cellSize * 0.7f);
             var massPerVertex = density * (cellSize * cellSize * cellSize);
             vertexShape.ComputeInertia(massPerVertex, out var vertexInertia);
             //vertexInertia.InverseInertiaTensor = default;
-            var vertexShapeIndex = Simulation.Shapes.Add(vertexShape);
+            var vertexShapeIndex = simulation.Shapes.Add(vertexShape);
             for (int i = 0; i < vertices.Length; ++i)
             {
-                vertexHandles[i] = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(
+                vertexHandles[i] = simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(
                     position + Quaternion.Transform(vertices[i], orientation), orientation), vertexInertia,
                     //Bodies don't have to have collidables. Take advantage of this for all the internal vertices.
                     new CollidableDescription(vertexEdgeCounts[i] == edgeCountForInternalVertex ? new TypedIndex() : vertexShapeIndex, cellSize * 0.5f),
@@ -696,7 +697,7 @@ namespace Demos.Demos
             {
                 ref var edge = ref edges[i];
                 var offset = vertices[edge.B] - vertices[edge.A];
-                Simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
+                simulation.Solver.Add(vertexHandles[edge.A], vertexHandles[edge.B],
                     new Weld
                     {
                         LocalOffset = offset,
@@ -709,12 +710,12 @@ namespace Demos.Demos
             for (int i = 0; i < tetrahedraVertexIndices.Length; ++i)
             {
                 ref var tetrahedron = ref tetrahedraVertexIndices[i];
-                Simulation.Solver.Add(vertexHandles[tetrahedron.A], vertexHandles[tetrahedron.B], vertexHandles[tetrahedron.C], vertexHandles[tetrahedron.D],
+                simulation.Solver.Add(vertexHandles[tetrahedron.A], vertexHandles[tetrahedron.B], vertexHandles[tetrahedron.C], vertexHandles[tetrahedron.D],
                     new VolumeConstraint(vertices[tetrahedron.A], vertices[tetrahedron.B], vertices[tetrahedron.C], vertices[tetrahedron.D], volumeSpringiness));
             }
 
-            BufferPool.Return(ref vertexEdgeCounts);
-            edges.Dispose(BufferPool);
+            pool.Return(ref vertexEdgeCounts);
+            edges.Dispose(pool);
         }
 
 
@@ -737,7 +738,7 @@ namespace Demos.Demos
             var volumeSpringiness = new SpringSettings(30f, 1);
             for (int i = 0; i < 5; ++i)
             {
-                CreateDeformable(new Vector3(i * 3, 5 + i * 1.5f, 0), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * (i * 0.55f)), 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
+                CreateDeformable(Simulation, new Vector3(i * 3, 5 + i * 1.5f, 0), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * (i * 0.55f)), 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
             }
 
             BufferPool.Return(ref vertices);
