@@ -54,9 +54,9 @@ namespace Demos.SpecializedTests
             var sphereIndex = Simulation.Shapes.Add(sphere);
             var cylinderIndex = Simulation.Shapes.Add(cylinder);
             var hullIndex = Simulation.Shapes.Add(convexHull);
-            const int width = 16;
-            const int height = 8;
-            const int length = 16;
+            const int width = 1;
+            const int height = 1;
+            const int length = 1;
             var shapeCount = 0;
             for (int i = 0; i < width; ++i)
             {
@@ -80,7 +80,7 @@ namespace Demos.SpecializedTests
                             }
                         };
                         var index = shapeCount++;
-                        switch (index % 5)
+                        switch (2 + index % 5)
                         {
                             case 0:
                                 bodyDescription.Collidable.Shape = sphereIndex;

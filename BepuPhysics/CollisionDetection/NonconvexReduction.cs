@@ -195,8 +195,6 @@ namespace BepuPhysics.CollisionDetection
             int initialBestScoreIndex = 0;
             var remainingContacts = new QuickList<RemainingCandidate>(ChildCount * 4, pool);
             var extremityScale = maximumDistance * 5e-3f;
-            var minimumDepth = float.MaxValue;
-            var maximumDepth = float.MinValue;
             for (int childIndex = 0; childIndex < ChildCount; ++childIndex)
             {
                 ref var child = ref Children[childIndex];
@@ -224,10 +222,6 @@ namespace BepuPhysics.CollisionDetection
                         initialBestScore = candidateScore;
                         initialBestScoreIndex = remainingContacts.Count;
                     }
-                    if (contact.Depth > maximumDepth)
-                        maximumDepth = contact.Depth;
-                    if (contact.Depth < minimumDepth)
-                        minimumDepth = contact.Depth;
                     ref var indices = ref remainingContacts.AllocateUnsafely();
                     indices.ChildIndex = childIndex;
                     indices.ContactIndex = contactIndex;
@@ -259,9 +253,7 @@ namespace BepuPhysics.CollisionDetection
             //This is going to be a greedy and nonoptimal search, but being consistent and good enough is more important than true optimality.
 
             //TODO: This could be significantly optimized. Many approximations would get 95% of the benefit, and even the full version could be vectorized in a few different ways.
-            var depthSpan = maximumDepth - minimumDepth;
-            var inverseDepthSpan = depthSpan > 0 ? 1f / depthSpan : 0;
-            //var inverseDepthSpan = depthSpan > 0 ? 1f / depthSpan : 0;
+            var depthMultiplier = 1000f / maximumDistance;
             var reducedAngularJacobians = stackalloc Vector3[NonconvexContactManifold.MaximumContactCount];
             *reducedAngularJacobians = Vector3.Cross(manifold->Contact0.Offset, manifold->Contact0.Normal);
             while (remainingContacts.Count > 0 && manifold->Count < NonconvexContactManifold.MaximumContactCount)
@@ -276,7 +268,9 @@ namespace BepuPhysics.CollisionDetection
                     //The candidate which has the greatest remaining impulse after applying the existing manifold's constraints is considered to be the most 'constraining' 
                     //potential addition. This can be thought of as an approximate constraint solve.
                     ref var remainingContact = ref Unsafe.Add(ref child.Manifold.Contact0, remainingContactIndices.ContactIndex);
-                    var depthImpulse = remainingContact.Depth < 0 ? -0.2f : -1f - (remainingContact.Depth - minimumDepth) * inverseDepthSpan;
+                    var depthImpulse = -1 - remainingContact.Depth * depthMultiplier;
+                    if (depthImpulse > -0.01f)
+                        depthImpulse = -0.01f;
 
                     var linear = depthImpulse * child.Manifold.Normal;
                     var angular = Vector3.Cross(remainingContact.Offset, linear);
@@ -299,8 +293,8 @@ namespace BepuPhysics.CollisionDetection
                     //(They should have *already* been suppressed by using a mini-solver, but without converging the solve solution, 
                     //it's possible for the order of contact evaluation to allow redundants.)
                     score *= remainingContactIndices.Uniqueness;
-                    //if (remainingContact.Depth < 0)
-                    //    score *= 0.2f;
+                    if (remainingContact.Depth < 0)
+                        score *= 0.2f;
                     if (score > bestScore)
                     {
                         bestScore = score;
@@ -416,205 +410,6 @@ namespace BepuPhysics.CollisionDetection
             }
         }
 
-        //unsafe struct ChildComparer : IComparerRef<int>
-        //{
-        //    public NonconvexReductionChild* Children;
-        //    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //    public int Compare(ref int a, ref int b)
-        //    {
-        //        ref var childA = ref Children[a];
-        //        ref var childB = ref Children[b];
-        //        var packedA = ((long)childA.ChildIndexA << 32) | (long)childA.ChildIndexB;
-        //        var packedB = ((long)childA.ChildIndexB << 32) | (long)childB.ChildIndexB;
-        //        return packedA.CompareTo(packedB);
-        //    }
-        //}
-        //unsafe struct DepthComparer : IComparerRef<int>
-        //{
-        //    public NonconvexReductionChild* Children;
-        //    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //    public int Compare(ref int a, ref int b)
-        //    {
-        //        var childIndexA = a >> 2;
-        //        var childIndexB = b >> 2;
-        //        ref var childA = ref Children[childIndexA];
-        //        ref var childB = ref Children[childIndexB];
-        //        var depthA = Unsafe.Add(ref childA.Manifold.Contact0, a & 3).Depth;
-        //        var depthB = Unsafe.Add(ref childB.Manifold.Contact0, b & 3).Depth;
-        //        return depthB.CompareTo(depthA);
-        //    }
-        //}
-
-        //        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //        public unsafe void Flush<TCallbacks>(int pairId, ref CollisionBatcher<TCallbacks> batcher) where TCallbacks : struct, ICollisionCallbacks
-        //        {
-        //            Console.WriteLine("Reducing!");
-        //            Debug.Assert(ChildCount > 0);
-        //            if (ChildCount == CompletedChildCount)
-        //            {
-        //                //This continuation is ready for processing. Find which contact subset to report.
-        //                int populatedChildManifoldCount = 0;
-        //                //We cache an index in case there is only one populated manifold. Order of discovery doesn't matter- this value only gets used when there's one manifold.
-        //                var activeChildren = stackalloc int[ChildCount];
-        //                int samplePopulatedChildIndex = 0;
-        //                int totalContactCount = 0;
-        //                for (int i = 0; i < ChildCount; ++i)
-        //                {
-        //                    ref var child = ref Children[i];
-        //                    var childManifoldCount = child.Manifold.Count;
-        //                    if (childManifoldCount > 0)
-        //                    {
-        //                        totalContactCount += childManifoldCount;
-        //                        activeChildren[populatedChildManifoldCount] = i;
-        //                        ++populatedChildManifoldCount;
-        //                        samplePopulatedChildIndex = i;
-        //                        for (int j = 0; j < child.Manifold.Count; ++j)
-        //                        {
-        //                            //Push all contacts into the space of the parent object.
-        //                            Unsafe.Add(ref child.Manifold.Contact0, j).Offset += child.OffsetA;
-        //                        }
-        //                    }
-        //                }
-        //                ref var sampleChild = ref Children[samplePopulatedChildIndex];
-
-        //                if (populatedChildManifoldCount > 1)
-        //                {
-        //                    //Nonconvex reduction operates in two passes. In the first pass, we try to group manifolds with similar normals together and then run a 
-        //                    //heuristic reduction on them. Since their normals are similar, we do the same thing we do in some of the convex collision testers- depth/extremity, distance, and area heuristics.
-        //                    var manifoldGroup = stackalloc int[populatedChildManifoldCount];
-        //                    var manifoldAlreadyGrouped = stackalloc bool[populatedChildManifoldCount];
-        //                    var groupDepths = stackalloc float[totalContactCount];
-        //                    var groupCandidates = stackalloc ManifoldCandidateScalar[totalContactCount];
-        //                    var firstPassContacts = stackalloc int[totalContactCount];
-        //                    for (int i = 0; i < populatedChildManifoldCount; ++i)
-        //                    {
-        //                        manifoldAlreadyGrouped[i] = false;
-        //                    }
-
-        //                    //Sort the active children by child indices to avoid report ordering sensitivity.
-        //                    ChildComparer childComparer;
-        //                    childComparer.Children = (NonconvexReductionChild*)Children.Memory;
-        //                    QuickSort.Sort(ref *activeChildren, 0, populatedChildManifoldCount - 1, ref childComparer);
-        //                    int totalReducedCount = 0;
-        //                    for (int activeChildIndex = 0; activeChildIndex < populatedChildManifoldCount; ++activeChildIndex)
-        //                    {
-        //                        if (manifoldAlreadyGrouped[activeChildIndex])
-        //                            continue;
-        //                        manifoldAlreadyGrouped[activeChildIndex] = true;
-        //                        *manifoldGroup = activeChildIndex;
-        //                        var countInGroup = 1;
-
-        //                        var originChildIndex = activeChildren[activeChildIndex];
-        //                        ref var groupOriginManifold = ref Children[originChildIndex].Manifold;
-        //                        for (int candidateIndex = activeChildIndex + 1; candidateIndex < populatedChildManifoldCount; ++candidateIndex)
-        //                        {
-        //                            if (manifoldAlreadyGrouped[candidateIndex])
-        //                                continue;
-        //                            ref var candidateNormal = ref Children[activeChildren[candidateIndex]].Manifold.Normal;
-        //                            var dot = Vector3.Dot(groupOriginManifold.Normal, candidateNormal);
-        //                            if (dot > 0.9999f)
-        //                            {
-        //                                //The normals are similar; put this into the same group.
-        //                                manifoldGroup[countInGroup++] = candidateIndex;
-        //                                manifoldAlreadyGrouped[candidateIndex] = true;
-        //                            }
-        //                        }
-
-        //                        if (countInGroup > 1)
-        //                        {
-        //                            //There is more than one manifold in the group; run a reduction over all the candidates.
-        //                            Helpers.BuildOrthnormalBasis(groupOriginManifold.Normal, out var tangentX, out var tangentY);
-
-        //                            int groupContactCount = 0;
-        //                            var min = new Vector2(float.MaxValue);
-        //                            var max = new Vector2(float.MinValue);
-        //                            for (int indexInGroup = 0; indexInGroup < countInGroup; ++indexInGroup)
-        //                            {
-        //                                var childIndex = activeChildren[manifoldGroup[indexInGroup]];
-        //                                ref var child = ref Children[activeChildren[manifoldGroup[indexInGroup]]];
-        //                                for (int j = 0; j < child.Manifold.Count; ++j)
-        //                                {
-        //                                    ref var contact = ref Unsafe.Add(ref child.Manifold.Contact0, j);
-        //                                    var groupContactIndex = groupContactCount++;
-        //                                    groupDepths[groupContactIndex] = contact.Depth;
-        //                                    ref var candidate = ref groupCandidates[groupContactIndex];
-        //                                    candidate.X = Vector3.Dot(tangentX, contact.Offset);
-        //                                    candidate.Y = Vector3.Dot(tangentY, contact.Offset);
-        //                                    ref var candidateLocation = ref Unsafe.As<float, Vector2>(ref candidate.X);
-        //                                    min = Vector2.Min(candidateLocation, min);
-        //                                    max = Vector2.Max(candidateLocation, max);
-        //                                    //Cache the source child and contact index within the child manifold so we can reconstruct the final contact list.
-        //                                    candidate.FeatureId = j | (childIndex << 2);
-        //                                }
-        //                            }
-        //                            var span = max - min;
-        //                            var sizeEstimate = span.X > span.Y ? span.X : span.Y;
-        //                            var reducedContacts = firstPassContacts + totalReducedCount;
-        //                            ManifoldCandidateHelper.Reduce(groupCandidates, groupDepths, groupContactCount, sizeEstimate, reducedContacts, out var reducedCount);
-        //                            totalReducedCount += reducedCount;
-        //                        }
-        //                        else
-        //                        {
-        //                            var reducedContacts = firstPassContacts + totalReducedCount;
-        //                            for (int i = 0; i < groupOriginManifold.Count; ++i)
-        //                            {
-        //                                reducedContacts[i] = i | (originChildIndex << 2);
-        //                            }
-        //                            totalReducedCount += groupOriginManifold.Count;
-        //                        }
-        //                    }
-        //                    //Sort the reduced set by depth and pick the N deepest ones, where N is the maximum size of our nonconvex manifold.
-        //                    DepthComparer depthComparer;
-        //                    depthComparer.Children = (NonconvexReductionChild*)Children.Memory;
-        //                    QuickSort.Sort(ref *firstPassContacts, 0, totalReducedCount - 1, ref depthComparer);
-        //                    for (int i = 0; i < totalReducedCount; ++i)
-        //                    {
-        //                        Console.WriteLine($"Depth {i}: {Unsafe.Add(ref Children[firstPassContacts[i] >> 2].Manifold.Contact0, firstPassContacts[i] & 3).Depth}");
-        //                    }
-        //                    //The first pass is now complete.
-        //                    if (totalReducedCount > NonconvexContactManifold.MaximumContactCount)
-        //                    {
-
-        //                        //for (int i = 0; i < totalReducedCount; ++i)
-        //                        //{
-        //                        //    Console.WriteLine($"Depth {i}: {Unsafe.Add(ref Children[firstPassContacts[i] >> 2].Manifold.Contact0, firstPassContacts[i] & 3).Depth}");
-        //                        //}
-        //                        totalReducedCount = NonconvexContactManifold.MaximumContactCount;
-        //                    }
-        //                    //There are multiple contributing child manifolds, so just assume that the resulting manifold is going to be nonconvex.
-        //                    NonconvexContactManifold reducedManifold;
-        //                    //We should assume that the stack memory backing the reduced manifold is uninitialized. We rely on the count, so initialize it manually.
-        //                    reducedManifold.Count = 0;
-        //                    for (int i = 0; i < totalReducedCount; ++i)
-        //                    {
-        //                        var packedIndices = firstPassContacts[i];
-        //                        var contactIndex = packedIndices & 3;
-        //                        var childIndex = packedIndices >> 2;
-        //                        AddContact(ref Children[childIndex], contactIndex, &reducedManifold);
-        //                    }
-
-        //                    //The manifold offsetB is the offset from shapeA origin to shapeB origin.
-        //                    reducedManifold.OffsetB = sampleChild.Manifold.OffsetB - sampleChild.OffsetB + sampleChild.OffsetA;
-        //                    batcher.Callbacks.OnPairCompleted(pairId, &reducedManifold);
-        //                }
-        //                else
-        //                {
-        //                    //Two possibilities here: 
-        //                    //1) populatedChildManifolds == 1, and samplePopulatedChildIndex is the index of that sole populated manifold. We can directly report it.
-        //                    //It's useful to directly report the convex child manifold for performance reasons- convex constraints do not require multiple normals and use a faster friction model.
-        //                    //2) populatedChildManifolds == 0, and samplePopulatedChildIndex is 0. Given that we know this continuation is only used when there is at least one manifold expected
-        //                    //and that we can only hit this codepath if all manifolds are empty, reporting manifold 0 is perfectly fine.
-        //                    //The manifold offsetB is the offset from shapeA origin to shapeB origin.
-        //                    sampleChild.Manifold.OffsetB = sampleChild.Manifold.OffsetB - sampleChild.OffsetB + sampleChild.OffsetA;
-        //                    batcher.Callbacks.OnPairCompleted(pairId, (ConvexContactManifold*)Unsafe.AsPointer(ref sampleChild.Manifold));
-        //                }
-        //                batcher.Pool.ReturnUnsafely(Children.Id);
-        //#if DEBUG
-        //                //This makes it a little easier to detect invalid accesses that occur after disposal.
-        //                this = default;
-        //#endif
-        //            }
-        //        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ConvexContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
