@@ -96,7 +96,7 @@ namespace BepuPhysics
         /// <returns>New simulation.</returns>
         public static Simulation Create<TNarrowPhaseCallbacks, TPoseIntegratorCallbacks>(
             BufferPool bufferPool, TNarrowPhaseCallbacks narrowPhaseCallbacks, TPoseIntegratorCallbacks poseIntegratorCallbacks, ITimestepper timestepper = null,
-            int solverIterationCount = 8, int solverFallbackBatchThreshold = 32, SimulationAllocationSizes? initialAllocationSizes = null)
+            int solverIterationCount = 8, int solverFallbackBatchThreshold = 64, SimulationAllocationSizes? initialAllocationSizes = null)
             where TNarrowPhaseCallbacks : struct, INarrowPhaseCallbacks
             where TPoseIntegratorCallbacks : struct, IPoseIntegratorCallbacks
         {

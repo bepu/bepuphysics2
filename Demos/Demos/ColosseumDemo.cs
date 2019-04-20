@@ -102,7 +102,7 @@ namespace Demos.Demos
             bulletDescription = BodyDescription.CreateDynamic(new Vector3(), bulletInertia, new CollidableDescription(Simulation.Shapes.Add(bulletShape), 10), new BodyActivityDescription(0.01f));
 
             var shootiePatootieShape = new Sphere(3f);
-            shootiePatootieShape.ComputeInertia(1000, out var shootiePatootieInertia);
+            shootiePatootieShape.ComputeInertia(100, out var shootiePatootieInertia);
             shootiePatootieDescription = BodyDescription.CreateDynamic(new Vector3(), shootiePatootieInertia, new CollidableDescription(Simulation.Shapes.Add(shootiePatootieShape), 10), new BodyActivityDescription(0.01f));
         }
 

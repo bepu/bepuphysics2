@@ -41,26 +41,22 @@ namespace Demos
         public DemoSet()
         {
             AddOption<CarDemo>();
-            AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<ColosseumDemo>();
             AddOption<PyramidDemo>();
             AddOption<RagdollDemo>();
             AddOption<CharacterDemo>();
-            AddOption<CompoundTestDemo>();
+            AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<ClothDemo>();
             AddOption<NewtDemo>();
             AddOption<PlanetDemo>();
-            AddOption<RopeStabilityDemo>();
-            AddOption<SubsteppingDemo>();
+            AddOption<CompoundTestDemo>();
             AddOption<BlockChainDemo>();
             AddOption<RayCastingDemo>();
             AddOption<SweepDemo>();
             AddOption<ContactEventsDemo>();
             AddOption<CustomVoxelCollidableDemo>();
-            AddOption<ShapePileTestDemo>();
-            AddOption<CylinderTestDemo>();
-            AddOption<ConvexHullTestDemo>();
-            AddOption<FountainStressTestDemo>();
+            AddOption<RopeStabilityDemo>();
+            AddOption<SubsteppingDemo>();
         }
 
         public int Count { get { return options.Count; } }
