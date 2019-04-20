@@ -1,8 +1,8 @@
 # Roadmap
 
-This is a high level plan for future development. All dates and features are goals, not guarantees. For a detailed breakdown of tasks in progress, check the [issues](https://github.com/bepu/bepuphysics2/issues) page.
+This is a high level plan for future development. All dates and features are speculative. For a detailed breakdown of tasks in progress, check the [issues](https://github.com/bepu/bepuphysics2/issues) page.
 
-## Near future (Q2-Q3 2019)
+## Near term (2019, early 2020)
 
 After v2's initial release, most of my time will move to things other than core engine development. Much of that time will be spent actually using the engine, so expect to see incremental enhancements and fixes driven by practical use.
 
@@ -17,10 +17,7 @@ Some things that didn't make it into the first release may show up. They may inc
 6. Mesh/compound intersection optimization.
 7. Ray cast optimization, particularly with large batches of rays.
 8. Lower deactivation/reactivation spike overhead.
- 
-## Medium term (Q3 2019-Q3 2020)
-
-I expect a new wave of SIMD intrinsics will become available during this period. When this happens, I will likely revisit the various SIMD implementations with some new tools. That will likely result in a nontrivial speedup for the non-bandwidth-bound paths.
+9. Platform-specific intrinsics. I will likely (eventually) revisit the various SIMD implementations with some new tools for speeding things up, though the question of maintaining .NET Standard support may delay things.
 
 ## Long term
 
