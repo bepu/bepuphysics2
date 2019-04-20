@@ -54,9 +54,9 @@ namespace Demos.SpecializedTests
             var sphereIndex = Simulation.Shapes.Add(sphere);
             var cylinderIndex = Simulation.Shapes.Add(cylinder);
             var hullIndex = Simulation.Shapes.Add(convexHull);
-            const int width = 1;
-            const int height = 1;
-            const int length = 1;
+            const int width = 8;
+            const int height = 16;
+            const int length = 8;
             var shapeCount = 0;
             for (int i = 0; i < width; ++i)
             {
@@ -67,7 +67,7 @@ namespace Demos.SpecializedTests
                         var location = new Vector3(6, 3, 6) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 2.5f, -length * 1.5f);
                         var bodyDescription = new BodyDescription
                         {
-                            Activity = new BodyActivityDescription(-0.01f),
+                            Activity = new BodyActivityDescription(0.01f),
                             Pose = new RigidPose
                             {
                                 Orientation = BepuUtilities.Quaternion.Identity,

@@ -148,77 +148,73 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe bool ShouldBlockNormal(in TestTriangle triangle, Vector3* meshSpaceContacts, int contactCount, in Vector3 meshSpaceNormal)
+        private static unsafe bool ShouldBlockNormal(in TestTriangle triangle, in Vector3 meshSpaceContact, in Vector3 meshSpaceNormal)
         {
             //While we don't have a decent way to do truly scaling SIMD operations within the context of a single manifold vs triangle test, we can at least use 4-wide operations
             //to accelerate each individual contact test. 
-            for (int i = 0; i < contactCount; ++i)
-            {
-                // distanceFromPlane = (Position - a) * N / ||N||
-                // distanceFromPlane^2 = ((Position - a) * N)^2 / (N * N)
-                // distanceAlongEdgeNormal^2 = ((Position - edgeStart) * edgeN)^2 / ||edgeN||^2
+            // distanceFromPlane = (Position - a) * N / ||N||
+            // distanceFromPlane^2 = ((Position - a) * N)^2 / (N * N)
+            // distanceAlongEdgeNormal^2 = ((Position - edgeStart) * edgeN)^2 / ||edgeN||^2
 
-                //There are four lanes, one for each plane of consideration:
-                //X: Plane normal
-                //Y: AB edge normal
-                //Z: BC edge normal
-                //W: CA edge normal
-                //They're all the same operation, so we can do them 4-wide. That's better than doing a bunch of individual horizontal dot products.
-                ref var contact = ref meshSpaceContacts[i];
-                var px = new Vector4(contact.X);
-                var py = new Vector4(contact.Y);
-                var pz = new Vector4(contact.Z);
-                var offsetX = px - triangle.AnchorX;
-                var offsetY = py - triangle.AnchorY;
-                var offsetZ = pz - triangle.AnchorZ;
-                var distanceAlongNormal = offsetX * triangle.NX + offsetY * triangle.NY + offsetZ * triangle.NZ;
-                //Note that very very thin triangles can result in questionable acceptance due to not checking for true distance- 
-                //a position might be way outside a vertex, but still within edge plane thresholds. We're assuming that the impact of this problem will be minimal.
-                if (distanceAlongNormal.X <= triangle.DistanceThreshold &&
-                    distanceAlongNormal.Y <= triangle.DistanceThreshold &&
-                    distanceAlongNormal.Z <= triangle.DistanceThreshold &&
-                    distanceAlongNormal.W <= triangle.DistanceThreshold)
+            //There are four lanes, one for each plane of consideration:
+            //X: Plane normal
+            //Y: AB edge normal
+            //Z: BC edge normal
+            //W: CA edge normal
+            //They're all the same operation, so we can do them 4-wide. That's better than doing a bunch of individual horizontal dot products.
+            var px = new Vector4(meshSpaceContact.X);
+            var py = new Vector4(meshSpaceContact.Y);
+            var pz = new Vector4(meshSpaceContact.Z);
+            var offsetX = px - triangle.AnchorX;
+            var offsetY = py - triangle.AnchorY;
+            var offsetZ = pz - triangle.AnchorZ;
+            var distanceAlongNormal = offsetX * triangle.NX + offsetY * triangle.NY + offsetZ * triangle.NZ;
+            //Note that very very thin triangles can result in questionable acceptance due to not checking for true distance- 
+            //a position might be way outside a vertex, but still within edge plane thresholds. We're assuming that the impact of this problem will be minimal.
+            if (distanceAlongNormal.X <= triangle.DistanceThreshold &&
+                distanceAlongNormal.Y <= triangle.DistanceThreshold &&
+                distanceAlongNormal.Z <= triangle.DistanceThreshold &&
+                distanceAlongNormal.W <= triangle.DistanceThreshold)
+            {
+                //The contact is near the triangle. Is the normal infringing on the triangle's face region?
+                //This occurs when:
+                //1) The contact is near an edge, and the normal points inward along the edge normal.
+                //2) The contact is on the inside of the triangle.
+                //Note that we are stricter about being on the edge than we were about being nearby.
+                //That's because infringement checks require a normal infringement along every edge that the contact is on;
+                //being too aggressive about edge classification would cause infringements to sometimes be ignored.
+                var negativeThreshold = triangle.DistanceThreshold * -1e-2f;
+                var onAB = distanceAlongNormal.Y >= negativeThreshold;
+                var onBC = distanceAlongNormal.Z >= negativeThreshold;
+                var onCA = distanceAlongNormal.W >= negativeThreshold;
+                if (!onAB && !onBC && !onCA)
                 {
-                    //The contact is near the triangle. Is the normal infringing on the triangle's face region?
-                    //This occurs when:
-                    //1) The contact is near an edge, and the normal points inward along the edge normal.
-                    //2) The contact is on the inside of the triangle.
-                    //Note that we are stricter about being on the edge than we were about being nearby.
-                    //That's because infringement checks require a normal infringement along every edge that the contact is on;
-                    //being too aggressive about edge classification would cause infringements to sometimes be ignored.
-                    var negativeThreshold = triangle.DistanceThreshold * -1e-2f;
-                    var onAB = distanceAlongNormal.Y >= negativeThreshold;
-                    var onBC = distanceAlongNormal.Z >= negativeThreshold;
-                    var onCA = distanceAlongNormal.W >= negativeThreshold;
-                    if (!onAB && !onBC && !onCA)
+                    //The contact is within the triangle. 
+                    //If this contact resulted in a correction, we can skip the remaining contacts in this manifold.
+                    return true;
+                }
+                else
+                {
+                    //The contact is on the border of the triangle. Is the normal pointing outward on any edge that the contact is on?
+                    //Remember, the contact has been pushed into mesh space. The position is on the surface of the triangle, and the normal points from convex to mesh.
+                    //The edge plane normals point outward from the triangle, so if the contact normal is detected as pointing along the edge plane normal,
+                    //then it is infringing.
+                    var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
+                    const float infringementEpsilon = 1e-6f;
+                    //In order to block a contact, it must be infringing on every edge that it is on top of.
+                    //In other words, when a contact is on a vertex, it's not good enough to infringe only one of the edges; in that case, the contact normal isn't 
+                    //actually infringing on the triangle face.
+                    //Further, note that we require nonzero positive infringement; otherwise, we'd end up blocking the contacts of a flat neighbor.
+                    //But we are a little more aggressive about blocking the *second* edge infringement- if it's merely parallel, we count it as infringing.
+                    //Otherwise you could get into situations where a contact on the vertex of a bunch of different triangles isn't blocked by any of them because
+                    //the normal is alinged with an edge.
+                    if ((onAB && normalDot.Y > infringementEpsilon) || (onBC && normalDot.Z > infringementEpsilon) || (onCA && normalDot.W > infringementEpsilon))
                     {
-                        //The contact is within the triangle. 
-                        //If this contact resulted in a correction, we can skip the remaining contacts in this manifold.
-                        return true;
-                    }
-                    else
-                    {
-                        //The contact is on the border of the triangle. Is the normal pointing outward on any edge that the contact is on?
-                        //Remember, the contact has been pushed into mesh space. The position is on the surface of the triangle, and the normal points from convex to mesh.
-                        //The edge plane normals point outward from the triangle, so if the contact normal is detected as pointing along the edge plane normal,
-                        //then it is infringing.
-                        var normalDot = triangle.NX * meshSpaceNormal.X + triangle.NY * meshSpaceNormal.Y + triangle.NZ * meshSpaceNormal.Z;
-                        const float infringementEpsilon = 1e-6f;
-                        //In order to block a contact, it must be infringing on every edge that it is on top of.
-                        //In other words, when a contact is on a vertex, it's not good enough to infringe only one of the edges; in that case, the contact normal isn't 
-                        //actually infringing on the triangle face.
-                        //Further, note that we require nonzero positive infringement; otherwise, we'd end up blocking the contacts of a flat neighbor.
-                        //But we are a little more aggressive about blocking the *second* edge infringement- if it's merely parallel, we count it as infringing.
-                        //Otherwise you could get into situations where a contact on the vertex of a bunch of different triangles isn't blocked by any of them because
-                        //the normal is alinged with an edge.
-                        if ((onAB && normalDot.Y > infringementEpsilon) || (onBC && normalDot.Z > infringementEpsilon) || (onCA && normalDot.W > infringementEpsilon))
+                        const float secondaryInfringementEpsilon = -1e-3f;
+                        //At least one edge is infringed. Are all contact-touched edges at least nearly infringed?
+                        if ((!onAB || normalDot.Y > secondaryInfringementEpsilon) && (!onBC || normalDot.Z > secondaryInfringementEpsilon) && (!onCA || normalDot.W > secondaryInfringementEpsilon))
                         {
-                            const float secondaryInfringementEpsilon = -1e-3f;
-                            //At least one edge is infringed. Are all contact-touched edges at least nearly infringed?
-                            if ((!onAB || normalDot.Y > secondaryInfringementEpsilon) && (!onBC || normalDot.Z > secondaryInfringementEpsilon) && (!onCA || normalDot.W > secondaryInfringementEpsilon))
-                            {
-                                return true;
-                            }
+                            return true;
                         }
                     }
                 }
@@ -226,9 +222,8 @@ namespace BepuPhysics.CollisionDetection
             return false;
         }
 
-
         public unsafe static void ReduceManifolds(ref Buffer<Triangle> continuationTriangles, ref Buffer<NonconvexReductionChild> continuationChildren, int start, int count,
-            bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation)
+           bool requiresFlip, in BoundingBox queryBounds, in Matrix3x3 meshOrientation, in Matrix3x3 meshInverseOrientation, BufferPool pool)
         {
             //Before handing responsibility off to the nonconvex reduction, make sure that no contacts create nasty 'bumps' at the border of triangles.
             //Bumps can occur when an isolated triangle test detects a contact pointing outward, like when a box hits the side. This is fine when the triangle truly is isolated,
@@ -250,7 +245,7 @@ namespace BepuPhysics.CollisionDetection
             //Contacts generated by face collisions are marked with a special feature id flag. If it is present, we can skip the contact. The collision tester also provided unique feature ids
             //beyond that flag, so we can strip the flag now. (We effectively just hijacked the feature id to store some temporary metadata.)
 
-            //TODO: Note that we perform contact correction prior to reduction. Reduction depends on normals to compute its 'constrainedness' heuristic.
+            //TODO: Note that we perform contact correction prior to reduction. Reduction depends on normals to compute its 'distinctiveness' heuristic.
             //You could sacrifice a little bit of reduction quality for faster contact correction (since reduction outputs a low fixed number of contacts), but
             //we should only pursue that if contact correction is a meaningful cost.
 
@@ -259,7 +254,18 @@ namespace BepuPhysics.CollisionDetection
             continuationChildren.Slice(start, count, out var children);
             //Allocate enough space for all potential triangles, even though we're only going to be enumerating over the subset which actually have contacts.
             int activeChildCount = 0;
-            var activeTriangles = stackalloc TestTriangle[count];
+            Buffer<TestTriangle> activeTriangles;
+            //Avoid a stack explosion in pathological cases. They can happen!
+            const int heapAllocateThreshold = 1024;
+            if (count > heapAllocateThreshold)
+            {
+                pool.Take(count, out activeTriangles);
+            }
+            else
+            {
+                var memory = stackalloc TestTriangle[count];
+                activeTriangles = new Buffer<TestTriangle>(memory, count);
+            }
             for (int i = 0; i < count; ++i)
             {
                 if (children[i].Manifold.Count > 0)
@@ -277,13 +283,33 @@ namespace BepuPhysics.CollisionDetection
                 if ((sourceChild.Manifold.Contact0.FeatureId & FaceCollisionFlag) == 0)
                 {
                     ComputeMeshSpaceContacts(ref sourceChild.Manifold, meshInverseOrientation, requiresFlip, meshSpaceContacts, out var meshSpaceNormal);
+                    //Select the deepest contact out of the manifold. Our goal is to find a contact on the representative feature of the source triangle.
+                    //Recall that triangle collision tests will generate speculative contacts elsewhere on the triangle, both on the face and potentially on edges
+                    //other than the deepest edge.
+                    //The *normal*, however, is most directly associated with the deepest contact. The fact that the normal is 'infringing' on some other edge doesn't really matter.
+                    //(Why doesn't it matter? MeshReduction operates on single convex-mesh pairs at a time. The *convex* shape cannot generate genuinely infringing contacts on two sides of a triangle at once.
+                    //The opposing edge's contact will actually point *away* from that edge toward the interior of the source triangle. For the same reason that we never block face contacts, it doesn't make sense to 
+                    //block based on those incidental contacts.)
+                    //This is equivalent to using the normal to determine the manifold voronoi region, except the contact position lets us deal with more arbitrary content.
+                    var deepestIndex = 0;
+                    var deepestDepth = sourceChild.Manifold.Contact0.Depth;
+                    for (int j = 1; j < sourceChild.Manifold.Count; ++j)
+                    {
+                        var depth = Unsafe.Add(ref sourceChild.Manifold.Contact0, j).Depth;
+                        if (deepestDepth < depth)
+                        {
+                            deepestDepth = depth;
+                            deepestIndex = j;
+                        }
+                    }
+                    ref var meshSpaceContact = ref meshSpaceContacts[deepestIndex];
                     for (int j = 0; j < activeChildCount; ++j)
                     {
                         //No point in trying to check a normal against its own triangle.
                         if (i != j)
                         {
                             ref var targetTriangle = ref activeTriangles[j];
-                            if (ShouldBlockNormal(targetTriangle, meshSpaceContacts, sourceChild.Manifold.Count, meshSpaceNormal))
+                            if (ShouldBlockNormal(targetTriangle, meshSpaceContact, meshSpaceNormal))
                             {
                                 sourceTriangle.Blocked = true;
                                 sourceTriangle.CorrectedNormal = new Vector3(targetTriangle.NX.X, targetTriangle.NY.X, targetTriangle.NZ.X);
@@ -351,6 +377,10 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
             }
+            if (count > heapAllocateThreshold)
+            {
+                pool.Return(ref activeTriangles);
+            }
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -362,7 +392,7 @@ namespace BepuPhysics.CollisionDetection
                 Matrix3x3.CreateFromQuaternion(MeshOrientation, out var meshOrientation);
                 Matrix3x3.Transpose(meshOrientation, out var meshInverseOrientation);
 
-                ReduceManifolds(ref Triangles, ref Inner.Children, 0, Inner.ChildCount, RequiresFlip, QueryBounds, meshOrientation, meshInverseOrientation);
+                ReduceManifolds(ref Triangles, ref Inner.Children, 0, Inner.ChildCount, RequiresFlip, QueryBounds, meshOrientation, meshInverseOrientation, batcher.Pool);
 
                 //Now that boundary smoothing analysis is done, we no longer need the triangle list.
                 batcher.Pool.Return(ref Triangles);
