@@ -1,8 +1,8 @@
 # bepuphysics v2
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=lG3uKYQTVj4" target="_blank"><img src="http://img.youtube.com/vi/lG3uKYQTVj4/0.jpg" 
+alt="don't mind this" width="700" height="400" border="10" /></a>
 
 This is the repo for the bepuphysics v2 library, a complete rewrite of the C# 3d rigid body physics engine [BEPUphysics v1](https://github.com/bepu/bepuphysics1).
-
-The library is still in a prerelease state. Bugs may be lurking.
 
 The BepuPhysics and BepuUtilities libraries target .NET Standard 2.0 and should work on any supported platform. The demos are built on .NET Core 2.1 and require DX11.
 
