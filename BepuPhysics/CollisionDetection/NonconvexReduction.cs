@@ -38,7 +38,7 @@ namespace BepuPhysics.CollisionDetection
             CompletedChildCount = 0;
             pool.Take(childManifoldCount, out Children);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe static void AddContact(ref NonconvexReductionChild child, int contactIndexInChild, NonconvexContactManifold* targetManifold)
         {
@@ -208,8 +208,10 @@ namespace BepuPhysics.CollisionDetection
                 var reducedContact = reducedContacts + lastContactIndex;
 
                 float bestScore = -1;
-                int bestScoreIndex = 0;
-                for (int i = remainingContacts.Count - 1; i >= 0; --i)
+                int bestScoreIndex = -1;
+                //Note the order of the loop; we choose the best contact by index, and removals can modify indices after the removal index.
+                //Can't reverse order (easily).
+                for (int i = 0; i < remainingContacts.Count; ++i)
                 {
                     ref var remainingContact = ref remainingContacts[i];
                     ref var childManifold = ref Children[remainingContact.ChildIndex].Manifold;
@@ -219,6 +221,7 @@ namespace BepuPhysics.CollisionDetection
                     {
                         //This contact is fully redundant.
                         remainingContacts.FastRemoveAt(i);
+                        --i;
                     }
                     else
                     {
@@ -232,7 +235,9 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                 }
-                UseContact(ref remainingContacts, bestScoreIndex, ref Children, manifold);
+                //We may have removed all the remaining contacts, so the bestScoreIndex might still be -1. In that case, we're done.
+                if (bestScoreIndex >= 0)
+                    UseContact(ref remainingContacts, bestScoreIndex, ref Children, manifold);
             }
 
             if (maximumAllocatedCandidateCount > heapAllocationThreshold)

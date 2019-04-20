@@ -64,7 +64,7 @@ namespace Demos.SpecializedTests
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        var location = new Vector3(6, 3, 6) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 2.5f, -length * 1.5f);
+                        var location = new Vector3(6, 3, 6) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 5.5f, -length * 1.5f);
                         var bodyDescription = new BodyDescription
                         {
                             Activity = new BodyActivityDescription(0.01f),
