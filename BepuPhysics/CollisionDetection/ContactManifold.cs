@@ -96,7 +96,7 @@ namespace BepuPhysics.CollisionDetection
     /// <summary>
     /// Contains the data associated with a nonconvex contact manifold.
     /// </summary>
-    [StructLayout(LayoutKind.Explicit, Size = 272)]
+    [StructLayout(LayoutKind.Explicit, Size = 144)]
     public unsafe struct NonconvexContactManifold : IContactManifold
     {
         /// <summary>
@@ -115,14 +115,6 @@ namespace BepuPhysics.CollisionDetection
         public NonconvexContact Contact2;
         [FieldOffset(112)]
         public NonconvexContact Contact3;
-        [FieldOffset(144)]
-        public NonconvexContact Contact4;
-        [FieldOffset(176)]
-        public NonconvexContact Contact5;
-        [FieldOffset(208)]
-        public NonconvexContact Contact6;
-        [FieldOffset(240)]
-        public NonconvexContact Contact7;
 
         int IContactManifold.Count => Count;
 
@@ -170,7 +162,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Add(NonconvexContactManifold* manifold, ref Vector3 normal, ref ConvexContact convexContact)
         {
-            Debug.Assert(manifold->Count < 8);
+            Debug.Assert(manifold->Count < MaximumContactCount);
             ref var targetContact = ref (&manifold->Contact0)[manifold->Count++];
             targetContact.Depth = convexContact.Depth;
             targetContact.Offset = convexContact.Offset;
@@ -180,7 +172,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref NonconvexContact Allocate(NonconvexContactManifold* manifold)
         {
-            Debug.Assert(manifold->Count < 8);
+            Debug.Assert(manifold->Count < MaximumContactCount);
             return ref (&manifold->Contact0)[manifold->Count++];
         }
 

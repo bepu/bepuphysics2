@@ -389,7 +389,7 @@ namespace Demos.Demos
             const int planeWidth = 257;
             const float scale = 3;
             Vector2 terrainPosition = new Vector2(1 - planeWidth, 1 - planeWidth) * scale * 0.5f;
-            raceTrack = new RaceTrack { QuadrantRadius = (planeWidth - 32) * scale * 0.25f };
+            raceTrack = new RaceTrack { QuadrantRadius = (planeWidth - 32) * scale * 0.25f, Center = default };
             var random = new Random(5);
 
             //Add some building-ish landmarks in the middle of each of the four racetrack quadrants.

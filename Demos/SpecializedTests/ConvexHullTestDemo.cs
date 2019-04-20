@@ -109,7 +109,7 @@ namespace Demos.SpecializedTests
             }
         }
 
-        int stepIndex = 0;
+        //int stepIndex = 0;
 
         public override void Update(Window window, Camera camera, Input input, float dt)
         {

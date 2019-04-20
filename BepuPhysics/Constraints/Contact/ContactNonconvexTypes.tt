@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 namespace BepuPhysics.Constraints.Contact
 {  
 <#
-for (int contactCount = 2; contactCount <= 8; ++contactCount)
+for (int contactCount = 2; contactCount <= 4; ++contactCount)
 {
 #>
     public struct Contact<#= contactCount #>Nonconvex : INonconvexTwoBodyContactConstraintDescription<Contact<#= contactCount #>Nonconvex>

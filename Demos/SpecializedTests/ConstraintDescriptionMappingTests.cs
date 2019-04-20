@@ -115,17 +115,17 @@ namespace Demos.SpecializedTests
             Test<Contact2NonconvexOneBody>(pool, random, 1);
             Test<Contact3NonconvexOneBody>(pool, random, 1);
             Test<Contact4NonconvexOneBody>(pool, random, 1);
-            Test<Contact5NonconvexOneBody>(pool, random, 1);
-            Test<Contact6NonconvexOneBody>(pool, random, 1);
-            Test<Contact7NonconvexOneBody>(pool, random, 1);
-            Test<Contact8NonconvexOneBody>(pool, random, 1);
+            //Test<Contact5NonconvexOneBody>(pool, random, 1);
+            //Test<Contact6NonconvexOneBody>(pool, random, 1);
+            //Test<Contact7NonconvexOneBody>(pool, random, 1);
+            //Test<Contact8NonconvexOneBody>(pool, random, 1);
             Test<Contact2Nonconvex>(pool, random, 2);
             Test<Contact3Nonconvex>(pool, random, 2);
             Test<Contact4Nonconvex>(pool, random, 2);
-            Test<Contact5Nonconvex>(pool, random, 2);
-            Test<Contact6Nonconvex>(pool, random, 2);
-            Test<Contact7Nonconvex>(pool, random, 2);
-            Test<Contact8Nonconvex>(pool, random, 2);
+            //Test<Contact5Nonconvex>(pool, random, 2);
+            //Test<Contact6Nonconvex>(pool, random, 2);
+            //Test<Contact7Nonconvex>(pool, random, 2);
+            //Test<Contact8Nonconvex>(pool, random, 2);
 
             Test<BallSocket>(pool, random, 2);
             Test<AngularHinge>(pool, random, 2);

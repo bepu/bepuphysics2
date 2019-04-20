@@ -21,7 +21,7 @@ for (int convexity = 0; convexity <= 1; ++convexity)
 	for (int bodyCount = 1; bodyCount <= 2; ++bodyCount)
 	{
 		var bodySuffix = bodyCount == 1 ? "OneBody" : "";
-		for (int contactCount = convex ? 1 : 2; contactCount <= (convex ? 4 : 8); ++contactCount)
+		for (int contactCount = convex ? 1 : 2; contactCount <= (convex ? 4 : 4); ++contactCount)
 		{
 #>
     struct Contact<#=contactCount#><#=convexitySuffix#><#=bodySuffix#>LineExtractor : IConstraintLineExtractor<Contact<#=contactCount#><#=convexitySuffix#><#=bodySuffix#>PrestepData>

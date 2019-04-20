@@ -122,10 +122,6 @@ namespace Demos.Demos
             Simulation = Simulation.Create(BufferPool, new ClothCallbacks() { Filters = filters }, new DemoPoseIntegratorCallbacks(new Vector3(0, -50, 0)));
             rolloverInfo = new RolloverInfo();
 
-            bool KinematicTopCorners(int rowIndex, int columnIndex, int width, int height)
-            {
-                return rowIndex == 0 && (columnIndex == width - 1 || columnIndex == 0);
-            }
             bool FullyDynamic(int rowIndex, int columnIndex, int width, int height)
             {
                 return false;
