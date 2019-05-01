@@ -167,6 +167,21 @@ namespace BepuUtilities.Memory
             return -1;
         }
 
+        /// <summary>
+        /// Creates an untyped buffer containing the same data as the Buffer<typeparamref name="T"/>.
+        /// </summary>
+        /// <returns>Untyped buffer containing the same data as the source buffer.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public RawBuffer AsRaw()
+        {
+            RawBuffer buffer;
+            buffer.Memory = Memory;
+            buffer.Length = length * Unsafe.SizeOf<T>();
+            buffer.Id = Id;
+            return buffer;
+        }
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryPin(out GCHandle handle)
         {
