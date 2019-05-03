@@ -256,7 +256,7 @@ namespace BepuPhysics
                                     //The HandleToLocation was updated during job setup, so we can use it.
                                     ref var bodyLocation = ref bodies.HandleToLocation[source.bodyConstraintReferences.Keys[j]];
                                     Debug.Assert(bodyLocation.SetIndex == 0, "Any batch moved into the active set should be dealing with bodies which have already been moved into the active set.");
-                                    var added = target.bodyConstraintReferences.AddUnsafely(ref bodyLocation.Index, source.bodyConstraintReferences.Values[j]);
+                                    var added = target.bodyConstraintReferences.AddUnsafelyRef(ref bodyLocation.Index, source.bodyConstraintReferences.Values[j]);
                                     Debug.Assert(added, "Any body moving from an inactive set to the active set should not already be present in the active set's fallback batch.");
                                 }
                                 //We've reused the lists. Set the count to zero so they don't get disposed later.

@@ -174,7 +174,7 @@ namespace BepuPhysics.CollisionDetection
                     {
                         pointers.CollisionDetectionCache = new PairCacheIndex();
                     }
-                    Mapping.AddUnsafely(ref pair.Pair, pointers);
+                    Mapping.AddUnsafelyRef(ref pair.Pair, pointers);
                 }
             }
         }
@@ -183,7 +183,7 @@ namespace BepuPhysics.CollisionDetection
         {
             if (NarrowPhase.IsContactConstraintType(typeId))
             {
-                var removed = Mapping.FastRemove(ref ConstraintHandleToPair[handle].Pair);
+                var removed = Mapping.FastRemoveRef(ref ConstraintHandleToPair[handle].Pair);
                 Debug.Assert(removed, "If a contact constraint is being directly removed, it must exist within the pair mapping- " +
                     "all *active* contact constraints do, and it's not valid to attempt to remove an inactive constraint.");
             }

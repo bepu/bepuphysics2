@@ -252,13 +252,13 @@ namespace BepuPhysics.CollisionDetection
                 //Walk backwards on the off chance that a swap can be avoided.
                 for (int j = cache.PendingRemoves.Count - 1; j >= 0; --j)
                 {
-                    var removed = Mapping.FastRemove(ref cache.PendingRemoves[j]);
+                    var removed = Mapping.FastRemoveRef(ref cache.PendingRemoves[j]);
                     Debug.Assert(removed);
                 }
                 for (int j = 0; j < cache.PendingAdds.Count; ++j)
                 {
                     ref var pending = ref cache.PendingAdds[j];
-                    var added = Mapping.AddUnsafely(ref pending.Pair, pending.Pointers);
+                    var added = Mapping.AddUnsafelyRef(ref pending.Pair, pending.Pointers);
                     Debug.Assert(added);
                 }
             }
@@ -351,7 +351,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int IndexOf(ref CollidablePair pair)
         {
-            return Mapping.IndexOf(ref pair);
+            return Mapping.IndexOfRef(ref pair);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

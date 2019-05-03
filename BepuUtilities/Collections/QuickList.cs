@@ -287,7 +287,7 @@ namespace BepuUtilities.Collections
         /// <param name="element">Element to find.</param>
         /// <returns>Index of the element in the list if present, -1 otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int IndexOf(ref T element)
+        public int IndexOfRef(ref T element)
         {
             Validate();
             return Span.IndexOf(ref element, 0, Count);
@@ -314,7 +314,7 @@ namespace BepuUtilities.Collections
         public bool Remove(ref T element)
         {
             Validate();
-            var index = IndexOf(ref element);
+            var index = IndexOfRef(ref element);
             if (index >= 0)
             {
                 RemoveAt(index);
@@ -360,7 +360,7 @@ namespace BepuUtilities.Collections
         /// <param name="element">Element to remove from the list.</param>
         /// <returns>True if the element was present and was removed, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool FastRemove(ref T element)
+        public bool FastRemoveRef(ref T element)
         {
             Validate();
             var index = IndexOf(element);
@@ -380,7 +380,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool FastRemove(T element)
         {
-            return FastRemove(ref element);
+            return FastRemoveRef(ref element);
         }
 
         /// <summary>
@@ -492,9 +492,9 @@ namespace BepuUtilities.Collections
         /// </returns>
         /// <param name="element">The object to locate in the collection.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Contains(ref T element)
+        public bool ContainsRef(ref T element)
         {
-            return IndexOf(ref element) >= 0;
+            return IndexOfRef(ref element) >= 0;
         }
 
         /// <summary>
