@@ -175,7 +175,7 @@ namespace BepuUtilities.Collections
             {
                 //We assume that ref adds will get inlined reasonably here. That's not actually guaranteed, but we'll bite the bullet.
                 //(You could technically branch on the Unsafe.SizeOf<T>, which should result in a compile time specialized zero overhead implementation... but meh!)
-                AddUnsafely(ref oldSet.Span[i]);
+                AddUnsafelyRef(ref oldSet.Span[i]);
             }
             oldSpan = oldSet.Span;
             oldTableSpan = oldSet.Table;
@@ -289,7 +289,7 @@ namespace BepuUtilities.Collections
         /// <param name="element">Element to get the index of.</param>
         /// <returns>The index of the element if the element exists in the set, -1 otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int IndexOf(ref T element)
+        public int IndexOfRef(ref T element)
         {
             GetTableIndices(ref element, out int tableIndex, out int objectIndex);
             return objectIndex;
@@ -312,7 +312,7 @@ namespace BepuUtilities.Collections
         /// <param name="element">Element to test for.</param>
         /// <returns>True if the element already belongs to the set, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Contains(ref T element)
+        public bool ContainsRef(ref T element)
         {
             return GetTableIndices(ref element, out int tableIndex, out int objectIndex);
         }
@@ -325,7 +325,7 @@ namespace BepuUtilities.Collections
         /// <param name="element">Element to add.</param>
         /// <returns>True if the element was added to the set, false if the element was already present and was instead replaced.</returns>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)] //TODO: Test performance of full chain inline.
-        public bool AddAndReplaceUnsafely(ref T element)
+        public bool AddAndReplaceUnsafelyRef(ref T element)
         {
             Validate();
             if (GetTableIndices(ref element, out int tableIndex, out int elementIndex))
@@ -353,7 +353,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AddAndReplaceUnsafely(T element)
         {
-            return AddAndReplaceUnsafely(ref element);
+            return AddAndReplaceUnsafelyRef(ref element);
         }
 
         /// <summary>
@@ -363,7 +363,7 @@ namespace BepuUtilities.Collections
         /// <param name="element">Element to add.</param>
         /// <returns>True if the element was added to the set, false if the element was already present.</returns>
         //[MethodImpl(MethodImplOptions.AggressiveInlining)] //TODO: Test performance of full chain inline.
-        public bool AddUnsafely(ref T element)
+        public bool AddUnsafelyRef(ref T element)
         {
             Validate();
             if (GetTableIndices(ref element, out int tableIndex, out int elementIndex))
@@ -389,7 +389,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AddUnsafely(T element)
         {
-            return AddUnsafely(ref element);
+            return AddUnsafelyRef(ref element);
         }
 
         /// <summary>
@@ -400,7 +400,7 @@ namespace BepuUtilities.Collections
         /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the element was added to the set, false if the element was already present and was instead replaced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddAndReplace(ref T element, IUnmanagedMemoryPool pool)
+        public bool AddAndReplaceRef(ref T element, IUnmanagedMemoryPool pool)
         {
             if (Count == Span.Length)
             {
@@ -411,7 +411,7 @@ namespace BepuUtilities.Collections
                 //If we resized only after determining that it was going to be added,
                 //the potential resize would invalidate the computed indices.
             }
-            return AddAndReplaceUnsafely(ref element);
+            return AddAndReplaceUnsafelyRef(ref element);
         }
 
 
@@ -422,7 +422,7 @@ namespace BepuUtilities.Collections
         /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the element was added to the set, false if the element was already present.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Add(ref T element, IUnmanagedMemoryPool pool)
+        public bool AddRef(ref T element, IUnmanagedMemoryPool pool)
         {
             if (Count == Span.Length)
             {
@@ -433,7 +433,7 @@ namespace BepuUtilities.Collections
                 //If we resized only after determining that it was going to be added,
                 //the potential resize would invalidate the computed indices.
             }
-            return AddUnsafely(ref element);
+            return AddUnsafelyRef(ref element);
         }
 
 
@@ -447,7 +447,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AddAndReplace(T element, IUnmanagedMemoryPool pool)
         {
-            return AddAndReplaceUnsafely(ref element);
+            return AddAndReplaceUnsafelyRef(ref element);
         }
 
 
@@ -460,7 +460,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Add(T element, IUnmanagedMemoryPool pool)
         {
-            return Add(ref element, pool);
+            return AddRef(ref element, pool);
         }
 
         //Note: the reason this is named "FastRemove" instead of just "Remove" despite it being the only remove present is that
@@ -524,7 +524,7 @@ namespace BepuUtilities.Collections
         /// </summary>
         /// <param name="element">Element to remove.</param>
         /// <returns>True if the element was found and removed, false otherwise.</returns>
-        public bool FastRemove(ref T element)
+        public bool FastRemoveRef(ref T element)
         {
             Validate();
             //Find it.
@@ -546,7 +546,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool FastRemove(T element)
         {
-            return FastRemove(ref element);
+            return FastRemoveRef(ref element);
         }
 
 
