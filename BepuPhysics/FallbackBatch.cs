@@ -88,7 +88,7 @@ namespace BepuPhysics
                     ++bodyConstraintReferences.Count;
                 }
                 var fallbackReference = new FallbackReference { ConstraintHandle = constraintHandle, IndexInConstraint = i };
-                constraintReferences.Add(ref fallbackReference, pool);
+                constraintReferences.AddRef(ref fallbackReference, pool);
             }
         }
 
@@ -139,7 +139,7 @@ namespace BepuPhysics
             ref var constraintReferences = ref bodyConstraintReferences.Values[bodyReferencesIndex];
             //TODO: Should really just be using a dictionary here.
             var dummy = new FallbackReference { ConstraintHandle = constraintHandle };
-            var removed = constraintReferences.FastRemove(ref dummy);
+            var removed = constraintReferences.FastRemoveRef(ref dummy);
             Debug.Assert(removed, "If a constraint removal was requested, it must exist within the referenced body's constraint set.");
             if (constraintReferences.Count == 0)
             {
