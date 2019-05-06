@@ -143,7 +143,7 @@ namespace BepuPhysics.Collidables
 
             inertia.InverseMass = 1f / totalWeight;
             center *= inertia.InverseMass;
-            Pool.SpecializeFor<CompoundChild>().Take(Children.Count, out children);
+            Pool.Take(Children.Count, out children);
             //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
             //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
             children = children.Slice(0, Children.Count);
@@ -177,7 +177,7 @@ namespace BepuPhysics.Collidables
             Debug.Assert(totalWeight > 0, "The compound as a whole must have nonzero weight when creating a dynamic compound.");
 
             inertia.InverseMass = 1f / totalWeight;
-            Pool.SpecializeFor<CompoundChild>().Take(Children.Count, out children);
+            Pool.Take(Children.Count, out children);
             //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
             //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
             children = children.Slice(0, Children.Count);
@@ -216,7 +216,7 @@ namespace BepuPhysics.Collidables
 
             var inverseWeight = 1f / totalWeight;
             center *= inverseWeight;
-            Pool.SpecializeFor<CompoundChild>().Take(Children.Count, out children);
+            Pool.Take(Children.Count, out children);
             //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
             //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
             children = children.Slice(0, Children.Count);
@@ -238,7 +238,7 @@ namespace BepuPhysics.Collidables
         /// <param name="center">Computed center of rotation based on the poses and weights of accumulated children.</param>
         public void BuildKinematicCompound(out Buffer<CompoundChild> children)
         {
-            Pool.SpecializeFor<CompoundChild>().Take(Children.Count, out children);
+            Pool.Take(Children.Count, out children);
             //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
             //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
             children = children.Slice(0, Children.Count);

@@ -264,7 +264,7 @@ namespace BepuPhysics.Trees
             pool.Take<float>(leafBounds.Length, out var centroidsX);
             pool.Take<float>(leafBounds.Length, out var centroidsY);
             pool.Take<float>(leafBounds.Length, out var centroidsZ);
-            pool.SpecializeFor<BoundingBox>().Take(leafBounds.Length, out var merged);
+            pool.Take<BoundingBox>(leafBounds.Length, out var merged);
             SweepResources leaves;
             leaves.Bounds = (BoundingBox*)leafBounds.Memory;
             leaves.IndexMap = (int*)indexMap.Memory;
@@ -302,7 +302,7 @@ namespace BepuPhysics.Trees
             pool.ReturnUnsafely(indexMapX.Id);
             pool.ReturnUnsafely(indexMapY.Id);
             pool.ReturnUnsafely(indexMapZ.Id);
-            pool.SpecializeFor<BoundingBox>().Return(ref merged);
+            pool.Return(ref merged);
 
         }
     }

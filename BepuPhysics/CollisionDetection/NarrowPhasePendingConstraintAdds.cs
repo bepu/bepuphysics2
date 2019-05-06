@@ -39,7 +39,7 @@ namespace BepuPhysics.CollisionDetection
             public PendingConstraintAddCache(BufferPool pool, int minimumConstraintCountPerCache = 128)
             {
                 this.pool = pool;
-                pool.SpecializeFor<UntypedList>().Take(PairCache.CollisionConstraintTypeCount, out pendingConstraintsByType);
+                pool.Take(PairCache.CollisionConstraintTypeCount, out pendingConstraintsByType);
                 //Have to clear the memory before use to avoid trash data sticking around.
                 pendingConstraintsByType.Clear(0, PairCache.CollisionConstraintTypeCount);
                 this.minimumConstraintCountPerCache = minimumConstraintCountPerCache;
@@ -216,37 +216,35 @@ namespace BepuPhysics.CollisionDetection
                     if (pendingConstraintsByType[i].Buffer.Allocated)
                         pool.Return(ref pendingConstraintsByType[i].Buffer);
                 }
-                pool.SpecializeFor<UntypedList>().Return(ref pendingConstraintsByType);
+                pool.Return(ref pendingConstraintsByType);
             }
 
             internal void AllocateForSpeculativeSearch()
             {
-                pool.SpecializeFor<Buffer<ushort>>().Take(PairCache.CollisionConstraintTypeCount, out speculativeBatchIndices);
+                pool.Take(PairCache.CollisionConstraintTypeCount, out speculativeBatchIndices);
                 speculativeBatchIndices.Clear(0, PairCache.CollisionConstraintTypeCount);
-                var indexPool = pool.SpecializeFor<ushort>();
                 for (int i = 0; i < PairCache.CollisionConstraintTypeCount; ++i)
                 {
                     ref var typeList = ref pendingConstraintsByType[i];
                     if (typeList.Buffer.Allocated)
                     {
                         Debug.Assert(typeList.Count > 0);
-                        indexPool.Take(typeList.Count, out speculativeBatchIndices[i]);
+                        pool.Take(typeList.Count, out speculativeBatchIndices[i]);
                     }
                 }
             }
 
             internal void DisposeSpeculativeSearch()
             {
-                var indexPool = pool.SpecializeFor<ushort>();
                 for (int i = 0; i < PairCache.CollisionConstraintTypeCount; ++i)
                 {
                     ref var indices = ref speculativeBatchIndices[i];
                     if (indices.Allocated)
                     {
-                        indexPool.Return(ref indices);
+                        pool.Return(ref indices);
                     }
                 }
-                pool.SpecializeFor<Buffer<ushort>>().Return(ref speculativeBatchIndices);
+                pool.Return(ref speculativeBatchIndices);
             }
             internal int CountConstraints()
             {

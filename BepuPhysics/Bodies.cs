@@ -986,7 +986,7 @@ namespace BepuPhysics
             if (Sets.Length != setsCapacity)
             {
                 var oldCapacity = Sets.Length;
-                Pool.SpecializeFor<BodySet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
+                Pool.Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
                 if (oldCapacity < Sets.Length)
                     Sets.Clear(oldCapacity, Sets.Length - oldCapacity); //We rely on unused slots being default initialized.
             }
@@ -1143,7 +1143,7 @@ namespace BepuPhysics
             if (newCapacity != HandleToLocation.Length)
             {
                 var oldCapacity = HandleToLocation.Length;
-                Pool.SpecializeFor<BodyLocation>().Resize(ref HandleToLocation, newCapacity, Math.Min(oldCapacity, newCapacity));
+                Pool.Resize(ref HandleToLocation, newCapacity, Math.Min(oldCapacity, newCapacity));
                 if (HandleToLocation.Length > oldCapacity)
                 {
                     Unsafe.InitBlockUnaligned(
@@ -1162,7 +1162,7 @@ namespace BepuPhysics
             var targetCapacity = BufferPool.GetCapacityForCount<BodyInertia>(Math.Max(capacity, ActiveSet.Count));
             if (Inertias.Length != targetCapacity)
             {
-                Pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, targetCapacity, Math.Min(Inertias.Length, ActiveSet.Count));
+                Pool.Resize(ref Inertias, targetCapacity, Math.Min(Inertias.Length, ActiveSet.Count));
             }
         }
         /// <summary>
@@ -1174,7 +1174,7 @@ namespace BepuPhysics
                 capacity = ActiveSet.Count;
             if (Inertias.Length < capacity)
             {
-                Pool.SpecializeFor<BodyInertia>().Resize(ref Inertias, capacity, Math.Min(Inertias.Length, ActiveSet.Count));
+                Pool.Resize(ref Inertias, capacity, Math.Min(Inertias.Length, ActiveSet.Count));
             }
         }
 
@@ -1256,10 +1256,10 @@ namespace BepuPhysics
                     set.Dispose(Pool);
                 }
             }
-            Pool.SpecializeFor<BodySet>().Return(ref Sets);
+            Pool.Return(ref Sets);
             if (Inertias.Allocated)
-                Pool.SpecializeFor<BodyInertia>().Return(ref Inertias);
-            Pool.SpecializeFor<BodyLocation>().Return(ref HandleToLocation);
+                Pool.Return(ref Inertias);
+            Pool.Return(ref HandleToLocation);
             HandlePool.Dispose(Pool.SpecializeFor<int>());
         }
 

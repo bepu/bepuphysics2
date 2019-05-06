@@ -225,13 +225,13 @@ namespace BepuPhysics
             //You may want to change this in the future if memory use is concerning.
             targetBodyCapacity = BufferPool.GetCapacityForCount<int>(targetBodyCapacity);
             Debug.Assert(Poses.Length != BufferPool.GetCapacityForCount<RigidPoses>(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
-            pool.SpecializeFor<RigidPose>().Resize(ref Poses, targetBodyCapacity, Count);
-            pool.SpecializeFor<BodyVelocity>().Resize(ref Velocities, targetBodyCapacity, Count);
-            pool.SpecializeFor<BodyInertia>().Resize(ref LocalInertias, targetBodyCapacity, Count);
-            pool.SpecializeFor<int>().Resize(ref IndexToHandle, targetBodyCapacity, Count);
-            pool.SpecializeFor<Collidable>().Resize(ref Collidables, targetBodyCapacity, Count);
-            pool.SpecializeFor<BodyActivity>().Resize(ref Activity, targetBodyCapacity, Count);
-            pool.SpecializeFor<QuickList<BodyConstraintReference>>().Resize(ref Constraints, targetBodyCapacity, Count);
+            pool.Resize(ref Poses, targetBodyCapacity, Count);
+            pool.Resize(ref Velocities, targetBodyCapacity, Count);
+            pool.Resize(ref LocalInertias, targetBodyCapacity, Count);
+            pool.Resize(ref IndexToHandle, targetBodyCapacity, Count);
+            pool.Resize(ref Collidables, targetBodyCapacity, Count);
+            pool.Resize(ref Activity, targetBodyCapacity, Count);
+            pool.Resize(ref Constraints, targetBodyCapacity, Count);
         }
 
         public unsafe void Clear(BufferPool pool)
@@ -249,13 +249,13 @@ namespace BepuPhysics
         /// <param name="pool">Pool to return the set's top level buffers to.</param>
         public void DisposeBuffers(BufferPool pool)
         {
-            pool.SpecializeFor<RigidPose>().Return(ref Poses);
-            pool.SpecializeFor<BodyVelocity>().Return(ref Velocities);
-            pool.SpecializeFor<BodyInertia>().Return(ref LocalInertias);
-            pool.SpecializeFor<int>().Return(ref IndexToHandle);
-            pool.SpecializeFor<Collidable>().Return(ref Collidables);
-            pool.SpecializeFor<BodyActivity>().Return(ref Activity);
-            pool.SpecializeFor<QuickList<BodyConstraintReference>>().Return(ref Constraints);
+            pool.Return(ref Poses);
+            pool.Return(ref Velocities);
+            pool.Return(ref LocalInertias);
+            pool.Return(ref IndexToHandle);
+            pool.Return(ref Collidables);
+            pool.Return(ref Activity);
+            pool.Return(ref Constraints);
         }
 
         /// <summary>

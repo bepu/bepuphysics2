@@ -199,8 +199,7 @@ namespace BepuUtilities.Collections
             }
 #endif
             int bucketSetCount = keysUpperBound < (1 << 16) ? keysUpperBound < (1 << 8) ? 1 : 2 : keysUpperBound < (1 << 24) ? 3 : 4;
-            var intPool = bufferPool.SpecializeFor<int>();
-            intPool.Take(bucketSetCount * 256, out var bucketCounts);
+            bufferPool.Take<int>(bucketSetCount * 256, out var bucketCounts);
             unsafe
             {
                 //The bucket counts will be added to, so they need to be zeroed.
@@ -244,7 +243,7 @@ namespace BepuUtilities.Collections
                     break;
             }
 
-            intPool.Return(ref bucketCounts);
+            bufferPool.Return(ref bucketCounts);
         }
 
     }

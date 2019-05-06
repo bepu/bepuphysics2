@@ -380,7 +380,7 @@ namespace BepuPhysics.Constraints
         void InternalResize(ref TypeBatch typeBatch, BufferPool pool, int constraintCapacity)
         {
             Debug.Assert(constraintCapacity >= 0, "The constraint capacity should have already been validated.");
-            pool.SpecializeFor<int>().Resize(ref typeBatch.IndexToHandle, constraintCapacity, typeBatch.ConstraintCount);
+            pool.Resize(ref typeBatch.IndexToHandle, constraintCapacity, typeBatch.ConstraintCount);
             //Note that we construct the bundle capacity from the resized constraint capacity. This means we only have to check the IndexToHandle capacity
             //before allocating, which simplifies things a little bit at the cost of some memory. Could revisit this if memory use is actually a concern.
             var bundleCapacity = BundleIndexing.GetBundleCount(typeBatch.IndexToHandle.Length);

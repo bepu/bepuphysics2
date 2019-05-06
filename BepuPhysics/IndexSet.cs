@@ -47,7 +47,7 @@ namespace BepuPhysics
         void InternalResizeForBundleCount(BufferPool pool, int bundleCapacity)
         {
             var copyRegionLength = Math.Min(bundleCapacity, flags.Length);
-            pool.SpecializeFor<ulong>().Resize(ref flags, bundleCapacity, copyRegionLength);
+            pool.Resize(ref flags, bundleCapacity, copyRegionLength);
             //Since the pool's data is not guaranteed to be clean and the indices rely on it being clean, we must clear any memory beyond the copied region.
             if (flags.Length > copyRegionLength)
                 flags.Clear(copyRegionLength, flags.Length - copyRegionLength);
@@ -151,7 +151,7 @@ namespace BepuPhysics
         public void Dispose(BufferPool pool)
         {
             Debug.Assert(flags.Length > 0, "Cannot double-dispose.");
-            pool.SpecializeFor<ulong>().Return(ref flags);
+            pool.Return(ref flags);
             flags = new Buffer<ulong>();
         }
     }

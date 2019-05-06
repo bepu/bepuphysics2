@@ -63,10 +63,10 @@ namespace BepuPhysics
             //Note that we base the bundle capacities on the static capacity. This simplifies the conditions on allocation
             targetCapacity = BufferPool.GetCapacityForCount<int>(targetCapacity);
             Debug.Assert(Poses.Length != BufferPool.GetCapacityForCount<RigidPoses>(targetCapacity), "Should not try to use internal resize of the result won't change the size.");
-            pool.SpecializeFor<RigidPose>().Resize(ref Poses, targetCapacity, Count);
-            pool.SpecializeFor<int>().Resize(ref IndexToHandle, targetCapacity, Count);
-            pool.SpecializeFor<int>().Resize(ref HandleToIndex, targetCapacity, Count);
-            pool.SpecializeFor<Collidable>().Resize(ref Collidables, targetCapacity, Count);
+            pool.Resize(ref Poses, targetCapacity, Count);
+            pool.Resize(ref IndexToHandle, targetCapacity, Count);
+            pool.Resize(ref HandleToIndex, targetCapacity, Count);
+            pool.Resize(ref Collidables, targetCapacity, Count);
             //Initialize all the indices beyond the copied region to -1.
             Unsafe.InitBlockUnaligned(((int*)HandleToIndex.Memory) + Count, 0xFF, (uint)(sizeof(int) * (HandleToIndex.Length - Count)));
             //Note that we do NOT modify the idpool's internal queue size here. We lazily handle that during adds, and during explicit calls to EnsureCapacity, Compact, and Resize.
@@ -329,10 +329,10 @@ namespace BepuPhysics
         /// <remarks>The object can be reused if it is reinitialized by using EnsureCapacity or Resize.</remarks>
         public void Dispose()
         {
-            pool.SpecializeFor<RigidPose>().Return(ref Poses);
-            pool.SpecializeFor<int>().Return(ref HandleToIndex);
-            pool.SpecializeFor<int>().Return(ref IndexToHandle);
-            pool.SpecializeFor<Collidable>().Return(ref Collidables);
+            pool.Return(ref Poses);
+            pool.Return(ref HandleToIndex);
+            pool.Return(ref IndexToHandle);
+            pool.Return(ref Collidables);
             HandlePool.Dispose(pool.SpecializeFor<int>());
         }
 

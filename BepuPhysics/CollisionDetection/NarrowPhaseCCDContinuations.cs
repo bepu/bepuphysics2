@@ -97,7 +97,7 @@ namespace BepuPhysics.CollisionDetection
                 public void Dispose(BufferPool pool)
                 {
                     Ids.Dispose(pool.SpecializeFor<int>());
-                    pool.SpecializeFor<T>().Return(ref Caches);
+                    pool.Return(ref Caches);
                 }
             }
 

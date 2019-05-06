@@ -320,7 +320,6 @@ namespace Demos.Demos
                 return true;
             }
 
-            var cellPool = pool.SpecializeFor<Cell>();
             newlyFilledCells.Add(cell, pool);
 
             cellsToVisit.Add(new Cell { X = cell.X, Y = cell.Y, Z = cell.Z - 1 }, pool);

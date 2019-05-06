@@ -38,7 +38,7 @@ namespace BepuPhysics
 
         public unsafe IslandScaffoldConstraintBatch(Solver solver, BufferPool pool, int batchIndex)
         {
-            pool.SpecializeFor<int>().Take(solver.TypeProcessors.Length, out TypeIdToIndex);
+            pool.Take(solver.TypeProcessors.Length, out TypeIdToIndex);
             Unsafe.InitBlockUnaligned(TypeIdToIndex.Memory, 0xFF, (uint)(TypeIdToIndex.Length * sizeof(int)));
             TypeBatches = new QuickList<IslandScaffoldTypeBatch>(solver.TypeProcessors.Length, pool);
             ReferencedBodyIndices = batchIndex < solver.FallbackBatchThreshold ? new IndexSet(pool, solver.bodies.ActiveSet.Count) : default;

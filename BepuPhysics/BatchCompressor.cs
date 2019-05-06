@@ -217,7 +217,7 @@ namespace BepuPhysics
             var maximumCompressionCount = (int)Math.Max(1, Math.Round(MaximumCompressionFraction * constraintCount));
             var targetCandidateCount = (int)Math.Max(1, Math.Round(TargetCandidateFraction * constraintCount));
 
-            pool.SpecializeFor<QuickList<Compression>>().Take(workerCount, out workerCompressions);
+            pool.Take(workerCount, out workerCompressions);
             for (int i = 0; i < workerCount; ++i)
             {
                 //Be careful: the jobs may require resizes on the compression count list. That requires the use of per-worker pools.
@@ -314,7 +314,6 @@ namespace BepuPhysics
                 //In deterministic mode, we must first sort the compressions found by every thread.
                 //Sorting by constraint handle gives a unique order regardless of memory layout.
                 //When combined with the analysis covering all or none of a type batch, the batch compressor becomes insensitive to memory layouts and is deterministic.
-                var targetPool = pool.SpecializeFor<CompressionTarget>();
                 var totalCompressionCount = 0;
                 for (int i = 0; i < workerCount; ++i)
                 {
@@ -382,7 +381,7 @@ namespace BepuPhysics
                 //Be careful: the jobs may require resizes on the compression count list. That requires the use of per-worker pools.
                 workerCompressions[i].Dispose((threadDispatcher == null ? pool : threadDispatcher.GetThreadMemoryPool(i)));
             }
-            pool.SpecializeFor<QuickList<Compression>>().Return(ref workerCompressions);
+            pool.Return(ref workerCompressions);
         }
 
 

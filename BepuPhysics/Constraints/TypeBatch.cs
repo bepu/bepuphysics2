@@ -39,7 +39,7 @@ namespace BepuPhysics.Constraints
             pool.Return(ref BodyReferences);
             pool.Return(ref PrestepData);
             pool.Return(ref AccumulatedImpulses);
-            pool.SpecializeFor<int>().Return(ref IndexToHandle);
+            pool.Return(ref IndexToHandle);
         }
     }
 }

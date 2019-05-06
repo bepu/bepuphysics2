@@ -294,28 +294,27 @@ namespace BepuPhysics
 
 
         unsafe void SortByBodyLocation(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, Buffer<ConstraintLocation> handlesToConstraints, int bodyCount,
-            BufferPool rawPool, IThreadDispatcher threadDispatcher)
+            BufferPool pool, IThreadDispatcher threadDispatcher)
         {
             int bundleCount = (constraintCount >> BundleIndexing.VectorShift);
             if ((constraintCount & BundleIndexing.VectorMask) != 0)
                 ++bundleCount;
             var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
-            var intPool = rawPool.SpecializeFor<int>();
-            intPool.Take(constraintCount, out context.SourceIndices);
-            intPool.Take(constraintCount, out context.SortKeys);
-            intPool.Take(constraintCount, out context.ScratchKeys);
-            intPool.Take(constraintCount, out context.ScratchValues);
-            intPool.Take(constraintCount, out context.IndexToHandleCache);
+            pool.Take(constraintCount, out context.SourceIndices);
+            pool.Take(constraintCount, out context.SortKeys);
+            pool.Take(constraintCount, out context.ScratchKeys);
+            pool.Take(constraintCount, out context.ScratchValues);
+            pool.Take(constraintCount, out context.IndexToHandleCache);
 
             var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
             typeProcessor.GetBundleTypeSizes(out var bodyReferencesBundleSize, out var prestepBundleSize, out var accumulatedImpulseBundleSize);
 
             //The typebatch invoked by the worker will cast the body references to the appropriate type. 
             //Using typeless buffers makes it easy to cache the buffers here in the constraint optimizer rather than in the individual type batches.
-            rawPool.Take(bundleCount * bodyReferencesBundleSize, out context.BodyReferencesCache);
-            rawPool.Take(bundleCount * prestepBundleSize, out context.PrestepDataCache);
-            rawPool.Take(bundleCount * accumulatedImpulseBundleSize, out context.AccumulatesImpulsesCache);
+            pool.Take(bundleCount * bodyReferencesBundleSize, out context.BodyReferencesCache);
+            pool.Take(bundleCount * prestepBundleSize, out context.PrestepDataCache);
+            pool.Take(bundleCount * accumulatedImpulseBundleSize, out context.AccumulatesImpulsesCache);
 
             context.BundlesPerWorker = bundleCount / threadCount;
             context.BundlesPerWorkerRemainder = bundleCount - context.BundlesPerWorker * threadCount;
@@ -344,7 +343,7 @@ namespace BepuPhysics
             if (threadDispatcher == null)
             {
                 GenerateSortKeys(0);
-                CopyToCacheAndSort(rawPool);
+                CopyToCacheAndSort(pool);
                 Regather(0);
             }
             else
@@ -361,14 +360,14 @@ namespace BepuPhysics
             //This is a pure debug function.
             solver.TypeProcessors[typeBatch.TypeId].VerifySortRegion(ref typeBatch, bundleStartIndex, constraintCount, ref context.SortedKeys, ref context.SortedSourceIndices);
 
-            intPool.Return(ref context.SourceIndices);
-            intPool.Return(ref context.SortKeys);
-            intPool.Return(ref context.ScratchKeys);
-            intPool.Return(ref context.ScratchValues);
-            intPool.Return(ref context.IndexToHandleCache);
-            rawPool.Return(ref context.BodyReferencesCache);
-            rawPool.Return(ref context.PrestepDataCache);
-            rawPool.Return(ref context.AccumulatesImpulsesCache);
+            pool.Return(ref context.SourceIndices);
+            pool.Return(ref context.SortKeys);
+            pool.Return(ref context.ScratchKeys);
+            pool.Return(ref context.ScratchValues);
+            pool.Return(ref context.IndexToHandleCache);
+            pool.Return(ref context.BodyReferencesCache);
+            pool.Return(ref context.PrestepDataCache);
+            pool.Return(ref context.AccumulatesImpulsesCache);
         }
     }
 }

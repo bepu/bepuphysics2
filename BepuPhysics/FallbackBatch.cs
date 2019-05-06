@@ -483,7 +483,6 @@ namespace BepuPhysics
 
         internal void EnsureCapacity(int bodyCapacity, BufferPool pool)
         {
-            var referenceListPool = pool.SpecializeFor<QuickSet<FallbackReference, FallbackReferenceComparer>>();
             if (bodyConstraintReferences.Keys.Allocated)
             {
                 //This is conservative since there's no guarantee that we'll actually need to resize at all if these bodies are already present, but that's fine. 

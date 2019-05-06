@@ -25,8 +25,8 @@ namespace BepuPhysics.CollisionDetection
             Pool = pool;
             ActiveTree = new Tree(pool, initialActiveLeafCapacity);
             StaticTree = new Tree(pool, initialStaticLeafCapacity);
-            pool.SpecializeFor<CollidableReference>().Take(initialActiveLeafCapacity, out activeLeaves);
-            pool.SpecializeFor<CollidableReference>().Take(initialStaticLeafCapacity, out staticLeaves);
+            pool.Take(initialActiveLeafCapacity, out activeLeaves);
+            pool.Take(initialStaticLeafCapacity, out staticLeaves);
 
             activeRefineContext = new Tree.RefitAndRefineMultithreadedContext();
             staticRefineContext = new Tree.RefitAndRefineMultithreadedContext();
@@ -155,7 +155,7 @@ namespace BepuPhysics.CollisionDetection
         }
         void Dispose(ref Tree tree, ref Buffer<CollidableReference> leaves)
         {
-            Pool.SpecializeFor<CollidableReference>().Return(ref leaves);
+            Pool.Return(ref leaves);
             tree.Dispose(Pool);
         }
         /// <summary>

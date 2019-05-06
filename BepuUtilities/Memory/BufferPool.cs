@@ -310,7 +310,7 @@ namespace BepuUtilities.Memory
         }
 
         /// <summary>
-        /// Takes a buffer large enough to contain a number of bytes.
+        /// Takes a buffer large enough to contain a number of bytes. Capacity may be larger than requested.
         /// </summary>
         /// <param name="count">Number of bytes that should fit within the buffer.</param>
         /// <param name="buffer">Buffer that can hold the bytes.</param>

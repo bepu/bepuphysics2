@@ -195,7 +195,7 @@ namespace BepuPhysics
             FallbackBatchThreshold = fallbackBatchThreshold;
             ActiveSet = new ConstraintSet(pool, fallbackBatchThreshold + 1);
             batchReferencedHandles = new QuickList<IndexSet>(fallbackBatchThreshold + 1, pool);
-            pool.SpecializeFor<ConstraintLocation>().Take(initialCapacity, out HandleToConstraint);
+            pool.Take(initialCapacity, out HandleToConstraint);
             solveWorker = SolveWorker;
             incrementalContactUpdateWorker = IncrementalContactUpdateWorker;
         }
@@ -499,7 +499,7 @@ namespace BepuPhysics
 
             if (constraintHandle >= HandleToConstraint.Length)
             {
-                pool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, HandleToConstraint.Length * 2, HandleToConstraint.Length);
+                pool.Resize(ref HandleToConstraint, HandleToConstraint.Length * 2, HandleToConstraint.Length);
                 Debug.Assert(constraintHandle < HandleToConstraint.Length, "Handle indices should never jump by more than 1 slot, so doubling should always be sufficient.");
             }
             ref var constraintLocation = ref HandleToConstraint[constraintHandle];
@@ -1112,7 +1112,7 @@ namespace BepuPhysics
         {
             if (HandleToConstraint.Length < constraintHandleCapacity)
             {
-                pool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1);
+                pool.Resize(ref HandleToConstraint, constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1);
             }
             //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
             var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
@@ -1135,7 +1135,7 @@ namespace BepuPhysics
             var targetConstraintCount = BufferPool.GetCapacityForCount<ConstraintLocation>(Math.Max(constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1));
             if (HandleToConstraint.Length != targetConstraintCount)
             {
-                pool.SpecializeFor<ConstraintLocation>().Resize(ref HandleToConstraint, targetConstraintCount, HandlePool.HighestPossiblyClaimedId + 1);
+                pool.Resize(ref HandleToConstraint, targetConstraintCount, HandlePool.HighestPossiblyClaimedId + 1);
             }
             //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
             var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);
@@ -1154,7 +1154,7 @@ namespace BepuPhysics
             if (Sets.Length != setsCapacity)
             {
                 var oldCapacity = Sets.Length;
-                pool.SpecializeFor<ConstraintSet>().Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
+                pool.Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
                 if (oldCapacity < Sets.Length)
                     Sets.Clear(oldCapacity, Sets.Length - oldCapacity); //We rely on unused slots being default initialized.
             }
@@ -1206,8 +1206,8 @@ namespace BepuPhysics
                 if (Sets[i].Allocated)
                     Sets[i].Dispose(pool);
             }
-            pool.SpecializeFor<ConstraintSet>().Return(ref Sets);
-            pool.SpecializeFor<ConstraintLocation>().Return(ref HandleToConstraint);
+            pool.Return(ref Sets);
+            pool.Return(ref HandleToConstraint);
             HandlePool.Dispose(pool.SpecializeFor<int>());
         }
 

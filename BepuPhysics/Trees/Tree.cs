@@ -103,17 +103,17 @@ namespace BepuPhysics.Trees
             Debug.Assert(Leaves.Allocated == Nodes.Allocated);
             if (leafCapacityForTarget != Leaves.Length)
             {
-                pool.SpecializeFor<Leaf>().Resize(ref Leaves, leafCapacityForTarget, leafCount);
+                pool.Resize(ref Leaves, leafCapacityForTarget, leafCount);
                 leaves = (Leaf*)Leaves.Memory;
             }
             if (nodeCapacityForTarget != Nodes.Length)
             {
-                pool.SpecializeFor<Node>().Resize(ref Nodes, nodeCapacityForTarget, nodeCount);
+                pool.Resize(ref Nodes, nodeCapacityForTarget, nodeCount);
                 nodes = (Node*)Nodes.Memory;
             }
             if (metanodeCapacityForTarget != Metanodes.Length)
             {
-                pool.SpecializeFor<Metanode>().Resize(ref Metanodes, metanodeCapacityForTarget, nodeCount);
+                pool.Resize(ref Metanodes, metanodeCapacityForTarget, nodeCount);
                 //A node's RefineFlag must be 0, so just clear out the node set. 
                 //TODO: This won't be necessary if we get rid of refineflags as a concept.
                 Metanodes.Clear(nodeCount, Nodes.Length - nodeCount);

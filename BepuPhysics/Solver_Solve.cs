@@ -737,8 +737,8 @@ namespace BepuPhysics
                 FallbackBatch.AllocateResults(this, pool, ref ActiveSet.Batches[FallbackBatchThreshold], out context.FallbackResults);
                 context.FallbackBlocks.CreateClaims(pool);
             }
-            pool.SpecializeFor<WorkerBounds>().Take(workerCount, out context.WorkerBoundsA);
-            pool.SpecializeFor<WorkerBounds>().Take(workerCount, out context.WorkerBoundsB);
+            pool.Take(workerCount, out context.WorkerBoundsA);
+            pool.Take(workerCount, out context.WorkerBoundsB);
             //The worker bounds front buffer should be initialized to avoid trash interval data from messing up the workstealing.
             //The worker bounds back buffer will be cleared by the worker before moving on to the next stage.
             for (int i = 0; i < workerCount; ++i)

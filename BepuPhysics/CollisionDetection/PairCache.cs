@@ -194,7 +194,7 @@ namespace BepuPhysics.CollisionDetection
             targetCapacity = Math.Max(solver.HandlePool.HighestPossiblyClaimedId + 1, targetCapacity);
             if (ConstraintHandleToPair.Length < targetCapacity)
             {
-                pool.SpecializeFor<CollisionPairLocation>().Resize(ref ConstraintHandleToPair, targetCapacity, ConstraintHandleToPair.Length);
+                pool.Resize(ref ConstraintHandleToPair, targetCapacity, ConstraintHandleToPair.Length);
             }
         }
 
@@ -203,7 +203,7 @@ namespace BepuPhysics.CollisionDetection
             targetCapacity = BufferPool.GetCapacityForCount<CollisionPairLocation>(Math.Max(solver.HandlePool.HighestPossiblyClaimedId + 1, targetCapacity));
             if (ConstraintHandleToPair.Length != targetCapacity)
             {
-                pool.SpecializeFor<CollisionPairLocation>().Resize(ref ConstraintHandleToPair, targetCapacity, Math.Min(targetCapacity, ConstraintHandleToPair.Length));
+                pool.Resize(ref ConstraintHandleToPair, targetCapacity, Math.Min(targetCapacity, ConstraintHandleToPair.Length));
             }
         }
 
@@ -340,11 +340,11 @@ namespace BepuPhysics.CollisionDetection
                 if (set.Allocated)
                     set.Dispose(pool);
             }
-            pool.SpecializeFor<SleepingSet>().Return(ref SleepingSets);
+            pool.Return(ref SleepingSets);
             //The constraint handle to pair is partially slaved to the constraint handle capacity. 
             //It gets ensured every frame, but the gap between construction and the first frame could leave it uninitialized.
             if (ConstraintHandleToPair.Allocated)
-                pool.SpecializeFor<CollisionPairLocation>().Return(ref ConstraintHandleToPair);
+                pool.Return(ref ConstraintHandleToPair);
         }
 
 

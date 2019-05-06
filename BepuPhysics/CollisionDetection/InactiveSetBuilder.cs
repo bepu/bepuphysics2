@@ -39,7 +39,7 @@ namespace BepuPhysics.CollisionDetection
                 else
                     break;
             }
-            pool.SpecializeFor<SleepingCache>().Return(ref ConstraintCaches);
+            pool.Return(ref ConstraintCaches);
             //Remember, collision caches are not guaranteed to exist. If none are found during set construction, nothing is allocated for them.
             //This just saves a little bit of extra space for the inactive set.
             if (CollisionCaches.Allocated)
@@ -52,7 +52,7 @@ namespace BepuPhysics.CollisionDetection
                     else
                         break;
                 }
-                pool.SpecializeFor<SleepingCache>().Return(ref CollisionCaches);
+                pool.Return(ref CollisionCaches);
             }
             Pairs.Dispose(pool);
         }
@@ -66,9 +66,8 @@ namespace BepuPhysics.CollisionDetection
         public int InitialCapacityPerCache;
         public SleepingSetBuilder(BufferPool pool, int initialPairCapacity, int initialCapacityPerCache)
         {
-            var listPool = pool.SpecializeFor<UntypedList>();
-            listPool.Take(PairCache.CollisionConstraintTypeCount, out ConstraintCaches);
-            listPool.Take(PairCache.CollisionTypeCount, out CollisionCaches);
+            pool.Take(PairCache.CollisionConstraintTypeCount, out ConstraintCaches);
+            pool.Take(PairCache.CollisionTypeCount, out CollisionCaches);
             //Original values are used to test for existence; have to clear to avoid undefined values.
             ConstraintCaches.Clear(0, ConstraintCaches.Length);
             CollisionCaches.Clear(0, CollisionCaches.Length);
@@ -124,9 +123,9 @@ namespace BepuPhysics.CollisionDetection
             //Note that collision caches are not guaranteed to exist, so there may be no need to allocate room to store them.
             if (sourceTypeCount > 0)
             {
-                pool.SpecializeFor<SleepingCache>().Take(sourceTypeCount, out inactiveCaches);
+                pool.Take(sourceTypeCount, out inactiveCaches);
                 int index = 0;
-                pool.SpecializeFor<int>().Take(sourceCaches.Length, out typeRemap);
+                pool.Take(sourceCaches.Length, out typeRemap);
                 for (int i = 0; i < sourceCaches.Length; ++i)
                 {
                     ref var sourceList = ref sourceCaches[i];
@@ -180,9 +179,9 @@ namespace BepuPhysics.CollisionDetection
                     remappedPair.CollisionCache = sourcePair.CollisionCache.Exists ?
                         new TypedIndex(collisionTypeRemap[sourcePair.CollisionCache.Type], sourcePair.CollisionCache.Index) : new TypedIndex();
                 }
-                pool.SpecializeFor<int>().Return(ref constraintTypeRemap);
+                pool.Return(ref constraintTypeRemap);
                 if (collisionTypeRemap.Allocated)
-                    pool.SpecializeFor<int>().Return(ref collisionTypeRemap);
+                    pool.Return(ref collisionTypeRemap);
                 Pairs.Count = 0;
             }
             else
@@ -199,13 +198,13 @@ namespace BepuPhysics.CollisionDetection
                 if (ConstraintCaches[i].Buffer.Allocated)
                     pool.Return(ref ConstraintCaches[i].Buffer);
             }
-            pool.SpecializeFor<UntypedList>().Return(ref ConstraintCaches);
+            pool.Return(ref ConstraintCaches);
             for (int i = 0; i < CollisionCaches.Length; ++i)
             {
                 if (CollisionCaches[i].Buffer.Allocated)
                     pool.Return(ref CollisionCaches[i].Buffer);
             }
-            pool.SpecializeFor<UntypedList>().Return(ref CollisionCaches);
+            pool.Return(ref CollisionCaches);
             Pairs.Dispose(pool);
         }
     }

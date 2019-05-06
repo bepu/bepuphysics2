@@ -52,7 +52,7 @@ namespace BepuPhysics
         {
             var oldLength = TypeIndexToTypeBatchIndex.Length;
             Debug.Assert(oldLength != BufferPool.GetCapacityForCount<int>(newSize), "Shouldn't resize if nothing changes.");
-            pool.SpecializeFor<int>().Resize(ref TypeIndexToTypeBatchIndex, newSize, oldLength);
+            pool.Resize(ref TypeIndexToTypeBatchIndex, newSize, oldLength);
             for (int i = oldLength; i < TypeIndexToTypeBatchIndex.Length; ++i)
             {
                 TypeIndexToTypeBatchIndex[i] = -1;
@@ -279,7 +279,7 @@ namespace BepuPhysics
             {
                 TypeBatches[i].Dispose(pool);
             }
-            pool.SpecializeFor<int>().Return(ref TypeIndexToTypeBatchIndex);
+            pool.Return(ref TypeIndexToTypeBatchIndex);
             TypeIndexToTypeBatchIndex = new Buffer<int>();
             TypeBatches.Dispose(pool);
             TypeBatches = default;

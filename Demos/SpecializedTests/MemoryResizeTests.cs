@@ -42,10 +42,9 @@ namespace Demos.SpecializedTests
 
         static void FillTrashBuffers(Simulation simulation, Random random)
         {
-            var pool = simulation.BufferPool.SpecializeFor<int>();
-            var bufferPool = simulation.BufferPool;
+            var pool = simulation.BufferPool;
             const int bufferCount = 50;
-            var bufferList = new QuickList<Buffer<int>>(bufferCount, bufferPool);
+            var bufferList = new QuickList<Buffer<int>>(bufferCount, pool);
             for (int trashBufferIndex = 0; trashBufferIndex < bufferCount; ++trashBufferIndex)
             {
                 //Pull a buffer from the pool, fill it with trash data, and return it. 
@@ -58,7 +57,7 @@ namespace Demos.SpecializedTests
             {
                 pool.Return(ref bufferList[i]);
             }
-            bufferList.Dispose(bufferPool);
+            bufferList.Dispose(pool);
         }
         public static void Test()
         {

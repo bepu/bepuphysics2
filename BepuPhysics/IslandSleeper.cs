@@ -617,7 +617,7 @@ namespace BepuPhysics
             //1) TRAVERSAL      
             this.traversalStartBodyIndices = traversalStartBodyIndices;
 
-            pool.SpecializeFor<WorkerTraversalResults>().Take(workerTraversalThreadCount, out workerTraversalResults);
+            pool.Take(workerTraversalThreadCount, out workerTraversalResults);
             //Note that all resources within a worker's results set are allocate on the worker's pool since the thread may need to resize things.
             this.threadDispatcher = threadDispatcher;
             jobIndex = -1;
@@ -654,7 +654,7 @@ namespace BepuPhysics
                     //The source of traversal worker resources was the main pool since it's running in single threaded mode.
                     workerTraversalResults[0].Dispose(pool);
                 }
-                pool.SpecializeFor<WorkerTraversalResults>().Return(ref workerTraversalResults);
+                pool.Return(ref workerTraversalResults);
             }
             if (totalIslandCount == 0)
             {
@@ -956,7 +956,7 @@ namespace BepuPhysics
             {
                 //The order in which sleeps occur affects the result of the simulation. To ensure determinism, we need to pin the sleep order to something
                 //which is deterministic. We will use the handle associated with each active body as the order provider.
-                pool.SpecializeFor<int>().Take(bodies.ActiveSet.Count, out var sortedIndices);
+                pool.Take<int>(bodies.ActiveSet.Count, out var sortedIndices);
                 for (int i = 0; i < bodies.ActiveSet.Count; ++i)
                 {
                     sortedIndices[i] = i;
@@ -974,7 +974,7 @@ namespace BepuPhysics
                     traversalStartBodyIndices[i] = sortedIndices[traversalStartBodyIndices[i]];
                     Debug.Assert(traversalStartBodyIndices[i] >= 0 && traversalStartBodyIndices[i] < bodies.ActiveSet.Count);
                 }
-                pool.SpecializeFor<int>().Return(ref sortedIndices);
+                pool.Return(ref sortedIndices);
             }
             Sleep(ref traversalStartBodyIndices, threadDispatcher, deterministic, (int)Math.Ceiling(bodies.ActiveSet.Count * TargetSleptFraction), (int)Math.Ceiling(bodies.ActiveSet.Count * TargetTraversedFraction), false);
 

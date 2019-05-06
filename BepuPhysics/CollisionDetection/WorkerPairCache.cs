@@ -50,8 +50,8 @@ namespace BepuPhysics.CollisionDetection
             this.pool = pool;
             this.minimumPerTypeCapacity = minimumPerTypeCapacity;
             const float previousCountMultiplier = 1.25f;
-            pool.SpecializeFor<UntypedList>().Take(PairCache.CollisionConstraintTypeCount, out constraintCaches);
-            pool.SpecializeFor<UntypedList>().Take(PairCache.CollisionTypeCount, out collisionCaches);
+            pool.Take(PairCache.CollisionConstraintTypeCount, out constraintCaches);
+            pool.Take(PairCache.CollisionTypeCount, out collisionCaches);
             for (int i = 0; i < minimumSizesPerConstraintType.Count; ++i)
             {
                 ref var sizes = ref minimumSizesPerConstraintType[i];
@@ -188,13 +188,13 @@ namespace BepuPhysics.CollisionDetection
                 if (constraintCaches[i].Buffer.Allocated)
                     pool.Return(ref constraintCaches[i].Buffer);
             }
-            pool.SpecializeFor<UntypedList>().Return(ref constraintCaches);
+            pool.Return(ref constraintCaches);
             for (int i = 0; i < collisionCaches.Length; ++i)
             {
                 if (collisionCaches[i].Buffer.Allocated)
                     pool.Return(ref collisionCaches[i].Buffer);
             }
-            pool.SpecializeFor<UntypedList>().Return(ref collisionCaches);
+            pool.Return(ref collisionCaches);
             this = new WorkerPairCache();
             //note that the pending collections are not disposed here; they are disposed upon flushing immediately after the narrow phase completes.
         }

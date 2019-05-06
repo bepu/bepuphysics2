@@ -259,9 +259,6 @@ namespace BepuPhysics.CollisionDetection
             //Accumulate the set of unique type batches in a contiguous list so we can easily execute multithreaded jobs over them.
             //Note that we're actually copying here, rather than merely creating references. This simplifies the deterministic/nondeterministic split at a pretty tiny cost.
             batches = new RemovalCache(pool, 32, 8);
-            var typeBatchIndexPool = pool.SpecializeFor<TypeBatchIndex>();
-            var removalTargetPool = pool.SpecializeFor<PerBodyRemovalTarget>();
-            var intPool = pool.SpecializeFor<int>();
             var removedConstraintCount = 0;
             for (int i = 0; i < threadCount; ++i)
             {
@@ -301,7 +298,7 @@ namespace BepuPhysics.CollisionDetection
             //Ensure that the solver's id pool is large enough to hold all constraint handles being removed.
             //(Note that we do this even if we end up using this for sleeping, where we don't actually return the handles.
             //There's no functional reason for that- it's just simpler to not have a conditional API, and it has no significant impact on performance. Might change later.)
-            solver.HandlePool.EnsureCapacity(solver.HandlePool.AvailableIdCount + removedConstraintCount, intPool);
+            solver.HandlePool.EnsureCapacity(solver.HandlePool.AvailableIdCount + removedConstraintCount, pool.SpecializeFor<int>());
 
             //Ensure that the removal list is large enough to hold every single type batch in the worst case. This prevents the need to resize during execution.
             //That's valuable because every access to the main thread's buffer pool is a potential race condition when other tasks are also using it.

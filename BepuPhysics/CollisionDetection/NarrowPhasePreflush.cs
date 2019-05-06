@@ -269,7 +269,7 @@ namespace BepuPhysics.CollisionDetection
                 //TODO: It would be nice to have all the jobs semi-sorted by heftiness- that would just split the awakener job creator loop. Only bother if profiling suggests it.
                 if (deterministic)
                 {
-                    Pool.SpecializeFor<QuickList<SortConstraintTarget>>().Take(PairCache.CollisionConstraintTypeCount, out sortedConstraints);
+                    Pool.Take(PairCache.CollisionConstraintTypeCount, out sortedConstraints);
                     sortedConstraints.Clear(0, PairCache.CollisionConstraintTypeCount);
                     for (int typeIndex = 0; typeIndex < PairCache.CollisionConstraintTypeCount; ++typeIndex)
                     {
