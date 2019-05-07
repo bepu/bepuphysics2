@@ -67,12 +67,12 @@ namespace BepuPhysics.CollisionDetection
 
             struct ContinuationCache<T> where T : struct
             {
-                public IdPool<Buffer<int>> Ids;
+                public IdPool Ids;
                 public Buffer<T> Caches;
 
                 public ContinuationCache(BufferPool pool)
                 {
-                    IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 32, out Ids);
+                    Ids = new IdPool(32, pool);
                     pool.Take(128, out Caches);
                 }
 
@@ -90,13 +90,13 @@ namespace BepuPhysics.CollisionDetection
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public void Return(int index, BufferPool pool)
                 {
-                    Ids.Return(index, pool.SpecializeFor<int>());
+                    Ids.Return(index, pool);
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public void Dispose(BufferPool pool)
                 {
-                    Ids.Dispose(pool.SpecializeFor<int>());
+                    Ids.Dispose(pool);
                     pool.Return(ref Caches);
                 }
             }

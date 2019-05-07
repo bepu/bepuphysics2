@@ -26,6 +26,7 @@ namespace DemoRenderer.Constraints
     }
 
     class TypeLineExtractor<T, TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses> : TypeLineExtractor
+        where TBodyReferences : struct
         where TPrestep : struct
         where T : struct, IConstraintLineExtractor<TPrestep>
     {

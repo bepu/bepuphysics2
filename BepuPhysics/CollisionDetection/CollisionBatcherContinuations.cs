@@ -87,7 +87,7 @@ namespace BepuPhysics.CollisionDetection
     public struct BatcherContinuations<T> where T : struct, ICollisionTestContinuation
     {
         public Buffer<T> Continuations;
-        public IdPool<Buffer<int>> IdPool;
+        public IdPool IdPool;
         const int InitialCapacity = 64;
 
         public ref T CreateContinuation(int slotsInContinuation, BufferPool pool, out int index)
@@ -97,7 +97,7 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(!IdPool.Allocated);
                 //Lazy initialization.
                 pool.Take(InitialCapacity, out Continuations);
-                IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), InitialCapacity, out IdPool);
+                IdPool = new IdPool(InitialCapacity, pool);
             }
             index = IdPool.Take();
             if (index >= Continuations.Length)
@@ -118,7 +118,7 @@ namespace BepuPhysics.CollisionDetection
             if (slot.TryFlush(continuation.PairId, ref batcher))
             {
                 //The entire continuation has completed; free the slot.
-                IdPool.Return(continuation.Index, batcher.Pool.SpecializeFor<int>());
+                IdPool.Return(continuation.Index, batcher.Pool);
             }
         }
 
@@ -129,7 +129,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 pool.ReturnUnsafely(Continuations.Id);
                 Debug.Assert(IdPool.Allocated);
-                IdPool.Dispose(pool.SpecializeFor<int>());
+                IdPool.Dispose(pool);
             }
 #if DEBUG
             //Makes it a little easier to catch bad accesses.

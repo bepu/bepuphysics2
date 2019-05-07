@@ -19,7 +19,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public int Capacity { get { return shapesData.Length / shapeDataSize; } }
         protected BufferPool pool;
-        protected IdPool<Buffer<int>> idPool;
+        protected IdPool idPool;
         /// <summary>
         /// Gets the type id of the shape type in this batch.
         /// </summary>
@@ -38,7 +38,7 @@ namespace BepuPhysics.Collidables
 
         public void Remove(int index)
         {
-            idPool.Return(index, pool.SpecializeFor<int>());
+            idPool.Return(index, pool);
         }
 
         public void RemoveAndDispose(int index, BufferPool pool)
@@ -57,10 +57,6 @@ namespace BepuPhysics.Collidables
         public abstract void ComputeBounds(int shapeIndex, in RigidPose pose, out Vector3 min, out Vector3 max);
         internal virtual void ComputeBounds(int shapeIndex, in BepuUtilities.Quaternion orientation, out float maximumRadius, out float maximumAngularExpansion, out Vector3 min, out Vector3 max)
         {
-            maximumRadius = 0;
-            maximumAngularExpansion = 0;
-            min = default;
-            max = default;
             throw new InvalidOperationException("Nonconvex shapes are not required to have a maximum radius or angular expansion implementation. This should only ever be called on convexes.");
         }
         public abstract bool RayTest(int shapeIndex, in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal);
@@ -106,7 +102,7 @@ namespace BepuPhysics.Collidables
         /// <param name="targetIdCapacity">Number of slots to allocate space for in the id pool.</param>
         public void ResizeIdPool(int targetIdCapacity)
         {
-            idPool.Resize(targetIdCapacity, pool.SpecializeFor<int>());
+            idPool.Resize(targetIdCapacity, pool);
         }
 
     }
@@ -127,7 +123,7 @@ namespace BepuPhysics.Collidables
             this.pool = pool;
             TypeId = default(TShape).TypeId;
             InternalResize(initialShapeCount, 0);
-            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialShapeCount, out idPool);
+            idPool = new IdPool(initialShapeCount, pool);
         }
 
         //Note that shapes cannot be moved; there is no reference to the collidables using them, so we can't correct their indices.
@@ -196,7 +192,7 @@ namespace BepuPhysics.Collidables
         {
             Debug.Assert(shapesData.Id == shapes.Id, "If the buffer ids don't match, there was some form of failed resize.");
             pool.Return(ref shapesData);
-            idPool.Dispose(pool.SpecializeFor<int>());
+            idPool.Dispose(pool);
         }
     }
 

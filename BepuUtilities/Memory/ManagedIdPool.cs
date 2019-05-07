@@ -12,7 +12,7 @@ namespace BepuUtilities.Memory
     /// </summary>
     /// <remarks>This contrasts with the IdPool which operates on unmanaged memory. This version only exists to support use cases where the unmanaged version can't be used-
     /// for example, in the BufferPool. While the implementation can be shared, doing so involves creating enough supporting infrastructure that it's simpler to have a managed-only version.</remarks>
-    public struct ManagedIdPool
+    public class ManagedIdPool
     {
         private int nextIndex;
 

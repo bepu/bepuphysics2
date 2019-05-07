@@ -33,7 +33,7 @@ namespace BepuPhysics
         /// The backing array index may change in response to cache optimization.
         /// </summary>
         public Buffer<BodyLocation> HandleToLocation;
-        public IdPool<Buffer<int>> HandlePool;
+        public IdPool HandlePool;
         /// <summary>
         /// The set of existing bodies. The slot at index 0 contains all active bodies. Later slots, if allocated, contain the bodies associated with inactive islands.
         /// Note that this buffer does not necessarily contain contiguous elements. When a set is removed, a gap remains.
@@ -81,7 +81,7 @@ namespace BepuPhysics
 
             //Note that the id pool only grows upon removal, so this is just a heuristic initialization.
             //You could get by with something a lot less aggressive, but it does tend to avoid resizes in the case of extreme churn.
-            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialBodyCapacity, out HandlePool);
+            HandlePool = new IdPool(initialBodyCapacity, pool);
             ResizeHandles(initialBodyCapacity);
             ResizeSetsCapacity(initialIslandCapacity + 1, 0);
             ActiveSet = new BodySet(initialBodyCapacity, pool);
@@ -206,7 +206,7 @@ namespace BepuPhysics
 
             var handle = RemoveFromActiveSet(activeBodyIndex);
 
-            HandlePool.Return(handle, Pool.SpecializeFor<int>());
+            HandlePool.Return(handle, Pool);
             ref var removedBodyLocation = ref HandleToLocation[handle];
             removedBodyLocation.SetIndex = -1;
             removedBodyLocation.Index = -1;
@@ -1260,7 +1260,7 @@ namespace BepuPhysics
             if (Inertias.Allocated)
                 Pool.Return(ref Inertias);
             Pool.Return(ref HandleToLocation);
-            HandlePool.Dispose(Pool.SpecializeFor<int>());
+            HandlePool.Dispose(Pool);
         }
 
     }

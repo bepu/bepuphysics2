@@ -10,7 +10,7 @@ namespace BepuUtilities.Memory
     /// Manages a pool of identifier values. Grabbing an id from the pool picks a number that has been picked and returned before, 
     /// or if none of those are available, the minimum value greater than any existing id.
     /// </summary>
-    public struct IdPool<TSpan> where TSpan : ISpan<int>
+    public struct IdPool
     {
         //TODO: You could make this quite a bit more memory efficient in the case where a bunch of ids are requested, then returned.
         //It would require a little more bookkeeping effort, though; it's likely that either taking or returning ids would slow down a little.
@@ -20,7 +20,7 @@ namespace BepuUtilities.Memory
         private int nextIndex;
 
         int availableIdCount;
-        TSpan availableIds;
+        Buffer<int> availableIds;
 
         /// <summary>
         /// Gets the highest value which any index claimed thus far could possibly have.
@@ -37,18 +37,20 @@ namespace BepuUtilities.Memory
         /// </summary>
         public int AvailableIdCount => availableIdCount;
 
+        public int Capacity => availableIds.Length;
+
         /// <summary>
         /// Gets whether the id pool has backing resources allocated to it and is ready to use.
         /// </summary>
         public bool Allocated => availableIds.Allocated;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Create<TPool>(TPool pool, int initialCapacity, out IdPool<TSpan> idPool) where TPool : IMemoryPool<int, TSpan>
+        public IdPool(int initialCapacity, IUnmanagedMemoryPool pool)
         {
-            idPool.nextIndex = 0;
-            idPool.availableIdCount = 0;
-            pool.Take(initialCapacity, out idPool.availableIds);
+            nextIndex = 0;
+            availableIdCount = 0;
+            pool.Take(initialCapacity, out availableIds);
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Take()
@@ -60,7 +62,7 @@ namespace BepuUtilities.Memory
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Return<TPool>(int id, TPool pool) where TPool : IMemoryPool<int, TSpan>
+        public void Return(int id, IUnmanagedMemoryPool pool)
         {
             Debug.Assert(availableIds.Allocated);
             if (availableIdCount == availableIds.Length)
@@ -70,7 +72,7 @@ namespace BepuUtilities.Memory
                 oldAvailableIds.CopyTo(0, ref availableIds, 0, availableIdCount);
                 pool.Return(ref oldAvailableIds);
             }
-            availableIds[availableIdCount++] = id;
+            ReturnUnsafely(id);
         }
 
         /// <summary>
@@ -85,7 +87,7 @@ namespace BepuUtilities.Memory
         }
 
         /// <summary>
-        /// Resets the IdPool without returning any resources to the underlying memory pool.
+        /// Resets the IdPool.
         /// </summary>
         public void Clear()
         {
@@ -93,7 +95,7 @@ namespace BepuUtilities.Memory
             availableIdCount = 0;
         }
 
-        void InternalResize<TPool>(int newSize, TPool pool) where TPool : IMemoryPool<int, TSpan>
+        void InternalResize(int newSize, IUnmanagedMemoryPool pool)
         {
             var oldAvailableIds = availableIds;
             pool.Take(newSize, out availableIds);
@@ -107,12 +109,12 @@ namespace BepuUtilities.Memory
         /// </summary>
         /// <param name="count">Number of elements to preallocate space for in the available ids queue.</param>
         /// <param name="pool">Pool to pull resized spans from.</param>
-        public void EnsureCapacity<TPool>(int count, TPool pool) where TPool : IMemoryPool<int, TSpan>
+        public void EnsureCapacity(int count, IUnmanagedMemoryPool pool)
         {
             if (!availableIds.Allocated)
             {
                 //If this was disposed, we must explicitly rehydrate it.
-                Create(pool, count, out this);
+                this = new IdPool(count, pool);
             }
             else
             {
@@ -125,7 +127,7 @@ namespace BepuUtilities.Memory
         /// Shrinks the available ids queue to the smallest size that can fit the given count and the current available id count.
         /// </summary>
         /// <param name="minimumCount">Number of elements to guarantee space for in the available ids queue.</param>
-        public void Compact<TPool>(int minimumCount, TPool pool) where TPool : IMemoryPool<int, TSpan>
+        public void Compact(int minimumCount, IUnmanagedMemoryPool pool)
         {
             Debug.Assert(availableIds.Allocated);
             var targetLength = BufferPool.GetCapacityForCount<int>(Math.Max(minimumCount, availableIdCount));
@@ -139,12 +141,12 @@ namespace BepuUtilities.Memory
         /// Resizes the underlying buffer to the smallest size required to hold the given count and the current available id count.
         /// </summary>
         /// <param name="count">Number of elements to guarantee space for in the available ids queue.</param>
-        public void Resize<TPool>(int count, TPool pool) where TPool : IMemoryPool<int, TSpan>
+        public void Resize(int count, IUnmanagedMemoryPool pool)
         {
             if (!availableIds.Allocated)
             {
                 //If this was disposed, we must explicitly rehydrate it.
-                Create(pool, count, out this);
+                this = new IdPool(count, pool);
             }
             else
             {
@@ -161,7 +163,7 @@ namespace BepuUtilities.Memory
         /// </summary>
         /// <remarks>The IdPool can be reused only if EnsureCapacity or Resize is called.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose<TPool>(TPool pool) where TPool : IMemoryPool<int, TSpan>
+        public void Dispose(IUnmanagedMemoryPool pool)
         {
             pool.Return(ref availableIds);
             //This simplifies reuse and makes it harder to use invalid data.

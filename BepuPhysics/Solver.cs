@@ -71,7 +71,7 @@ namespace BepuPhysics
         /// <summary>
         /// Pool to retrieve constraint handles from when creating new constraints.
         /// </summary>
-        public IdPool<Buffer<int>> HandlePool;
+        public IdPool HandlePool;
         internal BufferPool pool;
         public Buffer<ConstraintLocation> HandleToConstraint;
 
@@ -190,7 +190,7 @@ namespace BepuPhysics
             this.minimumCapacityPerTypeBatch = minimumCapacityPerTypeBatch;
             this.bodies = bodies;
             this.pool = pool;
-            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 128, out HandlePool);
+            HandlePool = new IdPool(128, pool);
             ResizeSetsCapacity(initialIslandCapacity + 1, 0);
             FallbackBatchThreshold = fallbackBatchThreshold;
             ActiveSet = new ConstraintSet(pool, fallbackBatchThreshold + 1);
@@ -867,7 +867,7 @@ namespace BepuPhysics
 
             pairCache.RemoveReferenceIfContactConstraint(handle, constraintLocation.TypeId);
             RemoveFromBatch(handle, constraintLocation.BatchIndex, constraintLocation.TypeId, constraintLocation.IndexInTypeBatch);
-            HandlePool.Return(handle, pool.SpecializeFor<int>());
+            HandlePool.Return(handle, pool);
         }
 
         public void GetDescription<TConstraintDescription, TTypeBatch>(ref ConstraintReference constraintReference, out TConstraintDescription description)
@@ -1208,7 +1208,7 @@ namespace BepuPhysics
             }
             pool.Return(ref Sets);
             pool.Return(ref HandleToConstraint);
-            HandlePool.Dispose(pool.SpecializeFor<int>());
+            HandlePool.Dispose(pool);
         }
 
 

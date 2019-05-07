@@ -239,7 +239,7 @@ namespace BepuUtilities.Memory
                 Debug.Assert(found, "Allocator set must contain the buffer id.");
 #endif
 #endif
-                Slots.Return(slotIndex, new PassthroughArrayPool<int>());
+                Slots.Return(slotIndex);
             }
 
             public void Clear()
@@ -465,18 +465,6 @@ namespace BepuUtilities.Memory
 
         }
 
-        /// <summary>
-        /// Creates a wrapper around the buffer pool that creates buffers of a particular type.
-        /// </summary>
-        /// <typeparam name="T">Type contained by the buffers returned by the specialized pool.</typeparam>
-        /// <returns>Pool specialized to create typed buffers.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public BufferPool<T> SpecializeFor<T>() where T : struct
-        {
-            ValidatePinnedState(true);
-            return new BufferPool<T>(this);
-        }
-
         [Conditional("LEAKDEBUG")]
         void ValidatePinnedState(bool pinned)
         {
@@ -608,50 +596,5 @@ namespace BepuUtilities.Memory
         }
 #endif
 
-    }
-
-    /// <summary>
-    /// Type specialized variants of the buffer pool.
-    /// </summary>
-    /// <typeparam name="T">Type of element to retrieve from the pool.</typeparam>
-    public struct BufferPool<T> : IMemoryPool<T, Buffer<T>> where T : struct
-    {
-        public readonly BufferPool Raw;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public BufferPool(BufferPool pool)
-        {
-            Raw = pool;
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Take(int count, out Buffer<T> span)
-        {
-            Raw.Take(count, out span);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void TakeForPower(int power, out Buffer<T> span)
-        {
-            //Note that we can't directly use TakeForPower from the underlying pool- the actual power needed at the byte level differs!
-            Debug.Assert(power >= 0 && power < 31, "Power must be positive and 2^power must fit within a signed integer.");
-            Raw.Take(1 << power, out span);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Return(ref Buffer<T> span)
-        {
-            Raw.ReturnUnsafely(span.Id);
-            span = new Buffer<T>();
-        }
-
-        /// <summary>
-        /// Resizes a typed buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer.
-        /// </summary>
-        /// <param name="buffer">Buffer reference to resize.</param>
-        /// <param name="targetSize">Number of elements to resize the buffer for.</param>
-        /// <param name="copyCount">Number of elements to copy into the new buffer from the old buffer.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Resize(ref Buffer<T> buffer, int targetSize, int copyCount)
-        {
-            Raw.Resize(ref buffer, targetSize, copyCount);
-        }
     }
 }

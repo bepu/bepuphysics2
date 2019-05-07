@@ -222,7 +222,7 @@ namespace BepuPhysics
             {
                 //TODO: If this ends up being the only place where you actually make use of the thread memory pools, you might as well get rid of it
                 //in favor of just preallocating workerCount buffers of 1024 ints each. Its original use of creating the typebatch-specific memory no longer exists.
-                LSBRadixSort.Sort<int, Buffer<int>, Buffer<int>>(
+                LSBRadixSort.Sort(
                     ref context.SortKeys, ref context.SourceIndices,
                     ref context.ScratchKeys, ref context.ScratchValues, 0, context.ConstraintsInSortRegionCount,
                     context.KeyUpperBound, threadDispatcher.GetThreadMemoryPool(workerIndex),
@@ -251,7 +251,7 @@ namespace BepuPhysics
 
         unsafe void CopyToCacheAndSort(BufferPool pool)
         {
-            LSBRadixSort.Sort<int, Buffer<int>, Buffer<int>>(
+            LSBRadixSort.Sort(
                 ref context.SortKeys, ref context.SourceIndices,
                 ref context.ScratchKeys, ref context.ScratchValues, 0, context.ConstraintsInSortRegionCount,
                 context.KeyUpperBound, pool,

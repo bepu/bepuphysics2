@@ -120,17 +120,15 @@ namespace BepuUtilities.Memory
         }
 
         [Conditional("DEBUG")]
-        private static void Validate<T, TSourceSpan, TTargetSpan>(ref TSourceSpan source, int sourceIndex, ref TTargetSpan target, int targetIndex, int count)
-            where TSourceSpan : ISpan<T>
-            where TTargetSpan : ISpan<T>
+        private static void Validate<T>(ref Buffer<T> source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : struct
         {
             Debug.Assert(targetIndex >= 0 && targetIndex + count <= target.Length, "Can't perform a copy that extends beyond the target span.");
             Debug.Assert(sourceIndex >= 0 && sourceIndex + count <= source.Length, "Can't perform a copy that extends beyond the source span.");
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Copy<T>(ref Buffer<T> source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count)
+        public static unsafe void Copy<T>(ref Buffer<T> source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : struct
         {
-            Validate<T, Buffer<T>, Buffer<T>>(ref source, sourceIndex, ref target, targetIndex, count);
+            Validate(ref source, sourceIndex, ref target, targetIndex, count);
             var byteCount = count * Unsafe.SizeOf<T>();
             Buffer.MemoryCopy(
                 source.Memory + sourceIndex * Unsafe.SizeOf<T>(),
@@ -138,103 +136,42 @@ namespace BepuUtilities.Memory
                 byteCount, byteCount);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Copy<T>(ref Array<T> source, int sourceIndex, ref Array<T> target, int targetIndex, int count)
-        {
-            Validate<T, Array<T>, Array<T>>(ref source, sourceIndex, ref target, targetIndex, count);
-            var byteCount = count * Unsafe.SizeOf<T>();
-            Array.Copy(source.Memory, sourceIndex, target.Memory, targetIndex, count);
-        }
-
-        //Copies between spans of different types should be extremely rare in practice.
-        //Due to that rareness, and the complexity involved in the overlap-isn't-a-problem guarantees of the function, just bite the bullet and pin.
-        //This will have slightly worse performance, but it doesn't matter much.
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Copy<T>(ref Buffer<T> source, int sourceIndex, ref Array<T> target, int targetIndex, int count)
-        {
-            Validate<T, Buffer<T>, Array<T>>(ref source, sourceIndex, ref target, targetIndex, count);
-            var arrayHandle = GCHandle.Alloc(target.Memory, GCHandleType.Pinned);
-            var byteCount = count * Unsafe.SizeOf<T>();
-            Buffer.MemoryCopy(
-                source.Memory + sourceIndex * Unsafe.SizeOf<T>(),
-                Unsafe.AsPointer(ref target[targetIndex]),
-                byteCount, byteCount);
-            arrayHandle.Free();
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Copy<T>(ref Array<T> source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count)
-        {
-            Validate<T, Array<T>, Buffer<T>>(ref source, sourceIndex, ref target, targetIndex, count);
-            var arrayHandle = GCHandle.Alloc(source.Memory, GCHandleType.Pinned);
-            var byteCount = count * Unsafe.SizeOf<T>();
-            Buffer.MemoryCopy(
-                Unsafe.AsPointer(ref source[sourceIndex]),
-                target.Memory + targetIndex * Unsafe.SizeOf<T>(),
-                byteCount, byteCount);
-            arrayHandle.Free();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void CopyFallback<T, TSourceSpan, TTargetSpan>(ref TSourceSpan source, int sourceIndex, ref TTargetSpan target, int targetIndex, int count)
-            where TSourceSpan : ISpan<T>
-            where TTargetSpan : ISpan<T>
-        {
-            Validate<T, TSourceSpan, TTargetSpan>(ref source, sourceIndex, ref target, targetIndex, count);
-            var sourcePinned = source.TryPin(out var sourceHandle);
-            var targetPinned = target.TryPin(out var targetHandle);
-
-            var byteCount = count * Unsafe.SizeOf<T>();
-            Buffer.MemoryCopy(
-                Unsafe.AsPointer(ref source[sourceIndex]),
-                Unsafe.AsPointer(ref target[targetIndex]),
-                byteCount, byteCount);
-
-            if (sourcePinned)
-                sourceHandle.Free();
-            if (targetPinned)
-                targetHandle.Free();
-        }
+        //Copies between buffers and arrays of different types should be extremely rare in practice. Using a simple fallback is fine.
+        //Note that we assume that the source is not aliased with the target. That's pretty safe.
 
         /// <summary>
-        /// Checks if the memory backing an instance is fully zeroed.
+        /// Copies data from a buffer to an array. Assumes the buffer does not overlap the array's memory.
         /// </summary>
-        /// <typeparam name="T">Type of the memory to check.</typeparam>
-        /// <param name="memory">Memory to check.</param>
-        /// <returns>True if all bytes backing the memory are zero, false otherwise.</returns>
-        public static bool IsZeroed<T>(ref T memory) where T : struct
+        /// <typeparam name="T">Type of element being copied.</typeparam>
+        /// <param name="source">Source buffer to pull elements from.</param>
+        /// <param name="sourceIndex">Index in the buffer to start pulling elements from.</param>
+        /// <param name="target">Target array to set values.</param>
+        /// <param name="targetIndex">Index in the array to start putting elements into.</param>
+        /// <param name="count">Number of elements to copy.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe void Copy<T>(ref Buffer<T> source, int sourceIndex, T[] target, int targetIndex, int count) where T : struct
         {
-            //This could be made much much faster, but at the moment this is only used in debug-related things. If you actually end up needing it elsewhere, consider
-            //optimizing it to use wider types.
-            var byteCount = Unsafe.SizeOf<T>();
-            ref var byteStart = ref Unsafe.As<T, byte>(ref memory);
-            for (int i = 0; i < byteCount; ++i)
+            for (int i = 0; i < count; ++i)
             {
-                if (Unsafe.Add(ref byteStart, i) != 0)
-                    return false;
+                target[targetIndex + i] = source[sourceIndex + i];
             }
-            return true;
         }
-
         /// <summary>
-        /// Checks if the memory backing a span region is fully zeroed.
+        /// Copies data from an array to a buffer. Assumes the buffer does not overlap the array's memory.
         /// </summary>
-        /// <typeparam name="T">Type of the instances in the span.</typeparam>
-        /// <typeparam name="TSpan">Type of the span.</typeparam>
-        /// <param name="span">Span to check for zeroing.</param>
-        /// <param name="start">Inclusive start index of the region to check.</param>
-        /// <param name="end">Exclusive end index of the region to check.</param>
-        /// <returns>True if all bytes backing the memory are zero, false otherwise.</returns>
-        public static bool IsZeroed<T, TSpan>(ref TSpan span, int start, int end) where TSpan : ISpan<T> where T : struct
+        /// <typeparam name="T">Type of element being copied.</typeparam>
+        /// <param name="source">Source array to pull elements from.</param>
+        /// <param name="sourceIndex">Index in the array to start pulling elements from.</param>
+        /// <param name="target">Target buffer to set values into.</param>
+        /// <param name="targetIndex">Index in the buffer to start putting elements into.</param>
+        /// <param name="count">Number of elements to copy.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe void Copy<T>(ref T[] source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : struct
         {
-            //Again, this is way, way slower than it needs to be- it just doesn't matter right now.
-            for (int i = start; i < end; ++i)
+            for (int i = 0; i < count; ++i)
             {
-                if (!IsZeroed(ref span[i]))
-                    return false;
+                target[targetIndex + i] = source[sourceIndex + i];
             }
-            return true;
         }
-
     }
 }

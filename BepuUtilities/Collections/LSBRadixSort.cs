@@ -182,9 +182,9 @@ namespace BepuUtilities.Collections
         /// <param name="sortedKeys">Span containing the sorted keys. Will be either the input keys span or scratchKeys span depending on the keysUpperBound.</param>
         /// <param name="sortedValues">Span containing the sorted values. Will be either the input values span or scratchValues span depending on the keysUpperBound.
         /// Only the region defined by the startIndex and count is modified; the remainder of the span (whether it be the input span or the scratch span) is unmodified.</param>
-        public static void Sort<TValue, TKeySpan, TValueSpan>(ref TKeySpan inputKeys, ref TValueSpan inputValues, ref TKeySpan scratchKeys, ref TValueSpan scratchValues,
-            int startIndex, int count, int keysUpperBound, BufferPool bufferPool, out TKeySpan sortedKeys, out TValueSpan sortedValues)
-            where TKeySpan : ISpan<int> where TValueSpan : ISpan<TValue>
+        public static void Sort<TValue>(ref Buffer<int> inputKeys, ref Buffer<TValue> inputValues, ref Buffer<int> scratchKeys, ref Buffer<TValue> scratchValues,
+            int startIndex, int count, int keysUpperBound, BufferPool bufferPool, out Buffer<int> sortedKeys, out Buffer<TValue> sortedValues)
+            where TValue : struct
         {
             //Note that we require the scratch and input spans to contain the offset region. That's because the output could be either the scratch or the input spans.
             Debug.Assert(
@@ -238,8 +238,8 @@ namespace BepuUtilities.Collections
                     break;
                 default:
                     Debug.Fail("Invalid bucket set count.");
-                    sortedKeys = default(TKeySpan);
-                    sortedValues = default(TValueSpan);
+                    sortedKeys = default;
+                    sortedValues = default;
                     break;
             }
 

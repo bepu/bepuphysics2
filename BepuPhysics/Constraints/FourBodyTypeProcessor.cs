@@ -38,6 +38,7 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public abstract class FourBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
         : TypeProcessor<FourBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
+        where TPrestepData : struct where TProjection : struct where TAccumulatedImpulse : struct
         where TConstraintFunctions : struct, IFourBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         protected sealed override int InternalBodiesPerConstraint => 4;
@@ -90,7 +91,7 @@ namespace BepuPhysics.Constraints
         {
             VerifySortRegion<FourBodySortKeyGenerator>(ref typeBatch, bundleStartIndex, constraintCount, ref sortedKeys, ref sortedSourceIndices);
         }
-               
+
         public unsafe override void Prestep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {
             ref var prestepBase = ref Unsafe.AsRef<TPrestepData>(typeBatch.PrestepData.Memory);

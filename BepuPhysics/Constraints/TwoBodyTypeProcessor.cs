@@ -49,6 +49,7 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public abstract class TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
         : TypeProcessor<TwoBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
+        where TPrestepData : struct where TProjection : struct where TAccumulatedImpulse : struct
         where TConstraintFunctions : struct, IConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         protected sealed override int InternalBodiesPerConstraint => 2;
@@ -246,6 +247,7 @@ namespace BepuPhysics.Constraints
 
     public abstract class TwoBodyContactTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
         : TwoBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
+        where TPrestepData : struct where TProjection : struct where TAccumulatedImpulse : struct
         where TConstraintFunctions : struct, IContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         public unsafe override void IncrementallyUpdateContactData(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)

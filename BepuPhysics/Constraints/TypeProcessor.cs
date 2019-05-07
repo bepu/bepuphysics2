@@ -141,7 +141,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Defines a function that creates a sort key from body references in a type batch. Used by constraint layout optimization.
     /// </summary>
-    public interface ISortKeyGenerator<TBodyReferences>
+    public interface ISortKeyGenerator<TBodyReferences> where TBodyReferences : struct
     {
         int GetSortKey(int constraintIndex, ref Buffer<TBodyReferences> bodyReferences);
     }
@@ -149,7 +149,7 @@ namespace BepuPhysics.Constraints
     //Note that the only reason to have generics at the type level here is to avoid the need to specify them for each individual function. It's functionally equivalent, but this just
     //cuts down on the syntax noise a little bit. 
     //Really, you could use a bunch of composed static generic helpers.
-    public abstract class TypeProcessor<TBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse> : TypeProcessor
+    public abstract class TypeProcessor<TBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse> : TypeProcessor where TBodyReferences : struct where TPrestepData : struct where TProjection : struct where TAccumulatedImpulse : struct
     {
         protected override int InternalConstrainedDegreesOfFreedom
         {

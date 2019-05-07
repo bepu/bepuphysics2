@@ -93,7 +93,7 @@ namespace Demos.Demos.Characters
         /// </summary>
         public Simulation Simulation { get; private set; }
         BufferPool pool;
-        IdPool<Buffer<int>> characterIdPool;
+        IdPool characterIdPool;
 
         Buffer<int> bodyHandleToCharacterIndex;
         QuickList<CharacterController> characters;
@@ -113,7 +113,7 @@ namespace Demos.Demos.Characters
         {
             this.pool = pool;
             characters = new QuickList<CharacterController>(initialCharacterCapacity, pool);
-            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCharacterCapacity, out characterIdPool);
+            characterIdPool = new IdPool(initialCharacterCapacity, pool);
             ResizeBodyHandleCapacity(initialBodyHandleCapacity);
             analyzeContactsWorker = AnalyzeContactsWorker;
         }
@@ -789,7 +789,7 @@ namespace Demos.Demos.Characters
                 disposed = true;
                 Simulation.Timestepper.BeforeCollisionDetection -= PrepareForContacts;
                 Simulation.Timestepper.CollisionsDetected -= AnalyzeContacts;
-                characterIdPool.Dispose(pool.SpecializeFor<int>());
+                characterIdPool.Dispose(pool);
                 characters.Dispose(pool);
                 pool.Return(ref bodyHandleToCharacterIndex);
             }

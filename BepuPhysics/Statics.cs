@@ -36,7 +36,7 @@ namespace BepuPhysics
         public Buffer<Collidable> Collidables;
 
         public Buffer<RigidPose> Poses;
-        public IdPool<Buffer<int>> HandlePool;
+        public IdPool HandlePool;
         protected BufferPool pool;
         public int Count;
 
@@ -54,7 +54,7 @@ namespace BepuPhysics
             this.bodies = bodies;
             this.broadPhase = broadPhase;
 
-            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), initialCapacity, out HandlePool);
+            HandlePool = new IdPool(initialCapacity, pool);
         }
 
         unsafe void InternalResize(int targetCapacity)
@@ -196,7 +196,7 @@ namespace BepuPhysics
                 HandleToIndex[lastHandle] = index;
                 IndexToHandle[index] = lastHandle;
             }
-            HandlePool.Return(handle, pool.SpecializeFor<int>());
+            HandlePool.Return(handle, pool);
             HandleToIndex[handle] = -1;
 
         }
@@ -333,7 +333,7 @@ namespace BepuPhysics
             pool.Return(ref HandleToIndex);
             pool.Return(ref IndexToHandle);
             pool.Return(ref Collidables);
-            HandlePool.Dispose(pool.SpecializeFor<int>());
+            HandlePool.Dispose(pool);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

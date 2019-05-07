@@ -14,7 +14,7 @@ namespace BepuPhysics
 {
     public class IslandSleeper
     {
-        IdPool<Buffer<int>> setIdPool;
+        IdPool setIdPool;
         Bodies bodies;
         Solver solver;
         BroadPhase broadPhase;
@@ -46,7 +46,7 @@ namespace BepuPhysics
             this.broadPhase = broadPhase;
             this.constraintRemover = constraintRemover;
             this.pool = pool;
-            IdPool<Buffer<int>>.Create(pool.SpecializeFor<int>(), 16, out setIdPool);
+            setIdPool = new IdPool(16, pool);
             //We reserve index 0 for the active set.
             setIdPool.Take();
             findIslandsDelegate = FindIslands;
@@ -57,7 +57,7 @@ namespace BepuPhysics
 
         internal void ReturnSetId(int id)
         {
-            setIdPool.Return(id, pool.SpecializeFor<int>());
+            setIdPool.Return(id, pool);
         }
 
         struct ConstraintBodyEnumerator : IForEach<int>
@@ -1027,7 +1027,7 @@ namespace BepuPhysics
 
         public void Dispose()
         {
-            setIdPool.Dispose(pool.SpecializeFor<int>());
+            setIdPool.Dispose(pool);
         }
 
 

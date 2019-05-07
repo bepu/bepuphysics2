@@ -18,7 +18,7 @@ namespace Demos.SpecializedTests
             }
         }
 
-        static void VerifySort<TSpan>(ref TSpan keys) where TSpan : ISpan<int>
+        static void VerifySort(ref Buffer<int> keys)
         {
             for (int i = 1; i < keys.Length; ++i)
             {
