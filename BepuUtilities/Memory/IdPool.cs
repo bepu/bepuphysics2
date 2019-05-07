@@ -124,16 +124,17 @@ namespace BepuUtilities.Memory
         /// <summary>
         /// Shrinks the available ids queue to the smallest size that can fit the given count and the current available id count.
         /// </summary>
-        /// <param name="minimumcount">Number of elements to guarantee space for in the available ids queue.</param>
-        public void Compact<TPool>(int minimumcount, TPool pool) where TPool : IMemoryPool<int, TSpan>
+        /// <param name="minimumCount">Number of elements to guarantee space for in the available ids queue.</param>
+        public void Compact<TPool>(int minimumCount, TPool pool) where TPool : IMemoryPool<int, TSpan>
         {
             Debug.Assert(availableIds.Allocated);
-            var targetLength = BufferPool.GetCapacityForCount<int>(Math.Max(minimumcount, availableIdCount));
+            var targetLength = BufferPool.GetCapacityForCount<int>(Math.Max(minimumCount, availableIdCount));
             if (availableIds.Length > targetLength)
             {
                 InternalResize(targetLength, pool);
             }
         }
+
         /// <summary>
         /// Resizes the underlying buffer to the smallest size required to hold the given count and the current available id count.
         /// </summary>

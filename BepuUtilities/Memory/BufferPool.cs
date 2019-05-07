@@ -101,7 +101,7 @@ namespace BepuUtilities.Memory
             /// <summary>
             /// Pool of slots available to this power level.
             /// </summary>
-            public IdPool<Array<int>> Slots;
+            public ManagedIdPool Slots;
 #if DEBUG
             internal HashSet<int> outstandingIds;
 #if LEAKDEBUG
@@ -123,9 +123,8 @@ namespace BepuUtilities.Memory
             {
                 Power = power;
                 SuballocationSize = 1 << power;
-
                 BlockSize = Math.Max(SuballocationSize, minimumBlockSize);
-                IdPool<Array<int>>.Create(new PassthroughArrayPool<int>(), expectedPooledCount, out Slots);
+                Slots = new ManagedIdPool(expectedPooledCount);
                 SuballocationsPerBlock = BlockSize / SuballocationSize;
                 SuballocationsPerBlockShift = SpanHelper.GetContainingPowerOf2(SuballocationsPerBlock);
                 SuballocationsPerBlockMask = (1 << SuballocationsPerBlockShift) - 1;
