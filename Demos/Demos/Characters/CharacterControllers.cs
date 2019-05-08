@@ -134,7 +134,7 @@ namespace Demos.Demos.Characters
         private void ResizeBodyHandleCapacity(int bodyHandleCapacity)
         {
             var oldCapacity = bodyHandleToCharacterIndex.Length;
-            pool.Resize(ref bodyHandleToCharacterIndex, bodyHandleCapacity, bodyHandleToCharacterIndex.Length);
+            pool.ResizeToAtLeast(ref bodyHandleToCharacterIndex, bodyHandleCapacity, bodyHandleToCharacterIndex.Length);
             if (bodyHandleToCharacterIndex.Length > oldCapacity)
             {
                 Unsafe.InitBlockUnaligned(ref Unsafe.As<int, byte>(ref bodyHandleToCharacterIndex[oldCapacity]), 0xFF, (uint)((bodyHandleToCharacterIndex.Length - oldCapacity) * sizeof(int)));
@@ -768,7 +768,7 @@ namespace Demos.Demos.Characters
         {
             var targetHandleCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(characterIdPool.HighestPossiblyClaimedId + 1, bodyHandleCapacity));
             if (targetHandleCapacity != bodyHandleToCharacterIndex.Length)
-                pool.Resize(ref bodyHandleToCharacterIndex, targetHandleCapacity, characterIdPool.HighestPossiblyClaimedId);
+                pool.ResizeToAtLeast(ref bodyHandleToCharacterIndex, targetHandleCapacity, characterIdPool.HighestPossiblyClaimedId);
 
             var targetCharacterCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(characters.Count, characterCapacity));
             if (targetCharacterCapacity != characters.Span.Length)

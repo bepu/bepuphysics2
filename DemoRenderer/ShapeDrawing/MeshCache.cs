@@ -70,7 +70,7 @@ namespace DemoRenderer.ShapeDrawing
             //Didn't fit. We need to resize.
             var copyCount = TriangleBuffer.Capacity + vertexCount;
             var newSize = 1 << SpanHelper.GetContainingPowerOf2(copyCount);
-            Pool.Resize(ref this.vertices, newSize, copyCount);
+            Pool.ResizeToAtLeast(ref this.vertices, newSize, copyCount);
             allocator.Capacity = newSize;
             allocator.Allocate(id, vertexCount, out longStart);
             start = (int)longStart;

@@ -38,7 +38,7 @@ namespace BepuPhysics.CollisionDetection
             var leafIndex = tree.Add(ref bounds, pool);
             if (leafIndex >= leaves.Length)
             {
-                pool.Resize(ref leaves, tree.LeafCount + 1, leaves.Length);
+                pool.ResizeToAtLeast(ref leaves, tree.LeafCount + 1, leaves.Length);
             }
             leaves[leafIndex] = collidable;
             return leafIndex;
@@ -143,7 +143,7 @@ namespace BepuPhysics.CollisionDetection
             if (tree.Leaves.Length < capacity)
                 tree.Resize(Pool, capacity);
             if (leaves.Length < capacity)
-                Pool.Resize(ref leaves, capacity, tree.LeafCount);
+                Pool.ResizeToAtLeast(ref leaves, capacity, tree.LeafCount);
         }
         void ResizeCapacity(ref Tree tree, ref Buffer<CollidableReference> leaves, int capacity)
         {
@@ -151,7 +151,7 @@ namespace BepuPhysics.CollisionDetection
             if (tree.Leaves.Length != BufferPool.GetCapacityForCount<Leaf>(capacity))
                 tree.Resize(Pool, capacity);
             if (leaves.Length != BufferPool.GetCapacityForCount<CollidableReference>(capacity))
-                Pool.Resize(ref leaves, capacity, tree.LeafCount);
+                Pool.ResizeToAtLeast(ref leaves, capacity, tree.LeafCount);
         }
         void Dispose(ref Tree tree, ref Buffer<CollidableReference> leaves)
         {

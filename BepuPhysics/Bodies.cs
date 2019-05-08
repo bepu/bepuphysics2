@@ -986,7 +986,7 @@ namespace BepuPhysics
             if (Sets.Length != setsCapacity)
             {
                 var oldCapacity = Sets.Length;
-                Pool.Resize(ref Sets, setsCapacity, potentiallyAllocatedCount);
+                Pool.ResizeToAtLeast(ref Sets, setsCapacity, potentiallyAllocatedCount);
                 if (oldCapacity < Sets.Length)
                     Sets.Clear(oldCapacity, Sets.Length - oldCapacity); //We rely on unused slots being default initialized.
             }
@@ -1143,7 +1143,7 @@ namespace BepuPhysics
             if (newCapacity != HandleToLocation.Length)
             {
                 var oldCapacity = HandleToLocation.Length;
-                Pool.Resize(ref HandleToLocation, newCapacity, Math.Min(oldCapacity, newCapacity));
+                Pool.ResizeToAtLeast(ref HandleToLocation, newCapacity, Math.Min(oldCapacity, newCapacity));
                 if (HandleToLocation.Length > oldCapacity)
                 {
                     Unsafe.InitBlockUnaligned(
@@ -1162,7 +1162,7 @@ namespace BepuPhysics
             var targetCapacity = BufferPool.GetCapacityForCount<BodyInertia>(Math.Max(capacity, ActiveSet.Count));
             if (Inertias.Length != targetCapacity)
             {
-                Pool.Resize(ref Inertias, targetCapacity, Math.Min(Inertias.Length, ActiveSet.Count));
+                Pool.ResizeToAtLeast(ref Inertias, targetCapacity, Math.Min(Inertias.Length, ActiveSet.Count));
             }
         }
         /// <summary>
@@ -1174,7 +1174,7 @@ namespace BepuPhysics
                 capacity = ActiveSet.Count;
             if (Inertias.Length < capacity)
             {
-                Pool.Resize(ref Inertias, capacity, Math.Min(Inertias.Length, ActiveSet.Count));
+                Pool.ResizeToAtLeast(ref Inertias, capacity, Math.Min(Inertias.Length, ActiveSet.Count));
             }
         }
 

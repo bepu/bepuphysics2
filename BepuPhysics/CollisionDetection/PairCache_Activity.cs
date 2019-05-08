@@ -34,7 +34,7 @@ namespace BepuPhysics.CollisionDetection
             if (SleepingSets.Length != setsCapacity)
             {
                 var oldCapacity = SleepingSets.Length;
-                pool.Resize(ref SleepingSets, setsCapacity, potentiallyAllocatedCount);
+                pool.ResizeToAtLeast(ref SleepingSets, setsCapacity, potentiallyAllocatedCount);
                 if (oldCapacity < SleepingSets.Length)
                     SleepingSets.Clear(oldCapacity, SleepingSets.Length - oldCapacity); //We rely on unused slots being default initialized.
             }

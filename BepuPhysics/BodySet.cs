@@ -225,13 +225,13 @@ namespace BepuPhysics
             //You may want to change this in the future if memory use is concerning.
             targetBodyCapacity = BufferPool.GetCapacityForCount<int>(targetBodyCapacity);
             Debug.Assert(Poses.Length != BufferPool.GetCapacityForCount<RigidPoses>(targetBodyCapacity), "Should not try to use internal resize of the result won't change the size.");
-            pool.Resize(ref Poses, targetBodyCapacity, Count);
-            pool.Resize(ref Velocities, targetBodyCapacity, Count);
-            pool.Resize(ref LocalInertias, targetBodyCapacity, Count);
-            pool.Resize(ref IndexToHandle, targetBodyCapacity, Count);
-            pool.Resize(ref Collidables, targetBodyCapacity, Count);
-            pool.Resize(ref Activity, targetBodyCapacity, Count);
-            pool.Resize(ref Constraints, targetBodyCapacity, Count);
+            pool.ResizeToAtLeast(ref Poses, targetBodyCapacity, Count);
+            pool.ResizeToAtLeast(ref Velocities, targetBodyCapacity, Count);
+            pool.ResizeToAtLeast(ref LocalInertias, targetBodyCapacity, Count);
+            pool.ResizeToAtLeast(ref IndexToHandle, targetBodyCapacity, Count);
+            pool.ResizeToAtLeast(ref Collidables, targetBodyCapacity, Count);
+            pool.ResizeToAtLeast(ref Activity, targetBodyCapacity, Count);
+            pool.ResizeToAtLeast(ref Constraints, targetBodyCapacity, Count);
         }
 
         public unsafe void Clear(BufferPool pool)

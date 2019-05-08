@@ -31,7 +31,7 @@ namespace BepuPhysics.CollisionDetection
             ElementSizeInBytes = elementSizeInBytes;
             if (Buffer.Length < targetCapacityInBytes)
             {
-                pool.Resize(ref Buffer, targetCapacityInBytes, ByteCount);
+                pool.ResizeToAtLeast(ref Buffer, targetCapacityInBytes, ByteCount);
             }
         }
 

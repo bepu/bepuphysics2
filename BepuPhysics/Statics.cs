@@ -63,10 +63,10 @@ namespace BepuPhysics
             //Note that we base the bundle capacities on the static capacity. This simplifies the conditions on allocation
             targetCapacity = BufferPool.GetCapacityForCount<int>(targetCapacity);
             Debug.Assert(Poses.Length != BufferPool.GetCapacityForCount<RigidPoses>(targetCapacity), "Should not try to use internal resize of the result won't change the size.");
-            pool.Resize(ref Poses, targetCapacity, Count);
-            pool.Resize(ref IndexToHandle, targetCapacity, Count);
-            pool.Resize(ref HandleToIndex, targetCapacity, Count);
-            pool.Resize(ref Collidables, targetCapacity, Count);
+            pool.ResizeToAtLeast(ref Poses, targetCapacity, Count);
+            pool.ResizeToAtLeast(ref IndexToHandle, targetCapacity, Count);
+            pool.ResizeToAtLeast(ref HandleToIndex, targetCapacity, Count);
+            pool.ResizeToAtLeast(ref Collidables, targetCapacity, Count);
             //Initialize all the indices beyond the copied region to -1.
             Unsafe.InitBlockUnaligned(((int*)HandleToIndex.Memory) + Count, 0xFF, (uint)(sizeof(int) * (HandleToIndex.Length - Count)));
             //Note that we do NOT modify the idpool's internal queue size here. We lazily handle that during adds, and during explicit calls to EnsureCapacity, Compact, and Resize.

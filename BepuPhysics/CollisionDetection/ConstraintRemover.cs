@@ -85,9 +85,9 @@ namespace BepuPhysics.CollisionDetection
                 index = BatchCount;
                 BatchCount = BatchCount + 1;
                 if (TypeBatches.Length == index)
-                    pool.Resize(ref TypeBatches, BatchCount, index);
+                    pool.ResizeToAtLeast(ref TypeBatches, BatchCount, index);
                 if (RemovalsForTypeBatches.Length == index)
-                    pool.Resize(ref RemovalsForTypeBatches, BatchCount, index);
+                    pool.ResizeToAtLeast(ref RemovalsForTypeBatches, BatchCount, index);
                 TypeBatches[index] = typeBatchIndex;
                 ref var newSlot = ref RemovalsForTypeBatches[index];
                 newSlot.ConstraintHandlesToRemove = new QuickList<int>(Math.Max(constraintHandleCount, minimumCapacityPerBatch), pool);

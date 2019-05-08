@@ -194,7 +194,7 @@ namespace BepuPhysics.CollisionDetection
             targetCapacity = Math.Max(solver.HandlePool.HighestPossiblyClaimedId + 1, targetCapacity);
             if (ConstraintHandleToPair.Length < targetCapacity)
             {
-                pool.Resize(ref ConstraintHandleToPair, targetCapacity, ConstraintHandleToPair.Length);
+                pool.ResizeToAtLeast(ref ConstraintHandleToPair, targetCapacity, ConstraintHandleToPair.Length);
             }
         }
 
@@ -203,7 +203,7 @@ namespace BepuPhysics.CollisionDetection
             targetCapacity = BufferPool.GetCapacityForCount<CollisionPairLocation>(Math.Max(solver.HandlePool.HighestPossiblyClaimedId + 1, targetCapacity));
             if (ConstraintHandleToPair.Length != targetCapacity)
             {
-                pool.Resize(ref ConstraintHandleToPair, targetCapacity, Math.Min(targetCapacity, ConstraintHandleToPair.Length));
+                pool.ResizeToAtLeast(ref ConstraintHandleToPair, targetCapacity, Math.Min(targetCapacity, ConstraintHandleToPair.Length));
             }
         }
 

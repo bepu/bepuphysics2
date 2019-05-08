@@ -14,7 +14,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             if (Overlaps.Length == Count)
             {
-                pool.Resize(ref Overlaps, MathHelper.Max(64, Count * 2), Count);
+                pool.ResizeToAtLeast(ref Overlaps, MathHelper.Max(64, Count * 2), Count);
             }
             return ref Overlaps[Count++];
         }

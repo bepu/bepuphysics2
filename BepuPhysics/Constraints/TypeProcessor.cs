@@ -373,16 +373,16 @@ namespace BepuPhysics.Constraints
         void InternalResize(ref TypeBatch typeBatch, BufferPool pool, int constraintCapacity)
         {
             Debug.Assert(constraintCapacity >= 0, "The constraint capacity should have already been validated.");
-            pool.Resize(ref typeBatch.IndexToHandle, constraintCapacity, typeBatch.ConstraintCount);
+            pool.ResizeToAtLeast(ref typeBatch.IndexToHandle, constraintCapacity, typeBatch.ConstraintCount);
             //Note that we construct the bundle capacity from the resized constraint capacity. This means we only have to check the IndexToHandle capacity
             //before allocating, which simplifies things a little bit at the cost of some memory. Could revisit this if memory use is actually a concern.
             var bundleCapacity = BundleIndexing.GetBundleCount(typeBatch.IndexToHandle.Length);
             //Note that the projection is not copied over. It is ephemeral data. (In the same vein as above, if memory is an issue, we could just allocate projections on demand.)
             var bundleCount = typeBatch.BundleCount;
-            pool.Resize(ref typeBatch.Projection, bundleCapacity * Unsafe.SizeOf<TProjection>(), 0);
-            pool.Resize(ref typeBatch.BodyReferences, bundleCapacity * Unsafe.SizeOf<TBodyReferences>(), bundleCount * Unsafe.SizeOf<TBodyReferences>());
-            pool.Resize(ref typeBatch.PrestepData, bundleCapacity * Unsafe.SizeOf<TPrestepData>(), bundleCount * Unsafe.SizeOf<TPrestepData>());
-            pool.Resize(ref typeBatch.AccumulatedImpulses, bundleCapacity * Unsafe.SizeOf<TAccumulatedImpulse>(), bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
+            pool.ResizeToAtLeast(ref typeBatch.Projection, bundleCapacity * Unsafe.SizeOf<TProjection>(), 0);
+            pool.ResizeToAtLeast(ref typeBatch.BodyReferences, bundleCapacity * Unsafe.SizeOf<TBodyReferences>(), bundleCount * Unsafe.SizeOf<TBodyReferences>());
+            pool.ResizeToAtLeast(ref typeBatch.PrestepData, bundleCapacity * Unsafe.SizeOf<TPrestepData>(), bundleCount * Unsafe.SizeOf<TPrestepData>());
+            pool.ResizeToAtLeast(ref typeBatch.AccumulatedImpulses, bundleCapacity * Unsafe.SizeOf<TAccumulatedImpulse>(), bundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
         }
 
         public override void Initialize(ref TypeBatch typeBatch, int initialCapacity, BufferPool pool)

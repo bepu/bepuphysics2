@@ -84,7 +84,7 @@ namespace BepuPhysics
             {
                 var targetCount = BufferPool.GetCapacityForCount<T>(bodies.HandlePool.HighestPossiblyClaimedId + 1);
                 Debug.Assert(targetCount > data.Length, "Given what just happened, we must require a resize.");
-                pool.Resize(ref data, targetCount, Math.Min(bodies.HandlePool.HighestPossiblyClaimedId + 1, data.Length));
+                pool.ResizeToAtLeast(ref data, targetCount, Math.Min(bodies.HandlePool.HighestPossiblyClaimedId + 1, data.Length));
             }
             return ref data[bodyHandle];
         }
@@ -98,7 +98,7 @@ namespace BepuPhysics
             var targetCount = BufferPool.GetCapacityForCount<T>(Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, capacity));
             if (targetCount > data.Length)
             {
-                pool.Resize(ref data, targetCount, Math.Min(data.Length, bodies.HandlePool.HighestPossiblyClaimedId + 1));
+                pool.ResizeToAtLeast(ref data, targetCount, Math.Min(data.Length, bodies.HandlePool.HighestPossiblyClaimedId + 1));
             }
         }
 
@@ -110,7 +110,7 @@ namespace BepuPhysics
             var targetCount = BufferPool.GetCapacityForCount<T>(bodies.HandlePool.HighestPossiblyClaimedId + 1);
             if (targetCount < data.Length)
             {
-                pool.Resize(ref data, targetCount, bodies.HandlePool.HighestPossiblyClaimedId + 1);
+                pool.ResizeToAtLeast(ref data, targetCount, bodies.HandlePool.HighestPossiblyClaimedId + 1);
             }
         }
 

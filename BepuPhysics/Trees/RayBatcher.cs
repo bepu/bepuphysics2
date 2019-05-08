@@ -178,12 +178,12 @@ namespace BepuPhysics.Trees
             this.preallocatedTreeDepth = treeDepthForPreallocation;
             //The number of ray pointers on the stack is limited in the worst case to all rays per level of the tree.
             var preallocatedRayPointerCount = rayCapacity * treeDepthForPreallocation;
-            pool.Resize(ref rayIndicesA0, preallocatedRayPointerCount, stackPointerA0);
-            pool.Resize(ref rayIndicesB, preallocatedRayPointerCount, stackPointerB);
-            pool.Resize(ref rayIndicesA1, preallocatedRayPointerCount, stackPointerA1);
+            pool.ResizeToAtLeast(ref rayIndicesA0, preallocatedRayPointerCount, stackPointerA0);
+            pool.ResizeToAtLeast(ref rayIndicesB, preallocatedRayPointerCount, stackPointerB);
+            pool.ResizeToAtLeast(ref rayIndicesA1, preallocatedRayPointerCount, stackPointerA1);
             //The number of stack entries is limited by the number of node entries (tree node count * 3) and the number of ray entries.
             //(Can't have more entries on the stack than total ray pointers, after all.)
-            pool.Resize(ref stack, Math.Min(preallocatedRayPointerCount, 3 << Math.Min(16, treeDepthForPreallocation)), stackPointer);
+            pool.ResizeToAtLeast(ref stack, Math.Min(preallocatedRayPointerCount, 3 << Math.Min(16, treeDepthForPreallocation)), stackPointer);
         }
 
         /// <summary>

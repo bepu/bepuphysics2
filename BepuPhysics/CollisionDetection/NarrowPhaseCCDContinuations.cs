@@ -82,7 +82,7 @@ namespace BepuPhysics.CollisionDetection
                     index = Ids.Take();
                     if (Caches.Length <= index)
                     {
-                        pool.Resize(ref Caches, index + 1, Caches.Length);
+                        pool.ResizeToAtLeast(ref Caches, index + 1, Caches.Length);
                     }
                     return ref Caches[index];
                 }
