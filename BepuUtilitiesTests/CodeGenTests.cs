@@ -39,40 +39,7 @@ namespace BEPUutilitiesTests
 
             Console.WriteLine($"Equality: {equal}, hash: {hashcode}");
         }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        unsafe static void TestPointerSpans<T>()
-        {
-            var memory = new byte[2048];
-            fixed (byte* memoryPointer = memory)
-            {
-                var span = new Buffer<T>(memoryPointer, memory.Length);
-                var def = default(T);
-                var index = span.IndexOf(ref def, 0, 128);
-
-                span.CopyTo(0, ref span, 0, 4);
-                var arraySpan = new Array<T>(new T[1024]);
-                span.CopyTo(0, ref arraySpan, 0, 4);
-                arraySpan.CopyTo(0, ref span, 0, 4);
-                arraySpan.CopyTo(0, ref arraySpan, 0, 4);
-
-                Console.WriteLine($"index: {index}");
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        unsafe static void TestArraySpans<T>()
-        {
-            var span = new Array<T>(new T[1024]);
-            var def = default(T);
-            var index = span.IndexOf(ref def, 0, 128);
-
-            span.CopyTo(0, ref span, 0, 4);
-            span.ClearManagedReferences(0, 4);
-
-            Console.WriteLine($"index: {index}");
-        }
-
+        
         [MethodImpl(MethodImplOptions.NoInlining)]
         unsafe static void TestQuickInlining(BufferPool pool)
         {
@@ -105,12 +72,7 @@ namespace BEPUutilitiesTests
             TestDefaultComparer(2, 4);
             TestDefaultComparer(2L, 2L);
             TestDefaultComparer("hey", "sup");
-
-            TestPointerSpans<ulong>();
-            TestPointerSpans<decimal>();
-            TestArraySpans<object>();
-            TestArraySpans<int>();
-
+            
             TestQuickInlining(pool);
             pool.Clear();
 
