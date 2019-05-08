@@ -96,7 +96,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 Debug.Assert(!IdPool.Allocated);
                 //Lazy initialization.
-                pool.Take(InitialCapacity, out Continuations);
+                pool.TakeAtLeast(InitialCapacity, out Continuations);
                 IdPool = new IdPool(InitialCapacity, pool);
             }
             index = IdPool.Take();

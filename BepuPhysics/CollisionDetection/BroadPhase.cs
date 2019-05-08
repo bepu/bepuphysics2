@@ -25,8 +25,8 @@ namespace BepuPhysics.CollisionDetection
             Pool = pool;
             ActiveTree = new Tree(pool, initialActiveLeafCapacity);
             StaticTree = new Tree(pool, initialStaticLeafCapacity);
-            pool.Take(initialActiveLeafCapacity, out activeLeaves);
-            pool.Take(initialStaticLeafCapacity, out staticLeaves);
+            pool.TakeAtLeast(initialActiveLeafCapacity, out activeLeaves);
+            pool.TakeAtLeast(initialStaticLeafCapacity, out staticLeaves);
 
             activeRefineContext = new Tree.RefitAndRefineMultithreadedContext();
             staticRefineContext = new Tree.RefitAndRefineMultithreadedContext();

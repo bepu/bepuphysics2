@@ -107,7 +107,7 @@ namespace BepuPhysics
             this.broadPhase = broadPhase;
             this.pool = pool;
             this.dt = dt;
-            pool.Take(shapes.RegisteredTypeSpan, out batches);
+            pool.TakeAtLeast(shapes.RegisteredTypeSpan, out batches);
             //Clearing is required ensure that we know when a batch needs to be created and when a batch needs to be disposed.
             batches.Clear(0, shapes.RegisteredTypeSpan);
             minimumBatchIndex = shapes.RegisteredTypeSpan;

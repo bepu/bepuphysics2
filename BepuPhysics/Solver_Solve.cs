@@ -221,7 +221,7 @@ namespace BepuPhysics
 
             public void CreateClaims(BufferPool pool)
             {
-                pool.Take(Blocks.Count, out Claims);
+                pool.TakeAtLeast(Blocks.Count, out Claims);
                 Claims.Clear(0, Blocks.Count);
             }
             public void Dispose(BufferPool pool)

@@ -177,13 +177,6 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        static void IncreaseSize<T>(BufferPool pool, ref Buffer<T> buffer) where T : struct
-        {
-            var old = buffer;
-            pool.Take(buffer.Length * 2, out buffer);
-            old.CopyTo(0, ref buffer, 0, old.Length);
-            pool.Return(ref old);
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void AddBodyReferencesLane(ref TBodyReferences bundle, int innerIndex, int* bodyIndices)

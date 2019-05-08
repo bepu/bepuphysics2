@@ -96,7 +96,7 @@ namespace Demos.Demos
             {
                 points.AllocateUnsafely() = new Vector3((float)random.NextDouble() - 0.5f,  (float)random.NextDouble() - 0.5f, (float)random.NextDouble() - 0.5f);
             }
-            ConvexHullHelper.CreateShape(points.Span.Slice(0, points.Count), BufferPool, out _, out hull);
+            ConvexHullHelper.CreateShape(points.Span.Slice(points.Count), BufferPool, out _, out hull);
             points.Dispose(BufferPool);
 
             //var staticShapeIndex = Simulation.Shapes.Add(new Box(100, 1, 100));

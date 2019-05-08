@@ -54,8 +54,8 @@ namespace BepuPhysics.CollisionDetection
             {
                 this.minimumCapacityPerBatch = minimumCapacityPerBatch;
 
-                pool.Take(batchCapacity, out TypeBatches);
-                pool.Take(batchCapacity, out RemovalsForTypeBatches);
+                pool.TakeAtLeast(batchCapacity, out TypeBatches);
+                pool.TakeAtLeast(batchCapacity, out RemovalsForTypeBatches);
                 BatchCount = 0;
             }
 

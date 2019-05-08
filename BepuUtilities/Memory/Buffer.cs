@@ -14,7 +14,7 @@ namespace BepuUtilities.Memory
     {
         //TODO: Once blittable exists, replace this.
         public byte* Memory;
-        int length;
+        internal int length;
         //We're primarily interested in x64, so memory + length is 12 bytes. This struct would/should get padded to 16 bytes for alignment reasons anyway, 
         //so making use of the last 4 bytes to speed up the case where the raw buffer is taken from a pool (which is basically always) is a good option.
 
@@ -51,6 +51,11 @@ namespace BepuUtilities.Memory
             return ref Get(buffer.Memory, index);
         }
 
+        /// <summary>
+        /// Gets a reference to the element at the given index.
+        /// </summary>
+        /// <param name="index">Index of the element to grab a reference of.</param>
+        /// <returns>Reference to the element at the given index.</returns>
         public ref T this[int index]
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -68,6 +73,12 @@ namespace BepuUtilities.Memory
             }
         }
 
+        /// <summary>
+        /// Creates a view of a subset of the buffer's memory.
+        /// </summary>
+        /// <param name="start">Index at which to start the sliced buffer.</param>
+        /// <param name="count">Number of elements to include in the sliced buffer.</param>
+        /// <returns>Buffer spanning the specified subset of the original buffer.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Buffer<T> Slice(int start, int count)
         {
@@ -75,6 +86,25 @@ namespace BepuUtilities.Memory
             return new Buffer<T>(Memory + Unsafe.SizeOf<T>() * start, count, Id);
         }
 
+        /// <summary>
+        /// Creates a view of a subset of the buffer's memory, starting from the first index.
+        /// </summary>
+        /// <param name="count">Number of elements to include in the sliced buffer.</param>
+        /// <returns>Buffer spanning the specified subset of the original buffer.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Buffer<T> Slice(int count)
+        {
+            ValidateRegion(0, count);
+            return new Buffer<T>(Memory, count, Id);
+        }
+
+
+        /// <summary>
+        /// Creates a view of a subset of the buffer's memory.
+        /// </summary>
+        /// <param name="start">Index at which to start the sliced buffer.</param>
+        /// <param name="count">Number of elements to include in the sliced buffer.</param>
+        /// <param name="sliced">Buffer spanning the specified subset of the original buffer.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Slice(int start, int count, out Buffer<T> sliced)
         {
@@ -82,12 +112,30 @@ namespace BepuUtilities.Memory
             sliced = new Buffer<T>(Memory + Unsafe.SizeOf<T>() * start, count, Id);
         }
 
+        /// <summary>
+        /// Creates a view of a subset of the buffer's memory, starting from the first index.
+        /// </summary>
+        /// <param name="count">Number of elements to include in the sliced buffer.</param>
+        /// <param name="sliced">Buffer spanning the specified subset of the original buffer.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Slice(int count, out Buffer<T> sliced)
+        {
+            ValidateRegion(0, count);
+            sliced = new Buffer<T>(Memory, count, Id);
+        }
+
+        /// <summary>
+        /// Gets the length of the buffer in typed elements.
+        /// </summary>
         public int Length
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return length; }
         }
 
+        /// <summary>
+        /// Gets whether the buffer references non-null memory.
+        /// </summary>
         public bool Allocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -97,6 +145,11 @@ namespace BepuUtilities.Memory
             }
         }
 
+        /// <summary>
+        /// Zeroes out the buffer's memory.
+        /// </summary>
+        /// <param name="start">Start location in the buffer.</param>
+        /// <param name="count">Number of elements to clear beyond the start index.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear(int start, int count)
         {
@@ -104,12 +157,26 @@ namespace BepuUtilities.Memory
             Unsafe.InitBlockUnaligned(Memory + Unsafe.SizeOf<T>() * start, 0, (uint)(count * Unsafe.SizeOf<T>()));
         }
 
+        /// <summary>
+        /// Copies buffer data into another buffer.
+        /// </summary>
+        /// <param name="sourceStart">Start index in the source buffer.</param>
+        /// <param name="target">Target buffer to copy into.</param>
+        /// <param name="targetStart">Start index in the target buffer.</param>
+        /// <param name="count">Number of elements to copy from the source buffer into the target buffer.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void CopyTo(int sourceStart, ref Buffer<T> target, int targetStart, int count)
         {
             SpanHelper.Copy(ref this, sourceStart, ref target, targetStart, count);
         }
 
+        /// <summary>
+        /// Gets the index of an element in the buffer using the type's default comparer.
+        /// </summary>
+        /// <param name="element">Element to look for in the buffer.</param>
+        /// <param name="start">Start index at which to begin the search.</param>
+        /// <param name="count">Number of elements to scan beyond the start index.</param>
+        /// <returns>Index of the element in the buffer if found, -1 otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int IndexOf(ref T element, int start, int count)
         {
@@ -133,12 +200,26 @@ namespace BepuUtilities.Memory
             }
         }
 
+        /// <summary>
+        /// Gets the index of an element in the buffer using the type's default comparer.
+        /// </summary>
+        /// <param name="element">Element to look for in the buffer.</param>
+        /// <param name="start">Start index at which to begin the search.</param>
+        /// <param name="count">Number of elements to scan beyond the start index.</param>
+        /// <returns>Index of the element in the buffer if found, -1 otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int IndexOf(T element, int start, int count)
         {
             return IndexOf(ref element, start, count);
         }
 
+        /// <summary>
+        /// Gets the index of the first element that matches a provided predicate.
+        /// </summary>
+        /// <param name="predicate">Predicate to test each element with.</param>
+        /// <param name="start">Start index at which to begin the search.</param>
+        /// <param name="count">Number of elements to scan beyond the start index.</param>
+        /// <returns>Index of the first matching element in the buffer if any, -1 otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int IndexOf<TPredicate>(ref TPredicate predicate, int start, int count) where TPredicate : IPredicate<T>
         {

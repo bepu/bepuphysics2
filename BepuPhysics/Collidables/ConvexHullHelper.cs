@@ -443,7 +443,6 @@ namespace BepuPhysics.Collidables
                 {
                     hullData.OriginalVertexMapping[i] = i;
                 }
-                hullData.OriginalVertexMapping.Slice(0, points.Length, out hullData.OriginalVertexMapping);
                 if (points.Length == 3)
                 {
                     pool.Take(1, out hullData.FaceStartIndices);
@@ -453,8 +452,6 @@ namespace BepuPhysics.Collidables
                     hullData.FaceVertexIndices[0] = 0;
                     hullData.FaceVertexIndices[1] = 1;
                     hullData.FaceVertexIndices[2] = 2;
-                    hullData.FaceStartIndices.Slice(0, 1, out hullData.FaceStartIndices);
-                    hullData.FaceVertexIndices.Slice(0, 3, out hullData.FaceVertexIndices);
                 }
                 else
                 {
@@ -466,7 +463,6 @@ namespace BepuPhysics.Collidables
             }
             var pointBundleCount = BundleIndexing.GetBundleCount(points.Length);
             pool.Take<Vector3Wide>(pointBundleCount, out var pointBundles);
-            pointBundles.Slice(0, pointBundleCount, out pointBundles);
             //While it's not asymptotically optimal in general, gift wrapping is simple and easy to productively vectorize.
             //As a first step, create an AOSOA version of the input data.
             Vector3 centroid = default;
@@ -522,7 +518,6 @@ namespace BepuPhysics.Collidables
                 //The point set lacks any volume or area.
                 pool.Take(1, out hullData.OriginalVertexMapping);
                 hullData.OriginalVertexMapping[0] = 0;
-                hullData.OriginalVertexMapping.Slice(0, 1, out hullData.OriginalVertexMapping);
                 hullData.FaceStartIndices = default;
                 hullData.FaceVertexIndices = default;
                 //steps = new List<DebugStep>();
@@ -675,9 +670,7 @@ namespace BepuPhysics.Collidables
             //Create a reduced hull point set from the face vertex references.
             pool.Take(earlyFaceStartIndices.Count, out hullData.FaceStartIndices);
             pool.Take(earlyFaceIndices.Count, out hullData.FaceVertexIndices);
-            hullData.FaceStartIndices.Slice(0, earlyFaceStartIndices.Count, out hullData.FaceStartIndices);
             earlyFaceStartIndices.Span.CopyTo(0, ref hullData.FaceStartIndices, 0, earlyFaceStartIndices.Count);
-            hullData.FaceVertexIndices.Slice(0, earlyFaceIndices.Count, out hullData.FaceVertexIndices);
             pool.Take<int>(points.Length, out var originalToHullIndexMapping);
             var hullToOriginalIndexMapping = new QuickList<int>(points.Length, pool);
             for (int i = 0; i < points.Length; ++i)
@@ -704,7 +697,6 @@ namespace BepuPhysics.Collidables
             }
 
             pool.Take(hullToOriginalIndexMapping.Count, out hullData.OriginalVertexMapping);
-            hullData.OriginalVertexMapping.Slice(0, hullToOriginalIndexMapping.Count, out hullData.OriginalVertexMapping);
             hullToOriginalIndexMapping.Span.CopyTo(0, ref hullData.OriginalVertexMapping, 0, hullToOriginalIndexMapping.Count);
 
             pool.Return(ref originalToHullIndexMapping);
@@ -779,7 +771,6 @@ namespace BepuPhysics.Collidables
             }
             var pointBundleCount = BundleIndexing.GetBundleCount(hullData.OriginalVertexMapping.Length);
             pool.Take(pointBundleCount, out hullShape.Points);
-            hullShape.Points.Slice(0, pointBundleCount, out hullShape.Points);
 
             var triangleSource = new RawHullTriangleSource(points, hullData);
             MeshInertiaHelper.ComputeClosedCenterOfMass(ref triangleSource, out _, out center);
@@ -801,10 +792,8 @@ namespace BepuPhysics.Collidables
 
             //Create the face->vertex mapping.
             pool.Take(hullData.FaceStartIndices.Length, out hullShape.FaceToVertexIndicesStart);
-            hullShape.FaceToVertexIndicesStart.Slice(0, hullData.FaceStartIndices.Length, out hullShape.FaceToVertexIndicesStart);
             hullData.FaceStartIndices.CopyTo(0, ref hullShape.FaceToVertexIndicesStart, 0, hullShape.FaceToVertexIndicesStart.Length);
             pool.Take(hullData.FaceVertexIndices.Length, out hullShape.FaceVertexIndices);
-            hullShape.FaceVertexIndices.Slice(0, hullData.FaceVertexIndices.Length, out hullShape.FaceVertexIndices);
             for (int i = 0; i < hullShape.FaceVertexIndices.Length; ++i)
             {
                 BundleIndexing.GetBundleIndices(hullData.FaceVertexIndices[i], out var bundleIndex, out var innerIndex);
@@ -816,7 +805,6 @@ namespace BepuPhysics.Collidables
             //Create bounding planes.
             var faceBundleCount = BundleIndexing.GetBundleCount(hullShape.FaceToVertexIndicesStart.Length);
             pool.Take(faceBundleCount, out hullShape.BoundingPlanes);
-            hullShape.BoundingPlanes.Slice(0, faceBundleCount, out hullShape.BoundingPlanes);
             for (int i = 0; i < hullShape.FaceToVertexIndicesStart.Length; ++i)
             {
                 hullShape.GetVertexIndicesForFace(i, out var faceVertexIndices);

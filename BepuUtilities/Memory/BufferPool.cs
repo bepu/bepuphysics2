@@ -311,28 +311,53 @@ namespace BepuUtilities.Memory
         /// <summary>
         /// Takes a buffer large enough to contain a number of bytes. Capacity may be larger than requested.
         /// </summary>
-        /// <param name="count">Number of bytes that should fit within the buffer.</param>
+        /// <param name="count">Desired minimum capacity of the buffer in bytes.</param>
         /// <param name="buffer">Buffer that can hold the bytes.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Take(int count, out RawBuffer buffer)
+        public void TakeAtLeast(int count, out RawBuffer buffer)
         {
             TakeForPower(SpanHelper.GetContainingPowerOf2(count), out buffer);
         }
 
         /// <summary>
-        /// Takes a buffer large enough to contain a number of instances of a given type. Capacity may be larger than requested.
+        /// Takes a buffer of the requested size from the pool.
         /// </summary>
-        /// <typeparam name="T">Type of the instances in the buffer.</typeparam>
-        /// <param name="count">Number of instances to request from the pool.</param>
-        /// <param name="buffer">Buffer large enough to contain the requested number of typed instances.</param>
+        /// <param name="count">Desired capacity of the buffer in bytes.</param>
+        /// <param name="buffer">Buffer of the requested size.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Take<T>(int count, out Buffer<T> buffer) where T : struct
+        public void Take(int count, out RawBuffer buffer)
+        {
+            TakeAtLeast(count, out buffer);
+            buffer.Length = count;
+        }
+
+        /// <summary>
+        /// Takes a buffer large enough to contain a number of elements of a given type. Capacity may be larger than requested.
+        /// </summary>
+        /// <typeparam name="T">Type of the elements in the buffer.</typeparam>
+        /// <param name="count">Desired minimum capacity of the buffer in typed elements.</param>
+        /// <param name="buffer">Buffer large enough to contain the requested number of elements.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void TakeAtLeast<T>(int count, out Buffer<T> buffer) where T : struct
         {
             //Avoid returning a zero length span because 1 byte / Unsafe.SizeOf<T>() happens to be zero.
             if (count == 0)
                 count = 1;
-            Take(count * Unsafe.SizeOf<T>(), out var rawBuffer);
+            TakeAtLeast(count * Unsafe.SizeOf<T>(), out var rawBuffer);
             buffer = rawBuffer.As<T>();
+        }
+
+        /// <summary>
+        /// Takes a typed buffer of the requested size from the pool.
+        /// </summary>
+        /// <typeparam name="T">Type of the instances in the buffer.</typeparam>
+        /// <param name="count">Desired capacity of the buffer in typed elements.</param>
+        /// <param name="buffer">Typed buffer of the requested size.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Take<T>(int count, out Buffer<T> buffer) where T : struct
+        {
+            TakeAtLeast(count, out buffer);
+            buffer.length = count; 
         }
 
         /// <summary>
@@ -397,6 +422,7 @@ namespace BepuUtilities.Memory
 
         /// <summary>
         /// Resizes a buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer.
+        /// Final buffer size is at least as large as the target size and may be larger.
         /// </summary>
         /// <param name="buffer">Buffer reference to resize.</param>
         /// <param name="targetSize">Number of bytes to resize the buffer for.</param>
@@ -414,7 +440,7 @@ namespace BepuUtilities.Memory
                 var currentSize = 1 << powerIndex;
                 if (currentSize != targetSize)
                 {
-                    Take(targetSize, out var newBuffer);
+                    TakeAtLeast(targetSize, out var newBuffer);
                     Unsafe.CopyBlockUnaligned(newBuffer.Memory, buffer.Memory, (uint)copyCount);
                     pools[powerIndex].Return(slotIndex);
                     buffer = newBuffer;
@@ -429,13 +455,14 @@ namespace BepuUtilities.Memory
             else
             {
                 //Nothing to return or copy.
-                Take(targetSize, out buffer);
+                TakeAtLeast(targetSize, out buffer);
             }
 
         }
 
         /// <summary>
-        /// Resizes a typed buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer.
+        /// Resizes a typed buffer to the smallest size available in the pool which contains the target size. Copies a subset of elements into the new buffer. 
+        /// Final buffer size is at least as large as the target size and may be larger.
         /// </summary>
         /// <typeparam name="T">Type of the buffer to resize.</typeparam>
         /// <param name="buffer">Buffer reference to resize.</param>
@@ -449,7 +476,7 @@ namespace BepuUtilities.Memory
             targetSize = GetCapacityForCount<T>(targetSize);
             if (buffer.Length != targetSize) //Note that we don't check for allocated status- for buffers, a length of 0 is the same as being unallocated.
             {
-                Take(targetSize, out Buffer<T> newBuffer);
+                TakeAtLeast(targetSize, out Buffer<T> newBuffer);
                 if (buffer.Length > 0)
                 {
                     //Don't bother copying from or re-pooling empty buffers. They're uninitialized.

@@ -69,7 +69,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public QuickList(int minimumInitialCount, IUnmanagedMemoryPool pool)
         {
-            pool.Take(minimumInitialCount, out Span);
+            pool.TakeAtLeast(minimumInitialCount, out Span);
             Count = 0;
         }
 
@@ -107,7 +107,7 @@ namespace BepuUtilities.Collections
             if (targetSize != Span.Length)
             {
                 var oldList = this;
-                pool.Take<T>(targetSize, out var newSpan);
+                pool.TakeAtLeast<T>(targetSize, out var newSpan);
                 Resize(ref newSpan, out var oldSpan);
                 oldList.Dispose(pool);
             }
@@ -140,7 +140,7 @@ namespace BepuUtilities.Collections
             }
             else
             {
-                pool.Take(count, out Span);
+                pool.TakeAtLeast(count, out Span);
             }
         }
 

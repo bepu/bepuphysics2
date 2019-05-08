@@ -213,7 +213,7 @@ namespace Demos.SpecializedTests
             {
                 points.AllocateUnsafely() = new Vector3(3 * (float)random.NextDouble(), 2 * (float)random.NextDouble(), (float)random.NextDouble());
             }
-            var pointsBuffer = points.Span.Slice(0, points.Count);
+            var pointsBuffer = points.Span.Slice(points.Count);
             ConvexHullHelper.CreateShape(pointsBuffer, pool, out _, out var convexHull);
 
             var shapes = new Shapes(pool, 8);

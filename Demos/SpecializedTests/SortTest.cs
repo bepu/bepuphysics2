@@ -31,7 +31,6 @@ namespace Demos.SpecializedTests
             const int elementExclusiveUpperBound = 1 << 16;
 
             var bufferPool = new BufferPool();
-            var threadDispatcher = new SimpleThreadDispatcher(8);
             bufferPool.Take<int>(elementCount, out var keys);
             bufferPool.Take<int>(elementCount, out var indexMap);      
             bufferPool.Take<int>(elementCount, out var keys2);

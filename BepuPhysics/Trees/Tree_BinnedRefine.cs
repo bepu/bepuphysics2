@@ -93,7 +93,7 @@ namespace BepuPhysics.Trees
                 16 * (1) + sizeof(Node) * nodeCount +
                 16 * (1) + sizeof(int) * nodeCount;
 
-            bufferPool.Take(bytesRequired, out buffer);
+            bufferPool.TakeAtLeast(bytesRequired, out buffer);
             var memory = buffer.Memory;
             int memoryAllocated = 0;
 

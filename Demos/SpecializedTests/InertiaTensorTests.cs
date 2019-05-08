@@ -271,7 +271,7 @@ namespace Demos.SpecializedTests
                 {
                     pointSet[j] -= new Vector3(0, 1, 0);
                 }
-                var pointsBuffer = pointSet.Span.Slice(0, pointSet.Count);
+                var pointsBuffer = pointSet.Span.Slice(pointSet.Count);
                 ConvexHullInertiaTester tester;
                 ConvexHullHelper.CreateShape(pointsBuffer, pool, out _, out tester.Hull);
 

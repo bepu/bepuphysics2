@@ -62,7 +62,7 @@ namespace BepuPhysics.CollisionDetection
             typeMatrix = collisionTypeMatrix;
             Dt = dt;
             Callbacks = callbacks;
-            pool.Take(collisionTypeMatrix.tasks.Length, out batches);
+            pool.TakeAtLeast(collisionTypeMatrix.tasks.Length, out batches);
             //Clearing is required ensure that we know when a batch needs to be created and when a batch needs to be disposed.
             batches.Clear(0, collisionTypeMatrix.tasks.Length);
             NonconvexReductions = new BatcherContinuations<NonconvexReduction>();
@@ -241,7 +241,7 @@ namespace BepuPhysics.CollisionDetection
             if (!batch.Shapes.Buffer.Allocated)
             {
                 var size = reference.BatchSize * (shapeSizeA + shapeSizeB);
-                Pool.Take(size, out batch.Shapes.Buffer);
+                Pool.TakeAtLeast(size, out batch.Shapes.Buffer);
                 Debug.Assert(batch.Shapes.ByteCount == 0);
             }
             cachedShapeA = batch.Shapes.Allocate(shapeSizeA);
@@ -259,7 +259,7 @@ namespace BepuPhysics.CollisionDetection
             if (!batch.Shapes.Buffer.Allocated)
             {
                 var size = reference.BatchSize * (Shapes[shapeTypeA].ShapeDataSize + shapeSizeB);
-                Pool.Take(size, out batch.Shapes.Buffer);
+                Pool.TakeAtLeast(size, out batch.Shapes.Buffer);
                 Debug.Assert(batch.Shapes.ByteCount == 0);
             }
             cachedShapeDataB = batch.Shapes.Allocate(shapeSizeB);

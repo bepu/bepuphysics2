@@ -48,7 +48,7 @@ namespace BepuUtilities.Memory
         {
             nextIndex = 0;
             availableIdCount = 0;
-            pool.Take(initialCapacity, out availableIds);
+            pool.TakeAtLeast(initialCapacity, out availableIds);
         }
 
 
@@ -68,7 +68,7 @@ namespace BepuUtilities.Memory
             if (availableIdCount == availableIds.Length)
             {
                 var oldAvailableIds = availableIds;
-                pool.Take(Math.Max(availableIdCount * 2, availableIds.Length), out availableIds);
+                pool.TakeAtLeast(Math.Max(availableIdCount * 2, availableIds.Length), out availableIds);
                 oldAvailableIds.CopyTo(0, ref availableIds, 0, availableIdCount);
                 pool.Return(ref oldAvailableIds);
             }
@@ -98,7 +98,7 @@ namespace BepuUtilities.Memory
         void InternalResize(int newSize, IUnmanagedMemoryPool pool)
         {
             var oldAvailableIds = availableIds;
-            pool.Take(newSize, out availableIds);
+            pool.TakeAtLeast(newSize, out availableIds);
             Debug.Assert(oldAvailableIds.Length != availableIds.Length, "Did you really mean to resize this? Nothing changed!");
             oldAvailableIds.CopyTo(0, ref availableIds, 0, availableIdCount);
             pool.Return(ref oldAvailableIds);

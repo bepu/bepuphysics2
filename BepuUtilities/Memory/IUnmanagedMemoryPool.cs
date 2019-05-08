@@ -6,7 +6,7 @@
     public interface IUnmanagedMemoryPool
     {
         //TODO: In the future, when the unmanaged gets generalized for constructed types (https://github.com/dotnet/csharplang/issues/1937), we can tighten these generic constraints for safety.
-        void Take<T>(int count, out Buffer<T> span) where T : struct;
+        void TakeAtLeast<T>(int count, out Buffer<T> span) where T : struct;
         void Return<T>(ref Buffer<T> span) where T : struct;
         /// <summary>
         /// Gets the capacity of a buffer that would be returned by the pool if a given element count was requested.

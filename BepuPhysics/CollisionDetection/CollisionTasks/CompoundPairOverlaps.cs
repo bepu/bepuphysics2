@@ -57,7 +57,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             this.subpairCount = 0;
             pool.Take(subpairCapacity, out childOverlaps);
             pool.Take(subpairCapacity, out pairQueries);
-            pairQueries.Slice(0, subpairCapacity, out pairQueries);
             //We rely on the length being zero to begin with for lazy initialization.
             childOverlaps.Clear(0, subpairCapacity);
             pool.Take(pairCapacity, out pairRegions);

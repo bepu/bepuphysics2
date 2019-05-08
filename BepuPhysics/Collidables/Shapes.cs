@@ -145,7 +145,7 @@ namespace BepuPhysics.Collidables
         {
             shapeDataSize = Unsafe.SizeOf<TShape>();
             var requiredSizeInBytes = shapeCount * Unsafe.SizeOf<TShape>();
-            pool.Take(requiredSizeInBytes, out var newShapesData);
+            pool.TakeAtLeast(requiredSizeInBytes, out var newShapesData);
             var newShapes = newShapesData.As<TShape>();
 #if DEBUG
             //In debug mode, unused slots are kept at the default value. This helps catch misuse.

@@ -144,9 +144,6 @@ namespace BepuPhysics.Collidables
             inertia.InverseMass = 1f / totalWeight;
             center *= inertia.InverseMass;
             Pool.Take(Children.Count, out children);
-            //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
-            //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
-            children = children.Slice(0, Children.Count);
             Symmetric3x3 summedInertia = default;
             for (int i = 0; i < Children.Count; ++i)
             {
@@ -178,9 +175,6 @@ namespace BepuPhysics.Collidables
 
             inertia.InverseMass = 1f / totalWeight;
             Pool.Take(Children.Count, out children);
-            //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
-            //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
-            children = children.Slice(0, Children.Count);
             Symmetric3x3 summedInertia = default;
             for (int i = 0; i < Children.Count; ++i)
             {
@@ -217,9 +211,6 @@ namespace BepuPhysics.Collidables
             var inverseWeight = 1f / totalWeight;
             center *= inverseWeight;
             Pool.Take(Children.Count, out children);
-            //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
-            //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
-            children = children.Slice(0, Children.Count);
             for (int i = 0; i < Children.Count; ++i)
             {
                 ref var sourceChild = ref Children[i];
@@ -239,9 +230,6 @@ namespace BepuPhysics.Collidables
         public void BuildKinematicCompound(out Buffer<CompoundChild> children)
         {
             Pool.Take(Children.Count, out children);
-            //Note that the buffer returned by the pool is only guaranteed to be at least as large as the requested size.
-            //The compound expects the buffer's length to exactly match the number of children, so we explicitly slice to avoid relying on the size of the returned buffer.
-            children = children.Slice(0, Children.Count);
             for (int i = 0; i < Children.Count; ++i)
             {
                 ref var sourceChild = ref Children[i];

@@ -66,8 +66,8 @@ namespace BepuPhysics.CollisionDetection
         public int InitialCapacityPerCache;
         public SleepingSetBuilder(BufferPool pool, int initialPairCapacity, int initialCapacityPerCache)
         {
-            pool.Take(PairCache.CollisionConstraintTypeCount, out ConstraintCaches);
-            pool.Take(PairCache.CollisionTypeCount, out CollisionCaches);
+            pool.TakeAtLeast(PairCache.CollisionConstraintTypeCount, out ConstraintCaches);
+            pool.TakeAtLeast(PairCache.CollisionTypeCount, out CollisionCaches);
             //Original values are used to test for existence; have to clear to avoid undefined values.
             ConstraintCaches.Clear(0, ConstraintCaches.Length);
             CollisionCaches.Clear(0, CollisionCaches.Length);
@@ -123,9 +123,9 @@ namespace BepuPhysics.CollisionDetection
             //Note that collision caches are not guaranteed to exist, so there may be no need to allocate room to store them.
             if (sourceTypeCount > 0)
             {
-                pool.Take(sourceTypeCount, out inactiveCaches);
+                pool.TakeAtLeast(sourceTypeCount, out inactiveCaches);
                 int index = 0;
-                pool.Take(sourceCaches.Length, out typeRemap);
+                pool.TakeAtLeast(sourceCaches.Length, out typeRemap);
                 for (int i = 0; i < sourceCaches.Length; ++i)
                 {
                     ref var sourceList = ref sourceCaches[i];

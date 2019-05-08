@@ -57,7 +57,6 @@ namespace Demos.Demos
             //Could stackalloc here, but the assumption is that there could be quite a few voxels.
             //Quite possible to overflow the stack, so we instead resort to heap allocation.
             pool.Take(voxelIndices.Count, out Buffer<BoundingBox> bounds);
-            bounds = bounds.Slice(0, voxelIndices.Count);
             for (int i = 0; i < voxelIndices.Count; ++i)
             {
                 ref var voxel = ref voxelIndices[i];

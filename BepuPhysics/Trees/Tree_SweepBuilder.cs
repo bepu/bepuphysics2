@@ -257,14 +257,14 @@ namespace BepuPhysics.Trees
             leafCount = leafBounds.Length;
 
 
-            pool.Take<int>(leafBounds.Length, out var indexMap);
-            pool.Take<int>(leafBounds.Length, out var indexMapX);
-            pool.Take<int>(leafBounds.Length, out var indexMapY);
-            pool.Take<int>(leafBounds.Length, out var indexMapZ);
-            pool.Take<float>(leafBounds.Length, out var centroidsX);
-            pool.Take<float>(leafBounds.Length, out var centroidsY);
-            pool.Take<float>(leafBounds.Length, out var centroidsZ);
-            pool.Take<BoundingBox>(leafBounds.Length, out var merged);
+            pool.TakeAtLeast<int>(leafBounds.Length, out var indexMap);
+            pool.TakeAtLeast<int>(leafBounds.Length, out var indexMapX);
+            pool.TakeAtLeast<int>(leafBounds.Length, out var indexMapY);
+            pool.TakeAtLeast<int>(leafBounds.Length, out var indexMapZ);
+            pool.TakeAtLeast<float>(leafBounds.Length, out var centroidsX);
+            pool.TakeAtLeast<float>(leafBounds.Length, out var centroidsY);
+            pool.TakeAtLeast<float>(leafBounds.Length, out var centroidsZ);
+            pool.TakeAtLeast<BoundingBox>(leafBounds.Length, out var merged);
             SweepResources leaves;
             leaves.Bounds = (BoundingBox*)leafBounds.Memory;
             leaves.IndexMap = (int*)indexMap.Memory;

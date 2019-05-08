@@ -118,8 +118,8 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public QuickSet(int initialCapacity, int tableSizePower, IUnmanagedMemoryPool pool, TEqualityComparer comparer)
         {
-            pool.Take<T>(initialCapacity, out var span);
-            pool.Take<int>(span.Length << tableSizePower, out var tableSpan);
+            pool.TakeAtLeast<T>(initialCapacity, out var span);
+            pool.TakeAtLeast<int>(span.Length << tableSizePower, out var tableSpan);
             //No guarantee that the table is clean; clear it.
             tableSpan.Clear(0, tableSpan.Length);
             this = new QuickSet<T, TEqualityComparer>(ref span, ref tableSpan, comparer, tableSizePower);
@@ -195,8 +195,8 @@ namespace BepuUtilities.Collections
             if (targetCapacity != Span.Length)
             {
                 var oldSet = this;
-                pool.Take<T>(newSize, out var newSpan);
-                pool.Take<int>(newSpan.Length << TablePowerOffset, out var newTableSpan);
+                pool.TakeAtLeast<T>(newSize, out var newSpan);
+                pool.TakeAtLeast<int>(newSpan.Length << TablePowerOffset, out var newTableSpan);
                 //There is no guarantee that the table retrieved from the pool is clean. Clear it!
                 newTableSpan.Clear(0, newTableSpan.Length);
                 Resize(ref newSpan, ref newTableSpan, out var oldSpan, out var oldTableSpan);

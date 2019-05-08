@@ -195,7 +195,7 @@ namespace BepuPhysics
             FallbackBatchThreshold = fallbackBatchThreshold;
             ActiveSet = new ConstraintSet(pool, fallbackBatchThreshold + 1);
             batchReferencedHandles = new QuickList<IndexSet>(fallbackBatchThreshold + 1, pool);
-            pool.Take(initialCapacity, out HandleToConstraint);
+            pool.TakeAtLeast(initialCapacity, out HandleToConstraint);
             solveWorker = SolveWorker;
             incrementalContactUpdateWorker = IncrementalContactUpdateWorker;
         }

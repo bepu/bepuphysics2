@@ -71,7 +71,7 @@ namespace BepuPhysics.Collidables
                 bounds.Min = Vector3.Min(t.A, Vector3.Min(t.B, t.C));
                 bounds.Max = Vector3.Max(t.A, Vector3.Max(t.B, t.C));
             }
-            Tree.SweepBuild(pool, boundingBoxes.Slice(0, triangles.Length));
+            Tree.SweepBuild(pool, boundingBoxes);
             pool.Return(ref boundingBoxes);
             Scale = scale;
         }

@@ -107,7 +107,7 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public QuickQueue(int minimumInitialCount, IUnmanagedMemoryPool pool)
         {
-            pool.Take(minimumInitialCount, out Span);
+            pool.TakeAtLeast(minimumInitialCount, out Span);
             Count = 0;
             CapacityMask = GetCapacityMask(Span.Length);
             FirstIndex = 0;
@@ -170,7 +170,7 @@ namespace BepuUtilities.Collections
             if (targetCapacity != Span.Length)
             {
                 var oldQueue = this;
-                pool.Take<T>(newSize, out var newSpan);
+                pool.TakeAtLeast<T>(newSize, out var newSpan);
                 Resize(ref newSpan, out var oldSpan);
                 oldQueue.Dispose(pool);
             }

@@ -404,7 +404,6 @@ namespace Demos.Demos.Characters
             Debug.Assert(!contactCollectionWorkerCaches.Allocated, "Worker caches were already allocated; did you forget to call AnalyzeContacts after collision detection to flush the previous frame's results?");
             var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
             pool.Take(threadCount, out contactCollectionWorkerCaches);
-            contactCollectionWorkerCaches = contactCollectionWorkerCaches.Slice(0, threadCount);
             for (int i = 0; i < contactCollectionWorkerCaches.Length; ++i)
             {
                 contactCollectionWorkerCaches[i] = new ContactCollectionWorkerCache(characters.Count, pool);
@@ -662,7 +661,6 @@ namespace Demos.Demos.Characters
             if (threadDispatcher == null)
             {
                 pool.Take(1, out analyzeContactsWorkerCaches);
-                analyzeContactsWorkerCaches = analyzeContactsWorkerCaches.Slice(0, 1);
                 analyzeContactsWorkerCaches[0] = new AnalyzeContactsWorkerCache(characters.Count, pool);
                 AnalyzeContactsForCharacterRegion(0, characters.Count, 0);
             }
@@ -672,7 +670,6 @@ namespace Demos.Demos.Characters
                 if (analysisJobCount > 0)
                 {
                     pool.Take(threadDispatcher.ThreadCount, out analyzeContactsWorkerCaches);
-                    analyzeContactsWorkerCaches = analyzeContactsWorkerCaches.Slice(0, threadDispatcher.ThreadCount);
                     pool.Take(analysisJobCount, out jobs);
                     for (int i = 0; i < threadDispatcher.ThreadCount; ++i)
                     {

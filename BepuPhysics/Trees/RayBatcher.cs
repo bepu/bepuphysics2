@@ -160,12 +160,12 @@ namespace BepuPhysics.Trees
         {
             this.pool = pool;
             batchRayCount = 0;
-            pool.Take(rayCapacity, out batchRays);
-            pool.Take(rayCapacity, out batchOriginalRays);
+            pool.TakeAtLeast(rayCapacity, out batchRays);
+            pool.TakeAtLeast(rayCapacity, out batchOriginalRays);
             Debug.Assert(rayCapacity <= ushort.MaxValue, $"The number of rays per traversal must be less than {ushort.MaxValue}.");
 
             //Note that this assumes the tree has a fixed maximum depth. Note a great idea in the long term.
-            pool.Take(Tree.TraversalStackCapacity, out fallbackStack);
+            pool.TakeAtLeast(Tree.TraversalStackCapacity, out fallbackStack);
             ResizeRayStacks(rayCapacity, treeDepthForPreallocation);
 
             stackPointer = stackPointerA0 = stackPointerB = stackPointerA1 = 0;

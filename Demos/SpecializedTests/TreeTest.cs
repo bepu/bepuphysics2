@@ -47,7 +47,7 @@ namespace Demos.SpecializedTests
 
             var prebuiltCount = Math.Max(leafCount / 2, 1);
 
-            tree.SweepBuild(pool, leafBounds.Slice(0, prebuiltCount));
+            tree.SweepBuild(pool, leafBounds.Slice(prebuiltCount));
             tree.Validate();
 
 
@@ -57,8 +57,8 @@ namespace Demos.SpecializedTests
             }
             tree.Validate();
 
-            pool.Take<int>(leafCount, out var handleToLeafIndex);
-            pool.Take<int>(leafCount, out var leafIndexToHandle);
+            pool.TakeAtLeast<int>(leafCount, out var handleToLeafIndex);
+            pool.TakeAtLeast<int>(leafCount, out var leafIndexToHandle);
             for (int i = 0; i < leafCount; ++i)
             {
                 handleToLeafIndex[i] = i;

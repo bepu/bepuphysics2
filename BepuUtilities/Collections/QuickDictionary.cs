@@ -174,9 +174,9 @@ namespace BepuUtilities.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public QuickDictionary(int initialCapacity, int tableSizePower, IUnmanagedMemoryPool pool, TEqualityComparer comparer)
         {
-            pool.Take<TKey>(initialCapacity, out var keySpan);
-            pool.Take<TValue>(keySpan.Length, out var valueSpan);
-            pool.Take<int>(keySpan.Length << tableSizePower, out var tableSpan);
+            pool.TakeAtLeast<TKey>(initialCapacity, out var keySpan);
+            pool.TakeAtLeast<TValue>(keySpan.Length, out var valueSpan);
+            pool.TakeAtLeast<int>(keySpan.Length << tableSizePower, out var tableSpan);
             //No guarantee that the table is clean; clear it.
             tableSpan.Clear(0, tableSpan.Length);
             this = new QuickDictionary<TKey, TValue, TEqualityComparer>(ref keySpan, ref valueSpan, ref tableSpan, comparer, tableSizePower);
@@ -259,9 +259,9 @@ namespace BepuUtilities.Collections
             var targetKeyCapacity = pool.GetCapacityForCount<TKey>(newSize);
             if (targetKeyCapacity != Keys.Length)
             {
-                pool.Take<TKey>(newSize, out var newKeySpan);
-                pool.Take<TValue>(newKeySpan.Length, out var newValueSpan);
-                pool.Take<int>(newKeySpan.Length << TablePowerOffset, out var newTableSpan);
+                pool.TakeAtLeast<TKey>(newSize, out var newKeySpan);
+                pool.TakeAtLeast<TValue>(newKeySpan.Length, out var newValueSpan);
+                pool.TakeAtLeast<int>(newKeySpan.Length << TablePowerOffset, out var newTableSpan);
                 //There is no guarantee that the table retrieved from the pool is clean. Clear it!
                 newTableSpan.Clear(0, newTableSpan.Length);
                 var oldDictionary = this;

@@ -35,7 +35,7 @@ namespace BepuPhysics.Collidables
                 ref var bounds = ref leafBounds[i];
                 Compound.ComputeChildBounds(Children[i], Quaternion.Identity, shapes, out bounds.Min, out bounds.Max);
             }
-            Tree.SweepBuild(pool, leafBounds.Slice(0, children.Length));
+            Tree.SweepBuild(pool, leafBounds);
             pool.Return(ref leafBounds);
         }
 

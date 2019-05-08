@@ -181,7 +181,7 @@ namespace BepuPhysics.CollisionDetection
             minimumSizesPerCollisionType.Dispose(pool);
 
             //Create the pair freshness array for the existing overlaps.
-            pool.Take(Mapping.Count, out PairFreshness);
+            pool.TakeAtLeast(Mapping.Count, out PairFreshness);
             //This clears 1 byte per pair. 32768 pairs with 10GBps assumed single core bandwidth means about 3 microseconds.
             //There is a small chance that multithreading this would be useful in larger simulations- but it would be very, very close.
             PairFreshness.Clear(0, Mapping.Count);

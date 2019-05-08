@@ -73,7 +73,7 @@ namespace BepuPhysics.CollisionDetection
                 public ContinuationCache(BufferPool pool)
                 {
                     Ids = new IdPool(32, pool);
-                    pool.Take(128, out Caches);
+                    pool.TakeAtLeast(128, out Caches);
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -32,7 +32,7 @@ namespace DemoRenderer.ShapeDrawing
         public MeshCache(Device device, BufferPool pool, int initialSizeInVertices = 1 << 22)
         {
             Pool = pool;
-            pool.Take(initialSizeInVertices, out vertices);
+            pool.TakeAtLeast(initialSizeInVertices, out vertices);
             TriangleBuffer = new StructuredBuffer<Vector3>(device, initialSizeInVertices, "Mesh Cache Vertex Buffer");
             allocator = new Allocator(initialSizeInVertices, pool);
 

@@ -301,20 +301,20 @@ namespace BepuPhysics
                 ++bundleCount;
             var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
-            pool.Take(constraintCount, out context.SourceIndices);
-            pool.Take(constraintCount, out context.SortKeys);
-            pool.Take(constraintCount, out context.ScratchKeys);
-            pool.Take(constraintCount, out context.ScratchValues);
-            pool.Take(constraintCount, out context.IndexToHandleCache);
+            pool.TakeAtLeast(constraintCount, out context.SourceIndices);
+            pool.TakeAtLeast(constraintCount, out context.SortKeys);
+            pool.TakeAtLeast(constraintCount, out context.ScratchKeys);
+            pool.TakeAtLeast(constraintCount, out context.ScratchValues);
+            pool.TakeAtLeast(constraintCount, out context.IndexToHandleCache);
 
             var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
             typeProcessor.GetBundleTypeSizes(out var bodyReferencesBundleSize, out var prestepBundleSize, out var accumulatedImpulseBundleSize);
 
             //The typebatch invoked by the worker will cast the body references to the appropriate type. 
             //Using typeless buffers makes it easy to cache the buffers here in the constraint optimizer rather than in the individual type batches.
-            pool.Take(bundleCount * bodyReferencesBundleSize, out context.BodyReferencesCache);
-            pool.Take(bundleCount * prestepBundleSize, out context.PrestepDataCache);
-            pool.Take(bundleCount * accumulatedImpulseBundleSize, out context.AccumulatesImpulsesCache);
+            pool.TakeAtLeast(bundleCount * bodyReferencesBundleSize, out context.BodyReferencesCache);
+            pool.TakeAtLeast(bundleCount * prestepBundleSize, out context.PrestepDataCache);
+            pool.TakeAtLeast(bundleCount * accumulatedImpulseBundleSize, out context.AccumulatesImpulsesCache);
 
             context.BundlesPerWorker = bundleCount / threadCount;
             context.BundlesPerWorkerRemainder = bundleCount - context.BundlesPerWorker * threadCount;

@@ -49,7 +49,7 @@ namespace Demos.SpecializedTests
             {
                 //Pull a buffer from the pool, fill it with trash data, and return it. 
                 ref var buffer = ref bufferList.AllocateUnsafely();
-                pool.Take(1 << random.Next(18), out buffer);
+                pool.TakeAtLeast(1 << random.Next(18), out buffer);
                 for (int k = 0; k < buffer.Length; ++k)
                     buffer[k] = random.Next(int.MinValue, int.MaxValue);
             }

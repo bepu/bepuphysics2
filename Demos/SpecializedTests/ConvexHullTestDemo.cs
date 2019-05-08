@@ -45,7 +45,7 @@ namespace Demos.SpecializedTests
                 //points.AllocateUnsafely() = new Vector3(0, 1, 0) + Vector3.Normalize(new Vector3((float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1, (float)random.NextDouble() * 2 - 1)) * (float)random.NextDouble();
             }
 
-            var pointsBuffer = points.Span.Slice(0, points.Count);
+            var pointsBuffer = points.Span.Slice(points.Count);
             CreateShape(pointsBuffer, BufferPool, out _, out var hullShape);
             const int iterationCount = 100;
             var start = Stopwatch.GetTimestamp();
@@ -102,7 +102,7 @@ namespace Demos.SpecializedTests
                     points.AllocateUnsafely() = new Vector3(1 * (float)random.NextDouble(), 2 * (float)random.NextDouble(), 3 * (float)random.NextDouble());
                 }
 
-                var pointsBuffer = points.Span.Slice(0, points.Count);
+                var pointsBuffer = points.Span.Slice(points.Count);
                 CreateShape(pointsBuffer, BufferPool, out _, out var hullShape);
 
                 hullShape.Dispose(BufferPool);

@@ -127,7 +127,7 @@ namespace Demos.Demos
             {
                 points.AllocateUnsafely() = new Vector3(1 * (float)random.NextDouble(), 0.5f * (float)random.NextDouble(), 1.5f * (float)random.NextDouble());
             }
-            var hull = new ConvexHull(points.Span.Slice(0, points.Count), BufferPool, out _);
+            var hull = new ConvexHull(points.Span.Slice(points.Count), BufferPool, out _);
             points.Dispose(BufferPool);
             return hull;
         }

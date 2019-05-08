@@ -39,7 +39,7 @@ namespace BepuPhysics.CollisionDetection
             public PendingConstraintAddCache(BufferPool pool, int minimumConstraintCountPerCache = 128)
             {
                 this.pool = pool;
-                pool.Take(PairCache.CollisionConstraintTypeCount, out pendingConstraintsByType);
+                pool.TakeAtLeast(PairCache.CollisionConstraintTypeCount, out pendingConstraintsByType);
                 //Have to clear the memory before use to avoid trash data sticking around.
                 pendingConstraintsByType.Clear(0, PairCache.CollisionConstraintTypeCount);
                 this.minimumConstraintCountPerCache = minimumConstraintCountPerCache;
@@ -221,7 +221,7 @@ namespace BepuPhysics.CollisionDetection
 
             internal void AllocateForSpeculativeSearch()
             {
-                pool.Take(PairCache.CollisionConstraintTypeCount, out speculativeBatchIndices);
+                pool.TakeAtLeast(PairCache.CollisionConstraintTypeCount, out speculativeBatchIndices);
                 speculativeBatchIndices.Clear(0, PairCache.CollisionConstraintTypeCount);
                 for (int i = 0; i < PairCache.CollisionConstraintTypeCount; ++i)
                 {
@@ -229,7 +229,7 @@ namespace BepuPhysics.CollisionDetection
                     if (typeList.Buffer.Allocated)
                     {
                         Debug.Assert(typeList.Count > 0);
-                        pool.Take(typeList.Count, out speculativeBatchIndices[i]);
+                        pool.TakeAtLeast(typeList.Count, out speculativeBatchIndices[i]);
                     }
                 }
             }

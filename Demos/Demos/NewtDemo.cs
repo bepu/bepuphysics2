@@ -422,7 +422,6 @@ namespace Demos.Demos
             vertexSpatialIndices = new CellSet(cells.Count * 4, pool);
             int cellIndex = 0;
             pool.Take(cells.Count, out cellVertexIndices);
-            cellVertexIndices = cellVertexIndices.Slice(0, cells.Count);
             for (int i = 0; i < cells.Count; ++i)
             {
                 ref var cell = ref cells[i];
@@ -464,7 +463,6 @@ namespace Demos.Demos
             //Create the tetrahedra.
             var tetrahedraCount = cellVertexIndices.Length * 5;
             pool.Take(tetrahedraCount, out tetrahedraVertexIndices);
-            tetrahedraVertexIndices = tetrahedraVertexIndices.Slice(0, tetrahedraCount);
             int tetrahedronIndex = 0;
             for (int i = 0; i < cellVertexIndices.Length; ++i)
             {
@@ -478,7 +476,6 @@ namespace Demos.Demos
 
             //Create the vertices.
             pool.Take(vertexSpatialIndices.Count, out vertices);
-            vertices = vertices.Slice(0, vertexSpatialIndices.Count);
             for (int i = 0; i < vertices.Length; ++i)
             {
                 ref var index = ref vertexSpatialIndices[i];
@@ -669,13 +666,13 @@ namespace Demos.Demos
             ref Buffer<Vector3> vertices, ref CellSet vertexSpatialIndices, ref Buffer<CellVertexIndices> cellVertexIndices, ref Buffer<TetrahedronVertices> tetrahedraVertexIndices)
         {
             var pool = simulation.BufferPool;
-            pool.Take<int>(vertices.Length, out var vertexEdgeCounts);
+            pool.TakeAtLeast<int>(vertices.Length, out var vertexEdgeCounts);
             vertexEdgeCounts.Clear(0, vertices.Length);
             var edges = new QuickSet<Edge, Edge>(vertices.Length * 3, pool);
             var edgeCountForInternalVertex = CreateHexahedralUniqueEdgesList(ref cellVertexIndices, ref vertexEdgeCounts, pool, ref edges);
             //var edgeCountForInternalVertex = CreateTetrahedralUniqueEdgesList(ref tetrahedraVertexIndices, ref vertexEdgeCounts, ref cellEdgePool, ref intPool, ref edges);
 
-            pool.Take<int>(vertices.Length, out var vertexHandles);
+            pool.TakeAtLeast<int>(vertices.Length, out var vertexHandles);
             var vertexShape = new Sphere(cellSize * 0.7f);
             var massPerVertex = density * (cellSize * cellSize * cellSize);
             vertexShape.ComputeInertia(massPerVertex, out var vertexInertia);

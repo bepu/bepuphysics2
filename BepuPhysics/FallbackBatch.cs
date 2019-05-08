@@ -204,16 +204,16 @@ namespace BepuPhysics
 
         public static void AllocateResults(Solver solver, BufferPool pool, ref ConstraintBatch batch, out Buffer<FallbackTypeBatchResults> results)
         {
-            pool.Take(batch.TypeBatches.Count, out results);
+            pool.TakeAtLeast(batch.TypeBatches.Count, out results);
             for (int i = 0; i < batch.TypeBatches.Count; ++i)
             {
                 ref var typeBatch = ref batch.TypeBatches[i];
                 var bodiesPerConstraint = solver.TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
                 ref var typeBatchResults = ref results[i];
-                pool.Take(bodiesPerConstraint, out typeBatchResults.BodyVelocities);
+                pool.TakeAtLeast(bodiesPerConstraint, out typeBatchResults.BodyVelocities);
                 for (int j = 0; j < bodiesPerConstraint; ++j)
                 {
-                    pool.Take(typeBatch.BundleCount, out typeBatchResults.GetVelocitiesForBody(j));
+                    pool.TakeAtLeast(typeBatch.BundleCount, out typeBatchResults.GetVelocitiesForBody(j));
                 }
             }
         }
@@ -462,9 +462,9 @@ namespace BepuPhysics
         {
             //Copy over non-buffer state. This copies buffer references pointlessly, but that doesn't matter.
             targetBatch.bodyConstraintReferences = sourceBatch.bodyConstraintReferences;
-            pool.Take(sourceBatch.bodyConstraintReferences.Count, out targetBatch.bodyConstraintReferences.Keys);
-            pool.Take(targetBatch.bodyConstraintReferences.Keys.Length, out targetBatch.bodyConstraintReferences.Values);
-            pool.Take(sourceBatch.bodyConstraintReferences.TableMask + 1, out targetBatch.bodyConstraintReferences.Table);
+            pool.TakeAtLeast(sourceBatch.bodyConstraintReferences.Count, out targetBatch.bodyConstraintReferences.Keys);
+            pool.TakeAtLeast(targetBatch.bodyConstraintReferences.Keys.Length, out targetBatch.bodyConstraintReferences.Values);
+            pool.TakeAtLeast(sourceBatch.bodyConstraintReferences.TableMask + 1, out targetBatch.bodyConstraintReferences.Table);
             sourceBatch.bodyConstraintReferences.Keys.CopyTo(0, ref targetBatch.bodyConstraintReferences.Keys, 0, sourceBatch.bodyConstraintReferences.Count);
             sourceBatch.bodyConstraintReferences.Values.CopyTo(0, ref targetBatch.bodyConstraintReferences.Values, 0, sourceBatch.bodyConstraintReferences.Count);
             sourceBatch.bodyConstraintReferences.Table.CopyTo(0, ref targetBatch.bodyConstraintReferences.Table, 0, sourceBatch.bodyConstraintReferences.TableMask + 1);
@@ -474,8 +474,8 @@ namespace BepuPhysics
                 ref var source = ref sourceBatch.bodyConstraintReferences.Values[i];
                 ref var target = ref targetBatch.bodyConstraintReferences.Values[i];
                 target = source;
-                pool.Take(source.Count, out target.Span);
-                pool.Take(source.TableMask + 1, out target.Table);
+                pool.TakeAtLeast(source.Count, out target.Span);
+                pool.TakeAtLeast(source.TableMask + 1, out target.Table);
                 source.Span.CopyTo(0, ref target.Span, 0, source.Count);
                 source.Table.CopyTo(0, ref target.Table, 0, source.TableMask + 1);
             }

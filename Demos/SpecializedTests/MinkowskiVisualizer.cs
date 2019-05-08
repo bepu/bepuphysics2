@@ -115,7 +115,7 @@ namespace Demos.SpecializedTests
             lines[sampleCount] = new LineInstance(basePosition - new Vector3(originLength, 0, 0), basePosition + new Vector3(originLength, 0, 0), packedOriginColor, packedBackgroundColor);
             lines[sampleCount + 1] = new LineInstance(basePosition - new Vector3(0, originLength, 0), basePosition + new Vector3(0, originLength, 0), packedOriginColor, packedBackgroundColor);
             lines[sampleCount + 2] = new LineInstance(basePosition - new Vector3(0, 0, originLength), basePosition + new Vector3(0, 0, originLength), packedOriginColor, packedBackgroundColor);
-            return lines.Slice(0, sampleCount + 3);
+            return lines;
         }
 
         public static void Draw(Buffer<LineInstance> lines, Renderer renderer)

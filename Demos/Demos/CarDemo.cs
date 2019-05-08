@@ -383,7 +383,6 @@ namespace Demos.Demos
             //Create a bunch of AI cars to race against.
             const int aiCount = 384;
             BufferPool.Take(aiCount, out aiControllers);
-            aiControllers = aiControllers.Slice(0, aiCount);
 
 
             const int planeWidth = 257;

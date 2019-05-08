@@ -16,7 +16,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public UntypedList(int elementSizeInBytes, int initialCapacityInElements, BufferPool pool)
         {
-            pool.Take(initialCapacityInElements * elementSizeInBytes, out Buffer);
+            pool.TakeAtLeast(initialCapacityInElements * elementSizeInBytes, out Buffer);
             Count = 0;
             ByteCount = 0;
             ElementSizeInBytes = elementSizeInBytes;
@@ -98,7 +98,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 //This didn't exist at all before; create a new entry for this type.
                 ElementSizeInBytes = elementSizeInBytes;
-                pool.Take(Math.Max(newSize, minimumElementCount * elementSizeInBytes), out Buffer);
+                pool.TakeAtLeast(Math.Max(newSize, minimumElementCount * elementSizeInBytes), out Buffer);
             }
             else
             {
@@ -106,7 +106,7 @@ namespace BepuPhysics.CollisionDetection
                 if (newSize > Buffer.Length)
                 {
                     //This will bump up to the next allocated block size, so we don't have to worry about constant micro-resizes.
-                    pool.Take(newSize, out var newBuffer);
+                    pool.TakeAtLeast(newSize, out var newBuffer);
                     Unsafe.CopyBlockUnaligned(newBuffer.Memory, Buffer.Memory, (uint)Buffer.Length);
                     pool.ReturnUnsafely(Buffer.Id);
                     Buffer = newBuffer;

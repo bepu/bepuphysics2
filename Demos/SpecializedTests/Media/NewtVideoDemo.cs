@@ -47,7 +47,7 @@ namespace Demos.SpecializedTests
                 points.AllocateUnsafely() = triangle.C * new Vector3(1, 1.5f, 1);
             }
 
-            var newtHull = new ConvexHull(points.Span.Slice(0, points.Count), BufferPool, out _);
+            var newtHull = new ConvexHull(points.Span.Slice(points.Count), BufferPool, out _);
             var bodyDescription = BodyDescription.CreateConvexDynamic(RigidPose.Identity, 1, Simulation.Shapes, newtHull);
             Console.WriteLine($"hmm {bodyDescription.Collidable.SpeculativeMargin}");
             Random random = new Random(5);

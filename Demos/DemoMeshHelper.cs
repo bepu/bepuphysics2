@@ -16,14 +16,13 @@ namespace Demos
             {
                 triangles[i] = new Triangle(meshContent.Triangles[i].A, meshContent.Triangles[i].B, meshContent.Triangles[i].C);
             }
-            mesh = new Mesh(triangles.Slice(0, meshContent.Triangles.Length), scaling, pool);
+            mesh = new Mesh(triangles, scaling, pool);
         }
 
         public static void CreateFan(int triangleCount, float radius, in Vector3 scaling, BufferPool pool, out Mesh mesh)
         {
             var anglePerTriangle = 2 * MathF.PI / triangleCount;
             pool.Take<Triangle>(triangleCount, out var triangles);
-            triangles = triangles.Slice(0, triangleCount);
 
             for (int i = 0; i < triangleCount; ++i)
             {
@@ -53,7 +52,6 @@ namespace Demos
             var quadHeight = height - 1;
             var triangleCount = quadWidth * quadHeight * 2;
             pool.Take<Triangle>(triangleCount, out var triangles);
-            triangles = triangles.Slice(0, triangleCount);
 
             for (int i = 0; i < quadWidth; ++i)
             {
