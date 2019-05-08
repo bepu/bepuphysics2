@@ -166,7 +166,6 @@ namespace Demos.SpecializedTests
             //renderer.TextBatcher.Write(
             //    text.Clear().Append($"Enumerate step with X and C. Current step: ").Append(stepIndex + 1).Append(" out of ").Append(debugSteps.Count),
             //    new Vector2(32, renderer.Surface.Resolution.Y - 140), 20, new Vector3(1), font);
-
             base.Render(renderer, camera, input, text, font);
         }
     }

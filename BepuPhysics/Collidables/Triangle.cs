@@ -12,7 +12,7 @@ using BepuPhysics.CollisionDetection;
 namespace BepuPhysics.Collidables
 {
     /// <summary>
-    /// Collision shape representing an individual triangle.
+    /// Collision shape representing an individual triangle. Triangle collisions and ray tests are one-sided; only tests which see the triangle as wound clockwise will generate contacts.
     /// </summary>
     public struct Triangle : IConvexShape
     {

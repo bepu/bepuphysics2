@@ -37,12 +37,24 @@ namespace BepuPhysics.Collidables
         }
     }
 
+    /// <summary>
+    /// Shape designed to contain a whole bunch of triangles. Triangle collisions and ray tests are one-sided; only tests which see the triangle as wound clockwise will generate contacts.
+    /// </summary>
     public struct Mesh : IHomogeneousCompoundShape<Triangle, TriangleWide>
     {
+        /// <summary>
+        /// Acceleration structure of the mesh.
+        /// </summary>
         public Tree Tree;
+        /// <summary>
+        /// Buffer of triangles composing the mesh. Triangles will only collide with tests which see the triangle as wound clockwise.
+        /// </summary>
         public Buffer<Triangle> Triangles;
         internal Vector3 scale;
         internal Vector3 inverseScale;
+        /// <summary>
+        /// Gets or sets the scale of the mesh.
+        /// </summary>
         public Vector3 Scale
         {
             get
