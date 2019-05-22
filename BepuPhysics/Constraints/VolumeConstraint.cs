@@ -205,7 +205,7 @@ namespace BepuPhysics.Constraints
 
 
     /// <summary>
-    /// Handles the solve iterations of a bunch of ball socket constraints.
+    /// Handles the solve iterations of a bunch of volume constraints.
     /// </summary>
     public class VolumeConstraintTypeProcessor : FourBodyTypeProcessor<VolumeConstraintPrestepData, VolumeConstraintProjection, Vector<float>, VolumeConstraintFunctions>
     {
