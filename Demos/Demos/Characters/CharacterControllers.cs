@@ -93,7 +93,6 @@ namespace Demos.Demos.Characters
         /// </summary>
         public Simulation Simulation { get; private set; }
         BufferPool pool;
-        IdPool characterIdPool;
 
         Buffer<int> bodyHandleToCharacterIndex;
         QuickList<CharacterController> characters;
@@ -113,7 +112,6 @@ namespace Demos.Demos.Characters
         {
             this.pool = pool;
             characters = new QuickList<CharacterController>(initialCharacterCapacity, pool);
-            characterIdPool = new IdPool(initialCharacterCapacity, pool);
             ResizeBodyHandleCapacity(initialBodyHandleCapacity);
             analyzeContactsWorker = AnalyzeContactsWorker;
         }
@@ -141,6 +139,17 @@ namespace Demos.Demos.Characters
             }
         }
 
+        /// <summary>
+        /// Gets the current index of a character using its associated body handle.
+        /// </summary>
+        /// <param name="bodyHandle">Body handle associated with the character to look up the index of.</param>
+        /// <returns>Index of the character associated with the body handle.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetCharacterIndexForHandle(int bodyHandle)
+        {
+            return bodyHandleToCharacterIndex[bodyHandle];
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref CharacterController GetCharacterByIndex(int index)
         {
@@ -163,12 +172,10 @@ namespace Demos.Demos.Characters
         {
             Debug.Assert(bodyHandle >= 0 && (bodyHandle >= bodyHandleToCharacterIndex.Length || bodyHandleToCharacterIndex[bodyHandle] == -1),
                 "Cannot allocate more than one character for the same body handle.");
-            characterIndex = characterIdPool.Take();
-            characters.EnsureCapacity(characterIndex + 1, pool);
             if (bodyHandle >= bodyHandleToCharacterIndex.Length)
                 ResizeBodyHandleCapacity(Math.Max(bodyHandle + 1, bodyHandleToCharacterIndex.Length * 2));
             characterIndex = characters.Count;
-            ref var character = ref characters.AllocateUnsafely();
+            ref var character = ref characters.Allocate(pool);
             character = default;
             character.BodyHandle = bodyHandle;
             bodyHandleToCharacterIndex[bodyHandle] = characterIndex;
@@ -766,9 +773,18 @@ namespace Demos.Demos.Characters
         /// <param name="bodyHandleCapacity">Target number of body handles to allocate space for.</param>
         public void Resize(int characterCapacity, int bodyHandleCapacity)
         {
-            var targetHandleCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(characterIdPool.HighestPossiblyClaimedId + 1, bodyHandleCapacity));
+            int lastOccupiedIndex = -1;
+            for (int i = bodyHandleToCharacterIndex.Length - 1; i >= 0; --i)
+            {
+                if (bodyHandleToCharacterIndex[i] != -1)
+                {
+                    lastOccupiedIndex = i;
+                    break;
+                }
+            }
+            var targetHandleCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(lastOccupiedIndex + 1, bodyHandleCapacity));
             if (targetHandleCapacity != bodyHandleToCharacterIndex.Length)
-                pool.ResizeToAtLeast(ref bodyHandleToCharacterIndex, targetHandleCapacity, characterIdPool.HighestPossiblyClaimedId);
+                ResizeBodyHandleCapacity(targetHandleCapacity);
 
             var targetCharacterCapacity = BufferPool.GetCapacityForCount<int>(Math.Max(characters.Count, characterCapacity));
             if (targetCharacterCapacity != characters.Span.Length)
@@ -786,7 +802,6 @@ namespace Demos.Demos.Characters
                 disposed = true;
                 Simulation.Timestepper.BeforeCollisionDetection -= PrepareForContacts;
                 Simulation.Timestepper.CollisionsDetected -= AnalyzeContacts;
-                characterIdPool.Dispose(pool);
                 characters.Dispose(pool);
                 pool.Return(ref bodyHandleToCharacterIndex);
             }
