@@ -39,8 +39,7 @@ namespace Demos.SpecializedTests
                         BodyDescription.CreateDynamic(
                             new Vector3(250 * (float)random.NextDouble() - 125, 2, 250 * (float)random.NextDouble() - 125), new BodyInertia { InverseMass = 1 },
                             new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1f)), 0.1f),
-                            new BodyActivityDescription(-1))),
-                    out var characterIndex);
+                            new BodyActivityDescription(-1))));
 
                 character.CosMaximumSlope = .707f;
                 character.LocalUp = Vector3.UnitY;

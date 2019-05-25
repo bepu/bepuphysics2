@@ -140,25 +140,37 @@ namespace Demos.Demos.Characters
         }
 
         /// <summary>
-        /// Gets the current index of a character using its associated body handle.
+        /// Gets the current memory slot index of a character using its associated body handle.
         /// </summary>
         /// <param name="bodyHandle">Body handle associated with the character to look up the index of.</param>
         /// <returns>Index of the character associated with the body handle.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetCharacterIndexForHandle(int bodyHandle)
+        public int GetCharacterIndexForBodyHandle(int bodyHandle)
         {
+            Debug.Assert(bodyHandle >= 0 && bodyHandle < bodyHandleToCharacterIndex.Length && bodyHandleToCharacterIndex[bodyHandle] >= 0, "Can only look up indices for body handles associated with characters in this CharacterControllers instance.");
             return bodyHandleToCharacterIndex[bodyHandle];
         }
 
+        /// <summary>
+        /// Gets a reference to the character at the given memory slot index.
+        /// </summary>
+        /// <param name="index">Index of the character to retrieve.</param>
+        /// <returns>Reference to the character at the given memory slot index.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref CharacterController GetCharacterByIndex(int index)
         {
             return ref characters[index];
         }
 
+        /// <summary>
+        /// Gets a reference to the character using the handle of the character's body.
+        /// </summary>
+        /// <param name="bodyHandle">Body handle of the character to look up.</param>
+        /// <returns>Reference to the character associated with the given body handle.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref CharacterController GetCharacterByBodyHandle(int bodyHandle)
         {
+            Debug.Assert(bodyHandle >= 0 && bodyHandle < bodyHandleToCharacterIndex.Length && bodyHandleToCharacterIndex[bodyHandle] >= 0, "Can only look up indices for body handles associated with characters in this CharacterControllers instance.");
             return ref characters[bodyHandleToCharacterIndex[bodyHandle]];
         }
 
@@ -166,15 +178,14 @@ namespace Demos.Demos.Characters
         /// Allocates a character.
         /// </summary>
         /// <param name="bodyHandle">Body handle associated with the character.</param>
-        /// <param name="characterIndex">Index of the allocated character.</param>
         /// <returns>Reference to the allocated character.</returns>
-        public ref CharacterController AllocateCharacter(int bodyHandle, out int characterIndex)
+        public ref CharacterController AllocateCharacter(int bodyHandle)
         {
             Debug.Assert(bodyHandle >= 0 && (bodyHandle >= bodyHandleToCharacterIndex.Length || bodyHandleToCharacterIndex[bodyHandle] == -1),
                 "Cannot allocate more than one character for the same body handle.");
             if (bodyHandle >= bodyHandleToCharacterIndex.Length)
                 ResizeBodyHandleCapacity(Math.Max(bodyHandle + 1, bodyHandleToCharacterIndex.Length * 2));
-            characterIndex = characters.Count;
+            var characterIndex = characters.Count;
             ref var character = ref characters.Allocate(pool);
             character = default;
             character.BodyHandle = bodyHandle;

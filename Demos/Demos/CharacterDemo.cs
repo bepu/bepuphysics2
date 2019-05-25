@@ -43,7 +43,7 @@ namespace Demos.Demos
             var shapeIndex = characters.Simulation.Shapes.Add(shape);
 
             bodyHandle = characters.Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f / mass }, new CollidableDescription(shapeIndex, speculativeMargin), new BodyActivityDescription(shape.Radius * 0.02f)));
-            ref var character = ref characters.AllocateCharacter(bodyHandle, out var characterIndex);
+            ref var character = ref characters.AllocateCharacter(bodyHandle);
             character.LocalUp = new Vector3(0, 1, 0);
             character.CosMaximumSlope = MathF.Cos(maximumSlope);
             character.JumpVelocity = jumpVelocity;
