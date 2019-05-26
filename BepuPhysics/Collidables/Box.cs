@@ -13,23 +13,38 @@ namespace BepuPhysics.Collidables
     /// </summary>
     public struct Box : IConvexShape
     {
+        /// <summary>
+        /// Half of the box's width along its local X axis.
+        /// </summary>
         public float HalfWidth;
+        /// <summary>
+        /// Half of the box's height along its local Y axis.
+        /// </summary>
         public float HalfHeight;
+        /// <summary>
+        /// Half of the box's length along its local Z axis.
+        /// </summary>
         public float HalfLength;
 
         /// <summary>
-        /// Gets or sets the width of the box.
+        /// Gets or sets the width of the box along its local X axis.
         /// </summary>
         public float Width { get { return HalfWidth * 2; } set { HalfWidth = value * 0.5f; } }
         /// <summary>
-        /// Gets or sets the height of the box.
+        /// Gets or sets the height of the box along its local Y axis.
         /// </summary>
         public float Height { get { return HalfHeight * 2; } set { HalfHeight = value * 0.5f; } }
         /// <summary>
-        /// Gets or sets the length of the box.
+        /// Gets or sets the length of the box along its local Z axis.
         /// </summary>
         public float Length { get { return HalfLength * 2; } set { HalfLength = value * 0.5f; } }
 
+        /// <summary>
+        /// Creates a Box shape.
+        /// </summary>
+        /// <param name="width">Width of the box along the local X axis.</param>
+        /// <param name="height">Height of the box along the local Y axis.</param>
+        /// <param name="length">Length of the box along the local Z axis.</param>
         public Box(float width, float height, float length)
         {
             HalfWidth = width * 0.5f;

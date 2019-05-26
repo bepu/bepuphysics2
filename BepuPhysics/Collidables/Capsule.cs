@@ -27,10 +27,15 @@ namespace BepuPhysics.Collidables
         public float HalfLength;
 
         /// <summary>
-        /// Gets or sets the length of the capsule.
+        /// Gets or sets the length of the capsule's internal line segment along the local Y axis.
         /// </summary>
         public float Length { get { return HalfLength * 2; } set { HalfLength = value * 0.5f; } }
 
+        /// <summary>
+        /// Creates a capsule shape.
+        /// </summary>
+        /// <param name="radius">Radius of the capsule.</param>
+        /// <param name="length">Length of the capsule's internal line segment along the local Y axis.</param>
         public Capsule(float radius, float length)
         {
             Radius = radius;

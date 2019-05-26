@@ -16,12 +16,21 @@ namespace BepuPhysics.Collidables
     /// </summary>
     public struct BigCompound : ICompoundShape
     {
+        /// <summary>
+        /// Acceleration structure for the compound children.
+        /// </summary>
         public Tree Tree;
         /// <summary>
         /// Buffer of children within this compound.
         /// </summary>
         public Buffer<CompoundChild> Children;
 
+        /// <summary>
+        /// Creates a compound shape with an acceleration structure.
+        /// </summary>
+        /// <param name="children">Set of children in the compound.</param>
+        /// <param name="shapes">Shapes set in which child shapes are allocated.</param>
+        /// <param name="pool">Pool to use to allocate acceleration structures.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public BigCompound(Buffer<CompoundChild> children, Shapes shapes, BufferPool pool)
         {

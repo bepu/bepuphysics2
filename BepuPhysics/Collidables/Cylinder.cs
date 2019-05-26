@@ -21,15 +21,20 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public float Radius;
         /// <summary>
-        /// Half length of the cylinder along its axis.
+        /// Half length of the cylinder along its local Y axis.
         /// </summary>
         public float HalfLength;
 
         /// <summary>
-        /// Gets or sets the length of the cylinder.
+        /// Gets or sets the length of the cylinder along its local Y axis.
         /// </summary>
         public float Length { get { return HalfLength * 2; } set { HalfLength = value * 0.5f; } }
 
+        /// <summary>
+        /// Creates a cylinder shape.
+        /// </summary>
+        /// <param name="radius">Radius of the cylinder.</param>
+        /// <param name="length">Length of the cylinder along its local Y axis.</param>
         public Cylinder(float radius, float length)
         {
             Radius = radius;

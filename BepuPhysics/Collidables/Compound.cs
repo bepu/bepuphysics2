@@ -27,6 +27,10 @@ namespace BepuPhysics.Collidables
         /// </summary>
         public Buffer<CompoundChild> Children;
 
+        /// <summary>
+        /// Creates a compound shape with no acceleration structure.
+        /// </summary>
+        /// <param name="children">Set of children in the compound.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Compound(Buffer<CompoundChild> children)
         {

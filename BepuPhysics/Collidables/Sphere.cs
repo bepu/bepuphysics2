@@ -29,8 +29,15 @@ namespace BepuPhysics.Collidables
 
     public struct Sphere : IConvexShape
     {
+        /// <summary>
+        /// Radius of the sphere.
+        /// </summary>
         public float Radius;
 
+        /// <summary>
+        /// Creates a sphere shape.
+        /// </summary>
+        /// <param name="radius">Radius of the sphere.</param>
         public Sphere(float radius)
         {
             Radius = radius;
