@@ -358,7 +358,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the body to receive the description.</param>
         /// <param name="description">Description to apply to the body.</param>
-        public void ApplyDescription(int handle, ref BodyDescription description)
+        public void ApplyDescription(int handle, in BodyDescription description)
         {
             ValidateExistingHandle(handle);
             ref var location = ref HandleToLocation[handle];
