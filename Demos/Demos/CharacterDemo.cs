@@ -35,6 +35,8 @@ namespace Demos.Demos
         float speed;
         Capsule shape;
 
+        public int BodyHandle { get { return bodyHandle; } }
+
         public CharacterInput(CharacterControllers characters, Vector3 initialPosition, Capsule shape,
             float speculativeMargin, float mass, float maximumHorizontalForce, float maximumVerticalGlueForce,
             float jumpVelocity, float speed, float maximumSlope = MathF.PI * 0.25f)
