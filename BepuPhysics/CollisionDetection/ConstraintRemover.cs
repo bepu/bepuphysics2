@@ -316,8 +316,7 @@ namespace BepuPhysics.CollisionDetection
         /// <summary>
         /// Returns the handles associated with all removed constraints to the solver's handle pool.
         /// </summary>
-        /// <param name="threadPool">Pool to allocate from to support the deterministic sort.</param>
-        public void ReturnConstraintHandles(BufferPool threadPool)
+        public void ReturnConstraintHandles()
         {
             //Note that this does not zero out the slot associated with the handle. It is assumed that the typebatch removal is proceeding in parallel.
             //It will attempt to look up handle->index mappings, so we can't corrupt them.
@@ -423,6 +422,23 @@ namespace BepuPhysics.CollisionDetection
             public int Compare(ref TypeBatchIndex a, ref TypeBatchIndex b)
             {
                 return Unsafe.As<TypeBatchIndex, int>(ref b).CompareTo(Unsafe.As<TypeBatchIndex, int>(ref a));
+            }
+        }
+
+        /// <summary>
+        /// For uses of the ConstraintRemover that fully remove a constraint from the simulation (rather than simply moving it somewhere else),
+        /// the handle->constraint mapping must be updated. This has to wait until after the multithreaded operations actually complete to avoid corrupting parallel operations.
+        /// </summary>
+        public void MarkAffectedConstraintsAsRemovedFromSolver()
+        {
+            for (int i = 0; i < batches.BatchCount; ++i)
+            {
+                ref var batchHandles = ref batches.RemovalsForTypeBatches[i].ConstraintHandlesToRemove;
+                for (int j = 0; j < batchHandles.Count; ++j)
+                {
+                    //A negative set index is our marker for nonexistence.
+                    solver.HandleToConstraint[batchHandles[j]].SetIndex = -1;
+                }
             }
         }
 

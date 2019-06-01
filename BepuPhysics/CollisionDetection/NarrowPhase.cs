@@ -170,7 +170,7 @@ namespace BepuPhysics.CollisionDetection
                     ConstraintRemover.RemoveConstraintsFromBodyLists();
                     break;
                 case NarrowPhaseFlushJobType.ReturnConstraintHandles:
-                    ConstraintRemover.ReturnConstraintHandles(threadPool);
+                    ConstraintRemover.ReturnConstraintHandles();
                     break;
                 case NarrowPhaseFlushJobType.RemoveConstraintFromBatchReferencedHandles:
                     ConstraintRemover.RemoveConstraintsFromBatchReferencedHandles();
@@ -232,6 +232,7 @@ namespace BepuPhysics.CollisionDetection
             flushJobs.Dispose(Pool);
 
             PairCache.Postflush();
+            ConstraintRemover.MarkAffectedConstraintsAsRemovedFromSolver();
             ConstraintRemover.Postflush();
 
             OnPostflush(threadDispatcher);

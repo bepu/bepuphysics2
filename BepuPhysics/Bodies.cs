@@ -392,20 +392,13 @@ namespace BepuPhysics
         /// <summary>
         /// Checks whether a body handle is currently registered with the bodies set.
         /// </summary>
-        /// <param name="handle">Handle to check for.</param>
+        /// <param name="bodyHandle">Handle to check for.</param>
         /// <returns>True if the handle exists in the collection, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool HandleExists(int handle)
+        public bool BodyExists(int bodyHandle)
         {
-            if (handle < 0 || handle >= HandleToLocation.Length)
-                return false;
-            ref var location = ref HandleToLocation[handle];
-            if (location.SetIndex < 0 || location.SetIndex > Sets.Length)
-                return false;
-            ref var set = ref Sets[location.SetIndex];
-            if (!set.Allocated)
-                return false;
-            return location.Index >= 0 && location.Index < set.Count && set.IndexToHandle[location.Index] == handle;
+            //A negative set index marks a body handle as unused.
+            return bodyHandle >= 0 && bodyHandle < HandleToLocation.Length && HandleToLocation[bodyHandle].SetIndex >= 0;
         }
 
         [Conditional("DEBUG")]
@@ -415,12 +408,13 @@ namespace BepuPhysics
             Debug.Assert(handle <= HandlePool.HighestPossiblyClaimedId && HandlePool.HighestPossiblyClaimedId < HandleToLocation.Length,
                 "Existing handles must fit within the body handle->index mapping.");
             ref var location = ref HandleToLocation[handle];
-            Debug.Assert(location.SetIndex >= 0 && location.SetIndex < Sets.Length);
+            Debug.Assert(location.SetIndex >= 0 && location.SetIndex < Sets.Length, "Body set index must be nonnegative and within the sets buffer length.");
             ref var set = ref Sets[location.SetIndex];
             Debug.Assert(set.Allocated);
             Debug.Assert(set.Count <= set.IndexToHandle.Length);
             Debug.Assert(location.Index >= 0 && location.Index < set.Count, "Body index must fall within the existing body set.");
             Debug.Assert(set.IndexToHandle[location.Index] == handle, "Handle->index must match index->handle map.");
+            Debug.Assert(BodyExists(handle), "Body must exist according to the BodyExists test.");
         }
 
         [Conditional("CHECKMATH")]

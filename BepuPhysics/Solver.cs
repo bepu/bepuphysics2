@@ -38,7 +38,7 @@ namespace BepuPhysics
         //This is required for body memory swap induced reference changes- it is not efficient to include type metadata in the per-body connections,
         //so instead we keep a type id cached.
         //(You could pack these a bit- it's pretty reasonable to say you can't have more than 2^24 constraints of a given type and 2^8 constraint types...
-        //It's just not that valuable, until proven otherwise.)
+        //It's just not that valuable, unless proven otherwise.)
         public int SetIndex;
         public int BatchIndex;
         public int TypeId;
@@ -195,7 +195,7 @@ namespace BepuPhysics
             FallbackBatchThreshold = fallbackBatchThreshold;
             ActiveSet = new ConstraintSet(pool, fallbackBatchThreshold + 1);
             batchReferencedHandles = new QuickList<IndexSet>(fallbackBatchThreshold + 1, pool);
-            pool.TakeAtLeast(initialCapacity, out HandleToConstraint);
+            ResizeHandleCapacity(initialCapacity);
             solveWorker = SolveWorker;
             incrementalContactUpdateWorker = IncrementalContactUpdateWorker;
         }
@@ -223,6 +223,19 @@ namespace BepuPhysics
                     $"({typeof(TDescription).Name}, {default(TDescription).ConstraintTypeId}). " +
                     $"Cannot register two types with the same type id.");
             }
+        }
+
+
+        /// <summary>
+        /// Gets whether the given constraint handle refers to a constraint in the solver.
+        /// </summary>
+        /// <param name="constraintHandle">Constraint handle to check for existence in the solver.</param>
+        /// <returns>True if the constraint handle exists in the solver, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool ConstraintExists(int constraintHandle)
+        {
+            //A constraint location with a negative set index marks a mapping slot as unused.
+            return constraintHandle >= 0 && constraintHandle < HandleToConstraint.Length && HandleToConstraint[constraintHandle].SetIndex >= 0;
         }
 
         /// <summary>
@@ -256,7 +269,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        public unsafe void ValidateExistingHandles(bool activeOnly = false)
+        internal unsafe void ValidateExistingHandles(bool activeOnly = false)
         {
             var maxBodySet = activeOnly ? 1 : bodies.Sets.Length;
             for (int i = 0; i < maxBodySet; ++i)
@@ -375,7 +388,7 @@ namespace BepuPhysics
         }
 
         [Conditional("DEBUG")]
-        public void ValidateConstraintMaps(bool activeOnly = false)
+        internal void ValidateConstraintMaps(bool activeOnly = false)
         {
             var setCount = activeOnly ? 1 : Sets.Length;
             for (int setIndex = 0; setIndex < setCount; ++setIndex)
@@ -407,6 +420,7 @@ namespace BepuPhysics
         [Conditional("DEBUG")]
         internal void AssertConstraintHandleExists(int handle)
         {
+            Debug.Assert(ConstraintExists(handle), "Constraint must exist according to Solver.ConstraintExists test.");
             Debug.Assert(handle >= 0 && handle < HandleToConstraint.Length, "Handle must be contained within the handle mapping.");
             ref var location = ref HandleToConstraint[handle];
             Debug.Assert(location.SetIndex >= 0 && location.SetIndex < Sets.Length, "Set index must be within the sets buffer.");
@@ -852,6 +866,7 @@ namespace BepuPhysics
         /// <param name="handle">Handle of the constraint to remove from the solver.</param>
         public void Remove(int handle)
         {
+            AssertConstraintHandleExists(handle);
             ref var constraintLocation = ref HandleToConstraint[handle];
             if (constraintLocation.SetIndex > 0)
             {
@@ -859,7 +874,6 @@ namespace BepuPhysics
                 awakener.AwakenConstraint(handle);
             }
             Debug.Assert(constraintLocation.SetIndex == 0);
-            AssertConstraintHandleExists(handle);
             ConstraintGraphRemovalEnumerator enumerator;
             enumerator.bodies = bodies;
             enumerator.constraintHandle = handle;
@@ -867,6 +881,8 @@ namespace BepuPhysics
 
             pairCache.RemoveReferenceIfContactConstraint(handle, constraintLocation.TypeId);
             RemoveFromBatch(handle, constraintLocation.BatchIndex, constraintLocation.TypeId, constraintLocation.IndexInTypeBatch);
+            //A negative set index marks a slot in the handle->constraint mapping as unused. The other values are considered undefined.
+            constraintLocation.SetIndex = -1;
             HandlePool.Return(handle, pool);
         }
 
@@ -1124,6 +1140,16 @@ namespace BepuPhysics
             }
         }
 
+        void ResizeHandleCapacity(int constraintHandleCapacity)
+        {
+            pool.ResizeToAtLeast(ref HandleToConstraint, constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1);
+            for (int i = HandlePool.HighestPossiblyClaimedId + 1; i < HandleToConstraint.Length; ++i)
+            {
+                //A negative set index marks a slot as unused.
+                HandleToConstraint[i].SetIndex = -1;
+            }
+        }
+
         /// <summary>
         /// Adjusts the size of the the solvers non-typebatch data structures. An allocation is allowed to shrink if it fits both all existing entries and the given capacity.
         /// An allocation will grow if the given capacity exceeds the currently allocated capacity.
@@ -1135,7 +1161,7 @@ namespace BepuPhysics
             var targetConstraintCount = BufferPool.GetCapacityForCount<ConstraintLocation>(Math.Max(constraintHandleCapacity, HandlePool.HighestPossiblyClaimedId + 1));
             if (HandleToConstraint.Length != targetConstraintCount)
             {
-                pool.ResizeToAtLeast(ref HandleToConstraint, targetConstraintCount, HandlePool.HighestPossiblyClaimedId + 1);
+                ResizeHandleCapacity(targetConstraintCount);
             }
             //Note that we can't shrink below the bodies handle capacity, since the handle distribution could be arbitrary.
             var targetBatchReferencedHandleSize = Math.Max(bodies.HandlePool.HighestPossiblyClaimedId + 1, bodyHandleCapacity);

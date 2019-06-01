@@ -17,9 +17,6 @@ namespace BepuPhysics
     /// </summary>
     public class Statics
     {
-        //TODO: There is quite a lot of overlap in implementation between this and the bodies collection.
-        //Seems like it could be reasonable to bundle common logic.
-
         /// <summary>
         /// Remaps a static handle to the actual array index of the static.
         /// The backing array index may change in response to cache optimization.
@@ -73,10 +70,25 @@ namespace BepuPhysics
             //The idpool's internal queue will often be nowhere near as large as the actual static size except in corner cases, so in the usual case, being lazy saves a little space.
             //If the user wants to guarantee zero resizes, EnsureCapacity provides them the option to do so.
         }
-        
+
+        /// <summary>
+        /// Checks whether a static handle is currently registered with the statics set.
+        /// </summary>
+        /// <param name="staticHandle">Handle to check for.</param>
+        /// <returns>True if the handle exists in the collection, false otherwise.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool StaticExists(int staticHandle)
+        {
+            if (staticHandle < 0 || staticHandle >= HandleToIndex.Length)
+                return false;
+            //A negative index marks a static handle as unused.
+            return HandleToIndex[staticHandle] >= 0;
+        }
+
         [Conditional("DEBUG")]
         public void ValidateExistingHandle(int handle)
         {
+            Debug.Assert(StaticExists(handle), "Handle must exist according to the StaticExists test.");
             Debug.Assert(handle >= 0, "Handles must be nonnegative.");
             Debug.Assert(handle < HandleToIndex.Length && HandleToIndex[handle] >= 0 && IndexToHandle[HandleToIndex[handle]] == handle,
                 "This static handle doesn't seem to exist, or the mappings are out of sync. If a handle exists, both directions should match.");

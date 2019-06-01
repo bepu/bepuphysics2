@@ -66,7 +66,7 @@ namespace BepuPhysics
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                Debug.Assert(bodies.HandleExists(bodyHandle));
+                Debug.Assert(bodies.BodyExists(bodyHandle));
                 return ref data[bodyHandle];
             }
         }
@@ -79,7 +79,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref T Allocate(int bodyHandle)
         {
-            Debug.Assert(bodies.HandleExists(bodyHandle), "The body handle should have been allocated in the bodies set before any attempt to create a property for it.");
+            Debug.Assert(bodies.BodyExists(bodyHandle), "The body handle should have been allocated in the bodies set before any attempt to create a property for it.");
             if (bodyHandle >= data.Length)
             {
                 var targetCount = BufferPool.GetCapacityForCount<T>(bodies.HandlePool.HighestPossiblyClaimedId + 1);

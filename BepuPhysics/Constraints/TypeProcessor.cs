@@ -258,9 +258,9 @@ namespace BepuPhysics.Constraints
         public sealed override unsafe void Scramble(ref TypeBatch typeBatch, Random random, ref Buffer<ConstraintLocation> handlesToConstraints)
         {
             //This is a pure debug function used to compare cache optimization strategies. Performance doesn't matter. 
-            TPrestepData aPrestep = default(TPrestepData);
-            TAccumulatedImpulse aAccumulated = default(TAccumulatedImpulse);
-            TBodyReferences aBodyReferences = default(TBodyReferences);
+            TPrestepData aPrestep = default;
+            TAccumulatedImpulse aAccumulated = default;
+            TBodyReferences aBodyReferences = default;
             int aHandle;
 
             var prestepData = typeBatch.PrestepData.As<TPrestepData>();
