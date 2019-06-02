@@ -43,15 +43,9 @@ namespace BepuPhysics
         {
             get
             {
-                if (Bodies == null || Handle < 0 || Handle >= Bodies.HandleToLocation.Length)
+                if (Bodies == null)
                     return false;
-                ref var location = ref Bodies.HandleToLocation[Handle];
-                if (location.SetIndex < 0 && location.SetIndex >= Bodies.Sets.Length)
-                    return false;
-                ref var set = ref Bodies.Sets[location.SetIndex];
-                if (location.Index < 0 && location.Index >= set.Count)
-                    return false;
-                return Bodies.Sets[location.SetIndex].IndexToHandle[location.Index] == Handle;
+                return Bodies.BodyExists(Handle);
             }
         }
 
@@ -179,7 +173,7 @@ namespace BepuPhysics
             ref var pose = ref set.Poses[index];
             ref var velocity = ref set.Velocities[index];
             PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out var inverseInertiaTensor);
-            
+
             velocity.Linear += impulse * localInertia.InverseMass;
             var angularImpulse = Vector3.Cross(impulseOffset, impulse);
             Symmetric3x3.TransformWithoutOverlap(angularImpulse, inverseInertiaTensor, out var angularVelocityChange);
@@ -196,7 +190,7 @@ namespace BepuPhysics
         public void ApplyImpulse(in Vector3 impulse, in Vector3 impulseOffset)
         {
             ref var location = ref Location;
-            ApplyImpulse(Bodies.Sets[location.SetIndex], location.Index, impulse, impulseOffset);   
+            ApplyImpulse(Bodies.Sets[location.SetIndex], location.Index, impulse, impulseOffset);
         }
 
     }
