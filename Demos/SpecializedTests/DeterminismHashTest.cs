@@ -14,13 +14,13 @@ namespace Demos.SpecializedTests
     public static class DeterminismHashTest<T> where T : Demo, new()
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static long ComputeHash(ref float v, long constant)
+        public static long ComputeHash(ref float v, long constant)
         {
             return Unsafe.As<float, int>(ref v) * constant;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static long ComputeHash(ref Vector3 v, long constant)
+        public static long ComputeHash(ref Vector3 v, long constant)
         {
             return constant * (ComputeHash(ref v.X, 13) + ComputeHash(ref v.X, 31) + ComputeHash(ref v.X, 53));
         }
@@ -49,7 +49,7 @@ namespace Demos.SpecializedTests
                         ref var velocity = ref set.Velocities[bodyIndex];
                         var poseHash = ComputeHash(ref pose.Position, 89) + ComputeHash(ref pose.Orientation.X, 107) + ComputeHash(ref pose.Orientation.Y, 113) + ComputeHash(ref pose.Orientation.Z, 131) + ComputeHash(ref pose.Orientation.W, 149);
                         var velocityHash = ComputeHash(ref velocity.Linear, 211) + ComputeHash(ref velocity.Angular, 397);
-                        hash += bodyIndex * (poseHash + velocityHash);
+                        hash += set.IndexToHandle[bodyIndex] * (poseHash + velocityHash);
                     }
                 }
             }
@@ -66,10 +66,10 @@ namespace Demos.SpecializedTests
             for (int i = 0; i < runCount; ++i)
             {
                 var hash = ExecuteSimulation(archive, frameCount);
-                if(originalHash != hash)
+                if (originalHash != hash)
                 {
                     Console.WriteLine($"Local determinism failure.");
-                }              
+                }
             }
             Console.WriteLine($"All runs complete.");
         }

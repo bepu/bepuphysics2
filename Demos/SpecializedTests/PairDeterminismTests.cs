@@ -4,6 +4,7 @@ using BepuPhysics.CollisionDetection;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using Demos.Demos;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -100,6 +101,7 @@ namespace Demos.SpecializedTests
             pool.Take<RigidPose>(pairCount, out var posesB);
             pool.Take<int>(pairCount, out var remapIndices);
             QuickList<int> remainingIndices = new QuickList<int>(pairCount, pool);
+            long hash = 0;
             for (int poseIteration = 0; poseIteration < poseIterations; ++poseIteration)
             {
                 for (int i = 0; i < pairCount; ++i)
@@ -109,6 +111,42 @@ namespace Demos.SpecializedTests
                     remapIndices[i] = i;
                 };
                 ComputeCollisions(registry, shapes, pool, ref originalManifolds, a, b, ref posesA, ref posesB, remapIndices, pairCount);
+
+                for (int i = 0; i < pairCount; ++i)
+                {
+                    if (originalManifolds.ManifoldIsConvex[i])
+                    {
+                        ref var manifold = ref originalManifolds.ConvexManifolds[i];
+                        long manifoldContribution =
+                            manifold.Count * 4993 +
+                            DeterminismHashTest<FountainStressTestDemo>.ComputeHash(ref manifold.Normal, 5573) +
+                            DeterminismHashTest<FountainStressTestDemo>.ComputeHash(ref manifold.OffsetB, 6829);
+                        for (int j = 0; j < manifold.Count; ++j)
+                        {
+                            ref var contact = ref Unsafe.Add(ref manifold.Contact0, j);
+                            manifoldContribution += 
+                                DeterminismHashTest<FountainStressTestDemo>.ComputeHash(ref contact.Offset, 4783) +
+                                DeterminismHashTest<FountainStressTestDemo>.ComputeHash(ref contact.Depth, 5647) + contact.FeatureId * 3697;
+                        }
+                        hash += manifoldContribution * i;
+                    }
+                    else
+                    {
+                        ref var manifold = ref originalManifolds.NonconvexManifolds[i];
+                        long manifoldContribution =
+                            manifold.Count * 4993 +
+                            DeterminismHashTest<FountainStressTestDemo>.ComputeHash(ref manifold.OffsetB, 6829);
+                        for (int j = 0; j < manifold.Count; ++j)
+                        {
+                            ref var contact = ref Unsafe.Add(ref manifold.Contact0, j);
+                            manifoldContribution +=
+                                DeterminismHashTest<FountainStressTestDemo>.ComputeHash(ref contact.Offset, 4783) +
+                                DeterminismHashTest<FountainStressTestDemo>.ComputeHash(ref contact.Normal, 5821) +
+                                DeterminismHashTest<FountainStressTestDemo>.ComputeHash(ref contact.Depth, 5647) + contact.FeatureId * 3697;
+                        }
+                        hash += manifoldContribution * i;
+                    }
+                }
 
                 for (int remapIteration = 0; remapIteration < remapIterations; ++remapIteration)
                 {
@@ -189,6 +227,7 @@ namespace Demos.SpecializedTests
                     }
                 }
             }
+            Console.WriteLine($"Results hash: {hash}");
             originalManifolds.Dispose(pool);
             comparisonManifolds.Dispose(pool);
             pool.Return(ref posesA);
@@ -240,7 +279,7 @@ namespace Demos.SpecializedTests
             var bigCompoundCollidable = new CollidableDescription(shapes.Add(bigCompound), 0.1f);
 
             DemoMeshHelper.CreateDeformedPlane(2, 2, (x, y) => new Vector3(x, 0, y), Vector3.One, pool, out var mesh);
-            var meshCollidable = new CollidableDescription(shapes.Add(mesh), 0.1f);            
+            var meshCollidable = new CollidableDescription(shapes.Add(mesh), 0.1f);
 
             const int pairCount = 31;
             const int poseIterations = 2048;
@@ -296,7 +335,7 @@ namespace Demos.SpecializedTests
             Test(compoundCollidable, compoundCollidable, bounds, pairCount, poseIterations, remapIterations, registry, pool, shapes, randomSeed);
             Test(compoundCollidable, bigCompoundCollidable, bounds, pairCount, poseIterations, remapIterations, registry, pool, shapes, randomSeed);
             Test(compoundCollidable, meshCollidable, bounds, pairCount, poseIterations, remapIterations, registry, pool, shapes, randomSeed);
-            
+
             Test(bigCompoundCollidable, bigCompoundCollidable, bounds, pairCount, poseIterations, remapIterations, registry, pool, shapes, randomSeed);
             Test(bigCompoundCollidable, meshCollidable, bounds, pairCount, poseIterations, remapIterations, registry, pool, shapes, randomSeed);
 
