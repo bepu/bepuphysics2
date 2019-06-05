@@ -22,7 +22,7 @@ namespace Demos.SpecializedTests
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long ComputeHash(ref Vector3 v, long constant)
         {
-            return constant * (ComputeHash(ref v.X, 13) + ComputeHash(ref v.X, 31) + ComputeHash(ref v.X, 53));
+            return constant * (ComputeHash(ref v.X, 13) + ComputeHash(ref v.Y, 31) + ComputeHash(ref v.Z, 53));
         }
 
         static long ExecuteSimulation(ContentArchive content, int frameCount)
