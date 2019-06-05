@@ -162,6 +162,22 @@ namespace BepuPhysics
         /// <summary>
         /// Applies an impulse to a body by index. Does not wake the body up.
         /// </summary>
+        /// <param name="pose">Pose of the body to apply impulse to.</param>
+        /// <param name="velocity">Velocity of the body to apply impulse to.</param>
+        /// <param name="localInertia">Local inertia of the body to apply impulse to.</param>
+        /// <param name="impulse">Impulse to apply to the body.</param>
+        /// <param name="impulseOffset">World space offset from the center of the body to apply the impulse at.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApplyImpulse(in Vector3 impulse, in Vector3 impulseOffset, ref BodyInertia localInertia, ref RigidPose pose, ref BodyVelocity velocity)
+        {
+            PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out var inverseInertiaTensor);
+            ApplyLinearImpulse(impulse, localInertia.InverseMass, ref velocity.Linear);
+            ApplyAngularImpulse(Vector3.Cross(impulseOffset, impulse), inverseInertiaTensor, ref velocity.Angular);
+        }
+
+        /// <summary>
+        /// Applies an impulse to a body by index. Does not wake the body up.
+        /// </summary>
         /// <param name="set">Body set containing the body to apply an impulse to.</param>
         /// <param name="index">Index of the body in the body set.</param>
         /// <param name="impulse">Impulse to apply to the body.</param>
@@ -172,12 +188,32 @@ namespace BepuPhysics
             ref var localInertia = ref set.LocalInertias[index];
             ref var pose = ref set.Poses[index];
             ref var velocity = ref set.Velocities[index];
-            PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out var inverseInertiaTensor);
+            ApplyImpulse(impulse, impulseOffset, ref localInertia, ref pose, ref velocity);
+        }
 
-            velocity.Linear += impulse * localInertia.InverseMass;
-            var angularImpulse = Vector3.Cross(impulseOffset, impulse);
+        /// <summary>
+        /// Applies an angular impulse to an angular velocity. Does not wake the body up.
+        /// </summary>
+        /// <param name="angularImpulse">Impulse to apply to the velocity.</param>
+        /// <param name="inverseInertiaTensor">Inverse inertia tensor to transform the impulse with.</param>
+        /// <param name="angularVelocity">Angular velocity to be modified.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApplyAngularImpulse(in Vector3 angularImpulse, in Symmetric3x3 inverseInertiaTensor, ref Vector3 angularVelocity)
+        {
             Symmetric3x3.TransformWithoutOverlap(angularImpulse, inverseInertiaTensor, out var angularVelocityChange);
-            velocity.Angular += angularVelocityChange;
+            angularVelocity += angularVelocityChange;
+        }
+
+        /// <summary>
+        /// Applies an impulse to a linear velocity. Does not wake the body up.
+        /// </summary>
+        /// <param name="impulse">Impulse to apply to the velocity.</param>
+        /// <param name="inverseMass">Inverse mass to transform the impulse with.</param>
+        /// <param name="linearVelocity">Linear velocity to be modified.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ApplyLinearImpulse(in Vector3 impulse, float inverseMass, ref Vector3 linearVelocity)
+        {
+            linearVelocity += impulse * inverseMass;
         }
 
 
@@ -191,6 +227,33 @@ namespace BepuPhysics
         {
             ref var location = ref Location;
             ApplyImpulse(Bodies.Sets[location.SetIndex], location.Index, impulse, impulseOffset);
+        }
+        
+        /// <summary>
+        /// Applies an impulse to a linear velocity. Does not wake the body up.
+        /// </summary>
+        /// <param name="impulse">Impulse to apply to the velocity.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ApplyLinearImpulse(in Vector3 impulse)
+        {
+            ref var location = ref Location;
+            ref var set = ref Bodies.Sets[location.SetIndex];
+            ApplyLinearImpulse(impulse, set.LocalInertias[location.Index].InverseMass, ref set.Velocities[location.Index].Linear);
+        }
+
+        /// <summary>
+        /// Applies an angular impulse to an angular velocity. Does not wake the body up.
+        /// </summary>
+        /// <param name="angularImpulse">Impulse to apply to the velocity.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ApplyAngularImpulse(in Vector3 angularImpulse)
+        {
+            ref var location = ref Location;
+            ref var set = ref Bodies.Sets[location.SetIndex];
+            ref var localInertia = ref set.LocalInertias[location.Index];
+            ref var pose = ref set.Poses[location.Index];
+            PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out var inverseInertia);
+            ApplyAngularImpulse(angularImpulse, inverseInertia, ref set.Velocities[location.Index].Angular);
         }
 
     }

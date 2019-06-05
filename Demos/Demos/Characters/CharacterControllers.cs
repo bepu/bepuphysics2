@@ -505,7 +505,8 @@ namespace Demos.Demos.Characters
                         //If the constraint no longer exists at all, 
                         if (!Simulation.Solver.ConstraintExists(character.MotionConstraintHandle) ||
                             //or if the constraint does exist but is now used by a different constraint type,
-                            Simulation.Solver.HandleToConstraint[character.MotionConstraintHandle].TypeId == DynamicCharacterMotionTypeProcessor.BatchTypeId)
+                            (Simulation.Solver.HandleToConstraint[character.MotionConstraintHandle].TypeId != DynamicCharacterMotionTypeProcessor.BatchTypeId &&
+                            Simulation.Solver.HandleToConstraint[character.MotionConstraintHandle].TypeId != StaticCharacterMotionTypeProcessor.BatchTypeId))
                         {
                             //then the character isn't actually supported anymore.
                             character.Supported = false;
@@ -513,7 +514,6 @@ namespace Demos.Demos.Characters
                         //Note that it's sufficient to only check that the type matches the dynamic motion constraint type id because no other systems ever create dynamic character motion constraints.
                         //Other systems may result in the constraint's removal, but no other system will ever *create* it.
                         //Further, during this analysis loop, we do not create any constraints. We only set up pending additions to be processed after the multithreaded analysis completes.
-                        //(And the static character motion constraint cannot be removed by the removal of anything except for the character body, so that's not a concern.)
                     }
 
                     //The body is active. We may need to remove the associated constraint from the solver. Remove if any of the following hold:
