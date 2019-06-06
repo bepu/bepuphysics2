@@ -317,12 +317,64 @@ namespace Demos.Demos
 
             Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 2.25f, 35.5f), 0.5f, Simulation.Shapes, new Box(1f, 1f, 1f)));
 
+            //Create some moving platforms to jump on.
+            movingPlatforms = new MovingPlatform[16];
+            Func<double, RigidPose> poseCreator = time =>
+            {
+                RigidPose pose;
+                var horizontalScale = (float)(45 + 10 * Math.Sin(time * 0.015));
+                //Float in a noisy ellipse around the newt.
+                pose.Position = new Vector3(0.7f * horizontalScale * (float)Math.Sin(time * 0.1), 10 + 4 * (float)Math.Sin((time + Math.PI * 0.5f) * 0.25), horizontalScale * (float)Math.Cos(time * 0.1));
+                //As the platform goes behind the newt, dip toward the ground. Use smoothstep for a less jerky ride.
+                var x = MathF.Max(0f, MathF.Min(1f, 1f - (pose.Position.Z + 20f) / -20f));
+                var smoothStepped = 3 * x * x - 2 * x * x * x;
+                pose.Position.Y = smoothStepped * (pose.Position.Y - 0.025f) + 0.025f;
+                pose.Orientation = Quaternion.Identity;
+                return pose;
+            };
+            var platformCollidable = new CollidableDescription(Simulation.Shapes.Add(new Box(5, 1, 5)), 0.1f);
+            for (int i = 0; i < movingPlatforms.Length; ++i)
+            {
+                movingPlatforms[i] = new MovingPlatform(platformCollidable, i * 3559, 1f / 60f, Simulation, poseCreator);
+            }
+
             //Prevent the character from falling into the void.
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
         }
 
+
+        struct MovingPlatform
+        {
+            public int BodyHandle;
+            public float InverseGoalSatisfactionTime;
+            public double TimeOffset;
+            public Func<double, RigidPose> PoseCreator;
+
+            public MovingPlatform(CollidableDescription collidable, double timeOffset, float goalSatisfactionTime, Simulation simulation, Func<double, RigidPose> poseCreator)
+            {
+                PoseCreator = poseCreator;
+                BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(poseCreator(timeOffset), collidable, new BodyActivityDescription(-1)));
+                InverseGoalSatisfactionTime = 1f / goalSatisfactionTime;
+                TimeOffset = timeOffset;
+            }
+
+            public void Update(Simulation simulation, double time)
+            {
+                var body = new BodyReference(BodyHandle, simulation.Bodies);
+                ref var pose = ref body.Pose;
+                ref var velocity = ref body.Velocity;
+                var targetPose = PoseCreator(time + TimeOffset);
+                velocity.Linear = (targetPose.Position - pose.Position) * InverseGoalSatisfactionTime;
+                Quaternion.GetRelativeRotationWithoutOverlap(pose.Orientation, targetPose.Orientation, out var rotation);
+                Quaternion.GetAxisAngleFromQuaternion(rotation, out var axis, out var angle);
+                velocity.Angular = axis * (angle * InverseGoalSatisfactionTime);
+            }
+        }
+        MovingPlatform[] movingPlatforms;
+
         bool characterActive;
         CharacterInput character;
+        double time;
         void CreateCharacter(Vector3 position)
         {
             characterActive = true;
@@ -346,6 +398,12 @@ namespace Demos.Demos
             if (characterActive)
             {
                 character.UpdateCharacterGoals(input, camera);
+            }
+            //Using a fixed time per update to match the demos simulation update rate.
+            time += 1 / 60f;
+            for (int i = 0; i < movingPlatforms.Length; ++i)
+            {
+                movingPlatforms[i].Update(Simulation, time);
             }
             base.Update(window, camera, input, dt);
         }
