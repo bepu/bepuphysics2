@@ -377,8 +377,9 @@ namespace Demos.Demos
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Sphere, Voxels, ConvexCompoundOverlapFinder<Sphere, SphereWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Capsule, Voxels, ConvexCompoundOverlapFinder<Capsule, CapsuleWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Box, Voxels, ConvexCompoundOverlapFinder<Box, BoxWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
-            Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Cylinder, Voxels, ConvexCompoundOverlapFinder<Cylinder, CylinderWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Triangle, Voxels, ConvexCompoundOverlapFinder<Triangle, TriangleWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
+            Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<Cylinder, Voxels, ConvexCompoundOverlapFinder<Cylinder, CylinderWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
+            Simulation.NarrowPhase.CollisionTaskRegistry.Register(new ConvexCompoundCollisionTask<ConvexHull, Voxels, ConvexCompoundOverlapFinder<ConvexHull, ConvexHullWide, Voxels>, ConvexVoxelsContinuations, NonconvexReduction>());
 
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new CompoundPairCollisionTask<Compound, Voxels, CompoundPairOverlapFinder<Compound, Voxels>, CompoundVoxelsContinuations<Compound>, NonconvexReduction>());
             Simulation.NarrowPhase.CollisionTaskRegistry.Register(new CompoundPairCollisionTask<BigCompound, Voxels, CompoundPairOverlapFinder<BigCompound, Voxels>, CompoundVoxelsContinuations<BigCompound>, NonconvexReduction>());
@@ -391,8 +392,9 @@ namespace Demos.Demos
             Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Sphere, SphereWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<Sphere, Voxels>>());
             Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Capsule, CapsuleWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<Capsule, Voxels>>());
             Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Box, BoxWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<Box, Voxels>>());
-            Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Cylinder, CylinderWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<Cylinder, Voxels>>());
             Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Triangle, TriangleWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<Triangle, Voxels>>());
+            Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<Cylinder, CylinderWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<Cylinder, Voxels>>());
+            Simulation.NarrowPhase.SweepTaskRegistry.Register(new ConvexHomogeneousCompoundSweepTask<ConvexHull, ConvexHullWide, Voxels, Box, BoxWide, ConvexCompoundSweepOverlapFinder<ConvexHull, Voxels>>());
 
             Simulation.NarrowPhase.SweepTaskRegistry.Register(new CompoundHomogeneousCompoundSweepTask<Compound, Voxels, Box, BoxWide, CompoundPairSweepOverlapFinder<Compound, Voxels>>());
             Simulation.NarrowPhase.SweepTaskRegistry.Register(new CompoundHomogeneousCompoundSweepTask<BigCompound, Voxels, Box, BoxWide, CompoundPairSweepOverlapFinder<BigCompound, Voxels>>());

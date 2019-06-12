@@ -32,10 +32,10 @@ namespace Demos
         }
 
 
-        public void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
+        public unsafe void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             var resolution = new Vector2(renderer.Surface.Resolution.X, renderer.Surface.Resolution.Y);
-            Span<Vector2> screenLocations = stackalloc Vector2[descriptions.Count];
+            var screenLocations = stackalloc Vector2[descriptions.Count];
             int closestIndex = -1;
             float closestDistance = MathF.Max(resolution.X, resolution.Y) * 0.1f;
             for (int i = 0; i < descriptions.Count; ++i)
