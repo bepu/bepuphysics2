@@ -1,4 +1,5 @@
 ﻿using BepuUtilities;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -74,6 +75,16 @@ namespace BepuPhysics.Constraints
         /// Gets or sets the ratio of the spring's actual damping to its critical damping. 0 is undamped, 1 is critically damped, and higher values are overdamped.
         /// </summary>
         public float DampingRatio { get { return TwiceDampingRatio / 2f; } set { TwiceDampingRatio = value * 2; } }
+        
+        /// <summary>
+        /// Checks if a spring settings instance contains valid values.
+        /// </summary>
+        /// <param name="springSettings">Settings to check.</param>
+        /// <returns>True if the spring settings are valid, false otherwise.</returns>
+        public static bool Validate(in SpringSettings springSettings)
+        {
+            return springSettings.AngularFrequency > 0 && springSettings.TwiceDampingRatio >= 0;
+        }
 
         /// <summary>
         /// Constructs a new spring settings instance.
@@ -84,6 +95,7 @@ namespace BepuPhysics.Constraints
         {
             AngularFrequency = frequency * MathHelper.TwoPi;
             TwiceDampingRatio = dampingRatio * 2;
+            Debug.Assert(Validate(this));
         }
 
        
