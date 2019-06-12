@@ -35,6 +35,7 @@ namespace BepuPhysics.Collidables
         public BigCompound(Buffer<CompoundChild> children, Shapes shapes, BufferPool pool)
         {
             Debug.Assert(children.Length > 0, "Compounds must have a nonzero number of children.");
+            Debug.Assert(Compound.ValidateChildIndices(ref children, shapes), "Children must all be convex.");
             Children = children;
             Tree = new Tree(pool, children.Length);
             pool.Take(children.Length, out Buffer<BoundingBox> leafBounds);

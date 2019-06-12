@@ -38,14 +38,47 @@ namespace BepuPhysics.Collidables
             Children = children;
         }
 
+        /// <summary>
+        /// Checks if a shape index.
+        /// </summary>
+        /// <param name="shapeIndex">Shape index to analyze.</param>
+        /// <param name="shapeBatches">Shape collection into which the index indexes.</param>
+        /// <returns>True if the index is valid, false otherwise.</returns>
+        public static bool ValidateChildIndex(TypedIndex shapeIndex, Shapes shapeBatches)
+        {
+            if (shapeIndex.Type < 0 || shapeIndex.Type >= shapeBatches.RegisteredTypeSpan)
+            {
+                Debug.Fail("Child shape type needs to fit within the shape batch registered types.");
+                return false;
+            }
+            var batch = shapeBatches[shapeIndex.Type];
+            if (shapeIndex.Index < 0 || shapeIndex.Index >= batch.Capacity)
+            {
+                Debug.Fail("Child shape index should point to a valid buffer location in the sahpe batch.");
+                return false;
+            }
+            if (shapeBatches[shapeIndex.Type].Compound)
+            {
+                Debug.Fail("Child shape type should be convex.");
+                return false;
+            }
+            //TODO: We don't have a cheap way to verify that a specific index actually contains a shape right now.
+            return true;
+        }
 
-        [Conditional("DEBUG")]
-        public static void ValidateChildIndices(ref Buffer<CompoundChild> children, Shapes shapeBatches)
+        /// <summary>
+        /// Checks if a set of children shape indices are all valid.
+        /// </summary>
+        /// <param name="children">Children to examine.</param>
+        /// <param name="shapeBatches">Shape collection into which the children index.</param>
+        /// <returns>True if all child indices are valid, false otherwise.</returns>
+        public static bool ValidateChildIndices(ref Buffer<CompoundChild> children, Shapes shapeBatches)
         {
             for (int i = 0; i < children.Length; ++i)
             {
-                Debug.Assert(shapeBatches[children[i].ShapeIndex.Type].Compound, "All children of a compound must be convex.");
+                ValidateChildIndex(children[i].ShapeIndex, shapeBatches);
             }
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -78,6 +111,7 @@ namespace BepuPhysics.Collidables
         public static void ComputeChildBounds(in CompoundChild child, in Quaternion orientation, Shapes shapeBatches, out Vector3 childMin, out Vector3 childMax)
         {
             GetRotatedChildPose(child.LocalPose, orientation, out var childPose);
+            Debug.Assert(!shapeBatches[child.ShapeIndex.Type].Compound, "All children of a compound must be convex.");
             shapeBatches[child.ShapeIndex.Type].ComputeBounds(child.ShapeIndex.Index, childPose, out childMin, out childMax);
         }
 
@@ -217,7 +251,7 @@ namespace BepuPhysics.Collidables
             }
 
         }
-        
+
         public void Dispose(BufferPool bufferPool)
         {
             bufferPool.Return(ref Children);

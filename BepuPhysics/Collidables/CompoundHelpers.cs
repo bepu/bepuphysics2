@@ -84,6 +84,7 @@ namespace BepuPhysics.Collidables
         /// <param name="inverseInertia">Inverse inertia tensor of the shape being added. This is assumed to already be scaled as desired by the weight.</param>
         public void Add(TypedIndex shape, in RigidPose localPose, in Symmetric3x3 inverseInertia, float weight)
         {
+            Debug.Assert(Compound.ValidateChildIndex(shape, Shapes));
             ref var child = ref Children.Allocate(Pool);
             child.LocalPose = localPose;
             child.ShapeIndex = shape;
@@ -104,6 +105,7 @@ namespace BepuPhysics.Collidables
         /// <param name="weight">Weight of the shape used for computing the center of rotation.</param>
         public void AddForKinematic(TypedIndex shape, in RigidPose localPose, float weight)
         {
+            Debug.Assert(Compound.ValidateChildIndex(shape, Shapes));
             ref var child = ref Children.Allocate(Pool);
             child.LocalPose = localPose;
             child.ShapeIndex = shape;

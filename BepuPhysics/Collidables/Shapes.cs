@@ -71,6 +71,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void GetShapeData(int shapeIndex, out void* shapePointer, out int shapeSize)
         {
+            Debug.Assert(shapeIndex >= 0 && shapeIndex < Capacity);
             shapePointer = shapesData.Memory + shapeDataSize * shapeIndex;
             shapeSize = shapeDataSize;
         }
