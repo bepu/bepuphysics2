@@ -140,7 +140,7 @@ namespace Demos.SpecializedTests.Media
                 }
                 if (characterActive)
                 {
-                    character.UpdateCharacterGoals(input, camera);
+                    character.UpdateCharacterGoals(input, camera, 1 / 60f);
                 }
 
                 if (input.WasPushed(Key.Z))

@@ -65,7 +65,7 @@ namespace Demos.Demos
         static Key Jump = Key.Space;
         static Key JumpAlternate = Key.BackSpace; //I have a weird keyboard.
 
-        public void UpdateCharacterGoals(Input input, Camera camera)
+        public void UpdateCharacterGoals(Input input, Camera camera, float simulationTimestepDuration)
         {
             Vector2 movementDirection = default;
             if (input.IsDown(MoveForward))
@@ -84,16 +84,17 @@ namespace Demos.Demos
             {
                 movementDirection += new Vector2(1, 0);
             }
-            var lengthSquared = movementDirection.LengthSquared();
-            if (lengthSquared > 0)
+            var movementDirectionLengthSquared = movementDirection.LengthSquared();
+            if (movementDirectionLengthSquared > 0)
             {
-                movementDirection /= MathF.Sqrt(lengthSquared);
+                movementDirection /= MathF.Sqrt(movementDirectionLengthSquared);
             }
 
             ref var character = ref characters.GetCharacterByBodyHandle(bodyHandle);
             character.TryJump = input.WasPushed(Jump) || input.WasPushed(JumpAlternate);
             var characterBody = new BodyReference(bodyHandle, characters.Simulation.Bodies);
-            var newTargetVelocity = movementDirection * (input.IsDown(Sprint) ? speed * 1.75f : speed);
+            var effectiveSpeed = input.IsDown(Sprint) ? speed * 1.75f : speed;
+            var newTargetVelocity = movementDirection * effectiveSpeed;
             var viewDirection = camera.Forward;
             //Modifying the character's raw data does not automatically wake the character up, so we do so explicitly if necessary.
             //If you don't explicitly wake the character up, it won't respond to the changed motion goals.
@@ -107,6 +108,37 @@ namespace Demos.Demos
             }
             character.TargetVelocity = newTargetVelocity;
             character.ViewDirection = viewDirection;
+
+            //The character's motion constraints aren't active while the character is in the air, so if we want air control, we'll need to apply it ourselves.
+            //(You could also modify the constraints to do this, but the robustness of solved constraints tends to be a lot less important for air control.)
+            //There isn't any one 'correct' way to implement air control- it's a nonphysical gameplay thing, and this is just one way to do it.
+            //Note that this permits accelerating along a particular direction, and never attempts to slow down the character.
+            //This allows some movement quirks common in some game character controllers.
+            //Consider what happens if, starting from a standstill, you accelerate fully along X, then along Z- your full velocity magnitude will be sqrt(2) * maximumAirSpeed.
+            //Feel free to try alternative implementations. Again, there is no one correct approach.
+            if (!character.Supported && movementDirectionLengthSquared > 0)
+            {
+                Quaternion.Transform(character.LocalUp, characterBody.Pose.Orientation, out var characterUp);
+                var characterRight = Vector3.Cross(character.ViewDirection, characterUp);
+                var rightLengthSquared = characterRight.LengthSquared();
+                if (rightLengthSquared > 1e-10f)
+                {
+                    characterRight /= MathF.Sqrt(rightLengthSquared);
+                    var characterForward = Vector3.Cross(characterUp, characterRight);
+                    var worldMovementDirection = characterRight * movementDirection.X + characterForward * movementDirection.Y;
+                    var currentVelocity = Vector3.Dot(characterBody.Velocity.Linear, worldMovementDirection);
+                    //We'll arbitrarily set air control to be a fraction of supported movement's speed/force.
+                    const float airControlForceScale = .2f;
+                    const float airControlSpeedScale = .2f;
+                    var airAccelerationDt = characterBody.LocalInertia.InverseMass * character.MaximumHorizontalForce * airControlForceScale * simulationTimestepDuration;
+                    var maximumAirSpeed = effectiveSpeed * airControlSpeedScale;
+                    var targetVelocity = MathF.Min(currentVelocity + airAccelerationDt, maximumAirSpeed);
+                    //While we shouldn't allow the character to continue accelerating in the air indefinitely, trying to move in a given direction should never slow us down in that direction.
+                    var velocityChangeAlongMovementDirection = MathF.Max(0, targetVelocity - currentVelocity);
+                    characterBody.Velocity.Linear += worldMovementDirection * velocityChangeAlongMovementDirection;
+                    Debug.Assert(characterBody.IsActive, "Velocity changes don't automatically update objects; the character should have already been woken up before applying air control.");
+                }
+            }
         }
 
         public void UpdateCameraPosition(Camera camera, float cameraBackwardOffsetScale = 4)
@@ -383,6 +415,7 @@ namespace Demos.Demos
 
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
+            const float simulationDt = 1 / 60f;
             if (input.WasPushed(Key.C))
             {
                 if (characterActive)
@@ -397,7 +430,7 @@ namespace Demos.Demos
             }
             if (characterActive)
             {
-                character.UpdateCharacterGoals(input, camera);
+                character.UpdateCharacterGoals(input, camera, simulationDt);
             }
             //Using a fixed time per update to match the demos simulation update rate.
             time += 1 / 60f;
