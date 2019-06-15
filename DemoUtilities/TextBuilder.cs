@@ -138,7 +138,7 @@ namespace DemoUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public TextBuilder Append(int value)
+        public TextBuilder Append(long value)
         {
             return Append(value, 0);
         }
@@ -146,6 +146,11 @@ namespace DemoUtilities
         public override string ToString()
         {
             return new string(characters, 0, count);
+        }
+
+        public TextBuilder Append(object trainingIteration, int v)
+        {
+            throw new NotImplementedException();
         }
     }
 }
