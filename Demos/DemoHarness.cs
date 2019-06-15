@@ -408,6 +408,7 @@ namespace Demos
                 disposed = true;
                 demo?.Dispose();
                 timeSamples.Dispose();
+                font.Dispose();
             }
         }
 
