@@ -13,7 +13,13 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public struct LinearAxisMotor : IConstraintDescription<LinearAxisMotor>
     {
+        /// <summary>
+        /// Local offset from the center of body A to its attachment point.
+        /// </summary>
         public Vector3 LocalOffsetA;
+        /// <summary>
+        /// Local offset from the center of body B to its attachment point.
+        /// </summary>
         public Vector3 LocalOffsetB;
         /// <summary>
         /// Direction of the motorized axis in the local space of body A.
@@ -23,6 +29,9 @@ namespace BepuPhysics.Constraints
         /// Target relative velocity along the world axis between A and B's anchor points.
         /// </summary>
         public float TargetVelocity;
+        /// <summary>
+        /// Motor control parameters.
+        /// </summary>
         public MotorSettings Settings;
 
         public int ConstraintTypeId

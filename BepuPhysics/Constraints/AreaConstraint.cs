@@ -18,6 +18,9 @@ namespace BepuPhysics.Constraints
         /// 2 times the target area of the triangle. Computed from ||ab x ac||.
         /// </summary>
         public float TargetScaledArea;
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
 
         /// <summary>

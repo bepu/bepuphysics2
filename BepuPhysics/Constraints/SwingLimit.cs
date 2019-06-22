@@ -8,14 +8,26 @@ using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
+    /// <summary>
+    /// Restricts axes attached to two bodies to fall within a maximum swing angle.
+    /// </summary>
     public struct SwingLimit : IConstraintDescription<SwingLimit>
     {
+        /// <summary>
+        /// Axis attached to body A in its local space.
+        /// </summary>
         public Vector3 AxisLocalA;
+        /// <summary>
+        /// Axis attached to body B in its local space.
+        /// </summary>
         public Vector3 AxisLocalB;
         /// <summary>
         /// Minimum dot product between the world space A and B axes that the constraint attempts to maintain.
         /// </summary>
         public float MinimumDot;
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
 
         /// <summary>

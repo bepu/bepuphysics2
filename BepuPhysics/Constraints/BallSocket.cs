@@ -8,11 +8,22 @@ using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
-
+    /// <summary>
+    /// Constrains a point on one body to a point on another body.
+    /// </summary>
     public struct BallSocket : IConstraintDescription<BallSocket>
     {
+        /// <summary>
+        /// Local offset from the center of body A to its attachment point.
+        /// </summary>
         public Vector3 LocalOffsetA;
+        /// <summary>
+        /// Local offset from the center of body B to its attachment point.
+        /// </summary>
         public Vector3 LocalOffsetB;
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
 
         public int ConstraintTypeId

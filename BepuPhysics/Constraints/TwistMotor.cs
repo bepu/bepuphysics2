@@ -11,7 +11,7 @@ using Quaternion = BepuUtilities.Quaternion;
 namespace BepuPhysics.Constraints
 {
     /// <summary>
-    /// Description of a constraint which controls the twist velocity along axes attached to two bodies.
+    /// Constrains the twist velocity between two bodies to a target.
     /// </summary>
     public struct TwistMotor : IConstraintDescription<TwistMotor>
     {
@@ -27,6 +27,9 @@ namespace BepuPhysics.Constraints
         /// Goal relative twist velocity around the body axes.
         /// </summary>
         public float TargetVelocity;
+        /// <summary>
+        /// Motor control parameters.
+        /// </summary>
         public MotorSettings Settings;
 
         public int ConstraintTypeId

@@ -15,8 +15,17 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public struct AngularAxisMotor : IConstraintDescription<AngularAxisMotor>
     {
+        /// <summary>
+        /// Axis of rotation in body A's local space.
+        /// </summary>
         public Vector3 LocalAxisA;
+        /// <summary>
+        /// Target relative angular velocity around the axis.
+        /// </summary>
         public float TargetVelocity;
+        /// <summary>
+        /// Motor control parameters.
+        /// </summary>
         public MotorSettings Settings;
 
         public int ConstraintTypeId

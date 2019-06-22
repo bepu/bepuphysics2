@@ -13,13 +13,25 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public struct PointOnLineServo : IConstraintDescription<PointOnLineServo>
     {
+        /// <summary>
+        /// Local offset from the center of body A to its attachment point.
+        /// </summary>
         public Vector3 LocalOffsetA;
+        /// <summary>
+        /// Local offset from the center of body B to its attachment point.
+        /// </summary>
         public Vector3 LocalOffsetB;
         /// <summary>
         /// Direction of the line in the local space of body A.
         /// </summary>
         public Vector3 LocalDirection;
+        /// <summary>
+        /// Servo control parameters.
+        /// </summary>
         public ServoSettings ServoSettings;
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
 
         public int ConstraintTypeId

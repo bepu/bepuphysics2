@@ -9,14 +9,29 @@ using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
     /// <summary>
-    /// Constrains two bodies with a swivel hinge. Equivalent to a BallSocket constraint and an AngularSwivelHinge constraint solved together.
+    /// Constrains two bodies with a swivel hinge that allows rotation around two axes, like a laptop monitor hinge that allows flipping the screen. Equivalent to a BallSocket constraint and an AngularSwivelHinge constraint solved together.
     /// </summary>
     public struct SwivelHinge : IConstraintDescription<SwivelHinge>
     {
+        /// <summary>
+        /// Local offset from the center of body A to its attachment point.
+        /// </summary>
         public Vector3 LocalOffsetA;
+        /// <summary>
+        /// Swivel axis in the local space of body A.
+        /// </summary>
         public Vector3 LocalSwivelAxisA;
+        /// <summary>
+        /// Local offset from the center of body B to its attachment point.
+        /// </summary>
         public Vector3 LocalOffsetB;
+        /// <summary>
+        /// Hinge axis in the local space of body B.
+        /// </summary>
         public Vector3 LocalHingeAxisB;
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
 
         public int ConstraintTypeId

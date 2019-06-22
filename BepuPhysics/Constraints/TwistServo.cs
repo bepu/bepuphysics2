@@ -11,7 +11,7 @@ using Quaternion = BepuUtilities.Quaternion;
 namespace BepuPhysics.Constraints
 {
     /// <summary>
-    /// Description of a constraint which tries to maintain a target twist angle around an axis attached to each connected body.
+    /// Constrains two bodies to maintain a target twist angle around body-attached axes.
     /// </summary>
     public struct TwistServo : IConstraintDescription<TwistServo>
     {
@@ -29,8 +29,13 @@ namespace BepuPhysics.Constraints
         /// Target angle between B's axis to measure and A's measurement axis. 
         /// </summary>
         public float TargetAngle;
-
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
+        /// <summary>
+        /// Servo control parameters.
+        /// </summary>
         public ServoSettings ServoSettings;
 
         public int ConstraintTypeId

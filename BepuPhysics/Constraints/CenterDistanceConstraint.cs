@@ -14,7 +14,13 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public struct CenterDistanceConstraint : IConstraintDescription<CenterDistanceConstraint>
     {
+        /// <summary>
+        /// Target distance between the body centers.
+        /// </summary>
         public float TargetDistance;
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

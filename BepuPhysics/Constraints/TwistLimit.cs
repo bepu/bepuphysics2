@@ -11,7 +11,7 @@ using Quaternion = BepuUtilities.Quaternion;
 namespace BepuPhysics.Constraints
 {
     /// <summary>
-    /// Description of a constraint which tries to maintain a target twist angle range around axes attached to each connected body.
+    /// Constrains two bodies' rotations around attached twist axes to a range of permitted twist angles.
     /// </summary>
     public struct TwistLimit : IConstraintDescription<TwistLimit>
     {
@@ -33,7 +33,9 @@ namespace BepuPhysics.Constraints
         /// Maximum angle between B's axis to measure and A's measurement axis. 
         /// </summary>
         public float MaximumAngle;
-
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
 
         public int ConstraintTypeId

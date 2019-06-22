@@ -18,6 +18,9 @@ namespace BepuPhysics.Constraints
         /// 6 times the target volume of the tetrahedra. Computed from (ab x ac) * ad; this may be negative depending on the winding of the tetrahedron.
         /// </summary>
         public float TargetScaledVolume;
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
 
         /// <summary>

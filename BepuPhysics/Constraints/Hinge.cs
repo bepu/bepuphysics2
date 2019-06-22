@@ -13,10 +13,25 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public struct Hinge : IConstraintDescription<Hinge>
     {
+        /// <summary>
+        /// Local offset from the center of body A to its attachment point.
+        /// </summary>
         public Vector3 LocalOffsetA;
+        /// <summary>
+        /// Hinge axis in the local space of A.
+        /// </summary>
         public Vector3 LocalHingeAxisA;
+        /// <summary>
+        /// Local offset from the center of body B to its attachment point.
+        /// </summary>
         public Vector3 LocalOffsetB;
+        /// <summary>
+        /// Hinge axis in the local space of B.
+        /// </summary>
         public Vector3 LocalHingeAxisB;
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
 
         public int ConstraintTypeId

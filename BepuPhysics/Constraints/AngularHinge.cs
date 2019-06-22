@@ -8,10 +8,22 @@ using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
+    /// <summary>
+    /// Angular component of a hinge. Constrains the angular degrees of freedom of two bodies such that they can only rotate relative to each other around the hinge's axis.
+    /// </summary>
     public struct AngularHinge : IConstraintDescription<AngularHinge>
     {
+        /// <summary>
+        /// Hinge axis in the local space of A.
+        /// </summary>
         public Vector3 LocalHingeAxisA;
+        /// <summary>
+        /// Hinge axis in the local space of B.
+        /// </summary>
         public Vector3 LocalHingeAxisB;
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
 
         public int ConstraintTypeId

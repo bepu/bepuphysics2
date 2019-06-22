@@ -9,7 +9,7 @@ using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
     /// <summary>
-    /// Description of a constraint which tries to maintain a target relative angular velocity between two bodies.
+    /// Constrains the relative angular velocity between two bodies to a target.
     /// </summary>
     public struct AngularMotor : IConstraintDescription<AngularMotor>
     {
@@ -17,6 +17,9 @@ namespace BepuPhysics.Constraints
         /// Target relative angular velocity between A and B, stored in A's local space. Target world space angular velocity of B is TargetVelocityLocalA * OrientationA.
         /// </summary>
         public Vector3 TargetVelocityLocalA;
+        /// <summary>
+        /// Motor control parameters.
+        /// </summary>
         public MotorSettings Settings;
 
         public int ConstraintTypeId

@@ -8,11 +8,26 @@ using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
 {
+    /// <summary>
+    /// Constrains a point on a body to a target location.
+    /// </summary>
     public struct OneBodyLinearServo : IConstraintDescription<OneBodyLinearServo>
     {
+        /// <summary>
+        /// Offset to the attachment point in the local space of the body.
+        /// </summary>
         public Vector3 LocalOffset;
+        /// <summary>
+        /// Target position.
+        /// </summary>
         public Vector3 Target;
+        /// <summary>
+        /// Spring frequency and damping parameters.
+        /// </summary>
         public SpringSettings SpringSettings;
+        /// <summary>
+        /// Servo control parameters.
+        /// </summary>
         public ServoSettings ServoSettings;
 
         public int ConstraintTypeId
@@ -101,7 +116,7 @@ namespace BepuPhysics.Constraints
             //Compute the position error and bias velocities. Note the order of subtraction when calculating error- we want the bias velocity to counteract the separation.
             Vector3Wide.Add(projection.Offset, position, out var worldGrabPoint);
             Vector3Wide.Subtract(prestep.Target, worldGrabPoint, out var error);
-            ServoSettingsWide.ComputeClampedBiasVelocity(error, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out projection.BiasVelocity, out projection.MaximumImpulse);            
+            ServoSettingsWide.ComputeClampedBiasVelocity(error, positionErrorToVelocity, prestep.ServoSettings, dt, inverseDt, out projection.BiasVelocity, out projection.MaximumImpulse);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
