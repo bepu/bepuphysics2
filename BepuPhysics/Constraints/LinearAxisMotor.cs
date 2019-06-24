@@ -88,14 +88,11 @@ namespace BepuPhysics.Constraints
             MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale, out projection.MaximumImpulse);
             var modifier = new LinearAxisServoFunctions.NoChangeModifier();
             LinearAxisServoFunctions.ComputeTransforms(ref modifier, bodies, ref bodyReferences, count, prestep.LocalOffsetA, prestep.LocalOffsetB, prestep.LocalPlaneNormal, inertiaA, inertiaB, effectiveMassCFMScale,
-                out var anchorA, out var anchorB, out var normal, out var effectiveMass,
+                out _, out _, out _, out var effectiveMass,
                 out projection.LinearVelocityToImpulseA, out projection.AngularVelocityToImpulseA, out projection.AngularVelocityToImpulseB,
                 out projection.LinearImpulseToVelocityA, out projection.AngularImpulseToVelocityA, out projection.NegatedLinearImpulseToVelocityB, out projection.AngularImpulseToVelocityB);
-
-            Vector3Wide.Subtract(anchorB, anchorA, out var anchorOffset);
-            Vector3Wide.Dot(anchorOffset, normal, out var planeNormalDot);
-            
-            projection.BiasImpulse = prestep.TargetVelocity * effectiveMass;
+                        
+            projection.BiasImpulse = -prestep.TargetVelocity * effectiveMass;
         }
                        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
