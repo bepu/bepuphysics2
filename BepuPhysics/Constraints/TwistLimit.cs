@@ -51,6 +51,9 @@ namespace BepuPhysics.Constraints
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
+            ConstraintChecker.AssertUnitLength(LocalBasisA, nameof(TwistLimit), nameof(LocalBasisA));
+            ConstraintChecker.AssertUnitLength(LocalBasisB, nameof(TwistLimit), nameof(LocalBasisB));
+            ConstraintChecker.AssertValid(SpringSettings, nameof(TwistLimit));
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<TwistLimitPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             QuaternionWide.WriteFirst(LocalBasisA, ref target.LocalBasisA);

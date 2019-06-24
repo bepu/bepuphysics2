@@ -41,6 +41,8 @@ namespace BepuPhysics.Constraints
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
+            ConstraintChecker.AssertUnitLength(TargetRelativeRotationLocalA, nameof(AngularServo), nameof(TargetRelativeRotationLocalA));
+            ConstraintChecker.AssertValid(ServoSettings, SpringSettings, nameof(AngularServo));
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<AngularServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             QuaternionWide.WriteFirst(TargetRelativeRotationLocalA, ref target.TargetRelativeRotationLocalA);

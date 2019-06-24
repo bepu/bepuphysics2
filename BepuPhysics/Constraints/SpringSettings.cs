@@ -95,7 +95,7 @@ namespace BepuPhysics.Constraints
         {
             AngularFrequency = frequency * MathHelper.TwoPi;
             TwiceDampingRatio = dampingRatio * 2;
-            Debug.Assert(Validate(this));
+            Debug.Assert(Validate(this), "Spring settings must have positive frequency and nonnegative damping ratio.");
         }
 
        

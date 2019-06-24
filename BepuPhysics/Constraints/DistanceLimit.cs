@@ -66,6 +66,10 @@ namespace BepuPhysics.Constraints
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
+            Debug.Assert(MinimumDistance >= 0, "DistanceLimit.MinimumDistance must be nonnegative.");
+            Debug.Assert(MaximumDistance >= 0, "DistanceLimit.MaximumDistance must be nonnegative.");
+            Debug.Assert(MaximumDistance >= MinimumDistance, "DistanceLimit.MaximumDistance must be greater than or equal to DistanceLimit.MinimumDistance.");
+            ConstraintChecker.AssertValid(SpringSettings, nameof(DistanceLimit));
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<DistanceLimitPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(LocalOffsetA, ref target.LocalOffsetA);

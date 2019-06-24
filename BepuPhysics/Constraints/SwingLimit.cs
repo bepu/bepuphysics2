@@ -48,6 +48,10 @@ namespace BepuPhysics.Constraints
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
+            ConstraintChecker.AssertUnitLength(AxisLocalA, nameof(SwingLimit), nameof(AxisLocalA));
+            ConstraintChecker.AssertUnitLength(AxisLocalB, nameof(SwingLimit), nameof(AxisLocalB));
+            Debug.Assert(MinimumDot >= -1f && MinimumDot <= 1f, "SwingLimit.MinimumDot must be from -1 to 1 inclusive.");
+            ConstraintChecker.AssertValid(SpringSettings, nameof(SwingLimit));
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<SwingLimitPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             GetFirst(ref target.AxisLocalA.X) = AxisLocalA.X;

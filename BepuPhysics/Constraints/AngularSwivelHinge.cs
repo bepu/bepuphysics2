@@ -39,6 +39,9 @@ namespace BepuPhysics.Constraints
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
+            ConstraintChecker.AssertUnitLength(LocalSwivelAxisA, nameof(AngularSwivelHinge), nameof(LocalSwivelAxisA));
+            ConstraintChecker.AssertUnitLength(LocalHingeAxisB, nameof(AngularSwivelHinge), nameof(LocalHingeAxisB));
+            ConstraintChecker.AssertValid(SpringSettings, nameof(AngularSwivelHinge));
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<AngularSwivelHingePrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(LocalSwivelAxisA, ref target.LocalSwivelAxisA);

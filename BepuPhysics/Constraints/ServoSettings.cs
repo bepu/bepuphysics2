@@ -1,6 +1,7 @@
 ﻿using BepuUtilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -18,12 +19,23 @@ namespace BepuPhysics.Constraints
         /// </summary>
         public static ServoSettings Default { get { return new ServoSettings(float.MaxValue, 0, float.MaxValue); } }
 
+        /// <summary>
+        /// Checks servo settings to ensure valid values.
+        /// </summary>
+        /// <param name="settings">Settings to check.</param>
+        /// <returns>True if the settings contain valid values, false otherwise.</returns>
+        public static bool Validate(in ServoSettings settings)
+        {
+            return settings.MaximumSpeed >= 0 && settings.BaseSpeed >= 0 && settings.MaximumForce >= 0;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ServoSettings(float maximumSpeed, float baseSpeed, float maximumForce)
         {
             MaximumSpeed = maximumSpeed;
             BaseSpeed = baseSpeed;
             MaximumForce = maximumForce;
+            Debug.Assert(Validate(this), "Servo settings must have nonnegative maximum speed, base speed, and maximum force.");
         }
     }
     public struct ServoSettingsWide

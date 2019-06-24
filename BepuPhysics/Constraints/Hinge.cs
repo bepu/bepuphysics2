@@ -47,6 +47,9 @@ namespace BepuPhysics.Constraints
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
+            ConstraintChecker.AssertUnitLength(LocalHingeAxisA, nameof(Hinge), nameof(LocalHingeAxisA));
+            ConstraintChecker.AssertUnitLength(LocalHingeAxisB, nameof(Hinge), nameof(LocalHingeAxisB));
+            ConstraintChecker.AssertValid(SpringSettings, nameof(Hinge));
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<HingePrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(LocalOffsetA, ref target.LocalOffsetA);

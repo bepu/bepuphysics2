@@ -362,8 +362,6 @@ namespace Demos.SpecializedTests
             }
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
-
-
         }        
     }
 }

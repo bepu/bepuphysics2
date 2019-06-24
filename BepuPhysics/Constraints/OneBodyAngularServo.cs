@@ -41,6 +41,8 @@ namespace BepuPhysics.Constraints
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
+            ConstraintChecker.AssertUnitLength(TargetOrientation, nameof(OneBodyAngularServo), nameof(TargetOrientation));
+            ConstraintChecker.AssertValid(ServoSettings, SpringSettings, nameof(OneBodyAngularServo));
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<OneBodyAngularServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             QuaternionWide.WriteFirst(TargetOrientation, ref target.TargetOrientation);

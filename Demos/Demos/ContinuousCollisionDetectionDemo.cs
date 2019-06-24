@@ -42,7 +42,7 @@ namespace Demos.Demos
             var spinnerBlade = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, bladeInertia, new CollidableDescription(shapeIndex, 0.2f, ContinuousDetectionSettings.Continuous(1e-4f, 1e-4f)), new BodyActivityDescription(0.01f)));
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new Hinge { LocalHingeAxisA = new Vector3(0, 0, 1), LocalHingeAxisB = new Vector3(0, 0, 1), LocalOffsetB = new Vector3(0, 0, -3), SpringSettings = new SpringSettings(30, 1) });
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new AngularAxisMotor { LocalAxisA = new Vector3(0, 0, 1), Settings = new MotorSettings(10, 1e-4f), TargetVelocity = rotationSpeed });
-            return Simulation.Solver.Add(spinnerBase, new OneBodyLinearServo());
+            return Simulation.Solver.Add(spinnerBase, new OneBodyLinearServo { ServoSettings = ServoSettings.Default, SpringSettings = new SpringSettings(30, 1) });
         }
 
         public override void Initialize(ContentArchive content, Camera camera)

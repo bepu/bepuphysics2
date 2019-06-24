@@ -1,6 +1,7 @@
 ﻿using BepuUtilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -27,6 +28,16 @@ namespace BepuPhysics.Constraints
         public float Softness { get { return 1f / Damping; } set { Damping = value <= 0 ? float.MaxValue : 1f / value; } }
 
         /// <summary>
+        /// Checks if a settings instance has valid nonnegative values.
+        /// </summary>
+        /// <param name="settings">Instance to examine.</param>
+        /// <returns>True if the settings are valid, false otherwise.</returns>
+        public static bool Validate(in MotorSettings settings)
+        {
+            return settings.MaximumForce >= 0 && settings.Damping >= 0;
+        }
+
+        /// <summary>
         /// Defines settings for a motor constraint.
         /// </summary>
         /// <param name="maximumForce">Maximum amount of force the motor can apply in one unit of time.</param>
@@ -36,6 +47,7 @@ namespace BepuPhysics.Constraints
         {
             MaximumForce = maximumForce;
             Softness = softness;
+            Debug.Assert(Validate(this), "Motor settings must have nonnegative maximum force and nonnegative damping.");
         }
     }
     public struct MotorSettingsWide

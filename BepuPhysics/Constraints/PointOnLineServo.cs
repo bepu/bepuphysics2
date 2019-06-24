@@ -47,6 +47,8 @@ namespace BepuPhysics.Constraints
 
         public void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
+            ConstraintChecker.AssertUnitLength(LocalDirection, nameof(PointOnLineServo), nameof(LocalDirection));
+            ConstraintChecker.AssertValid(ServoSettings, SpringSettings, nameof(PointOnLineServo));
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<PointOnLineServoPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
             Vector3Wide.WriteFirst(LocalOffsetA, ref target.LocalOffsetA);
