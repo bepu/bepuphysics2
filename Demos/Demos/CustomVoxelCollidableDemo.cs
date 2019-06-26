@@ -99,78 +99,82 @@ namespace Demos.Demos
             max += childLocalMax;
         }
 
-
-        unsafe struct FirstHitLeafTester : IRayLeafTester
+        unsafe struct HitLeafTester<T> : IRayLeafTester where T : IShapeRayHitHandler
         {
             public QuickList<Vector3> VoxelIndices;
             public Vector3 VoxelSize;
             public Box VoxelShape;
-            public float MinimumT;
-            public Vector3 MinimumNormal;
+            public T HitHandler;
+            public Matrix3x3 Orientation;
+            public RayData OriginalRay;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public FirstHitLeafTester(in QuickList<Vector3> voxelIndices, in Vector3 voxelSize)
-            {
-                this.VoxelIndices = voxelIndices;
-                this.VoxelSize = voxelSize;
-                this.VoxelShape = new Box(voxelSize.X, voxelSize.Y, voxelSize.Z);
-                MinimumT = float.MaxValue;
-                MinimumNormal = default;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            public unsafe void TestLeaf(int leafIndex, RayData* ray, float* maximumT)
             {
                 ref var voxelIndex = ref VoxelIndices[leafIndex];
-                //This could be made a bit speedier if we used a local variant of the ray test. This assumes non-identity orientations, which don't exist in the voxel set's local space.
-                if (VoxelShape.RayTest(new RigidPose((voxelIndex + new Vector3(0.5f)) * VoxelSize), rayData->Origin, rayData->Direction, out var t, out var normal) && t < MinimumT && t <= *maximumT)
+                //Note that you could make use of the voxel grid's regular structure to save some work dealing with orientations.
+                if (VoxelShape.RayTest(new RigidPose((voxelIndex + new Vector3(0.5f)) * VoxelSize), ray->Origin, ray->Direction, out var t, out var normal))
                 {
-                    MinimumT = t;
-                    MinimumNormal = normal;
+                    //Bring the ray normal back into world space.
+                    Matrix3x3.Transform(normal, Orientation, out normal);
+                    //Use the original ray to avoid leaking the fact that we were working in local space.
+                    HitHandler.OnRayHit(OriginalRay, ref *maximumT, t, normal, leafIndex);
                 }
             }
         }
 
-        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal)
+        /// <summary>
+        /// Casts a ray against the voxels. Executes a callback for every test candidate and every hit.
+        /// </summary>
+        /// <typeparam name="TRayHitHandler">Type of the callback to execute for every test candidate and hit.</typeparam>
+        /// <param name="pose">Pose of the voxels during the ray test.</param>
+        /// <param name="ray">Ray to test against the voxels.</param>
+        /// <param name="maximumT">Maximum length of the ray in units of the ray direction length.</param>
+        /// <param name="hitHandler">Callback to execute for every hit.</param>
+        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
-            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
-            Matrix3x3.TransformTranspose(origin - pose.Position, orientation, out var localOrigin);
-            Matrix3x3.TransformTranspose(direction, orientation, out var localDirection);
-            var leafTester = new FirstHitLeafTester(VoxelIndices, VoxelSize);
-            Tree.RayCast(localOrigin, localDirection, maximumT, ref leafTester);
-            if (leafTester.MinimumT < float.MaxValue)
-            {
-                t = leafTester.MinimumT;
-                Matrix3x3.Transform(leafTester.MinimumNormal, orientation, out normal);
-                normal = Vector3.Normalize(normal);
-                return true;
-            }
-            t = default;
-            normal = default;
-            return false;
+            HitLeafTester<TRayHitHandler> leafTester;
+            leafTester.VoxelIndices = VoxelIndices;
+            leafTester.VoxelSize = VoxelSize;
+            leafTester.VoxelShape = new Box(VoxelSize.X, VoxelSize.Y, VoxelSize.Z);
+            leafTester.HitHandler = hitHandler;
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out leafTester.Orientation);
+            leafTester.OriginalRay = ray;
+            Matrix3x3.TransformTranspose(ray.Origin - pose.Position, leafTester.Orientation, out var localOrigin);
+            Matrix3x3.TransformTranspose(ray.Direction, leafTester.Orientation, out var localDirection);
+            Tree.RayCast(localOrigin, localDirection, ref maximumT, ref leafTester);
+            //The leaf tester could have mutated the hit handler; copy it back over.
+            hitHandler = leafTester.HitHandler;
         }
 
         //Some shapes take advantage of multiple simultaneous incoming rays to perform batch execution.
         //That can improve performance quite a bit in some cases. We don't bother taking advantage of it here, but you could add it if you wanted!
-        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler
+        /// <summary>
+        /// Casts a bunch of rays against the voxels at the same time, executing a callback for every test candidate and every hit.
+        /// </summary>
+        /// <typeparam name="TRayHitHandler">Type of the callback to execute for every ray test candidate and every hit.</typeparam>
+        /// <param name="pose">Pose of the voxels during the ray test.</param>
+        /// <param name="rays">Set of rays to cast against the voxels.</param>
+        /// <param name="hitHandler">Callbacks to execute.</param>
+        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
-            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
-            Matrix3x3.Transpose(orientation, out var inverseOrientation);
-            var leafTester = new FirstHitLeafTester(VoxelIndices, VoxelSize);
+            HitLeafTester<TRayHitHandler> leafTester;
+            leafTester.VoxelIndices = VoxelIndices;
+            leafTester.VoxelSize = VoxelSize;
+            leafTester.VoxelShape = new Box(VoxelSize.X, VoxelSize.Y, VoxelSize.Z);
+            leafTester.HitHandler = hitHandler;
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out leafTester.Orientation);
+            Matrix3x3.Transpose(leafTester.Orientation, out var inverseOrientation);
             for (int i = 0; i < rays.RayCount; ++i)
             {
                 rays.GetRay(i, out var ray, out var maximumT);
+                leafTester.OriginalRay = *ray;
                 Matrix3x3.Transform(ray->Origin - pose.Position, inverseOrientation, out var localOrigin);
                 Matrix3x3.Transform(ray->Direction, inverseOrientation, out var localDirection);
-                leafTester.MinimumT = float.MaxValue;
-                Tree.RayCast(localOrigin, localDirection, *maximumT, ref leafTester);
-                if (leafTester.MinimumT < float.MaxValue)
-                {
-                    Matrix3x3.Transform(leafTester.MinimumNormal, orientation, out var normal);
-                    normal = Vector3.Normalize(normal);
-                    hitHandler.OnRayHit(i, leafTester.MinimumT, normal);
-                }
+                Tree.RayCast(localOrigin, localDirection, ref *maximumT, ref leafTester);
             }
+            //The leaf tester could have mutated the hit handler; copy it back over.
+            hitHandler = leafTester.HitHandler;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

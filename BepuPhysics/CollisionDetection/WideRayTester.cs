@@ -12,17 +12,13 @@ namespace BepuPhysics.CollisionDetection
     /// </summary>
     public static class WideRayTester
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Test<TRaySource, TShape, TShapeWide, TRayHitHandler>(ref TShape shape, in RigidPose pose, ref TRaySource raySource, ref TRayHitHandler rayHitHandler)
+        public unsafe static void Test<TRaySource, TShape, TShapeWide, TRayHitHandler>(ref TShape shape, in RigidPose pose, ref TRaySource raySource, ref TRayHitHandler rayHitHandler)
             where TShape : IConvexShape
             where TShapeWide : IShapeWide<TShape>
             where TRaySource : IRaySource
-            where TRayHitHandler : IShapeRayBatchHitHandler
+            where TRayHitHandler : struct, IShapeRayHitHandler
         {
             RayWide rayWide;
-            Vector<int> intersected;
-            Vector<float> t;
-            Vector3Wide normal;
             TShapeWide wide = default; //TODO: Not ideal; pointless zero init. Can improve later with blittable or compiler improvements. Or could torture the design a bit.
             wide.Broadcast(shape);
             RigidPoses poses;
@@ -35,10 +31,10 @@ namespace BepuPhysics.CollisionDetection
                 {
                     for (int j = 0; j < count; ++j)
                     {
-                        ref readonly var ray = ref raySource.GetRay(i + j);
-                        if (shape.RayTest(pose, ray.Origin, ray.Direction, out var scalarT, out var scalarNormal))
+                        raySource.GetRay(i + j, out var ray, out var maximumT);
+                        if (shape.RayTest(pose, ray->Origin, ray->Direction, out var t, out var normal) && t <= *maximumT)
                         {
-                            rayHitHandler.OnRayHit(i + j, t[j], scalarNormal);
+                            rayHitHandler.OnRayHit(*ray, ref *maximumT, t, normal, 0);
                         }
                     }
                 }
@@ -48,10 +44,10 @@ namespace BepuPhysics.CollisionDetection
                         count = Vector<float>.Count;
                     for (int j = 0; j < count; ++j)
                     {
-                        GatherScatter.GetOffsetInstance(ref rayWide, i).Gather(raySource.GetRay(i + j));
+                        GatherScatter.GetOffsetInstance(ref rayWide, j).Gather(raySource.GetRay(i + j));
                     }
 
-                    wide.RayTest(ref poses, ref rayWide, out intersected, out t, out normal);
+                    wide.RayTest(ref poses, ref rayWide, out var intersected, out var t, out var normal);
 
                     for (int j = 0; j < count; ++j)
                     {
@@ -61,7 +57,8 @@ namespace BepuPhysics.CollisionDetection
                         scalarNormal.Z = normal.Z[j];
                         if (intersected[j] < 0)
                         {
-                            rayHitHandler.OnRayHit(i + j, t[j], scalarNormal);
+                            raySource.GetRay(i + j, out var ray, out var maximumT);
+                            rayHitHandler.OnRayHit(*ray, ref *maximumT, t[j], scalarNormal, 0);
                         }
                     }
                 }

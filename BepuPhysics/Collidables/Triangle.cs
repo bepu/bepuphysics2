@@ -8,6 +8,7 @@ using System.Diagnostics;
 using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 using BepuPhysics.CollisionDetection;
+using BepuPhysics.Trees;
 
 namespace BepuPhysics.Collidables
 {
@@ -112,7 +113,6 @@ namespace BepuPhysics.Collidables
             }
             return false;
         }
-
 
         public void ComputeInertia(float mass, out BodyInertia inertia)
         {

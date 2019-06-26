@@ -10,6 +10,60 @@ using System.Text;
 
 namespace BepuPhysics
 {
+    public interface IShapeRayHitHandler
+    {
+        /// <summary>
+        /// Checks whether the child of a collidable should be tested against a ray. Only called by shape types that can have more than one child.
+        /// </summary>
+        /// <param name="collidable">Parent of the candidate.</param>
+        /// <param name="childIndex">Index of the candidate in the parent collidable.</param>
+        /// <returns>True if the child should be tested by the ray, false otherwise.</returns>
+        bool AllowTest(int childIndex);
+        /// <summary>
+        /// Called when a ray impact has been found.
+        /// </summary>
+        /// <param name="ray">Information about the ray associated with this hit.</param>
+        /// <param name="maximumT">Reference to maximumT passed to the traversal.</param>
+        /// <param name="t">Hit time of the sweep test.</param>
+        /// <param name="normal">Surface normal at the hit location.</param>
+        /// <param name="collidable">Collidable hit by the ray.</param>
+        /// <param name="childIndex">Index of the hit child. For convex shapes or other types that don't have multiple children, this is always zero.</param>
+        void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, int childIndex);
+    }
+
+    /// <summary>
+    /// Defines a type capable of filtering ray test candidates and handling ray hit results.
+    /// </summary>
+    public interface IRayHitHandler
+    {
+        /// <summary>
+        /// Checks whether a collidable identified by the acceleration structure should be tested against a ray.
+        /// </summary>
+        /// <param name="collidable">Candidate collidable for ray testing.</param>
+        /// <returns>True if the collidable should be tested by the ray, false otherwise.</returns>
+        bool AllowTest(CollidableReference collidable);
+        /// <summary>
+        /// Checks whether the child of a collidable should be tested against a ray. Only called by shape types that can have more than one child.
+        /// </summary>
+        /// <param name="collidable">Parent of the candidate.</param>
+        /// <param name="childIndex">Index of the candidate in the parent collidable.</param>
+        /// <returns>True if the child should be tested by the ray, false otherwise.</returns>
+        bool AllowTest(CollidableReference collidable, int childIndex);
+        /// <summary>
+        /// Called when a ray impact has been found.
+        /// </summary>
+        /// <param name="ray">Information about the ray associated with this hit.</param>
+        /// <param name="maximumT">Reference to maximumT passed to the traversal.</param>
+        /// <param name="t">Hit time of the sweep test.</param>
+        /// <param name="normal">Surface normal at the hit location.</param>
+        /// <param name="collidable">Collidable hit by the ray.</param>
+        /// <param name="childIndex">Index of the hit child. For convex shapes or other types that don't have multiple children, this is always zero.</param>
+        void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, CollidableReference collidable, int childIndex);
+    }
+
+    /// <summary>
+    /// Defines a type capable of filtering sweep candidates and handling sweep results.
+    /// </summary>
     public interface ISweepHitHandler
     {
         /// <summary>
@@ -26,7 +80,7 @@ namespace BepuPhysics
         /// <returns>True if the sweep test should be attempted, false otherwise.</returns>
         bool AllowTest(CollidableReference collidable, int child);
         /// <summary>
-        /// Called when a swep test detects a hit with nonzero T value.
+        /// Called when a sweep test detects a hit with nonzero T value.
         /// </summary>
         /// <param name="maximumT">Reference to maximumT passed to the traversal.</param>
         /// <param name="t">Impact time of the sweep test.</param>
@@ -35,7 +89,7 @@ namespace BepuPhysics
         /// <param name="collidable">Collidable hit by the traversal.</param>
         void OnHit(ref float maximumT, float t, in Vector3 hitLocation, in Vector3 hitNormal, CollidableReference collidable);
         /// <summary>
-        /// Called when a swept test detects a hit at T = 0, meaning that no location or normal can be computed.
+        /// Called when a sweep test detects a hit at T = 0, meaning that no location or normal can be computed.
         /// </summary>
         /// <param name="maximumT">Reference to maximumT passed to the traversal.</param>
         /// <param name="collidable">Collidable hit by the traversal.</param>
@@ -45,6 +99,23 @@ namespace BepuPhysics
     partial class Simulation
     {
         //TODO: This is all sensitive to pose precision. If you change broadphase or pose precision, this will have to change.
+
+        struct ShapeRayHitHandler<TRayHitHandler> : IShapeRayHitHandler where TRayHitHandler : IRayHitHandler
+        {
+            public TRayHitHandler HitHandler;
+            public CollidableReference Collidable;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool AllowTest(int childIndex)
+            {
+                return HitHandler.AllowTest(Collidable, childIndex);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, int childIndex)
+            {
+                HitHandler.OnRayHit(ray, ref maximumT, t, normal, Collidable, childIndex);
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe void GetPoseAndShape(CollidableReference reference, out RigidPose* pose, out TypedIndex shape)
@@ -66,19 +137,16 @@ namespace BepuPhysics
         struct RayHitDispatcher<TRayHitHandler> : IBroadPhaseRayTester where TRayHitHandler : IRayHitHandler
         {
             public Simulation Simulation;
-            public TRayHitHandler HitHandler;
-
+            public ShapeRayHitHandler<TRayHitHandler> ShapeHitHandler;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void RayTest(CollidableReference reference, RayData* rayData, float* maximumT)
+            public unsafe void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT)
             {
-                if (HitHandler.AllowTest(reference))
+                if (ShapeHitHandler.HitHandler.AllowTest(collidable))
                 {
-                    Simulation.GetPoseAndShape(reference, out var pose, out var shape);
-                    if (Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, rayData->Origin, rayData->Direction, *maximumT, out var t, out var normal) && t < *maximumT)
-                    {
-                        HitHandler.OnRayHit(*rayData, ref *maximumT, t, normal, reference);
-                    }
+                    ShapeHitHandler.Collidable = collidable;
+                    Simulation.GetPoseAndShape(collidable, out var pose, out var shape);
+                    Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, *rayData, ref *maximumT, ref ShapeHitHandler);
                 }
             }
         }
@@ -94,13 +162,13 @@ namespace BepuPhysics
         /// <param name="id">User specified id of the ray.</param>
         public unsafe void RayCast<THitHandler>(in Vector3 origin, in Vector3 direction, float maximumT, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler
         {
-            TreeRay.CreateFrom(origin, direction, maximumT, id, out var rayData, out var treeRay);
             RayHitDispatcher<THitHandler> dispatcher;
-            dispatcher.HitHandler = hitHandler;
+            dispatcher.ShapeHitHandler.HitHandler = hitHandler;
+            dispatcher.ShapeHitHandler.Collidable = default;
             dispatcher.Simulation = this;
             BroadPhase.RayCast(origin, direction, maximumT, ref dispatcher, id);
             //The hit handler was copied to pass it into the child processing; since the user may (and probably does) rely on mutations, copy it back to the original reference.
-            hitHandler = dispatcher.HitHandler;
+            hitHandler = dispatcher.ShapeHitHandler.HitHandler;
         }
 
         unsafe struct SweepHitDispatcher<TSweepHitHandler> : IBroadPhaseSweepTester, ISweepFilter where TSweepHitHandler : ISweepHitHandler

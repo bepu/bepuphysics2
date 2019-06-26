@@ -158,38 +158,61 @@ namespace BepuPhysics.Collidables
             AddChildBoundsToBatcher(ref Children, ref batcher, pose, velocity, bodyIndex);
         }
 
-        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, Shapes shapeBatches, out float t, out Vector3 normal)
+        struct WrappedHandler<TRayHitHandler> : IShapeRayHitHandler where TRayHitHandler : IShapeRayHitHandler
         {
-            t = float.MaxValue;
-            normal = new Vector3();
-            for (int i = 0; i < Children.Length; ++i)
-            {
-                ref var child = ref Children[i];
-                GetRotatedChildPose(child.LocalPose, pose.Orientation, out var childPose);
-                //TODO: This is an area that has to be updated for high precision poses.
-                childPose.Position += pose.Position;
-                if (shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, childPose, origin, direction, maximumT, out var childT, out var childNormal) && childT < t)
-                {
-                    t = childT;
-                    normal = childNormal;
-                }
-            }
-            return t < float.MaxValue;
-        }
+            public TRayHitHandler HitHandler;
+            public int ChildIndex;
 
-        public void RayTest<TRayHitHandler>(in RigidPose pose, Shapes shapeBatches, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler
-        {
-            for (int i = 0; i < Children.Length; ++i)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool AllowTest(int childIndex)
             {
-                ref var child = ref Children[i];
-                GetRotatedChildPose(child.LocalPose, pose.Orientation, out var childPose);
-                //TODO: This is an area that has to be updated for high precision poses.
-                childPose.Position += pose.Position;
-                //Note that this will report an impact for every child, even if it's not the first impact.
-                shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, childPose, ref rays, ref hitHandler);
+                return HitHandler.AllowTest(childIndex);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, int childIndex)
+            {
+                Debug.Assert(childIndex == 0, "All compound children should be convexes, so they should report a child index of 0.");
+                Debug.Assert(maximumT >= t, "Whatever generated this ray hit should have obeyed the current maximumT value.");
+                //Note the use of the child index given to the instance, not the parameter.
+                HitHandler.OnRayHit(ray, ref maximumT, t, normal, ChildIndex);
             }
         }
 
+        public void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        {
+            WrappedHandler<TRayHitHandler> wrappedHandler;
+            wrappedHandler.HitHandler = hitHandler;
+            for (int i = 0; i < Children.Length; ++i)
+            {
+                ref var child = ref Children[i];
+                wrappedHandler.ChildIndex = i;
+                GetRotatedChildPose(child.LocalPose, pose.Orientation, out var childPose);
+                //TODO: This is an area that has to be updated for high precision poses.
+                childPose.Position += pose.Position;
+                shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, childPose, ray, ref maximumT, ref wrappedHandler);
+            }
+            //Preserve any mutations.
+            hitHandler = wrappedHandler.HitHandler;
+        }
+
+        public void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        {
+            WrappedHandler<TRayHitHandler> wrappedHandler;
+            wrappedHandler.HitHandler = hitHandler;
+            for (int i = 0; i < Children.Length; ++i)
+            {
+                ref var child = ref Children[i];
+                wrappedHandler.ChildIndex = i;
+                GetRotatedChildPose(child.LocalPose, pose.Orientation, out var childPose);
+                //TODO: This is an area that has to be updated for high precision poses.
+                childPose.Position += pose.Position;
+                shapeBatches[child.ShapeIndex.Type].RayTest(child.ShapeIndex.Index, childPose, ref rays, ref wrappedHandler);
+            }
+            //Preserve any mutations.
+            hitHandler = wrappedHandler.HitHandler;
+        }
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ShapeBatch CreateShapeBatch(BufferPool pool, int initialCapacity, Shapes shapes)
         {

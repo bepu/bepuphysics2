@@ -59,8 +59,8 @@ namespace BepuPhysics.Collidables
         {
             throw new InvalidOperationException("Nonconvex shapes are not required to have a maximum radius or angular expansion implementation. This should only ever be called on convexes.");
         }
-        public abstract bool RayTest(int shapeIndex, in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal);
-        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose rigidPose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler;
+        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose rigidPose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
         /// <summary>
         /// Gets a raw untyped pointer to a shape's data.
@@ -235,22 +235,17 @@ namespace BepuPhysics.Collidables
             shape.ComputeAngularExpansionData(out maximumRadius, out angularExpansion);
         }
 
-        public override bool RayTest(int shapeIndex, in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal)
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler)
         {
-            return shapes[shapeIndex].RayTest(pose, origin, direction, out t, out normal) && t <= maximumT;
+            if (shapes[shapeIndex].RayTest(pose, ray.Origin, ray.Direction, out var t, out var normal) && t <= maximumT)
+            {
+                hitHandler.OnRayHit(ray, ref maximumT, t, normal, 0);
+            }
         }
 
-        public override void RayTest<TRayHitHandler>(int index, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler)
+        public unsafe override void RayTest<TRayHitHandler>(int index, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler)
         {
-            ref var shape = ref shapes[index];
-            for (int i = 0; i < rays.RayCount; ++i)
-            {
-                ref readonly var ray = ref rays.GetRay(i);
-                if (shape.RayTest(pose, ray.Origin, ray.Direction, out var t, out var normal))
-                {
-                    hitHandler.OnRayHit(i, t, normal);
-                }
-            }
+            WideRayTester.Test<RaySource, TShape, TShapeWide, TRayHitHandler>(ref shapes[index], pose, ref rays, ref hitHandler);
         }
     }
 
@@ -297,9 +292,9 @@ namespace BepuPhysics.Collidables
             min += pose.Position;
             max += pose.Position;
         }
-        public override bool RayTest(int shapeIndex, in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal)
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler)
         {
-            return shapes[shapeIndex].RayTest(pose, origin, direction, maximumT, out t, out normal);
+            shapes[shapeIndex].RayTest(pose, ray, ref maximumT, ref hitHandler);
         }
 
         public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler)
@@ -345,14 +340,14 @@ namespace BepuPhysics.Collidables
             max += pose.Position;
         }
 
-        public override bool RayTest(int shapeIndex, in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal)
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler)
         {
-            return shapes[shapeIndex].RayTest(pose, origin, direction, maximumT, shapeBatches, out t, out normal);
+            shapes[shapeIndex].RayTest(pose, ray, ref maximumT, shapeBatches, ref hitHandler);
         }
 
         public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler)
         {
-            shapes[shapeIndex].RayTest(pose, shapeBatches, ref rays, ref hitHandler);
+            shapes[shapeIndex].RayTest(pose, ref rays, shapeBatches, ref hitHandler);
         }
     }
 

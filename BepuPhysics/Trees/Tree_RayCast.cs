@@ -111,10 +111,12 @@ namespace BepuPhysics.Trees
             }
         }
 
-        public unsafe void RayCast<TLeafTester>(in Vector3 origin, in Vector3 direction, float maximumT, ref TLeafTester leafTester, int id = 0) where TLeafTester : IRayLeafTester
+        public unsafe void RayCast<TLeafTester>(in Vector3 origin, in Vector3 direction, ref float maximumT, ref TLeafTester leafTester, int id = 0) where TLeafTester : IRayLeafTester
         {
             TreeRay.CreateFrom(origin, direction, maximumT, id, out var rayData, out var treeRay);
             RayCast(&treeRay, &rayData, ref leafTester);
+            //The maximumT could have been mutated by the leaf tester. Propagate that change. This is important for when we jump between tree traversals and such.
+            maximumT = treeRay.MaximumT;
         }
                 
     }

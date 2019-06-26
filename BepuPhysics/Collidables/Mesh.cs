@@ -10,11 +10,6 @@ using System.Runtime.CompilerServices;
 using Quaternion = BepuUtilities.Quaternion;
 namespace BepuPhysics.Collidables
 {
-    public unsafe interface ICompoundRayHitHandler
-    {
-        void OnRayHit(int childIndex, float* maximumT, float t, in Vector3 normal);
-    }
-
     public unsafe struct ShapeTreeOverlapEnumerator<TSubpairOverlaps> : IBreakableForEach<int> where TSubpairOverlaps : ICollisionTaskSubpairOverlaps
     {
         public BufferPool Pool;
@@ -156,146 +151,80 @@ namespace BepuPhysics.Collidables
             return new HomogeneousCompoundShapeBatch<Mesh, Triangle, TriangleWide>(pool, initialCapacity);
         }
 
-        unsafe struct FirstHitLeafTester : IRayLeafTester
+        unsafe struct HitLeafTester<T> : IRayLeafTester where T : IShapeRayHitHandler
         {
-            Triangle* triangles;
-            public float MinimumT;
-            public Vector3 MinimumNormal;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public FirstHitLeafTester(in Buffer<Triangle> triangles)
-            {
-                this.triangles = (Triangle*)triangles.Memory;
-                MinimumT = float.MaxValue;
-                MinimumNormal = default;
-            }
+            public Triangle* Triangles;
+            public T HitHandler;
+            public Matrix3x3 Orientation;
+            public Vector3 InverseScale;
+            public RayData OriginalRay;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
             {
-                ref var triangle = ref triangles[leafIndex];
-                if (Triangle.RayTest(triangle.A, triangle.B, triangle.C, rayData->Origin, rayData->Direction, out var t, out var normal) && t < MinimumT && t <= *maximumT)
-                {
-                    MinimumT = t;
-                    MinimumNormal = normal;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Casts a ray against the mesh. Returns the first hit.
-        /// </summary>
-        /// <param name="pose">Pose of the mesh during the ray test.</param>
-        /// <param name="origin">Origin of the ray.</param>
-        /// <param name="direction">Direction of the ray.</param>
-        /// <param name="maximumT">Maximum length of the ray in units of the ray direction length.</param>
-        /// <param name="t">First impact time in units of the ray direction length.</param>
-        /// <param name="normal">First impact normal.</param>
-        /// <returns>True if the ray hit anything, false otherwise.</returns>
-        public bool RayTest(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, out float t, out Vector3 normal)
-        {
-            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
-            Matrix3x3.TransformTranspose(origin - pose.Position, orientation, out var localOrigin);
-            Matrix3x3.TransformTranspose(direction, orientation, out var localDirection);
-            localOrigin *= inverseScale;
-            localDirection *= inverseScale;
-            var leafTester = new FirstHitLeafTester(Triangles);
-            Tree.RayCast(localOrigin, localDirection, maximumT, ref leafTester);
-            if (leafTester.MinimumT < float.MaxValue)
-            {
-                t = leafTester.MinimumT;
-                Matrix3x3.Transform(leafTester.MinimumNormal * inverseScale, orientation, out normal);
-                normal = Vector3.Normalize(normal);
-                return true;
-            }
-            t = default;
-            normal = default;
-            return false;
-        }
-
-        unsafe struct HitLeafTester<T> : IRayLeafTester where T : ICompoundRayHitHandler
-        {
-            Triangle* triangles;
-            internal T HitHandler;
-            Matrix3x3 orientation;
-            Vector3 inverseScale;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public HitLeafTester(in Buffer<Triangle> triangles, in Matrix3x3 orientation, in Vector3 inverseScale, in T hitHandler)
-            {
-                this.triangles = (Triangle*)triangles.Memory;
-                HitHandler = hitHandler;
-                this.orientation = orientation;
-                this.inverseScale = inverseScale;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
-            {
-                ref var triangle = ref triangles[leafIndex];
-                if (Triangle.RayTest(triangle.A, triangle.B, triangle.C, rayData->Origin, rayData->Direction, out var t, out var normal))
+                ref var triangle = ref Triangles[leafIndex];
+                if (Triangle.RayTest(triangle.A, triangle.B, triangle.C, rayData->Origin, rayData->Direction, out var t, out var normal) && t <= *maximumT)
                 {
                     //Pull the hit back into world space before handing it off to the user. This does cost a bit more, but not much, and you can always add a specialized no-transform path later.
-                    Matrix3x3.Transform(normal * inverseScale, orientation, out normal);
+                    Matrix3x3.Transform(normal * InverseScale, Orientation, out normal);
                     normal = Vector3.Normalize(normal);
-                    HitHandler.OnRayHit(leafIndex, maximumT, t, normal);
+                    HitHandler.OnRayHit(OriginalRay, ref *maximumT, t, normal, leafIndex);
                 }
             }
         }
 
         /// <summary>
-        /// Casts a ray against the mesh. Executes a callback for every hit.
+        /// Casts a ray against the mesh. Executes a callback for every test candidate and every hit.
         /// </summary>
-        /// <typeparam name="TRayHitHandler">Type of the callback to execute for every hit.</typeparam>
+        /// <typeparam name="TRayHitHandler">Type of the callback to execute for every test candidate and hit.</typeparam>
         /// <param name="pose">Pose of the mesh during the ray test.</param>
-        /// <param name="origin">Origin of the ray.</param>
-        /// <param name="direction">Direction of the ray.</param>
+        /// <param name="ray">Ray to test against the mesh.</param>
         /// <param name="maximumT">Maximum length of the ray in units of the ray direction length.</param>
         /// <param name="hitHandler">Callback to execute for every hit.</param>
-        public void RayTest<TRayHitHandler>(in RigidPose pose, in Vector3 origin, in Vector3 direction, float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, ICompoundRayHitHandler
+        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
-            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
-            Matrix3x3.TransformTranspose(origin - pose.Position, orientation, out var localOrigin);
-            Matrix3x3.TransformTranspose(direction, orientation, out var localDirection);
+            HitLeafTester<TRayHitHandler> leafTester;
+            leafTester.Triangles = (Triangle*)Triangles.Memory;
+            leafTester.HitHandler = hitHandler;
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out leafTester.Orientation);
+            leafTester.InverseScale = inverseScale;
+            leafTester.OriginalRay = ray;
+            Matrix3x3.TransformTranspose(ray.Origin - pose.Position, leafTester.Orientation, out var localOrigin);
+            Matrix3x3.TransformTranspose(ray.Direction, leafTester.Orientation, out var localDirection);
             localOrigin *= inverseScale;
             localDirection *= inverseScale;
-            var leafTester = new HitLeafTester<TRayHitHandler>(Triangles, orientation, inverseScale, hitHandler);
-            Tree.RayCast(localOrigin, localDirection, maximumT, ref leafTester);
+            Tree.RayCast(localOrigin, localDirection, ref maximumT, ref leafTester);
             //The leaf tester could have mutated the hit handler; copy it back over.
             hitHandler = leafTester.HitHandler;
         }
 
         /// <summary>
-        /// Casts a bunch of rays against the tree at the same time, passing the time of first impact for each ray to the given callback.
-        /// Used by RayBatcher.
+        /// Casts a bunch of rays against the mesh at the same time, executing a callback for every test candidate and every hit.
         /// </summary>
-        /// <typeparam name="TRayHitHandler">Type of the callback to execute for all ray first hits.</typeparam>
+        /// <typeparam name="TRayHitHandler">Type of the callback to execute for every ray test candidate and every hit.</typeparam>
         /// <param name="pose">Pose of the mesh during the ray test.</param>
         /// <param name="rays">Set of rays to cast against the mesh.</param>
-        /// <param name="hitHandler">Callback to execute for all ray first hits.</param>
-        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayBatchHitHandler
+        /// <param name="hitHandler">Callbacks to execute.</param>
+        public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
-            //TODO: Note that we dispatch a bunch of scalar tests here. You could be more clever than this- batched tests are possible. 
-            //May be worth creating a different traversal designed for low ray counts- might be able to get some benefit out of a semidynamic packet or something.
-            Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
-            Matrix3x3.Transpose(orientation, out var inverseOrientation);
-            var leafTester = new FirstHitLeafTester(Triangles);
+            HitLeafTester<TRayHitHandler> leafTester;
+            leafTester.Triangles = (Triangle*)Triangles.Memory;
+            leafTester.HitHandler = hitHandler;
+            Matrix3x3.CreateFromQuaternion(pose.Orientation, out leafTester.Orientation);
+            Matrix3x3.Transpose(leafTester.Orientation, out var inverseOrientation);
+            leafTester.InverseScale = inverseScale;
             for (int i = 0; i < rays.RayCount; ++i)
             {
                 rays.GetRay(i, out var ray, out var maximumT);
+                leafTester.OriginalRay = *ray;
                 Matrix3x3.Transform(ray->Origin - pose.Position, inverseOrientation, out var localOrigin);
                 Matrix3x3.Transform(ray->Direction, inverseOrientation, out var localDirection);
                 localOrigin *= inverseScale;
                 localDirection *= inverseScale;
-                leafTester.MinimumT = float.MaxValue;
-                Tree.RayCast(localOrigin, localDirection, *maximumT, ref leafTester);
-                if (leafTester.MinimumT < float.MaxValue)
-                {
-                    Matrix3x3.Transform(leafTester.MinimumNormal * inverseScale, orientation, out var normal);
-                    normal = Vector3.Normalize(normal);
-                    hitHandler.OnRayHit(i, leafTester.MinimumT, normal);
-                }
+                Tree.RayCast(localOrigin, localDirection, ref *maximumT, ref leafTester);
             }
+            //The leaf tester could have mutated the hit handler; copy it back over.
+            hitHandler = leafTester.HitHandler;
         }
 
         public unsafe void FindLocalOverlaps<TOverlaps, TSubpairOverlaps>(ref Buffer<OverlapQueryForPair> pairs, BufferPool pool, Shapes shapes, ref TOverlaps overlaps)

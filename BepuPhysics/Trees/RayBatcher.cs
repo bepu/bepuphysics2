@@ -53,6 +53,7 @@ namespace BepuPhysics.Trees
     {
         int RayCount { get; }
         ref readonly RayData GetRay(int rayIndex);
+        void GetRay(int rayIndex, out RayData* ray, out float* maximumT);
     }
 
 

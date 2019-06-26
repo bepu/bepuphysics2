@@ -106,13 +106,6 @@ namespace BepuPhysics.CollisionDetection
         }
     }
 
-    public interface IRayHitHandler
-    {
-        bool AllowTest(CollidableReference collidable);
-        void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, CollidableReference collidable);
-    }
-
-
     /// <summary>
     /// Tests batches of rays against the simulation.
     /// </summary>
@@ -124,17 +117,22 @@ namespace BepuPhysics.CollisionDetection
             public Simulation Simulation;
             public ShapeHitHandler HitHandler;
 
-            public struct ShapeHitHandler : IShapeRayBatchHitHandler
+            public struct ShapeHitHandler : IShapeRayHitHandler
             {
                 public TRayHitHandler HitHandler;
                 public CollidableReference Reference;
                 public RaySource RaySource;
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public unsafe void OnRayHit(int rayIndex, float t, in Vector3 normal)
+                public bool AllowTest(int childIndex)
                 {
-                    RaySource.GetRay(rayIndex, out var ray, out var maximumT);
-                    HitHandler.OnRayHit(*ray, ref *maximumT, t, normal, Reference);
+                    return HitHandler.AllowTest(Reference, childIndex);
+                }
+
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                public unsafe void OnRayHit(in RayData ray, ref float maximumT, float t, in Vector3 normal, int childIndex)
+                {
+                    HitHandler.OnRayHit(ray, ref maximumT, t, normal, Reference, childIndex);
                 }
             }
 
@@ -157,10 +155,7 @@ namespace BepuPhysics.CollisionDetection
                 if (HitHandler.HitHandler.AllowTest(reference))
                 {
                     Simulation.GetPoseAndShape(reference, out var pose, out var shape);
-                    if (Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, rayData->Origin, rayData->Direction, *maximumT, out var t, out var normal) && t < *maximumT)
-                    {
-                        HitHandler.HitHandler.OnRayHit(*rayData, ref *maximumT, t, normal, reference);
-                    }
+                    Simulation.Shapes[shape.Type].RayTest(shape.Index, *pose, *rayData, ref *maximumT, ref HitHandler);
                 }
             }
 
@@ -203,5 +198,5 @@ namespace BepuPhysics.CollisionDetection
         {
             batcher.Dispose();
         }
-    }    
+    }
 }
