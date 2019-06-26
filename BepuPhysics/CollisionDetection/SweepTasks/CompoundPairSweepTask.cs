@@ -49,22 +49,26 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                     ref var childB = ref b.GetChild(childIndexB);
                     var childTypeB = childB.ShapeIndex.Type;
                     shapes[childTypeB].GetShapeData(childB.ShapeIndex.Index, out var childShapeDataB, out _);
-                    var task = sweepTasks.GetTask(childTypeA, childTypeB);
-
-                    if (task != null && task.Sweep(
-                            childShapeDataA, childTypeA, childA.LocalPose, orientationA, velocityA,
-                            childShapeDataB, childTypeB, childB.LocalPose, offsetB, orientationB, velocityB,
-                            maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
-                            out var t0Candidate, out var t1Candidate, out var hitLocationCandidate, out var hitNormalCandidate))
+                    if (filter.AllowTest(
+                        flipRequired ? childIndexB : childOverlaps.ChildIndex, 
+                        flipRequired ? childOverlaps.ChildIndex : childIndexB))
                     {
-                        //Note that we use t1 to determine whether to accept the new location. In other words, we're choosing to keep sweeps that have the earliest time of intersection.
-                        //(t0 is *not* intersecting for any initially separated pair.)
-                        if (t1Candidate < t1)
+                        var task = sweepTasks.GetTask(childTypeA, childTypeB);
+                        if (task != null && task.Sweep(
+                                childShapeDataA, childTypeA, childA.LocalPose, orientationA, velocityA,
+                                childShapeDataB, childTypeB, childB.LocalPose, offsetB, orientationB, velocityB,
+                                maximumT, minimumProgression, convergenceThreshold, maximumIterationCount,
+                                out var t0Candidate, out var t1Candidate, out var hitLocationCandidate, out var hitNormalCandidate))
                         {
-                            t0 = t0Candidate;
-                            t1 = t1Candidate;
-                            hitLocation = hitLocationCandidate;
-                            hitNormal = hitNormalCandidate;
+                            //Note that we use t1 to determine whether to accept the new location. In other words, we're choosing to keep sweeps that have the earliest time of intersection.
+                            //(t0 is *not* intersecting for any initially separated pair.)
+                            if (t1Candidate < t1)
+                            {
+                                t0 = t0Candidate;
+                                t1 = t1Candidate;
+                                hitLocation = hitLocationCandidate;
+                                hitNormal = hitNormalCandidate;
+                            }
                         }
                     }
                 }
