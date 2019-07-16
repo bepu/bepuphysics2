@@ -82,13 +82,17 @@ namespace BepuPhysics.Trees
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe BestInsertionChoice ComputeBestInsertionChoice(ref BoundingBox bounds, ref NodeChild child, out BoundingBox mergedCandidate, out float costChange)
+        private static unsafe BestInsertionChoice ComputeBestInsertionChoice(ref BoundingBox bounds, float newLeafCost, ref NodeChild child, out BoundingBox mergedCandidate, out float costChange)
         {
             CreateMerged(ref child.Min, ref child.Max, ref bounds.Min, ref bounds.Max, out mergedCandidate);
             var newCost = ComputeBoundsMetric(ref mergedCandidate);
             if (child.Index >= 0)
             {
+                //Estimate the cost of child node expansions as max(SAH(newLeafBounds), costChange) * log2(child.LeafCount).
+                //We're assuming that the remaining tree is balanced and that each level will expand by at least SAH(newLeafBounds). 
+                //This might not be anywhere close to correct, but it's not a bad estimate.
                 costChange = newCost - ComputeBoundsMetric(ref child.Min, ref child.Max);
+                costChange += SpanHelper.GetContainingPowerOf2(child.LeafCount) * Math.Max(newLeafCost, costChange);
                 return BestInsertionChoice.Traverse;
             }
             else
@@ -98,7 +102,7 @@ namespace BepuPhysics.Trees
             }
 
         }
-       
+
         /// <summary>
         /// Adds a leaf to the tree with the given bounding box and returns the index of the added leaf.
         /// </summary>
@@ -114,9 +118,10 @@ namespace BepuPhysics.Trees
                 //Since we're already at capacity, that will be ~double the size.
                 Resize(pool, leafCount + 1);
             }
-            
+
             //Assumption: Index 0 is always the root if it exists, and an empty tree will have a 'root' with a child count of 0.
             int nodeIndex = 0;
+            var newLeafCost = ComputeBoundsMetric(ref bounds);
             while (true)
             {
                 //Which child should the leaf belong to?
@@ -134,8 +139,8 @@ namespace BepuPhysics.Trees
                 {
                     ref var a = ref node->A;
                     ref var b = ref node->B;
-                    var choiceA = ComputeBestInsertionChoice(ref bounds, ref a, out var mergedA, out var costChangeA);
-                    var choiceB = ComputeBestInsertionChoice(ref bounds, ref b, out var mergedB, out var costChangeB);
+                    var choiceA = ComputeBestInsertionChoice(ref bounds, newLeafCost, ref a, out var mergedA, out var costChangeA);
+                    var choiceB = ComputeBestInsertionChoice(ref bounds, newLeafCost, ref b, out var mergedB, out var costChangeB);
                     if (costChangeA <= costChangeB)
                     {
                         if (choiceA == BestInsertionChoice.NewInternal)
