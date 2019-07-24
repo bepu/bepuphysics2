@@ -55,6 +55,7 @@ namespace BepuPhysics
         public BufferPool Pool { get; private set; }
 
         internal IslandAwakener awakener;
+        internal IslandSleeper sleeper;
         internal Shapes shapes;
         internal BroadPhase broadPhase;
         internal Solver solver;
@@ -95,10 +96,11 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="solver">Solver responsible for the constraints connected to the collection's bodies.</param>
         /// <param name="awakener">Island awakener to use when bodies undergo transitions requiring that they exist in the active set.</param>
-        public void Initialize(Solver solver, IslandAwakener awakener)
+        public void Initialize(Solver solver, IslandAwakener awakener, IslandSleeper sleeper)
         {
             this.solver = solver;
             this.awakener = awakener;
+            this.sleeper = sleeper;
         }
 
         void AddCollidableToBroadPhase(int bodyHandle, in RigidPose pose, in BodyInertia localInertia, ref Collidable collidable)

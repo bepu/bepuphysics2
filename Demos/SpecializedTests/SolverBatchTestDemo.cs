@@ -144,7 +144,7 @@ namespace Demos.Demos
             timeAccumulator += 1 / 60f;
             if (timeAccumulator > MathF.PI * 128)
                 timeAccumulator -= MathF.PI * 128;
-            if (!bigBall.IsActive)
+            if (!bigBall.Awake)
                 Simulation.Awakener.AwakenBody(bigBallHandle);
             bigBall.Velocity.Linear = new Vector3(0, 3f * MathF.Sin(timeAccumulator * 5), 0);
             base.Update(window, camera, input, dt);

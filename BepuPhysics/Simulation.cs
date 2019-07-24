@@ -75,7 +75,7 @@ namespace BepuPhysics
             Awakener = new IslandAwakener(Bodies, Statics, Solver, BroadPhase, Sleeper, bufferPool);
             Statics.awakener = Awakener;
             Solver.awakener = Awakener;
-            Bodies.Initialize(Solver, Awakener);
+            Bodies.Initialize(Solver, Awakener, Sleeper);
             SolverBatchCompressor = new BatchCompressor(Solver, Bodies);
             BodyLayoutOptimizer = new BodyLayoutOptimizer(Bodies, BroadPhase, Solver, bufferPool);
             ConstraintLayoutOptimizer = new ConstraintLayoutOptimizer(Bodies, Solver);

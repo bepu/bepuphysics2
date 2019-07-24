@@ -113,9 +113,6 @@ namespace Demos
             }
             else if (active)
             {
-                Quaternion.TransformWithoutOverlap(localGrabPoint, body.Pose.Orientation, out var grabPointOffset);
-                var grabbedPoint = grabPointOffset + body.Pose.Position;
-
                 var rayDirection = camera.GetRayDirection(mouseLocked, normalizedMousePosition);
                 var targetPoint = camera.Position + rayDirection * t;
                 targetOrientation = Quaternion.Concatenate(targetOrientation, rotation);

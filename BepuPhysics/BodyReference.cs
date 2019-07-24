@@ -13,7 +13,7 @@ namespace BepuPhysics
     /// <summary>
     /// Convenience structure for directly referring to a body's properties.
     /// </summary>
-    /// <remarks>Note that this type makes no attempt to protect against unsafe modification of body properties, nor does it try to wake up bodies if they are asleep.</remarks>
+    /// <remarks>Note that this type makes no attempt to protect against unsafe modification of body properties, nor does modifying its properties try to wake up bodies if they are asleep.</remarks>
     public struct BodyReference
     {
         /// <summary>
@@ -56,16 +56,37 @@ namespace BepuPhysics
         public ref BodyLocation Location
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return ref Bodies.HandleToLocation[Handle]; }
+            get
+            {
+                Bodies.ValidateExistingHandle(Handle);
+                return ref Bodies.HandleToLocation[Handle];
+            }
         }
 
         /// <summary>
-        /// Gets whether the body is in the active set.
+        /// Gets or sets whether the body is in the active set. Setting this to true will attempt to wake the body; setting it to false will force the body and any constraint-connected bodies asleep.
         /// </summary>
-        public bool IsActive
+        public bool Awake
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return Location.SetIndex == 0; }
+            set
+            {
+                if (Awake)
+                {
+                    if (!value)
+                    {
+                        Bodies.sleeper.Sleep(Location.Index);
+                    }
+                }
+                else
+                {
+                    if (value)
+                    {
+                        Bodies.awakener.AwakenBody(Handle);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -228,7 +249,7 @@ namespace BepuPhysics
             ref var location = ref Location;
             ApplyImpulse(Bodies.Sets[location.SetIndex], location.Index, impulse, impulseOffset);
         }
-        
+
         /// <summary>
         /// Applies an impulse to a linear velocity. Does not wake the body up.
         /// </summary>
