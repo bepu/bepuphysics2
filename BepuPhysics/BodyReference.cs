@@ -172,6 +172,10 @@ namespace BepuPhysics
         /// </summary>
         public bool Kinematic { get { return Bodies.IsKinematic(LocalInertia); } }
 
+        /// <summary>
+        /// Gets whether the body has locked inertia, meaning its inverse inertia tensor is zero.
+        /// </summary>
+        public bool HasLockedInertia { get { return Bodies.HasLockedInertia(LocalInertia.InverseInertiaTensor); } }
 
         /// <summary>
         /// If the body is dynamic, turns the body kinematic by setting all inverse inertia and mass values to zero and activates it.
@@ -185,7 +189,7 @@ namespace BepuPhysics
                 Bodies.SetLocalInertia(Handle, default);
             }
         }
-        
+
         /// <summary>
         /// Sets the body's local inertia to the provided inertia. Wakes up the body and correctly handles any transition between dynamic and kinematic states.
         /// If the body moves from dynamic to kinematic, any constraints connected to the body that now only contain kinematic references are removed.
@@ -206,6 +210,34 @@ namespace BepuPhysics
             ref var localInertia = ref set.LocalInertias[location.Index];
             ref var pose = ref set.Poses[location.Index];
             PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out inverseInertia);
+        }
+
+        /// <summary>
+        /// Gets a description of the body.
+        /// </summary>
+        /// <param name="description">Description of the body.</param>
+        public void GetDescription(out BodyDescription description)
+        {
+            Bodies.GetDescription(Handle, out description);
+        }
+
+        /// <summary>
+        /// Sets a body's properties according to a description. Properly handles any transitions between dynamic and kinematic and between shapeless and shapeful.
+        /// If the body is becoming kinematic, any constraints which only contain kinematic bodies will be removed. Wakes up the body.
+        /// </summary>
+        /// <param name="description">Description of the body.</param>
+        public void ApplyDescription(in BodyDescription description)
+        {
+            Bodies.ApplyDescription(Handle, description);
+        }
+
+        /// <summary>
+        /// Changes the shape of a body. Properly handles the transition between shapeless and shapeful. If the body is inactive, it will be forced awake.
+        /// </summary>
+        /// <param name="newShape">Index of the new shape to use for the body.</param>
+        public void SetShape(TypedIndex newShape)
+        {
+            Bodies.SetShape(Handle, newShape);
         }
 
         /// <summary>

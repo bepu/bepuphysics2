@@ -373,7 +373,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the body to change the shape of.</param>
         /// <param name="newShape">Index of the new shape to use for the body.</param>
-        public void ChangeShape(int handle, TypedIndex newShape)
+        public void SetShape(int handle, TypedIndex newShape)
         {
             ref var location = ref HandleToLocation[handle];
             if (location.SetIndex > 0)
