@@ -168,6 +168,34 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Gets whether the body is kinematic, meaning its inverse inertia and mass are all zero.
+        /// </summary>
+        public bool Kinematic { get { return Bodies.IsKinematic(LocalInertia); } }
+
+
+        /// <summary>
+        /// If the body is dynamic, turns the body kinematic by setting all inverse inertia and mass values to zero and activates it.
+        /// Any constraints connected to the body that now only contain kinematic references are removed.
+        /// If the body is kinematic, does nothing.
+        /// </summary>
+        public void BecomeKinematic()
+        {
+            if (!Kinematic)
+            {
+                Bodies.SetLocalInertia(Handle, default);
+            }
+        }
+        
+        /// <summary>
+        /// Sets the body's local inertia to the provided inertia. Wakes up the body and correctly handles any transition between dynamic and kinematic states.
+        /// If the body moves from dynamic to kinematic, any constraints connected to the body that now only contain kinematic references are removed.
+        /// </summary>
+        public void SetLocalInertia(in BodyInertia localInertia)
+        {
+            Bodies.SetLocalInertia(Handle, localInertia);
+        }
+
+        /// <summary>
         /// Computes the world space inverse inertia tensor for the body based on the LocalInertia and Pose.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

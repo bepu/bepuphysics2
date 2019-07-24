@@ -76,7 +76,8 @@ namespace Demos
 
         public void Update(Simulation simulation, Camera camera, bool mouseLocked, bool shouldGrab, in Quaternion rotation, in Vector2 normalizedMousePosition)
         {
-            var bodyExists = body.Exists;
+            //On the off chance some demo modifies the kinematic state, treat that as a grab terminator.
+            var bodyExists = body.Exists && !body.Kinematic;
             if (active && (!shouldGrab || !bodyExists))
             {
                 active = false;

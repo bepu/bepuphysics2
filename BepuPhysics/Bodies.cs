@@ -274,9 +274,24 @@ namespace BepuPhysics
                    inertia.ZZ == 0;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void UpdateBroadPhaseKinematicState(int handle, ref BodyLocation location, ref BodySet set)
+        private struct ConnectedDynamicCounter : IForEach<int>
         {
+            public Bodies Bodies;
+            public int DynamicCount;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void LoopBody(int bodyIndex)
+            {
+                //The solver's connected bodies enumeration directly provides the constraint-stored reference, which is an index in the active set for active constraints and a handle for inactive constraints.
+                //We forced the dynamic active at the beginning of BecomeKinematic, so we don't have to worry about the inactive side of things.
+                if (!Bodies.IsKinematic(Bodies.ActiveSet.LocalInertias[bodyIndex]))
+                    ++DynamicCount;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void UpdateForKinematicStateChange(int handle, ref BodyLocation location, ref BodySet set, bool newlyKinematic)
+        {
+            Debug.Assert(location.SetIndex == 0, "If we're changing kinematic state, we should have already awoken the body.");
             ref var collidable = ref set.Collidables[location.Index];
             if (collidable.Shape.Exists)
             {
@@ -290,18 +305,37 @@ namespace BepuPhysics
                     broadPhase.staticLeaves[collidable.BroadPhaseIndex] = new CollidableReference(mobility, handle);
                 }
             }
+            if(newlyKinematic)
+            {
+                ref var constraints = ref set.Constraints[location.Index];
+                ConnectedDynamicCounter enumerator;
+                enumerator.Bodies = this;
+                for (int i = 0; i < constraints.Count; ++i)
+                {
+                    ref var constraint = ref constraints[i];
+                    enumerator.DynamicCount = 0;
+                    solver.EnumerateConnectedBodies(constraint.ConnectingConstraintHandle, ref enumerator);
+                    if (enumerator.DynamicCount == 0)
+                    {
+                        //This constraint connects only kinematic bodies; keeping it in the solver would cause a singularity.
+                        solver.Remove(constraint.ConnectingConstraintHandle);
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// Changes the local mass and inertia tensor associated with a body. Properly handles the transition between kinematic and dynamic.
+        /// If the body is becoming kinematic, any constraints which only contain kinematic bodies will be removed.
+        /// Wakes up the body.
         /// </summary>
         /// <param name="handle">Handle of the body whose inertia should change.</param>
-        /// <param name="inertia">New inertia for the body.</param>
+        /// <param name="localInertia">New local inertia for the body.</param>
         /// <remarks>
         /// This function is only necessary when the inertia change could potentially result in a transition between dynamic and kinematic states.
         /// If it is guaranteed to be dynamic before and after the change, the inertia can be directly modified without issue.
         /// </remarks>
-        public void ChangeLocalInertia(int handle, ref BodyInertia inertia)
+        public void SetLocalInertia(int handle, in BodyInertia localInertia)
         {
             ref var location = ref HandleToLocation[handle];
             if (location.SetIndex > 0)
@@ -311,8 +345,9 @@ namespace BepuPhysics
             }
             //Note that the HandleToLocation slot reference is still valid; it may have been updated, but handle slots don't move.
             ref var set = ref Sets[location.SetIndex];
-            set.LocalInertias[location.Index] = inertia;
-            UpdateBroadPhaseKinematicState(handle, ref location, ref set);
+            var newlyKinematic = IsKinematic(localInertia) && !IsKinematic(set.LocalInertias[location.Index]);
+            set.LocalInertias[location.Index] = localInertia;
+            UpdateForKinematicStateChange(handle, ref location, ref set, newlyKinematic);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -356,7 +391,8 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Applies a description to a body. Properly handles any transitions between dynamic and kinematic and between shapeless and shapeful. If the body is inactive, it will be forced awake.
+        /// Applies a description to a body. Properly handles any transitions between dynamic and kinematic and between shapeless and shapeful.
+        /// If the body is becoming kinematic, any constraints which only contain kinematic bodies will be removed. Wakes up the body.
         /// </summary>
         /// <param name="handle">Handle of the body to receive the description.</param>
         /// <param name="description">Description to apply to the body.</param>
@@ -373,22 +409,34 @@ namespace BepuPhysics
             ref var set = ref Sets[location.SetIndex];
             ref var collidable = ref set.Collidables[location.Index];
             var oldShape = collidable.Shape;
+            var newlyKinematic = IsKinematic(description.LocalInertia) && !IsKinematic(set.LocalInertias[location.Index]);
             set.ApplyDescriptionByIndex(location.Index, description);
             UpdateForShapeChange(handle, location.Index, oldShape, description.Collidable.Shape);
-            UpdateBroadPhaseKinematicState(handle, ref location, ref set);
+            UpdateForKinematicStateChange(handle, ref location, ref set, newlyKinematic);
         }
 
         /// <summary>
         /// Gets the description of a body by handle.
         /// </summary>
-        /// <param name="handle">Handle to </param>
-        /// <param name="description"></param>
+        /// <param name="handle">Handle of the body to look up.</param>
+        /// <param name="description">Description of the body.</param>
         public void GetDescription(int handle, out BodyDescription description)
         {
             ValidateExistingHandle(handle);
             ref var location = ref HandleToLocation[handle];
             ref var set = ref Sets[location.SetIndex];
             set.GetDescription(location.Index, out description);
+        }
+
+        /// <summary>
+        /// Gets a reference to a body by its handle.
+        /// </summary>
+        /// <param name="handle">Handle of the body to grab a reference of.</param>
+        /// <returns>Reference to the desired body.</returns>
+        public BodyReference GetBodyReference(int handle)
+        {
+            ValidateExistingHandle(handle);
+            return new BodyReference(handle, this);
         }
 
         /// <summary>
