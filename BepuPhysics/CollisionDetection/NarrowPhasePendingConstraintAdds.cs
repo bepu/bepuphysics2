@@ -201,7 +201,7 @@ namespace BepuPhysics.CollisionDetection
                 ref var speculativeBatchIndicesForType = ref speculativeBatchIndices[typeIndex];
                 for (int i = start; i < end; ++i)
                 {
-                    speculativeBatchIndicesForType[i] = (ushort)solver.FindCandidateBatch(0, ref *(int*)(list.Buffer.Memory + byteIndex), bodyCount);
+                    speculativeBatchIndicesForType[i] = (ushort)solver.FindCandidateBatch(ref *(int*)(list.Buffer.Memory + byteIndex), bodyCount);
                     byteIndex += list.ElementSizeInBytes;
                 }
             }

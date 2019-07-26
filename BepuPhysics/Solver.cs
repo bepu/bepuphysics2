@@ -437,11 +437,10 @@ namespace BepuPhysics
         /// <summary>
         /// Attempts to locate a spot for a new constraint. Does not perform allocation for the constraint. If no batch exists, returns the index just beyond the end of the existing list of batches.
         /// </summary>
-        /// <param name="batchStartIndex">Index at which to start the search.</param>
         /// <returns>Index of the batch that the constraint would fit in.</returns>
         /// <remarks>This is used by the narrowphase's multithreaded constraint adders to locate a spot for a new constraint without requiring a lock. Only after a candidate is located
         /// do those systems attempt an actual claim, limiting the duration of locks and increasing potential parallelism.</remarks>
-        internal unsafe int FindCandidateBatch(int batchStartIndex, ref int bodyHandles, int bodyCount)
+        internal unsafe int FindCandidateBatch(ref int bodyHandles, int bodyCount)
         {
             ref var set = ref ActiveSet;
             GetSynchronizedBatchCount(out var synchronizedBatchCount, out var fallbackExists);
