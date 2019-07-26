@@ -11,7 +11,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Angular component of a hinge. Constrains the angular degrees of freedom of two bodies such that they can only rotate relative to each other around the hinge's axis.
     /// </summary>
-    public struct AngularHinge : IConstraintDescription<AngularHinge>
+    public struct AngularHinge : ITwoBodyConstraintDescription<AngularHinge>
     {
         /// <summary>
         /// Hinge axis in the local space of A.

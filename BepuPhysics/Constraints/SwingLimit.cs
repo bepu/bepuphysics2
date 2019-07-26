@@ -11,7 +11,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Restricts axes attached to two bodies to fall within a maximum swing angle.
     /// </summary>
-    public struct SwingLimit : IConstraintDescription<SwingLimit>
+    public struct SwingLimit : ITwoBodyConstraintDescription<SwingLimit>
     {
         /// <summary>
         /// Axis attached to body A in its local space.

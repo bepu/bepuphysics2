@@ -11,7 +11,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains a point on a body to have a target linear velocity.
     /// </summary>
-    public struct OneBodyLinearMotor : IConstraintDescription<OneBodyLinearMotor>
+    public struct OneBodyLinearMotor : IOneBodyConstraintDescription<OneBodyLinearMotor>
     {
         /// <summary>
         /// Offset to the attachment point in the local space of the body.

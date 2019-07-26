@@ -11,7 +11,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains a point on a body to a target location.
     /// </summary>
-    public struct OneBodyLinearServo : IConstraintDescription<OneBodyLinearServo>
+    public struct OneBodyLinearServo : IOneBodyConstraintDescription<OneBodyLinearServo>
     {
         /// <summary>
         /// Offset to the attachment point in the local space of the body.

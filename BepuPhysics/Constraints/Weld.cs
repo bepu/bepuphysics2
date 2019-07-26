@@ -12,7 +12,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains two bodies to maintain a relative position and orientation. All six degrees of freedom are solved simultaneously.
     /// </summary>
-    public struct Weld : IConstraintDescription<Weld>
+    public struct Weld : ITwoBodyConstraintDescription<Weld>
     {
         /// <summary>
         /// Offset from body A to body B in the local space of A.

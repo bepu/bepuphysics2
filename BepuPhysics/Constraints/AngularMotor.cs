@@ -11,7 +11,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains the relative angular velocity between two bodies to a target.
     /// </summary>
-    public struct AngularMotor : IConstraintDescription<AngularMotor>
+    public struct AngularMotor : ITwoBodyConstraintDescription<AngularMotor>
     {
         /// <summary>
         /// Target relative angular velocity between A and B, stored in A's local space. Target world space angular velocity of B is TargetVelocityLocalA * OrientationA.

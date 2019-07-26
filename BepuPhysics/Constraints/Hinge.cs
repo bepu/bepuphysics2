@@ -11,7 +11,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains two bodies with a hinge. Equivalent to a BallSocket constraint and an AngularHinge constraint solved together.
     /// </summary>
-    public struct Hinge : IConstraintDescription<Hinge>
+    public struct Hinge : ITwoBodyConstraintDescription<Hinge>
     {
         /// <summary>
         /// Local offset from the center of body A to its attachment point.

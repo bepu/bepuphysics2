@@ -11,7 +11,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains two bodies with a swivel hinge that allows rotation around two axes, like a laptop monitor hinge that allows flipping the screen. Equivalent to a BallSocket constraint and an AngularSwivelHinge constraint solved together.
     /// </summary>
-    public struct SwivelHinge : IConstraintDescription<SwivelHinge>
+    public struct SwivelHinge : ITwoBodyConstraintDescription<SwivelHinge>
     {
         /// <summary>
         /// Local offset from the center of body A to its attachment point.

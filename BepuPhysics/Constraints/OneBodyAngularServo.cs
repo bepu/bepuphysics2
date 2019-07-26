@@ -13,7 +13,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains a single body to a target orientation.
     /// </summary>
-    public struct OneBodyAngularServo : IConstraintDescription<OneBodyAngularServo>
+    public struct OneBodyAngularServo : IOneBodyConstraintDescription<OneBodyAngularServo>
     {
         /// <summary>
         /// Target orientation of the constraint.

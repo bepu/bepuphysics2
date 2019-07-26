@@ -11,7 +11,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains points on two bodies to move relative to each other along a direction.
     /// </summary>
-    public struct LinearAxisMotor : IConstraintDescription<LinearAxisMotor>
+    public struct LinearAxisMotor : ITwoBodyConstraintDescription<LinearAxisMotor>
     {
         /// <summary>
         /// Local offset from the center of body A to its attachment point.

@@ -12,7 +12,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains the center of two bodies to be separated by a goal distance.
     /// </summary>
-    public struct CenterDistanceConstraint : IConstraintDescription<CenterDistanceConstraint>
+    public struct CenterDistanceConstraint : ITwoBodyConstraintDescription<CenterDistanceConstraint>
     {
         /// <summary>
         /// Target distance between the body centers.

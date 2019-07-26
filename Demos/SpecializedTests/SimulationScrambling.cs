@@ -226,7 +226,7 @@ namespace Demos.SpecializedTests
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ChurnAddConstraint<T>(Simulation simulation, int[] bodyHandles, int[] constraintHandles, int[] constraintHandlesToIdentity,
-            CachedConstraint<T>[] constraintDescriptions, List<int> removedConstraints, List<int> removedBodies, Random random) where T : IConstraintDescription<T>
+            CachedConstraint<T>[] constraintDescriptions, List<int> removedConstraints, List<int> removedBodies, Random random) where T : ITwoBodyConstraintDescription<T>
         {
             //Add a constraint.
             int attemptCount = 0;
@@ -277,7 +277,7 @@ namespace Demos.SpecializedTests
             }
         }
 
-        public static double AddRemoveChurn<T>(Simulation simulation, int iterations, int[] bodyHandles, int[] constraintHandles) where T : IConstraintDescription<T>
+        public static double AddRemoveChurn<T>(Simulation simulation, int iterations, int[] bodyHandles, int[] constraintHandles) where T : ITwoBodyConstraintDescription<T>
         {
             //There are three levels of 'index' for each object in this test:
             //1) The top level 'identity'. Even when a body or constraint gets readded, the slot in the top level array maintains a pointer to the new handle.

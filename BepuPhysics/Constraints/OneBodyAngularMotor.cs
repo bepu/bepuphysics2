@@ -13,7 +13,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains the angular velocity of one body to the target.
     /// </summary>
-    public struct OneBodyAngularMotor : IConstraintDescription<OneBodyAngularMotor>
+    public struct OneBodyAngularMotor : IOneBodyConstraintDescription<OneBodyAngularMotor>
     {
         /// <summary>
         /// Target angular velocity.

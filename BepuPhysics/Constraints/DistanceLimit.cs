@@ -12,7 +12,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains points on two bodies to be separated by a distance within a range.
     /// </summary>
-    public struct DistanceLimit : IConstraintDescription<DistanceLimit>
+    public struct DistanceLimit : ITwoBodyConstraintDescription<DistanceLimit>
     {
         /// <summary>
         /// Local offset from the center of body A to its attachment point.

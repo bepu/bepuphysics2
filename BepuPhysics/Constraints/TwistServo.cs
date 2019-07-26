@@ -13,7 +13,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains two bodies to maintain a target twist angle around body-attached axes.
     /// </summary>
-    public struct TwistServo : IConstraintDescription<TwistServo>
+    public struct TwistServo : ITwoBodyConstraintDescription<TwistServo>
     {
         /// <summary>
         /// Local space basis attached to body A against which to measure body B's transformed axis. Expressed as a 3x3 rotation matrix, the X axis corresponds with 0 degrees, 

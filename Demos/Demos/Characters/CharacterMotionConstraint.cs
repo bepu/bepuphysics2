@@ -34,7 +34,7 @@ namespace Demos.Demos.Characters
     /// <summary>
     /// Description of a character motion constraint where the support is static.
     /// </summary>
-    public struct StaticCharacterMotionConstraint : IConstraintDescription<StaticCharacterMotionConstraint>
+    public struct StaticCharacterMotionConstraint : IOneBodyConstraintDescription<StaticCharacterMotionConstraint>
     {
         /// <summary>
         /// Maximum force that the horizontal motion constraint can apply to reach the current velocity goal.
@@ -329,7 +329,7 @@ namespace Demos.Demos.Characters
     /// <summary>
     /// Description of a character motion constraint where the support is dynamic.
     /// </summary>
-    public struct DynamicCharacterMotionConstraint : IConstraintDescription<DynamicCharacterMotionConstraint>
+    public struct DynamicCharacterMotionConstraint : ITwoBodyConstraintDescription<DynamicCharacterMotionConstraint>
     {
         /// <summary>
         /// Maximum force that the horizontal motion constraint can apply to reach the current velocity goal.

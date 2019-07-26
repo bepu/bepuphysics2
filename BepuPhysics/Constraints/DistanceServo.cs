@@ -12,7 +12,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains points on two bodies to be separated by a goal distance.
     /// </summary>
-    public struct DistanceServo : IConstraintDescription<DistanceServo>
+    public struct DistanceServo : ITwoBodyConstraintDescription<DistanceServo>
     {
         /// <summary>
         /// Local offset from the center of body A to its attachment point.

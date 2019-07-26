@@ -11,12 +11,12 @@ namespace BepuPhysics.Constraints.Contact
         public Vector3 OffsetA;
         public float PenetrationDepth;
     }
-    public interface IConvexOneBodyContactConstraintDescription<TDescription> : IConstraintDescription<TDescription> 
+    public interface IConvexOneBodyContactConstraintDescription<TDescription> : IOneBodyConstraintDescription<TDescription> 
         where TDescription : IConvexOneBodyContactConstraintDescription<TDescription>
     {
         void CopyManifoldWideProperties(ref Vector3 normal, ref PairMaterialProperties material);
     }
-    public interface IConvexTwoBodyContactConstraintDescription<TDescription> : IConstraintDescription<TDescription> 
+    public interface IConvexTwoBodyContactConstraintDescription<TDescription> : ITwoBodyConstraintDescription<TDescription> 
         where TDescription : IConvexTwoBodyContactConstraintDescription<TDescription>
     {
         void CopyManifoldWideProperties(ref Vector3 offsetB, ref Vector3 normal, ref PairMaterialProperties material);
@@ -43,7 +43,7 @@ namespace BepuPhysics.Constraints.Contact
         public SpringSettings SpringSettings;
         public float MaximumRecoveryVelocity;
     }
-    public interface INonconvexOneBodyContactConstraintDescription<TDescription> : IConstraintDescription<TDescription> 
+    public interface INonconvexOneBodyContactConstraintDescription<TDescription> : IOneBodyConstraintDescription<TDescription> 
         where TDescription : INonconvexOneBodyContactConstraintDescription<TDescription>
     {
         void CopyManifoldWideProperties(ref PairMaterialProperties material);
@@ -52,7 +52,7 @@ namespace BepuPhysics.Constraints.Contact
         ref NonconvexOneBodyManifoldConstraintProperties GetCommonProperties(ref TDescription description);
         ref NonconvexConstraintContactData GetFirstContact(ref TDescription description);
     }
-    public interface INonconvexTwoBodyContactConstraintDescription<TDescription> : IConstraintDescription<TDescription> 
+    public interface INonconvexTwoBodyContactConstraintDescription<TDescription> : ITwoBodyConstraintDescription<TDescription> 
         where TDescription : INonconvexTwoBodyContactConstraintDescription<TDescription>
     {
         void CopyManifoldWideProperties(ref Vector3 offsetB, ref PairMaterialProperties material);

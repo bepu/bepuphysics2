@@ -336,6 +336,5 @@ namespace BepuPhysics
             PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, pose.Orientation, out var inverseInertia);
             ApplyAngularImpulse(angularImpulse, inverseInertia, ref set.Velocities[location.Index].Angular);
         }
-
     }
 }

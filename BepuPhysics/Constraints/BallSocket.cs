@@ -11,7 +11,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains a point on one body to a point on another body.
     /// </summary>
-    public struct BallSocket : IConstraintDescription<BallSocket>
+    public struct BallSocket : ITwoBodyConstraintDescription<BallSocket>
     {
         /// <summary>
         /// Local offset from the center of body A to its attachment point.

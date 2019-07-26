@@ -13,7 +13,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains two bodies' rotations around attached twist axes to a range of permitted twist angles.
     /// </summary>
-    public struct TwistLimit : IConstraintDescription<TwistLimit>
+    public struct TwistLimit : ITwoBodyConstraintDescription<TwistLimit>
     {
         /// <summary>
         /// Local space basis attached to body A against which to measure body B's transformed axis. Expressed as a 3x3 rotation matrix, the X axis corresponds with 0 degrees, 

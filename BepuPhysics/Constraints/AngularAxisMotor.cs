@@ -13,7 +13,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains two bodies to rotate around a local axis attached to the first body at a target velocity.
     /// </summary>
-    public struct AngularAxisMotor : IConstraintDescription<AngularAxisMotor>
+    public struct AngularAxisMotor : ITwoBodyConstraintDescription<AngularAxisMotor>
     {
         /// <summary>
         /// Axis of rotation in body A's local space.

@@ -11,7 +11,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains points on two bodies to be on a plane defined in the local space of one of the bodies.
     /// </summary>
-    public struct LinearAxisServo : IConstraintDescription<LinearAxisServo>
+    public struct LinearAxisServo : ITwoBodyConstraintDescription<LinearAxisServo>
     {
         /// <summary>
         /// Local offset from the center of body A to its attachment point.

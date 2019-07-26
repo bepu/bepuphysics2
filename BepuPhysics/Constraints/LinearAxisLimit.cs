@@ -11,7 +11,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Constrains points on two bodies to a range of offsets from each other along a direction.
     /// </summary>
-    public struct LinearAxisLimit : IConstraintDescription<LinearAxisLimit>
+    public struct LinearAxisLimit : ITwoBodyConstraintDescription<LinearAxisLimit>
     {
         /// <summary>
         /// Local offset from the center of body A to its attachment point.

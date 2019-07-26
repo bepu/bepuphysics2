@@ -12,7 +12,7 @@ namespace BepuPhysics.Constraints
     /// Constrains the volume of a tetrahedron connecting the centers of four bodies to match a goal volume. 
     /// Scaled volume computed from (ab x ac) * ad; the volume may be negative depending on the winding of the tetrahedron.
     /// </summary>
-    public struct VolumeConstraint : IConstraintDescription<VolumeConstraint>
+    public struct VolumeConstraint : IFourBodyConstraintDescription<VolumeConstraint>
     {
         /// <summary>
         /// 6 times the target volume of the tetrahedra. Computed from (ab x ac) * ad; this may be negative depending on the winding of the tetrahedron.

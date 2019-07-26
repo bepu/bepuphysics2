@@ -12,7 +12,7 @@ namespace BepuPhysics.Constraints
     /// Constrains the area of a triangle connecting the centers of three bodies to match a goal area. 
     /// Scaled volume computed from ||ab x ac||.
     /// </summary>
-    public struct AreaConstraint : IConstraintDescription<AreaConstraint>
+    public struct AreaConstraint : IThreeBodyConstraintDescription<AreaConstraint>
     {
         /// <summary>
         /// 2 times the target area of the triangle. Computed from ||ab x ac||.

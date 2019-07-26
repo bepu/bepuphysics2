@@ -667,7 +667,7 @@ namespace BepuPhysics
         /// <param name="bodyHandle">First body of the pair.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe int Add<TDescription>(int bodyHandle, ref TDescription description)
-            where TDescription : IConstraintDescription<TDescription>
+            where TDescription : IOneBodyConstraintDescription<TDescription>
         {
             return Add(ref bodyHandle, 1, ref description);
         }
@@ -679,7 +679,7 @@ namespace BepuPhysics
         /// <param name="bodyHandle">First body of the pair.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe int Add<TDescription>(int bodyHandle, TDescription description)
-            where TDescription : IConstraintDescription<TDescription>
+            where TDescription : IOneBodyConstraintDescription<TDescription>
         {
             return Add(ref bodyHandle, 1, ref description);
         }
@@ -692,7 +692,7 @@ namespace BepuPhysics
         /// <param name="bodyHandleB">Second body of the pair.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, ref TDescription description)
-            where TDescription : IConstraintDescription<TDescription>
+            where TDescription : ITwoBodyConstraintDescription<TDescription>
         {
             //Don't really want to take a dependency on the stack layout of parameters, so...
             var bodyReferences = stackalloc int[2];
@@ -709,7 +709,7 @@ namespace BepuPhysics
         /// <param name="bodyHandleB">Second body of the pair.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, TDescription description)
-            where TDescription : IConstraintDescription<TDescription>
+            where TDescription : ITwoBodyConstraintDescription<TDescription>
         {
             return Add(bodyHandleA, bodyHandleB, ref description);
         }
@@ -723,7 +723,7 @@ namespace BepuPhysics
         /// <param name="bodyHandleC">Third body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, int bodyHandleC, ref TDescription description)
-            where TDescription : IConstraintDescription<TDescription>
+            where TDescription : IThreeBodyConstraintDescription<TDescription>
         {
             //Don't really want to take a dependency on the stack layout of parameters, so...
             var bodyReferences = stackalloc int[3];
@@ -742,7 +742,7 @@ namespace BepuPhysics
         /// <param name="bodyHandleC">Third body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, int bodyHandleC, TDescription description)
-            where TDescription : IConstraintDescription<TDescription>
+            where TDescription : IThreeBodyConstraintDescription<TDescription>
         {
             return Add(bodyHandleA, bodyHandleB, bodyHandleC, ref description);
         }
@@ -757,7 +757,7 @@ namespace BepuPhysics
         /// <param name="bodyHandleD">Fourth body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, int bodyHandleC, int bodyHandleD, ref TDescription description)
-            where TDescription : IConstraintDescription<TDescription>
+            where TDescription : IFourBodyConstraintDescription<TDescription>
         {
             //Don't really want to take a dependency on the stack layout of parameters, so...
             var bodyReferences = stackalloc int[4];
@@ -778,7 +778,7 @@ namespace BepuPhysics
         /// <param name="bodyHandleD">Fourth body of the constraint.</param>
         /// <returns>Allocated constraint handle.</returns>
         public unsafe int Add<TDescription>(int bodyHandleA, int bodyHandleB, int bodyHandleC, int bodyHandleD, TDescription description)
-            where TDescription : IConstraintDescription<TDescription>
+            where TDescription : IFourBodyConstraintDescription<TDescription>
         {
             return Add(bodyHandleA, bodyHandleB, bodyHandleC, bodyHandleD, ref description);
         }
