@@ -33,7 +33,7 @@ for (int convexity = 0; convexity <= 1; ++convexity)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
 <#for (int i = 0; i < contactCount; ++i) { if(convex) {#>
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA<#=i#>, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth<#=i#>, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact<#=i#>.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact<#=i#>.Depth, tint, ref lines);
 <#} else {#>
             ContactLines.Add(poseA, ref prestepBundle.Contact<#=i#>.Offset, ref prestepBundle.Contact<#=i#>.Normal, ref prestepBundle.Contact<#=i#>.Depth, tint, ref lines);
 <#}}#>

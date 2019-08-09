@@ -120,6 +120,24 @@ namespace BepuPhysics.CollisionDetection
             contactConstraintAccessors[id] = contactConstraintAccessor;
         }
 
+        /// <summary>
+        /// Looks up the contact constraint accessor for the given constraint type id if it exists.
+        /// </summary>
+        /// <param name="constraintTypeId">Constraint type id to look up a constraint accessor for.</param>
+        /// <param name="accessor">Accessor for the given type id.</param>
+        /// <returns>True if the constraint type id refers to a registered accessor, false otherwise.</returns>
+        public bool TryGetContactConstraintAccessor(int constraintTypeId, out ContactConstraintAccessor accessor)
+        {
+            if(IsContactConstraintType(constraintTypeId) && contactConstraintAccessors.Length > constraintTypeId)
+            {
+                accessor = contactConstraintAccessors[constraintTypeId];
+                if (accessor != null)
+                    return true;
+            }
+            accessor = null;
+            return false;
+        }
+
         protected NarrowPhase()
         {
             flushWorkerLoop = FlushWorkerLoop;
@@ -133,6 +151,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsContactConstraintType(int constraintTypeId)
         {
+            Debug.Assert(constraintTypeId >= 0);
             return constraintTypeId < PairCache.CollisionConstraintTypeCount;
         }
 

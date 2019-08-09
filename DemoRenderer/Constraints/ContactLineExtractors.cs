@@ -15,7 +15,7 @@ namespace BepuPhysics.Constraints.Contact
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
         }
     }
     struct Contact2OneBodyLineExtractor : IConstraintLineExtractor<Contact2OneBodyPrestepData>
@@ -26,8 +26,8 @@ namespace BepuPhysics.Constraints.Contact
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA1, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth1, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
         }
     }
     struct Contact3OneBodyLineExtractor : IConstraintLineExtractor<Contact3OneBodyPrestepData>
@@ -38,9 +38,9 @@ namespace BepuPhysics.Constraints.Contact
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA1, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth1, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA2, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth2, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact2.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);
         }
     }
     struct Contact4OneBodyLineExtractor : IConstraintLineExtractor<Contact4OneBodyPrestepData>
@@ -51,10 +51,10 @@ namespace BepuPhysics.Constraints.Contact
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA1, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth1, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA2, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth2, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA3, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth3, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact2.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact3.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact3.Depth, tint, ref lines);
         }
     }
     struct Contact1LineExtractor : IConstraintLineExtractor<Contact1PrestepData>
@@ -65,7 +65,7 @@ namespace BepuPhysics.Constraints.Contact
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
         }
     }
     struct Contact2LineExtractor : IConstraintLineExtractor<Contact2PrestepData>
@@ -76,8 +76,8 @@ namespace BepuPhysics.Constraints.Contact
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA1, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth1, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
         }
     }
     struct Contact3LineExtractor : IConstraintLineExtractor<Contact3PrestepData>
@@ -88,9 +88,9 @@ namespace BepuPhysics.Constraints.Contact
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA1, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth1, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA2, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth2, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact2.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);
         }
     }
     struct Contact4LineExtractor : IConstraintLineExtractor<Contact4PrestepData>
@@ -101,10 +101,10 @@ namespace BepuPhysics.Constraints.Contact
             Bodies bodies, ref Vector3 tint, ref QuickList<LineInstance> lines)
         {
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA0, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth0, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA1, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth1, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA2, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth2, tint, ref lines);
-            ContactLines.Add(poseA, ref prestepBundle.OffsetA3, ref prestepBundle.Normal, ref prestepBundle.PenetrationDepth3, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact0.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact0.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact1.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact1.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact2.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact2.Depth, tint, ref lines);
+            ContactLines.Add(poseA, ref prestepBundle.Contact3.OffsetA, ref prestepBundle.Normal, ref prestepBundle.Contact3.Depth, tint, ref lines);
         }
     }
     struct Contact2NonconvexOneBodyLineExtractor : IConstraintLineExtractor<Contact2NonconvexOneBodyPrestepData>

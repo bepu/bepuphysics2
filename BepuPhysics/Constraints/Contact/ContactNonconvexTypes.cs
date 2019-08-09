@@ -2,6 +2,7 @@
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using BepuUtilities;
 namespace BepuPhysics.Constraints.Contact
 {  
     public struct Contact2Nonconvex : INonconvexTwoBodyContactConstraintDescription<Contact2Nonconvex>
@@ -53,32 +54,47 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact2NonconvexPrestepData : INonconvexTwoBodyContactPrestepWide<Contact2NonconvexPrestepData>
+    public struct Contact2NonconvexPrestepData : ITwoBodyNonconvexContactPrestep<Contact2NonconvexPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
-        public NonconvexTwoBodyContactPrestepCommon Common;
-        public NonconvexPrestepData Contact0;
-        public NonconvexPrestepData Contact1;
+        public MaterialPropertiesWide MaterialProperties;
+        public Vector3Wide OffsetB;
+        public NonconvexContactPrestepData Contact0;
+        public NonconvexContactPrestepData Contact1;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexTwoBodyContactPrestepCommon GetCommonProperties(ref Contact2NonconvexPrestepData prestep)
+        public ref MaterialPropertiesWide GetMaterialProperties(ref Contact2NonconvexPrestepData prestep)
         {
-            return ref prestep.Common;
+            return ref prestep.MaterialProperties;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexPrestepData GetFirstContact(ref Contact2NonconvexPrestepData prestep)
+        public ref Vector3Wide GetOffsetB(ref Contact2NonconvexPrestepData prestep)
         {
-            return ref prestep.Contact0;
+            return ref prestep.OffsetB;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexContactPrestepData GetContact(ref Contact2NonconvexPrestepData prestep, int index)
+        {
+            return ref Unsafe.Add(ref prestep.Contact0, index);
         }
         
         public int ContactCount => 2;
+        public int BodyCount => 2;
     }
 
-    public struct Contact2NonconvexAccumulatedImpulses
+    public struct Contact2NonconvexAccumulatedImpulses : INonconvexContactAccumulatedImpulses<Contact2NonconvexAccumulatedImpulses>
     {
         public NonconvexAccumulatedImpulses Contact0;
         public NonconvexAccumulatedImpulses Contact1;
+        public int ContactCount => 2;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexAccumulatedImpulses GetImpulsesForContact(ref Contact2NonconvexAccumulatedImpulses impulses, int index)
+        {
+            return ref Unsafe.Add(ref impulses.Contact0, index);
+        }
     }
 
     public unsafe struct Contact2NonconvexProjection : INonconvexTwoBodyProjection<Contact2NonconvexProjection>
@@ -161,26 +177,27 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact2NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact2NonconvexOneBodyPrestepData>    
+    public struct Contact2NonconvexOneBodyPrestepData : INonconvexContactPrestep<Contact2NonconvexOneBodyPrestepData>    
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
-        public NonconvexOneBodyContactPrestepCommon Common;
-        public NonconvexPrestepData Contact0;
-        public NonconvexPrestepData Contact1;
+        public MaterialPropertiesWide MaterialProperties;
+        public NonconvexContactPrestepData Contact0;
+        public NonconvexContactPrestepData Contact1;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexOneBodyContactPrestepCommon GetCommonProperties(ref Contact2NonconvexOneBodyPrestepData prestep)
+        public ref MaterialPropertiesWide GetMaterialProperties(ref Contact2NonconvexOneBodyPrestepData prestep)
         {
-            return ref prestep.Common;
+            return ref prestep.MaterialProperties;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexPrestepData GetFirstContact(ref Contact2NonconvexOneBodyPrestepData prestep)
+        public ref NonconvexContactPrestepData GetContact(ref Contact2NonconvexOneBodyPrestepData prestep, int index)
         {
-            return ref prestep.Contact0;
+            return ref Unsafe.Add(ref prestep.Contact0, index);
         }
                 
         public int ContactCount => 2;
+        public int BodyCount => 1;
     }
 
     public unsafe struct Contact2NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact2NonconvexOneBodyProjection>
@@ -266,34 +283,49 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact3NonconvexPrestepData : INonconvexTwoBodyContactPrestepWide<Contact3NonconvexPrestepData>
+    public struct Contact3NonconvexPrestepData : ITwoBodyNonconvexContactPrestep<Contact3NonconvexPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
-        public NonconvexTwoBodyContactPrestepCommon Common;
-        public NonconvexPrestepData Contact0;
-        public NonconvexPrestepData Contact1;
-        public NonconvexPrestepData Contact2;
+        public MaterialPropertiesWide MaterialProperties;
+        public Vector3Wide OffsetB;
+        public NonconvexContactPrestepData Contact0;
+        public NonconvexContactPrestepData Contact1;
+        public NonconvexContactPrestepData Contact2;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexTwoBodyContactPrestepCommon GetCommonProperties(ref Contact3NonconvexPrestepData prestep)
+        public ref MaterialPropertiesWide GetMaterialProperties(ref Contact3NonconvexPrestepData prestep)
         {
-            return ref prestep.Common;
+            return ref prestep.MaterialProperties;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexPrestepData GetFirstContact(ref Contact3NonconvexPrestepData prestep)
+        public ref Vector3Wide GetOffsetB(ref Contact3NonconvexPrestepData prestep)
         {
-            return ref prestep.Contact0;
+            return ref prestep.OffsetB;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexContactPrestepData GetContact(ref Contact3NonconvexPrestepData prestep, int index)
+        {
+            return ref Unsafe.Add(ref prestep.Contact0, index);
         }
         
         public int ContactCount => 3;
+        public int BodyCount => 2;
     }
 
-    public struct Contact3NonconvexAccumulatedImpulses
+    public struct Contact3NonconvexAccumulatedImpulses : INonconvexContactAccumulatedImpulses<Contact3NonconvexAccumulatedImpulses>
     {
         public NonconvexAccumulatedImpulses Contact0;
         public NonconvexAccumulatedImpulses Contact1;
         public NonconvexAccumulatedImpulses Contact2;
+        public int ContactCount => 3;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexAccumulatedImpulses GetImpulsesForContact(ref Contact3NonconvexAccumulatedImpulses impulses, int index)
+        {
+            return ref Unsafe.Add(ref impulses.Contact0, index);
+        }
     }
 
     public unsafe struct Contact3NonconvexProjection : INonconvexTwoBodyProjection<Contact3NonconvexProjection>
@@ -378,27 +410,28 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact3NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact3NonconvexOneBodyPrestepData>    
+    public struct Contact3NonconvexOneBodyPrestepData : INonconvexContactPrestep<Contact3NonconvexOneBodyPrestepData>    
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
-        public NonconvexOneBodyContactPrestepCommon Common;
-        public NonconvexPrestepData Contact0;
-        public NonconvexPrestepData Contact1;
-        public NonconvexPrestepData Contact2;
+        public MaterialPropertiesWide MaterialProperties;
+        public NonconvexContactPrestepData Contact0;
+        public NonconvexContactPrestepData Contact1;
+        public NonconvexContactPrestepData Contact2;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexOneBodyContactPrestepCommon GetCommonProperties(ref Contact3NonconvexOneBodyPrestepData prestep)
+        public ref MaterialPropertiesWide GetMaterialProperties(ref Contact3NonconvexOneBodyPrestepData prestep)
         {
-            return ref prestep.Common;
+            return ref prestep.MaterialProperties;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexPrestepData GetFirstContact(ref Contact3NonconvexOneBodyPrestepData prestep)
+        public ref NonconvexContactPrestepData GetContact(ref Contact3NonconvexOneBodyPrestepData prestep, int index)
         {
-            return ref prestep.Contact0;
+            return ref Unsafe.Add(ref prestep.Contact0, index);
         }
                 
         public int ContactCount => 3;
+        public int BodyCount => 1;
     }
 
     public unsafe struct Contact3NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact3NonconvexOneBodyProjection>
@@ -486,36 +519,51 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact4NonconvexPrestepData : INonconvexTwoBodyContactPrestepWide<Contact4NonconvexPrestepData>
+    public struct Contact4NonconvexPrestepData : ITwoBodyNonconvexContactPrestep<Contact4NonconvexPrestepData>
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
-        public NonconvexTwoBodyContactPrestepCommon Common;
-        public NonconvexPrestepData Contact0;
-        public NonconvexPrestepData Contact1;
-        public NonconvexPrestepData Contact2;
-        public NonconvexPrestepData Contact3;
+        public MaterialPropertiesWide MaterialProperties;
+        public Vector3Wide OffsetB;
+        public NonconvexContactPrestepData Contact0;
+        public NonconvexContactPrestepData Contact1;
+        public NonconvexContactPrestepData Contact2;
+        public NonconvexContactPrestepData Contact3;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexTwoBodyContactPrestepCommon GetCommonProperties(ref Contact4NonconvexPrestepData prestep)
+        public ref MaterialPropertiesWide GetMaterialProperties(ref Contact4NonconvexPrestepData prestep)
         {
-            return ref prestep.Common;
+            return ref prestep.MaterialProperties;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexPrestepData GetFirstContact(ref Contact4NonconvexPrestepData prestep)
+        public ref Vector3Wide GetOffsetB(ref Contact4NonconvexPrestepData prestep)
         {
-            return ref prestep.Contact0;
+            return ref prestep.OffsetB;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexContactPrestepData GetContact(ref Contact4NonconvexPrestepData prestep, int index)
+        {
+            return ref Unsafe.Add(ref prestep.Contact0, index);
         }
         
         public int ContactCount => 4;
+        public int BodyCount => 2;
     }
 
-    public struct Contact4NonconvexAccumulatedImpulses
+    public struct Contact4NonconvexAccumulatedImpulses : INonconvexContactAccumulatedImpulses<Contact4NonconvexAccumulatedImpulses>
     {
         public NonconvexAccumulatedImpulses Contact0;
         public NonconvexAccumulatedImpulses Contact1;
         public NonconvexAccumulatedImpulses Contact2;
         public NonconvexAccumulatedImpulses Contact3;
+        public int ContactCount => 4;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref NonconvexAccumulatedImpulses GetImpulsesForContact(ref Contact4NonconvexAccumulatedImpulses impulses, int index)
+        {
+            return ref Unsafe.Add(ref impulses.Contact0, index);
+        }
     }
 
     public unsafe struct Contact4NonconvexProjection : INonconvexTwoBodyProjection<Contact4NonconvexProjection>
@@ -602,28 +650,29 @@ namespace BepuPhysics.Constraints.Contact
 
     }
 
-    public struct Contact4NonconvexOneBodyPrestepData : INonconvexOneBodyContactPrestepWide<Contact4NonconvexOneBodyPrestepData>    
+    public struct Contact4NonconvexOneBodyPrestepData : INonconvexContactPrestep<Contact4NonconvexOneBodyPrestepData>    
     {
         //Note that this layout is defined by the execution order in the prestep. The function accesses it sequentially to ensure the prefetcher can do its job.
-        public NonconvexOneBodyContactPrestepCommon Common;
-        public NonconvexPrestepData Contact0;
-        public NonconvexPrestepData Contact1;
-        public NonconvexPrestepData Contact2;
-        public NonconvexPrestepData Contact3;
+        public MaterialPropertiesWide MaterialProperties;
+        public NonconvexContactPrestepData Contact0;
+        public NonconvexContactPrestepData Contact1;
+        public NonconvexContactPrestepData Contact2;
+        public NonconvexContactPrestepData Contact3;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexOneBodyContactPrestepCommon GetCommonProperties(ref Contact4NonconvexOneBodyPrestepData prestep)
+        public ref MaterialPropertiesWide GetMaterialProperties(ref Contact4NonconvexOneBodyPrestepData prestep)
         {
-            return ref prestep.Common;
+            return ref prestep.MaterialProperties;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref NonconvexPrestepData GetFirstContact(ref Contact4NonconvexOneBodyPrestepData prestep)
+        public ref NonconvexContactPrestepData GetContact(ref Contact4NonconvexOneBodyPrestepData prestep, int index)
         {
-            return ref prestep.Contact0;
+            return ref Unsafe.Add(ref prestep.Contact0, index);
         }
                 
         public int ContactCount => 4;
+        public int BodyCount => 1;
     }
 
     public unsafe struct Contact4NonconvexOneBodyProjection : INonconvexOneBodyProjection<Contact4NonconvexOneBodyProjection>

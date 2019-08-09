@@ -155,7 +155,7 @@ namespace BepuPhysics.CollisionDetection
             }
             AddConstraint(workerIndex, manifoldConstraintType, ref pair, constraintCacheIndex, ref newImpulses, bodyHandles, ref description);
         }
-        
+
         public unsafe void UpdateConstraint<TBodyHandles, TDescription, TContactImpulses, TCollisionCache, TConstraintCache>(int workerIndex, ref CollidablePair pair,
             int manifoldTypeAsConstraintType, ref TConstraintCache newConstraintCache, ref TCollisionCache collisionCache,
             ref TDescription description, TBodyHandles bodyHandles)
