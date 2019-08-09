@@ -323,6 +323,17 @@ namespace BepuPhysics
         }
 
         /// <summary>
+        /// Computes the velocity of an offset point attached to the body.
+        /// </summary>
+        /// <param name="offset">Offset from the body's center to </param>
+        /// <param name="velocity">Effective velocity of the point if it were attached to the body.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void GetVelocityForOffset(in Vector3 offset, out Vector3 velocity)
+        {
+            velocity = Velocity.Linear + Vector3.Cross(Velocity.Angular, offset);
+        }
+
+        /// <summary>
         /// Applies an angular impulse to an angular velocity. Does not wake the body up.
         /// </summary>
         /// <param name="angularImpulse">Impulse to apply to the velocity.</param>
