@@ -93,6 +93,23 @@ namespace DemoUtilities
             //This is a bit of a throwaway implementation and is far from the fastest or numerically best implementation,
             //but it is fairly simple and it doesn't matter very much.
             const double minimumDoubleMagnitude = 2.22507385850720138309023271733240406421921598046233e-308;
+            if(double.IsNaN(value))
+            {
+                Append("NaN");
+                return this;
+            }
+            if(double.IsPositiveInfinity(value))
+            {
+                Append("+INF");
+                return this;
+            }
+            if(double.IsNegativeInfinity(value))
+            {
+                Append("-INF");
+                return this;
+            }
+
+
             bool negative = value < 0;
             if (negative)
                 value = -value;
