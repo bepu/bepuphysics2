@@ -153,6 +153,12 @@ for (int i = 0; i < contactCount; ++i)
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ConstraintContactData GetFirstContact(ref Contact<#= contactCount #><#=suffix#> description)
+        {
+            return ref description.Contact0;
+        }
         
         public int ConstraintTypeId
         {

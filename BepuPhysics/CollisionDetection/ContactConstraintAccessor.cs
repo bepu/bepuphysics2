@@ -236,6 +236,16 @@ namespace BepuPhysics.CollisionDetection
                 targetContact.PenetrationDepth = sourceContact.Depth;
             }
         }
+        protected static void CopyContactData(ref NonconvexContactManifold manifold, ref TConstraintCache constraintCache, ref ConstraintContactData targetContacts)
+        {
+            Debug.Assert(manifold.Count == 1, "Nonconvex manifolds used to create convex constraints must only have one contact.");
+            //TODO: Check codegen. This should be a compilation time constant. If it's not, just use the ContactCount that we cached.
+            var contactCount = constraintCache.CacheTypeId + 1;
+            Debug.Assert(contactCount == manifold.Count, "Relying on generic specialization; should be the same value!");
+            Unsafe.Add(ref Unsafe.As<TConstraintCache, int>(ref constraintCache), 1) = manifold.Contact0.FeatureId;
+            targetContacts.OffsetA = manifold.Contact0.Offset;
+            targetContacts.PenetrationDepth = manifold.Contact0.Depth;
+        }
     }
 
 
@@ -251,10 +261,25 @@ namespace BepuPhysics.CollisionDetection
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
             Debug.Assert(typeof(TCallBodyHandles) == typeof(int));
-            ref var manifold = ref Unsafe.As<TContactManifold, ConvexContactManifold>(ref manifoldPointer);
-            CopyContactData(ref manifold, out var constraintCache, out var description);
-            description.CopyManifoldWideProperties(ref manifold.Normal, ref material);
-            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
+            if (typeof(TContactManifold) == typeof(ConvexContactManifold))
+            {
+                ref var manifold = ref Unsafe.As<TContactManifold, ConvexContactManifold>(ref manifoldPointer);
+                CopyContactData(ref manifold, out var constraintCache, out var description);
+                description.CopyManifoldWideProperties(ref manifold.Normal, ref material);
+                UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
+            }
+            else
+            {
+                Debug.Assert(typeof(TContactManifold) == typeof(NonconvexContactManifold));
+                ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
+                Debug.Assert(manifold.Count == 1, "Nonconvex manifolds should only result in convex constraints when the contact count is 1.");
+                //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
+                TConstraintCache constraintCache = default;
+                TConstraintDescription description = default;
+                CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
+                description.CopyManifoldWideProperties(ref manifold.Contact0.Normal, ref material);
+                UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
+            }
         }
 
         public override void ExtractContactData<TExtractor>(in ConstraintLocation constraintLocation, Solver solver, ref TExtractor extractor)
@@ -293,10 +318,25 @@ namespace BepuPhysics.CollisionDetection
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
             Debug.Assert(typeof(TCallBodyHandles) == typeof(TwoBodyHandles));
-            ref var manifold = ref Unsafe.As<TContactManifold, ConvexContactManifold>(ref manifoldPointer);
-            CopyContactData(ref manifold, out var constraintCache, out var description);
-            description.CopyManifoldWideProperties(ref manifold.OffsetB, ref manifold.Normal, ref material);
-            UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
+            if (typeof(TContactManifold) == typeof(ConvexContactManifold))
+            {
+                ref var manifold = ref Unsafe.As<TContactManifold, ConvexContactManifold>(ref manifoldPointer);
+                CopyContactData(ref manifold, out var constraintCache, out var description);
+                description.CopyManifoldWideProperties(ref manifold.OffsetB, ref manifold.Normal, ref material);
+                UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
+            }
+            else
+            {
+                Debug.Assert(typeof(TContactManifold) == typeof(NonconvexContactManifold));
+                ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
+                Debug.Assert(manifold.Count == 1, "Nonconvex manifolds should only result in convex constraints when the contact count is 1.");
+                //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
+                TConstraintCache constraintCache = default;
+                TConstraintDescription description = default;
+                CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
+                description.CopyManifoldWideProperties(ref manifold.OffsetB, ref manifold.Contact0.Normal, ref material);
+                UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
+            }
         }
         public override void ExtractContactData<TExtractor>(in ConstraintLocation constraintLocation, Solver solver, ref TExtractor extractor)
         {

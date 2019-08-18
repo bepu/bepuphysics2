@@ -237,6 +237,12 @@ namespace BepuPhysics.Constraints.Contact
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ConstraintContactData GetFirstContact(ref Contact1OneBody description)
+        {
+            return ref description.Contact0;
+        }
         
         public int ConstraintTypeId
         {
@@ -402,6 +408,12 @@ namespace BepuPhysics.Constraints.Contact
             Normal = normal;
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ConstraintContactData GetFirstContact(ref Contact2OneBody description)
+        {
+            return ref description.Contact0;
         }
         
         public int ConstraintTypeId
@@ -581,6 +593,12 @@ namespace BepuPhysics.Constraints.Contact
             Normal = normal;
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ConstraintContactData GetFirstContact(ref Contact3OneBody description)
+        {
+            return ref description.Contact0;
         }
         
         public int ConstraintTypeId
@@ -775,6 +793,12 @@ namespace BepuPhysics.Constraints.Contact
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ConstraintContactData GetFirstContact(ref Contact4OneBody description)
+        {
+            return ref description.Contact0;
+        }
         
         public int ConstraintTypeId
         {
@@ -967,6 +991,12 @@ namespace BepuPhysics.Constraints.Contact
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ConstraintContactData GetFirstContact(ref Contact1 description)
+        {
+            return ref description.Contact0;
+        }
         
         public int ConstraintTypeId
         {
@@ -1148,6 +1178,12 @@ namespace BepuPhysics.Constraints.Contact
             Normal = normal;
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ConstraintContactData GetFirstContact(ref Contact2 description)
+        {
+            return ref description.Contact0;
         }
         
         public int ConstraintTypeId
@@ -1344,6 +1380,12 @@ namespace BepuPhysics.Constraints.Contact
             Normal = normal;
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ConstraintContactData GetFirstContact(ref Contact3 description)
+        {
+            return ref description.Contact0;
         }
         
         public int ConstraintTypeId
@@ -1555,6 +1597,12 @@ namespace BepuPhysics.Constraints.Contact
             Normal = normal;
             SpringSettings = material.SpringSettings;
             MaximumRecoveryVelocity = material.MaximumRecoveryVelocity;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref ConstraintContactData GetFirstContact(ref Contact4 description)
+        {
+            return ref description.Contact0;
         }
         
         public int ConstraintTypeId

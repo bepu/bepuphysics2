@@ -15,11 +15,13 @@ namespace BepuPhysics.Constraints.Contact
         where TDescription : IConvexOneBodyContactConstraintDescription<TDescription>
     {
         void CopyManifoldWideProperties(ref Vector3 normal, ref PairMaterialProperties material);
+        ref ConstraintContactData GetFirstContact(ref TDescription description);
     }
     public interface IConvexTwoBodyContactConstraintDescription<TDescription> : ITwoBodyConstraintDescription<TDescription> 
         where TDescription : IConvexTwoBodyContactConstraintDescription<TDescription>
     {
         void CopyManifoldWideProperties(ref Vector3 offsetB, ref Vector3 normal, ref PairMaterialProperties material);
+        ref ConstraintContactData GetFirstContact(ref TDescription description);
     }
 
     public struct NonconvexConstraintContactData
