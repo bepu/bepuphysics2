@@ -204,7 +204,7 @@ namespace BepuPhysics.Collidables
                 bestDenominator = candidateDenominator;
                 bestIndex = 0;
             }
-            for (int i = 0; i < facePoints.Count; ++i)
+            for (int i = 1; i < facePoints.Count; ++i)
             {
                 startToCandidate = facePoints[i] - start;
                 dot = Vector2.Dot(startToCandidate, previousEdgeDirection);
@@ -214,7 +214,7 @@ namespace BepuPhysics.Collidables
                 //Watch out for collinear points. If the angle is the same, then pick the more distant point.
                 var candidate = candidateNumerator * bestDenominator;
                 var currentBest = bestNumerator * candidateDenominator;
-                var epsilon = 1e-7f * absCandidateNumerator * bestDenominator;
+                var epsilon = 1e-6 * absCandidateNumerator * bestDenominator;
                 if (candidate > currentBest - epsilon)
                 {
                     //Candidate and current best angle may be extremely similar.
