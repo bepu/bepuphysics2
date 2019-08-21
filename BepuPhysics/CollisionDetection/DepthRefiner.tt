@@ -65,7 +65,7 @@ namespace BepuPhysics.CollisionDetection
 <# var suffix = outputWitness ? "WithWitness" : ""; #>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void FindSupport(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB, in Vector3Wide direction, 
-			in Vector<int> terminatedLanes, out Vector3Wide support<# if (outputWitness) {#>, out Vector3Wide supportOnA<#}#>)
+            in Vector<int> terminatedLanes, out Vector3Wide support<# if (outputWitness) {#>, out Vector3Wide supportOnA<#}#>)
         {
             //support(N, A) - support(-N, B)
             supportFinderA.ComputeLocalSupport(a, direction, terminatedLanes, out <# if (!outputWitness) { Write("var "); }#>supportOnA);
@@ -76,12 +76,12 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.Subtract(supportOnA, extremeB, out support);
         }
 
-		public struct Vertex<#=suffix#>
+        public struct Vertex<#=suffix#>
         {
             public Vector3Wide Support;
 <# if (outputWitness) { #>
-			public Vector3Wide SupportOnA;
-			public Vector<float> Weight;
+            public Vector3Wide SupportOnA;
+            public Vector<float> Weight;
 <#}#>
             public Vector<int> Exists;
         }
@@ -92,7 +92,7 @@ namespace BepuPhysics.CollisionDetection
             public Vertex<#=suffix#> B;
             public Vertex<#=suffix#> C;
 <# if (outputWitness) { #>
-			public Vector<float> WeightDenominator;
+            public Vector<float> WeightDenominator;
 <#}#>
         }
 
@@ -118,7 +118,7 @@ namespace BepuPhysics.CollisionDetection
             Vector3Wide.ConditionalSelect(shouldFill, supportOnA, vertex.SupportOnA, out vertex.SupportOnA);
 <#}#>
         }
-	
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Create(in Vector3Wide normal, in Vector3Wide support<# if (outputWitness) {#>, in Vector3Wide supportOnA<#}#>, out Simplex<#=suffix#> simplex)
         {
@@ -259,10 +259,10 @@ namespace BepuPhysics.CollisionDetection
 
             var relevantFeatures = Vector<int>.One;
 <#if (outputWitness) {#>
-			simplex.A.Weight = Vector.ConditionalSelect(terminatedLanes, simplex.A.Weight, Vector<float>.One);
-			simplex.B.Weight = Vector.ConditionalSelect(terminatedLanes, simplex.B.Weight, Vector<float>.Zero);
-			simplex.C.Weight = Vector.ConditionalSelect(terminatedLanes, simplex.C.Weight, Vector<float>.Zero);
-			simplex.WeightDenominator = Vector.ConditionalSelect(terminatedLanes, simplex.WeightDenominator, Vector<float>.One);
+            simplex.A.Weight = Vector.ConditionalSelect(terminatedLanes, simplex.A.Weight, Vector<float>.One);
+            simplex.B.Weight = Vector.ConditionalSelect(terminatedLanes, simplex.B.Weight, Vector<float>.Zero);
+            simplex.C.Weight = Vector.ConditionalSelect(terminatedLanes, simplex.C.Weight, Vector<float>.Zero);
+            simplex.WeightDenominator = Vector.ConditionalSelect(terminatedLanes, simplex.WeightDenominator, Vector<float>.One);
 <#}#>
 
             //If this is a vertex case and the sample is right on top of the origin, immediately quit.
@@ -272,50 +272,62 @@ namespace BepuPhysics.CollisionDetection
             var useEdge = Vector.AndNot(Vector.BitwiseOr(targetOutsideTriangleEdges, simplexIsAnEdge), terminatedLanes);
             if (Vector.LessThanAny(useEdge, Vector<int>.Zero))
             {
-                //Choose the edge that is closest to the search target. Note that we can compute the closest edge distance without performing a division:
+                //Choose the edge that is closest to the search target.
                 //distance squared from ab to target o = ||a - o + ab * t||^2
                 //t = clamp(dot(ab, ao), 0, ||ab||^2) / ||ab||^2
+                //You could expand this into a scalar expression like so:
                 //dot(oa, oa) + 2 * dot(oa, ab) * t + dot(ab, ab) * t^2
                 //dot(oa, oa) + 2 * dot(oa, ab) * clamp(dot(ab, ao)) / ||ab||^2 + dot(ab, ab) * t^2
                 //dot(oa, oa) + 2 * dot(oa, ab) * clamp(dot(ab, ao)) / ||ab||^2 + dot(ab, ab) * clamp(dot(ab, ao))^2 / ||ab||^4
                 //dot(oa, oa) + 2 * dot(oa, ab) * clamp(-dot(ab, oa)) / ||ab||^2 + clamp(-dot(ab, oa))^2 / ||ab||^2
                 //abDistanceSquared = (dot(oa, oa) * ||ab||^2 + 2 * dot(oa, ab) * clamp(-dot(ab, oa)) + clamp(-dot(ab, oa))^2) / ||ab||^2
+                //But that has nasty numerical consequences.
+                //You could avoid a division in the comparisons like so:
                 //abDistanceSquaredNumerator / ||ab||^2 <= bcDistanceSquaredNumerator / ||bc||^2
                 //abDistanceSquaredNumerator * ||bc||^2 <= bcDistanceSquaredNumerator * ||ab||^2
+                //But doing so would cause even worse catastrophic cancellation due to adding/subtracting on squared-ish values scaled again by lengthSquared.
+                var inverseABLengthSquared = Vector<float>.One / abLengthSquared;
+                var inverseBCLengthSquared = Vector<float>.One / bcLengthSquared;
+                var inverseCALengthSquared = Vector<float>.One / caLengthSquared;
                 Vector3Wide.Subtract(simplex.B.Support, searchTarget, out var targetToB);
-                Vector3Wide.LengthSquared(targetToC, out var targetToCLengthSquared);
-                Vector3Wide.LengthSquared(targetToB, out var targetToBLengthSquared);
                 Vector3Wide.Dot(targetToA, ab, out var oaDotAB);
                 Vector3Wide.Dot(targetToB, bc, out var obDotBC);
                 Vector3Wide.Dot(targetToC, ca, out var ocDotCA);
                 var abScaledT = Vector.Max(Vector<float>.Zero, Vector.Min(abLengthSquared, -oaDotAB));
                 var bcScaledT = Vector.Max(Vector<float>.Zero, Vector.Min(bcLengthSquared, -obDotBC));
                 var caScaledT = Vector.Max(Vector<float>.Zero, Vector.Min(caLengthSquared, -ocDotCA));
-                var two = new Vector<float>(2);
-                var abScaledDistanceSquared = targetToALengthSquared * abLengthSquared + two * oaDotAB * abScaledT + abScaledT * abScaledT;
-                var bcScaledDistanceSquared = targetToBLengthSquared * bcLengthSquared + two * obDotBC * bcScaledT + bcScaledT * bcScaledT;
-                var caScaledDistanceSquared = targetToCLengthSquared * caLengthSquared + two * ocDotCA * caScaledT + caScaledT * caScaledT;
+                var abT = abScaledT * inverseABLengthSquared;
+                var bcT = bcScaledT * inverseBCLengthSquared;
+                var caT = caScaledT * inverseCALengthSquared;
+                Vector3Wide.Scale(ab, abT, out var abScaledEdgeOffset);
+                Vector3Wide.Scale(bc, bcT, out var bcScaledEdgeOffset);
+                Vector3Wide.Scale(ca, caT, out var caScaledEdgeOffset);
+                Vector3Wide.Add(targetToA, abScaledEdgeOffset, out var abClosestOffset);
+                Vector3Wide.Add(targetToB, bcScaledEdgeOffset, out var bcClosestOffset);
+                Vector3Wide.Add(targetToC, caScaledEdgeOffset, out var caClosestOffset);
+                Vector3Wide.LengthSquared(abClosestOffset, out var abDistanceSquared);
+                Vector3Wide.LengthSquared(bcClosestOffset, out var bcDistanceSquared);
+                Vector3Wide.LengthSquared(caClosestOffset, out var caDistanceSquared);
 
                 var bcDegenerate = Vector.Equals(bcLengthSquared, Vector<float>.Zero);
                 var caDegenerate = Vector.Equals(caLengthSquared, Vector<float>.Zero);
-                var abCloserThanBC = Vector.BitwiseOr(bcDegenerate, Vector.LessThan(abScaledDistanceSquared * bcLengthSquared, bcScaledDistanceSquared * abLengthSquared));
-                var abCloserThanCA = Vector.BitwiseOr(caDegenerate, Vector.LessThan(abScaledDistanceSquared * caLengthSquared, caScaledDistanceSquared * abLengthSquared));
-                var bcCloserThanCA = Vector.BitwiseOr(caDegenerate, Vector.LessThan(bcScaledDistanceSquared * caLengthSquared, caScaledDistanceSquared * bcLengthSquared));
+                var abCloserThanBC = Vector.BitwiseOr(bcDegenerate, Vector.LessThan(abDistanceSquared, bcDistanceSquared));
+                var abCloserThanCA = Vector.BitwiseOr(caDegenerate, Vector.LessThan(abDistanceSquared, caDistanceSquared));
+                var bcCloserThanCA = Vector.BitwiseOr(caDegenerate, Vector.LessThan(bcDistanceSquared, caDistanceSquared));
 
                 var useAB = Vector.BitwiseAnd(abCloserThanBC, abCloserThanCA);
                 var useBC = Vector.AndNot(bcCloserThanCA, useAB);
 
-                var bestScaledDistanceSquared = Vector.ConditionalSelect(useAB, abScaledDistanceSquared, Vector.ConditionalSelect(useBC, bcScaledDistanceSquared, caScaledDistanceSquared));
-                var edgeLengthSquared = Vector.ConditionalSelect(useAB, abLengthSquared, Vector.ConditionalSelect(useBC, bcLengthSquared, caLengthSquared));
+                var bestDistanceSquared = Vector.ConditionalSelect(useAB, abDistanceSquared, Vector.ConditionalSelect(useBC, bcDistanceSquared, caDistanceSquared));
 
                 //If the search target is on the edge, we can immediately quit.
-                terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(useEdge, Vector.LessThanOrEqual(bestScaledDistanceSquared, terminationEpsilonSquared * edgeLengthSquared)));
+                terminatedLanes = Vector.BitwiseOr(terminatedLanes, Vector.BitwiseAnd(useEdge, Vector.LessThanOrEqual(bestDistanceSquared, terminationEpsilonSquared)));
 <#if (!outputWitness) {#>
                 //TODO: Wrapping this in a condition under the assumption that we just terminated is a little iffy. Measure.
                 if (Vector.LessThanAny(Vector.AndNot(useEdge, terminatedLanes), Vector<int>.Zero))
 <#}#>
                 {
-                    var t = Vector.ConditionalSelect(useAB, abScaledT, Vector.ConditionalSelect(useBC, bcScaledT, caScaledT)) / edgeLengthSquared;
+                    var t = Vector.ConditionalSelect(useAB, abT, Vector.ConditionalSelect(useBC, bcT, caT));
                     Vector3Wide.ConditionalSelect(useAB, ab, ca, out var edgeOffset);
                     Vector3Wide.ConditionalSelect(useAB, targetToA, targetToC, out var edgeStart);
                     Vector3Wide.ConditionalSelect(useBC, bc, edgeOffset, out edgeOffset);
@@ -333,13 +345,13 @@ namespace BepuPhysics.CollisionDetection
                     relevantFeatures = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, featureForAB, Vector.ConditionalSelect(useBC, featureForBC, featureForCA)), relevantFeatures);
                     Vector3Wide.ConditionalSelect(useEdge, triangleToTargetCandidate, triangleToTarget, out triangleToTarget);
 <#if (outputWitness) {#>
-					var weightEdgeStart = Vector<float>.One - t;
-					simplex.A.Weight = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, weightEdgeStart, Vector.ConditionalSelect(useBC, Vector<float>.Zero, t)), simplex.A.Weight);
-					simplex.B.Weight = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, t, Vector.ConditionalSelect(useBC, weightEdgeStart, Vector<float>.Zero)), simplex.B.Weight);
-					simplex.C.Weight = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, Vector<float>.Zero, Vector.ConditionalSelect(useBC, t, weightEdgeStart)), simplex.C.Weight);
-					//Weight denominator is still just one, as it is in the vertex case.
+                    var weightEdgeStart = Vector<float>.One - t;
+                    simplex.A.Weight = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, weightEdgeStart, Vector.ConditionalSelect(useBC, Vector<float>.Zero, t)), simplex.A.Weight);
+                    simplex.B.Weight = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, t, Vector.ConditionalSelect(useBC, weightEdgeStart, Vector<float>.Zero)), simplex.B.Weight);
+                    simplex.C.Weight = Vector.ConditionalSelect(useEdge, Vector.ConditionalSelect(useAB, Vector<float>.Zero, Vector.ConditionalSelect(useBC, t, weightEdgeStart)), simplex.C.Weight);
+                    //Weight denominator is still just one, as it is in the vertex case.
 <#}#>
-					
+
 <#if (debug) {#>
                     {
                         //DEBUG STUFF
@@ -373,12 +385,12 @@ namespace BepuPhysics.CollisionDetection
                 Vector3Wide.ConditionalSelect(targetContainedInEdgePlanes, triangleNormal, triangleToTarget, out triangleToTarget);
                 relevantFeatures = Vector.ConditionalSelect(targetContainedInEdgePlanes, new Vector<int>(1 + 2 + 4), relevantFeatures);
 <#if (outputWitness) {#>
-				simplex.A.Weight = Vector.ConditionalSelect(targetContainedInEdgePlanes, bcPlaneTest, simplex.A.Weight);
-				simplex.B.Weight = Vector.ConditionalSelect(targetContainedInEdgePlanes, caPlaneTest, simplex.B.Weight);
-				simplex.C.Weight = Vector.ConditionalSelect(targetContainedInEdgePlanes, abPlaneTest, simplex.C.Weight);
-				simplex.WeightDenominator = Vector.ConditionalSelect(targetContainedInEdgePlanes, triangleNormalLengthSquared, simplex.WeightDenominator);
+                simplex.A.Weight = Vector.ConditionalSelect(targetContainedInEdgePlanes, bcPlaneTest, simplex.A.Weight);
+                simplex.B.Weight = Vector.ConditionalSelect(targetContainedInEdgePlanes, caPlaneTest, simplex.B.Weight);
+                simplex.C.Weight = Vector.ConditionalSelect(targetContainedInEdgePlanes, abPlaneTest, simplex.C.Weight);
+                simplex.WeightDenominator = Vector.ConditionalSelect(targetContainedInEdgePlanes, triangleNormalLengthSquared, simplex.WeightDenominator);
 <#}#>
-				
+
 <#if (debug) {#>
                 {
                     //DEBUG STUFF
@@ -392,23 +404,23 @@ namespace BepuPhysics.CollisionDetection
 <#}#>
             }
 
-			simplex.A.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, Vector<int>.One), Vector<int>.Zero);
+            simplex.A.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, Vector<int>.One), Vector<int>.Zero);
             simplex.B.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(2)), Vector<int>.Zero);
             simplex.C.Exists = Vector.GreaterThan(Vector.BitwiseAnd(relevantFeatures, new Vector<int>(4)), Vector<int>.Zero);
 
             if (Vector.EqualsAny(terminatedLanes, Vector<int>.Zero))
             {
-				//In fairly rare cases near penetrating convergence, it's possible for the triangle->target offset to point nearly 90 degrees away from the previous best.
-				//This doesn't break convergence, but it can slow it down. To avoid it, use the offset to tilt the normal rather than using the offset directly.
-				Vector3Wide.Scale(triangleToTarget, new Vector<float>(4f), out var pushOffset);
-				Vector3Wide.Add(searchTarget, pushOffset, out var pushNormalCandidate);
-				Vector3Wide.ConditionalSelect(Vector.BitwiseOr(Vector.LessThanOrEqual(bestDepth, Vector<float>.Zero), targetContainedInEdgePlanes), triangleToTarget, pushNormalCandidate, out triangleToTarget);
+                //In fairly rare cases near penetrating convergence, it's possible for the triangle->target offset to point nearly 90 degrees away from the previous best.
+                //This doesn't break convergence, but it can slow it down. To avoid it, use the offset to tilt the normal rather than using the offset directly.
+                Vector3Wide.Scale(triangleToTarget, new Vector<float>(4f), out var pushOffset);
+                Vector3Wide.Add(searchTarget, pushOffset, out var pushNormalCandidate);
+                Vector3Wide.ConditionalSelect(Vector.BitwiseOr(Vector.LessThanOrEqual(bestDepth, Vector<float>.Zero), targetContainedInEdgePlanes), triangleToTarget, pushNormalCandidate, out triangleToTarget);
 
                 //No active lanes can have a zero length targetToTriangle, so we can normalize safely.
                 Vector3Wide.LengthSquared(triangleToTarget, out var lengthSquared);
                 Vector3Wide.Scale(triangleToTarget, Vector<float>.One / Vector.SquareRoot(lengthSquared), out nextNormal);
             }
-			
+
 <#if (debug) {#>
             {
                 //DEBUG STUFF
@@ -424,7 +436,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
             in Vector3Wide initialNormal, in Vector<int> inactiveLanes, in Vector<float> searchEpsilon, in Vector<float> minimumDepthThreshold, 
-			out Vector<float> depth, out Vector3Wide refinedNormal, <# if (outputWitness) { Write("out Vector3Wide witnessOnA, "); } #><# if (debug) { Write("List<DepthRefinerStep> steps = null, "); }#>int maximumIterations = 25)
+            out Vector<float> depth, out Vector3Wide refinedNormal, <# if (outputWitness) { Write("out Vector3Wide witnessOnA, "); } #><# if (debug) { Write("List<DepthRefinerStep> steps = null, "); }#>int maximumIterations = 25)
         {
 #if DEBUG
             Vector3Wide.LengthSquared(initialNormal, out var initialNormalLengthSquared);
@@ -439,9 +451,9 @@ namespace BepuPhysics.CollisionDetection
         public static void FindMinimumDepth(in TShapeWideA a, in TShapeWideB b, in Vector3Wide localOffsetB, in Matrix3x3Wide localOrientationB, ref TSupportFinderA supportFinderA, ref TSupportFinderB supportFinderB,
             ref Simplex<#=suffix#> simplex, in Vector3Wide initialNormal, in Vector<float> initialDepth,
             in Vector<int> inactiveLanes, in Vector<float> convergenceThreshold, in Vector<float> minimumDepthThreshold, 
-			out Vector<float> refinedDepth, out Vector3Wide refinedNormal, <# if (outputWitness) { Write("out Vector3Wide witnessOnA, "); } #><# if (debug) { Write("List<DepthRefinerStep> steps = null, "); }#>int maximumIterations = 50)
+            out Vector<float> refinedDepth, out Vector3Wide refinedNormal, <# if (outputWitness) { Write("out Vector3Wide witnessOnA, "); } #><# if (debug) { Write("List<DepthRefinerStep> steps = null, "); }#>int maximumIterations = 50)
         {
-			Vector<float> depthThreshold = minimumDepthThreshold;
+            Vector<float> depthThreshold = minimumDepthThreshold;
             if (supportFinderA.HasMargin)
             {
                 supportFinderA.GetMargin(a, out var margin);
@@ -450,7 +462,7 @@ namespace BepuPhysics.CollisionDetection
             if (supportFinderB.HasMargin)
             {
                 supportFinderB.GetMargin(b, out var margin);
-			    depthThreshold -= margin;
+                depthThreshold -= margin;
             }
             var depthBelowThreshold = Vector.LessThan(initialDepth, depthThreshold);
             var terminatedLanes = Vector.BitwiseOr(depthBelowThreshold, inactiveLanes);
@@ -460,7 +472,7 @@ namespace BepuPhysics.CollisionDetection
             if (Vector.LessThanAll(terminatedLanes, Vector<int>.Zero))
             {
 <#if (outputWitness) {#>
-				witnessOnA = default;
+                witnessOnA = default;
 <#}#>
                 return;
             }
@@ -487,7 +499,7 @@ namespace BepuPhysics.CollisionDetection
                     break;
 
                 GetNextNormal<HasNewSupport>(ref simplex, support, <# if (outputWitness) { Write("supportOnA, "); } #>ref terminatedLanes, refinedNormal, refinedDepth, convergenceThreshold, out normal<# if (debug) { Write(", out debugStep"); }#>);
-				
+
 <#if (debug) {#>
                 debugStep.BestDepth = refinedDepth[0];
                 Vector3Wide.ReadSlot(ref refinedNormal, 0, out debugStep.BestNormal);
@@ -505,18 +517,18 @@ namespace BepuPhysics.CollisionDetection
                 refinedDepth += margin;
             }
 <#if (outputWitness) {#>
-			//For simplexes terminating in a triangle state, we deferred the division for converting plane tests to barycentric coordinates until now.
-			var inverseDenominator = Vector<float>.One / simplex.WeightDenominator;
-			Vector3Wide.Scale(simplex.A.SupportOnA, simplex.A.Weight * inverseDenominator, out var weightedA);
-			Vector3Wide.Scale(simplex.B.SupportOnA, simplex.B.Weight * inverseDenominator, out var weightedB);
-			Vector3Wide.Scale(simplex.C.SupportOnA, simplex.C.Weight * inverseDenominator, out var weightedC);
-			Vector3Wide.Add(weightedA, weightedB, out witnessOnA);
-			Vector3Wide.Add(weightedC, witnessOnA, out witnessOnA);		
-			if (supportFinderA.HasMargin)
+            //For simplexes terminating in a triangle state, we deferred the division for converting plane tests to barycentric coordinates until now.
+            var inverseDenominator = Vector<float>.One / simplex.WeightDenominator;
+            Vector3Wide.Scale(simplex.A.SupportOnA, simplex.A.Weight * inverseDenominator, out var weightedA);
+            Vector3Wide.Scale(simplex.B.SupportOnA, simplex.B.Weight * inverseDenominator, out var weightedB);
+            Vector3Wide.Scale(simplex.C.SupportOnA, simplex.C.Weight * inverseDenominator, out var weightedC);
+            Vector3Wide.Add(weightedA, weightedB, out witnessOnA);
+            Vector3Wide.Add(weightedC, witnessOnA, out witnessOnA);		
+            if (supportFinderA.HasMargin)
             {
                 supportFinderA.GetMargin(a, out var margin);
-				Vector3Wide.Scale(refinedNormal, margin, out var witnessOffset);
-				Vector3Wide.Add(witnessOffset, witnessOnA, out witnessOnA);
+                Vector3Wide.Scale(refinedNormal, margin, out var witnessOffset);
+                Vector3Wide.Add(witnessOffset, witnessOnA, out witnessOnA);
             }
 <#}#>
         }
