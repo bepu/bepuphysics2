@@ -87,7 +87,6 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //Check if the extreme point of the hull toward the triangle along its face normal lies inside the triangle.
             //If it is, then there's no need for depth refinement.
-            Vector<int> triangleNormalIsMinimal;
             var hullSupportFinder = default(ConvexHullSupportFinder);
             var triangleSupportFinder = default(PretransformedTriangleSupportFinder);
             //Sample the hull's extreme point along the triangle face normal- if it's contained within the triangle edge planes, we can avoid doing more expensive refinement.
@@ -103,7 +102,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(edgePlaneCA, closestToC, out var extremeCAPlaneTest);
             //Note that the triangle face extreme point can only be trusted if the hull's center is above the triangle's surface *AND* contained within the edge normals.
             //Merely being above the surface is insufficient- imagine a hull off to the side of the triangle, wedged beneath it.
-            triangleNormalIsMinimal = Vector.BitwiseAnd(
+            var triangleNormalIsMinimal = Vector.BitwiseAnd(
                 Vector.BitwiseAnd(
                     Vector.AndNot(hullInsideTriangleEdgePlanes, hullBelowPlane), 
                     Vector.LessThanOrEqual(extremeABPlaneTest, Vector<float>.Zero)), 

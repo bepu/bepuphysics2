@@ -111,26 +111,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Check if the cylinder's position is within the triangle and below the triangle plane. If so, we can ignore it.
             Vector3Wide.Dot(triangleNormal, localTriangleCenter, out var cylinderToTriangleDot);
             var cylinderBelowPlane = Vector.GreaterThanOrEqual(cylinderToTriangleDot, Vector<float>.Zero);
-            Vector<int> cylinderInsideAndBelowTriangle;
             Vector3Wide.CrossWithoutOverlap(triangleAB, triangleNormal, out var edgePlaneAB);
             Vector3Wide.CrossWithoutOverlap(triangleBC, triangleNormal, out var edgePlaneBC);
             Vector3Wide.CrossWithoutOverlap(triangleCA, triangleNormal, out var edgePlaneCA);
-            if (Vector.LessThanAny(cylinderBelowPlane, Vector<int>.Zero))
-            {
-                //Is the cylinder position within the triangle bounds?
-                Vector3Wide.Dot(edgePlaneAB, triangleA, out var abPlaneTest);
-                Vector3Wide.Dot(edgePlaneBC, triangleB, out var bcPlaneTest);
-                Vector3Wide.Dot(edgePlaneCA, triangleC, out var caPlaneTest);
-                cylinderInsideAndBelowTriangle = Vector.BitwiseAnd(
-                    Vector.BitwiseAnd(cylinderBelowPlane, Vector.LessThanOrEqual(abPlaneTest, Vector<float>.Zero)),
-                    Vector.BitwiseAnd(Vector.LessThanOrEqual(bcPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(caPlaneTest, Vector<float>.Zero)));
-            }
-            else
-            {
-                cylinderInsideAndBelowTriangle = Vector<int>.Zero;
-            }
-
-            //We now have a decent estimate for the local normal and an initial simplex to work from. Refine it to a local minimum.
+            //Is the cylinder position within the triangle bounds?
+            Vector3Wide.Dot(edgePlaneAB, triangleA, out var abPlaneTest);
+            Vector3Wide.Dot(edgePlaneBC, triangleB, out var bcPlaneTest);
+            Vector3Wide.Dot(edgePlaneCA, triangleC, out var caPlaneTest);
+            var cylinderInsideTriangleEdgePlanes = Vector.BitwiseAnd(
+                Vector.LessThanOrEqual(abPlaneTest, Vector<float>.Zero),
+                Vector.BitwiseAnd(
+                    Vector.LessThanOrEqual(bcPlaneTest, Vector<float>.Zero), 
+                    Vector.LessThanOrEqual(caPlaneTest, Vector<float>.Zero)));
+            var cylinderInsideAndBelowTriangle = Vector.BitwiseAnd(cylinderInsideTriangleEdgePlanes, cylinderBelowPlane);
 
             ManifoldCandidateHelper.CreateInactiveMask(pairCount, out var inactiveLanes);
             var degenerate = Vector.LessThan(triangleNormalLength, new Vector<float>(1e-10f));
@@ -145,53 +138,47 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             PretransformedTriangleSupportFinder triangleSupportFinder = default;
             CylinderSupportFinder cylinderSupportFinder = default;
-            //Check if the extreme point of the cylinder toward the triangle along its face normal lies inside the triangle.
-            //If it is, then there's no need for depth refinement.
-            Vector<int> triangleNormalIsMinimal;
-            DepthRefiner.SimplexWithWitness simplex;
-            //Create a simplex entry for the direction from the hull center to triangle center.
-            DepthRefiner.FindSupport(b, triangle, localTriangleCenter, rA, ref cylinderSupportFinder, ref triangleSupportFinder, initialNormal, inactiveLanes, out simplex.A.Support, out simplex.A.SupportOnA);
-            Vector3Wide.Dot(simplex.A.Support, initialNormal, out var depth);
-            simplex.A.Exists = Vector.OnesComplement(inactiveLanes);
             //Create a simplex entry for the triangle face normal.
             Vector3Wide.Negate(triangleNormal, out var negatedTriangleNormal);
-            cylinderSupportFinder.ComputeLocalSupport(b, negatedTriangleNormal, inactiveLanes, out var cylinderSupportAlongTriangleNormal);
-            simplex.B.SupportOnA = cylinderSupportAlongTriangleNormal;
-            Vector3Wide.Subtract(simplex.B.SupportOnA, localTriangleCenter, out simplex.B.Support);
-            Vector3Wide.Dot(simplex.B.Support, negatedTriangleNormal, out var triangleFaceDepth);
-            var useTriangleFace = Vector.LessThan(triangleFaceDepth, depth);
-            Vector3Wide.ConditionalSelect(useTriangleFace, negatedTriangleNormal, initialNormal, out initialNormal);
-            depth = Vector.ConditionalSelect(useTriangleFace, triangleFaceDepth, depth);
-            simplex.B.Exists = simplex.A.Exists;
-            simplex.C.Exists = default;
+            cylinderSupportFinder.ComputeLocalSupport(b, negatedTriangleNormal, inactiveLanes, out var cylinderSupportAlongNegatedTriangleNormal);
+            Vector3Wide.Subtract(cylinderSupportAlongNegatedTriangleNormal, localTriangleCenter, out var negatedTriangleNormalSupport);
+            Vector3Wide.Dot(negatedTriangleNormalSupport, negatedTriangleNormal, out var triangleFaceDepth);
 
             //Check if the extreme point on the hull is contained within the bounds of the triangle face. If it is, there is no need for a full depth refinement.
-            Vector3Wide.Subtract(triangleA, cylinderSupportAlongTriangleNormal, out var closestToA);
-            Vector3Wide.Subtract(triangleB, cylinderSupportAlongTriangleNormal, out var closestToB);
-            Vector3Wide.Subtract(triangleC, cylinderSupportAlongTriangleNormal, out var closestToC);
+            Vector3Wide.Subtract(triangleA, cylinderSupportAlongNegatedTriangleNormal, out var closestToA);
+            Vector3Wide.Subtract(triangleB, cylinderSupportAlongNegatedTriangleNormal, out var closestToB);
+            Vector3Wide.Subtract(triangleC, cylinderSupportAlongNegatedTriangleNormal, out var closestToC);
             Vector3Wide.Dot(edgePlaneAB, closestToA, out var extremeABPlaneTest);
             Vector3Wide.Dot(edgePlaneBC, closestToB, out var extremeBCPlaneTest);
             Vector3Wide.Dot(edgePlaneCA, closestToC, out var extremeCAPlaneTest);
-            triangleNormalIsMinimal = Vector.BitwiseAnd(Vector.LessThanOrEqual(extremeABPlaneTest, Vector<float>.Zero), Vector.BitwiseAnd(Vector.LessThanOrEqual(extremeBCPlaneTest, Vector<float>.Zero), Vector.LessThanOrEqual(extremeCAPlaneTest, Vector<float>.Zero)));
+            var triangleNormalIsMinimal = Vector.BitwiseAnd(
+                Vector.BitwiseAnd(
+                    Vector.AndNot(cylinderInsideTriangleEdgePlanes, cylinderBelowPlane),
+                    Vector.LessThanOrEqual(extremeABPlaneTest, Vector<float>.Zero)),
+                Vector.BitwiseAnd(
+                    Vector.LessThanOrEqual(extremeBCPlaneTest, Vector<float>.Zero),
+                    Vector.LessThanOrEqual(extremeCAPlaneTest, Vector<float>.Zero)));
 
             var depthThreshold = -speculativeMargin;
             var skipDepthRefine = Vector.BitwiseOr(triangleNormalIsMinimal, inactiveLanes);
             Vector3Wide localNormal, closestOnB;
+            Vector<float> depth;
             var epsilonScale = Vector.Max(b.HalfLength, b.Radius);
             if (Vector.EqualsAny(skipDepthRefine, Vector<int>.Zero))
             {
                 DepthRefiner.FindMinimumDepth(
-                    b, triangle, localTriangleCenter, rA, ref cylinderSupportFinder, ref triangleSupportFinder, ref simplex, initialNormal, depth, skipDepthRefine, 1e-5f * epsilonScale, depthThreshold,
+                    b, triangle, localTriangleCenter, rA, ref cylinderSupportFinder, ref triangleSupportFinder, initialNormal, skipDepthRefine, 1e-5f * epsilonScale, depthThreshold,
                     out var refinedDepth, out var refinedNormal, out var refinedClosestOnHull);
-                Vector3Wide.ConditionalSelect(skipDepthRefine, cylinderSupportAlongTriangleNormal, refinedClosestOnHull, out closestOnB);
-                Vector3Wide.ConditionalSelect(skipDepthRefine, initialNormal, refinedNormal, out localNormal);
-                depth = Vector.ConditionalSelect(skipDepthRefine, depth, refinedDepth);
+                Vector3Wide.ConditionalSelect(skipDepthRefine, cylinderSupportAlongNegatedTriangleNormal, refinedClosestOnHull, out closestOnB);
+                Vector3Wide.ConditionalSelect(skipDepthRefine, negatedTriangleNormal, refinedNormal, out localNormal);
+                depth = Vector.ConditionalSelect(skipDepthRefine, triangleFaceDepth, refinedDepth);
             }
             else
             {
                 //No depth refine ran; the extreme point prepass did everything we needed. Just use the initial normal.
-                localNormal = initialNormal;
-                closestOnB = cylinderSupportAlongTriangleNormal;
+                localNormal = negatedTriangleNormal;
+                closestOnB = cylinderSupportAlongNegatedTriangleNormal;
+                depth = triangleFaceDepth;
             }
 
             //If the cylinder is too far away or if it's on the backside of the triangle, don't generate any contacts.
