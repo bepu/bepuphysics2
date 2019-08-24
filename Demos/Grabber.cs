@@ -116,7 +116,7 @@ namespace Demos
             {
                 var rayDirection = camera.GetRayDirection(mouseLocked, normalizedMousePosition);
                 var targetPoint = camera.Position + rayDirection * t;
-                targetOrientation = Quaternion.Concatenate(targetOrientation, rotation);
+                targetOrientation = Quaternion.Normalize(Quaternion.Concatenate(targetOrientation, rotation));
 
                 CreateMotorDescription(targetPoint, body.LocalInertia.InverseMass, out var linearDescription, out var angularDescription);
                 simulation.Solver.ApplyDescription(linearMotorHandle, ref linearDescription);
