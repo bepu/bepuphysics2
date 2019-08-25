@@ -25,12 +25,11 @@ namespace Demos
         {
             descriptions = new List<RolloverDescription>();
         }
-        
+
         public void Add(in Vector3 position, string description, float previewOffset = -1.2f, string previewText = "Info...")
         {
             this.descriptions.Add(new RolloverDescription { Position = position, Description = description, PreviewOffset = previewOffset, Preview = previewText });
         }
-
 
         public unsafe void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
@@ -41,12 +40,7 @@ namespace Demos
             for (int i = 0; i < descriptions.Count; ++i)
             {
                 var textPosition = descriptions[i].Position;
-                Matrix.Transform(new Vector4(textPosition, 1), camera.ViewProjection, out var projected);
-                projected /= projected.W;
-                if (projected.Z <= 0 || MathF.Abs(projected.X) > 1 || MathF.Abs(projected.Y) > 1)
-                    continue;
-                var ndc = new Vector2(projected.X, projected.Y);
-                screenLocations[i] = (ndc * new Vector2(0.5f, -0.5f) + new Vector2(0.5f)) * resolution;
+                Helpers.GetScreenLocation(textPosition, camera.ViewProjection, resolution, out screenLocations[i]);
                 var mouse = input.MousePosition;
                 var distance = Vector2.Distance(new Vector2(mouse.X, mouse.Y), screenLocations[i]);
                 if (distance < closestDistance)

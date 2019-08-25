@@ -244,6 +244,21 @@ namespace DemoRenderer
             Quaternion.Normalize(ref orientation);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool GetScreenLocation(in Vector3 position, in BepuUtilities.Matrix viewProjection, in Vector2 resolution, out Vector2 screenLocation)
+        {
+            BepuUtilities.Matrix.Transform(new Vector4(position, 1), viewProjection, out var projected);
+            projected /= projected.W;
+            if (projected.Z <= 0 || MathF.Abs(projected.X) > 1 || MathF.Abs(projected.Y) > 1)
+            {
+                screenLocation = default;
+                return false;
+            }
+            var ndc = new Vector2(projected.X, projected.Y);
+            screenLocation = (ndc * new Vector2(0.5f, -0.5f) + new Vector2(0.5f)) * resolution;
+            return true;
+        }
+
         [Conditional("DEBUG")]
         public static void CheckForUndisposed(bool disposed, object o)
         {
