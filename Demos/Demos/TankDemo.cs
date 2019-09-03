@@ -89,9 +89,18 @@ namespace Demos.Demos
         /// </summary>
         public ServoSettings TurretServo;
         /// <summary>
+        /// Spring properties for the tank's swivel constraint.
+        /// </summary>
+        public SpringSettings TurretSpring;
+        /// <summary>
         /// Servo properties for the tank's barrel pitching constraint.
         /// </summary>
         public ServoSettings BarrelServo;
+        /// <summary>
+        /// Spring properties for the tank's barrel pitching constraint.
+        /// </summary>
+        public SpringSettings BarrelSpring;
+
 
         /// <summary>
         /// Shape used for all wheels.
@@ -295,17 +304,19 @@ namespace Demos.Demos
             constraints.AllocateUnsafely() = motorHandle;
             ref var wheelProperties = ref properties.Allocate(wheelHandle);
             wheelProperties = new TankBodyProperties { Filter = new SubgroupCollisionFilter(bodyHandle, 3), Friction = wheelFriction };
+            //The wheels don't need to be tested against the body or each other.
             SubgroupCollisionFilter.DisableCollision(ref wheelProperties.Filter, ref bodyFilter);
+            SubgroupCollisionFilter.DisableCollision(ref wheelProperties.Filter, ref wheelProperties.Filter);
             return wheelHandle;
         }
 
-        static int CreatePart(Simulation simulation, in TankPartDescription part, RigidPose pose, BodyProperty<TankBodyProperties> properties, int subgroupId)
+        static ref SubgroupCollisionFilter CreatePart(Simulation simulation, in TankPartDescription part, RigidPose pose, BodyProperty<TankBodyProperties> properties, out int handle)
         {
             RigidPose.Multiply(part.Pose, pose, out var bodyPose);
-            var handle = simulation.Bodies.Add(BodyDescription.CreateDynamic(bodyPose, part.Inertia, new CollidableDescription(part.Shape, 0.1f), new BodyActivityDescription(0.01f)));
+            handle = simulation.Bodies.Add(BodyDescription.CreateDynamic(bodyPose, part.Inertia, new CollidableDescription(part.Shape, 0.1f), new BodyActivityDescription(0.01f)));
             ref var partProperties = ref properties.Allocate(handle);
-            partProperties = new TankBodyProperties { Friction = part.Friction, Filter = new SubgroupCollisionFilter(handle, subgroupId) };
-            return handle;
+            partProperties = new TankBodyProperties { Friction = part.Friction };
+            return ref partProperties.Filter;
         }
 
         /// <summary>
@@ -324,13 +335,15 @@ namespace Demos.Demos
             var leftMotors = new QuickList<int>(description.WheelCountPerTread, pool);
             var rightMotors = new QuickList<int>(description.WheelCountPerTread, pool);
             Tank tank;
-            tank.Body = CreatePart(simulation, description.Body, pose, properties, 0);
-            tank.Turret = CreatePart(simulation, description.Turret, pose, properties, 1);
-            tank.Barrel = CreatePart(simulation, description.Barrel, pose, properties, 2);
-            SubgroupCollisionFilter.DisableCollision(ref properties[tank.Body].Filter, ref properties[tank.Turret].Filter);
-            SubgroupCollisionFilter.DisableCollision(ref properties[tank.Turret].Filter, ref properties[tank.Barrel].Filter);
-            ref var bodyProperties = ref properties.Allocate(tank.Body);
-            bodyProperties = new TankBodyProperties { Friction = description.Body.Friction, Filter = new SubgroupCollisionFilter(tank.Body, 0) };
+            ref var bodyFilter = ref CreatePart(simulation, description.Body, pose, properties, out tank.Body);
+            ref var turretFilter = ref CreatePart(simulation, description.Turret, pose, properties, out tank.Turret);
+            ref var barrelFilter = ref CreatePart(simulation, description.Barrel, pose, properties, out tank.Barrel);
+            //Use the tank's body handle as the group id for collision filters.
+            bodyFilter = new SubgroupCollisionFilter(tank.Body, 0);
+            turretFilter = new SubgroupCollisionFilter(tank.Body, 1);
+            barrelFilter = new SubgroupCollisionFilter(tank.Body, 2);
+            SubgroupCollisionFilter.DisableCollision(ref bodyFilter, ref turretFilter);
+            SubgroupCollisionFilter.DisableCollision(ref turretFilter, ref barrelFilter);
 
             Matrix3x3.CreateFromQuaternion(description.TurretBasis, out var turretBasis);
 
@@ -362,17 +375,17 @@ namespace Demos.Demos
             {
                 LocalBasisA = bodyLocalTurretBasis,
                 LocalBasisB = turretLocalTurretBasis,
-                SpringSettings = new SpringSettings(30, 1),
+                SpringSettings = description.TurretSpring,
                 ServoSettings = description.TurretServo
             };
             tank.TurretServo = simulation.Solver.Add(tank.Body, tank.Turret, tank.TurretServoDescription);
             constraints.AllocateUnsafely() = tank.TurretServo;
 
             //Attach the barrel to the turret.
-            Quaternion.Transform(turretBasis.X, Quaternion.Conjugate(description.Body.Pose.Orientation), out var turretLocalPitchAxis);
-            Quaternion.Transform(turretBasis.X, Quaternion.Conjugate(description.Turret.Pose.Orientation), out var barrelLocalPitchAxis);
-            RigidPose.TransformByInverse(description.BarrelAnchor, description.Body.Pose, out var turretLocalBarrelAnchor);
-            RigidPose.TransformByInverse(description.BarrelAnchor, description.Turret.Pose, out var barrelLocalBarrelAnchor);
+            Quaternion.Transform(turretBasis.X, Quaternion.Conjugate(description.Turret.Pose.Orientation), out var turretLocalPitchAxis);
+            Quaternion.Transform(turretBasis.X, Quaternion.Conjugate(description.Barrel.Pose.Orientation), out var barrelLocalPitchAxis);
+            RigidPose.TransformByInverse(description.BarrelAnchor, description.Turret.Pose, out var turretLocalBarrelAnchor);
+            RigidPose.TransformByInverse(description.BarrelAnchor, description.Barrel.Pose, out var barrelLocalBarrelAnchor);
             constraints.AllocateUnsafely() = simulation.Solver.Add(tank.Turret, tank.Barrel,
                 new Hinge
                 {
@@ -390,21 +403,21 @@ namespace Demos.Demos
             barrelPitchBasis.Y = -turretBasis.Y;
             Debug.Assert(barrelPitchBasis.Determinant() > 0.999f && barrelPitchBasis.Determinant() < 1.0001f, "The barrel axis and forward axis should be perpendicular and unit length.");
             Quaternion.CreateFromRotationMatrix(barrelPitchBasis, out var barrelPitchBasisQuaternion);
-            Quaternion.ConcatenateWithoutOverlap(barrelPitchBasisQuaternion, Quaternion.Conjugate(description.Body.Pose.Orientation), out var turretLocalBarrelBasis);
-            Quaternion.ConcatenateWithoutOverlap(barrelPitchBasisQuaternion, Quaternion.Conjugate(description.Turret.Pose.Orientation), out var barrelLocalBarrelBasis);
+            Quaternion.ConcatenateWithoutOverlap(barrelPitchBasisQuaternion, Quaternion.Conjugate(description.Turret.Pose.Orientation), out var turretLocalBarrelBasis);
+            Quaternion.ConcatenateWithoutOverlap(barrelPitchBasisQuaternion, Quaternion.Conjugate(description.Barrel.Pose.Orientation), out var barrelLocalBarrelBasis);
             tank.BarrelServoDescription = new TwistServo
             {
                 LocalBasisA = turretLocalBarrelBasis,
                 LocalBasisB = barrelLocalBarrelBasis,
-                SpringSettings = new SpringSettings(30, 1),
-                ServoSettings = description.TurretServo
+                SpringSettings = description.BarrelSpring,
+                ServoSettings = description.BarrelServo
             };
             tank.BarrelServo = simulation.Solver.Add(tank.Turret, tank.Barrel, tank.BarrelServoDescription);
             constraints.AllocateUnsafely() = tank.BarrelServo;
 
             Quaternion.TransformUnitY(description.WheelOrientation, out var wheelAxis);
             Quaternion.TransformUnitZ(description.WheelOrientation, out var treadDirection);
-            var treadStart = description.TreadSpacing * description.WheelCountPerTread * -0.5f;
+            var treadStart = description.TreadSpacing * (description.WheelCountPerTread - 1) * -0.5f;
             int previousLeftWheelHandle = 0, previousRightWheelHandle = 0;
             for (int i = 0; i < description.WheelCountPerTread; ++i)
             {
@@ -420,7 +433,7 @@ namespace Demos.Demos
                     description.SuspensionLength, description.SuspensionSettings, description.WheelOrientation,
                     ref wheelHandles, ref constraints, ref leftMotors);
 
-                if (i > 1)
+                if (i >= 1)
                 {
                     //Connect wheels in a tread to each other to distribute the drive forces.
                     //The motor will always just target 0 velocity. The wheel orientations will be allowed to drift from each other.
@@ -429,6 +442,8 @@ namespace Demos.Demos
                     constraints.AllocateUnsafely() = simulation.Solver.Add(previousLeftWheelHandle, leftWheelHandle, ref motorDescription);
                     constraints.AllocateUnsafely() = simulation.Solver.Add(previousRightWheelHandle, rightWheelHandle, ref motorDescription);
                 }
+                previousLeftWheelHandle = leftWheelHandle;
+                previousRightWheelHandle = rightWheelHandle;
 
             }
 
@@ -454,10 +469,15 @@ namespace Demos.Demos
 
     }
 
+    /// <summary>
+    /// Applies control inputs to a tank instance.
+    /// </summary>
     struct TankController
     {
         public Tank Tank;
 
+        //While the Tank instance contains references to all the simulation-contained stuff, none of it actually defines how fast or strong the tank is.
+        //We store that here in the controller so it can be modified on the fly.
         public float Speed;
         public float Force;
         public float ZoomMultiplier;
@@ -482,6 +502,17 @@ namespace Demos.Demos
             IdleForce = idleForce;
             BrakeForce = brakeForce;
         }
+
+        /// <summary>
+        /// Updates constraint targets for an input state.
+        /// </summary>
+        /// <param name="simulation">Simulation containing the tank.</param>
+        /// <param name="leftTargetSpeedFraction">Target speed fraction of the maximum speed for the left tread.</param>
+        /// <param name="rightTargetSpeedFraction">Target speed fraction of the maximum speed for the right tread.</param>
+        /// <param name="zoom">Whether or not to use the boost mulitplier.</param>
+        /// <param name="brakeLeft"></param>
+        /// <param name="brakeRight"></param>
+        /// <param name="aimDirection"></param>
         public void Update(Simulation simulation, float leftTargetSpeedFraction, float rightTargetSpeedFraction, bool zoom, bool brakeLeft, bool brakeRight, in Vector3 aimDirection)
         {
             var leftTargetSpeed = brakeLeft ? 0 : leftTargetSpeedFraction * Speed;
@@ -519,12 +550,18 @@ namespace Demos.Demos
 
     public struct TankBodyProperties
     {
+        /// <summary>
+        /// Controls which collidables the body can collide with.
+        /// </summary>
         public SubgroupCollisionFilter Filter;
+        /// <summary>
+        /// Friction coefficient to use for the body.
+        /// </summary>
         public float Friction;
     }
 
     /// <summary>
-    /// For the car demo, we want both wheel-body collision filtering and different friction for wheels versus the car body.
+    /// For the tank demo, we want both wheel-body collision filtering and different friction for wheels versus the tank body.
     /// </summary>
     struct TankCallbacks : INarrowPhaseCallbacks
     {
@@ -557,7 +594,7 @@ namespace Demos.Demos
             pairMaterial.FrictionCoefficient = Properties[pair.A.Handle].Friction;
             if (pair.B.Mobility != CollidableMobility.Static)
             {
-                //If two bodies collide, just average the friction.
+                //If two bodies collide, just average the friction. Other options include min(a, b) or a * b.
                 pairMaterial.FrictionCoefficient = (pairMaterial.FrictionCoefficient + Properties[pair.B.Handle].Friction) * 0.5f;
             }
             pairMaterial.MaximumRecoveryVelocity = 2f;
@@ -600,7 +637,7 @@ namespace Demos.Demos
         static Key Zoom = Key.LShift;
         static Key Brake = Key.Space;
         static Key BrakeAlternate = Key.BackSpace; //I have a weird keyboard.
-        static Key ToggleCar = Key.C;
+        static Key ToggleTank = Key.C;
         public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(0, 5, 10);
@@ -623,27 +660,29 @@ namespace Demos.Demos
 
             var tankDescription = new TankDescription
             {
-                Body = TankPartDescription.Create(10, new Box(2, 1, 3), RigidPose.Identity, 0.5f, Simulation.Shapes),
-                Turret = TankPartDescription.Create(1, new Box(0.6f, 0.4f, 0.8f), new RigidPose(new Vector3(0, 0.7f, 0.4f)), 0.5f, Simulation.Shapes),
-                Barrel = TankPartDescription.Create(0.5f, new Box(0.1f, 0.1f, 1f), new RigidPose(new Vector3(0, 0.7f, 0.4f - 0.9f)), 0.5f, Simulation.Shapes),
+                Body = TankPartDescription.Create(10, new Box(4f, 1, 5), RigidPose.Identity, 0.5f, Simulation.Shapes),
+                Turret = TankPartDescription.Create(1, new Box(1.5f, 0.7f, 2f), new RigidPose(new Vector3(0, 0.85f, 0.4f)), 0.5f, Simulation.Shapes),
+                Barrel = TankPartDescription.Create(0.5f, new Box(0.2f, 0.2f, 3f), new RigidPose(new Vector3(0, 0.85f, 0.4f - 1f - 1.5f)), 0.5f, Simulation.Shapes),
                 TurretAnchor = new Vector3(0f, 0.5f, 0.4f),
-                BarrelAnchor = new Vector3(0, 0.7f, 0.4f - 0.4f),
+                BarrelAnchor = new Vector3(0, 0.5f + 0.35f, 0.4f - 1f),
                 TurretBasis = Quaternion.Identity,
-                TurretServo = new ServoSettings(1f, 0f, 10f),
-                BarrelServo = new ServoSettings(1f, 0f, 10f),
-                LeftTreadOffset = new Vector3(-0.9f, -0.5f, 0),
-                RightTreadOffset = new Vector3(-0.9f, -0.5f, 0),
+                TurretServo = new ServoSettings(1f, 0f, 40f),
+                TurretSpring = new SpringSettings(10f, 1f),
+                BarrelServo = new ServoSettings(1f, 0f, 40f),
+                BarrelSpring = new SpringSettings(10f, 1f),
+                LeftTreadOffset = new Vector3(-1.9f, 0f, 0),
+                RightTreadOffset = new Vector3(1.9f, 0f, 0),
                 SuspensionLength = 1f,
-                SuspensionSettings = new SpringSettings(1.5f, 1f),
+                SuspensionSettings = new SpringSettings(2.5f, 2f),
                 WheelShape = wheelShapeIndex,
                 WheelInertia = wheelInertia,
-                WheelFriction = 1f,
+                WheelFriction = 2f,
                 TreadSpacing = 1f,
                 WheelCountPerTread = 5,
-                WheelOrientation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f),
+                WheelOrientation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * -0.5f),
             };
 
-            playerController = new TankController(Tank.Create(Simulation, properties, BufferPool, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), tankDescription), 20, 3, 2, 1, 3.5f);
+            playerController = new TankController(Tank.Create(Simulation, properties, BufferPool, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), tankDescription), 20, 5, 2, 1, 3.5f);
 
 
             const int planeWidth = 257;
@@ -690,7 +729,7 @@ namespace Demos.Demos
         bool playerControlActive = true;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            if (input.WasPushed(ToggleCar))
+            if (input.WasPushed(ToggleTank))
                 playerControlActive = !playerControlActive;
             if (playerControlActive)
             {
@@ -748,7 +787,7 @@ namespace Demos.Demos
             RenderControl(ref position, textHeight, nameof(Left), Left.ToString(), text, renderer.TextBatcher, font);
             RenderControl(ref position, textHeight, nameof(Zoom), Zoom.ToString(), text, renderer.TextBatcher, font);
             RenderControl(ref position, textHeight, nameof(Brake), Brake.ToString(), text, renderer.TextBatcher, font);
-            RenderControl(ref position, textHeight, nameof(ToggleCar), ToggleCar.ToString(), text, renderer.TextBatcher, font);
+            RenderControl(ref position, textHeight, nameof(ToggleTank), ToggleTank.ToString(), text, renderer.TextBatcher, font);
             base.Render(renderer, camera, input, text, font);
         }
     }
