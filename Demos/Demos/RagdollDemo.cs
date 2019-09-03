@@ -48,7 +48,7 @@ namespace Demos.Demos
         /// Initializes a collision filter that belongs to one specific subgroup and can collide with any other subgroup.
         /// </summary>
         /// <param name="groupId">Id of the group that this filter operates within.</param>
-        /// <param name="subgroupId">Id of the subgroup to put this ragdoll</param>
+        /// <param name="subgroupId">Id of the subgroup to put this collidable into.</param>
         public SubgroupCollisionFilter(int groupId, int subgroupId)
         {
             GroupId = groupId;

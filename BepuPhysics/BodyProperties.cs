@@ -47,6 +47,20 @@ namespace BepuPhysics
             Quaternion.Conjugate(pose.Orientation, out var conjugate);
             Quaternion.TransformWithoutOverlap(translated, conjugate, out result);
         }
+
+        /// <summary>
+        /// Concatenates one rigid transform with another. The resulting transform is equivalent to performing transform a followed by transform b.
+        /// </summary>
+        /// <param name="a">First transform to concatenate.</param>
+        /// <param name="b">Second transform to concatenate.</param>
+        /// <param name="result">Result of the concatenation.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Multiply(in RigidPose a, in RigidPose b, out RigidPose result)
+        {
+            Quaternion.ConcatenateWithoutOverlap(a.Orientation, b.Orientation, out result.Orientation);
+            Quaternion.Transform(a.Position, b.Orientation, out var rotatedTranslationA);
+            result.Position = rotatedTranslationA + b.Position;
+        }
     }
 
     public struct BodyVelocity
