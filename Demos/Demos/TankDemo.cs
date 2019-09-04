@@ -226,10 +226,10 @@ namespace Demos.Demos
             //+X is 90 degres for swivel.
             //We'll compute the swivel angle first.
             Quaternion.TransformWithoutOverlap(aimDirection, toTurretBasis, out var aimDirectionInTurretBasis);
-            var targetSwivelAngle = MathF.Atan2(-aimDirectionInTurretBasis.Z, aimDirectionInTurretBasis.X);
+            var targetSwivelAngle = MathF.Atan2(aimDirectionInTurretBasis.X, -aimDirectionInTurretBasis.Z);
 
             //Barrel pitching is measured against the +Y axis and an axis created from the target swivel angle.
-            var targetPitchAngle = MathF.Asin(MathF.Max(-1f, MathF.Min(1f, aimDirectionInTurretBasis.Y)));
+            var targetPitchAngle = MathF.Asin(MathF.Max(-1f, MathF.Min(1f, -aimDirectionInTurretBasis.Y)));
             return (targetSwivelAngle, targetPitchAngle);
         }
 
@@ -673,7 +673,7 @@ namespace Demos.Demos
                 LeftTreadOffset = new Vector3(-1.9f, 0f, 0),
                 RightTreadOffset = new Vector3(1.9f, 0f, 0),
                 SuspensionLength = 1f,
-                SuspensionSettings = new SpringSettings(2.5f, 2f),
+                SuspensionSettings = new SpringSettings(2.5f, 0.8f),
                 WheelShape = wheelShapeIndex,
                 WheelInertia = wheelInertia,
                 WheelFriction = 2f,
@@ -686,44 +686,61 @@ namespace Demos.Demos
 
 
             const int planeWidth = 257;
-            const float scale = 3;
-            var terrainPosition = new Vector2(1 - planeWidth, 1 - planeWidth) * scale * 0.5f;
+            const float terrainScale = 3;
+            const float inverseTerrainScale = 1f / terrainScale;
+            var terrainPosition = new Vector2(1 - planeWidth, 1 - planeWidth) * terrainScale * 0.5f;
             var random = new Random(5);
 
-            //Add some building-ish landmarks .
-            Vector3 landmarkMin = new Vector3(-planeWidth * scale * 0.45f, 10, -planeWidth * scale * 0.45f);
-            Vector3 landmarkSpan = new Vector3(planeWidth * scale * 0.9f, 15, planeWidth * scale * 0.9f);
-            for (int j = 0; j < 25; ++j)
+            //Add some building-ish landmarks.
+            Vector3 landmarkMin = new Vector3(planeWidth * terrainScale * -0.45f, 0, planeWidth * terrainScale * -0.45f);
+            Vector3 landmarkSpan = new Vector3(planeWidth * terrainScale * 0.9f, 0, planeWidth * terrainScale * 0.9f);
+            for (int j = 0; j < 125; ++j)
             {
                 var buildingShape = new Box(10 + (float)random.NextDouble() * 10, 20 + (float)random.NextDouble() * 20, 10 + (float)random.NextDouble() * 10);
+                var position = landmarkMin + landmarkSpan * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
                 Simulation.Statics.Add(new StaticDescription(
-                    new Vector3(0, buildingShape.HalfHeight, 0) + landmarkMin + landmarkSpan * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()),
+                    new Vector3(0, buildingShape.HalfHeight - 4f + GetHeightForPosition(position.X, position.Z, planeWidth, inverseTerrainScale, terrainPosition), 0) + position,
                     Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)random.NextDouble() * MathF.PI),
                     new CollidableDescription(Simulation.Shapes.Add(buildingShape), 0.1f)));
             }
 
-
-
+            for (int i = 0; i < 100; ++i)
+            {
+                Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, i * 1), Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI * 0.5f),
+                    new CollidableDescription(Simulation.Shapes.Add(new Capsule((float)random.NextDouble() * 0.4f + 0.2f, 40)), 0.1f)));
+            }
 
             DemoMeshHelper.CreateDeformedPlane(planeWidth, planeWidth,
                 (int vX, int vY) =>
-                {
-                    var octave0 = (MathF.Sin((vX + 5f) * 0.05f) + MathF.Sin((vY + 11) * 0.05f)) * 1.8f;
-                    var octave1 = (MathF.Sin((vX + 17) * 0.15f) + MathF.Sin((vY + 19) * 0.15f)) * 0.9f;
-                    var octave2 = (MathF.Sin((vX + 37) * 0.35f) + MathF.Sin((vY + 93) * 0.35f)) * 0.4f;
-                    var octave3 = (MathF.Sin((vX + 53) * 0.65f) + MathF.Sin((vY + 47) * 0.65f)) * 0.2f;
-                    var octave4 = (MathF.Sin((vX + 67) * 1.50f) + MathF.Sin((vY + 13) * 1.5f)) * 0.125f;
-                    var distanceToEdge = planeWidth / 2 - Math.Max(Math.Abs(vX - planeWidth / 2), Math.Abs(vY - planeWidth / 2));
-                    var edgeRamp = 25f / (distanceToEdge + 1);
-                    var terrainHeight = octave0 + octave1 + octave2 + octave3 + octave4;
-                    var vertexPosition = new Vector2(vX * scale, vY * scale) + terrainPosition;
-                    return new Vector3(vertexPosition.X, terrainHeight + edgeRamp, vertexPosition.Y);
-
-                }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
+                    {
+                        var position2D = new Vector2(vX, vY) * terrainScale + terrainPosition;
+                        return new Vector3(position2D.X, GetHeightForPosition(position2D.X, position2D.Y, planeWidth, inverseTerrainScale, terrainPosition), position2D.Y);
+                    }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
 
+        }
+
+        float GetHeightForPosition(float x, float y, int planeWidth, float inverseTerrainScale, in Vector2 terrainPosition)
+        {
+            var normalizedX = (x - terrainPosition.X) * inverseTerrainScale;
+            var normalizedY = (y - terrainPosition.Y) * inverseTerrainScale;
+            var octave0 = (MathF.Sin((normalizedX + 5f) * 0.05f) + MathF.Sin((normalizedY * inverseTerrainScale + 11) * 0.05f)) * 3.8f;
+            var octave1 = (MathF.Sin((normalizedX + 17) * 0.15f) + MathF.Sin((normalizedY * inverseTerrainScale + 19) * 0.15f)) * 1.9f;
+            var octave2 = (MathF.Sin((normalizedX + 37) * 0.35f) + MathF.Sin((normalizedY * inverseTerrainScale + 93) * 0.35f)) * 0.7f;
+            var octave3 = (MathF.Sin((normalizedX + 53) * 0.65f) + MathF.Sin((normalizedY * inverseTerrainScale + 47) * 0.65f)) * 0.5f;
+            var octave4 = (MathF.Sin((normalizedX + 67) * 1.50f) + MathF.Sin((normalizedY * inverseTerrainScale + 13) * 1.5f)) * 0.325f;
+            var distanceToEdge = planeWidth / 2 - Math.Max(Math.Abs(normalizedX - planeWidth / 2), Math.Abs(normalizedY - planeWidth / 2));
+            //Flatten an area in the middle.
+            var offsetX = planeWidth * 0.5f - normalizedX;
+            var offsetY = planeWidth * 0.5f - normalizedY;
+            var distanceToCenterSquared = offsetX * offsetX + offsetY * offsetY;
+            const float centerCircleSize = 30f;
+            const float fadeoutBoundary = 50f;
+            var outsideWeight = MathF.Min(1f, MathF.Max(0, distanceToCenterSquared - centerCircleSize * centerCircleSize) / (fadeoutBoundary * fadeoutBoundary - centerCircleSize * centerCircleSize));
+            var edgeRamp = 25f / (distanceToEdge + 1);
+            return outsideWeight * (octave0 + octave1 + octave2 + octave3 + octave4 + edgeRamp);
         }
 
         bool playerControlActive = true;
@@ -737,24 +754,60 @@ namespace Demos.Demos
                 float rightTargetSpeedFraction = 0;
                 var left = input.IsDown(Left);
                 var right = input.IsDown(Right);
-                var signedTarget = input.IsDown(Forward) ? 1f : input.IsDown(Backward) ? -1f : 0;
+                var forward = input.IsDown(Forward);
+                var backward = input.IsDown(Backward);
+                if (forward)
+                {
+                    if ((left && right) || (!left && !right))
+                    {
+                        leftTargetSpeedFraction = 1f;
+                        rightTargetSpeedFraction = 1f;
+                    }
+                    //Note turns require a bit of help from the opposing track to overcome friction.
+                    else if (left)
+                    {
+                        leftTargetSpeedFraction = 0.5f;
+                        rightTargetSpeedFraction = 1f;
+                    }
+                    else if (right)
+                    {
+                        leftTargetSpeedFraction = 1f;
+                        rightTargetSpeedFraction = 0.5f;
+                    }
+                }
+                else if (backward)
+                {
+                    if ((left && right) || (!left && !right))
+                    {
+                        leftTargetSpeedFraction = -1f;
+                        rightTargetSpeedFraction = -1f;
+                    }
+                    else if (left)
+                    {
+                        leftTargetSpeedFraction = -0.5f;
+                        rightTargetSpeedFraction = -1f;
+                    }
+                    else if (right)
+                    {
+                        leftTargetSpeedFraction = -1f;
+                        rightTargetSpeedFraction = -0.5f;
+                    }
+                }
+                else
+                {
+                    //Not trying to move. Turn?
+                    if (left && !right)
+                    {
+                        leftTargetSpeedFraction = -1f;
+                        rightTargetSpeedFraction = 1f;
+                    }
+                    else if (right && !left)
+                    {
+                        leftTargetSpeedFraction = 1f;
+                        rightTargetSpeedFraction = -1f;
+                    }
+                }
 
-                if ((left && right) || (!left && !right))
-                {
-                    leftTargetSpeedFraction = signedTarget;
-                    rightTargetSpeedFraction = signedTarget;
-                }
-                //If we're trying to move forward and turn, idle the opposing track.
-                else if (left)
-                {
-                    leftTargetSpeedFraction = signedTarget;
-                    rightTargetSpeedFraction = 0f;
-                }
-                else if (right)
-                {
-                    leftTargetSpeedFraction = 0f;
-                    rightTargetSpeedFraction = signedTarget;
-                }
                 var zoom = input.IsDown(Zoom);
                 var brake = input.IsDown(Brake) || input.IsDown(BrakeAlternate);
                 playerController.Update(Simulation, leftTargetSpeedFraction, rightTargetSpeedFraction, zoom, brake, brake, camera.Forward);
@@ -775,8 +828,11 @@ namespace Demos.Demos
             if (playerControlActive)
             {
                 var tankBody = new BodyReference(playerController.Tank.Body, Simulation.Bodies);
-                Quaternion.TransformUnitY(tankBody.Pose.Orientation, out var carUp);
-                camera.Position = tankBody.Pose.Position + carUp * 1.3f + camera.Backward * 8;
+                Quaternion.TransformUnitY(tankBody.Pose.Orientation, out var tankUp);
+                Quaternion.TransformUnitZ(tankBody.Pose.Orientation, out var tankBackward);
+                var backwardDirection = camera.Backward;
+                backwardDirection.Y = MathF.Max(backwardDirection.Y, -0.2f);
+                camera.Position = tankBody.Pose.Position + tankUp * 2f + tankBackward * 0.4f + backwardDirection * 8;
             }
 
             var textHeight = 16;
