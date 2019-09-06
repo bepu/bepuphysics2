@@ -1,6 +1,9 @@
 ﻿using DemoContentLoader;
 using DemoRenderer;
 using Demos.Demos;
+using Demos.Demos.Cars;
+using Demos.Demos.Characters;
+using Demos.Demos.Tanks;
 using Demos.SpecializedTests;
 using Demos.SpecializedTests.Media;
 using System;
@@ -40,6 +43,7 @@ namespace Demos
 
         public DemoSet()
         {
+            AddOption<TankDemo>();
             AddOption<CarDemo>();
             AddOption<ColosseumDemo>();
             AddOption<PyramidDemo>();
