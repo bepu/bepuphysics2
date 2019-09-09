@@ -1,12 +1,14 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using BepuPhysics;
+using BepuPhysics.Collidables;
 
 namespace Demos.Demos.Tanks
 {
     /// <summary>
     /// Applies control inputs to a tank instance.
     /// </summary>
-    struct TankController
+    public struct TankController
     {
         public Tank Tank;
 
@@ -17,7 +19,7 @@ namespace Demos.Demos.Tanks
         public float ZoomMultiplier;
         public float IdleForce;
         public float BrakeForce;
-
+        
         //Track the previous state to force wakeups if the constraint targets have changed.
         private float previousLeftTargetSpeed;
         private float previousLeftForce;
@@ -44,10 +46,10 @@ namespace Demos.Demos.Tanks
         /// <param name="leftTargetSpeedFraction">Target speed fraction of the maximum speed for the left tread.</param>
         /// <param name="rightTargetSpeedFraction">Target speed fraction of the maximum speed for the right tread.</param>
         /// <param name="zoom">Whether or not to use the boost mulitplier.</param>
-        /// <param name="brakeLeft"></param>
-        /// <param name="brakeRight"></param>
-        /// <param name="aimDirection"></param>
-        public void Update(Simulation simulation, float leftTargetSpeedFraction, float rightTargetSpeedFraction, bool zoom, bool brakeLeft, bool brakeRight, in Vector3 aimDirection)
+        /// <param name="brakeLeft">Whether the left tread should brake.</param>
+        /// <param name="brakeRight">Whether the right tread should brake.</param>
+        /// <param name="aimDirection">Direction that the tank's barrel should point.</param>
+        public void UpdateMovementAndAim(Simulation simulation, float leftTargetSpeedFraction, float rightTargetSpeedFraction, bool zoom, bool brakeLeft, bool brakeRight, in Vector3 aimDirection)
         {
             var leftTargetSpeed = brakeLeft ? 0 : leftTargetSpeedFraction * Speed;
             var rightTargetSpeed = brakeRight ? 0 : rightTargetSpeedFraction * Speed;

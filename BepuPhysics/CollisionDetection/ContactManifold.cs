@@ -59,7 +59,7 @@ namespace BepuPhysics.CollisionDetection
         public int FeatureId;
     }
 
-    public interface IContactManifold
+    public interface IContactManifold<TManifold> where TManifold : struct, IContactManifold<TManifold>
     {
         /// <summary>
         /// Gets the number of contacts in the manifold.
@@ -89,6 +89,39 @@ namespace BepuPhysics.CollisionDetection
         /// Feature ids represent which parts of the collidables formed the contact and can be used to track unique contacts across frames.</param>
         void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId);
 
+        //Can't return refs to the this instance, but it's convenient to have ref returns for parameters and interfaces can't require static functions, so...
+        /// <summary>
+        /// Pulls a reference to a contact's depth.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to a contact's depth.</returns>
+        ref float GetDepth(ref TManifold manifold, int contactIndex);
+
+        /// <summary>
+        /// Pulls a reference to a contact's normal. For convex manifolds that share a normal, all contact indices will simply return a reference to the manifold-wide normal.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to a contact's normal (or the manifold-wide normal in a convex manifold).</returns>
+        ref Vector3 GetNormal(ref TManifold manifold, int contactIndex);
+
+        /// <summary>
+        /// Pulls a reference to a contact's offset.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to a contact's offset.</returns>
+        ref Vector3 GetOffset(ref TManifold manifold, int contactIndex);
+
+        /// <summary>
+        /// Pulls a reference to a contact's feature id.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to a contact's feature id.</returns>
+        ref int GetFeatureId(ref TManifold manifold, int contactIndex);
+
     }
 
     //TODO: We could use specialized storage types for things like continuations if L2 can't actually hold it all. Seems unlikely, but it's not that hard if required.
@@ -97,7 +130,7 @@ namespace BepuPhysics.CollisionDetection
     /// Contains the data associated with a nonconvex contact manifold.
     /// </summary>
     [StructLayout(LayoutKind.Explicit, Size = 144)]
-    public unsafe struct NonconvexContactManifold : IContactManifold
+    public unsafe struct NonconvexContactManifold : IContactManifold<NonconvexContactManifold>
     {
         /// <summary>
         /// Offset from collidable A to collidable B.
@@ -116,9 +149,9 @@ namespace BepuPhysics.CollisionDetection
         [FieldOffset(112)]
         public NonconvexContact Contact3;
 
-        int IContactManifold.Count => Count;
+        int IContactManifold<NonconvexContactManifold>.Count => Count;
 
-        bool IContactManifold.Convex => false;
+        bool IContactManifold<NonconvexContactManifold>.Convex => false;
 
         /// <summary>
         /// The maximum number of contacts that can exist within a nonconvex manifold.
@@ -176,13 +209,61 @@ namespace BepuPhysics.CollisionDetection
             return ref (&manifold->Contact0)[manifold->Count++];
         }
 
+        /// <summary>
+        /// Pulls a reference to a contact's depth.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to a contact's depth.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref float GetDepth(ref NonconvexContactManifold manifold, int contactIndex)
+        {
+            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).Depth;
+        }
+
+        /// <summary>
+        /// Pulls a reference to a contact's normal.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to a contact's normal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref Vector3 GetNormal(ref NonconvexContactManifold manifold, int contactIndex)
+        {
+            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).Normal;
+        }
+
+
+        /// <summary>
+        /// Pulls a reference to a contact's offset.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to a contact's offset.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref Vector3 GetOffset(ref NonconvexContactManifold manifold, int contactIndex)
+        {
+            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).Offset;
+        }
+
+        /// <summary>
+        /// Pulls a reference to a contact's feature id.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to a contact's feature id.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref int GetFeatureId(ref NonconvexContactManifold manifold, int contactIndex)
+        {
+            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).FeatureId;
+        }
     }
 
     /// <summary>
     /// Contains the data associated with a convex contact manifold.
     /// </summary>
     [StructLayout(LayoutKind.Explicit, Size = 108)]
-    public unsafe struct ConvexContactManifold : IContactManifold
+    public unsafe struct ConvexContactManifold : IContactManifold<ConvexContactManifold>
     {
         /// <summary>
         /// Offset from collidable A to collidable B.
@@ -207,9 +288,9 @@ namespace BepuPhysics.CollisionDetection
         [FieldOffset(88)]
         public ConvexContact Contact3;
 
-        int IContactManifold.Count => Count;
+        int IContactManifold<ConvexContactManifold>.Count => Count;
 
-        bool IContactManifold.Convex => true;
+        bool IContactManifold<ConvexContactManifold>.Convex => true;
 
         [Conditional("DEBUG")]
         private void ValidateIndex(int contactIndex)
@@ -243,6 +324,55 @@ namespace BepuPhysics.CollisionDetection
             {
                 Unsafe.Add(ref manifold.Contact0, index) = Unsafe.Add(ref manifold.Contact0, manifold.Count);
             }
+        }
+
+        /// <summary>
+        /// Pulls a reference to a contact's depth.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to a contact's depth.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref float GetDepth(ref ConvexContactManifold manifold, int contactIndex)
+        {
+            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).Depth;
+        }
+
+        /// <summary>
+        /// Pulls a reference to a contact manifold's normal. Convex manifolds share a single normal across all contacts.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to the contact manifold's normal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref Vector3 GetNormal(ref ConvexContactManifold manifold, int contactIndex)
+        {
+            return ref manifold.Normal;
+        }
+
+
+        /// <summary>
+        /// Pulls a reference to a contact's offset.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to a contact's offset.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref Vector3 GetOffset(ref ConvexContactManifold manifold, int contactIndex)
+        {
+            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).Offset;
+        }
+
+        /// <summary>
+        /// Pulls a reference to a contact's feature id.
+        /// </summary>
+        /// <param name="manifold">Manifold to pull a reference from.</param>
+        /// <param name="contactIndex">Contact to pull data from.</param>
+        /// <returns>Reference to a contact's feature id.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref int GetFeatureId(ref ConvexContactManifold manifold, int contactIndex)
+        {
+            return ref Unsafe.Add(ref manifold.Contact0, contactIndex).FeatureId;
         }
     }
 

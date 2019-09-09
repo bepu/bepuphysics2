@@ -53,7 +53,30 @@ namespace Demos.Demos.Tanks
         /// </summary>
         public Buffer<int> RightMotors;
 
+        /// <summary>
+        /// Transforms directions from body local space to turret basis local space. Used for computing aiming angles.
+        /// </summary>
         Quaternion FromBodyLocalToTurretBasisLocal;
+        /// <summary>
+        /// Location in the barrel body's local space where projectiles should be created.
+        /// </summary>
+        Vector3 BarrelLocalProjectileSpawn;
+        /// <summary>
+        /// Direction in the barrel body's local space along which projectiles should be fired.
+        /// </summary>
+        Vector3 BarrelLocalDirection;
+        /// <summary>
+        /// Speed of projectiles fired by the tank.
+        /// </summary>
+        float ProjectileSpeed;
+        /// <summary>
+        /// Inertia of projectiles fired by the tank.
+        /// </summary>
+        BodyInertia ProjectileInertia;
+        /// <summary>
+        /// Shape of the projectiles fired by the tank.
+        /// </summary>
+        TypedIndex ProjectileShape;
 
         //We cache the motor descriptions so we don't need to recompute the bases.
         TwistServo BarrelServoDescription;
@@ -74,6 +97,7 @@ namespace Demos.Demos.Tanks
                 simulation.Solver.ApplyDescription(motors[i], ref motorDescription);
             }
         }
+
 
         /// <summary>
         /// Computes the swivel and pitch angles required to aim in a given direction based on the tank's current pose.
@@ -114,6 +138,44 @@ namespace Demos.Demos.Tanks
             barrelDescription.TargetAngle = targetPitchAngle;
             simulation.Solver.ApplyDescription(BarrelServo, ref barrelDescription);
 
+        }
+
+        /// <summary>
+        /// Computes the direction along which the barrel points.
+        /// </summary>
+        /// <param name="simulation">Simulation containing the tank.</param>
+        /// <param name="barrelDirection">Direction in which the barrel points.</param>
+        public void ComputeBarrelDirection(Simulation simulation, out Vector3 barrelDirection)
+        {
+            Quaternion.Transform(BarrelLocalDirection, simulation.Bodies.GetBodyReference(Barrel).Pose.Orientation, out barrelDirection);
+        }
+
+        /// <summary>
+        /// Fires a projectile.
+        /// </summary>
+        /// <param name="simulation">Simulation that contains the tank.</param>
+        /// <param name="bodyProperties">Body properties to allocate the projectile's properties in.</param>
+        /// <returns>Handle of the created projectile body.</returns>
+        public int Fire(Simulation simulation, BodyProperty<TankBodyProperties> bodyProperties)
+        {
+            var barrel = simulation.Bodies.GetBodyReference(Barrel);
+            ref var barrelPose = ref barrel.Pose;
+            RigidPose.Transform(BarrelLocalProjectileSpawn, barrelPose, out var projectileSpawn);
+            Quaternion.Transform(BarrelLocalDirection, barrelPose.Orientation, out var barrelDirection);
+            //While we could just use continuous collision detection for the collidable, using a very large speculative margin will tend to do the job well enough for this demo.
+            //It'll create speculative contacts as needed.
+            var projectileHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(projectileSpawn, new BodyVelocity(barrelDirection * ProjectileSpeed), ProjectileInertia, new CollidableDescription(ProjectileShape, float.MaxValue), new BodyActivityDescription(0.01f)));
+            ref var projectileProperties = ref bodyProperties.Allocate(projectileHandle);
+            projectileProperties.Friction = 1f;
+            //Prevent the projectile from colliding with the firing tank.
+            projectileProperties.Filter = new SubgroupCollisionFilter(Body);
+            projectileProperties.Filter.CollidableSubgroups = 0;
+            projectileProperties.Filter.SubgroupMembership = 0;
+            projectileProperties.Projectile = true;
+
+            barrel.Awake = true;
+            barrel.ApplyLinearImpulse(barrelDirection * -ProjectileSpeed / ProjectileInertia.InverseMass);
+            return projectileHandle;
         }
 
         static int CreateWheel(Simulation simulation, BodyProperty<TankBodyProperties> properties, in RigidPose tankPose, in RigidPose bodyLocalPose,
@@ -322,6 +384,12 @@ namespace Demos.Demos.Tanks
             //aimDirectionInTurretBasis = worldAimDirection * inverse(body.Pose.Orientation) * description.Body.Pose.Orientation * inverse(description.TurretBasis), so we precompute and cache:
             //FromBodyLocalToTurretBasisLocal = description.Body.Pose.Orientation * inverse(description.TurretBasis)
             Quaternion.ConcatenateWithoutOverlap(description.Body.Pose.Orientation, Quaternion.Conjugate(description.TurretBasis), out tank.FromBodyLocalToTurretBasisLocal);
+            tank.BarrelLocalProjectileSpawn = description.BarrelLocalProjectileSpawn;
+            Quaternion.Transform(-turretBasis.Z, Quaternion.Conjugate(description.Barrel.Pose.Orientation), out tank.BarrelLocalDirection);
+            tank.ProjectileInertia = description.ProjectileInertia;
+            tank.ProjectileShape = description.ProjectileShape;
+            tank.ProjectileSpeed = description.ProjectileSpeed;
+
             return tank;
         }
 

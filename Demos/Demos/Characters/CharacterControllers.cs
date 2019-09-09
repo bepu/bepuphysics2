@@ -256,7 +256,7 @@ namespace Demos.Demos.Characters
         Buffer<ContactCollectionWorkerCache> contactCollectionWorkerCaches;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        bool TryReportContacts<TManifold>(CollidableReference characterCollidable, CollidableReference supportCollidable, CollidablePair pair, ref TManifold manifold, int workerIndex) where TManifold : struct, IContactManifold
+        bool TryReportContacts<TManifold>(CollidableReference characterCollidable, CollidableReference supportCollidable, CollidablePair pair, ref TManifold manifold, int workerIndex) where TManifold : struct, IContactManifold<TManifold>
         {
             if (characterCollidable.Mobility == CollidableMobility.Dynamic && characterCollidable.Handle < bodyHandleToCharacterIndex.Length)
             {
@@ -396,7 +396,7 @@ namespace Demos.Demos.Characters
         /// <param name="materialProperties">Material properties for this pair. Will be modified if the pair involves a character.</param>
         /// <returns>True if the pair involved a character pair, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryReportContacts<TManifold>(in CollidablePair pair, ref TManifold manifold, int workerIndex, ref PairMaterialProperties materialProperties) where TManifold : struct, IContactManifold
+        public bool TryReportContacts<TManifold>(in CollidablePair pair, ref TManifold manifold, int workerIndex, ref PairMaterialProperties materialProperties) where TManifold : struct, IContactManifold<TManifold>
         {
             Debug.Assert(contactCollectionWorkerCaches.Allocated && workerIndex < contactCollectionWorkerCaches.Length && contactCollectionWorkerCaches[workerIndex].SupportCandidates.Allocated,
                 "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");

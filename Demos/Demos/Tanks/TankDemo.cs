@@ -4,7 +4,9 @@ using System.Numerics;
 using System.Text;
 using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuUtilities.Collections;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
@@ -16,8 +18,20 @@ namespace Demos.Demos.Tanks
 {
     public class TankDemo : Demo
     {
+        BodyProperty<TankBodyProperties> bodyProperties;
         TankController playerController;
 
+        QuickList<AITank> aiTanks;
+
+        //We want to create a little graphical explosion at projectile impact points. Since it's not an instant thing, we'll have to track it over a period of time.
+        struct ProjectileExplosion
+        {
+            public Vector3 Position;
+            public int Age;
+        }
+        QuickList<ProjectileExplosion> explosions;
+
+        static MouseButton Fire = MouseButton.Left;
         static Key Forward = Key.W;
         static Key Backward = Key.S;
         static Key Right = Key.D;
@@ -32,8 +46,8 @@ namespace Demos.Demos.Tanks
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            var properties = new BodyProperty<TankBodyProperties>();
-            Simulation = Simulation.Create(BufferPool, new TankCallbacks() { Properties = properties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            bodyProperties = new BodyProperty<TankBodyProperties>();
+            Simulation = Simulation.Create(BufferPool, new TankCallbacks() { Properties = bodyProperties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
             builder.Add(new Box(1.85f, 0.7f, 4.73f), RigidPose.Identity, 10);
@@ -46,6 +60,8 @@ namespace Demos.Demos.Tanks
             wheelShape.ComputeInertia(0.25f, out var wheelInertia);
             var wheelShapeIndex = Simulation.Shapes.Add(wheelShape);
 
+            var projectileShape = new Sphere(0.1f);
+            projectileShape.ComputeInertia(0.2f, out var projectileInertia);
             var tankDescription = new TankDescription
             {
                 Body = TankPartDescription.Create(10, new Box(4f, 1, 5), RigidPose.Identity, 0.5f, Simulation.Shapes),
@@ -58,6 +74,12 @@ namespace Demos.Demos.Tanks
                 TurretSpring = new SpringSettings(10f, 1f),
                 BarrelServo = new ServoSettings(1f, 0f, 40f),
                 BarrelSpring = new SpringSettings(10f, 1f),
+
+                ProjectileShape = Simulation.Shapes.Add(projectileShape),
+                ProjectileSpeed = 100f,
+                BarrelLocalProjectileSpawn = new Vector3(0, 0, 1.5f),
+                ProjectileInertia = projectileInertia,
+
                 LeftTreadOffset = new Vector3(-1.9f, 0f, 0),
                 RightTreadOffset = new Vector3(1.9f, 0f, 0),
                 SuspensionLength = 1f,
@@ -70,7 +92,7 @@ namespace Demos.Demos.Tanks
                 WheelOrientation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * -0.5f),
             };
 
-            playerController = new TankController(Tank.Create(Simulation, properties, BufferPool, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), tankDescription), 20, 5, 2, 1, 3.5f);
+            playerController = new TankController(Tank.Create(Simulation, bodyProperties, BufferPool, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), tankDescription), 20, 5, 2, 1, 3.5f);
 
 
             const int planeWidth = 257;
@@ -107,6 +129,7 @@ namespace Demos.Demos.Tanks
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
+            explosions = new QuickList<ProjectileExplosion>(32, BufferPool);
 
         }
 
@@ -114,11 +137,11 @@ namespace Demos.Demos.Tanks
         {
             var normalizedX = (x - terrainPosition.X) * inverseTerrainScale;
             var normalizedY = (y - terrainPosition.Y) * inverseTerrainScale;
-            var octave0 = (MathF.Sin((normalizedX + 5f) * 0.05f) + MathF.Sin((normalizedY * inverseTerrainScale + 11) * 0.05f)) * 3.8f;
-            var octave1 = (MathF.Sin((normalizedX + 17) * 0.15f) + MathF.Sin((normalizedY * inverseTerrainScale + 19) * 0.15f)) * 1.9f;
-            var octave2 = (MathF.Sin((normalizedX + 37) * 0.35f) + MathF.Sin((normalizedY * inverseTerrainScale + 93) * 0.35f)) * 0.7f;
-            var octave3 = (MathF.Sin((normalizedX + 53) * 0.65f) + MathF.Sin((normalizedY * inverseTerrainScale + 47) * 0.65f)) * 0.5f;
-            var octave4 = (MathF.Sin((normalizedX + 67) * 1.50f) + MathF.Sin((normalizedY * inverseTerrainScale + 13) * 1.5f)) * 0.325f;
+            var octave0 = (MathF.Sin((normalizedX + 5f) * 0.05f) + MathF.Sin((normalizedY + 11) * 0.05f)) * 3.8f;
+            var octave1 = (MathF.Sin((normalizedX + 17) * 0.15f) + MathF.Sin((normalizedY + 47) * 0.15f)) * 1.5f;
+            var octave2 = (MathF.Sin((normalizedX + 37) * 0.35f) + MathF.Sin((normalizedY + 93) * 0.35f)) * 0.5f;
+            var octave3 = (MathF.Sin((normalizedX + 53) * 0.65f) + MathF.Sin((normalizedY + 131) * 0.65f)) * 0.3f;
+            var octave4 = (MathF.Sin((normalizedX + 67) * 1.50f) + MathF.Sin((normalizedY + 13) * 1.5f)) * 0.1525f;
             var distanceToEdge = planeWidth / 2 - Math.Max(Math.Abs(normalizedX - planeWidth / 2), Math.Abs(normalizedY - planeWidth / 2));
             //Flatten an area in the middle.
             var offsetX = planeWidth * 0.5f - normalizedX;
@@ -132,6 +155,9 @@ namespace Demos.Demos.Tanks
         }
 
         bool playerControlActive = true;
+        long frameIndex;
+        long lastPlayerShotFrameIndex;
+        int projectileCount;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
             if (input.WasPushed(ToggleTank))
@@ -198,11 +224,36 @@ namespace Demos.Demos.Tanks
 
                 var zoom = input.IsDown(Zoom);
                 var brake = input.IsDown(Brake) || input.IsDown(BrakeAlternate);
-                playerController.Update(Simulation, leftTargetSpeedFraction, rightTargetSpeedFraction, zoom, brake, brake, camera.Forward);
-            }
+                playerController.UpdateMovementAndAim(Simulation, leftTargetSpeedFraction, rightTargetSpeedFraction, zoom, brake, brake, camera.Forward);
 
+                if (input.WasPushed(Fire) && frameIndex > lastPlayerShotFrameIndex + 60)
+                {
+                    playerController.Tank.Fire(Simulation, bodyProperties);
+                    lastPlayerShotFrameIndex = frameIndex;
+                    ++projectileCount;
+                }
+            }
+            frameIndex++;
+            //Ensure that the callbacks list of exploding projectiles can contain all projectiles that exist.
+            //(We cast the narrowphase to the generic subtype so that we can grab the callbacks. This isn't the only way-
+            //notice that we cached the bodyProperties reference outside of the callbacks for direct access.
+            //The exploding projectiles list, however, is a QuickList<int> value type. If we tried to cache it outside we'd only have a copy of it.
+            //So, rather than trying to set up some pinned memory or replacing it with a reference type, we just cast our way in.)
+            ref var explodingProjectiles = ref ((NarrowPhase<TankCallbacks>)Simulation.NarrowPhase).Callbacks.ExplodingProjectiles;
+            explodingProjectiles.EnsureCapacity(projectileCount, BufferPool);
             base.Update(window, camera, input, dt);
+            //Remove any projectile that hit something.
+            for (int i = 0; i < explodingProjectiles.Count; ++i)
+            {
+                var projectileHandle = explodingProjectiles[i];
+                ref var explosion = ref explosions.Allocate(BufferPool);
+                explosion.Age = 0;
+                explosion.Position = Simulation.Bodies.GetBodyReference(projectileHandle).Pose.Position;
+                Simulation.Bodies.Remove(projectileHandle);
+            }
+            explodingProjectiles.Count = 0;
         }
+
 
         void RenderControl(ref Vector2 position, float textHeight, string controlName, string controlValue, TextBuilder text, TextBatcher textBatcher, Font font)
         {
@@ -223,8 +274,23 @@ namespace Demos.Demos.Tanks
                 camera.Position = tankBody.Pose.Position + tankUp * 2f + tankBackward * 0.4f + backwardDirection * 8;
             }
 
+            //Draw explosions and remove old ones.
+            for (int i = explosions.Count - 1; i >= 0; --i)
+            {
+                ref var explosion = ref explosions[i];
+                var pose = new RigidPose(explosion.Position);
+                //The age is measured in frames, so it's not framerate independent. That's fine for a demo.
+                renderer.Shapes.AddShape(new Sphere(0.25f + MathF.Sqrt(explosion.Age)), Simulation.Shapes, ref pose, new Vector3(1f, 0.5f, 0));
+                if (explosion.Age > 5)
+                {
+                    explosions.FastRemoveAt(i);
+                }
+                ++explosion.Age;
+            }
+
             var textHeight = 16;
-            var position = new Vector2(32, renderer.Surface.Resolution.Y - 128);
+            var position = new Vector2(32, renderer.Surface.Resolution.Y - 144);
+            RenderControl(ref position, textHeight, nameof(Fire), Fire.ToString(), text, renderer.TextBatcher, font);
             RenderControl(ref position, textHeight, nameof(Forward), Forward.ToString(), text, renderer.TextBatcher, font);
             RenderControl(ref position, textHeight, nameof(Backward), Backward.ToString(), text, renderer.TextBatcher, font);
             RenderControl(ref position, textHeight, nameof(Right), Right.ToString(), text, renderer.TextBatcher, font);
