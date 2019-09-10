@@ -22,6 +22,8 @@ namespace Demos.Demos.Tanks
         TankController playerController;
 
         QuickList<AITank> aiTanks;
+        Random random;
+        Vector2 playAreaMin, playAreaMax;
 
         //We want to create a little graphical explosion at projectile impact points. Since it's not an instant thing, we'll have to track it over a period of time.
         struct ProjectileExplosion
@@ -77,7 +79,7 @@ namespace Demos.Demos.Tanks
 
                 ProjectileShape = Simulation.Shapes.Add(projectileShape),
                 ProjectileSpeed = 100f,
-                BarrelLocalProjectileSpawn = new Vector3(0, 0, 1.5f),
+                BarrelLocalProjectileSpawn = new Vector3(0, 0, -1.5f),
                 ProjectileInertia = projectileInertia,
 
                 LeftTreadOffset = new Vector3(-1.9f, 0f, 0),
@@ -99,12 +101,13 @@ namespace Demos.Demos.Tanks
             const float terrainScale = 3;
             const float inverseTerrainScale = 1f / terrainScale;
             var terrainPosition = new Vector2(1 - planeWidth, 1 - planeWidth) * terrainScale * 0.5f;
-            var random = new Random(5);
+            random = new Random(5);
 
             //Add some building-ish landmarks.
-            Vector3 landmarkMin = new Vector3(planeWidth * terrainScale * -0.45f, 0, planeWidth * terrainScale * -0.45f);
-            Vector3 landmarkSpan = new Vector3(planeWidth * terrainScale * 0.9f, 0, planeWidth * terrainScale * 0.9f);
-            for (int j = 0; j < 125; ++j)
+            var landmarkMin = new Vector3(planeWidth * terrainScale * -0.45f, 0, planeWidth * terrainScale * -0.45f);
+            var landmarkMax = new Vector3(planeWidth * terrainScale * 0.45f, 0, planeWidth * terrainScale * 0.45f);
+            var landmarkSpan = landmarkMax - landmarkMin;
+            for (int j = 0; j < 25; ++j)
             {
                 var buildingShape = new Box(10 + (float)random.NextDouble() * 10, 20 + (float)random.NextDouble() * 20, 10 + (float)random.NextDouble() * 10);
                 var position = landmarkMin + landmarkSpan * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
@@ -112,12 +115,6 @@ namespace Demos.Demos.Tanks
                     new Vector3(0, buildingShape.HalfHeight - 4f + GetHeightForPosition(position.X, position.Z, planeWidth, inverseTerrainScale, terrainPosition), 0) + position,
                     Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)random.NextDouble() * MathF.PI),
                     new CollidableDescription(Simulation.Shapes.Add(buildingShape), 0.1f)));
-            }
-
-            for (int i = 0; i < 100; ++i)
-            {
-                Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, i * 1), Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI * 0.5f),
-                    new CollidableDescription(Simulation.Shapes.Add(new Capsule((float)random.NextDouble() * 0.4f + 0.2f, 40)), 0.1f)));
             }
 
             DemoMeshHelper.CreateDeformedPlane(planeWidth, planeWidth,
@@ -131,6 +128,24 @@ namespace Demos.Demos.Tanks
 
             explosions = new QuickList<ProjectileExplosion>(32, BufferPool);
 
+            //Create the AI tanks.
+            const int aiTankCount = 50;
+            aiTanks = new QuickList<AITank>(aiTankCount, BufferPool);
+            playAreaMin = new Vector2(landmarkMin.X, landmarkMin.Z);
+            playAreaMax = new Vector2(landmarkMax.X, landmarkMax.Z);
+            var playAreaSpan = playAreaMax - playAreaMin;
+            for (int i = 0; i < aiTankCount; ++i)
+            {
+                var horizontalPosition = playAreaMin + new Vector2((float)random.NextDouble(), (float)random.NextDouble()) * playAreaSpan;
+                aiTanks.AllocateUnsafely() = new AITank
+                {
+                    Controller = new TankController(
+                        Tank.Create(Simulation, bodyProperties, BufferPool, new RigidPose(
+                            new Vector3(horizontalPosition.X, 10, horizontalPosition.Y),
+                            Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * 0.1f)),
+                            tankDescription), 20, 5, 2, 1, 3.5f)
+                };
+            }
         }
 
         float GetHeightForPosition(float x, float y, int planeWidth, float inverseTerrainScale, in Vector2 terrainPosition)
@@ -150,7 +165,7 @@ namespace Demos.Demos.Tanks
             const float centerCircleSize = 30f;
             const float fadeoutBoundary = 50f;
             var outsideWeight = MathF.Min(1f, MathF.Max(0, distanceToCenterSquared - centerCircleSize * centerCircleSize) / (fadeoutBoundary * fadeoutBoundary - centerCircleSize * centerCircleSize));
-            var edgeRamp = 25f / (distanceToEdge + 1);
+            var edgeRamp = 25f / (5 * distanceToEdge + 1);
             return outsideWeight * (octave0 + octave1 + octave2 + octave3 + octave4 + edgeRamp);
         }
 
@@ -233,6 +248,13 @@ namespace Demos.Demos.Tanks
                     ++projectileCount;
                 }
             }
+
+            for (int i = 0; i < aiTanks.Count; ++i)
+            {
+                aiTanks[i].Update(Simulation, bodyProperties, random, frameIndex, playAreaMin, playAreaMax, i, ref aiTanks, ref projectileCount);
+            }
+
+
             frameIndex++;
             //Ensure that the callbacks list of exploding projectiles can contain all projectiles that exist.
             //(We cast the narrowphase to the generic subtype so that we can grab the callbacks. This isn't the only way-
@@ -271,7 +293,7 @@ namespace Demos.Demos.Tanks
                 Quaternion.TransformUnitZ(tankBody.Pose.Orientation, out var tankBackward);
                 var backwardDirection = camera.Backward;
                 backwardDirection.Y = MathF.Max(backwardDirection.Y, -0.2f);
-                camera.Position = tankBody.Pose.Position + tankUp * 2f + tankBackward * 0.4f + backwardDirection * 8;
+                camera.Position = tankBody.Pose.Position + tankUp * 3f + tankBackward * 0.4f + backwardDirection * 8;
             }
 
             //Draw explosions and remove old ones.

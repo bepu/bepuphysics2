@@ -91,19 +91,23 @@ namespace Demos.Demos.Tanks
                     if (manifold.GetDepth(ref manifold, i) >= 0)
                     {
                         //An actual collision was found. 
-                        bool lockTaken = false;
                         if (propertiesA.Projectile)
                         {
+                            bool lockTaken = false;
                             ProjectileLock.Enter(ref lockTaken);
                             //The exploding projectiles list should have been sized ahead of time to hold all projectiles, so no dynamic allocations should be required.
-                            ExplodingProjectiles.AllocateUnsafely() = pair.A.Handle;
+                            //Note that we have to protect against redundant adds- a projectile might hit multiple things in the same frame. Wouldn't want it to explode multiple times.
+                            if (!ExplodingProjectiles.Contains(pair.A.Handle))
+                                ExplodingProjectiles.AllocateUnsafely() = pair.A.Handle;
                             ProjectileLock.Exit();
                         }
                         if (pair.B.Mobility != CollidableMobility.Static && Properties[pair.B.Handle].Projectile)
                         {
                             //Could technically combine the locks in the case that both bodies are projectiles, but that's not exactly common.
+                            bool lockTaken = false;
                             ProjectileLock.Enter(ref lockTaken);
-                            ExplodingProjectiles.AllocateUnsafely() = pair.B.Handle;
+                            if (!ExplodingProjectiles.Contains(pair.B.Handle))
+                                ExplodingProjectiles.AllocateUnsafely() = pair.B.Handle;
                             ProjectileLock.Exit();
                         }
                         break;

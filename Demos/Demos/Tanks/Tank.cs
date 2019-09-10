@@ -58,6 +58,10 @@ namespace Demos.Demos.Tanks
         /// </summary>
         Quaternion FromBodyLocalToTurretBasisLocal;
         /// <summary>
+        /// Orientation of the body in the tank's local space.
+        /// </summary>
+        public Quaternion BodyLocalOrientation;
+        /// <summary>
         /// Location in the barrel body's local space where projectiles should be created.
         /// </summary>
         Vector3 BarrelLocalProjectileSpawn;
@@ -162,9 +166,9 @@ namespace Demos.Demos.Tanks
             ref var barrelPose = ref barrel.Pose;
             RigidPose.Transform(BarrelLocalProjectileSpawn, barrelPose, out var projectileSpawn);
             Quaternion.Transform(BarrelLocalDirection, barrelPose.Orientation, out var barrelDirection);
-            //While we could just use continuous collision detection for the collidable, using a very large speculative margin will tend to do the job well enough for this demo.
-            //It'll create speculative contacts as needed.
-            var projectileHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(projectileSpawn, new BodyVelocity(barrelDirection * ProjectileSpeed), ProjectileInertia, new CollidableDescription(ProjectileShape, float.MaxValue), new BodyActivityDescription(0.01f)));
+            var projectileHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(projectileSpawn, new BodyVelocity(barrelDirection * ProjectileSpeed), ProjectileInertia,
+                //The projectile moves pretty fast, so we'll use continuous collision detection.
+                new CollidableDescription(ProjectileShape, 0.1f, ContinuousDetectionSettings.Continuous(1e-3f, 1e-3f)), new BodyActivityDescription(0.01f)));
             ref var projectileProperties = ref bodyProperties.Allocate(projectileHandle);
             projectileProperties.Friction = 1f;
             //Prevent the projectile from colliding with the firing tank.
@@ -384,12 +388,12 @@ namespace Demos.Demos.Tanks
             //aimDirectionInTurretBasis = worldAimDirection * inverse(body.Pose.Orientation) * description.Body.Pose.Orientation * inverse(description.TurretBasis), so we precompute and cache:
             //FromBodyLocalToTurretBasisLocal = description.Body.Pose.Orientation * inverse(description.TurretBasis)
             Quaternion.ConcatenateWithoutOverlap(description.Body.Pose.Orientation, Quaternion.Conjugate(description.TurretBasis), out tank.FromBodyLocalToTurretBasisLocal);
+            tank.BodyLocalOrientation = description.Body.Pose.Orientation;
             tank.BarrelLocalProjectileSpawn = description.BarrelLocalProjectileSpawn;
             Quaternion.Transform(-turretBasis.Z, Quaternion.Conjugate(description.Barrel.Pose.Orientation), out tank.BarrelLocalDirection);
             tank.ProjectileInertia = description.ProjectileInertia;
             tank.ProjectileShape = description.ProjectileShape;
             tank.ProjectileSpeed = description.ProjectileSpeed;
-
             return tank;
         }
 

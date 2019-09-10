@@ -49,7 +49,6 @@ namespace Demos.SpecializedTests
 
             var newtHull = new ConvexHull(points.Span.Slice(points.Count), BufferPool, out _);
             var bodyDescription = BodyDescription.CreateConvexDynamic(RigidPose.Identity, 1, Simulation.Shapes, newtHull);
-            Console.WriteLine($"hmm {bodyDescription.Collidable.SpeculativeMargin}");
             Random random = new Random(5);
             var poseBounds = new BoundingBox { Min = new Vector3(-20, 1, 5), Max = new Vector3(20, 10, 50) };
             for (int i = 0; i < 512; ++i)
