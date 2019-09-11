@@ -8,6 +8,9 @@ namespace Demos.Demos.Tanks
 {
     public struct AITank
     {
+        /// <summary>
+        /// Controller used by the AI.
+        /// </summary>
         public TankController Controller;
         /// <summary>
         /// Index of the current target of this AI.
@@ -17,9 +20,17 @@ namespace Demos.Demos.Tanks
         /// Current movement target location.
         /// </summary>
         public Vector2 MovementTarget;
+        /// <summary>
+        /// Index of the last frame that the tank fired on.
+        /// </summary>
         public long LastShotFrame;
 
-        public void Update(Simulation simulation, BodyProperty<TankBodyProperties> bodyProperties, Random random, long frameIndex, in Vector2 playAreaMin, in Vector2 playAreaMax, int aiIndex, ref QuickList<AITank> aiTanks, ref int projectileCount)
+        /// <summary>
+        /// Remaining hit points of the AI. When it hits zero, the tank will fall apart.
+        /// </summary>
+        internal int HitPoints;
+
+        public void Update(Simulation simulation, BodyProperty<TankDemoBodyProperties> bodyProperties, Random random, long frameIndex, in Vector2 playAreaMin, in Vector2 playAreaMax, int aiIndex, ref QuickList<AITank> aiTanks, ref int projectileCount)
         {
             ref var currentPose = ref simulation.Bodies.GetBodyReference(Controller.Tank.Body).Pose;
             //tankBodyPose = localTankBodyPose * tankPose
@@ -50,7 +61,7 @@ namespace Demos.Demos.Tanks
                 //Change movement target. Pick a random point around the target's current location.
                 //Try to avoid being excessively close, though- that tends to make all the tanks bunch up in the middle.
                 Vector2 movementTargetOffset;
-                float offsetLengthSquared, dot;
+                float offsetLengthSquared;
                 do
                 {
                     movementTargetOffset = new Vector2((float)(random.NextDouble() - 0.5) * 150, (float)(random.NextDouble() - 0.5) * 150);

@@ -160,7 +160,7 @@ namespace Demos.Demos.Tanks
         /// <param name="simulation">Simulation that contains the tank.</param>
         /// <param name="bodyProperties">Body properties to allocate the projectile's properties in.</param>
         /// <returns>Handle of the created projectile body.</returns>
-        public int Fire(Simulation simulation, BodyProperty<TankBodyProperties> bodyProperties)
+        public int Fire(Simulation simulation, BodyProperty<TankDemoBodyProperties> bodyProperties)
         {
             var barrel = simulation.Bodies.GetBodyReference(Barrel);
             ref var barrelPose = ref barrel.Pose;
@@ -182,7 +182,7 @@ namespace Demos.Demos.Tanks
             return projectileHandle;
         }
 
-        static int CreateWheel(Simulation simulation, BodyProperty<TankBodyProperties> properties, in RigidPose tankPose, in RigidPose bodyLocalPose,
+        static int CreateWheel(Simulation simulation, BodyProperty<TankDemoBodyProperties> properties, in RigidPose tankPose, in RigidPose bodyLocalPose,
             TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction, int bodyHandle, ref SubgroupCollisionFilter bodyFilter, in Vector3 bodyToWheelSuspension, float suspensionLength,
             in SpringSettings suspensionSettings, in Quaternion localWheelOrientation,
             ref QuickList<int> wheelHandles, ref QuickList<int> constraints, ref QuickList<int> motors)
@@ -235,19 +235,19 @@ namespace Demos.Demos.Tanks
             motors.AllocateUnsafely() = motorHandle;
             constraints.AllocateUnsafely() = motorHandle;
             ref var wheelProperties = ref properties.Allocate(wheelHandle);
-            wheelProperties = new TankBodyProperties { Filter = new SubgroupCollisionFilter(bodyHandle, 3), Friction = wheelFriction };
+            wheelProperties = new TankDemoBodyProperties { Filter = new SubgroupCollisionFilter(bodyHandle, 3), Friction = wheelFriction, TankPart = true };
             //The wheels don't need to be tested against the body or each other.
             SubgroupCollisionFilter.DisableCollision(ref wheelProperties.Filter, ref bodyFilter);
             SubgroupCollisionFilter.DisableCollision(ref wheelProperties.Filter, ref wheelProperties.Filter);
             return wheelHandle;
         }
 
-        static ref SubgroupCollisionFilter CreatePart(Simulation simulation, in TankPartDescription part, RigidPose pose, BodyProperty<TankBodyProperties> properties, out int handle)
+        static ref SubgroupCollisionFilter CreatePart(Simulation simulation, in TankPartDescription part, RigidPose pose, BodyProperty<TankDemoBodyProperties> properties, out int handle)
         {
             RigidPose.Multiply(part.Pose, pose, out var bodyPose);
             handle = simulation.Bodies.Add(BodyDescription.CreateDynamic(bodyPose, part.Inertia, new CollidableDescription(part.Shape, 0.1f), new BodyActivityDescription(0.01f)));
             ref var partProperties = ref properties.Allocate(handle);
-            partProperties = new TankBodyProperties { Friction = part.Friction };
+            partProperties = new TankDemoBodyProperties { Friction = part.Friction, TankPart = true };
             return ref partProperties.Filter;
         }
 
@@ -260,7 +260,7 @@ namespace Demos.Demos.Tanks
         /// <param name="pose">Pose of the tank.</param>
         /// <param name="description">Description of the tank.</param>
         /// <returns>Tank instance containing references to the simulation tank parts.</returns>
-        public static Tank Create(Simulation simulation, BodyProperty<TankBodyProperties> properties, BufferPool pool, in RigidPose pose, in TankDescription description)
+        public static Tank Create(Simulation simulation, BodyProperty<TankDemoBodyProperties> properties, BufferPool pool, in RigidPose pose, in TankDescription description)
         {
             var wheelHandles = new QuickList<int>(description.WheelCountPerTread * 2, pool);
             var constraints = new QuickList<int>(description.WheelCountPerTread * 2 * 6 + 4, pool);
@@ -397,8 +397,30 @@ namespace Demos.Demos.Tanks
             return tank;
         }
 
-        public void Dispose(BufferPool pool)
+        void ClearBodyProperties(ref TankDemoBodyProperties properties)
         {
+            //After blowing up, all tank parts will collide with each other, and we should no longer flag the pieces as part of a living tank.
+            properties.Filter = new SubgroupCollisionFilter(properties.Filter.GroupId);
+            properties.TankPart = false;
+        }
+
+        public void Explode(Simulation simulation, BodyProperty<TankDemoBodyProperties> properties, BufferPool pool)
+        {
+            //When the tank explodes, we just remove all the binding constraints and let it fall apart and reset body properties.
+            for (int i =0; i < WheelHandles.Length; ++i)
+            {
+                ClearBodyProperties(ref properties[WheelHandles[i]]);
+            }
+            ClearBodyProperties(ref properties[Body]);
+            ClearBodyProperties(ref properties[Turret]);
+            ClearBodyProperties(ref properties[Barrel]);
+            var turret = simulation.Bodies.GetBodyReference(Turret);
+            turret.Awake = true;
+            turret.Velocity.Linear += new Vector3(0, 10, 0);
+            for (int i =0; i < Constraints.Length; ++i)
+            {
+                simulation.Solver.Remove(Constraints[i]);
+            }
             pool.Return(ref WheelHandles);
             pool.Return(ref Constraints);
             pool.Return(ref LeftMotors);

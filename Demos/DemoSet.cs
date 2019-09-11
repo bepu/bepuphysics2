@@ -43,12 +43,12 @@ namespace Demos
 
         public DemoSet()
         {
-            AddOption<TankDemo>();
             AddOption<CarDemo>();
+            AddOption<CharacterDemo>();
+            AddOption<TankDemo>();
             AddOption<ColosseumDemo>();
             AddOption<PyramidDemo>();
             AddOption<RagdollDemo>();
-            AddOption<CharacterDemo>();
             AddOption<ContinuousCollisionDetectionDemo>();
             AddOption<ClothDemo>();
             AddOption<NewtDemo>();

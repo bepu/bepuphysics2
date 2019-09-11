@@ -18,7 +18,7 @@ namespace Demos.Demos.Tanks
 {
     public class TankDemo : Demo
     {
-        BodyProperty<TankBodyProperties> bodyProperties;
+        BodyProperty<TankDemoBodyProperties> bodyProperties;
         TankController playerController;
 
         QuickList<AITank> aiTanks;
@@ -26,12 +26,14 @@ namespace Demos.Demos.Tanks
         Vector2 playAreaMin, playAreaMax;
 
         //We want to create a little graphical explosion at projectile impact points. Since it's not an instant thing, we'll have to track it over a period of time.
-        struct ProjectileExplosion
+        struct Explosion
         {
             public Vector3 Position;
+            public float Scale;
+            public Vector3 Color;
             public int Age;
         }
-        QuickList<ProjectileExplosion> explosions;
+        QuickList<Explosion> explosions;
 
         static MouseButton Fire = MouseButton.Left;
         static Key Forward = Key.W;
@@ -48,7 +50,7 @@ namespace Demos.Demos.Tanks
             camera.Yaw = 0;
             camera.Pitch = 0;
 
-            bodyProperties = new BodyProperty<TankBodyProperties>();
+            bodyProperties = new BodyProperty<TankDemoBodyProperties>();
             Simulation = Simulation.Create(BufferPool, new TankCallbacks() { Properties = bodyProperties }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
@@ -85,7 +87,7 @@ namespace Demos.Demos.Tanks
                 LeftTreadOffset = new Vector3(-1.9f, 0f, 0),
                 RightTreadOffset = new Vector3(1.9f, 0f, 0),
                 SuspensionLength = 1f,
-                SuspensionSettings = new SpringSettings(2.5f, 0.8f),
+                SuspensionSettings = new SpringSettings(2.5f, 1.5f),
                 WheelShape = wheelShapeIndex,
                 WheelInertia = wheelInertia,
                 WheelFriction = 2f,
@@ -126,10 +128,10 @@ namespace Demos.Demos.Tanks
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
-            explosions = new QuickList<ProjectileExplosion>(32, BufferPool);
+            explosions = new QuickList<Explosion>(32, BufferPool);
 
             //Create the AI tanks.
-            const int aiTankCount = 50;
+            const int aiTankCount = 100;
             aiTanks = new QuickList<AITank>(aiTankCount, BufferPool);
             playAreaMin = new Vector2(landmarkMin.X, landmarkMin.Z);
             playAreaMax = new Vector2(landmarkMax.X, landmarkMax.Z);
@@ -143,7 +145,8 @@ namespace Demos.Demos.Tanks
                         Tank.Create(Simulation, bodyProperties, BufferPool, new RigidPose(
                             new Vector3(horizontalPosition.X, 10, horizontalPosition.Y),
                             Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * 0.1f)),
-                            tankDescription), 20, 5, 2, 1, 3.5f)
+                            tankDescription), 20, 5, 2, 1, 3.5f),
+                    HitPoints = 5
                 };
             }
         }
@@ -261,19 +264,47 @@ namespace Demos.Demos.Tanks
             //notice that we cached the bodyProperties reference outside of the callbacks for direct access.
             //The exploding projectiles list, however, is a QuickList<int> value type. If we tried to cache it outside we'd only have a copy of it.
             //So, rather than trying to set up some pinned memory or replacing it with a reference type, we just cast our way in.)
-            ref var explodingProjectiles = ref ((NarrowPhase<TankCallbacks>)Simulation.NarrowPhase).Callbacks.ExplodingProjectiles;
-            explodingProjectiles.EnsureCapacity(projectileCount, BufferPool);
+            ref var projectileImpacts = ref ((NarrowPhase<TankCallbacks>)Simulation.NarrowPhase).Callbacks.ProjectileImpacts;
+            projectileImpacts.EnsureCapacity(projectileCount, BufferPool);
             base.Update(window, camera, input, dt);
             //Remove any projectile that hit something.
-            for (int i = 0; i < explodingProjectiles.Count; ++i)
+            for (int i = 0; i < projectileImpacts.Count; ++i)
             {
-                var projectileHandle = explodingProjectiles[i];
+                ref var impact = ref projectileImpacts[i];
                 ref var explosion = ref explosions.Allocate(BufferPool);
                 explosion.Age = 0;
-                explosion.Position = Simulation.Bodies.GetBodyReference(projectileHandle).Pose.Position;
-                Simulation.Bodies.Remove(projectileHandle);
+                explosion.Position = Simulation.Bodies.GetBodyReference(impact.ProjectileHandle).Pose.Position;
+                explosion.Scale = 1f;
+                explosion.Color = new Vector3(1f, 0.5f, 0);
+                Simulation.Bodies.Remove(impact.ProjectileHandle);
+                if (impact.ImpactedTankBodyHandle >= 0)
+                {
+                    //The projectile hit a tank. Hurt it!
+                    for (int aiIndex = 0; aiIndex < aiTanks.Count; ++aiIndex)
+                    {
+                        ref var aiTank = ref aiTanks[aiIndex];
+                        if (aiTank.Controller.Tank.Body == impact.ImpactedTankBodyHandle)
+                        {
+                            --aiTank.HitPoints;
+                            if (aiTank.HitPoints == 0)
+                            {
+                                ref var deathExplosion = ref explosions.Allocate(BufferPool);
+                                deathExplosion.Position = Simulation.Bodies.GetBodyReference(aiTank.Controller.Tank.Turret).Pose.Position;
+                                deathExplosion.Scale = 3;
+                                deathExplosion.Age = 0;
+                                deathExplosion.Color = new Vector3(1, 0, 0);
+                                aiTank.Controller.Tank.Explode(Simulation, bodyProperties, BufferPool);
+                                aiTanks.FastRemoveAt(aiIndex);
+                            }
+                            break;
+                        }
+                    }
+                    //This loop might actually fail to find the tank- if a tank gets hit by more than one projectile in a frame, or if the player tank is hit.
+                    //(The player tank cheats and isn't in the aiTanks list.)
+                    //That's fine, though.
+                }
             }
-            explodingProjectiles.Count = 0;
+            projectileImpacts.Count = 0;
         }
 
 
@@ -302,7 +333,7 @@ namespace Demos.Demos.Tanks
                 ref var explosion = ref explosions[i];
                 var pose = new RigidPose(explosion.Position);
                 //The age is measured in frames, so it's not framerate independent. That's fine for a demo.
-                renderer.Shapes.AddShape(new Sphere(0.25f + MathF.Sqrt(explosion.Age)), Simulation.Shapes, ref pose, new Vector3(1f, 0.5f, 0));
+                renderer.Shapes.AddShape(new Sphere(explosion.Scale * (0.25f + MathF.Sqrt(explosion.Age))), Simulation.Shapes, ref pose, explosion.Color);
                 if (explosion.Age > 5)
                 {
                     explosions.FastRemoveAt(i);
@@ -320,6 +351,12 @@ namespace Demos.Demos.Tanks
             RenderControl(ref position, textHeight, nameof(Zoom), Zoom.ToString(), text, renderer.TextBatcher, font);
             RenderControl(ref position, textHeight, nameof(Brake), Brake.ToString(), text, renderer.TextBatcher, font);
             RenderControl(ref position, textHeight, nameof(ToggleTank), ToggleTank.ToString(), text, renderer.TextBatcher, font);
+
+            if (aiTanks.Count > 0)
+                renderer.TextBatcher.Write(text.Clear().Append("Enemy tanks remaining: ").Append(aiTanks.Count), new Vector2(32, renderer.Surface.Resolution.Y - 172), 24, new Vector3(1, 1, 1), font);
+            else
+                renderer.TextBatcher.Write(text.Clear().Append("ya did it!"), new Vector2(32, renderer.Surface.Resolution.Y - 172), 24, new Vector3(0.3f, 1, 0.3f), font);
+
             base.Render(renderer, camera, input, text, font);
         }
     }

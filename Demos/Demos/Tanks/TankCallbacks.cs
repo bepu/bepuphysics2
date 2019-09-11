@@ -14,7 +14,7 @@ namespace Demos.Demos.Tanks
     /// <summary>
     /// Stores properties about a body in the tank demo.
     /// </summary>
-    public struct TankBodyProperties
+    public struct TankDemoBodyProperties
     {
         /// <summary>
         /// Controls which collidables the body can collide with.
@@ -28,6 +28,22 @@ namespace Demos.Demos.Tanks
         /// True if the body is a projectile and should explode on contact.
         /// </summary>
         public bool Projectile;
+        /// <summary>
+        /// True if the body is part of a tank.
+        /// </summary>
+        public bool TankPart;
+    }
+
+    public struct ProjectileImpact
+    {
+        /// <summary>
+        /// Handle of the projectile body associated with this impact.
+        /// </summary>
+        public int ProjectileHandle;
+        /// <summary>
+        /// Handle of the tank body associated with whatever the projectile hit. If the projectile didn't hit a tank, this is -1.
+        /// </summary>
+        public int ImpactedTankBodyHandle;
     }
 
     /// <summary>
@@ -35,9 +51,9 @@ namespace Demos.Demos.Tanks
     /// </summary>
     struct TankCallbacks : INarrowPhaseCallbacks
     {
-        public BodyProperty<TankBodyProperties> Properties;
+        public BodyProperty<TankDemoBodyProperties> Properties;
         public SpinLock ProjectileLock;
-        public QuickList<int> ExplodingProjectiles;
+        public QuickList<ProjectileImpact> ProjectileImpacts;
         public void Initialize(Simulation simulation)
         {
             Properties.Initialize(simulation.Bodies);
@@ -60,6 +76,43 @@ namespace Demos.Demos.Tanks
             //This function is called for children of compounds, triangles in meshes, and similar cases, but we don't perform any child-level filtering in the tank demo.
             //The top level filter will always run before this function has a chance to, so we don't have to do anything here.
             return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void TryAddProjectileImpact(int projectileHandle, CollidableReference impactedCollidable)
+        {
+            bool lockTaken = false;
+            ProjectileLock.Enter(ref lockTaken);
+            try
+            {
+                //Note that we have to protect against redundant adds- a projectile might hit multiple things in the same frame. Wouldn't want it to explode multiple times.
+                for (int i = 0; i < ProjectileImpacts.Count; ++i)
+                {
+                    ref var impact = ref ProjectileImpacts[i];
+                    //If the projectile has already been handled, ignore it.
+                    if (impact.ProjectileHandle == projectileHandle)
+                        return;
+                }
+                //The exploding projectiles list should have been sized ahead of time to hold all projectiles, so no dynamic allocations should be required.
+                ref var newImpact = ref ProjectileImpacts.AllocateUnsafely();
+                newImpact.ProjectileHandle = projectileHandle;
+                if (impactedCollidable.Mobility != CollidableMobility.Static)
+                {
+                    //The filter's group id is the tank's main body handle. We use that to find the tank (if this body is related to a tank at all).
+                    ref var properties = ref Properties[impactedCollidable.Handle];
+                    newImpact.ImpactedTankBodyHandle = properties.TankPart ? properties.Filter.GroupId : -1;
+                }
+                else
+                {
+                    //It hit a static; tank's aren't static.
+                    newImpact.ImpactedTankBodyHandle = -1;
+                }
+            }
+            finally
+            {
+                if (lockTaken)
+                    ProjectileLock.Exit();
+            }
         }
 
         //The engine hands off a direct pointer to the contact manifold that would be used for constraint generation (if allowed), but a lot of logic is shared between the manifold types.
@@ -93,22 +146,12 @@ namespace Demos.Demos.Tanks
                         //An actual collision was found. 
                         if (propertiesA.Projectile)
                         {
-                            bool lockTaken = false;
-                            ProjectileLock.Enter(ref lockTaken);
-                            //The exploding projectiles list should have been sized ahead of time to hold all projectiles, so no dynamic allocations should be required.
-                            //Note that we have to protect against redundant adds- a projectile might hit multiple things in the same frame. Wouldn't want it to explode multiple times.
-                            if (!ExplodingProjectiles.Contains(pair.A.Handle))
-                                ExplodingProjectiles.AllocateUnsafely() = pair.A.Handle;
-                            ProjectileLock.Exit();
+                            TryAddProjectileImpact(pair.A.Handle, pair.B);
                         }
                         if (pair.B.Mobility != CollidableMobility.Static && Properties[pair.B.Handle].Projectile)
                         {
                             //Could technically combine the locks in the case that both bodies are projectiles, but that's not exactly common.
-                            bool lockTaken = false;
-                            ProjectileLock.Enter(ref lockTaken);
-                            if (!ExplodingProjectiles.Contains(pair.B.Handle))
-                                ExplodingProjectiles.AllocateUnsafely() = pair.B.Handle;
-                            ProjectileLock.Exit();
+                            TryAddProjectileImpact(pair.B.Handle, pair.A);
                         }
                         break;
                     }
