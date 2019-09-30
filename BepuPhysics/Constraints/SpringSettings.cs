@@ -83,7 +83,7 @@ namespace BepuPhysics.Constraints
         /// <returns>True if the spring settings are valid, false otherwise.</returns>
         public static bool Validate(in SpringSettings springSettings)
         {
-            return springSettings.AngularFrequency > 0 && springSettings.TwiceDampingRatio >= 0;
+            return ConstraintChecker.IsPositiveNumber(springSettings.AngularFrequency) && ConstraintChecker.IsNonnegativeNumber(springSettings.TwiceDampingRatio);
         }
 
         /// <summary>

@@ -34,7 +34,7 @@ namespace BepuPhysics.Constraints
         /// <returns>True if the settings are valid, false otherwise.</returns>
         public static bool Validate(in MotorSettings settings)
         {
-            return settings.MaximumForce >= 0 && settings.Damping >= 0;
+            return ConstraintChecker.IsNonnegativeNumber(settings.MaximumForce) && ConstraintChecker.IsNonnegativeNumber(settings.Damping);
         }
 
         /// <summary>

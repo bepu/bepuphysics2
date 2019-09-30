@@ -26,7 +26,7 @@ namespace BepuPhysics.Constraints
         /// <returns>True if the settings contain valid values, false otherwise.</returns>
         public static bool Validate(in ServoSettings settings)
         {
-            return settings.MaximumSpeed >= 0 && settings.BaseSpeed >= 0 && settings.MaximumForce >= 0;
+            return ConstraintChecker.IsNonnegativeNumber(settings.MaximumSpeed) && ConstraintChecker.IsNonnegativeNumber(settings.BaseSpeed) && ConstraintChecker.IsNonnegativeNumber(settings.MaximumForce);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -64,7 +64,11 @@ namespace BepuPhysics.Constraints
             //Can't request speed that would cause an overshoot.
             var baseSpeed = Vector.Min(servoSettings.BaseSpeed, errorLength * inverseDt);
             var unclampedBiasSpeed = errorLength * positionErrorToBiasVelocity;
-            var scale = Vector.Min(Vector<float>.One, servoSettings.MaximumSpeed / Vector.Max(baseSpeed, unclampedBiasSpeed));
+            var targetSpeed = Vector.Max(baseSpeed, unclampedBiasSpeed);
+            var scale = Vector.Min(Vector<float>.One, servoSettings.MaximumSpeed / targetSpeed);
+            //Protect against division by zero. The min would handle inf, but if MaximumSpeed is 0, it turns into a NaN.
+            var useFallback = Vector.LessThan(targetSpeed, new Vector<float>(1e-10f));
+            scale = Vector.ConditionalSelect(useFallback, Vector<float>.One, scale);
             Vector2Wide.Scale(errorAxis, scale * unclampedBiasSpeed, out clampedBiasVelocity);
             maximumImpulse = servoSettings.MaximumForce * dt;
         }
@@ -88,7 +92,11 @@ namespace BepuPhysics.Constraints
             //Can't request speed that would cause an overshoot.
             var baseSpeed = Vector.Min(servoSettings.BaseSpeed, errorLength * inverseDt);
             var unclampedBiasSpeed = errorLength * positionErrorToBiasVelocity;
-            var scale = Vector.Min(Vector<float>.One, servoSettings.MaximumSpeed / Vector.Max(baseSpeed, unclampedBiasSpeed));
+            var targetSpeed = Vector.Max(baseSpeed, unclampedBiasSpeed);
+            var scale = Vector.Min(Vector<float>.One, servoSettings.MaximumSpeed / targetSpeed);
+            //Protect against division by zero. The min would handle inf, but if MaximumSpeed is 0, it turns into a NaN.
+            var useFallback = Vector.LessThan(targetSpeed, new Vector<float>(1e-10f));
+            scale = Vector.ConditionalSelect(useFallback, Vector<float>.One, scale);
             Vector3Wide.Scale(errorAxis, scale * unclampedBiasSpeed, out clampedBiasVelocity);
             maximumImpulse = servoSettings.MaximumForce * dt;
         }
