@@ -106,7 +106,7 @@ namespace Demos.SpecializedTests
             for (int i = 0; i < characters.CharacterCount; ++i)
             {
                 ref var character = ref characters.GetCharacterByIndex(i);
-                if (frameIndex % 128 == 0)
+                if ((frameIndex + i) % 128 == 0)
                     character.TryJump = true;
                 var tangent = Vector3.Cross(new BodyReference(character.BodyHandle, Simulation.Bodies).Pose.Position, Vector3.UnitY);
                 var tangentLengthSquared = tangent.LengthSquared();

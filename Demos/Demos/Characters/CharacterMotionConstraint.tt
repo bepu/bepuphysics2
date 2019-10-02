@@ -20,7 +20,7 @@ using DemoUtilities;
 using BepuUtilities.Memory;
 using static BepuUtilities.GatherScatter;
 
-namespace Demos.Demos.Character
+namespace Demos.Demos.Characters
 { 
     public struct CharacterMotionAccumulatedImpulse
     {
@@ -45,7 +45,7 @@ namespace Demos.Demos.Character
     /// <summary>
     /// Description of a character motion constraint where the support is <#=prefix.ToLower()#>.
     /// </summary>
-    public struct <#=prefix#>CharacterMotionConstraint : IConstraintDescription<<#=prefix#>CharacterMotionConstraint>
+    public struct <#=prefix#>CharacterMotionConstraint : I<#=dynamic ? "TwoBody" : "OneBody"#>ConstraintDescription<<#=prefix#>CharacterMotionConstraint>
     {
         /// <summary>
         /// Maximum force that the horizontal motion constraint can apply to reach the current velocity goal.
