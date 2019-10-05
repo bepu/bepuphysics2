@@ -17,7 +17,7 @@ using Quaternion = BepuUtilities.Quaternion;
 namespace Demos.Demos.Characters
 {
     /// <summary>
-    /// Raw data for a character controller instance.
+    /// Raw data for a dynamic character controller instance.
     /// </summary>
     public struct CharacterController
     {

@@ -17,6 +17,9 @@ using OpenTK.Input;
 
 namespace Demos.Demos.Characters
 {
+    /// <summary>
+    /// Shows one way of using the dynamic character controller in the context of a giant newt and levitating pads.
+    /// </summary>
     public class CharacterDemo : Demo
     {
         CharacterControllers characters;

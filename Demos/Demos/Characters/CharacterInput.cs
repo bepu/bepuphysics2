@@ -15,9 +15,10 @@ namespace Demos.Demos.Characters
     /// Convenience structure that wraps a CharacterController reference and its associated body.
     /// </summary>
     /// <remarks>
-    /// This should be treated as an example- nothing here is intended to suggest how you *must* handle characters. 
+    /// <para>This should be treated as an example- nothing here is intended to suggest how you *must* handle characters. 
     /// On the contrary, this does some fairly inefficient stuff if you're dealing with hundreds of characters in a predictable way.
-    /// It's just a fairly convenient interface for demos usage.
+    /// It's just a fairly convenient interface for demos usage.</para>
+    /// <para>Note that all characters are dynamic and respond to constraints and forces in the simulation.</para>
     /// </remarks>
     public struct CharacterInput
     {
@@ -35,6 +36,8 @@ namespace Demos.Demos.Characters
             this.characters = characters;
             var shapeIndex = characters.Simulation.Shapes.Add(shape);
 
+            //Because characters are dynamic, they require a defined BodyInertia. For the purposes of the demos, we don't want them to rotate or fall over, so the inverse inertia tensor is left at its default value of all zeroes.
+            //This is effectively equivalent to giving it an infinite inertia tensor- in other words, no torque will cause it to rotate.
             bodyHandle = characters.Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f / mass }, new CollidableDescription(shapeIndex, speculativeMargin), new BodyActivityDescription(shape.Radius * 0.02f)));
             ref var character = ref characters.AllocateCharacter(bodyHandle);
             character.LocalUp = new Vector3(0, 1, 0);
