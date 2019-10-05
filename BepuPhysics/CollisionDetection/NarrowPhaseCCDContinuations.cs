@@ -126,9 +126,8 @@ namespace BepuPhysics.CollisionDetection
                 return new CCDContinuationIndex((int)ConstraintGeneratorType.Continuous, index);
             }
 
-            //Generic pointers are not allowed, so we have to do a bit of hackery.
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            unsafe void OnPairCompleted<TManifold>(int pairId, void* manifoldPointer)
+            public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifoldReference) where TManifold : struct, IContactManifold<TManifold>
             {
                 var todoTestCollisionCache = default(EmptyCollisionCache);
                 CCDContinuationIndex continuationId = new CCDContinuationIndex(pairId);
@@ -140,7 +139,7 @@ namespace BepuPhysics.CollisionDetection
                         {
                             //Direct has no need for accumulating multiple reports; we can immediately dispatch.
                             ref var continuation = ref discrete.Caches[continuationIndex];
-                            narrowPhase.UpdateConstraintsForPair<TManifold, EmptyCollisionCache>(workerIndex, ref continuation.Pair, manifoldPointer, ref todoTestCollisionCache);
+                            narrowPhase.UpdateConstraintsForPair(workerIndex, ref continuation.Pair, ref manifoldReference, ref todoTestCollisionCache);
                             discrete.Return(continuationIndex, pool);
                         }
                         break;
@@ -151,7 +150,7 @@ namespace BepuPhysics.CollisionDetection
                             //Treat all the offsets as unchanged, but update the depths according to relative motion.
                             if (typeof(TManifold) == typeof(ConvexContactManifold))
                             {
-                                ref var manifold = ref Unsafe.AsRef<ConvexContactManifold>(manifoldPointer);
+                                ref var manifold = ref Unsafe.As<TManifold, ConvexContactManifold>(ref manifoldReference);
                                 for (int i = 0; i < manifold.Count; ++i)
                                 {
                                     ref var contact = ref Unsafe.Add(ref manifold.Contact0, i);
@@ -164,7 +163,7 @@ namespace BepuPhysics.CollisionDetection
                             else
                             {
                                 Debug.Assert(typeof(TManifold) == typeof(NonconvexContactManifold));
-                                ref var manifold = ref Unsafe.AsRef<NonconvexContactManifold>(manifoldPointer);
+                                ref var manifold = ref Unsafe.As<TManifold, NonconvexContactManifold>(ref manifoldReference);
                                 for (int i = 0; i < manifold.Count; ++i)
                                 {
                                     ref var contact = ref Unsafe.Add(ref manifold.Contact0, i);
@@ -174,22 +173,12 @@ namespace BepuPhysics.CollisionDetection
                                     contact.Depth -= velocityAtContact * continuation.T;
                                 }
                             }
-                            narrowPhase.UpdateConstraintsForPair<TManifold, EmptyCollisionCache>(workerIndex, ref continuation.Pair, manifoldPointer, ref todoTestCollisionCache);
+                            narrowPhase.UpdateConstraintsForPair(workerIndex, ref continuation.Pair, ref manifoldReference, ref todoTestCollisionCache);
                             continuous.Return(continuationIndex, pool);
                         }
                         break;
                 }
 
-            }
-
-            public unsafe void OnPairCompleted(int pairId, NonconvexContactManifold* manifold)
-            {
-                OnPairCompleted<NonconvexContactManifold>(pairId, manifold);
-            }
-
-            public unsafe void OnPairCompleted(int pairId, ConvexContactManifold* manifold)
-            {
-                OnPairCompleted<ConvexContactManifold>(pairId, manifold);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -217,9 +206,9 @@ namespace BepuPhysics.CollisionDetection
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ConvexContactManifold* manifold)
+            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ref ConvexContactManifold manifold)
             {
-                narrowPhase.Callbacks.ConfigureContactManifold(workerIndex, GetCollidablePair(pairId), childA, childB, manifold);
+                narrowPhase.Callbacks.ConfigureContactManifold(workerIndex, GetCollidablePair(pairId), childA, childB, ref manifold);
             }
 
             internal void Dispose()

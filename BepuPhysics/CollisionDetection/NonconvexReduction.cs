@@ -302,7 +302,7 @@ namespace BepuPhysics.CollisionDetection
 
                     //The manifold offsetB is the offset from shapeA origin to shapeB origin.
                     reducedManifold.OffsetB = sampleChild->Manifold.OffsetB - sampleChild->OffsetB + sampleChild->OffsetA;
-                    batcher.Callbacks.OnPairCompleted(pairId, &reducedManifold);
+                    batcher.Callbacks.OnPairCompleted(pairId, ref *&reducedManifold);
                 }
                 else
                 {
@@ -313,7 +313,7 @@ namespace BepuPhysics.CollisionDetection
                     //and that we can only hit this codepath if all manifolds are empty, reporting manifold 0 is perfectly fine.
                     //The manifold offsetB is the offset from shapeA origin to shapeB origin.
                     sampleChild->Manifold.OffsetB = sampleChild->Manifold.OffsetB - sampleChild->OffsetB + sampleChild->OffsetA;
-                    batcher.Callbacks.OnPairCompleted(pairId, &sampleChild->Manifold);
+                    batcher.Callbacks.OnPairCompleted(pairId, ref sampleChild->Manifold);
                 }
                 batcher.Pool.ReturnUnsafely(Children.Id);
 #if DEBUG
@@ -324,10 +324,10 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ConvexContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
+        public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ref ConvexContactManifold manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
         {
-            Children[report.ChildIndex].Manifold = *manifold;
+            Children[report.ChildIndex].Manifold = manifold;
             ++CompletedChildCount;
         }
 

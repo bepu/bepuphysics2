@@ -134,7 +134,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     ref var offsetSource = ref GetOffsetInstance(ref pairWide.GetOffsetB(ref pairWide), j);
                     manifoldSource.ReadFirst(offsetSource, ref manifold);
                     ref var pair = ref Unsafe.Add(ref bundleStart, j);
-                    batcher.ProcessConvexResult(&manifold, ref pair.GetContinuation(ref pair));
+                    batcher.ProcessConvexResult(ref manifold, ref pair.GetContinuation(ref pair));
                 }
             }
 

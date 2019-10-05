@@ -11,7 +11,7 @@ namespace BepuPhysics.CollisionDetection
     {
         void Create(int slots, BufferPool pool);
 
-        unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ConvexContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
+        unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ref ConvexContactManifold manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
         unsafe void OnChildCompletedEmpty<TCallbacks>(ref PairContinuation report, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks;
@@ -110,11 +110,11 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ContributeChildToContinuation<TCallbacks>(ref PairContinuation continuation, ConvexContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
+        public unsafe void ContributeChildToContinuation<TCallbacks>(ref PairContinuation continuation, ref ConvexContactManifold manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
         {
             ref var slot = ref Continuations[continuation.Index];
-            slot.OnChildCompleted(ref continuation, manifold, ref batcher);
+            slot.OnChildCompleted(ref continuation, ref manifold, ref batcher);
             if (slot.TryFlush(continuation.PairId, ref batcher))
             {
                 //The entire continuation has completed; free the slot.

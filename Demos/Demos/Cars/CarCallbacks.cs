@@ -41,7 +41,7 @@ namespace Demos.Demos.Cars
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void CreateMaterial(CollidablePair pair, out PairMaterialProperties pairMaterial)
+        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
         {
             pairMaterial.FrictionCoefficient = Properties[pair.A.Handle].Friction;
             if (pair.B.Mobility != CollidableMobility.Static)
@@ -51,23 +51,12 @@ namespace Demos.Demos.Cars
             }
             pairMaterial.MaximumRecoveryVelocity = 2f;
             pairMaterial.SpringSettings = new SpringSettings(30, 1);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-        {
-            CreateMaterial(pair, out pairMaterial);
-            return true;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-        {
-            CreateMaterial(pair, out pairMaterial);
             return true;
         }
 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ConvexContactManifold* manifold)
+        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
         {
             return true;
         }

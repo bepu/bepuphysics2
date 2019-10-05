@@ -44,21 +44,22 @@ namespace Demos.SpecializedTests
                 return true;
             }
 
-            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ConvexContactManifold* manifold)
+            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ref ConvexContactManifold manifold)
             {
 
             }
 
-            public unsafe void OnPairCompleted(int pairId, ConvexContactManifold* manifold)
+            public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : struct, IContactManifold<TManifold>
             {
-                Manifolds.ConvexManifolds[pairId] = *manifold;
-                Manifolds.ManifoldIsConvex[pairId] = true;
-            }
-
-            public unsafe void OnPairCompleted(int pairId, NonconvexContactManifold* manifold)
-            {
-                Manifolds.NonconvexManifolds[pairId] = *manifold;
-                Manifolds.ManifoldIsConvex[pairId] = false;
+                if (manifold.Convex)
+                {
+                    Manifolds.ConvexManifolds[pairId] = Unsafe.As<TManifold, ConvexContactManifold>(ref manifold);
+                }
+                else
+                {
+                    Manifolds.NonconvexManifolds[pairId] = Unsafe.As<TManifold, NonconvexContactManifold>(ref manifold);
+                }
+                Manifolds.ManifoldIsConvex[pairId] = manifold.Convex;
             }
         }
 
@@ -124,7 +125,7 @@ namespace Demos.SpecializedTests
                         for (int j = 0; j < manifold.Count; ++j)
                         {
                             ref var contact = ref Unsafe.Add(ref manifold.Contact0, j);
-                            manifoldContribution += 
+                            manifoldContribution +=
                                 DeterminismHashTest<FountainStressTestDemo>.ComputeHash(ref contact.Offset, 4783) +
                                 DeterminismHashTest<FountainStressTestDemo>.ComputeHash(ref contact.Depth, 5647) + contact.FeatureId * 3697;
                         }

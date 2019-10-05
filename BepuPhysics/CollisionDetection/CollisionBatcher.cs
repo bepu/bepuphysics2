@@ -181,7 +181,7 @@ namespace BepuPhysics.CollisionDetection
             {
                 //There is no task for this shape type pair. Immediately respond with an empty manifold.
                 var manifold = new ConvexContactManifold();
-                Callbacks.OnPairCompleted(pairContinuation.PairId, &manifold);
+                Callbacks.OnPairCompleted(pairContinuation.PairId, ref manifold);
                 return;
             }
             if (shapeTypeA != reference.ExpectedFirstTypeId)
@@ -314,33 +314,33 @@ namespace BepuPhysics.CollisionDetection
             CompoundMeshReductions.Dispose(Pool);
         }
 
-        public unsafe void ProcessConvexResult(ConvexContactManifold* manifold, ref PairContinuation continuation)
+        public unsafe void ProcessConvexResult(ref ConvexContactManifold manifold, ref PairContinuation continuation)
         {
             if (continuation.Type == CollisionContinuationType.Direct)
             {
                 //This result concerns a pair which had no higher level owner. Directly report the manifold result.
-                Callbacks.OnPairCompleted(continuation.PairId, manifold);
+                Callbacks.OnPairCompleted(continuation.PairId, ref manifold);
             }
             else
             {
                 //This result is associated with another pair and requires additional processing.
                 //Before we move to the next stage, notify the submitter that the subpair has completed.
-                Callbacks.OnChildPairCompleted(continuation.PairId, continuation.ChildA, continuation.ChildB, manifold);
+                Callbacks.OnChildPairCompleted(continuation.PairId, continuation.ChildA, continuation.ChildB, ref manifold);
                 switch (continuation.Type)
                 {
                     case CollisionContinuationType.NonconvexReduction:
                         {
-                            NonconvexReductions.ContributeChildToContinuation(ref continuation, manifold, ref this);
+                            NonconvexReductions.ContributeChildToContinuation(ref continuation, ref manifold, ref this);
                         }
                         break;
                     case CollisionContinuationType.MeshReduction:
                         {
-                            MeshReductions.ContributeChildToContinuation(ref continuation, manifold, ref this);
+                            MeshReductions.ContributeChildToContinuation(ref continuation, ref manifold, ref this);
                         }
                         break;
                     case CollisionContinuationType.CompoundMeshReduction:
                         {
-                            CompoundMeshReductions.ContributeChildToContinuation(ref continuation, manifold, ref this);
+                            CompoundMeshReductions.ContributeChildToContinuation(ref continuation, ref manifold, ref this);
                         }
                         break;
                 }

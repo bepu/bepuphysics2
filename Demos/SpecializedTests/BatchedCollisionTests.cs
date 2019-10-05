@@ -21,19 +21,14 @@ namespace Demos.SpecializedTests
         {
             public int* Count;
 
-            public unsafe void OnPairCompleted(int pairId, ConvexContactManifold* manifold)
+            public unsafe void OnPairCompleted<TManifold>(int pairId, ref TManifold manifold) where TManifold : struct, IContactManifold<TManifold>
             {
-                ref var contact = ref manifold->Contact0;
-                var extra = 1e-16 * (contact.Depth + contact.Offset.X + manifold->Normal.X);
+                manifold.GetContact(0, out var offset, out var normal, out var depth, out var featureId);
+                var extra = 1e-16 * (depth + offset.X + normal.X);
                 *Count += 1 + (int)extra;
             }
-            public unsafe void OnPairCompleted(int pairId, NonconvexContactManifold* manifold)
-            {
-                ref var contact = ref manifold->Contact0;
-                var extra = 1e-16 * (contact.Depth + contact.Offset.X + contact.Normal.X);
-                *Count += 1 + (int)extra;
-            }
-            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ConvexContactManifold* manifold)
+
+            public unsafe void OnChildPairCompleted(int pairId, int childA, int childB, ref ConvexContactManifold manifold)
             {
             }
 

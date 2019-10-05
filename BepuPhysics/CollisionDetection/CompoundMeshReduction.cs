@@ -31,10 +31,10 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ConvexContactManifold* manifold, ref CollisionBatcher<TCallbacks> batcher)
+        public unsafe void OnChildCompleted<TCallbacks>(ref PairContinuation report, ref ConvexContactManifold manifold, ref CollisionBatcher<TCallbacks> batcher)
             where TCallbacks : struct, ICollisionCallbacks
         {
-            Inner.OnChildCompleted(ref report, manifold, ref batcher);
+            Inner.OnChildCompleted(ref report, ref manifold, ref batcher);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

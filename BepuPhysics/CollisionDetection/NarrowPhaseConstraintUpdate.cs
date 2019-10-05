@@ -308,7 +308,9 @@ namespace BepuPhysics.CollisionDetection
             contactConstraintAccessors[manifoldTypeAsConstraintType].UpdateConstraintForManifold(this, manifoldTypeAsConstraintType, workerIndex, ref pair, ref manifold, ref collisionCache, ref material, bodyHandles);
         }
 
-        public unsafe void UpdateConstraintsForPair<TContactManifold, TCollisionCache>(int workerIndex, ref CollidablePair pair, void* manifoldPointer, ref TCollisionCache collisionCache) where TCollisionCache : IPairCacheEntry
+        public unsafe void UpdateConstraintsForPair<TContactManifold, TCollisionCache>(int workerIndex, ref CollidablePair pair, ref TContactManifold manifold, ref TCollisionCache collisionCache) 
+            where TCollisionCache : IPairCacheEntry
+            where TContactManifold : struct, IContactManifold<TContactManifold>
         {
             //Note that we do not check for the pair being between two statics before reporting it. The assumption is that, if the initial broadphase pair filter allowed such a pair
             //to reach this point, the user probably wants to receive some information about the resulting contact manifold.
@@ -317,18 +319,7 @@ namespace BepuPhysics.CollisionDetection
             var bMobility = pair.B.Mobility;
             Debug.Assert(aMobility != CollidableMobility.Static, "The broad phase should not generate static-static pairs ever, and any static collidable should be in slot B.");
             bool allowConstraint;
-            PairMaterialProperties pairMaterial;
-            if (typeof(TContactManifold) == typeof(ConvexContactManifold))
-            {
-                var manifold = (ConvexContactManifold*)manifoldPointer;
-                allowConstraint = Callbacks.ConfigureContactManifold(workerIndex, pair, manifold, out pairMaterial) && manifold->Count > 0;
-            }
-            else
-            {
-                Debug.Assert(typeof(TContactManifold) == typeof(NonconvexContactManifold));
-                var manifold = (NonconvexContactManifold*)manifoldPointer;
-                allowConstraint = Callbacks.ConfigureContactManifold(workerIndex, pair, manifold, out pairMaterial) && manifold->Count > 0;
-            }
+            allowConstraint = Callbacks.ConfigureContactManifold(workerIndex, pair, ref manifold, out var pairMaterial) && manifold.Count > 0;
             if (allowConstraint &&
                 //Note that, even if the callback says 'yeah sure create a constraint for those', it never makes sense to generate constraints between two nondynamics.
                 //It would just result in a bunch of NaNs when computing the effective mass.
@@ -339,13 +330,13 @@ namespace BepuPhysics.CollisionDetection
                     //Two bodies.
                     Debug.Assert(pair.A.Mobility != CollidableMobility.Static && pair.B.Mobility != CollidableMobility.Static);
                     var bodyHandles = new TwoBodyHandles { A = pair.A.Handle, B = pair.B.Handle };
-                    UpdateConstraintForManifold(workerIndex, ref pair, ref Unsafe.AsRef<TContactManifold>(manifoldPointer), ref collisionCache, ref pairMaterial, bodyHandles);
+                    UpdateConstraintForManifold(workerIndex, ref pair, ref manifold, ref collisionCache, ref pairMaterial, bodyHandles);
                 }
                 else
                 {
                     //One of the two collidables is static.
                     Debug.Assert(pair.A.Mobility != CollidableMobility.Static && pair.B.Mobility == CollidableMobility.Static);
-                    UpdateConstraintForManifold(workerIndex, ref pair, ref Unsafe.AsRef<TContactManifold>(manifoldPointer), ref collisionCache, ref pairMaterial, pair.A.Handle);
+                    UpdateConstraintForManifold(workerIndex, ref pair, ref manifold, ref collisionCache, ref pairMaterial, pair.A.Handle);
                 }
                 //In the event that there are no contacts in the new manifold, the pair is left in a stale state. It will be removed by the stale removal post process. 
             }

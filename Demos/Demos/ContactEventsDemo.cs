@@ -192,17 +192,10 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void HandleManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold)
+        public void HandleManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold) where TManifold : struct, IContactManifold<TManifold>
         {
-            HandleManifoldForCollidable(workerIndex, pair.A, pair.B, pair, ref *manifold);
-            HandleManifoldForCollidable(workerIndex, pair.B, pair.A, pair, ref *manifold);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void HandleManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold)
-        {
-            HandleManifoldForCollidable(workerIndex, pair.A, pair.B, pair, ref *manifold);
-            HandleManifoldForCollidable(workerIndex, pair.B, pair.A, pair, ref *manifold);
+            HandleManifoldForCollidable(workerIndex, pair.A, pair.B, pair, ref manifold);
+            HandleManifoldForCollidable(workerIndex, pair.B, pair.A, pair, ref manifold);
         }
 
         public void Flush()
@@ -293,29 +286,17 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void ConfigureMaterial(out PairMaterialProperties pairMaterial)
+        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
         {
             pairMaterial.FrictionCoefficient = 1f;
             pairMaterial.MaximumRecoveryVelocity = 2f;
             pairMaterial.SpringSettings = new SpringSettings(30, 1);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-        {
-            ConfigureMaterial(out pairMaterial);
-            events.HandleManifold(workerIndex, pair, manifold);
-            return true;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-        {
-            ConfigureMaterial(out pairMaterial);
-            events.HandleManifold(workerIndex, pair, manifold);
+            events.HandleManifold(workerIndex, pair, ref manifold);
             return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ConvexContactManifold* manifold)
+        public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
         {
             return true;
         }
@@ -386,7 +367,7 @@ namespace Demos.Demos
 
             var listenedBody2 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0.5f, 10, 0), 1, Simulation.Shapes, new Capsule(0.25f, 0.7f)));
             events.RegisterListener(new CollidableReference(CollidableMobility.Dynamic, listenedBody2));
-            
+
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 1, 30)), 0.04f)));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 3, 15), new CollidableDescription(Simulation.Shapes.Add(new Box(30, 5, 1)), 0.04f)));
 

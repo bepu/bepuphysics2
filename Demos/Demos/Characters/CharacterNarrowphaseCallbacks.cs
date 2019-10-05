@@ -31,29 +31,15 @@ namespace Demos.Demos.Characters
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void GetMaterial(out PairMaterialProperties pairMaterial)
+        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
         {
             pairMaterial = new PairMaterialProperties { FrictionCoefficient = 1, MaximumRecoveryVelocity = 2, SpringSettings = new SpringSettings(30, 1) };
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-        {
-            GetMaterial(out pairMaterial);
-            Characters.TryReportContacts(pair, ref *manifold, workerIndex, ref pairMaterial);
+            Characters.TryReportContacts(pair, ref manifold, workerIndex, ref pairMaterial);
             return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-        {
-            GetMaterial(out pairMaterial);
-            Characters.TryReportContacts(pair, ref *manifold, workerIndex, ref pairMaterial);
-            return true;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ConvexContactManifold* manifold)
+        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
         {
             return true;
         }

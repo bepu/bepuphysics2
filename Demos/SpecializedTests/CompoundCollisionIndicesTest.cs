@@ -28,33 +28,29 @@ namespace Demos.SpecializedTests
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void ConfigureMaterial(out PairMaterialProperties pairMaterial)
+        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
         {
+            if (manifold.Count > 0)
+            {
+                if (manifold.Convex)
+                {
+                    Console.WriteLine($"CONVEX PAIR: {pair.A} versus {pair.B}");
+                }
+                else
+                {
+                    Console.WriteLine($"NONCONVEX PAIR: {pair.A} versus {pair.B}");
+                }
+            }
             pairMaterial.FrictionCoefficient = 1f;
             pairMaterial.MaximumRecoveryVelocity = 2f;
             pairMaterial.SpringSettings = new SpringSettings(30, 1);
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-        {
-            if (manifold->Count > 0)
-                Console.WriteLine($"NONCONVEX PAIR: {pair.A} versus {pair.B}");
-            ConfigureMaterial(out pairMaterial);
-            return true;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-        {
-            if (manifold->Count > 0)
-                Console.WriteLine($"CONVEX PAIR: {pair.A} versus {pair.B}");
-            ConfigureMaterial(out pairMaterial);
             return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ConvexContactManifold* manifold)
+        public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
         {
-            if (manifold->Count > 0)
+            if (manifold.Count > 0)
                 Console.WriteLine($"SUBPAIR: {pair.A} child {childIndexA} versus {pair.B} child {childIndexB}");
             return true;
         }

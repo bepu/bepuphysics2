@@ -69,47 +69,27 @@ namespace Demos.Demos
                 return true;
             }
 
+            /// <summary>
+            /// Provides a notification that a manifold has been created for a pair. Offers an opportunity to change the manifold's details. 
+            /// </summary>
+            /// <param name="workerIndex">Index of the worker thread that created this manifold.</param>
+            /// <param name="pair">Pair of collidables that the manifold was detected between.</param>
+            /// <param name="manifold">Set of contacts detected between the collidables.</param>
+            /// <param name="pairMaterial">Material properties of the manifold.</param>
+            /// <returns>True if a constraint should be created for the manifold, false otherwise.</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            void ConfigureMaterial(out PairMaterialProperties pairMaterial)
+            public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
             {
+                //The IContactManifold parameter includes functions for accessing contact data regardless of what the underlying type of the manifold is.
+                //If you want to have direct access to the underlying type, you can use the manifold.Convex property and a cast like Unsafe.As<TManifold, ConvexContactManifold or NonconvexContactManifold>(ref manifold).
+       
                 //The engine does not define any per-body material properties. Instead, all material lookup and blending operations are handled by the callbacks.
                 //For the purposes of this demo, we'll use the same settings for all pairs.
                 //(Note that there's no bounciness property! See here for more details: https://github.com/bepu/bepuphysics2/issues/3)
                 pairMaterial.FrictionCoefficient = 1f;
                 pairMaterial.MaximumRecoveryVelocity = 2f;
                 pairMaterial.SpringSettings = new SpringSettings(30, 1);
-            }
-
-            //Note that there is a unique callback for convex versus nonconvex types. There is no fundamental difference here- it's just a matter of convenience
-            //to avoid working through an interface or casting.
-            //For the purposes of the demo, contact constraints are always generated.
-            /// <summary>
-            /// Provides a notification that a manifold has been created for a pair. Offers an opportunity to change the manifold's details. 
-            /// </summary>
-            /// <param name="workerIndex">Index of the worker thread that created this manifold.</param>
-            /// <param name="pair">Pair of collidables that the manifold was detected between.</param>
-            /// <param name="manifold">Set of contacts detected between the collidables.</param>
-            /// <param name="pairMaterial">Material properties of the manifold.</param>
-            /// <returns>True if a constraint should be created for the manifold, false otherwise.</returns>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-            {
-                ConfigureMaterial(out pairMaterial);
-                return true;
-            }
-
-            /// <summary>
-            /// Provides a notification that a manifold has been created for a pair. Offers an opportunity to change the manifold's details. 
-            /// </summary>
-            /// <param name="workerIndex">Index of the worker thread that created this manifold.</param>
-            /// <param name="pair">Pair of collidables that the manifold was detected between.</param>
-            /// <param name="manifold">Set of contacts detected between the collidables.</param>
-            /// <param name="pairMaterial">Material properties of the manifold.</param>
-            /// <returns>True if a constraint should be created for the manifold, false otherwise.</returns>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-            {
-                ConfigureMaterial(out pairMaterial);
+                //For the purposes of the demo, contact constraints are always generated.
                 return true;
             }
 
@@ -124,7 +104,7 @@ namespace Demos.Demos
             /// <param name="manifold">Set of contacts detected between the collidables.</param>
             /// <returns>True if this manifold should be considered for constraint generation, false otherwise.</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ConvexContactManifold* manifold)
+            public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
             {
                 return true;
             }
@@ -197,7 +177,7 @@ namespace Demos.Demos
             simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 5, 0), sphereInertia, new CollidableDescription(simulation.Shapes.Add(sphere), 0.1f), new BodyActivityDescription(0.01f)));
 
             simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(simulation.Shapes.Add(new Box(500, 1, 500)), 0.1f)));
-            
+
             var threadDispatcher = new SimpleThreadDispatcher(Environment.ProcessorCount);
 
             //Now take 100 time steps!

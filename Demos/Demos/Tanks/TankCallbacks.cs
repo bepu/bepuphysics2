@@ -115,10 +115,8 @@ namespace Demos.Demos.Tanks
             }
         }
 
-        //The engine hands off a direct pointer to the contact manifold that would be used for constraint generation (if allowed), but a lot of logic is shared between the manifold types.
-        //We'll make use of the IContactManifold interface to combine most of the logic.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void HandlePair<TManifold>(CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
+        public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : struct, IContactManifold<TManifold>
         {
             //Different tank parts have different friction values. Wheels tend to stick more than the body of the tank.
             ref var propertiesA = ref Properties[pair.A.Handle];
@@ -157,23 +155,11 @@ namespace Demos.Demos.Tanks
                     }
                 }
             }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, NonconvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-        {
-            HandlePair(pair, ref *manifold, out pairMaterial);
-            return true;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, ConvexContactManifold* manifold, out PairMaterialProperties pairMaterial)
-        {
-            HandlePair(pair, ref *manifold, out pairMaterial);
             return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ConvexContactManifold* manifold)
+        public unsafe bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)
         {
             return true;
         }
