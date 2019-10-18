@@ -50,8 +50,11 @@ namespace Demos
             //Under ideal conditions, those bodies will be near in memory to increase the chances of a cache hit. If kinematics are separately bundled, the the number of cache
             //misses necessarily increases. Slowing down the solver in order to speed up the pose integrator is a really, really bad trade, especially when the benefit is a few ALU ops.
 
-            //Note that you CAN technically modify the pose in IntegrateVelocity. The PoseIntegrator has already integrated the previous velocity into the position, but you can modify it again
-            //if you really wanted to.
+            //Note that you CAN technically modify the pose in IntegrateVelocity by directly accessing it through the Simulation.Bodies.ActiveSet.Poses, it just requires a little care and isn't directly exposed.
+            //If the PositionFirstTimestepper is being used, then the pose integrator has already integrated the pose.
+            //If the PositionLastTimestepper or SubsteppingTimestepper are in use, the pose has not yet been integrated.
+            //If your pose modification depends on the order of integration, you'll want to take this into account.
+
             //This is also a handy spot to implement things like position dependent gravity or per-body damping.
         }
 

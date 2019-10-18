@@ -55,6 +55,9 @@ namespace DemoContentBuilder
                                     case ".obj":
                                         contentToBuild.Add(new ContentBuildInput { Path = path, Type = ContentType.Mesh });
                                         break;
+                                    case ".png":
+                                        contentToBuild.Add(new ContentBuildInput { Path = path, Type = ContentType.Image });
+                                        break;
                                 }
                             }
                             else
