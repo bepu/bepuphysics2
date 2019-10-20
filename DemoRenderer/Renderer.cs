@@ -28,10 +28,12 @@ namespace DemoRenderer
         public ShapesExtractor Shapes { get; private set; }
         public LineRenderer LineRenderer { get; private set; }
         public LineExtractor Lines { get; private set; }
+        public ImageRenderer ImageRenderer { get; private set; }
         public GlyphRenderer GlyphRenderer { get; private set; }
         public UILineRenderer UILineRenderer { get; private set; }
         public CompressToSwap CompressToSwap { get; private set; }
 
+        public ImageBatcher ImageBatcher { get; private set; }
         public TextBatcher TextBatcher { get; private set; }
         public UILineBatcher UILineBatcher { get; private set; }
 
@@ -79,7 +81,9 @@ namespace DemoRenderer
             Background = new BackgroundRenderer(surface.Device, ShaderCache);
             CompressToSwap = new CompressToSwap(surface.Device, ShaderCache);
 
-            GlyphRenderer = new GlyphRenderer(surface.Device, surface.Context, ShaderCache);
+            ImageRenderer = new ImageRenderer(surface.Device, ShaderCache);
+            ImageBatcher = new ImageBatcher(pool);
+            GlyphRenderer = new GlyphRenderer(surface.Device, ShaderCache);
             TextBatcher = new TextBatcher();
             UILineRenderer = new UILineRenderer(surface.Device, ShaderCache);
             UILineBatcher = new UILineBatcher();
@@ -148,6 +152,7 @@ namespace DemoRenderer
             var resolution = Surface.Resolution;
 
             TextBatcher.Resolution = resolution;
+            ImageBatcher.Resolution = resolution;
             UILineBatcher.Resolution = resolution;
 
             var sampleDescription = new SampleDescription(4, 0);
@@ -253,6 +258,8 @@ namespace DemoRenderer
             UILineBatcher.Flush(context, Surface.Resolution, UILineRenderer);
             GlyphRenderer.PreparePipeline(context);
             TextBatcher.Flush(context, Surface.Resolution, GlyphRenderer);
+            ImageRenderer.PreparePipeline(context);
+            ImageBatcher.Flush(context, Surface.Resolution, ImageRenderer);
 
             //Note that, for now, the compress to swap handles its own depth state since it's the only post processing stage.
             context.OutputMerger.SetBlendState(opaqueBlendState);

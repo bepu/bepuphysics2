@@ -238,7 +238,7 @@ namespace DemoRenderer.ShapeDrawing
             ref var activity = ref set.Activity[indexInSet];
             ref var inertia = ref set.LocalInertias[indexInSet];
             Vector3 color;
-            Helpers.UnpackColor((uint)HashHelper.Rehash(handle), out var colorVariation);
+            Helpers.UnpackColor((uint)HashHelper.Rehash(handle), out Vector3 colorVariation);
             if (Bodies.IsKinematic(inertia))
             {
                 var kinematicBase = new Vector3(0, 0.609f, 0.37f);
@@ -274,7 +274,7 @@ namespace DemoRenderer.ShapeDrawing
         {
             var handle = statics.IndexToHandle[index];
             //Statics don't have any activity states. Just some simple variation on a central static color.
-            Helpers.UnpackColor((uint)HashHelper.Rehash(handle), out var colorVariation);
+            Helpers.UnpackColor((uint)HashHelper.Rehash(handle), out Vector3 colorVariation);
             var staticBase = new Vector3(0.1f, 0.057f, 0.014f);
             var staticVariationSpan = new Vector3(0.07f, 0.07f, 0.03f);
             var color = staticBase + staticVariationSpan * colorVariation;

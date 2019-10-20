@@ -15,7 +15,7 @@ namespace Demos.UI
 
         public void CheckForDemoSwap(DemoHarness harness)
         {
-            if (harness.input.WasPushed(harness.controls.ChangeDemo.Key))
+            if (harness.loop.Input.WasPushed(harness.controls.ChangeDemo.Key))
             {
                 TrackingInput = !TrackingInput;
                 TargetDemoIndex = -1;
@@ -23,9 +23,9 @@ namespace Demos.UI
 
             if (TrackingInput)
             {
-                for (int i = 0; i < harness.input.TypedCharacters.Count; ++i)
+                for (int i = 0; i < harness.loop.Input.TypedCharacters.Count; ++i)
                 {
-                    var character = harness.input.TypedCharacters[i];
+                    var character = harness.loop.Input.TypedCharacters[i];
                     if (character == '\b')
                     {
                         //Backspace!
@@ -47,7 +47,7 @@ namespace Demos.UI
                     }
                 }
 
-                if (harness.input.WasPushed(OpenTK.Input.Key.Enter))
+                if (harness.loop.Input.WasPushed(OpenTK.Input.Key.Enter))
                 {
                     //Done entering the index. Swap the demo if needed.
                     TrackingInput = false;

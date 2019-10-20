@@ -46,7 +46,7 @@ namespace DemoContentLoader
                 case ContentType.Mesh:
                     return MeshIO.Load(reader);
                 case ContentType.Image:
-                    return ImageIO.Load(reader);
+                    return Texture2DIO.Load(reader);
             }
             throw new ArgumentException($"Given content type {type} cannot be loaded; no loader is specified. Is the archive corrupted?");
         }
@@ -62,7 +62,7 @@ namespace DemoContentLoader
                     MeshIO.Save((MeshContent)content, writer);
                     return;
                 case ContentType.Image:
-                    ImageIO.Save((ImageContent)content, writer);
+                    Texture2DIO.Save((Texture2DContent)content, writer);
                     return;
             }
             throw new ArgumentException("Given content type cannot be saved; no archiver is specified.");

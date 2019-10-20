@@ -54,7 +54,7 @@ namespace DemoRenderer.UI
         {
             foreach (var batch in batches)
             {
-                renderer.Render(context, batch.Key, screenResolution, batch.Value.Glyphs, 0, batch.Value.GlyphCount);
+                renderer.Render(context, batch.Key, screenResolution, new Span<GlyphInstance>(batch.Value.Glyphs, 0, batch.Value.GlyphCount));
                 batchPool.Return(batch.Value);
             }
             batches.Clear();

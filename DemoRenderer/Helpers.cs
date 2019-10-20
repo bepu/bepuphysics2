@@ -22,7 +22,7 @@ namespace DemoRenderer
         {
             inputAssembler.SetIndexBuffer(binding.Buffer, binding.Format, offset);
         }
-        
+
         /// <summary>
         /// Updates a buffer using UpdateSubresource.
         /// </summary>
@@ -176,6 +176,33 @@ namespace DemoRenderer
             color.X = (packedColor & 0x7FF) / (float)((1 << 11) - 1);
             color.Y = ((packedColor >> 11) & 0x7FF) / (float)((1 << 11) - 1);
             color.Z = ((packedColor >> 22) & 0x3FF) / (float)((1 << 10) - 1);
+        }
+
+        /// <summary>
+        /// Packs an RGBA color in a UNORM manner such that bits 0 through 7 are R, bits 8 through 15 are G, and bits 16 through 23 are B, and 24 through 31 are A. 
+        /// </summary>
+        /// <param name="color">RGBA color to pack.</param>
+        /// <returns>Color packed into 32 bits.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint PackColor(in Vector4 color)
+        {
+            var scaledColor = Vector4.Max(Vector4.Zero, Vector4.Min(Vector4.One, color)) * 255;
+            return (uint)scaledColor.X | ((uint)scaledColor.Y << 8) | ((uint)scaledColor.Z << 16) | ((uint)scaledColor.W << 24);
+        }
+
+        /// <summary>
+        /// Unpacks a 4 component color packed by the Helpers.PackColor function.
+        /// </summary>
+        /// <param name="packedColor">Packed representation of the color to unpack.</param>
+        /// <param name="color">Unpacked color.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void UnpackColor(uint packedColor, out Vector4 color)
+        {
+            color = new Vector4(
+                (packedColor & 255) / 255f,
+                ((packedColor >> 8) & 255) / 255f,
+                ((packedColor >> 16) & 255) / 255f,
+                ((packedColor >> 24) & 255) / 255f);
         }
 
         /// <summary>

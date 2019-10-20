@@ -13,10 +13,8 @@ namespace Demos
 {
     public class DemoHarness : IDisposable
     {
-        Window window;
+        internal GameLoop loop;
         ContentArchive content;
-        internal Input input;
-        Camera camera;
         Grabber grabber;
         internal Controls controls;
         Font font;
@@ -45,7 +43,7 @@ namespace Demos
             if (demoIndex >= 0 && demoIndex < demoSet.Count)
             {
                 demo.Dispose();
-                demo = demoSet.Build(demoIndex, content, camera);
+                demo = demoSet.Build(demoIndex, content, loop.Camera, loop.Surface);
                 //Forcing a full blocking collection makes it a little easier to distinguish some memory issues.
                 GC.Collect(int.MaxValue, GCCollectionMode.Forced, true, true);
             }
@@ -56,9 +54,7 @@ namespace Demos
         public DemoHarness(GameLoop loop, ContentArchive content,
             Controls? controls = null)
         {
-            this.window = loop.Window;
-            this.input = loop.Input;
-            this.camera = loop.Camera;
+            this.loop = loop;
             this.content = content;
             timeSamples = new SimulationTimeSamples(512, loop.Pool);
             if (controls == null)
@@ -108,16 +104,16 @@ namespace Demos
             timingGraph.AddSeries("Batch Compress", new Vector3(0, 0.5f, 0), 0.125f, timeSamples.BatchCompressor);
 
             demoSet = new DemoSet();
-            demo = demoSet.Build(0, content, camera);
+            demo = demoSet.Build(0, content, loop.Camera, loop.Surface);
 
-            OnResize(window.Resolution);
+            OnResize(loop.Window.Resolution);
         }
 
         private void UpdateTimingGraphForMode(TimingDisplayMode newDisplayMode)
         {
             timingDisplayMode = newDisplayMode;
             ref var description = ref timingGraph.Description;
-            var resolution = window.Resolution;
+            var resolution = loop.Window.Resolution;
             switch (timingDisplayMode)
             {
                 case TimingDisplayMode.Big:
@@ -160,7 +156,10 @@ namespace Demos
         public void Update(float dt)
         {
             //Don't bother responding to input if the window isn't focused.
-            if (window.Focused)
+            var input = loop.Input;
+            var window = loop.Window;
+            var camera = loop.Camera;
+            if (loop.Window.Focused)
             {
                 if (controls.Exit.WasTriggered(input))
                 {
@@ -319,18 +318,18 @@ namespace Demos
             renderer.Lines.ClearInstances();
 
             //Perform any demo-specific rendering first.
-            demo.Render(renderer, camera, input, uiText, font);
+            demo.Render(renderer, loop.Camera, loop.Input, uiText, font);
 #if DEBUG
             float warningHeight = 15f;
             renderer.TextBatcher.Write(uiText.Clear().Append("Running in Debug configuration. Compile in Release or, better yet, ReleaseStrip configuration for performance testing."),
-                new Vector2((window.Resolution.X - GlyphBatch.MeasureLength(uiText, font, warningHeight)) * 0.5f, warningHeight), warningHeight, new Vector3(1, 0, 0), font);
+                new Vector2((loop.Window.Resolution.X - GlyphBatch.MeasureLength(uiText, font, warningHeight)) * 0.5f, warningHeight), warningHeight, new Vector3(1, 0, 0), font);
 #endif            
             float textHeight = 16;
             float lineSpacing = textHeight * 1.0f;
             var textColor = new Vector3(1, 1, 1);
             if (showControls)
             {
-                var penPosition = new Vector2(window.Resolution.X - textHeight * 6 - 25, window.Resolution.Y - 25);
+                var penPosition = new Vector2(loop.Window.Resolution.X - textHeight * 6 - 25, loop.Window.Resolution.Y - 25);
                 penPosition.Y -= 19 * lineSpacing;
                 uiText.Clear().Append("Controls: ");
                 var headerHeight = textHeight * 1.2f;
@@ -377,7 +376,7 @@ namespace Demos
                 uiText.Clear().Append("Press ").Append(controls.ShowControls.ToString()).Append(" for controls.");
                 const float inset = 25;
                 renderer.TextBatcher.Write(uiText,
-                    new Vector2(window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, textHeight), window.Resolution.Y - inset),
+                    new Vector2(loop.Window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, textHeight), loop.Window.Resolution.Y - inset),
                     textHeight, textColor, font);
             }
 
@@ -393,9 +392,9 @@ namespace Demos
                 const float inset = 25;
                 renderer.TextBatcher.Write(
                     uiText.Clear().Append(1e3 * timeSamples.Simulation[timeSamples.Simulation.End - 1], timingGraph.Description.VerticalIntervalLabelRounding).Append(" ms/step"),
-                    new Vector2(window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, timingTextSize), inset), timingTextSize, timingGraph.Description.TextColor, font);
+                    new Vector2(loop.Window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, timingTextSize), inset), timingTextSize, timingGraph.Description.TextColor, font);
             }
-            grabber.Draw(renderer.Lines, camera, input.MouseLocked, controls.Grab.IsDown(input), window.GetNormalizedMousePosition(input.MousePosition));
+            grabber.Draw(renderer.Lines, loop.Camera, loop.Input.MouseLocked, controls.Grab.IsDown(loop.Input), loop.Window.GetNormalizedMousePosition(loop.Input.MousePosition));
             renderer.Shapes.AddInstances(demo.Simulation, demo.ThreadDispatcher);
             renderer.Lines.Extract(demo.Simulation.Bodies, demo.Simulation.Solver, demo.Simulation.BroadPhase, showConstraints, showContacts, showBoundingBoxes, demo.ThreadDispatcher);
         }

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace DemoContentLoader
 {
-    public unsafe class Texture2DContent
+    public unsafe class Texture2DContent : IContent
     {
         public int Width { get; private set; }
         public int Height { get; private set; }
@@ -14,6 +14,8 @@ namespace DemoContentLoader
 
         GCHandle handle;
         public byte[] Data { get; private set; }
+
+        public ContentType ContentType => ContentType.Image;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Texture2DContent(int width, int height, int mipLevels, int texelSizeInBytes)
@@ -59,25 +61,25 @@ namespace DemoContentLoader
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetOffset(int x, int y, int mipLevel)
+        public int GetOffset(int columnIndex, int rowIndex, int mipLevel)
         {
             Debug.Assert(mipLevel >= 0 && mipLevel < MipLevels);
-            Debug.Assert(x >= 0 && x < Width && y >= 0 && y < Height);
-            return GetMipStartIndex(mipLevel) + GetRowPitch(mipLevel) * y + x;
+            Debug.Assert(columnIndex >= 0 && columnIndex < Width && rowIndex >= 0 && rowIndex < Height);
+            return GetMipStartIndex(mipLevel) + GetRowPitch(mipLevel) * rowIndex + columnIndex;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetOffsetForMip0(int x, int y)
+        public int GetOffsetForMip0(int columnIndex, int rowIndex)
         {
-            Debug.Assert(x >= 0 && x < Width && y >= 0 && y < Height);
-            return Width * y + x;
+            Debug.Assert(columnIndex >= 0 && columnIndex < Width && rowIndex >= 0 && rowIndex < Height);
+            return Width * rowIndex + columnIndex;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetRowOffsetForMip0(int y)
+        public int GetRowOffsetForMip0(int rowIndex)
         {
-            Debug.Assert( y >= 0 && y < Height);
-            return Width * y;
+            Debug.Assert(rowIndex >= 0 && rowIndex < Height);
+            return Width * rowIndex;
         }
-        
+
         public byte* Pin()
         {
             if (handle.IsAllocated)
@@ -85,7 +87,7 @@ namespace DemoContentLoader
             handle = GCHandle.Alloc(Data, GCHandleType.Pinned);
             return (byte*)handle.AddrOfPinnedObject();
         }
-    
+
         public void Unpin()
         {
             if (!handle.IsAllocated)

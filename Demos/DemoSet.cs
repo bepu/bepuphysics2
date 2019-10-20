@@ -3,6 +3,7 @@ using DemoRenderer;
 using Demos.Demos;
 using Demos.Demos.Cars;
 using Demos.Demos.Characters;
+using Demos.Demos.Sponsors;
 using Demos.Demos.Tanks;
 using Demos.SpecializedTests;
 using Demos.SpecializedTests.Media;
@@ -20,7 +21,7 @@ namespace Demos
         struct Option
         {
             public string Name;
-            public Func<ContentArchive, Camera, Demo> Builder;
+            public Func<ContentArchive, Camera, RenderSurface, Demo> Builder;
         }
 
         List<Option> options = new List<Option>();
@@ -28,12 +29,13 @@ namespace Demos
         {
             options.Add(new Option
             {
-                Builder = (content, camera) =>
+                Builder = (content, camera, surface) =>
                 {
                     //Note that the actual work is done in the Initialize function rather than a constructor.
                     //The 'new T()' syntax actually uses reflection and repackages exceptions in an inconvenient way.
                     //By using Initialize instead, the stack trace and debugger will go right to the source.
                     var demo = new T();
+                    demo.LoadGraphicalContent(content, surface);
                     demo.Initialize(content, camera);
                     return demo;
                 },
@@ -61,6 +63,7 @@ namespace Demos
             AddOption<CustomVoxelCollidableDemo>();
             AddOption<RopeStabilityDemo>();
             AddOption<SubsteppingDemo>();
+            AddOption<SponsorDemo>();
         }
 
         public int Count { get { return options.Count; } }
@@ -70,9 +73,9 @@ namespace Demos
             return options[index].Name;
         }
 
-        public Demo Build(int index, ContentArchive content, Camera camera)
+        public Demo Build(int index, ContentArchive content, Camera camera, RenderSurface surface)
         {
-            return options[index].Builder(content, camera);
+            return options[index].Builder(content, camera, surface);
         }
     }
 }

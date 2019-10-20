@@ -10,9 +10,9 @@ using System.Runtime.CompilerServices;
 namespace DemoRenderer.UI
 {
     /// <summary>
-    /// GPU-relevant information for the rendering of a single character glyph instance.
+    /// GPU-relevant information for the rendering of a single image instance.
     /// </summary>
-    public struct GlyphInstance
+    public struct ImageInstance
     {
         /// <summary>
         /// Packed location of the minimum corner of the glyph. Lower 16 bits is X, upper 16 bits is Y. Should be scaled by PackedToScreen.
@@ -23,17 +23,16 @@ namespace DemoRenderer.UI
         /// </summary>
         public uint PackedHorizontalAxis;
         /// <summary>
-        /// The combination of two properties: scale to apply to the source glyph. UNORM packed across a range of 0.0 at 0 to 16.0 at 65535, stored in the lower 16 bits,
-        /// and the id of the glyph type in the font stored in the upper 16 bits.
+        /// Packed width and height. Width is in the lower 16 bits, height is in the upper 16 bits.
         /// </summary>
-        public uint PackedScaleAndSourceId;
+        public uint PackedSize;
         /// <summary>
-        /// Color, packed in a UNORM manner such that bits 0 through 10 are R, bits 11 through 21 are G, and bits 22 through 31 are B.
+        /// RGBA color, packed in a UNORM manner such that bits 0 through 7 are R, bits 8 through 15 are G, bits 16 through 23 are B, and bits 24 through 31 are A.
         /// </summary>
         public uint PackedColor;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public GlyphInstance(ref Vector2 start, ref Vector2 horizontalAxis, float scale, int sourceId, ref Vector3 color, ref Vector2 screenToPackedScale)
+        public ImageInstance(in Vector2 start, in Vector2 horizontalAxis, in Vector2 size, in Vector4 color, in Vector2 screenToPackedScale)
         {
             //Note that this can do some weird stuff if the position is outside of the target range. For the sake of the demos, we just assume everything's in frame.
             //If you want to use this for a game where you can't guarantee that everything's in frame, this packing range would need to be modified.
@@ -44,45 +43,42 @@ namespace DemoRenderer.UI
             Debug.Assert(scaledAxisX <= 65534);
             Debug.Assert(scaledAxisY <= 65534);
             PackedHorizontalAxis = scaledAxisX | (scaledAxisY << 16);
-            var packScaledScale = scale * (65535f / 16f);
-            Debug.Assert(packScaledScale >= 0);
-            if (packScaledScale > 65535f)
-                packScaledScale = 65535f;
-            Debug.Assert(sourceId >= 0 && sourceId < 65536);
-            PackedScaleAndSourceId = (uint)packScaledScale | (uint)(sourceId << 16);
+            const float sizeScale = 65535f / 4096f;
+            var scaledSize = size * sizeScale;
+            var clampedSize = Vector2.Max(Vector2.Zero, Vector2.Min(new Vector2(65535f), scaledSize));
+            PackedSize = (uint)clampedSize.X | (((uint)clampedSize.Y) << 16);           
             PackedColor = Helpers.PackColor(color);
         }
     }
 
-    public class GlyphRenderer : IDisposable
+    public class ImageRenderer : IDisposable
     {
         struct VertexConstants
         {
             public Vector2 PackedToScreenScale;
             public Vector2 ScreenToNDCScale;
-            public Vector2 InverseAtlasResolution;
         }
         ConstantsBuffer<VertexConstants> vertexConstants;
 
-        StructuredBuffer<GlyphInstance> instances;
+        StructuredBuffer<ImageInstance> instances;
         IndexBuffer indices;
 
         SamplerState sampler;
         VertexShader vertexShader;
         PixelShader pixelShader;
-        public GlyphRenderer(Device device, ShaderCache cache, int maximumGlyphsPerDraw = 2048)
+        public ImageRenderer(Device device, ShaderCache cache, int maximumGlyphsPerDraw = 2048)
         {
-            instances = new StructuredBuffer<GlyphInstance>(device, maximumGlyphsPerDraw, "Glyph Instances");
-            indices = new IndexBuffer(Helpers.GetQuadIndices(maximumGlyphsPerDraw), device, "Glyph Indices");
+            instances = new StructuredBuffer<ImageInstance>(device, maximumGlyphsPerDraw, "Image Instances");
+            indices = new IndexBuffer(Helpers.GetQuadIndices(maximumGlyphsPerDraw), device, "Image Indices");
 
             var samplerDescription = SamplerStateDescription.Default();
             samplerDescription.Filter = Filter.MinMagMipLinear;
             sampler = new SamplerState(device, samplerDescription);
 
-            vertexConstants = new ConstantsBuffer<VertexConstants>(device, debugName: "Glyph Renderer Vertex Constants");
+            vertexConstants = new ConstantsBuffer<VertexConstants>(device, debugName: "Image Renderer Vertex Constants");
 
-            vertexShader = new VertexShader(device, cache.GetShader(@"UI\RenderGlyphs.hlsl.vshader"));
-            pixelShader = new PixelShader(device, cache.GetShader(@"UI\RenderGlyphs.hlsl.pshader"));
+            vertexShader = new VertexShader(device, cache.GetShader(@"UI\RenderImages.hlsl.vshader"));
+            pixelShader = new PixelShader(device, cache.GetShader(@"UI\RenderImages.hlsl.pshader"));
         }
 
         /// <summary>
@@ -102,26 +98,24 @@ namespace DemoRenderer.UI
             context.PixelShader.SetSampler(0, sampler);
         }
 
-        public void Render(DeviceContext context, Font font, Int2 screenResolution, Span<GlyphInstance> glyphs)
+        public void Render(DeviceContext context, RenderableImage image, Int2 screenResolution, Span<ImageInstance> instances)
         {
             var vertexConstantsData = new VertexConstants
             {
                 //These first two scales could be uploaded once, but it would require another buffer. Not important enough.
                 //The packed minimum must permit subpixel locations. So, distribute the range 0 to 65535 over the pixel range 0 to resolution.
                 PackedToScreenScale = new Vector2(screenResolution.X / 65535f, screenResolution.Y / 65535f),
-                ScreenToNDCScale = new Vector2(2f / screenResolution.X, -2f / screenResolution.Y),
-                InverseAtlasResolution = new Vector2(1f / font.Content.Atlas.Width, 1f / font.Content.Atlas.Height)
+                ScreenToNDCScale = new Vector2(2f / screenResolution.X, -2f / screenResolution.Y)
             };
             vertexConstants.Update(context, ref vertexConstantsData);
-            context.VertexShader.SetShaderResource(1, font.Sources.SRV);
-            context.PixelShader.SetShaderResource(0, font.AtlasSRV);
+            context.PixelShader.SetShaderResource(0, image.SRV);
 
-            var count = glyphs.Length;
+            var count = instances.Length;
             var start = 0;
             while (count > 0)
             {
-                var batchCount = Math.Min(instances.Capacity, count);
-                instances.Update(context, glyphs.Slice(start, batchCount));
+                var batchCount = Math.Min(this.instances.Capacity, count);
+                this.instances.Update(context, instances.Slice(start, batchCount));
                 context.DrawIndexed(batchCount * 6, 0, 0);
                 count -= batchCount;
                 start += batchCount;
@@ -143,7 +137,7 @@ namespace DemoRenderer.UI
         }
 
 #if DEBUG
-        ~GlyphRenderer()
+        ~ImageRenderer()
         {
             Helpers.CheckForUndisposed(disposed, this);
         }
