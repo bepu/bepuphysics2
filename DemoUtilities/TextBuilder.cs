@@ -18,6 +18,17 @@ namespace DemoUtilities
 
         public ref char this[int index] { get { return ref characters[index]; } }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator Span<char>(TextBuilder textBuilder)
+        {
+            return new Span<char>(textBuilder.characters, 0, textBuilder.count);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator ReadOnlySpan<char>(TextBuilder textBuilder)
+        {
+            return new ReadOnlySpan<char>(textBuilder.characters, 0, textBuilder.count);
+        }
+
         public int Length
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -93,17 +104,17 @@ namespace DemoUtilities
             //This is a bit of a throwaway implementation and is far from the fastest or numerically best implementation,
             //but it is fairly simple and it doesn't matter very much.
             const double minimumDoubleMagnitude = 2.22507385850720138309023271733240406421921598046233e-308;
-            if(double.IsNaN(value))
+            if (double.IsNaN(value))
             {
                 Append("NaN");
                 return this;
             }
-            if(double.IsPositiveInfinity(value))
+            if (double.IsPositiveInfinity(value))
             {
                 Append("+INF");
                 return this;
             }
-            if(double.IsNegativeInfinity(value))
+            if (double.IsNegativeInfinity(value))
             {
                 Append("-INF");
                 return this;

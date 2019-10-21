@@ -71,6 +71,14 @@ namespace DemoRenderer.UI
             Draw(image, targetPosition, scale * new Vector2(image.Content.Width, image.Content.Height), new Vector2(1, 0), new Vector4(1));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Draw(RenderableImage image, in Vector2 targetPosition, float height, in Vector4 color)
+        {
+            var scale = height / image.Content.Height;
+            Draw(image, targetPosition, scale * new Vector2(image.Content.Width, image.Content.Height), new Vector2(1, 0), color);
+        }
+
+
         public unsafe void Flush(DeviceContext context, Int2 screenResolution, ImageRenderer renderer)
         {
             foreach (var batch in batches)

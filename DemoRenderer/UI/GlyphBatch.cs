@@ -33,7 +33,7 @@ namespace DemoRenderer.UI
             GlyphCount = 0;
         }
 
-        public static float MeasureLength(TextBuilder characters, Font font, float height)
+        public static float MeasureLength(ReadOnlySpan<char> characters, Font font, float height)
         {
             if (characters.Length > 0)
             {
@@ -53,10 +53,11 @@ namespace DemoRenderer.UI
                 return length * scale;
             }
             return 0;
+
         }
 
-        public void Add(TextBuilder characters, int start, int count, Vector2 screenToPackedScale,
-            Vector2 startingPosition, Vector2 horizontalAxis, Vector3 color, float height, Font font)
+        public void Add(ReadOnlySpan<char> characters, int start, int count, Vector2 screenToPackedScale,
+            Vector2 startingPosition, Vector2 horizontalAxis, Vector4 color, float height, Font font)
         {
             var scale = height * font.Content.InverseSizeInTexels;
             //Note that we don't actually include glyphs for spaces, so this could result in an oversized allocation. Not very concerning; no effect on correctness.

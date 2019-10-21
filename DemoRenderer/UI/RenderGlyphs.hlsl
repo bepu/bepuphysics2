@@ -21,7 +21,7 @@ struct GlyphInstance
 	//Index of the source character description in the description set.
 	//Lower 16 bits contain scale, upper 16 bits contain source id.
 	uint PackedScaleAndSourceId;
-	//Color, packed in a UNORM manner such that bits 0 through 10 are R, bits 11 through 21 are G, and bits 22 through 31 are B.
+	//RGBA color, packed in a UNORM manner such that bits 0 through 7 are R, bits 8 through 15 are G, bits 16 through 23 are B, and bits 24 through 31 are A.
 	uint PackedColor;
 };
 
@@ -40,7 +40,7 @@ struct PSInput
 	float4 Position : SV_Position;
 	float2 AtlasUV : TextureCoordinates;
 	nointerpolation float DistanceScale : DistanceScale;
-	nointerpolation float3 Color : Color; //Could leave this packed; might be faster than passing it up. Shrug.
+	nointerpolation float4 Color : Color; //Could leave this packed; might be faster than passing it up. Shrug.
 };
 
 #define SampleRadius 0.5
@@ -83,7 +83,7 @@ PSInput VSMain(uint vertexId : SV_VertexId)
 		screenPosition * ScreenToNDCScale + float2(-1.0, 1.0), 0.5, 1);
 	output.AtlasUV = (source.Minimum - atlasPadding + paddedSpan * quadCoordinates) * InverseAtlasResolution;
 	output.DistanceScale = source.DistanceScale * instanceScale;
-	output.Color = UnpackR11G11B10_UNorm(instance.PackedColor);
+	output.Color = UnpackR8G8B8A8_UNorm(instance.PackedColor);
 	return output;
 }
 
@@ -97,6 +97,6 @@ float4 PSMain(PSInput input) : SV_Target0
 	//If the glyph's distance is beyond the sample radius, then there is zero coverage.
 	//If the distance is 0, then the sample is half covered.
 	//If the distance is less than -sampleRadius, then it's fully covered.
-	float alpha = saturate(0.5 - screenDistance / (SampleRadius * 2));
-	return float4(input.Color * alpha, alpha);
+	float alpha = input.Color.w * saturate(0.5 - screenDistance / (SampleRadius * 2));
+	return float4(input.Color.xyz * alpha, alpha);
 }

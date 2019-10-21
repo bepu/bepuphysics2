@@ -29,7 +29,7 @@ namespace DemoRenderer.UI
         }
         
         public void Write(TextBuilder characters, int start, int count, Vector2 targetPosition, float height,
-            Vector2 horizontalAxis, Vector3 color, Font font)
+            Vector2 horizontalAxis, Vector4 color, Font font)
         {
             if (!batches.TryGetValue(font, out var glyphBatch))
             {
@@ -40,14 +40,30 @@ namespace DemoRenderer.UI
             glyphBatch.Add(characters, start, count, screenToPackedScale, targetPosition, horizontalAxis, color, height, font);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Write(TextBuilder characters, Vector2 targetPosition, float height, Vector3 color, Font font)
+        public void Write(TextBuilder characters, int start, int count, Vector2 targetPosition, float height,
+            Vector2 horizontalAxis, Vector3 color, Font font)
+        {
+            Write(characters, start, count, targetPosition, height, horizontalAxis, new Vector4(color, 1), font);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write(TextBuilder characters, Vector2 targetPosition, float height, Vector4 color, Font font)
         {
             Write(characters, 0, characters.Length, targetPosition, height, new Vector2(1, 0), color, font);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Write(TextBuilder characters, Vector2 targetPosition, float height, Vector2 horizontalAxis, Vector3 color, Font font)
+        public void Write(TextBuilder characters, Vector2 targetPosition, float height, Vector3 color, Font font)
+        {
+            Write(characters, 0, characters.Length, targetPosition, height, new Vector2(1, 0), new Vector4(color, 1), font);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write(TextBuilder characters, Vector2 targetPosition, float height, Vector2 horizontalAxis, Vector4 color, Font font)
         {
             Write(characters, 0, characters.Length, targetPosition, height, horizontalAxis, color, font);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write(TextBuilder characters, Vector2 targetPosition, float height, Vector2 horizontalAxis, Vector3 color, Font font)
+        {
+            Write(characters, 0, characters.Length, targetPosition, height, horizontalAxis, new Vector4(color, 1), font);
         }
 
         public void Flush(DeviceContext context, Int2 screenResolution, GlyphRenderer renderer)
