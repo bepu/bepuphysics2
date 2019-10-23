@@ -73,7 +73,10 @@ namespace Demos
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b)
         {
-            return true;
+            //While the engine won't even try creating pairs between statics at all, it will ask about kinematic-kinematic pairs.
+            //Those pairs cannot emit constraints since both involved bodies have infinite inertia. Since most of the demos don't need
+            //to collect information about kinematic-kinematic pairs, we'll require that at least one of the bodies needs to be dynamic.
+            return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

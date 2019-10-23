@@ -111,7 +111,7 @@ namespace Demos.Demos
             {
                 return SubgroupCollisionFilter.AllowCollision(CollisionFilters[a.Handle], CollisionFilters[b.Handle]);
             }
-            return true;
+            return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

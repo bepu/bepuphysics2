@@ -546,7 +546,7 @@ namespace Demos.Demos
             {
                 return DeformableCollisionFilter.Test(Filters[a.Handle], Filters[b.Handle]);
             }
-            return true;
+            return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

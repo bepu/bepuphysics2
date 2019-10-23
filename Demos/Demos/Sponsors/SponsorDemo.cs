@@ -9,20 +9,25 @@ using DemoRenderer.UI;
 using System.IO;
 using DemoUtilities;
 using System.Diagnostics;
+using BepuUtilities.Collections;
+using BepuPhysics.Collidables;
 
 namespace Demos.Demos.Sponsors
 {
+    public struct Sponsor
+    {
+        public string Name;
+        public RenderableImage RewardImage;
+    }
+
     public class SponsorDemo : Demo
     {
-        struct Sponsor
-        {
-            public string Name;
-            public RenderableImage RewardImage;
-        }
         List<string> sponsors0 = new List<string>();
         List<Sponsor> sponsors1 = new List<Sponsor>();
         List<Sponsor> sponsors2 = new List<Sponsor>();
         List<Sponsor> sponsors3 = new List<Sponsor>();
+
+        QuickList<SponsorNewt> newts;
 
         RenderableImage CreateRewardImage(string rewardImagePath, ContentArchive content, RenderSurface surface)
         {
@@ -75,7 +80,11 @@ namespace Demos.Demos.Sponsors
 
             //These supporters are those who gave 1000 dollars a month (or historical backers of roughly equivalent or greater total contribution).
             Add(sponsors3, @"K. H. & F.", @"Content\Sponsors\spooky.png", content, surface);
+
         }
+
+        Vector2 newtArenaMin, newtArenaMax;
+        Random random;
         public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-30, 8, -60);
@@ -83,6 +92,20 @@ namespace Demos.Demos.Sponsors
             camera.Pitch = 0;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+
+            DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(-10, 10, -10), out var newtMesh);
+            var newtShape = Simulation.Shapes.Add(newtMesh);
+            newts = new QuickList<SponsorNewt>(sponsors2.Count, BufferPool);
+            newtArenaMin = new Vector2(-100);
+            newtArenaMax = new Vector2(100);
+            random = new Random(5);
+            for (int i = 0; i < sponsors2.Count; ++i)
+            {
+                ref var newt = ref newts.AllocateUnsafely();
+                newt = new SponsorNewt(Simulation, newtShape, 0, newtArenaMin, newtArenaMax, random, i);
+            }
+
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(240, 20, 240)), 0.1f)));
         }
 
 
@@ -156,10 +179,22 @@ namespace Demos.Demos.Sponsors
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
             base.Update(window, camera, input, dt);
+            for (int i = 0; i < newts.Count; ++i)
+            {
+                newts[i].Update(Simulation, time, 0, newtArenaMin, newtArenaMax, random, 60f);
+            }
             time += dt;
         }
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
+            var viewProjection = camera.ViewProjection;
+            var integerResolution = renderer.Surface.Resolution;
+            var resolution = new Vector2(integerResolution.X, integerResolution.Y);
+            for (int i = 0; i < newts.Count; ++i)
+            {
+                newts[i].Render(Simulation, sponsors2, renderer, viewProjection, resolution, text, font);
+            }
+
             var integralMousePosition = input.MousePosition;
             var mousePosition = new Vector2(integralMousePosition.X, integralMousePosition.Y);
             renderer.TextBatcher.Write(text.Clear().Append("Mouseover entries to view additional very important tier rewards."), new Vector2(224, 48), 16, new Vector3(1), font);
@@ -168,6 +203,7 @@ namespace Demos.Demos.Sponsors
             DrawSponsors("Very neat sponsors", sponsors2, new Vector2(200, 124 + 192), mousePosition, renderer, text, font, time, 4, 4, 0.25f, 24, 4, 36);
             DrawSponsors("Sponsors", sponsors1, new Vector2(200, 124 + 192 + 192), mousePosition, renderer, text, font, time, 4, 4, 0.25f, 24, 4, 36);
             DrawSponsors("Smaller sponsors who are still cool", sponsors0, new Vector2(200, 124 + 192 * 3), renderer, text, font, time, 4, 4, 0.25f, 16, 24);
+
         }
 
         protected override void OnDispose()

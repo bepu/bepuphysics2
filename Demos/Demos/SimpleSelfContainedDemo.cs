@@ -46,7 +46,11 @@ namespace Demos.Demos
             {
                 //Before creating a narrow phase pair, the broad phase asks this callback whether to bother with a given pair of objects.
                 //This can be used to implement arbitrary forms of collision filtering. See the RagdollDemo or NewtDemo for examples.
-                return true;
+                //Here, we'll make sure at least one of the two bodies is dynamic.
+                //The engine won't generate static-static pairs, but it will generate kinematic-kinematic pairs.
+                //That's useful if you're trying to make some sort of sensor/trigger object, but since kinematic-kinematic pairs
+                //can't generate constraints (both bodies have infinite inertia), simple simulations can just ignore such pairs.
+                return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
             }
 
             /// <summary>
