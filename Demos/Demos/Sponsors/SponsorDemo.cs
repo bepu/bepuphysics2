@@ -72,7 +72,9 @@ namespace Demos.Demos.Sponsors
 
             //These supporters are those who gave 50 dollars a month (or historical backers of roughly equivalent or greater total contribution).
             //They get a larger entry, a bit more text if desired, and a physically simulated entry in this demo.
+            //You may notice that this tier does not have much in the way of restrictions on the "name"/text.
             Add(sponsors2, @"M. T.", @"Content\Sponsors\goose.png", content, surface);
+            Add(sponsors2, @"Yo Mamma wants you to go to bed", @"Content\Sponsors\spide.png", content, surface);
             Add(sponsors2, @"A. R.", @"Content\Sponsors\scootybun.png", content, surface);
             Add(sponsors2, @"Alex 'mcmonkey' Goodwin, @mcmonkey4eva on github and twitter", @"Content\Sponsors\mcmonkey.png", content, surface);
             Add(sponsors2, @"A. K. D.", @"Content\Sponsors\behattedpenguin.png", content, surface);
@@ -105,7 +107,13 @@ namespace Demos.Demos.Sponsors
                 newt = new SponsorNewt(Simulation, newtShape, 0, newtArenaMin, newtArenaMax, random, i);
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(240, 20, 240)), 0.1f)));
+            const float floorSize = 240;
+            const float wallThickness = 200;
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10f, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(floorSize, 20, floorSize)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(floorSize * -0.5f - wallThickness * 0.5f, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(wallThickness, 30, floorSize + wallThickness * 2)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(floorSize * 0.5f + wallThickness * 0.5f, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(wallThickness, 30, floorSize + wallThickness * 2)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, floorSize * -0.5f - wallThickness * 0.5f), new CollidableDescription(Simulation.Shapes.Add(new Box(floorSize, 30, wallThickness)), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, floorSize * 0.5f + wallThickness * 0.5f), new CollidableDescription(Simulation.Shapes.Add(new Box(floorSize, 30, wallThickness)), 0.1f)));
         }
 
 
