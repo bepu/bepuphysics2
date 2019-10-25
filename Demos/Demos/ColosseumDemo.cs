@@ -18,7 +18,7 @@ namespace Demos.Demos
     /// </summary>
     public class ColosseumDemo : Demo
     {
-        void CreateRingWall(Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, int height, float radius)
+        public static void CreateRingWall(Simulation simulation, Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, int height, float radius)
         {
             var circumference = MathF.PI * 2 * radius;
             var boxCountPerRing = (int)(0.9f * circumference / ringBoxShape.Length);
@@ -31,12 +31,12 @@ namespace Demos.Demos
                     bodyDescription.Pose = new RigidPose(
                         position + new Vector3(-MathF.Cos(angle) * radius, (ringIndex + 0.5f) * ringBoxShape.Height, MathF.Sin(angle) * radius),
                         Quaternion.CreateFromAxisAngle(Vector3.UnitY, angle));
-                    Simulation.Bodies.Add(bodyDescription);
+                    simulation.Bodies.Add(bodyDescription);
                 }
             }
         }
 
-        void CreateRingPlatform(Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, float radius)
+        public static void CreateRingPlatform(Simulation simulation, Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, float radius)
         {
             var innerCircumference = MathF.PI * 2 * (radius - ringBoxShape.HalfLength);
             var boxCount = (int)(0.95f * innerCircumference / ringBoxShape.Height);
@@ -47,18 +47,18 @@ namespace Demos.Demos
                 bodyDescription.Pose = new RigidPose(
                     position + new Vector3(-MathF.Cos(angle) * radius, ringBoxShape.HalfWidth, MathF.Sin(angle) * radius),
                     Quaternion.Concatenate(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f), Quaternion.CreateFromAxisAngle(Vector3.UnitY, angle + MathF.PI * 0.5f)));
-                Simulation.Bodies.Add(bodyDescription);
+                simulation.Bodies.Add(bodyDescription);
             }
         }
 
-        Vector3 CreateRing(Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, float radius, int heightPerPlatformLevel, int platformLevels)
+        public static Vector3 CreateRing(Simulation simulation, Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, float radius, int heightPerPlatformLevel, int platformLevels)
         {
             for (int platformIndex = 0; platformIndex < platformLevels; ++platformIndex)
             {
                 var wallOffset = ringBoxShape.HalfLength - ringBoxShape.HalfWidth;
-                CreateRingWall(position, ringBoxShape, bodyDescription, heightPerPlatformLevel, radius + wallOffset);
-                CreateRingWall(position, ringBoxShape, bodyDescription, heightPerPlatformLevel, radius - wallOffset);
-                CreateRingPlatform(position + new Vector3(0, heightPerPlatformLevel * ringBoxShape.Height, 0), ringBoxShape, bodyDescription, radius);
+                CreateRingWall(simulation, position, ringBoxShape, bodyDescription, heightPerPlatformLevel, radius + wallOffset);
+                CreateRingWall(simulation, position, ringBoxShape, bodyDescription, heightPerPlatformLevel, radius - wallOffset);
+                CreateRingPlatform(simulation, position + new Vector3(0, heightPerPlatformLevel * ringBoxShape.Height, 0), ringBoxShape, bodyDescription, radius);
                 position.Y += heightPerPlatformLevel * ringBoxShape.Height + ringBoxShape.Width;
             }
             return position;
@@ -89,7 +89,7 @@ namespace Demos.Demos
                 var ringCount = layerCount - layerIndex;
                 for (int ringIndex = 0; ringIndex < ringCount; ++ringIndex)
                 {
-                    CreateRing(layerPosition, ringBoxShape, boxDescription, innerRadius + ringIndex * (ringBoxShape.Length + ringSpacing) + layerIndex * (ringBoxShape.Length - ringBoxShape.Width), heightPerPlatform, platformsPerLayer);
+                    CreateRing(Simulation, layerPosition, ringBoxShape, boxDescription, innerRadius + ringIndex * (ringBoxShape.Length + ringSpacing) + layerIndex * (ringBoxShape.Length - ringBoxShape.Width), heightPerPlatform, platformsPerLayer);
                 }
                 layerPosition.Y += platformsPerLayer * (ringBoxShape.Height * heightPerPlatform + ringBoxShape.Width);
             }

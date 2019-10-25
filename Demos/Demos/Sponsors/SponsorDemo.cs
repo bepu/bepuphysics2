@@ -29,6 +29,7 @@ namespace Demos.Demos.Sponsors
         List<Sponsor> sponsors3 = new List<Sponsor>();
 
         QuickList<SponsorNewt> newts;
+        int overlordNewtHandle;
 
         RenderableImage CreateRewardImage(string rewardImagePath, ContentArchive content, RenderSurface surface)
         {
@@ -92,9 +93,9 @@ namespace Demos.Demos.Sponsors
         QuickList<SponsorCharacterAI> characterAIs;
         public override void Initialize(ContentArchive content, Camera camera)
         {
-            camera.Position = new Vector3(-30, 8, -60);
-            camera.Yaw = MathF.PI * 3f / 4;
-            camera.Pitch = 0;
+            camera.Position = new Vector3(130, 50, 130);
+            camera.Yaw = -MathF.PI * 0.25f;
+            camera.Pitch = 0.4f;
 
             characterControllers = new CharacterControllers(BufferPool);
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characterControllers), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
@@ -104,7 +105,7 @@ namespace Demos.Demos.Sponsors
             newts = new QuickList<SponsorNewt>(sponsors2.Count, BufferPool);
             newtArenaMin = new Vector2(-100);
             newtArenaMax = new Vector2(100);
-            random = new Random(5);
+            random = new Random(6);
             for (int i = 0; i < sponsors2.Count; ++i)
             {
                 ref var newt = ref newts.AllocateUnsafely();
@@ -128,6 +129,22 @@ namespace Demos.Demos.Sponsors
                 var targetPosition = 0.5f * (newtArenaMin + (newtArenaMax - newtArenaMin) * new Vector2((float)random.NextDouble(), (float)random.NextDouble()));
                 characterAIs.AllocateUnsafely() = new SponsorCharacterAI(characterControllers, characterCollidable, new Vector3(position2D.X, 5, position2D.Y), targetPosition);
             }
+
+            const int hutCount = 30;
+            var hutBoxShape = new Box(0.4f, 2, 3);
+            hutBoxShape.ComputeInertia(20, out var obstacleInertia);
+            var obstacleDescription = BodyDescription.CreateDynamic(new Vector3(), obstacleInertia, new CollidableDescription(Simulation.Shapes.Add(hutBoxShape), 0.1f), new BodyActivityDescription(1e-2f));
+
+            for (int i = 0; i < hutCount; ++i)
+            {
+                var position2D = newtArenaMin + (newtArenaMax - newtArenaMin) * new Vector2((float)random.NextDouble(), (float)random.NextDouble());
+                ColosseumDemo.CreateRing(Simulation, new Vector3(position2D.X, 0, position2D.Y), hutBoxShape, obstacleDescription, 5, 2, random.Next(1, 5));
+
+            }
+
+            var overlordNewtShape = newtMesh;
+            overlordNewtShape.Scale = new Vector3(60, 60, 60);
+            overlordNewtHandle = Simulation.Statics.Add(new StaticDescription(new Vector3(0, 10, -floorSize * 0.5f - 70), new CollidableDescription(Simulation.Shapes.Add(overlordNewtShape), 0.1f)));
         }
 
 
@@ -221,14 +238,25 @@ namespace Demos.Demos.Sponsors
                 newts[i].Render(Simulation, sponsors2, renderer, viewProjection, resolution, text, font);
             }
 
+            //We'll hardcode the overlord newts. Not going to be a problem, I suspect.
+            {
+                var worldTextPosition = Simulation.Statics.Poses[Simulation.Statics.HandleToIndex[overlordNewtHandle]].Position + new Vector3(0, 48, 0);
+                Helpers.GetScreenLocation(worldTextPosition, viewProjection, resolution, out var screenspacePosition);
+                const float nameHeight = 14;
+                var name = sponsors3[0].Name;
+                var nameLength = GlyphBatch.MeasureLength(name, font, nameHeight);
+                screenspacePosition.X -= nameLength * 0.5f;
+                renderer.TextBatcher.Write(text.Clear().Append(name), screenspacePosition, nameHeight, new Vector3(0.3f, 0f, 0f), font);
+            }
+
             var integralMousePosition = input.MousePosition;
             var mousePosition = new Vector2(integralMousePosition.X, integralMousePosition.Y);
-            renderer.TextBatcher.Write(text.Clear().Append("Mouseover entries to view additional very important tier rewards."), new Vector2(224, 48), 16, new Vector3(1), font);
-            renderer.TextBatcher.Write(text.Clear().Append("Are you a sponsor, but missing from this list? Want a different name/nickname for your entry? Send me a message!"), new Vector2(224, 68), 16, new Vector3(1), font);
-            DrawSponsors("Super duper sponsors", sponsors3, new Vector2(200, 124), mousePosition, renderer, text, font, time, 1, 4, 0.25f, 32, 6, 48);
-            DrawSponsors("Very neat sponsors", sponsors2, new Vector2(200, 124 + 192), mousePosition, renderer, text, font, time, 4, 4, 0.25f, 24, 4, 36);
-            DrawSponsors("Sponsors", sponsors1, new Vector2(200, 124 + 192 + 192), mousePosition, renderer, text, font, time, 4, 4, 0.25f, 24, 4, 36);
-            DrawSponsors("Smaller sponsors who are still cool", sponsors0, new Vector2(200, 124 + 192 * 3), renderer, text, font, time, 4, 4, 0.25f, 16, 24);
+            renderer.TextBatcher.Write(text.Clear().Append("Mouseover entries to view additional very important tier rewards."), new Vector2(32, resolution.Y - 50), 14, new Vector3(1), font);
+            renderer.TextBatcher.Write(text.Clear().Append("Are you a sponsor, but missing from this list? Want a different name/nickname for your entry? Send me a message!"), new Vector2(32, resolution.Y - 32), 14, new Vector3(1), font);
+            DrawSponsors("Super duper sponsors", sponsors3, new Vector2(32, resolution.Y - 480), mousePosition, renderer, text, font, time, 1, 4, 0.25f, 32, 6, 48);
+            DrawSponsors("Very neat sponsors", sponsors2, new Vector2(32, resolution.Y - 288), mousePosition, renderer, text, font, time, 4, 4, 0.25f, 24, 4, 36);
+            DrawSponsors("Sponsors", sponsors1, new Vector2(renderer.Surface.Resolution.X - 512, resolution.Y - 480), mousePosition, renderer, text, font, time, 4, 4, 0.25f, 24, 4, 36);
+            DrawSponsors("Smaller sponsors who are still cool", sponsors0, new Vector2(renderer.Surface.Resolution.X - 512, resolution.Y - 288), renderer, text, font, time, 4, 4, 0.25f, 16, 24);
 
         }
 

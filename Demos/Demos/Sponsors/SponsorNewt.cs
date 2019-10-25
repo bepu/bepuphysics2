@@ -34,7 +34,7 @@ namespace Demos.Demos.Sponsors
 
         public void Update(Simulation simulation, double time, float height, in Vector2 arenaMin, in Vector2 arenaMax, Random random, float inverseDt)
         {
-            const float jumpDuration = 0.5f;
+            const float jumpDuration = 1;
             var body = simulation.Bodies.GetBodyReference(BodyHandle);
             //It's worth noting that the newt model has +Z as forward, so we have to compensate for that.
             if (time >= nextAllowedJump)

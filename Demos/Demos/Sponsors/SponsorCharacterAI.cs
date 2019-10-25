@@ -19,7 +19,7 @@ namespace Demos.Demos.Sponsors
 
             ref var character = ref characters.AllocateCharacter(bodyHandle);
             character.LocalUp = new Vector3(0, 1, 0);
-            character.CosMaximumSlope = MathF.Cos(MathF.PI * 0.4f);
+            character.CosMaximumSlope = MathF.Cos(MathF.PI * 0.48f);
             character.JumpVelocity = 4;
             character.MaximumVerticalForce = 10f;
             character.MaximumHorizontalForce = 5f;
