@@ -11,6 +11,7 @@ using DemoUtilities;
 using System.Diagnostics;
 using BepuUtilities.Collections;
 using BepuPhysics.Collidables;
+using Demos.Demos.Characters;
 
 namespace Demos.Demos.Sponsors
 {
@@ -87,15 +88,18 @@ namespace Demos.Demos.Sponsors
 
         Vector2 newtArenaMin, newtArenaMax;
         Random random;
+        CharacterControllers characterControllers;
+        QuickList<SponsorCharacterAI> characterAIs;
         public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-30, 8, -60);
             camera.Yaw = MathF.PI * 3f / 4;
             camera.Pitch = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
+            characterControllers = new CharacterControllers(BufferPool);
+            Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characterControllers), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
-            DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(-10, 10, -10), out var newtMesh);
+            DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(10, 10, 10), out var newtMesh);
             var newtShape = Simulation.Shapes.Add(newtMesh);
             newts = new QuickList<SponsorNewt>(sponsors2.Count, BufferPool);
             newtArenaMin = new Vector2(-100);
@@ -114,6 +118,16 @@ namespace Demos.Demos.Sponsors
             Simulation.Statics.Add(new StaticDescription(new Vector3(floorSize * 0.5f + wallThickness * 0.5f, -5, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(wallThickness, 30, floorSize + wallThickness * 2)), 0.1f)));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, floorSize * -0.5f - wallThickness * 0.5f), new CollidableDescription(Simulation.Shapes.Add(new Box(floorSize, 30, wallThickness)), 0.1f)));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, floorSize * 0.5f + wallThickness * 0.5f), new CollidableDescription(Simulation.Shapes.Add(new Box(floorSize, 30, wallThickness)), 0.1f)));
+
+            const int characterCount = 1000;
+            characterAIs = new QuickList<SponsorCharacterAI>(characterCount, BufferPool);
+            var characterCollidable = new CollidableDescription(Simulation.Shapes.Add(new Capsule(0.5f, 1f)), 0.1f);
+            for (int i = 0; i < characterCount; ++i)
+            {
+                var position2D = newtArenaMin + (newtArenaMax - newtArenaMin) * new Vector2((float)random.NextDouble(), (float)random.NextDouble());
+                var targetPosition = 0.5f * (newtArenaMin + (newtArenaMax - newtArenaMin) * new Vector2((float)random.NextDouble(), (float)random.NextDouble()));
+                characterAIs.AllocateUnsafely() = new SponsorCharacterAI(characterControllers, characterCollidable, new Vector3(position2D.X, 5, position2D.Y), targetPosition);
+            }
         }
 
 
@@ -190,6 +204,10 @@ namespace Demos.Demos.Sponsors
             for (int i = 0; i < newts.Count; ++i)
             {
                 newts[i].Update(Simulation, time, 0, newtArenaMin, newtArenaMax, random, 60f);
+            }
+            for (int i = 0; i < characterAIs.Count; ++i)
+            {
+                characterAIs[i].Update(characterControllers, Simulation, ref newts, newtArenaMin, newtArenaMax, random);
             }
             time += dt;
         }
