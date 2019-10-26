@@ -47,6 +47,6 @@ Visit the [forums](https://forum.bepuentertainment.com) for discussion and quest
 
 Check the [roadmap](Documentation/roadmap.md) for a high level look at where things are going.
 
-If you have too many dollars, we are willing to consume them on [patreon](https://www.patreon.com/bepu).
+If you have too many dollars, we are willing to consume them through [github sponsors](https://www.github.com/sponsors/RossNordby).
 
 ![](https://raw.githubusercontent.com/bepu/bepuphysics1/master/Documentation/images/readme/angelduck.png)
