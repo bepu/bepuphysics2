@@ -100,7 +100,7 @@ namespace Demos.Demos.Sponsors
             characterControllers = new CharacterControllers(BufferPool);
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characterControllers), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
-            DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(10, 10, 10), out var newtMesh);
+            DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(-10, 10, -10), out var newtMesh);
             var newtShape = Simulation.Shapes.Add(newtMesh);
             newts = new QuickList<SponsorNewt>(sponsors2.Count, BufferPool);
             newtArenaMin = new Vector2(-100);
@@ -214,19 +214,22 @@ namespace Demos.Demos.Sponsors
             return position.Y - initialY;
         }
 
-        double time;
+        double realTime;
+        double simulationTime;
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
-            base.Update(window, camera, input, dt);
+            const float simulationDt = 1 / 60f; 
+            Simulation.Timestep(simulationDt, ThreadDispatcher);
             for (int i = 0; i < newts.Count; ++i)
             {
-                newts[i].Update(Simulation, time, 0, newtArenaMin, newtArenaMax, random, 60f);
+                newts[i].Update(Simulation, simulationTime, 0, newtArenaMin, newtArenaMax, random, 1f / simulationDt);
             }
             for (int i = 0; i < characterAIs.Count; ++i)
             {
                 characterAIs[i].Update(characterControllers, Simulation, ref newts, newtArenaMin, newtArenaMax, random);
             }
-            time += dt;
+            simulationTime += simulationDt;
+            realTime += dt;
         }
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
@@ -253,10 +256,10 @@ namespace Demos.Demos.Sponsors
             var mousePosition = new Vector2(integralMousePosition.X, integralMousePosition.Y);
             renderer.TextBatcher.Write(text.Clear().Append("Mouseover entries to view additional very important tier rewards."), new Vector2(32, resolution.Y - 50), 14, new Vector3(1), font);
             renderer.TextBatcher.Write(text.Clear().Append("Are you a sponsor, but missing from this list? Want a different name/nickname for your entry? Send me a message!"), new Vector2(32, resolution.Y - 32), 14, new Vector3(1), font);
-            DrawSponsors("Super duper sponsors", sponsors3, new Vector2(32, resolution.Y - 480), mousePosition, renderer, text, font, time, 1, 4, 0.25f, 32, 6, 48);
-            DrawSponsors("Very neat sponsors", sponsors2, new Vector2(32, resolution.Y - 288), mousePosition, renderer, text, font, time, 4, 4, 0.25f, 24, 4, 36);
-            DrawSponsors("Sponsors", sponsors1, new Vector2(renderer.Surface.Resolution.X - 512, resolution.Y - 480), mousePosition, renderer, text, font, time, 4, 4, 0.25f, 24, 4, 36);
-            DrawSponsors("Smaller sponsors who are still cool", sponsors0, new Vector2(renderer.Surface.Resolution.X - 512, resolution.Y - 288), renderer, text, font, time, 4, 4, 0.25f, 16, 24);
+            DrawSponsors("Super duper sponsors", sponsors3, new Vector2(32, resolution.Y - 480), mousePosition, renderer, text, font, realTime, 1, 4, 0.25f, 32, 6, 48);
+            DrawSponsors("Very neat sponsors", sponsors2, new Vector2(32, resolution.Y - 288), mousePosition, renderer, text, font, realTime, 4, 4, 0.25f, 24, 4, 36);
+            DrawSponsors("Sponsors", sponsors1, new Vector2(renderer.Surface.Resolution.X - 512, resolution.Y - 480), mousePosition, renderer, text, font, realTime, 4, 4, 0.25f, 24, 4, 36);
+            DrawSponsors("Smaller sponsors who are still cool", sponsors0, new Vector2(renderer.Surface.Resolution.X - 512, resolution.Y - 288), renderer, text, font, realTime, 4, 4, 0.25f, 16, 24);
 
         }
 

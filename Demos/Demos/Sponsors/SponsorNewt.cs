@@ -36,18 +36,17 @@ namespace Demos.Demos.Sponsors
         {
             const float jumpDuration = 1;
             var body = simulation.Bodies.GetBodyReference(BodyHandle);
-            //It's worth noting that the newt model has +Z as forward, so we have to compensate for that.
             if (time >= nextAllowedJump)
             {
                 //Choose a jump location. It should be within the arena, and generally somewhere ahead of the newt.
-                Quaternion.TransformUnitZ(body.Pose.Orientation, out var forward);
+                Quaternion.TransformUnitZ(body.Pose.Orientation, out var backward);
                 jumpStart = new Vector2(body.Pose.Position.X, body.Pose.Position.Z);
-                jumpEnd = jumpStart + new Vector2(forward.X + (float)random.NextDouble() * 1.4f - 0.7f, forward.Z + (float)random.NextDouble() * 1.4f - 0.7f) * 20;
+                jumpEnd = jumpStart + new Vector2(backward.X + (float)random.NextDouble() * 1.4f - 0.7f, backward.Z + (float)random.NextDouble() * 1.4f - 0.7f) * -20;
                 jumpEnd -= jumpStart * 0.05f;
                 jumpEnd = Vector2.Max(arenaMin, Vector2.Min(arenaMax, jumpEnd));
                 jumpStartTime = time;
                 jumpEndTime = time + jumpDuration;
-                forwardAtJumpStart = new Vector2(forward.X, forward.Z);
+                forwardAtJumpStart = -new Vector2(backward.X, backward.Z);
                 forwardAtJumpEnd = jumpEnd - jumpStart;
                 var newForwardLengthSquared = forwardAtJumpEnd.LengthSquared();
                 forwardAtJumpEnd = newForwardLengthSquared < 1e-10f ? forwardAtJumpStart : forwardAtJumpEnd / MathF.Sqrt(newForwardLengthSquared);
@@ -86,14 +85,13 @@ namespace Demos.Demos.Sponsors
             //Since it's a kinematic body, we'll compute the current pose error, and then the velocity to correct that error within a single frame.
             body.Velocity.Linear = (targetPosition - body.Pose.Position) * inverseDt;
             Matrix3x3 targetOrientationBasis;
-            targetOrientationBasis.X = new Vector3(targetForward.Y, 0, -targetForward.X);
+            targetOrientationBasis.X = new Vector3(-targetForward.Y, 0, targetForward.X);
             targetOrientationBasis.Y = Vector3.UnitY;
-            targetOrientationBasis.Z = new Vector3(targetForward.X, 0, targetForward.Y);
+            targetOrientationBasis.Z = -new Vector3(targetForward.X, 0, targetForward.Y);
             Quaternion.CreateFromRotationMatrix(targetOrientationBasis, out var targetOrientation);
             Quaternion.GetRelativeRotationWithoutOverlap(body.Pose.Orientation, targetOrientation, out var orientationError);
             Quaternion.GetAxisAngleFromQuaternion(orientationError, out var errorAxis, out var errorAngle);
             body.Velocity.Angular = errorAxis * (errorAngle * inverseDt);
-
         }
 
         public void Render(Simulation simulation, List<Sponsor> sponsors, Renderer renderer, in Matrix viewProjection, in Vector2 resolution, TextBuilder text, Font font)

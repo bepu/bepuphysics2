@@ -243,7 +243,8 @@ namespace BepuPhysics.Collidables
                 var scaledMin = mesh.inverseScale * pair.Min;
                 var scaledMax = mesh.inverseScale * pair.Max;
                 enumerator.Overlaps = Unsafe.AsPointer(ref overlaps.GetOverlapsForPair(i));
-                mesh.Tree.GetOverlaps(scaledMin, scaledMax, ref enumerator);
+                //Take a min/max to compensate for negative scales.
+                mesh.Tree.GetOverlaps(Vector3.Min(scaledMin, scaledMax), Vector3.Max(scaledMin, scaledMax), ref enumerator);
             }
         }
 
@@ -256,7 +257,8 @@ namespace BepuPhysics.Collidables
             ShapeTreeSweepLeafTester<TOverlaps> enumerator;
             enumerator.Pool = pool;
             enumerator.Overlaps = overlaps;
-            Tree.Sweep(scaledMin, scaledMax, scaledSweep, maximumT, ref enumerator);
+            //Take a min/max to compensate for negative scales.
+            Tree.Sweep(Vector3.Min(scaledMin, scaledMax), Vector3.Max(scaledMin, scaledMax), scaledSweep, maximumT, ref enumerator);
         }
 
         public struct MeshTriangleSource : ITriangleSource
