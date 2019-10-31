@@ -9,6 +9,9 @@ using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics
 {
+    /// <summary>
+    /// Represents a rigid transformation.
+    /// </summary>
     public struct RigidPose
     {
         public Vector3 Position;
@@ -33,19 +36,40 @@ namespace BepuPhysics
             Orientation = Quaternion.Identity;
         }
 
-
+        /// <summary>
+        /// Transforms a vector by the rigid pose: v * pose.Orientation + pose.Position.
+        /// </summary>
+        /// <param name="v">Vector to transform.</param>
+        /// <param name="pose">Pose to transform the vector with.</param>
+        /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Transform(in Vector3 v, in RigidPose pose, out Vector3 result)
         {
             Quaternion.TransformWithoutOverlap(v, pose.Orientation, out var rotated);
             result = rotated + pose.Position;
         }
+        /// <summary>
+        /// Transforms a vector by the inverse of a rigid pose: (v - pose.Position) * pose.Orientation^-1.
+        /// </summary>
+        /// <param name="v">Vector to transform.</param>
+        /// <param name="pose">Pose to invert and transform the vector with.</param>
+        /// <param name="result">Transformed vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void TransformByInverse(in Vector3 v, in RigidPose pose, out Vector3 result)
         {
             var translated = v - pose.Position;
             Quaternion.Conjugate(pose.Orientation, out var conjugate);
             Quaternion.TransformWithoutOverlap(translated, conjugate, out result);
+        }
+        /// <summary>
+        /// Inverts the rigid transformation of the pose.
+        /// </summary>
+        /// <param name="pose">Pose to invert.</param>
+        /// <param name="inverse">Inverse of the pose.</param>
+        public static void Invert(in RigidPose pose, out RigidPose inverse)
+        {
+            Quaternion.Conjugate(pose.Orientation, out inverse.Orientation);
+            Quaternion.Transform(-pose.Position, inverse.Orientation, out inverse.Position);
         }
 
         /// <summary>
