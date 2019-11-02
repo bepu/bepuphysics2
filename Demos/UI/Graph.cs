@@ -98,7 +98,7 @@ namespace Demos.UI
             graphSeries = new List<Series>(initialSeriesCapacity);
         }
 
-        int IndexOf(string name)
+        public int IndexOf(string name)
         {
             for (int i = graphSeries.Count - 1; i >= 0; --i)
             {
@@ -107,7 +107,7 @@ namespace Demos.UI
             }
             return -1;
         }
-        int IndexOf(IDataSeries data)
+        public int IndexOf(IDataSeries data)
         {
             for (int i = graphSeries.Count - 1; i >= 0; --i)
             {
@@ -270,7 +270,7 @@ namespace Demos.UI
                 var valueToPixels = description.BodySpan.Y / (yDataSpan * description.VerticalIntervalValueScale);
                 for (int i = 0; i < description.TargetVerticalTickCount + 2; ++i)
                 {
-                    var tickValue = Math.Round((minY + yDataIntervalSize * i) * description.VerticalIntervalValueScale, description.VerticalIntervalLabelRounding);
+                    var tickValue = Math.Round((yDataIntervalSize * i) * description.VerticalIntervalValueScale, description.VerticalIntervalLabelRounding);
                     if (tickValue == previousTickValue)
                     {
                         //Don't bother creating redundant ticks.
@@ -284,7 +284,7 @@ namespace Demos.UI
                     var backgroundEnd = penPosition + new Vector2(description.BodySpan.X, 0);
                     lines.Draw(penPosition, tickEnd, description.IntervalTickRadius, description.BodyLineColor);
                     lines.Draw(penPosition, backgroundEnd, description.BackgroundLineRadius, description.BodyLineColor);
-                    characters.Clear().Append(tickValue, description.VerticalIntervalLabelRounding);
+                    characters.Clear().Append(tickValue + minY, description.VerticalIntervalLabelRounding);
                     text.Write(characters,
                         tickEnd + new Vector2(-description.VerticalTickTextPadding, 0.5f * GlyphBatch.MeasureLength(characters, description.Font, description.IntervalTextHeight)),
                         description.IntervalTextHeight, new Vector2(0, -1), description.TextColor, description.Font);
