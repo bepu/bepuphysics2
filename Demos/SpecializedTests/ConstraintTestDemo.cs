@@ -369,7 +369,7 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, b, new CenterLinearMotor
                 {
                     TargetVelocityLocalA = new Vector3(0, -0.1f, 0),
-                    Settings = new MotorSettings(10, 1e-4f)
+                    Settings = new MotorSettings(100, 1e-4f)
                 });
             }
 
