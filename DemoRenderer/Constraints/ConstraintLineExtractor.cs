@@ -117,6 +117,8 @@ namespace DemoRenderer.Constraints
             this.pool = pool;
             lineExtractors = new TypeLineExtractor[32];
             AllocateSlot(BallSocketTypeProcessor.BatchTypeId) = new TypeLineExtractor<BallSocketLineExtractor, TwoBodyReferences, BallSocketPrestepData, BallSocketProjection, Vector3Wide>();
+            AllocateSlot(BallSocketServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<BallSocketServoLineExtractor, TwoBodyReferences, BallSocketServoPrestepData, BallSocketServoProjection, Vector3Wide>();
+            AllocateSlot(BallSocketMotorTypeProcessor.BatchTypeId) = new TypeLineExtractor<BallSocketMotorLineExtractor, TwoBodyReferences, BallSocketMotorPrestepData, BallSocketMotorProjection, Vector3Wide>();
             AllocateSlot(WeldTypeProcessor.BatchTypeId) = new TypeLineExtractor<WeldLineExtractor, TwoBodyReferences, WeldPrestepData, WeldProjection, WeldAccumulatedImpulses>();
             AllocateSlot(DistanceServoTypeProcessor.BatchTypeId) = new TypeLineExtractor<DistanceServoLineExtractor, TwoBodyReferences, DistanceServoPrestepData, DistanceServoProjection, Vector<float>>();
             AllocateSlot(DistanceLimitTypeProcessor.BatchTypeId) = new TypeLineExtractor<DistanceLimitLineExtractor, TwoBodyReferences, DistanceLimitPrestepData, DistanceLimitProjection, Vector<float>>();

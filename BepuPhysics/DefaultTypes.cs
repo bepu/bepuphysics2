@@ -43,7 +43,8 @@ namespace BepuPhysics
             solver.Register<OneBodyLinearMotor>();
             solver.Register<SwivelHinge>();
             solver.Register<Hinge>();
-            solver.Register<CenterLinearMotor>();
+            solver.Register<BallSocketMotor>();
+            solver.Register<BallSocketServo>();
 
             solver.Register<Contact1OneBody>();
             solver.Register<Contact2OneBody>();

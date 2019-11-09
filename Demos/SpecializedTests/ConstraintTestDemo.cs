@@ -30,7 +30,7 @@ namespace Demos.SpecializedTests
             camera.Yaw = 0;
             Simulation = Simulation.Create(BufferPool,
                 new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
-            
+
             var shapeA = new Box(.75f, 1, .5f);
             var shapeIndexA = Simulation.Shapes.Add(shapeA);
             var collidableA = new CollidableDescription(shapeIndexA, 0.1f);
@@ -366,16 +366,31 @@ namespace Demos.SpecializedTests
                 var bDescription = BodyDescription.CreateDynamic(new Vector3(x, 6, 0), inertiaB, collidableB, activity);
                 var a = Simulation.Bodies.Add(aDescription);
                 var b = Simulation.Bodies.Add(bDescription);
-                Simulation.Solver.Add(a, b, new CenterLinearMotor
+                Simulation.Solver.Add(a, b, new BallSocketMotor
                 {
-                    TargetVelocityLocalA = new Vector3(0, -0.1f, 0),
-                    Settings = new MotorSettings(100, 1e-4f)
+                    LocalOffsetB = new Vector3(0, -1, 0),
+                    TargetVelocityLocalA = new Vector3(0, -0.25f, 0),
+                    Settings = new MotorSettings(10, 1e-4f)
+                });
+            }
+            {
+                var x = GetNextPosition(ref nextX);
+                var aDescription = BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity);
+                var bDescription = BodyDescription.CreateDynamic(new Vector3(x, 6, 0), inertiaB, collidableB, activity);
+                var a = Simulation.Bodies.Add(aDescription);
+                var b = Simulation.Bodies.Add(bDescription);
+                Simulation.Solver.Add(a, b, new BallSocketServo
+                {
+                    LocalOffsetA = new Vector3(0, 1, 0),
+                    LocalOffsetB = new Vector3(0, -1, 0),
+                    SpringSettings = new SpringSettings(30, 1),
+                    ServoSettings = new ServoSettings(1, 0, 30)
                 });
             }
 
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), new CollidableDescription(Simulation.Shapes.Add(new Box(256, 1, 256)), 0.1f)));
-        }        
+        }
     }
 }
 
