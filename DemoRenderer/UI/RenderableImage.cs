@@ -22,6 +22,10 @@ namespace DemoRenderer.UI
         public unsafe RenderableImage(Device device, DeviceContext context, Texture2DContent imageContent, string debugName = null)
         {
             Content = imageContent;
+            if(imageContent.TexelSizeInBytes != 4)
+            {
+                throw new ArgumentException("The renderable image assumes an R8G8B8A8_UNorm texture.");
+            }
             Debug.Assert(imageContent.MipLevels == 1, "We ignore any mip levels stored in the content; if the content pipeline output them, something's likely mismatched.");
             Texture = new Texture2D(device, new Texture2DDescription
             {

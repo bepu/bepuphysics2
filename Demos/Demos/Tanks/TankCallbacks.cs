@@ -132,7 +132,7 @@ namespace Demos.Demos.Tanks
             pairMaterial.MaximumRecoveryVelocity = 2f;
             pairMaterial.SpringSettings = new SpringSettings(30, 1);
 
-            if (propertiesA.Projectile || (pair.B.Mobility != CollidableMobility.Static) && Properties[pair.B.Handle].Projectile)
+            if (propertiesA.Projectile || (pair.B.Mobility != CollidableMobility.Static && Properties[pair.B.Handle].Projectile))
             {
                 for (int i = 0; i < manifold.Count; ++i)
                 {
