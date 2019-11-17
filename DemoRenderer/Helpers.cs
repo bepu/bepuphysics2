@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Quaternion = BepuUtilities.Quaternion;
+using BepuUtilities;
 
 namespace DemoRenderer
 {
@@ -284,6 +285,26 @@ namespace DemoRenderer
             var ndc = new Vector2(projected.X, projected.Y);
             screenLocation = (ndc * new Vector2(0.5f, -0.5f) + new Vector2(0.5f)) * resolution;
             return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static float ToSRGB(float x)
+        {
+            return x <= 0.0031308f ? 
+                12.92f * x : 
+                1.055f * MathF.Pow(x, 1f / 2.4f) - 0.055f;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToSRGB(in Vector3 linear, out Vector3 srgb)
+        {
+            Matrix3x3 m;
+            m.X = new Vector3(3.2406f, -0.9689f, 0.0557f);
+            m.Y = new Vector3(-1.5372f, 1.8758f, -0.204f);
+            m.Z = new Vector3(-0.4986f, 0.0415f, 1.057f);
+
+            Matrix3x3.Transform(linear, m, out var transformed);
+            srgb = Vector3.Max(Vector3.Zero, Vector3.Min(Vector3.One, new Vector3(ToSRGB(transformed.X), ToSRGB(transformed.Y), ToSRGB(transformed.Z))));
         }
 
         [Conditional("DEBUG")]
