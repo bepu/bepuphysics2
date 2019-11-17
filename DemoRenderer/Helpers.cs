@@ -287,24 +287,28 @@ namespace DemoRenderer
             return true;
         }
 
+        /// <summary>
+        /// Applies the sRGB gamma curve to a scalar input.
+        /// </summary>
+        /// <param name="x">Value to apply the curve to.</param>
+        /// <returns>Transformed value.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static float ToSRGB(float x)
+        public static float ToSRGB(float x)
         {
-            return x <= 0.0031308f ? 
-                12.92f * x : 
-                1.055f * MathF.Pow(x, 1f / 2.4f) - 0.055f;
+            return MathF.Max(0, MathF.Min(1, x <= 0.0031308f ?
+                12.92f * x :
+                1.055f * MathF.Pow(x, 1f / 2.4f) - 0.055f));
         }
 
+        /// <summary>
+        /// Applies the sRGB gamma curve to a vector.
+        /// </summary>
+        /// <param name="linear">Linear input to apply the curve to.</param>
+        /// <param name="srgb">Transformed value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ToSRGB(in Vector3 linear, out Vector3 srgb)
         {
-            Matrix3x3 m;
-            m.X = new Vector3(3.2406f, -0.9689f, 0.0557f);
-            m.Y = new Vector3(-1.5372f, 1.8758f, -0.204f);
-            m.Z = new Vector3(-0.4986f, 0.0415f, 1.057f);
-
-            Matrix3x3.Transform(linear, m, out var transformed);
-            srgb = Vector3.Max(Vector3.Zero, Vector3.Min(Vector3.One, new Vector3(ToSRGB(transformed.X), ToSRGB(transformed.Y), ToSRGB(transformed.Z))));
+            srgb = new Vector3(ToSRGB(linear.X), ToSRGB(linear.Y), ToSRGB(linear.Z));
         }
 
         [Conditional("DEBUG")]
