@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Text;
 using DemoRenderer.UI;
 using DemoContentLoader;
+using Helpers = DemoRenderer.Helpers;
 
 namespace Demos
 {

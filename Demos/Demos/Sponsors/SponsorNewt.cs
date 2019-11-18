@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
+using Helpers = DemoRenderer.Helpers;
 using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos.Sponsors

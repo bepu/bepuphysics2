@@ -12,6 +12,7 @@ using System.Diagnostics;
 using BepuUtilities.Collections;
 using BepuPhysics.Collidables;
 using Demos.Demos.Characters;
+using Helpers = DemoRenderer.Helpers;
 
 namespace Demos.Demos.Sponsors
 {
@@ -34,7 +35,7 @@ namespace Demos.Demos.Sponsors
         RenderableImage CreateRewardImage(string rewardImagePath, ContentArchive content, RenderSurface surface)
         {
             var textureContent = content.Load<Texture2DContent>(rewardImagePath);
-            return new RenderableImage(surface.Device, surface.Context, textureContent, Path.GetFileNameWithoutExtension(rewardImagePath));
+            return new RenderableImage(surface.Device, surface.Context, textureContent, debugName: Path.GetFileNameWithoutExtension(rewardImagePath));
         }
         void Add(List<Sponsor> sponsors, string name, string rewardImagePath, ContentArchive content, RenderSurface surface)
         {

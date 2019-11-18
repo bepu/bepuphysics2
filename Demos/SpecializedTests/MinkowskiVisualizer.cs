@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Helpers = DemoRenderer.Helpers;
 using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.SpecializedTests

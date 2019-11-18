@@ -4,7 +4,10 @@ using System.Runtime.CompilerServices;
 
 namespace BepuPhysics
 {
-    internal static class Helpers
+    /// <summary>
+    /// Shared miscellaneous helper functions.
+    /// </summary>
+    public static class Helpers
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Swap<T>(ref T a, ref T b)
