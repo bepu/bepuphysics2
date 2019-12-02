@@ -148,7 +148,7 @@ namespace DemoUtilities
                 {
                     AddDigit(ref value, ref multiplier);
                 }
-                if (value > epsilon)
+                if (value >= epsilon)
                 {
                     Add('.');
                     for (int i = -1; i > place; --i)

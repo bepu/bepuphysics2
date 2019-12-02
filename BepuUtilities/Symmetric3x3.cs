@@ -5,7 +5,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace BepuPhysics
+namespace BepuUtilities
 {
     /// <summary>
     /// Lower left triangle (including diagonal) of a symmetric 3x3 matrix.

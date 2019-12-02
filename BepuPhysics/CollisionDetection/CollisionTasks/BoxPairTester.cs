@@ -109,7 +109,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Subtract(vertex, faceCenterB, out var pointOnBToVertex);
             Vector3Wide.Dot(faceNormalB, pointOnBToVertex, out var planeDistance);
             Vector3Wide.Scale(contactNormal, planeDistance * inverseContactNormalDotFaceNormalB, out var offset);
-            //Contact normal points from triangle to box by convention, so we have to subtract.
+            //Contact normal points from B to A by convention, so we have to subtract.
             Vector3Wide.Subtract(vertex, offset, out var vertexOnBFace);
 
             Vector3Wide.Subtract(vertexOnBFace, faceCenterB, out var vertexOffsetOnBFace);

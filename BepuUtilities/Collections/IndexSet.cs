@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace BepuPhysics
+namespace BepuUtilities.Collections
 {
     /// <summary>
     /// Collection of unique indices supporting add, remove, and contains operations.

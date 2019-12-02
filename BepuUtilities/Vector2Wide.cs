@@ -44,6 +44,20 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ConditionallyNegate(in Vector<int> shouldNegate, ref Vector2Wide v)
+        {
+            v.X = Vector.ConditionalSelect(shouldNegate, -v.X, v.X);
+            v.Y = Vector.ConditionalSelect(shouldNegate, -v.Y, v.Y);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ConditionallyNegate(in Vector<int> shouldNegate, in Vector2Wide v, out Vector2Wide negated)
+        {
+            negated.X = Vector.ConditionalSelect(shouldNegate, -v.X, v.X);
+            negated.Y = Vector.ConditionalSelect(shouldNegate, -v.Y, v.Y);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ConditionalSelect(in Vector<int> condition, in Vector2Wide left, in Vector2Wide right, out Vector2Wide result)
         {
             result.X = Vector.ConditionalSelect(condition, left.X, right.X);
@@ -60,6 +74,12 @@ namespace BepuUtilities
         public static void Length(in Vector2Wide v, out Vector<float> length)
         {
             length = Vector.SquareRoot(v.X * v.X + v.Y * v.Y);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void PerpDot(in Vector2Wide a, in Vector2Wide b, out Vector<float> result)
+        {
+            result = a.Y * b.X - a.X * b.Y;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -82,6 +102,19 @@ namespace BepuUtilities
         }
 
         /// <summary>
+        /// Pulls one lane out of the wide representation.
+        /// </summary>
+        /// <param name="wide">Source of the lane.</param>
+        /// <param name="slotIndex">Index of the lane within the wide representation to read.</param>
+        /// <param name="narrow">Non-SIMD type to store the lane in.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ReadSlot(ref Vector2Wide wide, int slotIndex, out Vector2 narrow)
+        {
+            ref var offset = ref GatherScatter.GetOffsetInstance(ref wide, slotIndex);
+            ReadFirst(offset, out narrow);
+        }
+
+        /// <summary>
         /// Gathers values from a vector and places them into the first indices of the target vector.
         /// </summary>
         /// <param name="source">Vector to copy values from.</param>
@@ -91,6 +124,18 @@ namespace BepuUtilities
         {
             GatherScatter.GetFirst(ref targetSlot.X) = source.X;
             GatherScatter.GetFirst(ref targetSlot.Y) = source.Y;
+        }
+
+        /// <summary>
+        /// Writes a value into a slot of the target bundle.
+        /// </summary>
+        /// <param name="source">Source of the value to write.</param>
+        /// <param name="slotIndex">Index of the slot to write into.</param>
+        /// <param name="target">Bundle to write the value into.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteSlot(in Vector2 source, int slotIndex, ref Vector2Wide target)
+        {
+            WriteFirst(source, ref GatherScatter.GetOffsetInstance(ref target, slotIndex));
         }
 
         public override string ToString()

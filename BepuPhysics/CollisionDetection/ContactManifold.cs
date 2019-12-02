@@ -24,7 +24,7 @@ namespace BepuPhysics.CollisionDetection
         [FieldOffset(12)]
         public float Depth;
         /// <summary>
-        /// Surface basis of the contact. If transformed into a rotation matrix, X and Z represent tangent directions and Y represents the contact normal.
+        /// Surface basis of the contact. If transformed into a rotation matrix, X and Z represent tangent directions and Y represents the contact normal. Points from collidable B to collidable A.
         /// </summary>
         [FieldOffset(16)]
         public Vector3 Normal;
@@ -83,7 +83,7 @@ namespace BepuPhysics.CollisionDetection
         /// </summary>
         /// <param name="contactIndex">Index of the contact to copy data from.</param>
         /// <param name="offset">Offset from the first collidable's position to the contact position.</param>
-        /// <param name="normal">Normal of the contact surface at the requested contact.</param>
+        /// <param name="normal">Normal of the contact surface at the requested contact. Points from collidable B to collidable A.</param>
         /// <param name="depth">Penetration depth at the requested contact.</param>
         /// <param name="featureId">Feature id of the requested contact.
         /// Feature ids represent which parts of the collidables formed the contact and can be used to track unique contacts across frames.</param>
@@ -99,7 +99,7 @@ namespace BepuPhysics.CollisionDetection
         ref float GetDepth(ref TManifold manifold, int contactIndex);
 
         /// <summary>
-        /// Pulls a reference to a contact's normal. For convex manifolds that share a normal, all contact indices will simply return a reference to the manifold-wide normal.
+        /// Pulls a reference to a contact's normal. Points from collidable B to collidable A. For convex manifolds that share a normal, all contact indices will simply return a reference to the manifold-wide normal.
         /// </summary>
         /// <param name="manifold">Manifold to pull a reference from.</param>
         /// <param name="contactIndex">Contact to pull data from.</param>
@@ -163,6 +163,16 @@ namespace BepuPhysics.CollisionDetection
         {
             Debug.Assert(contactIndex >= 0 && contactIndex < Count, "Contact index must be within the contact count.");
         }
+
+        /// <summary>
+        /// Retrieves a copy of a contact's data.
+        /// </summary>
+        /// <param name="contactIndex">Index of the contact to copy data from.</param>
+        /// <param name="offset">Offset from the first collidable's position to the contact position.</param>
+        /// <param name="normal">Normal of the contact surface at the requested contact. Points from collidable B to collidable A.</param>
+        /// <param name="depth">Penetration depth at the requested contact.</param>
+        /// <param name="featureId">Feature id of the requested contact.
+        /// Feature ids represent which parts of the collidables formed the contact and can be used to track unique contacts across frames.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId)
         {
@@ -173,7 +183,11 @@ namespace BepuPhysics.CollisionDetection
             depth = contact.Depth;
             featureId = contact.FeatureId;
         }
-
+        /// <summary>
+        /// Retrieves the feature id associated with a requested contact.
+        /// </summary>
+        /// <param name="contactIndex">Index of the contact to grab the feature id of.</param>
+        /// <returns>Feature id of the requested contact.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetFeatureId(int contactIndex)
         {
@@ -222,7 +236,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         /// <summary>
-        /// Pulls a reference to a contact's normal.
+        /// Pulls a reference to a contact's normal. Points from collidable B to collidable A.
         /// </summary>
         /// <param name="manifold">Manifold to pull a reference from.</param>
         /// <param name="contactIndex">Contact to pull data from.</param>
@@ -274,7 +288,7 @@ namespace BepuPhysics.CollisionDetection
         public int Count;
 
         /// <summary>
-        /// Surface normal shared by all contacts.
+        /// Surface normal shared by all contacts. Points from collidable B to collidable A.
         /// </summary>
         [FieldOffset(16)]
         public Vector3 Normal;
@@ -298,6 +312,11 @@ namespace BepuPhysics.CollisionDetection
             Debug.Assert(contactIndex >= 0 && contactIndex < Count, "Contact index must be within the contact count.");
         }
 
+        /// <summary>
+        /// Retrieves the feature id associated with a requested contact.
+        /// </summary>
+        /// <param name="contactIndex">Index of the contact to grab the feature id of.</param>
+        /// <returns>Feature id of the requested contact.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetFeatureId(int contactIndex)
         {
@@ -305,6 +324,15 @@ namespace BepuPhysics.CollisionDetection
             return Unsafe.Add(ref Contact0, contactIndex).FeatureId;
         }
 
+        /// <summary>
+        /// Retrieves a copy of a contact's data.
+        /// </summary>
+        /// <param name="contactIndex">Index of the contact to copy data from.</param>
+        /// <param name="offset">Offset from the first collidable's position to the contact position.</param>
+        /// <param name="normal">Normal of the contact surface at the requested contact. Points from collidable B to collidable A.</param>
+        /// <param name="depth">Penetration depth at the requested contact.</param>
+        /// <param name="featureId">Feature id of the requested contact.
+        /// Feature ids represent which parts of the collidables formed the contact and can be used to track unique contacts across frames.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId)
         {
@@ -339,7 +367,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         /// <summary>
-        /// Pulls a reference to a contact manifold's normal. Convex manifolds share a single normal across all contacts.
+        /// Pulls a reference to a contact manifold's normal. Points from collidable B to collidable A. Convex manifolds share a single normal across all contacts.
         /// </summary>
         /// <param name="manifold">Manifold to pull a reference from.</param>
         /// <param name="contactIndex">Contact to pull data from.</param>
