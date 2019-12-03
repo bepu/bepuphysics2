@@ -123,7 +123,7 @@ namespace BepuPhysics
             }
             TypeBatches.Dispose(pool);
             pool.Return(ref TypeIdToIndex);
-            if (ReferencedBodyIndices.flags.Allocated)
+            if (ReferencedBodyIndices.Flags.Allocated)
                 ReferencedBodyIndices.Dispose(pool);
         }
 
