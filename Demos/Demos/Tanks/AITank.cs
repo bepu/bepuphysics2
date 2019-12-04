@@ -42,7 +42,7 @@ namespace Demos.Demos.Tanks
                 Controller.UpdateMovementAndAim(simulation, 0, 0, false, false, false, new Vector3(1, 0, 0));
                 return;
             }
-            if (Target == aiIndex || random.NextDouble() < 1f / 250f)
+            if (Target >= aiTanks.Count || Target == aiIndex || random.NextDouble() < 1f / 250f)
             {
                 //Change target.
                 if (aiTanks.Count > 1)

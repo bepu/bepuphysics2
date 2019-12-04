@@ -139,7 +139,11 @@ namespace Demos.Demos.Tanks
                     //This probably looks a bit odd. You can't return refs to the this instance in structs, and interfaces can't require static functions...
                     //so we use this redundant construction to get a direct reference to a contact's depth with near zero overhead.
                     //There's a more typical out parameter overload for contact properties too. And there's always the option of using the manifold pointers directly.
-                    if (manifold.GetDepth(ref manifold, i) >= 0)
+                    //Note the use of a nonzero negative threshold: speculative contacts will bring incoming objects to a stop at the surface, but in some cases integrator/numerical issues can mean that they don't quite reach.
+                    //In most cases, this isn't a problem at all, but tank projectiles are moving very quickly and a single missed frame might be enough to not trigger an explosion.
+                    //A nonzero epsilon helps catch those cases.
+                    //(An alternative would be to check each projectile's contact constraints and cause an explosion if any contact has nonzero penetration impulse.)
+                    if (manifold.GetDepth(ref manifold, i) >= -1e-3f)
                     {
                         //An actual collision was found. 
                         if (propertiesA.Projectile)

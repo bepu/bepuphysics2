@@ -62,7 +62,7 @@ namespace Demos.Demos.Sponsors
             //They get a poorly drawn animal!
             Add(sponsors1, "Y. V.", @"Content\Sponsors\smugturt.png", content, surface);
             Add(sponsors1, "R. S. K.", @"Content\Sponsors\squidhanginout.png", content, surface);
-            Add(sponsors1, "G. W.", @"Content\Sponsors\angerybite.png", content, surface);
+            Add(sponsors1, "Gavin-Williams", @"Content\Sponsors\angerybite.png", content, surface);
             Add(sponsors1, "N.", @"Content\Sponsors\normalgiraffe.png", content, surface);
             Add(sponsors1, "M. H.", @"Content\Sponsors\tarbeenus.png", content, surface);
             Add(sponsors1, "K. C.", @"Content\Sponsors\physquirrel.png", content, surface);
