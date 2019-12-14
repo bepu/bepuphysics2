@@ -255,11 +255,11 @@ namespace DemoRenderer
             //Glyph and screenspace line drawing rely on the same premultiplied alpha blending transparency. We'll handle their state out here.
             context.OutputMerger.SetBlendState(uiBlendState);
             context.OutputMerger.SetDepthStencilState(uiDepthState);
+            ImageRenderer.PreparePipeline(context);
+            ImageBatcher.Flush(context, Surface.Resolution, ImageRenderer);
             UILineBatcher.Flush(context, Surface.Resolution, UILineRenderer);
             GlyphRenderer.PreparePipeline(context);
             TextBatcher.Flush(context, Surface.Resolution, GlyphRenderer);
-            ImageRenderer.PreparePipeline(context);
-            ImageBatcher.Flush(context, Surface.Resolution, ImageRenderer);
 
             //Note that, for now, the compress to swap handles its own depth state since it's the only post processing stage.
             context.OutputMerger.SetBlendState(opaqueBlendState);

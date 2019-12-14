@@ -161,7 +161,6 @@ namespace BepuPhysics.Constraints
 
             //If the distance is zero, there is no valid offset direction. Pick one arbitrarily.
             var needFallback = Vector.LessThan(distance, new Vector<float>(1e-9f));
-            Vector3Wide.Broadcast(new Vector3(1, 0, 0), out var fallback);
             direction.X = Vector.ConditionalSelect(needFallback, Vector<float>.One, direction.X);
             direction.Y = Vector.ConditionalSelect(needFallback, Vector<float>.Zero, direction.Y);
             direction.Z = Vector.ConditionalSelect(needFallback, Vector<float>.Zero, direction.Z);

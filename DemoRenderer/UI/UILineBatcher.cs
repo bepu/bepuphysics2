@@ -30,14 +30,14 @@ namespace DemoRenderer.UI
             lines = new UILineInstance[initialCapacity];
         }
 
-        public void Draw(Vector2 start, Vector2 end, float radius, Vector3 color)
+        public void Draw(in Vector2 start, in Vector2 end, float radius, in Vector3 color)
         {
             if (LineCount == lines.Length)
             {
                 Debug.Assert(lines.Length > 0);
                 Array.Resize(ref lines, LineCount * 2);
             }
-            lines[LineCount++] = new UILineInstance(ref start, ref end, radius, ref color, ref screenToPackedScale);
+            lines[LineCount++] = new UILineInstance(start, end, radius, color, screenToPackedScale);
         }
 
         public void Flush(DeviceContext context, Int2 screenResolution, UILineRenderer renderer)

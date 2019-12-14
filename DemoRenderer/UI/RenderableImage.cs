@@ -19,23 +19,17 @@ namespace DemoRenderer.UI
 
         public Texture2DContent Content { get; private set; }
 
-        public unsafe RenderableImage(Device device, DeviceContext context, Texture2DContent imageContent, bool srgb = false, string debugName = null)
+        void Initialize(Device device, int width, int height, bool srgb = false, string debugName = null)
         {
-            Content = imageContent;
-            if(imageContent.TexelSizeInBytes != 4)
-            {
-                throw new ArgumentException("The renderable image assumes an R8G8B8A8_UNorm or  texture.");
-            }
-            Debug.Assert(imageContent.MipLevels == 1, "We ignore any mip levels stored in the content; if the content pipeline output them, something's likely mismatched.");
             Texture = new Texture2D(device, new Texture2DDescription
             {
                 ArraySize = 1,
                 BindFlags = BindFlags.ShaderResource | BindFlags.RenderTarget,
                 CpuAccessFlags = CpuAccessFlags.None,
                 Format = srgb ? SharpDX.DXGI.Format.R8G8B8A8_UNorm_SRgb : SharpDX.DXGI.Format.R8G8B8A8_UNorm,
-                Height = imageContent.Height,
-                Width = imageContent.Width,
-                MipLevels = (int)MathF.Floor(MathF.Log(MathF.Min(imageContent.Width, imageContent.Height), 2)) + 1,
+                Height = height,
+                Width = width,
+                MipLevels = (int)MathF.Floor(MathF.Log(MathF.Min(width, height), 2)) + 1,
                 OptionFlags = ResourceOptionFlags.GenerateMipMaps,
                 SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0),
                 Usage = ResourceUsage.Default
@@ -43,6 +37,24 @@ namespace DemoRenderer.UI
             Texture.DebugName = debugName;
             SRV = new ShaderResourceView(device, Texture);
             SRV.DebugName = debugName + " SRV";
+        }
+
+
+        public unsafe RenderableImage(Device device, int width, int height, bool srgb = false, string debugName = null)
+        {
+            Initialize(device, width, height, srgb, debugName);
+            Content = new Texture2DContent(width, height, 1, 4);
+        }
+
+        public unsafe RenderableImage(Device device, DeviceContext context, Texture2DContent imageContent, bool srgb = false, string debugName = null)
+        {
+            if (imageContent.TexelSizeInBytes != 4)
+            {
+                throw new ArgumentException("The renderable image assumes an R8G8B8A8_UNorm or  texture.");
+            }
+            Debug.Assert(imageContent.MipLevels == 1, "We ignore any mip levels stored in the content; if the content pipeline output them, something's likely mismatched.");
+            Initialize(device, imageContent.Width, imageContent.Height, srgb, debugName);
+            Content = imageContent;
             UploadContentToTexture(context);
         }
 

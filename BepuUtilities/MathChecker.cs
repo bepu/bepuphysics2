@@ -39,6 +39,19 @@ namespace BepuUtilities
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
+        public static void Validate(this Vector2 v)
+        {
+            if (IsInvalid(v.LengthSquared()))
+            {
+                throw new InvalidOperationException("Invalid value.");
+            }
+        }
+
+        /// <summary>
+        /// Checks the value to see if it is a NaN or infinite.  If it is, an exception is thrown.
+        /// This is only run when the CHECKMATH symbol is defined.
+        /// </summary>
+        [Conditional("CHECKMATH")]
         public static void Validate(this Vector3 v)
         {
             if (IsInvalid(v.LengthSquared()))
