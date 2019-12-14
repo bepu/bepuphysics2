@@ -105,6 +105,28 @@ namespace DemoUtilities
 
         }
 
+        /// <summary>
+        /// Constructs a new rendering-capable window at a specific location
+        /// </summary>
+        /// <param name="title">Title of the window.</param>
+        /// <param name="resolution">Initial size in pixels of the window's drawable surface.</param>
+        /// <param name="location">Initial location of the window.</param>
+        /// <param name="windowMode">Initial window mode.</param>
+        public Window(string title, Int2 resolution, Int2 location, WindowMode windowMode)
+        {
+            window = new NativeWindow(location.X, location.Y, resolution.X, resolution.Y, title, GameWindowFlags.FixedWindow, GraphicsMode.Default, DisplayDevice.Default);
+            Debug.Assert(window.ClientSize.Width == resolution.X);
+            Debug.Assert(window.ClientSize.Height == resolution.Y);
+            window.Visible = true;
+            Resolution = resolution;
+            window.Resize += (form, args) => resized = true;
+            window.Closing += OnClosing;
+
+            window.WindowBorder = WindowBorder.Resizable;
+
+            WindowMode = windowMode;
+        }
+
         public Vector2 GetNormalizedMousePosition(Int2 mousePosition)
         {
             return new Vector2((float)mousePosition.X / Resolution.X, (float)mousePosition.Y / Resolution.Y);
