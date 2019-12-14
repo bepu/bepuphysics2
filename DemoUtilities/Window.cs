@@ -88,10 +88,11 @@ namespace DemoUtilities
         /// </summary>
         /// <param name="title">Title of the window.</param>
         /// <param name="resolution">Initial size in pixels of the window's drawable surface.</param>
+        /// <param name="location">Initial location of the window's drawable surface.</param>
         /// <param name="windowMode">Initial window mode.</param>
-        public Window(string title, Int2 resolution, WindowMode windowMode)
+        public Window(string title, Int2 resolution, Int2 location, WindowMode windowMode)
         {
-            window = new NativeWindow(resolution.X, resolution.Y, title, GameWindowFlags.FixedWindow, GraphicsMode.Default, DisplayDevice.Default);
+            window = new NativeWindow(location.X, location.Y, resolution.X, resolution.Y, title, GameWindowFlags.FixedWindow, GraphicsMode.Default, DisplayDevice.Default);
             Debug.Assert(window.ClientSize.Width == resolution.X);
             Debug.Assert(window.ClientSize.Height == resolution.Y);
             window.Visible = true;
@@ -103,6 +104,16 @@ namespace DemoUtilities
 
             WindowMode = windowMode;
 
+        }
+        /// <summary>
+        /// Constructs a new rendering-capable window.
+        /// </summary>
+        /// <param name="title">Title of the window.</param>
+        /// <param name="resolution">Initial size in pixels of the window's drawable surface.</param>
+        /// <param name="windowMode">Initial window mode.</param>
+        public Window(string title, Int2 resolution, WindowMode windowMode)
+            : this(title, resolution, new Int2((DisplayDevice.Default.Width - resolution.X) / 2, (DisplayDevice.Default.Height - resolution.Y) / 2), windowMode)
+        {
         }
 
         public Vector2 GetNormalizedMousePosition(Int2 mousePosition)
