@@ -187,9 +187,9 @@ namespace BepuUtilities.Memory
                 buffer = new RawBuffer(Blocks[blockIndex].Allocate(indexInBlock, SuballocationSize), SuballocationSize, (Power << IdPowerShift) | slot);
                 Debug.Assert(buffer.Id >= 0 && Power >= 0 && Power < 32, "Slot/power should be safely encoded in a 32 bit integer.");
 #if DEBUG
-                const int maximumOutstandingCapacity = 1 << 29;
-                Debug.Assert(outstandingIds.Count * SuballocationSize <= maximumOutstandingCapacity,
-                    $"Do you actually truly really need to have {maximumOutstandingCapacity} bytes taken from this power pool, or is this a memory leak?");
+                const int maximumOutstandingCount = 1 << 20;
+                Debug.Assert(outstandingIds.Count <= maximumOutstandingCount,
+                    $"Do you actually truly really need to have {maximumOutstandingCount} allocations taken from this power pool, or is this a memory leak?");
                 Debug.Assert(outstandingIds.Add(slot), "Should not be able to request the same slot twice.");
 #if LEAKDEBUG
                 var allocator = new StackTrace().ToString();
