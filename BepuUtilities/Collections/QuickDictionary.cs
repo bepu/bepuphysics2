@@ -540,7 +540,7 @@ namespace BepuUtilities.Collections
         /// <param name="pool">Pool used for spans.</param>   
         /// <returns>True if the pair was added to the dictionary, false if the key was already present and its pair was replaced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AddAndReplace<TKeyPool, TValuePool, TTablePool>(TKey key, in TValue value, IUnmanagedMemoryPool pool)
+        public bool AddAndReplace(TKey key, in TValue value, IUnmanagedMemoryPool pool)
         {
             return AddAndReplaceRef(ref key, value, pool);
         }

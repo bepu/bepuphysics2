@@ -211,7 +211,7 @@ namespace BepuUtilities.Memory
                 var slotIndex = buffer.Id & ((1 << IdPowerShift) - 1);
                 var blockIndex = slotIndex >> SuballocationsPerBlockShift;
                 var indexInAllocatorBlock = slotIndex & SuballocationsPerBlockMask;
-                Debug.Assert(buffer.Length == SuballocationSize,
+                Debug.Assert(buffer.Length <= SuballocationSize,
                   "A buffer taken from a pool should have a specific size.");
                 Debug.Assert(blockIndex >= 0 && blockIndex < BlockCount,
                     "The block pointed to by a returned buffer should actually exist within the pool.");
