@@ -130,6 +130,8 @@ namespace BepuPhysics.CollisionDetection
             ActiveTree.GetOverlaps(min, max, ref enumerator);
             enumerator.Leaves = staticLeaves;
             StaticTree.GetOverlaps(min, max, ref enumerator);
+            //Enumeration could have mutated the enumerator; preserve those modifications.
+            overlapEnumerator = enumerator.Enumerator;
         }
 
         /// <summary>
@@ -146,6 +148,8 @@ namespace BepuPhysics.CollisionDetection
             ActiveTree.GetOverlaps(boundingBox, ref enumerator);
             enumerator.Leaves = staticLeaves;
             StaticTree.GetOverlaps(boundingBox, ref enumerator);
+            //Enumeration could have mutated the enumerator; preserve those modifications.
+            overlapEnumerator = enumerator.Enumerator;
         }
     }
 }
