@@ -34,12 +34,16 @@ namespace Demos.Demos
             var random = new Random(5);
             var shapeToDrop = new Box(1, 1, 1);
             shapeToDrop.ComputeInertia(1, out var shapeToDropInertia);
-            var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDropInertia, new CollidableDescription(Simulation.Shapes.Add(shapeToDrop), 0.1f), new BodyActivityDescription(0.01f));
-            for (int i = 0; i < 512; ++i)
+            var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDropInertia, new CollidableDescription(Simulation.Shapes.Add(shapeToDrop), 0.3f), new BodyActivityDescription(0.01f));
+            for (int i = 0; i < 128; ++i)
             {
                 descriptionToDrop.Pose.Position = new Vector3(-5 + 10 * (float)random.NextDouble(), 45 + 150 * (float)random.NextDouble(), -5 + 10 * (float)random.NextDouble());
                 Simulation.Bodies.Add(descriptionToDrop);
             }
+
+            //Add in a static object to test against. Note that the mesh triangles are one sided, so some of the queries whose centers are beneath the mesh do not generate any contacts.
+            DemoMeshHelper.CreateDeformedPlane(20, 20, (x, y) => { return new Vector3(x * 5 - 50, 3 * MathF.Sin(x) * MathF.Sin(y), y * 5 - 50); }, Vector3.One, BufferPool, out var mesh);
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
         }
 
         /// <summary>
@@ -151,7 +155,7 @@ namespace Demos.Demos
                     shapeIndex.Type, queryShapeType,
                     shapeData, cachedQueryShapeData,
                     //Because we're using this as a boolean query, we use a speculative margin of 0. Don't care about negative depths.
-                    pose.Position - queryPose.Position, queryPose.Orientation, pose.Orientation, 0, new PairContinuation(queryId));
+                    queryPose.Position - pose.Position, queryPose.Orientation, pose.Orientation, 0, new PairContinuation(queryId));
             }
             broadPhaseEnumerator.References.Dispose(BufferPool);
         }
@@ -195,9 +199,11 @@ namespace Demos.Demos
                 GetPoseAndShape(broadPhaseEnumerator.References[overlapIndex], out var pose, out var shapeIndex);
                 //Since both involved shapes are from the simulation cache, we don't need to cache them ourselves.
                 Simulation.Shapes[shapeIndex.Type].GetShapeData(shapeIndex.Index, out var shapeData, out _);
-                batcher.AddDirectly(queryShapeIndex.Type, shapeIndex.Type, queryShapeData, shapeData,
+                batcher.AddDirectly(
+                    shapeIndex.Type, queryShapeIndex.Type,
+                    shapeData, queryShapeData,
                     //Because we're using this as a boolean query, we use a speculative margin of 0. Don't care about negative depths.
-                    pose.Position - queryPose.Position, queryPose.Orientation, pose.Orientation, 0, new PairContinuation(queryId));
+                    queryPose.Position - pose.Position, queryPose.Orientation, pose.Orientation, 0, new PairContinuation(queryId));
             }
             broadPhaseEnumerator.References.Dispose(BufferPool);
         }
@@ -218,7 +224,7 @@ namespace Demos.Demos
             const int widthInQueries = 5;
             var queries = new QuickList<Query>(widthInQueries * widthInQueries, BufferPool);
             var querySpacing = new Vector3(3, 0, 3);
-            var basePosition = new Vector3(0, 3, 0) - new Vector3(widthInQueries - 1) * querySpacing * 0.5f;
+            var basePosition = new Vector3(0, 2, 0) - new Vector3(widthInQueries - 1) * querySpacing * 0.5f;
             for (int i = 0; i < 5; ++i)
             {
                 for (int j = 0; j < 5; ++j)
