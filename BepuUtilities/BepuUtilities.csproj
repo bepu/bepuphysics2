@@ -9,9 +9,9 @@
     <Description>Supporting utilities library for BEPUphysics v2.</Description>
     <Copyright>© Bepu Entertainment LLC</Copyright>
     <PackageProjectUrl>https://github.com/bepu/bepuphysics2</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/bepu/bepuphysics2/blob/master/LICENSE.md</PackageLicenseUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/bepu/bepuphysics2</RepositoryUrl>
-    <PackageIconUrl>https://raw.githubusercontent.com/bepu/bepuphysics1/master/Documentation/images/readme/bepuphysicslogo256.png</PackageIconUrl>
+    <PackageIcon>bepuphysicslogo256.png</PackageIcon>
     <Configurations>Debug;Release;ReleaseStrip</Configurations>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -41,6 +41,13 @@
   <ItemGroup>
     <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.1" />
+  </ItemGroup>
+    
+  <ItemGroup>
+    <None Include="..\Documentation\images\bepuphysicslogo256.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

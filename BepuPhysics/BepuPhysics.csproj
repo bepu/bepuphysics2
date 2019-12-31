@@ -7,9 +7,9 @@
     <Description>Speedy real time physics simulation library.</Description>
     <Copyright>© Bepu Entertainment LLC</Copyright>
     <PackageProjectUrl>https://github.com/bepu/bepuphysics2</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/bepu/bepuphysics2/blob/master/LICENSE.md</PackageLicenseUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/bepu/bepuphysics2</RepositoryUrl>
-    <PackageIconUrl>https://raw.githubusercontent.com/bepu/bepuphysics1/master/Documentation/images/readme/bepuphysicslogo256.png</PackageIconUrl>
+    <PackageIcon>bepuphysicslogo256.png</PackageIcon>
     <Configurations>Debug;Release;ReleaseStrip;ReleaseStripNoProfiling</Configurations>
     <LangVersion>latest</LangVersion>
     <PackageTags>physics;3d;rigid body;real time;simulation</PackageTags>
@@ -80,6 +80,10 @@
     <None Update="Constraints\Contact\ContactNonconvexTypes.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>ContactNonconvexTypes.cs</LastGenOutput>
+    </None>
+    <None Include="..\Documentation\images\bepuphysicslogo256.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
     </None>
   </ItemGroup>
 
