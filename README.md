@@ -31,6 +31,8 @@ Report bugs [here on github](../../issues).
 
 Visit the [forums](https://forum.bepuentertainment.com) for discussion and questions.
 
+By user request, there's an [experimental discord server](https://discord.gg/ssa2XpY). I'll be focusing on the forum/github for long-form content, but if you like discord, now you can discord. 
+
 [Building](Documentation/Building.md)
 
 [Getting Started](Documentation/GettingStarted.md)
