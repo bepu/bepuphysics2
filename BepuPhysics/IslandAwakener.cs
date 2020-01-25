@@ -446,7 +446,7 @@ namespace BepuPhysics
             }
         }
 
-        struct TypeAllocationSizes<T> where T : struct, ITypeCount
+        struct TypeAllocationSizes<T> where T : unmanaged, ITypeCount
         {
             public Buffer<T> TypeCounts;
             public int HighestOccupiedTypeIndex;

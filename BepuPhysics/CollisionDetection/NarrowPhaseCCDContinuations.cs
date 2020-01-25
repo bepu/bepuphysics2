@@ -65,7 +65,7 @@ namespace BepuPhysics.CollisionDetection
             }
 
 
-            struct ContinuationCache<T> where T : struct
+            struct ContinuationCache<T> where T : unmanaged
             {
                 public IdPool Ids;
                 public Buffer<T> Caches;

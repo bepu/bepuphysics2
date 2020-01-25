@@ -214,7 +214,7 @@ namespace BepuPhysics
 
             }
         }
-        struct WorkBlocks<T> where T : struct
+        struct WorkBlocks<T> where T : unmanaged
         {
             public QuickList<T> Blocks;
             public Buffer<int> Claims;
@@ -265,7 +265,7 @@ namespace BepuPhysics
         int TraverseForwardUntilBlocked<TStageFunction, TBlock>(ref TStageFunction stageFunction, ref WorkBlocks<TBlock> blocks, int blockIndex, ref WorkerBounds bounds, ref Buffer<WorkerBounds> allWorkerBounds, int workerIndex,
             int batchEnd, int claimedState, int unclaimedState)
             where TStageFunction : IStageFunction
-            where TBlock : struct
+            where TBlock : unmanaged
         {
             //If no claim is made, this defaults to an invalid interval endpoint.
             int highestLocallyClaimedIndex = -1;
@@ -297,7 +297,7 @@ namespace BepuPhysics
         int TraverseBackwardUntilBlocked<TStageFunction, TBlock>(ref TStageFunction stageFunction, ref WorkBlocks<TBlock> blocks, int blockIndex, ref WorkerBounds bounds, ref Buffer<WorkerBounds> allWorkerBounds, int workerIndex,
             int batchStart, int claimedState, int unclaimedState)
             where TStageFunction : IStageFunction
-            where TBlock : struct
+            where TBlock : unmanaged
         {
             //If no claim is made, this defaults to an invalid interval endpoint.
             int lowestLocallyClaimedIndex = blocks.Blocks.Count;
@@ -474,7 +474,7 @@ namespace BepuPhysics
             int batchStart, int batchEnd, ref int workerStart, ref int syncStage,
             int claimedState, int unclaimedState)
             where TStageFunction : IStageFunction
-            where TBlock : struct
+            where TBlock : unmanaged
         {
             //It is possible for a worker to not have any job available in a particular batch. This can only happen when there are more workers than work blocks in the batch.
             //The workers with indices beyond the available work blocks will have their starts all set to -1 by the scheduler.

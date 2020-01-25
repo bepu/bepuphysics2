@@ -13,7 +13,7 @@ namespace BepuPhysics
     /// </summary>
     /// <typeparam name="T">Type of the data to store.</typeparam>
     /// <remarks>This is built for use cases relying on random access like the narrow phase. For maximum performance with sequential access, an index-aligned structure would be better.</remarks>
-    public class BodyProperty<T> : IDisposable where T : struct
+    public class BodyProperty<T> : IDisposable where T : unmanaged
     {
         Bodies bodies;
         BufferPool pool;

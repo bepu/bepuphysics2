@@ -21,7 +21,7 @@ namespace BepuUtilities.Collections
     /// it does not (and is incapable of) checking that provided memory gets returned to the same pool that it came from.
     /// </remarks>
     /// <typeparam name="T">Type of the elements in the queue.</typeparam>
-    public struct QuickQueue<T> where T : struct
+    public struct QuickQueue<T> where T : unmanaged
     {
         /// <summary>
         /// Number of elements in the queue.

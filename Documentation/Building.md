@@ -4,7 +4,7 @@
 
 The easiest way to build the library is using the latest version of Visual Studio with the .NET Core workload installed to open and build the `Library.sln`.
 
-The library tends to use the latest C# language features. At the time of writing, it requires C# 7.3. 8.0 will likely be adopted soon after its stable release.
+The library tends to use the latest C# language features. At the time of writing, it requires C# 7.3 (for Visual Studio users min version is 15.7). 8.0 will likely be adopted soon after its stable release.
 
 `BepuPhysics.csproj` uses T4 templates for code generation in a few places. If changes are made to the templates, you'll need a build pipeline that can process them (like Visual Studio). The repository contains the original generated .cs files, so if no changes are made, the templates do not need to be evaluated.
 

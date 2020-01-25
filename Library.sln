@@ -1,8 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
-VisualStudioVersion = 16.0.28803.156
-MinimumVisualStudioVersion = 10.0.40219.1
+VisualStudioVersion = 16.0.29709.97
+MinimumVisualStudioVersion = 15.7.27703.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BepuPhysics", "BepuPhysics\BepuPhysics.csproj", "{DB6DB527-25B9-4B2F-A6C5-D7C4D25A338F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BepuUtilities", "BepuUtilities\BepuUtilities.csproj", "{73294547-FA97-4A63-919C-E7969294D655}"

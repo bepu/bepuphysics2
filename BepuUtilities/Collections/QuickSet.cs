@@ -26,7 +26,7 @@ namespace BepuUtilities.Collections
     /// A generous table capacity is recommended; this trades some memory for simplicity and runtime performance.</para></remarks>
     /// <typeparam name="T">Type of element held by the container.</typeparam>
     /// <typeparam name="TEqualityComparer">Type of the equality tester and hash calculator used.</typeparam>
-    public struct QuickSet<T, TEqualityComparer> where TEqualityComparer : IEqualityComparerRef<T> where T : struct
+    public struct QuickSet<T, TEqualityComparer> where TEqualityComparer : IEqualityComparerRef<T> where T : unmanaged
     {
         /// <summary>
         /// Gets the number of elements in the set.
