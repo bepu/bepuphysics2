@@ -184,7 +184,7 @@ namespace BepuPhysics.Collidables
         public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             HitLeafTester<TRayHitHandler> leafTester;
-            leafTester.Triangles = (Triangle*)Triangles.Memory;
+            leafTester.Triangles = Triangles.Memory;
             leafTester.HitHandler = hitHandler;
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out leafTester.Orientation);
             leafTester.InverseScale = inverseScale;
@@ -208,7 +208,7 @@ namespace BepuPhysics.Collidables
         public unsafe void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             HitLeafTester<TRayHitHandler> leafTester;
-            leafTester.Triangles = (Triangle*)Triangles.Memory;
+            leafTester.Triangles = Triangles.Memory;
             leafTester.HitHandler = hitHandler;
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out leafTester.Orientation);
             Matrix3x3.Transpose(leafTester.Orientation, out var inverseOrientation);

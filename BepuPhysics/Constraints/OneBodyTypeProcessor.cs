@@ -39,8 +39,8 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public abstract class OneBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
         : TypeProcessor<Vector<int>, TPrestepData, TProjection, TAccumulatedImpulse>
-        where TPrestepData : struct where TProjection : struct where TAccumulatedImpulse : struct
-        where TConstraintFunctions : struct, IOneBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+        where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
+        where TConstraintFunctions : unmanaged, IOneBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         protected sealed override int InternalBodiesPerConstraint => 1;
 
@@ -203,8 +203,8 @@ namespace BepuPhysics.Constraints
 
     public abstract class OneBodyContactTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
         : OneBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
-        where TPrestepData : struct where TProjection : struct where TAccumulatedImpulse : struct
-        where TConstraintFunctions : struct, IOneBodyContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+        where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
+        where TConstraintFunctions : unmanaged, IOneBodyContactConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         public unsafe override void IncrementallyUpdateContactData(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
         {

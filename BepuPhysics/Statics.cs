@@ -65,7 +65,7 @@ namespace BepuPhysics
             pool.ResizeToAtLeast(ref HandleToIndex, targetCapacity, Count);
             pool.ResizeToAtLeast(ref Collidables, targetCapacity, Count);
             //Initialize all the indices beyond the copied region to -1.
-            Unsafe.InitBlockUnaligned(((int*)HandleToIndex.Memory) + Count, 0xFF, (uint)(sizeof(int) * (HandleToIndex.Length - Count)));
+            Unsafe.InitBlockUnaligned(HandleToIndex.Memory + Count, 0xFF, (uint)(sizeof(int) * (HandleToIndex.Length - Count)));
             //Note that we do NOT modify the idpool's internal queue size here. We lazily handle that during adds, and during explicit calls to EnsureCapacity, Compact, and Resize.
             //The idpool's internal queue will often be nowhere near as large as the actual static size except in corner cases, so in the usual case, being lazy saves a little space.
             //If the user wants to guarantee zero resizes, EnsureCapacity provides them the option to do so.

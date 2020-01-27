@@ -10,10 +10,9 @@ namespace BepuUtilities.Memory
     /// Span over an unmanaged memory region.
     /// </summary>
     /// <typeparam name="T">Type of the memory exposed by the span.</typeparam>
-    public unsafe struct Buffer<T> where T : struct
+    public unsafe struct Buffer<T> where T : unmanaged
     {
-        //TODO: Once blittable exists, replace this.
-        public byte* Memory;
+        public T* Memory;
         internal int length;
         //We're primarily interested in x64, so memory + length is 12 bytes. This struct would/should get padded to 16 bytes for alignment reasons anyway, 
         //so making use of the last 4 bytes to speed up the case where the raw buffer is taken from a pool (which is basically always) is a good option.
@@ -26,7 +25,7 @@ namespace BepuUtilities.Memory
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Buffer(void* memory, int length, int id = -1)
         {
-            Memory = (byte*)memory;
+            Memory = (T*)memory;
             this.length = length;
             Id = id;
         }
@@ -44,13 +43,6 @@ namespace BepuUtilities.Memory
             return ref Get(buffer.Memory, index);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref T Get(ref Buffer<T> buffer, int index)
-        {
-            Debug.Assert(index >= 0 && index < buffer.length, "Index out of range.");
-            return ref Get(buffer.Memory, index);
-        }
-
         /// <summary>
         /// Gets a reference to the element at the given index.
         /// </summary>
@@ -61,16 +53,21 @@ namespace BepuUtilities.Memory
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                //TODO: As of this writing, the codegen for this isn't perfect. It's marginally better than doing bounds checks on a regular array.
-                //Still not quite as fast as a raw Unsafe.Add on a properly typed ref, or a pure pointer index.
-                //Hopefully, coreclr's Span<T> will result in some improvement here. 
-                //No guarantee, though- they used to have a similar issue earlier in development but swapped to using internal intrinsics. 
-                //Specifically, they're using:
-                //return ref Unsafe.Add(ref _pointer.Value, index);
-                //where _pointer is a ByReference<T>, which we cannot use.
                 Debug.Assert(index >= 0 && index < length, "Index out of range.");
-                return ref Get(Memory, index);
+                return ref Memory[index];
             }
+        }
+
+        /// <summary>
+        /// Gets a pointer to the element at the given index.
+        /// </summary>
+        /// <param name="index">Index of the element to retrieve a pointer for.</param>
+        /// <returns>Pointer to the element at the given index.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public T* GetPointer(int index)
+        {
+            Debug.Assert(index >= 0 && index < Length, "Index out of range.");
+            return Memory + index;
         }
 
         /// <summary>
@@ -83,7 +80,7 @@ namespace BepuUtilities.Memory
         public Buffer<T> Slice(int start, int count)
         {
             ValidateRegion(start, count);
-            return new Buffer<T>(Memory + Unsafe.SizeOf<T>() * start, count, Id);
+            return new Buffer<T>(Memory + start, count, Id);
         }
 
         /// <summary>
@@ -109,7 +106,7 @@ namespace BepuUtilities.Memory
         public void Slice(int start, int count, out Buffer<T> sliced)
         {
             ValidateRegion(start, count);
-            sliced = new Buffer<T>(Memory + Unsafe.SizeOf<T>() * start, count, Id);
+            sliced = new Buffer<T>(Memory + start, count, Id);
         }
 
         /// <summary>
@@ -154,7 +151,7 @@ namespace BepuUtilities.Memory
         public void Clear(int start, int count)
         {
             ValidateRegion(start, count);
-            Unsafe.InitBlockUnaligned(Memory + Unsafe.SizeOf<T>() * start, 0, (uint)(count * Unsafe.SizeOf<T>()));
+            Unsafe.InitBlockUnaligned(Memory + start, 0, (uint)(count * Unsafe.SizeOf<T>()));
         }
 
         /// <summary>
@@ -239,7 +236,7 @@ namespace BepuUtilities.Memory
         public RawBuffer AsRaw()
         {
             RawBuffer buffer;
-            buffer.Memory = Memory;
+            buffer.Memory = (byte*)Memory;
             buffer.Length = length * Unsafe.SizeOf<T>();
             buffer.Id = Id;
             return buffer;

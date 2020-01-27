@@ -100,7 +100,7 @@ namespace BepuPhysics.Collidables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public LeafTester(in Buffer<CompoundChild> children, Shapes shapes, in TRayHitHandler handler, in Matrix3x3 orientation, in RayData originalRay)
             {
-                Children = (CompoundChild*)children.Memory;
+                Children = children.Memory;
                 Shapes = shapes;
                 HitRotator.HitHandler = handler;
                 HitRotator.Orientation = orientation;

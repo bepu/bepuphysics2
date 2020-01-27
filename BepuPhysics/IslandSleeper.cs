@@ -589,7 +589,7 @@ namespace BepuPhysics
         }
 
 
-        void Sleep(ref QuickList<int> traversalStartBodyIndices, IThreadDispatcher threadDispatcher, bool deterministic, int targetSleptBodyCount, int targetTraversedBodyCount, bool forceSleep)
+        unsafe void Sleep(ref QuickList<int> traversalStartBodyIndices, IThreadDispatcher threadDispatcher, bool deterministic, int targetSleptBodyCount, int targetTraversedBodyCount, bool forceSleep)
         {
             //There are four threaded phases to sleep:
             //1) Traversing the constraint graph to identify 'simulation islands' that satisfy the sleep conditions.
@@ -717,7 +717,7 @@ namespace BepuPhysics
                                 for (int typeBatchIndex = 0; typeBatchIndex < sourceBatch.TypeBatches.Count; ++typeBatchIndex)
                                 {
                                     ref var sourceTypeBatch = ref sourceBatch.TypeBatches[typeBatchIndex];
-                                    ref var targetTypeBatch = ref targetBatch.CreateNewTypeBatch(sourceTypeBatch.TypeId, solver.TypeProcessors[sourceTypeBatch.TypeId], sourceTypeBatch.Handles.Count, pool);
+                                    ref var targetTypeBatch = ref *targetBatch.CreateNewTypeBatch(sourceTypeBatch.TypeId, solver.TypeProcessors[sourceTypeBatch.TypeId], sourceTypeBatch.Handles.Count, pool);
                                     targetTypeBatch.ConstraintCount = sourceTypeBatch.Handles.Count;
                                 }
                             }

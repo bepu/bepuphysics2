@@ -37,8 +37,8 @@ namespace BepuPhysics.Constraints
     /// </summary>
     public abstract class ThreeBodyTypeProcessor<TPrestepData, TProjection, TAccumulatedImpulse, TConstraintFunctions>
         : TypeProcessor<ThreeBodyReferences, TPrestepData, TProjection, TAccumulatedImpulse>
-        where TPrestepData : struct where TProjection : struct where TAccumulatedImpulse : struct
-        where TConstraintFunctions : struct, IThreeBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
+        where TPrestepData : unmanaged where TProjection : unmanaged where TAccumulatedImpulse : unmanaged
+        where TConstraintFunctions : unmanaged, IThreeBodyConstraintFunctions<TPrestepData, TProjection, TAccumulatedImpulse>
     {
         protected sealed override int InternalBodiesPerConstraint => 3;
 

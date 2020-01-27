@@ -26,8 +26,8 @@ namespace DemoRenderer.Constraints
     }
 
     class TypeLineExtractor<T, TBodyReferences, TPrestep, TProjection, TAccumulatedImpulses> : TypeLineExtractor
-        where TBodyReferences : struct
-        where TPrestep : struct
+        where TBodyReferences : unmanaged
+        where TPrestep : unmanaged
         where T : struct, IConstraintLineExtractor<TPrestep>
     {
         public override int LinesPerConstraint => default(T).LinesPerConstraint;

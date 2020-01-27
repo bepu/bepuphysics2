@@ -120,19 +120,19 @@ namespace BepuUtilities.Memory
         }
 
         [Conditional("DEBUG")]
-        private static void Validate<T>(ref Buffer<T> source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : struct
+        private static void Validate<T>(ref Buffer<T> source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : unmanaged
         {
             Debug.Assert(targetIndex >= 0 && targetIndex + count <= target.Length, "Can't perform a copy that extends beyond the target span.");
             Debug.Assert(sourceIndex >= 0 && sourceIndex + count <= source.Length, "Can't perform a copy that extends beyond the source span.");
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Copy<T>(ref Buffer<T> source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : struct
+        public static unsafe void Copy<T>(ref Buffer<T> source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : unmanaged
         {
             Validate(ref source, sourceIndex, ref target, targetIndex, count);
             var byteCount = count * Unsafe.SizeOf<T>();
             Buffer.MemoryCopy(
-                source.Memory + sourceIndex * Unsafe.SizeOf<T>(),
-                target.Memory + targetIndex * Unsafe.SizeOf<T>(),
+                source.Memory + sourceIndex,
+                target.Memory + targetIndex,
                 byteCount, byteCount);
         }
 
@@ -149,7 +149,7 @@ namespace BepuUtilities.Memory
         /// <param name="targetIndex">Index in the array to start putting elements into.</param>
         /// <param name="count">Number of elements to copy.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Copy<T>(ref Buffer<T> source, int sourceIndex, T[] target, int targetIndex, int count) where T : struct
+        public static unsafe void Copy<T>(ref Buffer<T> source, int sourceIndex, T[] target, int targetIndex, int count) where T : unmanaged
         {
             for (int i = 0; i < count; ++i)
             {
@@ -166,7 +166,7 @@ namespace BepuUtilities.Memory
         /// <param name="targetIndex">Index in the buffer to start putting elements into.</param>
         /// <param name="count">Number of elements to copy.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Copy<T>(ref T[] source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : struct
+        public static unsafe void Copy<T>(ref T[] source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : unmanaged
         {
             for (int i = 0; i < count; ++i)
             {

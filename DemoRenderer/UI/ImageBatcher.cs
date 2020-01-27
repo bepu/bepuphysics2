@@ -83,7 +83,7 @@ namespace DemoRenderer.UI
         {
             foreach (var batch in batches)
             {
-                renderer.Render(context, batch.Key, screenResolution, new Span<ImageInstance>((ImageInstance*)batch.Value.Instances.Span.Memory, batch.Value.Instances.Count));
+                renderer.Render(context, batch.Key, screenResolution, new Span<ImageInstance>(batch.Value.Instances.Span.Memory, batch.Value.Instances.Count));
                 batchPool.Return(batch.Value);
             }
             batches.Clear();

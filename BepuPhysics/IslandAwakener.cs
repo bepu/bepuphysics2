@@ -446,7 +446,7 @@ namespace BepuPhysics
             }
         }
 
-        struct TypeAllocationSizes<T> where T : struct, ITypeCount
+        struct TypeAllocationSizes<T> where T : unmanaged, ITypeCount
         {
             public Buffer<T> TypeCounts;
             public int HighestOccupiedTypeIndex;
@@ -470,7 +470,7 @@ namespace BepuPhysics
         }
 
 
-        internal (int phaseOneJobCount, int phaseTwoJobCount) PrepareJobs(ref QuickList<int> setIndices, bool resetActivityStates, int threadCount)
+        unsafe internal (int phaseOneJobCount, int phaseTwoJobCount) PrepareJobs(ref QuickList<int> setIndices, bool resetActivityStates, int threadCount)
         {
             if (setIndices.Count == 0)
                 return (0, 0);
@@ -589,7 +589,7 @@ namespace BepuPhysics
                     if (countForType > 0)
                     {
                         var typeProcessor = solver.TypeProcessors[typeId];
-                        ref var typeBatch = ref batch.GetOrCreateTypeBatch(typeId, typeProcessor, countForType, pool);
+                        ref var typeBatch = ref *batch.GetOrCreateTypeBatch(typeId, typeProcessor, countForType, pool);
                         var targetCapacity = countForType + typeBatch.ConstraintCount;
                         if (targetCapacity > typeBatch.IndexToHandle.Length)
                         {

@@ -273,7 +273,7 @@ namespace BepuPhysics.CollisionDetection
                         }
                     }
                 }
-                var sampleChild = (NonconvexReductionChild*)Children.Memory + samplePopulatedChildIndex;
+                var sampleChild = Children.Memory + samplePopulatedChildIndex;
 
                 if (populatedChildManifolds > 1)
                 {

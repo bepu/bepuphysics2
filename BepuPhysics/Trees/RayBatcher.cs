@@ -442,7 +442,7 @@ namespace BepuPhysics.Trees
                 BroadcastNode(ref *node, out var nodeWide);
                 for (int bundleStartIndex = 0; bundleStartIndex < batchRayCount; bundleStartIndex += Vector<float>.Count)
                 {
-                    var bundleStart = (TreeRay*)batchRays.Memory + bundleStartIndex;
+                    var bundleStart = batchRays.Memory + bundleStartIndex;
 
                     var count = batchRayCount - bundleStartIndex;
                     if (count > Vector<float>.Count)
@@ -483,13 +483,13 @@ namespace BepuPhysics.Trees
                 switch (entry.RayStack)
                 {
                     case 0:
-                        rayStackStart = (ushort*)rayIndicesA0.Memory + (stackPointerA0 -= entry.RayCount);
+                        rayStackStart = rayIndicesA0.Memory + (stackPointerA0 -= entry.RayCount);
                         break;
                     case 1:
-                        rayStackStart = (ushort*)rayIndicesB.Memory + (stackPointerB -= entry.RayCount);
+                        rayStackStart = rayIndicesB.Memory + (stackPointerB -= entry.RayCount);
                         break;
                     default:
-                        rayStackStart = (ushort*)rayIndicesA1.Memory + (stackPointerA1 -= entry.RayCount);
+                        rayStackStart = rayIndicesA1.Memory + (stackPointerA1 -= entry.RayCount);
                         break;
                 }
 
@@ -505,7 +505,7 @@ namespace BepuPhysics.Trees
                     else
                     {
                         //This is a leaf node.
-                        var rayStackSource = new RaySource((TreeRay*)batchRays.Memory, (RayData*)batchOriginalRays.Memory, rayStackStart, entry.RayCount);
+                        var rayStackSource = new RaySource(batchRays.Memory, batchOriginalRays.Memory, rayStackStart, entry.RayCount);
                         leafTester.RayTest(Tree.Encode(entry.NodeIndex), ref rayStackSource);
                     }
                 }
@@ -515,7 +515,7 @@ namespace BepuPhysics.Trees
                     for (int i = 0; i < entry.RayCount; ++i)
                     {
                         var rayIndex = rayStackStart[i];
-                        tree.RayCast(entry.NodeIndex, (TreeRay*)batchRays.Memory + rayIndex, (RayData*)batchOriginalRays.Memory + rayIndex, (int*)fallbackStack.Memory, ref leafTester);
+                        tree.RayCast(entry.NodeIndex, batchRays.Memory + rayIndex, batchOriginalRays.Memory + rayIndex, fallbackStack.Memory, ref leafTester);
                     }
                 }
             }

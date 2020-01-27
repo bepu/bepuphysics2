@@ -184,7 +184,7 @@ namespace BepuUtilities.Collections
         /// Only the region defined by the startIndex and count is modified; the remainder of the span (whether it be the input span or the scratch span) is unmodified.</param>
         public static void Sort<TValue>(ref Buffer<int> inputKeys, ref Buffer<TValue> inputValues, ref Buffer<int> scratchKeys, ref Buffer<TValue> scratchValues,
             int startIndex, int count, int keysUpperBound, BufferPool bufferPool, out Buffer<int> sortedKeys, out Buffer<TValue> sortedValues)
-            where TValue : struct
+            where TValue : unmanaged
         {
             //Note that we require the scratch and input spans to contain the offset region. That's because the output could be either the scratch or the input spans.
             Debug.Assert(

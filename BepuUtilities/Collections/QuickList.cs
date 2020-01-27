@@ -21,7 +21,7 @@ namespace BepuUtilities.Collections
     /// it does not (and is incapable of) checking that provided memory gets returned to the same pool that it came from.
     /// </remarks>
     /// <typeparam name="T">Type of the elements in the list.</typeparam>
-    public struct QuickList<T> where T : struct
+    public struct QuickList<T> where T : unmanaged
     {
         /// <summary>
         /// Backing memory containing the elements of the list.
@@ -48,6 +48,18 @@ namespace BepuUtilities.Collections
                 ValidateIndex(index);
                 return ref Span[index];
             }
+        }
+
+        /// <summary>
+        /// Gets a pointer to the element at the given index in the list.
+        /// </summary>
+        /// <param name="index">Index to grab an element pointer from.</param>
+        /// <returns>Pointer to the element at the given index in the list.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe T* GetPointer(int index)
+        {
+            ValidateIndex(index);
+            return Span.GetPointer(index);
         }
 
         /// <summary>

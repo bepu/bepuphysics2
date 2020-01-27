@@ -115,7 +115,7 @@ namespace BepuPhysics
             return o;
         }
 
-        public void Update(BufferPool bufferPool, IThreadDispatcher threadDispatcher = null)
+        public unsafe void Update(BufferPool bufferPool, IThreadDispatcher threadDispatcher = null)
         {
             //TODO: It's possible that the cost associated with setting up multithreading exceeds the cost of the actual optimization for smaller simulations.
             //You might want to fall back to single threaded based on some empirical testing.
@@ -157,14 +157,13 @@ namespace BepuPhysics
 
             var maximumRegionSizeInConstraints = regionSizeInBundles * Vector<int>.Count;
 
-            ref var typeBatch = ref activeSet.Batches[target.BatchIndex].TypeBatches[target.TypeBatchIndex];
-            SortByBodyLocation(ref typeBatch, target.BundleIndex, Math.Min(typeBatch.ConstraintCount - target.BundleIndex * Vector<int>.Count, maximumRegionSizeInConstraints),
+            var typeBatch = activeSet.Batches[target.BatchIndex].TypeBatches.GetPointer(target.TypeBatchIndex);
+            SortByBodyLocation(typeBatch, target.BundleIndex, Math.Min(typeBatch->ConstraintCount - target.BundleIndex * Vector<int>.Count, maximumRegionSizeInConstraints),
                 solver.HandleToConstraint, bodies.ActiveSet.Count, bufferPool, threadDispatcher);
 
         }
 
-        //TODO: Generic pointers are blocked in pre-blittable C# versions. We can update this later to avoid unsafe casts.
-        unsafe void* typeBatchPointer;
+        unsafe TypeBatch* typeBatchPointer;
         IThreadDispatcher threadDispatcher;
         Buffer<ConstraintLocation> handlesToConstraints;
         struct MultithreadingContext
@@ -204,7 +203,7 @@ namespace BepuPhysics
                 return; //No work remains.
             var localWorkerConstraintStart = localWorkerBundleStart << BundleIndexing.VectorShift;
 
-            ref var typeBatch = ref Unsafe.AsRef<TypeBatch>(typeBatchPointer);
+            ref var typeBatch = ref *typeBatchPointer;
             solver.TypeProcessors[typeBatch.TypeId].GenerateSortKeysAndCopyReferences(ref typeBatch,
                 workerBundleStart, localWorkerBundleStart, workerBundleCount,
                 workerConstraintStart, localWorkerConstraintStart, workerConstraintCount,
@@ -241,7 +240,7 @@ namespace BepuPhysics
                     return; //No work remains.
                 var localWorkerConstraintStart = localWorkerBundleStart << BundleIndexing.VectorShift;
 
-                ref var typeBatch = ref Unsafe.AsRef<TypeBatch>(typeBatchPointer);
+                ref var typeBatch = ref *typeBatchPointer;
                 solver.TypeProcessors[typeBatch.TypeId].CopyToCache(ref typeBatch,
                     workerBundleStart, localWorkerBundleStart, workerBundleCount,
                     workerConstraintStart, localWorkerConstraintStart, workerConstraintCount,
@@ -265,7 +264,7 @@ namespace BepuPhysics
             if (workerConstraintCount <= 0)
                 return; //No work remains.
 
-            ref var typeBatch = ref Unsafe.AsRef<TypeBatch>(typeBatchPointer);
+            ref var typeBatch = ref *typeBatchPointer;
             solver.TypeProcessors[typeBatch.TypeId].CopyToCache(ref typeBatch,
                 workerBundleStart, 0, workerBundleCount,
                 workerConstraintStart, 0, workerConstraintCount,
@@ -285,7 +284,7 @@ namespace BepuPhysics
             var localWorkerConstraintStart = localWorkerBundleStart << BundleIndexing.VectorShift;
             ref var firstSourceIndex = ref context.SortedSourceIndices[localWorkerConstraintStart];
 
-            ref var typeBatch = ref Unsafe.AsRef<TypeBatch>(typeBatchPointer);
+            ref var typeBatch = ref *typeBatchPointer;
             solver.TypeProcessors[typeBatch.TypeId].Regather(ref typeBatch, workerConstraintStart, workerConstraintCount, ref firstSourceIndex,
                 ref context.IndexToHandleCache, ref context.BodyReferencesCache, ref context.PrestepDataCache, ref context.AccumulatesImpulsesCache, ref handlesToConstraints);
 
@@ -293,7 +292,7 @@ namespace BepuPhysics
 
 
 
-        unsafe void SortByBodyLocation(ref TypeBatch typeBatch, int bundleStartIndex, int constraintCount, Buffer<ConstraintLocation> handlesToConstraints, int bodyCount,
+        unsafe void SortByBodyLocation(TypeBatch* typeBatch, int bundleStartIndex, int constraintCount, Buffer<ConstraintLocation> handlesToConstraints, int bodyCount,
             BufferPool pool, IThreadDispatcher threadDispatcher)
         {
             int bundleCount = (constraintCount >> BundleIndexing.VectorShift);
@@ -307,7 +306,7 @@ namespace BepuPhysics
             pool.TakeAtLeast(constraintCount, out context.ScratchValues);
             pool.TakeAtLeast(constraintCount, out context.IndexToHandleCache);
 
-            var typeProcessor = solver.TypeProcessors[typeBatch.TypeId];
+            var typeProcessor = solver.TypeProcessors[typeBatch->TypeId];
             typeProcessor.GetBundleTypeSizes(out var bodyReferencesBundleSize, out var prestepBundleSize, out var accumulatedImpulseBundleSize);
 
             //The typebatch invoked by the worker will cast the body references to the appropriate type. 
@@ -318,7 +317,7 @@ namespace BepuPhysics
 
             context.BundlesPerWorker = bundleCount / threadCount;
             context.BundlesPerWorkerRemainder = bundleCount - context.BundlesPerWorker * threadCount;
-            context.TypeBatchConstraintCount = typeBatch.ConstraintCount;
+            context.TypeBatchConstraintCount = typeBatch->ConstraintCount;
             context.SourceStartBundleIndex = bundleStartIndex;
 
             //The second phase uses one worker to sort.
@@ -336,7 +335,7 @@ namespace BepuPhysics
             context.ConstraintsInSortRegionCount = constraintCount;
             context.KeyUpperBound = bodyCount - 1;
 
-            this.typeBatchPointer = Unsafe.AsPointer(ref typeBatch);
+            this.typeBatchPointer = typeBatch;
             this.threadDispatcher = threadDispatcher;
             this.handlesToConstraints = handlesToConstraints;
 
@@ -358,7 +357,7 @@ namespace BepuPhysics
             this.handlesToConstraints = new Buffer<ConstraintLocation>();
 
             //This is a pure debug function.
-            solver.TypeProcessors[typeBatch.TypeId].VerifySortRegion(ref typeBatch, bundleStartIndex, constraintCount, ref context.SortedKeys, ref context.SortedSourceIndices);
+            solver.TypeProcessors[typeBatch->TypeId].VerifySortRegion(ref *typeBatch, bundleStartIndex, constraintCount, ref context.SortedKeys, ref context.SortedSourceIndices);
 
             pool.Return(ref context.SourceIndices);
             pool.Return(ref context.SortKeys);

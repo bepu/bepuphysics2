@@ -84,7 +84,7 @@ namespace BepuPhysics.CollisionDetection
         public int ChildIndex { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (int)(Packed & ((1 << 18) - 1)); } }
     }
 
-    public struct BatcherContinuations<T> where T : struct, ICollisionTestContinuation
+    public struct BatcherContinuations<T> where T : unmanaged, ICollisionTestContinuation
     {
         public Buffer<T> Continuations;
         public IdPool IdPool;

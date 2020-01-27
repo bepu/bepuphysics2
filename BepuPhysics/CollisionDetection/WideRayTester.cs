@@ -13,14 +13,15 @@ namespace BepuPhysics.CollisionDetection
     public static class WideRayTester
     {
         public unsafe static void Test<TRaySource, TShape, TShapeWide, TRayHitHandler>(ref TShape shape, in RigidPose pose, ref TRaySource raySource, ref TRayHitHandler rayHitHandler)
-            where TShape : IConvexShape
-            where TShapeWide : IShapeWide<TShape>
+            where TShape : unmanaged, IConvexShape
+            where TShapeWide : unmanaged, IShapeWide<TShape>
             where TRaySource : IRaySource
             where TRayHitHandler : struct, IShapeRayHitHandler
         {
             RayWide rayWide;
-            TShapeWide wide = default; //TODO: Not ideal; pointless zero init. Can improve later with blittable or compiler improvements. Or could torture the design a bit.
-            wide.Broadcast(shape);
+            TShapeWide wide;
+            //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
+            (*&wide).Broadcast(shape);
             RigidPoses poses;
             Vector3Wide.Broadcast(pose.Position, out poses.Position);
             QuaternionWide.Broadcast(pose.Orientation, out poses.Orientation);
@@ -44,7 +45,8 @@ namespace BepuPhysics.CollisionDetection
                         count = Vector<float>.Count;
                     for (int j = 0; j < count; ++j)
                     {
-                        GatherScatter.GetOffsetInstance(ref rayWide, j).Gather(raySource.GetRay(i + j));
+                        //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
+                        GatherScatter.GetOffsetInstance(ref *&rayWide, j).Gather(raySource.GetRay(i + j));
                     }
 
                     wide.RayTest(ref poses, ref rayWide, out var intersected, out var t, out var normal);

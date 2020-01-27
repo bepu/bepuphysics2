@@ -58,8 +58,8 @@ namespace BepuPhysics.Constraints.Contact
         //TODO: These could share even more, but... this already handles the 14
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyTwoBodyDescription<TDescription, TPrestep>(ref TDescription description, ref TypeBatch batch, int bundleIndex, int innerIndex)
-              where TPrestep : struct, ITwoBodyNonconvexContactPrestep<TPrestep>
-              where TDescription : struct, INonconvexTwoBodyContactConstraintDescription<TDescription>
+              where TPrestep : unmanaged, ITwoBodyNonconvexContactPrestep<TPrestep>
+              where TDescription : unmanaged, INonconvexTwoBodyContactConstraintDescription<TDescription>
         {
             Debug.Assert(batch.TypeId == description.ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<TPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -83,8 +83,8 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyOneBodyDescription<TDescription, TPrestep>(ref TDescription description, ref TypeBatch batch, int bundleIndex, int innerIndex)
-              where TPrestep : struct, INonconvexContactPrestep<TPrestep>
-              where TDescription : struct, INonconvexOneBodyContactConstraintDescription<TDescription>
+              where TPrestep : unmanaged, INonconvexContactPrestep<TPrestep>
+              where TDescription : unmanaged, INonconvexOneBodyContactConstraintDescription<TDescription>
         {
             Debug.Assert(batch.TypeId == description.ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<TPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -116,8 +116,8 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void BuildTwoBodyDescription<TDescription, TPrestep>(ref TypeBatch batch, int bundleIndex, int innerIndex, out TDescription description)
-              where TPrestep : struct, ITwoBodyNonconvexContactPrestep<TPrestep>
-              where TDescription : struct, INonconvexTwoBodyContactConstraintDescription<TDescription>
+              where TPrestep : unmanaged, ITwoBodyNonconvexContactPrestep<TPrestep>
+              where TDescription : unmanaged, INonconvexTwoBodyContactConstraintDescription<TDescription>
         {
             Debug.Assert(batch.TypeId == default(TDescription).ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var prestep = ref GetOffsetInstance(ref Buffer<TPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -130,7 +130,7 @@ namespace BepuPhysics.Constraints.Contact
             material.SpringSettings.TwiceDampingRatio = GetFirst(ref materialSource.SpringSettings.TwiceDampingRatio);
             material.MaximumRecoveryVelocity = GetFirst(ref materialSource.MaximumRecoveryVelocity);
 
-            //TODO: Not ideal. We could avoid a default initialization with blittable...
+            //TODO: Replace with Unsafe.SkipInit?
             description = default;
             description.CopyManifoldWideProperties(ref offsetB, ref material);
 
@@ -141,8 +141,8 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void BuildOneBodyDescription<TDescription, TPrestep>(ref TypeBatch batch, int bundleIndex, int innerIndex, out TDescription description)
-              where TPrestep : struct, INonconvexContactPrestep<TPrestep>
-              where TDescription : struct, INonconvexOneBodyContactConstraintDescription<TDescription>
+              where TPrestep : unmanaged, INonconvexContactPrestep<TPrestep>
+              where TDescription : unmanaged, INonconvexOneBodyContactConstraintDescription<TDescription>
         {
             Debug.Assert(batch.TypeId == default(TDescription).ConstraintTypeId, "The type batch passed to the description must match the description's expected type.");
             ref var prestep = ref GetOffsetInstance(ref Buffer<TPrestep>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
@@ -154,7 +154,7 @@ namespace BepuPhysics.Constraints.Contact
             material.SpringSettings.TwiceDampingRatio = GetFirst(ref materialSource.SpringSettings.TwiceDampingRatio);
             material.MaximumRecoveryVelocity = GetFirst(ref materialSource.MaximumRecoveryVelocity);
 
-            //TODO: Not ideal. We could avoid a default initialization with blittable...
+            //TODO: Replace with Unsafe.SkipInit?
             description = default;
             description.CopyManifoldWideProperties(ref material);
 

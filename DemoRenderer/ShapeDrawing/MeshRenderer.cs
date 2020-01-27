@@ -110,7 +110,7 @@ namespace DemoRenderer.ShapeDrawing
                 {
                     var subbatchStart = Math.Max(0, batch.Count - this.instances.Capacity);
                     var subbatchCount = batch.Count - subbatchStart;
-                    this.instances.Update(context, new Span<MeshInstance>((MeshInstance*)batch.Span.Memory + subbatchStart, subbatchCount));
+                    this.instances.Update(context, new Span<MeshInstance>(batch.Span.Memory + subbatchStart, subbatchCount));
                     context.DrawInstanced(batchVertexCount, subbatchCount, 0, 0);
                     batch.Count -= subbatchCount;
                 }

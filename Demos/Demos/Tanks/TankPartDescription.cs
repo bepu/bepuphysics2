@@ -25,7 +25,7 @@ namespace Demos.Demos.Tanks
         /// </summary>
         public float Friction;
 
-        public static TankPartDescription Create<TShape>(float mass, in TShape shape, in RigidPose pose, float friction, Shapes shapes) where TShape : struct, IConvexShape
+        public static TankPartDescription Create<TShape>(float mass, in TShape shape, in RigidPose pose, float friction, Shapes shapes) where TShape : unmanaged, IConvexShape
         {
             TankPartDescription description;
             description.Shape = shapes.Add(shape);

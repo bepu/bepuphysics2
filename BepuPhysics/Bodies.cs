@@ -43,7 +43,7 @@ namespace BepuPhysics
         /// Gets a reference to the active set, stored in the index 0 of the Sets buffer.
         /// </summary>
         /// <returns>Reference to the active body set.</returns>
-        public unsafe ref BodySet ActiveSet { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return ref Unsafe.As<byte, BodySet>(ref *Sets.Memory); } }
+        public unsafe ref BodySet ActiveSet { [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return ref *Sets.Memory; } }
 
         //TODO: Having Inertias publicly exposed seems like a recipe for confusion, given its ephemeral nature. We may want to explicitly delete it after frame execution and
         //never expose it. If the user really wants an up to date world space inertia, it's pretty easy for them to build it from the local inertia and orientation anyway.
@@ -1191,7 +1191,7 @@ namespace BepuPhysics
                 if (HandleToLocation.Length > oldCapacity)
                 {
                     Unsafe.InitBlockUnaligned(
-                      ((BodyLocation*)HandleToLocation.Memory) + oldCapacity, 0xFF,
+                      HandleToLocation.Memory + oldCapacity, 0xFF,
                       (uint)(sizeof(BodyLocation) * (HandleToLocation.Length - oldCapacity)));
                 }
             }

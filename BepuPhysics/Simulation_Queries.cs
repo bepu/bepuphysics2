@@ -123,14 +123,14 @@ namespace BepuPhysics
             if (reference.Mobility == CollidableMobility.Static)
             {
                 var index = Statics.HandleToIndex[reference.Handle];
-                pose = (RigidPose*)Statics.Poses.Memory + index;
+                pose = Statics.Poses.Memory + index;
                 shape = Statics.Collidables[index].Shape;
             }
             else
             {
                 ref var location = ref Bodies.HandleToLocation[reference.Handle];
                 ref var set = ref Bodies.Sets[location.SetIndex];
-                pose = (RigidPose*)set.Poses.Memory + location.Index;
+                pose = set.Poses.Memory + location.Index;
                 shape = set.Collidables[location.Index].Shape;
             }
         }
@@ -262,7 +262,7 @@ namespace BepuPhysics
         /// <param name="maximumIterationCount">Maximum number of iterations to use in iterative sweep tests.</param>
         public unsafe void Sweep<TShape, TSweepHitHandler>(TShape shape, in RigidPose pose, in BodyVelocity velocity, float maximumT, BufferPool pool, ref TSweepHitHandler hitHandler,
             float minimumProgression, float convergenceThreshold, int maximumIterationCount)
-            where TShape : IConvexShape where TSweepHitHandler : ISweepHitHandler
+            where TShape : unmanaged, IConvexShape where TSweepHitHandler : ISweepHitHandler
         {
             //Build a bounding box.
             shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
@@ -276,7 +276,7 @@ namespace BepuPhysics
             dispatcher.Pose = pose;
             dispatcher.Velocity = velocity;
             //Note that the shape was passed by copy, and that all shape types are required to be blittable. No GC hole.
-            dispatcher.ShapeData = Unsafe.AsPointer(ref shape);
+            dispatcher.ShapeData = &shape;
             dispatcher.ShapeType = shape.TypeId;
             dispatcher.Simulation = this;
             dispatcher.Pool = pool;
@@ -302,7 +302,7 @@ namespace BepuPhysics
         /// <param name="hitHandler">Callbacks executed when a sweep impacts an object in the scene.</param>
         /// <remarks>Simulation objects are treated as stationary during the sweep.</remarks>
         public unsafe void Sweep<TShape, TSweepHitHandler>(in TShape shape, in RigidPose pose, in BodyVelocity velocity, float maximumT, BufferPool pool, ref TSweepHitHandler hitHandler)
-            where TShape : IConvexShape where TSweepHitHandler : ISweepHitHandler
+            where TShape : unmanaged, IConvexShape where TSweepHitHandler : ISweepHitHandler
         {
             //Estimate some reasonable termination conditions for iterative sweeps based on the input shape size.
             shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);

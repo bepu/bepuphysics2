@@ -73,7 +73,7 @@ namespace BepuUtilities.Memory
         /// <param name="count">Number of elements in the region in terms of the type.</param>
         /// <returns>A typed buffer.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Buffer<T> Slice<T>(int start, int count) where T : struct
+        public Buffer<T> Slice<T>(int start, int count) where T : unmanaged
         {
             ValidateRegion<T>(start, count);
             return new Buffer<T>(Memory + start * Unsafe.SizeOf<T>(), count * Unsafe.SizeOf<T>());
@@ -85,7 +85,7 @@ namespace BepuUtilities.Memory
         /// <typeparam name="T">Type of the buffer.</typeparam>
         /// <returns>Typed buffer of maximum extent within the current raw buffer.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Buffer<T> As<T>() where T : struct
+        public Buffer<T> As<T>() where T : unmanaged
         {
             var count = Length / Unsafe.SizeOf<T>();
             return new Buffer<T>(Memory, count, Id);

@@ -122,9 +122,9 @@ namespace BepuPhysics.CollisionDetection
 
     //Note that the vast majority of the 'work' done by these accessor implementations is just type definitions used to call back into some other functions that need that type knowledge.
     public abstract class ContactConstraintAccessor<TConstraintDescription, TBodyHandles, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> : ContactConstraintAccessor
-        where TConstraintDescription : IConstraintDescription<TConstraintDescription>
-        where TConstraintCache : IPairCacheEntry
-        where TPrestepData : struct
+        where TConstraintDescription : unmanaged, IConstraintDescription<TConstraintDescription>
+        where TConstraintCache : unmanaged, IPairCacheEntry
+        where TPrestepData : unmanaged
     {
         protected ContactConstraintAccessor()
         {
@@ -202,10 +202,10 @@ namespace BepuPhysics.CollisionDetection
 
         protected static void CopyContactData(ref ConvexContactManifold manifold, out TConstraintCache constraintCache, out TConstraintDescription description)
         {
-            //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
+            //TODO: Unnecessary zero inits. Unsafe.SkipInit would help here once available. Could also hack away with pointers.
             constraintCache = default;
             description = default;
-            //TODO: Check codegen. This should be a compilation time constant. If it's not, just use the ContactCount that we cached.
+            //This should be a compilation time constant provided an inlined constant property.
             var contactCount = constraintCache.CacheTypeId + 1;
             Debug.Assert(contactCount == manifold.Count, "Relying on generic specialization; should be the same value!");
             //Contact data comes first in the constraint description memory layout.
@@ -251,12 +251,12 @@ namespace BepuPhysics.CollisionDetection
 
     public class ConvexOneBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
         ContactConstraintAccessor<TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
-        where TConstraintDescription : IConvexOneBodyContactConstraintDescription<TConstraintDescription>
-        where TConstraintCache : IPairCacheEntry
-        where TPrestepData : struct, IConvexContactPrestep<TPrestepData>
-        where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
+        where TConstraintDescription : unmanaged, IConvexOneBodyContactConstraintDescription<TConstraintDescription>
+        where TConstraintCache : unmanaged, IPairCacheEntry
+        where TPrestepData : unmanaged, IConvexContactPrestep<TPrestepData>
+        where TAccumulatedImpulses : unmanaged, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
     {
-        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public unsafe override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
@@ -273,10 +273,10 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(typeof(TContactManifold) == typeof(NonconvexContactManifold));
                 ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
                 Debug.Assert(manifold.Count == 1, "Nonconvex manifolds should only result in convex constraints when the contact count is 1.");
-                //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
-                TConstraintCache constraintCache = default;
-                TConstraintDescription description = default;
-                CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
+                TConstraintCache constraintCache;
+                TConstraintDescription description;
+                //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
+                CopyContactData(ref manifold, ref *&constraintCache, ref (*&description).GetFirstContact(ref description));
                 description.CopyManifoldWideProperties(ref manifold.Contact0.Normal, ref material);
                 UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
             }
@@ -308,12 +308,12 @@ namespace BepuPhysics.CollisionDetection
 
     public class ConvexTwoBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
         ContactConstraintAccessor<TConstraintDescription, TwoBodyHandles, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
-        where TConstraintDescription : IConvexTwoBodyContactConstraintDescription<TConstraintDescription>
-        where TConstraintCache : IPairCacheEntry
-        where TPrestepData : struct, ITwoBodyConvexContactPrestep<TPrestepData>
-        where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
+        where TConstraintDescription : unmanaged, IConvexTwoBodyContactConstraintDescription<TConstraintDescription>
+        where TConstraintCache : unmanaged, IPairCacheEntry
+        where TPrestepData : unmanaged, ITwoBodyConvexContactPrestep<TPrestepData>
+        where TAccumulatedImpulses : unmanaged, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
     {
-        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public unsafe override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
@@ -330,10 +330,10 @@ namespace BepuPhysics.CollisionDetection
                 Debug.Assert(typeof(TContactManifold) == typeof(NonconvexContactManifold));
                 ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
                 Debug.Assert(manifold.Count == 1, "Nonconvex manifolds should only result in convex constraints when the contact count is 1.");
-                //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
-                TConstraintCache constraintCache = default;
-                TConstraintDescription description = default;
-                CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
+                TConstraintCache constraintCache;
+                TConstraintDescription description;
+                //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
+                CopyContactData(ref manifold, ref *&constraintCache, ref (*&description).GetFirstContact(ref description));
                 description.CopyManifoldWideProperties(ref manifold.OffsetB, ref manifold.Contact0.Normal, ref material);
                 UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
             }
@@ -372,21 +372,21 @@ namespace BepuPhysics.CollisionDetection
 
     public class NonconvexOneBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
         ContactConstraintAccessor<TConstraintDescription, int, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
-        where TConstraintDescription : INonconvexOneBodyContactConstraintDescription<TConstraintDescription>
-        where TConstraintCache : IPairCacheEntry
-        where TPrestepData : struct, INonconvexContactPrestep<TPrestepData>
-        where TAccumulatedImpulses : struct, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
+        where TConstraintDescription : unmanaged, INonconvexOneBodyContactConstraintDescription<TConstraintDescription>
+        where TConstraintCache : unmanaged, IPairCacheEntry
+        where TPrestepData : unmanaged, INonconvexContactPrestep<TPrestepData>
+        where TAccumulatedImpulses : unmanaged, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
     {
-        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public unsafe override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
             Debug.Assert(typeof(TCallBodyHandles) == typeof(int));
             ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
-            //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
-            TConstraintCache constraintCache = default;
-            TConstraintDescription description = default;
-            CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
+            TConstraintCache constraintCache;
+            TConstraintDescription description;
+            //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
+            CopyContactData(ref manifold, ref *&constraintCache, ref (*&description).GetFirstContact(ref description));
             description.CopyManifoldWideProperties(ref material);
             UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
         }
@@ -417,21 +417,21 @@ namespace BepuPhysics.CollisionDetection
 
     public class NonconvexTwoBodyAccessor<TConstraintDescription, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache> :
         ContactConstraintAccessor<TConstraintDescription, TwoBodyHandles, TPrestepData, TAccumulatedImpulses, TContactImpulses, TConstraintCache>
-        where TConstraintDescription : INonconvexTwoBodyContactConstraintDescription<TConstraintDescription>
-        where TConstraintCache : IPairCacheEntry
-        where TPrestepData : struct, ITwoBodyNonconvexContactPrestep<TPrestepData>
-        where TAccumulatedImpulses : struct, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
+        where TConstraintDescription : unmanaged, INonconvexTwoBodyContactConstraintDescription<TConstraintDescription>
+        where TConstraintCache : unmanaged, IPairCacheEntry
+        where TPrestepData : unmanaged, ITwoBodyNonconvexContactPrestep<TPrestepData>
+        where TAccumulatedImpulses : unmanaged, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
     {
-        public override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
+        public unsafe override void UpdateConstraintForManifold<TContactManifold, TCollisionCache, TCallBodyHandles, TCallbacks>(
             NarrowPhase<TCallbacks> narrowPhase, int manifoldTypeAsConstraintType, int workerIndex,
             ref CollidablePair pair, ref TContactManifold manifoldPointer, ref TCollisionCache collisionCache, ref PairMaterialProperties material, TCallBodyHandles bodyHandles)
         {
             Debug.Assert(typeof(TCallBodyHandles) == typeof(TwoBodyHandles));
             ref var manifold = ref Unsafe.As<TContactManifold, NonconvexContactManifold>(ref manifoldPointer);
-            //TODO: Unnecessary zero inits. Should see if releasestrip strips these. Blittable could help us avoid this if the compiler doesn't realize.
-            TConstraintCache constraintCache = default;
-            TConstraintDescription description = default;
-            CopyContactData(ref manifold, ref constraintCache, ref description.GetFirstContact(ref description));
+            TConstraintCache constraintCache;
+            TConstraintDescription description;
+            //TODO: Pointer initialization skip hack. Replace with Unsafe.SkipInit?
+            CopyContactData(ref manifold, ref *&constraintCache, ref (*&description).GetFirstContact(ref description));
             description.CopyManifoldWideProperties(ref manifold.OffsetB, ref material);
             UpdateConstraint(narrowPhase, manifoldTypeAsConstraintType, workerIndex, ref pair, ref constraintCache, ref collisionCache, ref description, bodyHandles);
         }

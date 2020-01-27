@@ -11,23 +11,21 @@ namespace BepuPhysics
 {
     public unsafe struct ConstraintReference
     {
-        //TODO: Once blittable exists, we can give this a proper type. Blocked by generics interference in TypeBatch.
-        //May want to just treat this as opaque.
-        internal void* typeBatchPointer;
+        internal TypeBatch* typeBatchPointer;
         public ref TypeBatch TypeBatch
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return ref Unsafe.AsRef<TypeBatch>(typeBatchPointer);
+                return ref *typeBatchPointer;
             }
         }
         public readonly int IndexInTypeBatch;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ConstraintReference(ref TypeBatch typeBatch, int indexInTypeBatch)
+        public ConstraintReference(TypeBatch* typeBatchPointer, int indexInTypeBatch)
         {
-            typeBatchPointer = Unsafe.AsPointer(ref typeBatch);
+            this.typeBatchPointer = typeBatchPointer;
             IndexInTypeBatch = indexInTypeBatch;
         }
     }
@@ -247,11 +245,11 @@ namespace BepuPhysics
         /// <param name="reference">Temporary direct reference to the type batch and index in the type batch associated with the constraint handle.
         /// May be invalidated by constraint removals.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetConstraintReference(int handle, out ConstraintReference reference)
+        public unsafe void GetConstraintReference(int handle, out ConstraintReference reference)
         {
             AssertConstraintHandleExists(handle);
             ref var constraintLocation = ref HandleToConstraint[handle];
-            reference = new ConstraintReference(ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId), constraintLocation.IndexInTypeBatch);
+            reference = new ConstraintReference(Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatchPointer(constraintLocation.TypeId), constraintLocation.IndexInTypeBatch);
         }
 
         [Conditional("DEBUG")]
@@ -841,7 +839,7 @@ namespace BepuPhysics
         /// <param name="batchIndex">Index of the batch to remove from.</param>
         /// <param name="typeId">Type id of the constraint to remove.</param>
         /// <param name="indexInTypeBatch">Index of the constraint to remove within its type batch.</param>
-        internal void RemoveFromBatch(int constraintHandle, int batchIndex, int typeId, int indexInTypeBatch)
+        internal unsafe void RemoveFromBatch(int constraintHandle, int batchIndex, int typeId, int indexInTypeBatch)
         {
             ref var batch = ref ActiveSet.Batches[batchIndex];
             if (batchIndex == FallbackBatchThreshold)
@@ -853,7 +851,7 @@ namespace BepuPhysics
             }
             else
             {
-                batch.RemoveWithHandles(typeId, indexInTypeBatch, ref batchReferencedHandles[batchIndex], this);
+                batch.RemoveWithHandles(typeId, indexInTypeBatch, batchReferencedHandles.GetPointer(batchIndex), this);
             }
             RemoveBatchIfEmpty(ref batch, batchIndex);
         }

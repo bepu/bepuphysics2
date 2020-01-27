@@ -143,7 +143,7 @@ namespace Demos.Demos
 
     public class RagdollDemo : Demo
     {
-        static int AddBody<TShape>(TShape shape, float mass, in RigidPose pose, Simulation simulation) where TShape : struct, IConvexShape
+        static int AddBody<TShape>(TShape shape, float mass, in RigidPose pose, Simulation simulation) where TShape : unmanaged, IConvexShape
         {
             //Note that this always registers a new shape instance. You could be more clever/efficient and share shapes, but the goal here is to show the most basic option.
             //Also, the cost of registering different shapes isn't that high for tiny implicit shapes.

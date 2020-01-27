@@ -266,15 +266,15 @@ namespace BepuPhysics.Trees
             pool.TakeAtLeast<float>(leafBounds.Length, out var centroidsZ);
             pool.TakeAtLeast<BoundingBox>(leafBounds.Length, out var merged);
             SweepResources leaves;
-            leaves.Bounds = (BoundingBox*)leafBounds.Memory;
-            leaves.IndexMap = (int*)indexMap.Memory;
-            leaves.IndexMapX = (int*)indexMapX.Memory;
-            leaves.IndexMapY = (int*)indexMapY.Memory;
-            leaves.IndexMapZ = (int*)indexMapZ.Memory;
-            leaves.CentroidsX = (float*)centroidsX.Memory;
-            leaves.CentroidsY = (float*)centroidsY.Memory;
-            leaves.CentroidsZ = (float*)centroidsZ.Memory;
-            leaves.Merged = (BoundingBox*)merged.Memory;
+            leaves.Bounds = leafBounds.Memory;
+            leaves.IndexMap = indexMap.Memory;
+            leaves.IndexMapX = indexMapX.Memory;
+            leaves.IndexMapY = indexMapY.Memory;
+            leaves.IndexMapZ = indexMapZ.Memory;
+            leaves.CentroidsX = centroidsX.Memory;
+            leaves.CentroidsY = centroidsY.Memory;
+            leaves.CentroidsZ = centroidsZ.Memory;
+            leaves.Merged = merged.Memory;
 
 
             for (int i = 0; i < leafBounds.Length; ++i)

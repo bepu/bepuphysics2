@@ -113,7 +113,7 @@ namespace Demos.Demos
         double t;
         int[] kinematicHandles;
 
-        void AddConvexShape<TConvex>(in TConvex convex, out TypedIndex shapeIndex, out BodyInertia inertia) where TConvex : struct, IConvexShape
+        void AddConvexShape<TConvex>(in TConvex convex, out TypedIndex shapeIndex, out BodyInertia inertia) where TConvex : unmanaged, IConvexShape
         {
             shapeIndex = Simulation.Shapes.Add(convex);
             convex.ComputeInertia(1, out inertia);
