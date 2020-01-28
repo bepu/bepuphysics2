@@ -2,7 +2,6 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using BepuUtilities.Memory;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 using BepuPhysics.CollisionDetection;
 

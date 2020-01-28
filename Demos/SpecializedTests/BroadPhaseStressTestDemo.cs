@@ -49,7 +49,7 @@ namespace Demos.SpecializedTests
                                 Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = -0.1f },
                                 Pose = new RigidPose
                                 {
-                                    Orientation = BepuUtilities.Quaternion.Identity,
+                                    Orientation = Quaternion.Identity,
                                     Position = location
                                 },
                                 Collidable = new CollidableDescription
@@ -68,7 +68,7 @@ namespace Demos.SpecializedTests
                             {
                                 Pose = new RigidPose
                                 {
-                                    Orientation = BepuUtilities.Quaternion.Identity,
+                                    Orientation = Quaternion.Identity,
                                     Position = location
                                 },
                                 Collidable = new CollidableDescription

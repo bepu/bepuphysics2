@@ -1,9 +1,7 @@
 ﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 
 namespace DemoRenderer.Constraints
@@ -19,7 +17,7 @@ namespace DemoRenderer.Constraints
             var poseA = bodies.Sets[setIndex].Poses[bodyIndices[0]];
             var poseB = bodies.Sets[setIndex].Poses[bodyIndices[1]];
             Vector3Wide.ReadFirst(prestepBundle.LocalOffsetB, out var localOffsetB);
-            Quaternion.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
+            QuaternionEx.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
             var anchor = poseB.Position + worldOffsetB;
             var color = new Vector3(0.2f, 0.2f, 1f) * tint;
             var packedColor = Helpers.PackColor(color);

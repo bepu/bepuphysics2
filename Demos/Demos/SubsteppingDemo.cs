@@ -1,6 +1,5 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using DemoContentLoader;
@@ -8,11 +7,7 @@ using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
-
 namespace Demos.Demos
 {
     /// <summary>
@@ -57,7 +52,7 @@ namespace Demos.Demos
                 var boxDescription = BodyDescription.CreateDynamic(new Vector3(), boxInertia, new CollidableDescription(Simulation.Shapes.Add(boxShape), 0.1f), new BodyActivityDescription(-1f));
                 for (int i = 0; i < 20; ++i)
                 {
-                    boxDescription.Pose = new RigidPose(new Vector3(0, 0.5f + boxShape.Height * (i + 0.5f), 0), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.05f * i));
+                    boxDescription.Pose = new RigidPose(new Vector3(0, 0.5f + boxShape.Height * (i + 0.5f), 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.05f * i));
                     Simulation.Bodies.Add(boxDescription);
                 }
                 var topBlockShape = new Box(8, 2, 8);

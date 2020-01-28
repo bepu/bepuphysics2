@@ -1,19 +1,14 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
-using BepuPhysics.CollisionDetection.SweepTasks;
 using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using DemoRenderer;
 using DemoRenderer.Constraints;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Helpers = DemoRenderer.Helpers;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.SpecializedTests
 {
@@ -89,8 +84,8 @@ namespace Demos.SpecializedTests
             aWide.Broadcast(a);
             bWide.Broadcast(b);
             var worldOffsetB = poseB.Position - poseA.Position;
-            var localOrientationB = Matrix3x3.CreateFromQuaternion(Quaternion.Concatenate(poseB.Orientation, Quaternion.Conjugate(poseA.Orientation)));
-            var localOffsetB = Quaternion.Transform(worldOffsetB, Quaternion.Conjugate(poseA.Orientation));
+            var localOrientationB = Matrix3x3.CreateFromQuaternion(QuaternionEx.Concatenate(poseB.Orientation, QuaternionEx.Conjugate(poseA.Orientation)));
+            var localOffsetB = QuaternionEx.Transform(worldOffsetB, QuaternionEx.Conjugate(poseA.Orientation));
             Vector3Wide.Broadcast(localOffsetB, out var localOffsetBWide);
             Matrix3x3Wide.Broadcast(localOrientationB, out var localOrientationBWide);
             var supportFinderA = default(TSupportFinderA);

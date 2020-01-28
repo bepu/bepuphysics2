@@ -88,7 +88,7 @@ namespace Demos.SpecializedTests
                 axis /= length;
             else
                 axis = new Vector3(0, 1, 0);
-            pose.Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(axis, 1203f * (float)random.NextDouble());
+            pose.Orientation = BepuUtilities.QuaternionEx.CreateFromAxisAngle(axis, 1203f * (float)random.NextDouble());
             return pose;
         }
 

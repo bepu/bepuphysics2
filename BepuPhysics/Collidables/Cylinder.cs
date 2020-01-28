@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 using BepuUtilities.Memory;
-using System.Diagnostics;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 using BepuPhysics.CollisionDetection;
 
@@ -69,7 +65,7 @@ namespace BepuPhysics.Collidables
 
             //We want to compute 3 different sample directions: (1,0,0), (0,1,0), and (0,0,1). This is equivalent to simply accessing the component X Y or Z out of the axis.
             //Using this fact, we can compute all three directions together:
-            Quaternion.TransformUnitY(orientation, out var y);
+            QuaternionEx.TransformUnitY(orientation, out var y);
             var positiveDiscBoundOffsets = Vector3.SquareRoot(Vector3.Max(Vector3.Zero, Vector3.One - y * y)) * Radius;
             max = Vector3.Abs(HalfLength * y) + positiveDiscBoundOffsets;
             //Cylinders are symmetric.

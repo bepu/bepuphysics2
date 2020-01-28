@@ -3,7 +3,6 @@ using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos.Cars
 {
@@ -42,7 +41,7 @@ namespace Demos.Demos.Cars
         {
             RigidPose wheelPose;
             RigidPose.Transform(bodyToWheelSuspension + suspensionDirection * suspensionLength, bodyPose, out wheelPose.Position);
-            Quaternion.ConcatenateWithoutOverlap(localWheelOrientation, bodyPose.Orientation, out wheelPose.Orientation);
+            QuaternionEx.ConcatenateWithoutOverlap(localWheelOrientation, bodyPose.Orientation, out wheelPose.Orientation);
             WheelHandles handles;
             handles.Wheel = simulation.Bodies.Add(BodyDescription.CreateDynamic(wheelPose, wheelInertia, new CollidableDescription(wheelShape, 0.1f), new BodyActivityDescription(0.01f)));
 
@@ -89,7 +88,7 @@ namespace Demos.Demos.Cars
             car.Body = simulation.Bodies.Add(BodyDescription.CreateDynamic(pose, bodyInertia, new CollidableDescription(bodyShape, 0.1f), new BodyActivityDescription(0.01f)));
             ref var bodyProperties = ref properties.Allocate(car.Body);
             bodyProperties = new CarBodyProperties { Friction = bodyFriction, Filter = new SubgroupCollisionFilter(car.Body, 0) };
-            Quaternion.TransformUnitY(localWheelOrientation, out var wheelAxis);
+            QuaternionEx.TransformUnitY(localWheelOrientation, out var wheelAxis);
             car.hingeDescription = new AngularHinge
             {
                 LocalHingeAxisA = wheelAxis,

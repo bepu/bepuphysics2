@@ -2,11 +2,8 @@
 using BepuPhysics.Collidables;
 using BepuUtilities;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
 namespace Demos.SpecializedTests
 {
     public interface IRayTester<T> where T : IShape

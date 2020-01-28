@@ -89,12 +89,12 @@ namespace Demos
                         var r = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
                         var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, -height, -length) * 0.5f) + randomizationBase + r * randomizationSpan;
 
-                        BepuUtilities.Quaternion orientation;
+                        Quaternion orientation;
                         orientation.X = -1 + 2 * (float)random.NextDouble();
                         orientation.Y = -1 + 2 * (float)random.NextDouble();
                         orientation.Z = -1 + 2 * (float)random.NextDouble();
                         orientation.W = 0.01f + (float)random.NextDouble();
-                        orientation.Normalize();
+                        QuaternionEx.Normalize(ref orientation);
 
                         TypedIndex shapeIndex;
                         switch ((i + j + k) % 3)
@@ -160,7 +160,7 @@ namespace Demos
                     return new Vector3(x - planeWidth / 2, 1 * MathF.Cos(x / 4f) * MathF.Sin(y / 4f), y - planeHeight / 2);
                 }, new Vector3(1, 3, 1), BufferPool, out var planeMesh);
             Simulation.Statics.Add(new StaticDescription(
-                new Vector3(0, -10, 0), BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 4),
+                new Vector3(0, -10, 0), BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 4),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
             int raySourceCount = 3;

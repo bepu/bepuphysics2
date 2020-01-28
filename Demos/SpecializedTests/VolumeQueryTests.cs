@@ -83,12 +83,12 @@ namespace Demos.SpecializedTests
                         var r = new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
                         var location = spacing * (new Vector3(i, j, k) + new Vector3(-width, -height, -length) * 0.5f) + randomizationBase + r * randomizationSpan;
 
-                        BepuUtilities.Quaternion orientation;
+                        Quaternion orientation;
                         orientation.X = -1 + 2 * (float)random.NextDouble();
                         orientation.Y = -1 + 2 * (float)random.NextDouble();
                         orientation.Z = -1 + 2 * (float)random.NextDouble();
                         orientation.W = 0.01f + (float)random.NextDouble();
-                        orientation.Normalize();
+                        QuaternionEx.Normalize(ref orientation);
 
                         if ((i + j + k) % 2 == 1)
                         {

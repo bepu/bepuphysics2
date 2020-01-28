@@ -3,7 +3,6 @@ using BepuUtilities.Memory;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 
 namespace DemoRenderer.Constraints

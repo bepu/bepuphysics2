@@ -1,13 +1,6 @@
 ﻿using BepuUtilities;
 using BepuPhysics;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
-using System;
-using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos
 {
@@ -16,8 +9,8 @@ namespace Demos
         static void CreateBallSocket(ref RigidPose a, ref RigidPose b, out BallSocket description)
         {
             var midpoint = 0.5f * (a.Position + b.Position);
-            description.LocalOffsetA = Quaternion.Transform(midpoint - a.Position, Quaternion.Conjugate(a.Orientation));
-            description.LocalOffsetB = Quaternion.Transform(midpoint - b.Position, Quaternion.Conjugate(b.Orientation));
+            description.LocalOffsetA = QuaternionEx.Transform(midpoint - a.Position, QuaternionEx.Conjugate(a.Orientation));
+            description.LocalOffsetB = QuaternionEx.Transform(midpoint - b.Position, QuaternionEx.Conjugate(b.Orientation));
             description.SpringSettings = new SpringSettings(15, 0.1f);
         }
         static void TryConnectTo(int sliceIndex, int rowIndex, int columnIndex,

@@ -10,7 +10,6 @@ using DemoUtilities;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos
 {
@@ -276,11 +275,11 @@ namespace Demos.Demos
         }
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
-            var xRotation = Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0.02f * animationT * MathHelper.Pi);
-            var yRotation = Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0.04f * animationT * MathHelper.Pi);
-            var zRotation = Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), 0.06f * animationT * MathHelper.Pi);
-            var worldA = Quaternion.Concatenate(xRotation, Quaternion.Concatenate(yRotation, zRotation));
-            var worldB = Quaternion.Concatenate(yRotation, Quaternion.Concatenate(zRotation, xRotation));
+            var xRotation = QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), 0.02f * animationT * MathHelper.Pi);
+            var yRotation = QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), 0.04f * animationT * MathHelper.Pi);
+            var zRotation = QuaternionEx.CreateFromAxisAngle(new Vector3(0, 0, 1), 0.06f * animationT * MathHelper.Pi);
+            var worldA = QuaternionEx.Concatenate(xRotation, QuaternionEx.Concatenate(yRotation, zRotation));
+            var worldB = QuaternionEx.Concatenate(yRotation, QuaternionEx.Concatenate(zRotation, xRotation));
             base.Render(renderer, camera, input, text, font);
 
             var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 8);

@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
-using System.Text;
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
@@ -13,7 +10,6 @@ using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using OpenTK.Input;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos.Cars
 {
@@ -64,7 +60,7 @@ namespace Demos.Demos.Cars
             const float backZ = -1.7f;
             playerController = new SimpleCarController(SimpleCar.Create(Simulation, properties, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2f,
                 new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
-                new SpringSettings(5f, 0.7f), Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
+                new SpringSettings(5f, 0.7f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
                 forwardSpeed: 75, forwardForce: 6, zoomMultiplier: 2, backwardSpeed: 30, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 1.5f, maximumSteeringAngle: MathF.PI * 0.23f);
 
             //Create a bunch of AI cars to race against.
@@ -89,7 +85,7 @@ namespace Demos.Demos.Cars
                     var buildingShape = new Box(10 + (float)random.NextDouble() * 10, 20 + (float)random.NextDouble() * 20, 10 + (float)random.NextDouble() * 10);
                     Simulation.Statics.Add(new StaticDescription(
                         new Vector3(0, buildingShape.HalfHeight, 0) + landmarkMin + landmarkSpan * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()),
-                        Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)random.NextDouble() * MathF.PI),
+                        QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, (float)random.NextDouble() * MathF.PI),
                         new CollidableDescription(Simulation.Shapes.Add(buildingShape), 0.1f)));
                 }
             }
@@ -101,10 +97,10 @@ namespace Demos.Demos.Cars
             {
                 //The AI cars are very similar, except... we handicap them a little to make the player good about themselves.
                 var position = min + span * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
-                var orientation = Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * MathF.PI * 2);
+                var orientation = QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * MathF.PI * 2);
                 aiControllers[i].Controller = new SimpleCarController(SimpleCar.Create(Simulation, properties, new RigidPose(position, orientation), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2f,
                     new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
-                    new SpringSettings(5, 0.7f), Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
+                    new SpringSettings(5, 0.7f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
                     forwardSpeed: 50, forwardForce: 5, zoomMultiplier: 2, backwardSpeed: 10, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 1.5f, maximumSteeringAngle: MathF.PI * 0.23f);
                 aiControllers[i].LaneOffset = (float)random.NextDouble() * 20 - 10;
             }
@@ -128,7 +124,7 @@ namespace Demos.Demos.Cars
                     return new Vector3(vertexPosition.X, height + edgeRamp, vertexPosition.Y);
 
                 }, new Vector3(1, 1, 1), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
 
 
@@ -201,7 +197,7 @@ namespace Demos.Demos.Cars
             if (playerControlActive)
             {
                 var carBody = new BodyReference(playerController.Car.Body, Simulation.Bodies);
-                Quaternion.TransformUnitY(carBody.Pose.Orientation, out var carUp);
+                QuaternionEx.TransformUnitY(carBody.Pose.Orientation, out var carUp);
                 camera.Position = carBody.Pose.Position + carUp * 1.3f + camera.Backward * 8;
             }
 

@@ -1,9 +1,6 @@
 ﻿using BepuUtilities;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace DemoRenderer
 {
@@ -79,7 +76,7 @@ namespace DemoRenderer
         {
             get
             {
-                Quaternion.CreateFromYawPitchRoll(-yaw, -pitch, 0, out var orientationQuaternion);
+                QuaternionEx.CreateFromYawPitchRoll(-yaw, -pitch, 0, out var orientationQuaternion);
                 return orientationQuaternion;
             }
         }
@@ -103,7 +100,7 @@ namespace DemoRenderer
             get
             {
                 var orientation = OrientationQuaternion;
-                Quaternion.TransformUnitX(orientation, out var right);
+                QuaternionEx.TransformUnitX(orientation, out var right);
                 return right;
             }
         }
@@ -125,7 +122,7 @@ namespace DemoRenderer
             get
             {
                 var orientation = OrientationQuaternion;
-                Quaternion.TransformUnitY(orientation, out var up);
+                QuaternionEx.TransformUnitY(orientation, out var up);
                 return up;
             }
         }
@@ -147,7 +144,7 @@ namespace DemoRenderer
             get
             {
                 var orientation = OrientationQuaternion;
-                Quaternion.TransformUnitZ(orientation, out var backward);
+                QuaternionEx.TransformUnitZ(orientation, out var backward);
                 return backward;
             }
         }
@@ -243,7 +240,7 @@ namespace DemoRenderer
             var unitPlaneHalfWidth = unitPlaneHalfHeight * AspectRatio;
             var localRayDirection = new Vector3(
                 new Vector2(unitPlaneHalfWidth, unitPlaneHalfHeight) * 2 * new Vector2(normalizedMousePosition.X - 0.5f, 0.5f - normalizedMousePosition.Y), -1);
-            Quaternion.TransformWithoutOverlap(localRayDirection, OrientationQuaternion, out var rayDirection);
+            QuaternionEx.TransformWithoutOverlap(localRayDirection, OrientationQuaternion, out var rayDirection);
             return rayDirection;
         }
 

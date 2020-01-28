@@ -1,21 +1,14 @@
 ﻿using BepuUtilities;
-using DemoRenderer;
 using BepuPhysics;
-using BepuPhysics.Collidables;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using System;
-using BepuPhysics.CollisionDetection;
 using System.Runtime.CompilerServices;
-using System.Diagnostics;
 using BepuPhysics.Constraints;
-using DemoContentLoader;
-using DemoUtilities;
 using BepuUtilities.Memory;
 using static BepuUtilities.GatherScatter;
 
 namespace Demos.Demos.Characters
-{ 
+{
     public struct CharacterMotionAccumulatedImpulse
     {
         public Vector2Wide Horizontal;

@@ -1,6 +1,5 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using DemoContentLoader;
@@ -8,10 +7,7 @@ using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos
 {
@@ -114,7 +110,7 @@ namespace Demos.Demos
                         direction = new Vector3(0, 1, 0);
 
                     coinDescription.Pose.Position = origin + direction * 10 * (float)random.NextDouble();
-                    coinDescription.Pose.Orientation = Quaternion.Normalize(new Quaternion(0.01f + (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()));
+                    coinDescription.Pose.Orientation = QuaternionEx.Normalize(new Quaternion(0.01f + (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble()));
                     coinDescription.Velocity.Linear = direction * (5 + 30 * (float)random.NextDouble());
                     Simulation.Bodies.Add(coinDescription);
                 }

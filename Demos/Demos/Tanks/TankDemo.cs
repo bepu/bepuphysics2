@@ -1,18 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using OpenTK.Input;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos.Tanks
 {
@@ -93,7 +91,7 @@ namespace Demos.Demos.Tanks
                 WheelFriction = 2f,
                 TreadSpacing = 1f,
                 WheelCountPerTread = 5,
-                WheelOrientation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * -0.5f),
+                WheelOrientation = QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * -0.5f),
             };
 
             playerController = new TankController(Tank.Create(Simulation, bodyProperties, BufferPool, new RigidPose(new Vector3(0, 10, 0), Quaternion.Identity), tankDescription), 20, 5, 2, 1, 3.5f);
@@ -115,7 +113,7 @@ namespace Demos.Demos.Tanks
                 var position = landmarkMin + landmarkSpan * new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
                 Simulation.Statics.Add(new StaticDescription(
                     new Vector3(0, buildingShape.HalfHeight - 4f + GetHeightForPosition(position.X, position.Z, planeWidth, inverseTerrainScale, terrainPosition), 0) + position,
-                    Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)random.NextDouble() * MathF.PI),
+                    QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, (float)random.NextDouble() * MathF.PI),
                     new CollidableDescription(Simulation.Shapes.Add(buildingShape), 0.1f)));
             }
 
@@ -144,7 +142,7 @@ namespace Demos.Demos.Tanks
                     Controller = new TankController(
                         Tank.Create(Simulation, bodyProperties, BufferPool, new RigidPose(
                             new Vector3(horizontalPosition.X, 10, horizontalPosition.Y),
-                            Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * 0.1f)),
+                            QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * 0.1f)),
                             tankDescription), 20, 5, 2, 1, 3.5f),
                     HitPoints = 5
                 };
@@ -320,8 +318,8 @@ namespace Demos.Demos.Tanks
             if (playerControlActive)
             {
                 var tankBody = new BodyReference(playerController.Tank.Body, Simulation.Bodies);
-                Quaternion.TransformUnitY(tankBody.Pose.Orientation, out var tankUp);
-                Quaternion.TransformUnitZ(tankBody.Pose.Orientation, out var tankBackward);
+                QuaternionEx.TransformUnitY(tankBody.Pose.Orientation, out var tankUp);
+                QuaternionEx.TransformUnitZ(tankBody.Pose.Orientation, out var tankBackward);
                 var backwardDirection = camera.Backward;
                 backwardDirection.Y = MathF.Max(backwardDirection.Y, -0.2f);
                 camera.Position = tankBody.Pose.Position + tankUp * 3f + tankBackward * 0.4f + backwardDirection * 8;

@@ -69,7 +69,7 @@ namespace BepuPhysics.Constraints
             }
         }
         [Conditional("DEBUG")]
-        public static void AssertUnitLength(in BepuUtilities.Quaternion q, string typeName, string propertyName)
+        public static void AssertUnitLength(in Quaternion q, string typeName, string propertyName)
         {
             var lengthSquared = q.LengthSquared();
             if (lengthSquared > 1 + 1e-5f || lengthSquared < 1 - 1e-5f || !IsFiniteNumber(lengthSquared))

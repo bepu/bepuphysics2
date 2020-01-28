@@ -41,7 +41,7 @@ namespace Demos.SpecializedTests
                         Activity = new BodyActivityDescription { MinimumTimestepCountUnderThreshold = 32, SleepThreshold = 0.01f },
                         Pose = new RigidPose
                         {
-                            Orientation = BepuUtilities.Quaternion.Identity,
+                            Orientation = Quaternion.Identity,
                             Position = location
                         },
                         Collidable = new CollidableDescription
@@ -109,7 +109,7 @@ namespace Demos.SpecializedTests
                 Pose = new RigidPose
                 {
                     Position = new Vector3(-10, -15, 0),
-                    Orientation = BepuUtilities.Quaternion.Identity
+                    Orientation = Quaternion.Identity
                 }
             };
             Simulation.Statics.Add(bigBallDescription);
@@ -128,7 +128,7 @@ namespace Demos.SpecializedTests
                 Pose = new RigidPose
                 {
                     Position = new Vector3(0, -10, 0),
-                    Orientation = BepuUtilities.Quaternion.Identity
+                    Orientation = Quaternion.Identity
                 }
             };
             Simulation.Statics.Add(groundDescription);

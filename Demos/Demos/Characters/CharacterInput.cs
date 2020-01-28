@@ -2,12 +2,12 @@
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using System;
 using System.Diagnostics;
 using DemoUtilities;
 using DemoRenderer.UI;
 using OpenTK.Input;
+using BepuUtilities;
 
 namespace Demos.Demos.Characters
 {
@@ -112,7 +112,7 @@ namespace Demos.Demos.Characters
             //Feel free to try alternative implementations. Again, there is no one correct approach.
             if (!character.Supported && movementDirectionLengthSquared > 0)
             {
-                Quaternion.Transform(character.LocalUp, characterBody.Pose.Orientation, out var characterUp);
+                QuaternionEx.Transform(character.LocalUp, characterBody.Pose.Orientation, out var characterUp);
                 var characterRight = Vector3.Cross(character.ViewDirection, characterUp);
                 var rightLengthSquared = characterRight.LengthSquared();
                 if (rightLengthSquared > 1e-10f)

@@ -1,11 +1,8 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection.CollisionTasks;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {

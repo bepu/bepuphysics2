@@ -1,17 +1,13 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuPhysics.Trees;
 using BepuUtilities;
 using DemoRenderer;
 using DemoRenderer.Constraints;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos
 {
@@ -116,7 +112,7 @@ namespace Demos
             {
                 var rayDirection = camera.GetRayDirection(mouseLocked, normalizedMousePosition);
                 var targetPoint = camera.Position + rayDirection * t;
-                targetOrientation = Quaternion.Normalize(Quaternion.Concatenate(targetOrientation, rotation));
+                targetOrientation = QuaternionEx.Normalize(QuaternionEx.Concatenate(targetOrientation, rotation));
 
                 CreateMotorDescription(targetPoint, body.LocalInertia.InverseMass, out var linearDescription, out var angularDescription);
                 simulation.Solver.ApplyDescription(linearMotorHandle, ref linearDescription);

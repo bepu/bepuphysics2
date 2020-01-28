@@ -3,9 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using BepuUtilities.Memory;
 using System.Diagnostics;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuPhysics.Trees;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 
@@ -84,8 +82,8 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetRotatedChildPose(in RigidPose localPose, in Quaternion orientation, out RigidPose rotatedChildPose)
         {
-            Quaternion.ConcatenateWithoutOverlap(localPose.Orientation, orientation, out rotatedChildPose.Orientation);
-            Quaternion.Transform(localPose.Position, orientation, out rotatedChildPose.Position);
+            QuaternionEx.ConcatenateWithoutOverlap(localPose.Orientation, orientation, out rotatedChildPose.Orientation);
+            QuaternionEx.Transform(localPose.Position, orientation, out rotatedChildPose.Position);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetRotatedChildPose(in RigidPoses localPose, in QuaternionWide orientation, out Vector3Wide childPosition, out QuaternionWide childOrientation)

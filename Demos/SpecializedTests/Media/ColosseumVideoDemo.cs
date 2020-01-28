@@ -4,15 +4,11 @@ using BepuUtilities;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
-using Demos.Demos;
 using Demos.Demos.Characters;
 using DemoUtilities;
 using OpenTK.Input;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.SpecializedTests.Media
 {
@@ -33,7 +29,7 @@ namespace Demos.SpecializedTests.Media
                     var angle = ((ringIndex & 1) == 0 ? i + 0.5f : i) * increment;
                     bodyDescription.Pose = new RigidPose(
                         position + new Vector3(-MathF.Cos(angle) * radius, (ringIndex + 0.5f) * ringBoxShape.Height, MathF.Sin(angle) * radius),
-                        Quaternion.CreateFromAxisAngle(Vector3.UnitY, angle));
+                        QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle));
                     Simulation.Bodies.Add(bodyDescription);
                 }
             }
@@ -49,7 +45,7 @@ namespace Demos.SpecializedTests.Media
                 var angle = i * increment;
                 bodyDescription.Pose = new RigidPose(
                     position + new Vector3(-MathF.Cos(angle) * radius, ringBoxShape.HalfWidth, MathF.Sin(angle) * radius),
-                    Quaternion.Concatenate(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f), Quaternion.CreateFromAxisAngle(Vector3.UnitY, angle + MathF.PI * 0.5f)));
+                    QuaternionEx.Concatenate(QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle + MathF.PI * 0.5f)));
                 Simulation.Bodies.Add(bodyDescription);
             }
         }

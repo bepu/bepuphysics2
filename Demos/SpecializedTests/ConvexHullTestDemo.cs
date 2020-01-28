@@ -82,7 +82,7 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         Simulation.Bodies.Add(BodyDescription.CreateDynamic(
-                            new RigidPose(origin + spacing * new Vector3(i, j, k), BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f)),
+                            new RigidPose(origin + spacing * new Vector3(i, j, k), BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f)),
                             inertia, new CollidableDescription(hullShapeIndex, 1f), new BodyActivityDescription(0.01f)));
                     }
                 }

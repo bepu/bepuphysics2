@@ -5,7 +5,6 @@ using BepuPhysics.Collidables;
 using System;
 using System.Numerics;
 using DemoContentLoader;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos
 {
@@ -229,9 +228,10 @@ namespace Demos.Demos
                         do
                         {
                             localPose.Orientation = new Quaternion((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                            orientationLengthSquared = QuaternionEx.LengthSquared(ref localPose.Orientation);
                         }
-                        while ((orientationLengthSquared = localPose.Orientation.LengthSquared()) < 1e-9f);
-                        Quaternion.Scale(localPose.Orientation, 1f / MathF.Sqrt(orientationLengthSquared), out localPose.Orientation);
+                        while (orientationLengthSquared < 1e-9f);
+                        QuaternionEx.Scale(localPose.Orientation, 1f / MathF.Sqrt(orientationLengthSquared), out localPose.Orientation);
                         //Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI, out localPose.Orientation);
 
                         compoundBuilder.Add(treeCompoundBoxShapeIndex, localPose, childInertia.InverseInertiaTensor, 1);
@@ -272,7 +272,7 @@ namespace Demos.Demos
                     Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
                     return new Vector3(offsetFromCenter.X, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.01f * offsetFromCenter.LengthSquared(), offsetFromCenter.Y);
                 }, new Vector3(2, 1, 2), BufferPool, out var planeMesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(64, 4, 32), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
+            Simulation.Statics.Add(new StaticDescription(new Vector3(64, 4, 32), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2),
                 new CollidableDescription(Simulation.Shapes.Add(planeMesh), 0.1f)));
         }
     }

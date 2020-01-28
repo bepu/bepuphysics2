@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Numerics;
 using BepuPhysics;
+using BepuUtilities;
 using BepuUtilities.Collections;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos.Tanks
 {
@@ -35,7 +35,7 @@ namespace Demos.Demos.Tanks
             ref var currentPose = ref simulation.Bodies.GetBodyReference(Controller.Tank.Body).Pose;
             //tankBodyPose = localTankBodyPose * tankPose
             //tankPose = inverse(localTankBodyPose) * tankBodyPose
-            Quaternion.TransformUnitY(Quaternion.Concatenate(Quaternion.Conjugate(Controller.Tank.BodyLocalOrientation), currentPose.Orientation), out var tankUp);
+            QuaternionEx.TransformUnitY(QuaternionEx.Concatenate(QuaternionEx.Conjugate(Controller.Tank.BodyLocalOrientation), currentPose.Orientation), out var tankUp);
             if (tankUp.Y < -0.5f)
             {
                 //The tank is upside down. Don't bother doing anything.
@@ -73,7 +73,7 @@ namespace Demos.Demos.Tanks
             }
 
             var offset = new Vector3(MovementTarget.X - currentTankPosition2D.X, 0, MovementTarget.Y - currentTankPosition2D.Y);
-            Quaternion.Transform(offset, Quaternion.Concatenate(Quaternion.Conjugate(currentPose.Orientation), Controller.Tank.BodyLocalOrientation), out var localMovementOffset);
+            QuaternionEx.Transform(offset, QuaternionEx.Concatenate(QuaternionEx.Conjugate(currentPose.Orientation), Controller.Tank.BodyLocalOrientation), out var localMovementOffset);
 
             var targetHorizontalMovementDirection = new Vector2(localMovementOffset.X, -localMovementOffset.Z);
             var targetDirectionLength = targetHorizontalMovementDirection.Length();

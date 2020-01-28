@@ -1,13 +1,4 @@
-﻿using BepuUtilities;
-using BepuPhysics;
-using BepuPhysics.CollisionDetection;
-using BepuPhysics.Constraints;
-using System;
-using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-
-using Quaternion = BepuUtilities.Quaternion;
+﻿using BepuPhysics;
 
 namespace Demos
 {

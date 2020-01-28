@@ -21,7 +21,7 @@ namespace BepuPhysics.CollisionDetection
         //However, the original user may have provided this pair in unknown order and triggered a flip. We'll compensate for that when examining contact positions.
         public bool RequiresFlip;
         //The triangles array is in the mesh's local space. In order to test any contacts against them, we need to be able to transform contacts.
-        public BepuUtilities.Quaternion MeshOrientation;
+        public Quaternion MeshOrientation;
         //This uses all of the nonconvex reduction's logic, so we just nest it.
         public NonconvexReduction Inner;
 

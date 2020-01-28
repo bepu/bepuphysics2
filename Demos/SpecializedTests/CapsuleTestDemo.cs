@@ -41,7 +41,7 @@ namespace Demos.SpecializedTests
                             LocalInertia = localInertia,
                             Pose = new RigidPose
                             {
-                                Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2),
+                                Orientation = QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2),
                                 Position = location
                             },
                             Collidable = new CollidableDescription { SpeculativeMargin = 50.1f, Shape = shapeIndex }
@@ -59,7 +59,7 @@ namespace Demos.SpecializedTests
                 LocalInertia = boxLocalInertia,
                 Pose = new RigidPose
                 {
-                    Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0),
+                    Orientation = QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), 0),
                     Position = new Vector3(1, -0.5f, 0)
                 },
                 Collidable = new CollidableDescription { SpeculativeMargin = 50.1f, Shape = Simulation.Shapes.Add(boxShape) }

@@ -5,10 +5,12 @@ using BepuUtilities.Memory;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics
 {
+    //TODO: It's a little odd that this exists alongside the BepuUtilities.RigidTransform. The original reasoning was that rigid poses may end up having a non-FP32 representation.
+    //We haven't taken advantage of that, so right now it's pretty much a pure duplicate.
+    //When/if we take advantage of larger sizes, we'll have to closely analyze every use case of RigidPose to see if we need the higher precision or not.
     /// <summary>
     /// Represents a rigid transformation.
     /// </summary>
@@ -45,7 +47,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Transform(in Vector3 v, in RigidPose pose, out Vector3 result)
         {
-            Quaternion.TransformWithoutOverlap(v, pose.Orientation, out var rotated);
+            QuaternionEx.TransformWithoutOverlap(v, pose.Orientation, out var rotated);
             result = rotated + pose.Position;
         }
         /// <summary>
@@ -58,8 +60,8 @@ namespace BepuPhysics
         public static void TransformByInverse(in Vector3 v, in RigidPose pose, out Vector3 result)
         {
             var translated = v - pose.Position;
-            Quaternion.Conjugate(pose.Orientation, out var conjugate);
-            Quaternion.TransformWithoutOverlap(translated, conjugate, out result);
+            QuaternionEx.Conjugate(pose.Orientation, out var conjugate);
+            QuaternionEx.TransformWithoutOverlap(translated, conjugate, out result);
         }
         /// <summary>
         /// Inverts the rigid transformation of the pose.
@@ -68,8 +70,8 @@ namespace BepuPhysics
         /// <param name="inverse">Inverse of the pose.</param>
         public static void Invert(in RigidPose pose, out RigidPose inverse)
         {
-            Quaternion.Conjugate(pose.Orientation, out inverse.Orientation);
-            Quaternion.Transform(-pose.Position, inverse.Orientation, out inverse.Position);
+            QuaternionEx.Conjugate(pose.Orientation, out inverse.Orientation);
+            QuaternionEx.Transform(-pose.Position, inverse.Orientation, out inverse.Position);
         }
 
         /// <summary>
@@ -81,8 +83,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Multiply(in RigidPose a, in RigidPose b, out RigidPose result)
         {
-            Quaternion.ConcatenateWithoutOverlap(a.Orientation, b.Orientation, out result.Orientation);
-            Quaternion.Transform(a.Position, b.Orientation, out var rotatedTranslationA);
+            QuaternionEx.ConcatenateWithoutOverlap(a.Orientation, b.Orientation, out result.Orientation);
+            QuaternionEx.Transform(a.Position, b.Orientation, out var rotatedTranslationA);
             result.Position = rotatedTranslationA + b.Position;
         }
     }

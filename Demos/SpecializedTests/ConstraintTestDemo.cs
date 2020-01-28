@@ -1,16 +1,10 @@
 ﻿using BepuUtilities;
 using DemoRenderer;
-using DemoUtilities;
 using BepuPhysics;
 using BepuPhysics.Collidables;
-using System;
 using System.Numerics;
-using System.Diagnostics;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
 using DemoContentLoader;
 using BepuPhysics.Constraints;
-using Quaternion = BepuUtilities.Quaternion;
 using Demos.Demos;
 
 namespace Demos.SpecializedTests
@@ -139,7 +133,7 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, b, new BallSocket { LocalOffsetA = new Vector3(0, 1, 0), LocalOffsetB = new Vector3(0, -1, 0), SpringSettings = new SpringSettings(30, 1) });
                 Simulation.Solver.Add(a, b, new AngularServo
                 {
-                    TargetRelativeRotationLocalA = Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2),
+                    TargetRelativeRotationLocalA = QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2),
                     ServoSettings = new ServoSettings(float.MaxValue, 0, 12f),
                     SpringSettings = new SpringSettings(30, 1)
                 });

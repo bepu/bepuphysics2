@@ -3,15 +3,10 @@ using DemoRenderer;
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using System;
 using BepuPhysics.Constraints;
 using DemoContentLoader;
 using DemoUtilities;
-using BepuUtilities.Memory;
-using static BepuUtilities.GatherScatter;
-using Demos.Demos.Characters;
-using BepuUtilities.Collections;
 using DemoRenderer.UI;
 using OpenTK.Input;
 
@@ -42,7 +37,7 @@ namespace Demos.Demos.Characters
                 for (int j = 0; j < 12; ++j)
                 {
                     var position = origin + new Vector3(i, 0, j) * spacing;
-                    var orientation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble())), 10 * (float)random.NextDouble());
+                    var orientation = QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(0.0001f) + new Vector3((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble())), 10 * (float)random.NextDouble());
                     var shape = new Box(0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble(), 0.1f + 0.3f * (float)random.NextDouble());
                     var collidable = new CollidableDescription(Simulation.Shapes.Add(shape), 0.1f);
                     shape.ComputeInertia(1, out var inertia);
@@ -173,8 +168,8 @@ namespace Demos.Demos.Characters
                 ref var velocity = ref body.Velocity;
                 var targetPose = PoseCreator(time + TimeOffset);
                 velocity.Linear = (targetPose.Position - pose.Position) * InverseGoalSatisfactionTime;
-                Quaternion.GetRelativeRotationWithoutOverlap(pose.Orientation, targetPose.Orientation, out var rotation);
-                Quaternion.GetAxisAngleFromQuaternion(rotation, out var axis, out var angle);
+                QuaternionEx.GetRelativeRotationWithoutOverlap(pose.Orientation, targetPose.Orientation, out var rotation);
+                QuaternionEx.GetAxisAngleFromQuaternion(rotation, out var axis, out var angle);
                 velocity.Angular = axis * (angle * InverseGoalSatisfactionTime);
             }
         }

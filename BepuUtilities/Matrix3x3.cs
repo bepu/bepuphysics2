@@ -294,7 +294,6 @@ namespace BepuUtilities
             }
         }
 
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CreateFromMatrix(in Matrix matrix, out Matrix3x3 matrix3x3)
         {

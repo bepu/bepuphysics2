@@ -25,7 +25,7 @@ namespace Demos
                 Pose = new RigidPose
                 {
                     Position = new Vector3(columnIndex, rowIndex, sliceIndex) * Spacing + Origin,
-                    Orientation = BepuUtilities.Quaternion.Identity
+                    Orientation = Quaternion.Identity
                 },
                 LocalInertia = new BodyInertia { InverseMass = rowIndex > 0 ? 1 : 0 },
                 Collidable = new CollidableDescription

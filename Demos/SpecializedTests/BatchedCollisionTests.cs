@@ -118,7 +118,7 @@ namespace Demos.SpecializedTests
             float orientationLengthSquared;
             do
             {
-                pose.Orientation = new BepuUtilities.Quaternion
+                pose.Orientation = new Quaternion
                 {
                     X = 2 * (float)random.NextDouble() - 1,
                     Y = 2 * (float)random.NextDouble() - 1,
@@ -164,8 +164,8 @@ namespace Demos.SpecializedTests
             var pointsBuffer = points.Span.Slice(points.Count);
             ConvexHullHelper.CreateShape(pointsBuffer, pool, out _, out var convexHull);
 
-            var poseA = new RigidPose { Position = new Vector3(0, 0, 0), Orientation = BepuUtilities.Quaternion.Identity };
-            var poseB = new RigidPose { Position = new Vector3(0, 1, 0), Orientation = BepuUtilities.Quaternion.Identity };
+            var poseA = new RigidPose { Position = new Vector3(0, 0, 0), Orientation = Quaternion.Identity };
+            var poseB = new RigidPose { Position = new Vector3(0, 1, 0), Orientation = Quaternion.Identity };
             Shapes shapes = new Shapes(pool, 32);
 
             int iterationCount = 1 << 22;

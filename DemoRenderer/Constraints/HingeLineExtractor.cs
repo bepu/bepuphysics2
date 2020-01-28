@@ -1,9 +1,7 @@
 ﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 
 namespace DemoRenderer.Constraints
@@ -22,9 +20,9 @@ namespace DemoRenderer.Constraints
             Vector3Wide.ReadFirst(prestepBundle.LocalOffsetA, out var localOffsetA);
             Vector3Wide.ReadFirst(prestepBundle.LocalHingeAxisB, out var localHingeAxisB);
             Vector3Wide.ReadFirst(prestepBundle.LocalOffsetB, out var localOffsetB);
-            Quaternion.Transform(localOffsetA, poseA.Orientation, out var offsetA);
-            Quaternion.Transform(localHingeAxisA, poseA.Orientation, out var hingeAxisA);
-            Quaternion.Transform(localOffsetB, poseB.Orientation, out var offsetB);
+            QuaternionEx.Transform(localOffsetA, poseA.Orientation, out var offsetA);
+            QuaternionEx.Transform(localHingeAxisA, poseA.Orientation, out var hingeAxisA);
+            QuaternionEx.Transform(localOffsetB, poseB.Orientation, out var offsetB);
             var packedAxisColor = Helpers.PackColor(new Vector3(0.2f, 0.7f, 1f) * tint);
             var backgroundColor = new Vector3(0f, 0f, 1f) * tint;
             var jointAnchorA = poseA.Position + offsetA;

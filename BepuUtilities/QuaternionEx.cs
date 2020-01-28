@@ -1,53 +1,13 @@
 ﻿using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-
 namespace BepuUtilities
 {
-    //TODO: The existence and functionality provided by this quaternion should be reconsidered as the system.numerics types improve.
     /// <summary>
-    /// Provides XNA-like quaternion support.
+    /// Provides additional functionality and some lower overhead function variants for Quaternions.
     /// </summary>
-    public struct Quaternion
+    public static class QuaternionEx
     {
-        //TODO: This memory layout should be revisited- a Vector4 may turn out better in certain cases.
-        //We could always unsafe cast in those cases, though.
-        /// <summary>
-        /// X component of the quaternion.
-        /// </summary>
-        public float X;
-
-        /// <summary>
-        /// Y component of the quaternion.
-        /// </summary>
-        public float Y;
-
-        /// <summary>
-        /// Z component of the quaternion.
-        /// </summary>
-        public float Z;
-
-        /// <summary>
-        /// W component of the quaternion.
-        /// </summary>
-        public float W;
-
-        /// <summary>
-        /// Constructs a new Quaternion.
-        /// </summary>
-        /// <param name="x">X component of the quaternion.</param>
-        /// <param name="y">Y component of the quaternion.</param>
-        /// <param name="z">Z component of the quaternion.</param>
-        /// <param name="w">W component of the quaternion.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Quaternion(float x, float y, float z, float w)
-        {
-            this.X = x;
-            this.Y = y;
-            this.Z = z;
-            this.W = w;
-        }
-
         /// <summary>
         /// Adds two quaternions together.
         /// </summary>
@@ -242,20 +202,14 @@ namespace BepuUtilities
             return quaternion;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Normalize()
-        {
-            Normalize(ref this);
-        }
-
         /// <summary>
         /// Computes the squared length of the quaternion.
         /// </summary>
         /// <returns>Squared length of the quaternion.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float LengthSquared()
+        public static float LengthSquared(ref Quaternion quaternion)
         {
-            return X * X + Y * Y + Z * Z + W * W;
+            return Unsafe.As<Quaternion, Vector4>(ref quaternion).LengthSquared();
         }
 
         /// <summary>
@@ -263,11 +217,10 @@ namespace BepuUtilities
         /// </summary>
         /// <returns>Length of the quaternion.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float Length()
+        public static float Length(ref Quaternion quaternion)
         {
-            return (float)Math.Sqrt(X * X + Y * Y + Z * Z + W * W);
+            return Unsafe.As<Quaternion, Vector4>(ref quaternion).Length();
         }
-
 
         /// <summary>
         /// Blends two quaternions together to get an intermediate state.
@@ -385,46 +338,6 @@ namespace BepuUtilities
         }
 
         /// <summary>
-        /// Tests components for equality.
-        /// </summary>
-        /// <param name="a">First quaternion to test for equivalence.</param>
-        /// <param name="b">Second quaternion to test for equivalence.</param>
-        /// <returns>Whether or not the quaternions' components were equal.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator ==(in Quaternion a, in Quaternion b)
-        {
-            return a.X == b.X && a.Y == b.Y && a.Z == b.Z && a.W == b.W;
-        }
-
-        /// <summary>
-        /// Tests components for inequality.
-        /// </summary>
-        /// <param name="a">First quaternion to test for equivalence.</param>
-        /// <param name="b">Second quaternion to test for equivalence.</param>
-        /// <returns>Whether the quaternions' components were not equal.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator !=(in Quaternion a, in Quaternion b)
-        {
-            return a.X != b.X || a.Y != b.Y || a.Z != b.Z || a.W != b.W;
-        }
-
-        //TODO: Neither of these are good implementations. They're only here since the operator variants exist.
-        //If you need a high performance equality or hash, you'll need to implement something better than this.
-        public override bool Equals(object obj)
-        {
-            if (obj is Quaternion q)
-            {
-                return this == q;
-            }
-            return false;
-        }
-
-        public override int GetHashCode()
-        {
-            return base.GetHashCode();
-        }
-
-        /// <summary>
         /// Negates the components of a quaternion.
         /// </summary>
         /// <param name="a">Quaternion to negate.</param>
@@ -445,18 +358,6 @@ namespace BepuUtilities
         /// <returns>Negated result.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion Negate(in Quaternion q)
-        {
-            Negate(q, out var result);
-            return result;
-        }
-
-        /// <summary>
-        /// Negates the components of a quaternion.
-        /// </summary>
-        /// <param name="q">Quaternion to negate.</param>
-        /// <returns>Negated result.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion operator -(in Quaternion q)
         {
             Negate(q, out var result);
             return result;
@@ -767,7 +668,7 @@ namespace BepuUtilities
                 var axis = Vector3.Cross(v1, v2);
                 q = new Quaternion(axis.X, axis.Y, axis.Z, dot + 1);
             }
-            q.Normalize();
+            Normalize(ref q);
         }
 
         //The following two functions are highly similar, but it's a bit of a brain teaser to phrase one in terms of the other.
@@ -800,15 +701,6 @@ namespace BepuUtilities
         {
             Conjugate(targetBasis, out var basisInverse);
             ConcatenateWithoutOverlap(rotation, basisInverse, out localRotation);
-        }
-
-        /// <summary>
-        /// Gets a string representation of the quaternion.
-        /// </summary>
-        /// <returns>String representing the quaternion.</returns>
-        public override string ToString()
-        {
-            return "{ X: " + X + ", Y: " + Y + ", Z: " + Z + ", W: " + W + "}";
         }
     }
 }

@@ -5,7 +5,6 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
@@ -188,7 +187,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             public void AdjustHitLocation(in Quaternion initialOrientationA, in BodyVelocity velocityA, float t0, ref Vector3 hitLocation)
             {
                 PoseIntegration.Integrate(new RigidPose { Orientation = initialOrientationA }, velocityA, t0, out var integratedPose);
-                Quaternion.Transform(LocalPoseA.Position, integratedPose.Orientation, out var childOffset);
+                QuaternionEx.Transform(LocalPoseA.Position, integratedPose.Orientation, out var childOffset);
                 hitLocation = hitLocation + integratedPose.Position + childOffset;
             }
 
@@ -224,10 +223,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 in Quaternion orientationB, in Vector3 angularVelocityB, float angularSpeedB, out float t0, out float t1, out Vector3 hitNormal, out Vector3 hitLocation)
             {
                 //The tangent velocity magnitude doesn't change over the course of the sweep. Compute and cache it as an upper bound on the contribution from the offset.
-                Quaternion.TransformWithoutOverlap(LocalPoseA.Position, orientationA, out var rA);
+                QuaternionEx.TransformWithoutOverlap(LocalPoseA.Position, orientationA, out var rA);
                 var tangentA = Vector3.Cross(rA, angularVelocityA);
                 TangentSpeedA = tangentA.Length();
-                Quaternion.TransformWithoutOverlap(LocalPoseB.Position, orientationB, out var rB);
+                QuaternionEx.TransformWithoutOverlap(LocalPoseB.Position, orientationB, out var rB);
                 var tangentB = Vector3.Cross(rB, angularVelocityB);
                 TangentSpeedB = tangentB.Length();
                 TwiceRadiusA = 2 * LocalPoseA.Position.Length();

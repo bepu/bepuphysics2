@@ -34,7 +34,7 @@ namespace Demos.SpecializedTests
             c *= inverseTotal;
 
             var localP = triangle.A * a + triangle.B * b + triangle.C * c;
-            BepuUtilities.Quaternion.TransformWithoutOverlap(localP, pose.Orientation, out pointOnTriangle);
+            BepuUtilities.QuaternionEx.TransformWithoutOverlap(localP, pose.Orientation, out pointOnTriangle);
             pointOnTriangle += pose.Position;
         }
 
@@ -59,7 +59,7 @@ namespace Demos.SpecializedTests
             var offsetToBorder = borderPoint - center;
             var localP = center + offsetToBorder * (1.01f + 4 * (float)random.NextDouble());
 
-            BepuUtilities.Quaternion.TransformWithoutOverlap(localP, pose.Orientation, out pointOutsideTriangle);
+            BepuUtilities.QuaternionEx.TransformWithoutOverlap(localP, pose.Orientation, out pointOutsideTriangle);
             pointOutsideTriangle += pose.Position;
         }
 
@@ -102,7 +102,7 @@ namespace Demos.SpecializedTests
             triangle.C = new Vector3(0, 0, 1);
             var pose = new RigidPose
             {
-                Orientation = BepuUtilities.Quaternion.Identity,
+                Orientation = Quaternion.Identity,
                 Position = new Vector3(0)
             };
             var rayOrigin = new Vector3(1f / 3f, 5, 1 / 3f);
@@ -138,8 +138,8 @@ namespace Demos.SpecializedTests
                     if (orientationLengthSquared > 1e-7f)
                         break;
                 }
-                BepuUtilities.Quaternion.Scale(pose.Orientation, 1f / (float)Math.Sqrt(orientationLengthSquared), out pose.Orientation);
-                pose.Position = BepuUtilities.Quaternion.Transform(localTriangleCenter, pose.Orientation);
+                BepuUtilities.QuaternionEx.Scale(pose.Orientation, 1f / (float)Math.Sqrt(orientationLengthSquared), out pose.Orientation);
+                pose.Position = BepuUtilities.QuaternionEx.Transform(localTriangleCenter, pose.Orientation);
 
                 var normal = Vector3.Cross(triangle.C - triangle.A, triangle.B - triangle.A);
                 var normalLength = normal.Length();
@@ -148,7 +148,7 @@ namespace Demos.SpecializedTests
                 normal /= normalLength;
 
 
-                BepuUtilities.Quaternion.Transform(normal, pose.Orientation, out normal);
+                BepuUtilities.QuaternionEx.Transform(normal, pose.Orientation, out normal);
                 Vector3 pointOnTriangle;
                 do
                 {

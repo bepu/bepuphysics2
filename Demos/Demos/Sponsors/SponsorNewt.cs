@@ -7,9 +7,7 @@ using DemoUtilities;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
 using Helpers = DemoRenderer.Helpers;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos.Sponsors
 {
@@ -22,7 +20,7 @@ namespace Demos.Demos.Sponsors
             var arenaSpan = arenaMax - arenaMin;
             var position = arenaMin + arenaSpan * new Vector2((float)random.NextDouble(), (float)random.NextDouble());
             var angle = MathF.PI * 2 * (float)random.NextDouble();
-            BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(new Vector3(position.X, height, position.Y), Quaternion.CreateFromAxisAngle(Vector3.UnitY, angle)), new CollidableDescription(shape, 0.5f), new BodyActivityDescription(-1)));
+            BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(new Vector3(position.X, height, position.Y), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle)), new CollidableDescription(shape, 0.5f), new BodyActivityDescription(-1)));
             SponsorIndex = sponsorIndex;
         }
 
@@ -40,7 +38,7 @@ namespace Demos.Demos.Sponsors
             if (time >= nextAllowedJump)
             {
                 //Choose a jump location. It should be within the arena, and generally somewhere ahead of the newt.
-                Quaternion.TransformUnitZ(body.Pose.Orientation, out var backward);
+                QuaternionEx.TransformUnitZ(body.Pose.Orientation, out var backward);
                 jumpStart = new Vector2(body.Pose.Position.X, body.Pose.Position.Z);
                 jumpEnd = jumpStart + new Vector2(backward.X + (float)random.NextDouble() * 1.4f - 0.7f, backward.Z + (float)random.NextDouble() * 1.4f - 0.7f) * -20;
                 jumpEnd -= jumpStart * 0.05f;
@@ -68,7 +66,7 @@ namespace Demos.Demos.Sponsors
                 var targetForwardLengthSquared = targetForward.LengthSquared();
                 if (targetForwardLengthSquared < 1e-10f)
                 {
-                    Quaternion.TransformUnitZ(body.Pose.Orientation, out var backward);
+                    QuaternionEx.TransformUnitZ(body.Pose.Orientation, out var backward);
                     targetForward = -new Vector2(backward.X, backward.Z);
                 }
                 else
@@ -89,9 +87,9 @@ namespace Demos.Demos.Sponsors
             targetOrientationBasis.X = new Vector3(-targetForward.Y, 0, targetForward.X);
             targetOrientationBasis.Y = Vector3.UnitY;
             targetOrientationBasis.Z = -new Vector3(targetForward.X, 0, targetForward.Y);
-            Quaternion.CreateFromRotationMatrix(targetOrientationBasis, out var targetOrientation);
-            Quaternion.GetRelativeRotationWithoutOverlap(body.Pose.Orientation, targetOrientation, out var orientationError);
-            Quaternion.GetAxisAngleFromQuaternion(orientationError, out var errorAxis, out var errorAngle);
+            QuaternionEx.CreateFromRotationMatrix(targetOrientationBasis, out var targetOrientation);
+            QuaternionEx.GetRelativeRotationWithoutOverlap(body.Pose.Orientation, targetOrientation, out var orientationError);
+            QuaternionEx.GetAxisAngleFromQuaternion(orientationError, out var errorAxis, out var errorAngle);
             body.Velocity.Angular = errorAxis * (errorAngle * inverseDt);
         }
 

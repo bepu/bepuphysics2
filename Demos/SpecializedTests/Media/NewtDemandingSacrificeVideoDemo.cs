@@ -1,23 +1,12 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
-using BepuPhysics.Constraints;
-using BepuPhysics.Trees;
 using BepuUtilities;
-using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer;
-using DemoRenderer.UI;
 using Demos.Demos;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.SpecializedTests
 {
@@ -43,7 +32,7 @@ namespace Demos.SpecializedTests
             Simulation.Solver.IterationCount = 2;
 
             DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(30), out var mesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 20, 0), Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 20, 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, 0), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
         }
 
         Random random = new Random(5);

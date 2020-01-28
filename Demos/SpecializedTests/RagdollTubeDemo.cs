@@ -3,15 +3,8 @@ using DemoRenderer;
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using System;
-using BepuPhysics.CollisionDetection;
-using System.Runtime.CompilerServices;
-using System.Diagnostics;
-using BepuPhysics.Constraints;
 using DemoContentLoader;
-using DemoUtilities;
-using BepuUtilities.Memory;
 using Demos.Demos;
 
 namespace Demos.SpecializedTests
@@ -41,7 +34,7 @@ namespace Demos.SpecializedTests
                 {
                     for (int k = 0; k < length; ++k)
                     {
-                        RagdollDemo.AddRagdoll(origin + spacing * new Vector3(i, j, k), Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f), ragdollIndex++, filters, Simulation);
+                        RagdollDemo.AddRagdoll(origin + spacing * new Vector3(i, j, k), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f), ragdollIndex++, filters, Simulation);
                     }
                 }
             }
@@ -54,8 +47,8 @@ namespace Demos.SpecializedTests
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, panelCount + 1);
             for (int i = 0; i < panelCount; ++i)
             {
-                var rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, i * MathHelper.TwoPi / panelCount);
-                Quaternion.TransformUnitY(rotation, out var localUp);
+                var rotation = QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, i * MathHelper.TwoPi / panelCount);
+                QuaternionEx.TransformUnitY(rotation, out var localUp);
                 var position = localUp * tubeRadius;
                 builder.AddForKinematic(panelShapeIndex, new RigidPose(position, rotation), 1);
             }

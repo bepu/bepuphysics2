@@ -1,10 +1,8 @@
 ﻿using BepuUtilities;
-using BepuPhysics;
 using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.SpecializedTests
 {
@@ -42,12 +40,12 @@ namespace Demos.SpecializedTests
                 q.Z = (float)random.NextDouble() * 2 - 1;
                 q.W = (float)random.NextDouble() * 2 - 1;
 
-                Quaternion.Normalize(ref q);
+                QuaternionEx.Normalize(ref q);
 
                 for (int i = 0; i < innerIterations; ++i)
                 {
                     Matrix3x3.CreateFromQuaternion(q, out var r);
-                    Quaternion.CreateFromRotationMatrix(r, out var qTest);
+                    QuaternionEx.CreateFromRotationMatrix(r, out var qTest);
 
 #if DEBUG
                     const float epsilon = 1e-6f;
@@ -62,7 +60,7 @@ namespace Demos.SpecializedTests
 
                     if (qTest.X * q.X < 0)
                     {
-                        Quaternion.Negate(qTest, out qTest);
+                        QuaternionEx.Negate(qTest, out qTest);
                     }
                     Debug.Assert(
                         Math.Abs(qTest.X - q.X) < epsilon &&
@@ -249,14 +247,14 @@ namespace Demos.SpecializedTests
 
                 for (int i = 0; i < innerIterations; ++i)
                 {
-                    Quaternion.GetQuaternionBetweenNormalizedVectors(v1, v2, out var v1ToV2);
-                    Quaternion.GetQuaternionBetweenNormalizedVectors(v2, v1, out var v2ToV1);
+                    QuaternionEx.GetQuaternionBetweenNormalizedVectors(v1, v2, out var v1ToV2);
+                    QuaternionEx.GetQuaternionBetweenNormalizedVectors(v2, v1, out var v2ToV1);
 
 #if DEBUG
-                    Quaternion.ConcatenateWithoutOverlap(v1ToV2, v2ToV1, out var concatenated);
-                    Quaternion.Transform(v1, v1ToV2, out var v1TransformedToV2);
-                    Quaternion.Transform(v2, v2ToV1, out var v2TransformedToV1);
-                    Quaternion.Transform(v1, concatenated, out var v1TransformedToV1);
+                    QuaternionEx.ConcatenateWithoutOverlap(v1ToV2, v2ToV1, out var concatenated);
+                    QuaternionEx.Transform(v1, v1ToV2, out var v1TransformedToV2);
+                    QuaternionEx.Transform(v2, v2ToV1, out var v2TransformedToV1);
+                    QuaternionEx.Transform(v1, concatenated, out var v1TransformedToV1);
 
 
                     var v1ToV2ErrorLength = (v1TransformedToV2 - v2).LengthSquared();

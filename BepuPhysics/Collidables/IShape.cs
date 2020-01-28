@@ -29,7 +29,7 @@ namespace BepuPhysics.Collidables
 
     public interface IConvexShape : IShape
     {
-        void ComputeBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max);
+        void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max);
         void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion);
 
         void ComputeInertia(float mass, out BodyInertia inertia);
@@ -44,7 +44,7 @@ namespace BepuPhysics.Collidables
     {
         //Note that compound shapes have no wide GetBounds function. Compounds, by virtue of containing shapes of different types, cannot be usefully vectorized over.
         //Instead, their children are added to other computation batches.
-        void ComputeBounds(in BepuUtilities.Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max);
+        void ComputeBounds(in Quaternion orientation, Shapes shapeBatches, out Vector3 min, out Vector3 max);
         void AddChildBoundsToBatcher(ref BoundingBoxBatcher batcher, in RigidPose pose, in BodyVelocity velocity, int bodyIndex);
 
         //Compound shapes may require indirections into other shape batches. This isn't wonderfully fast, but this scalar path is designed more for convenience than performance anyway.
@@ -65,7 +65,7 @@ namespace BepuPhysics.Collidables
         where TChildShape : IConvexShape
         where TChildShapeWide : IShapeWide<TChildShape>
     {
-        void ComputeBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max);
+        void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max);
 
         void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
         void RayTest<TRayHitHandler>(in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;

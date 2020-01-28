@@ -1,23 +1,14 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
-using BepuPhysics.Trees;
 using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer;
-using DemoRenderer.UI;
 using Demos.Demos;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.SpecializedTests
 {
@@ -40,7 +31,7 @@ namespace Demos.SpecializedTests
             var volumeSpringiness = new SpringSettings(30f, 1);
             for (int i = 0; i < 5; ++i)
             {
-                NewtDemo.CreateDeformable(Simulation, new Vector3(i * 3, 5 + i * 1.5f, 0), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * (i * 0.55f)), 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
+                NewtDemo.CreateDeformable(Simulation, new Vector3(i * 3, 5 + i * 1.5f, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * (i * 0.55f)), 1f, cellSize, weldSpringiness, volumeSpringiness, i, filters, ref vertices, ref vertexSpatialIndices, ref cellVertexIndices, ref tetrahedraVertexIndices);
             }
 
             BufferPool.Return(ref vertices);
@@ -58,7 +49,7 @@ namespace Demos.SpecializedTests
             bulletDescription = BodyDescription.CreateDynamic(RigidPose.Identity, bulletInertia, new CollidableDescription(Simulation.Shapes.Add(bulletShape), 1f), new BodyActivityDescription(0.01f));
 
             DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(20), out var mesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(200, 0.5f, 120), Quaternion.CreateFromAxisAngle(Vector3.UnitY, -3 * MathHelper.PiOver4), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(200, 0.5f, 120), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3 * MathHelper.PiOver4), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
         }
         BodyDescription bulletDescription;
         public override void Update(Window window, Camera camera, Input input, float dt)

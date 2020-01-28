@@ -8,12 +8,9 @@ using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos
 {
@@ -121,7 +118,7 @@ namespace Demos.Demos
                 {
                     description.LocalInertia.InverseMass = isKinematic(rowIndex, columnIndex, width, height) ? 0 : inverseMass;
                     var localPosition = new Vector3(columnIndex * spacing, rowIndex * -spacing, 0);
-                    Quaternion.TransformWithoutOverlap(localPosition, orientation, out var rotatedPosition);
+                    QuaternionEx.TransformWithoutOverlap(localPosition, orientation, out var rotatedPosition);
                     description.Pose.Position = rotatedPosition + position;
                     var handle = Simulation.Bodies.Add(description);
                     handles[rowIndex, columnIndex] = handle;
@@ -210,7 +207,7 @@ namespace Demos.Demos
             }
 
             int clothInstanceId = 0;
-            var initialRotation = Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * -0.5f);
+            var initialRotation = QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * -0.5f);
             {
                 var position = new Vector3(-90, 40, 0);
                 var handles = CreateBodyGrid(position, initialRotation, 10, 30, 1f, 0.65f, 1, clothInstanceId++, filters, KinematicTopCorners);
@@ -240,10 +237,10 @@ namespace Demos.Demos
 
 
             Simulation.Statics.Add(new StaticDescription(
-                new Vector3(60, 20, 0), Quaternion.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI * 0.5f),
+                new Vector3(60, 20, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 0, 1), MathF.PI * 0.5f),
                 new CollidableDescription(Simulation.Shapes.Add(new Capsule(8, 120)), 0.1f)));
             Simulation.Statics.Add(new StaticDescription(
-                new Vector3(30, 5, 0), Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f),
+                new Vector3(30, 5, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f),
                 new CollidableDescription(Simulation.Shapes.Add(new Capsule(8, 60)), 0.1f)));
 
             {

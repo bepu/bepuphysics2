@@ -67,7 +67,7 @@ namespace Demos
                             -staticGridWidthInSpheres * staticSpacing * 0.5f + i * staticSpacing,
                             -4,
                             -staticGridWidthInSpheres * staticSpacing * 0.5f + j * staticSpacing),
-                            Orientation = BepuUtilities.Quaternion.Identity
+                            Orientation = Quaternion.Identity
                         }
                     };
                     Simulation.Statics.Add(staticDescription);

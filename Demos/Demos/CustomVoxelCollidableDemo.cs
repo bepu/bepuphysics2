@@ -3,7 +3,6 @@ using DemoRenderer;
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using DemoContentLoader;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.CollisionDetection.CollisionTasks;
@@ -271,7 +270,7 @@ namespace Demos.Demos
             ref var voxels = ref Unsafe.AsRef<Voxels>(pair.B);
             ref var voxelIndex = ref voxels.VoxelIndices[childIndexB];
             var localPosition = (voxelIndex + new Vector3(0.5f)) * voxels.VoxelSize;
-            Quaternion.TransformWithoutOverlap(localPosition, pair.OrientationB, out childPoseB.Position);
+            QuaternionEx.TransformWithoutOverlap(localPosition, pair.OrientationB, out childPoseB.Position);
             childPoseB.Orientation = Quaternion.Identity;
             childTypeB = Box.Id;
             //The collision batcher accumulates pairs to process by pointer, since in almost every other case the shape data is available by pointer already.

@@ -1,9 +1,7 @@
 ﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 
 namespace DemoRenderer.Constraints
@@ -21,9 +19,9 @@ namespace DemoRenderer.Constraints
             Vector3Wide.ReadFirst(prestepBundle.LocalOffsetA, out var localOffsetA);
             Vector3Wide.ReadFirst(prestepBundle.LocalOffsetB, out var localOffsetB);
             Vector3Wide.ReadFirst(prestepBundle.LocalDirection, out var localDirection);
-            Quaternion.Transform(localOffsetA, poseA.Orientation, out var worldOffsetA);
-            Quaternion.Transform(localDirection, poseA.Orientation, out var worldDirection);
-            Quaternion.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
+            QuaternionEx.Transform(localOffsetA, poseA.Orientation, out var worldOffsetA);
+            QuaternionEx.Transform(localDirection, poseA.Orientation, out var worldDirection);
+            QuaternionEx.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
 
             var anchorA = poseA.Position + worldOffsetA;
             var anchorB = poseB.Position + worldOffsetB;

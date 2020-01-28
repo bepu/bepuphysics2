@@ -1,6 +1,5 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using DemoContentLoader;
@@ -8,12 +7,7 @@ using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos
 {
@@ -43,7 +37,7 @@ namespace Demos.Demos
                 {
                     description.LocalInertia.InverseMass = isKinematic(rowIndex, columnIndex, width, height) ? 0 : inverseMass;
                     var localPosition = new Vector3(columnIndex * spacing, rowIndex * -spacing, 0);
-                    Quaternion.TransformWithoutOverlap(localPosition, orientation, out var rotatedPosition);
+                    QuaternionEx.TransformWithoutOverlap(localPosition, orientation, out var rotatedPosition);
                     description.Pose.Position = rotatedPosition + position;
                     var handle = Simulation.Bodies.Add(description);
                     handles[rowIndex, columnIndex] = handle;
@@ -128,7 +122,7 @@ namespace Demos.Demos
             }
 
             int clothInstanceId = 0;
-            var initialRotation = Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * -0.5f);
+            var initialRotation = QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * -0.5f);
 
 
 

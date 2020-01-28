@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Numerics;
-using System.Text;
-using BepuUtilities;
 using DemoContentLoader;
 using DemoRenderer;
 using BepuPhysics;
@@ -10,7 +7,6 @@ using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using DemoUtilities;
 using DemoRenderer.UI;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos
 {

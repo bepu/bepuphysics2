@@ -9,7 +9,6 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using static BepuPhysics.Solver;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.SpecializedTests
 {

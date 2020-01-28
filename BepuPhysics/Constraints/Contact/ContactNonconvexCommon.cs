@@ -1,10 +1,8 @@
 ﻿using BepuPhysics.CollisionDetection;
 using BepuUtilities.Memory;
-using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using Quaternion = BepuUtilities.Quaternion;
 using static BepuUtilities.GatherScatter;
 using BepuUtilities;
 

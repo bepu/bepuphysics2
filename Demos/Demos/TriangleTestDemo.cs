@@ -32,7 +32,7 @@ namespace Demos.Demos
                 triangle.Broadcast(new Triangle(a, b, c));
                 var margin = new Vector<float>(1f);
                 Vector3Wide.Broadcast(new Vector3(1, -1, 0), out var offsetB);
-                QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), out var orientationB);
+                QuaternionWide.Broadcast(BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), out var orientationB);
                 tester.Test(ref sphere, ref triangle, ref margin, ref offsetB, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
@@ -50,8 +50,8 @@ namespace Demos.Demos
                 triangle.Broadcast(new Triangle(a, b, c));
                 var margin = new Vector<float>(2f);
                 Vector3Wide.Broadcast(new Vector3(-1f, -0.5f, -1f), out var offsetB);
-                QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), MathHelper.PiOver2), out var orientationA);
-                QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
+                QuaternionWide.Broadcast(BepuUtilities.QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), MathHelper.PiOver2), out var orientationA);
+                QuaternionWide.Broadcast(BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
                 tester.Test(ref capsule, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
@@ -69,8 +69,8 @@ namespace Demos.Demos
                 triangle.Broadcast(new Triangle(a, b, c));
                 var margin = new Vector<float>(2f);
                 Vector3Wide.Broadcast(new Vector3(-1f, -0.5f, -1f), out var offsetB);
-                QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), MathHelper.PiOver2), out var orientationA);
-                QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
+                QuaternionWide.Broadcast(BepuUtilities.QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), MathHelper.PiOver2), out var orientationA);
+                QuaternionWide.Broadcast(BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
                 tester.Test(ref shape, ref triangle, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
@@ -81,8 +81,8 @@ namespace Demos.Demos
 
                 var margin = new Vector<float>(2f);
                 Vector3Wide.Broadcast(new Vector3(0, -1, 0), out var offsetB);
-                QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), 0), out var orientationA);
-                QuaternionWide.Broadcast(BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
+                QuaternionWide.Broadcast(BepuUtilities.QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(-1, 0, 1)), 0), out var orientationA);
+                QuaternionWide.Broadcast(BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), 0), out var orientationB);
                 tester.Test(ref a, ref b, ref margin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
             }
             {
@@ -96,7 +96,7 @@ namespace Demos.Demos
                     Pose = new RigidPose
                     {
                         Position = new Vector3(2, 0, 2),
-                        Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 3.2345f)
+                        Orientation = BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 3.2345f)
                     },
                     Collidable = new CollidableDescription
                     {
@@ -117,7 +117,7 @@ namespace Demos.Demos
                     Pose = new RigidPose
                     {
                         Position = new Vector3(1, -0.01f, 1),
-                        Orientation = BepuUtilities.Quaternion.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)
+                        Orientation = BepuUtilities.QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)
                         //Orientation = BepuUtilities.Quaternion.Identity
                     }
                 };

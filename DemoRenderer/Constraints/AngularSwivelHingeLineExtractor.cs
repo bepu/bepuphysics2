@@ -1,9 +1,7 @@
 ﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 
 namespace DemoRenderer.Constraints
@@ -20,8 +18,8 @@ namespace DemoRenderer.Constraints
             ref var poseB = ref bodies.Sets[setIndex].Poses[bodyIndices[1]];
             Vector3Wide.ReadFirst(prestepBundle.LocalSwivelAxisA, out var localSwivelAxisA);
             Vector3Wide.ReadFirst(prestepBundle.LocalHingeAxisB, out var localHingeAxisB);
-            Quaternion.Transform(localSwivelAxisA, poseA.Orientation, out var swivelAxis);
-            Quaternion.Transform(localHingeAxisB, poseB.Orientation, out var hingeAxis);
+            QuaternionEx.Transform(localSwivelAxisA, poseA.Orientation, out var swivelAxis);
+            QuaternionEx.Transform(localHingeAxisB, poseB.Orientation, out var hingeAxis);
             var color = new Vector3(0.2f, 0.7f, 1f) * tint;
             var packedColor = Helpers.PackColor(color);
             var backgroundColor = new Vector3(0f, 0f, 1f) * tint;

@@ -66,7 +66,7 @@ namespace Demos.Demos
                             -staticGridWidthInInstances * staticSpacing * 0.5f + i * staticSpacing,
                             -4 + 4 * (float)Math.Cos(i * 0.3) + 4 * (float)Math.Cos(j * 0.3),
                             -staticGridWidthInInstances * staticSpacing * 0.5f + j * staticSpacing),
-                            Orientation = BepuUtilities.Quaternion.Identity
+                            Orientation = Quaternion.Identity
                         }
                     };
                     Simulation.Statics.Add(staticDescription);
@@ -97,7 +97,7 @@ namespace Demos.Demos
                             startingRadius * (float)Math.Cos(angle),
                             0,
                             startingRadius * (float)Math.Sin(angle)),
-                        Orientation = BepuUtilities.Quaternion.Identity
+                        Orientation = Quaternion.Identity
                     },
                     Activity = new BodyActivityDescription { SleepThreshold = 0, MinimumTimestepCountUnderThreshold = 4 },
                 };
@@ -169,10 +169,10 @@ namespace Demos.Demos
                     float orientationLengthSquared;
                     do
                     {
-                        localPose.Orientation = new BepuUtilities.Quaternion((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
+                        localPose.Orientation = new Quaternion((float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble(), (float)random.NextDouble());
                     }
                     while ((orientationLengthSquared = localPose.Orientation.LengthSquared()) < 1e-9f);
-                    BepuUtilities.Quaternion.Scale(localPose.Orientation, 1f / MathF.Sqrt(orientationLengthSquared), out localPose.Orientation);
+                    QuaternionEx.Scale(localPose.Orientation, 1f / MathF.Sqrt(orientationLengthSquared), out localPose.Orientation);
                     compoundBuilder.Add(shapeIndex, localPose, childInertia.InverseInertiaTensor, 1);
                 }
                 compoundBuilder.BuildDynamicCompound(out children, out inertia, out var center);

@@ -1,11 +1,8 @@
 ﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using BepuPhysics;
 using BepuPhysics.Constraints;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
-using System;
 
 namespace DemoRenderer.Constraints
 {
@@ -26,7 +23,7 @@ namespace DemoRenderer.Constraints
             Matrix3x3.CreateFromQuaternion(poseA.Orientation, out var orientationA);
             Matrix3x3.Transform(localOffsetA, orientationA, out var worldOffsetA);
             Matrix3x3.Transform(localPlaneNormal, orientationA, out var worldPlaneNormal);
-            Quaternion.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
+            QuaternionEx.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
 
             var anchorA = poseA.Position + worldOffsetA;
             var anchorB = poseB.Position + worldOffsetB;

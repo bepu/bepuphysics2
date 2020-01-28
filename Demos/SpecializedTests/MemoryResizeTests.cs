@@ -1,15 +1,9 @@
-﻿using BepuUtilities;
-using BepuUtilities.Memory;
+﻿using BepuUtilities.Memory;
 using BepuPhysics;
 using BepuPhysics.Constraints;
-using BepuPhysics.Constraints.Contact;
 using System;
 using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using static BepuPhysics.Solver;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuPhysics.Collidables;
 using BepuUtilities.Collections;
 

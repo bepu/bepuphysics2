@@ -256,7 +256,7 @@ namespace Demos.Demos
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
             Simulation.Statics.Add(new StaticDescription(
-                new Vector3(100, 70, 0), BepuUtilities.Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f),
+                new Vector3(100, 70, 0), BepuUtilities.QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI * 0.5f),
                 new CollidableDescription(Simulation.Shapes.Add(new Capsule(8, 64)), 0.1f)));
 
         }

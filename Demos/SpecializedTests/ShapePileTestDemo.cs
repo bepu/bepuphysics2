@@ -70,7 +70,7 @@ namespace Demos.SpecializedTests
                             Activity = new BodyActivityDescription(0.01f),
                             Pose = new RigidPose
                             {
-                                Orientation = BepuUtilities.Quaternion.Identity,
+                                Orientation = Quaternion.Identity,
                                 Position = location
                             },
                             Collidable = new CollidableDescription

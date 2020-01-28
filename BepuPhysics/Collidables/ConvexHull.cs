@@ -137,7 +137,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public void ComputeBounds(in BepuUtilities.Quaternion orientation, out Vector3 min, out Vector3 max)
+        public void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             QuaternionWide.Broadcast(orientation, out var orientationWide);
             ComputeBounds(orientationWide, out min, out max);

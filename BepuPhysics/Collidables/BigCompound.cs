@@ -3,7 +3,6 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using BepuUtilities.Memory;
 using System.Diagnostics;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuPhysics.Trees;

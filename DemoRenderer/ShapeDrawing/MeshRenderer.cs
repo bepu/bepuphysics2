@@ -1,13 +1,11 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace DemoRenderer.ShapeDrawing
 {

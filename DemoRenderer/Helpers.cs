@@ -6,7 +6,6 @@ using Buffer = SharpDX.Direct3D11.Buffer;
 using System.Runtime.CompilerServices;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 
 namespace DemoRenderer
@@ -269,13 +268,13 @@ namespace DemoRenderer
             orientation.Y = UnpackDuplicateZeroSNORM(Unsafe.Add(ref packedShorts, 1));
             orientation.Z = UnpackDuplicateZeroSNORM(Unsafe.Add(ref packedShorts, 2));
             orientation.W = UnpackDuplicateZeroSNORM(Unsafe.Add(ref packedShorts, 3));
-            Quaternion.Normalize(ref orientation);
+            QuaternionEx.Normalize(ref orientation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool GetScreenLocation(in Vector3 position, in BepuUtilities.Matrix viewProjection, in Vector2 resolution, out Vector2 screenLocation)
+        public static bool GetScreenLocation(in Vector3 position, in Matrix viewProjection, in Vector2 resolution, out Vector2 screenLocation)
         {
-            BepuUtilities.Matrix.Transform(new Vector4(position, 1), viewProjection, out var projected);
+            Matrix.Transform(new Vector4(position, 1), viewProjection, out var projected);
             projected /= projected.W;
             if (projected.Z <= 0 || MathF.Abs(projected.X) > 1 || MathF.Abs(projected.Y) > 1)
             {

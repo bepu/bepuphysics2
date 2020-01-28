@@ -1,5 +1,4 @@
 ﻿using BepuUtilities;
-using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
@@ -7,7 +6,6 @@ using Demos.UI;
 using DemoUtilities;
 using System;
 using System.Numerics;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos
 {
@@ -256,7 +254,7 @@ namespace Demos
                     var delta = input.MouseDelta;
                     var yaw = delta.X * controls.MouseSensitivity;
                     var pitch = delta.Y * controls.MouseSensitivity;
-                    incrementalGrabRotation = Quaternion.Concatenate(Quaternion.CreateFromAxisAngle(camera.Right, pitch), Quaternion.CreateFromAxisAngle(camera.Up, yaw));
+                    incrementalGrabRotation = QuaternionEx.Concatenate(QuaternionEx.CreateFromAxisAngle(camera.Right, pitch), QuaternionEx.CreateFromAxisAngle(camera.Up, yaw));
                     if (!input.MouseLocked)
                     {
                         //Undo the mouse movement if we're in freemouse mode.

@@ -2,11 +2,9 @@
 using BepuPhysics.Collidables;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 using System.Numerics;
 using System;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics.CollisionDetection
 {

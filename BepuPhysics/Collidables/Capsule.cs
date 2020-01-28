@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 using BepuUtilities.Memory;
-using System.Diagnostics;
-using Quaternion = BepuUtilities.Quaternion;
 using BepuUtilities;
 using BepuPhysics.CollisionDetection;
 
@@ -53,7 +49,7 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeBounds(in Quaternion orientation, out Vector3 min, out Vector3 max)
         {
-            Quaternion.TransformUnitY(orientation, out var segmentOffset);
+            QuaternionEx.TransformUnitY(orientation, out var segmentOffset);
             max = Vector3.Abs(HalfLength * segmentOffset) + new Vector3(Radius);
             min = -max;
         }

@@ -1,23 +1,12 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
-using BepuPhysics.Constraints;
-using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Collections;
-using BepuUtilities.Memory;
 using DemoContentLoader;
 using DemoRenderer;
-using DemoRenderer.UI;
-using Demos.Demos;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.SpecializedTests
 {
@@ -63,7 +52,7 @@ namespace Demos.SpecializedTests
 
 
             DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(1, 1.5f, 1), out mesh);
-            Simulation.Statics.Add(new StaticDescription(new Vector3(30, 0, 20), Quaternion.CreateFromAxisAngle(Vector3.UnitY, -3 * MathHelper.PiOver4), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(30, 0, 20), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3 * MathHelper.PiOver4), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
         }
 
         Mesh mesh;
@@ -73,7 +62,7 @@ namespace Demos.SpecializedTests
             if(input.WasPushed(OpenTK.Input.Key.Z))
             {
                 mesh.Scale = new Vector3(30);
-                Simulation.Statics.Add(new StaticDescription(new Vector3(70, 0, 50), Quaternion.CreateFromAxisAngle(Vector3.UnitY, -3.1f * MathHelper.PiOver4), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
+                Simulation.Statics.Add(new StaticDescription(new Vector3(70, 0, 50), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3.1f * MathHelper.PiOver4), new CollidableDescription(Simulation.Shapes.Add(mesh), 0.1f)));
             }
             base.Update(window, camera, input, dt);
         }

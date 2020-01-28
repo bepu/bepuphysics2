@@ -2,7 +2,6 @@
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace Demos.Demos.Tanks
 {

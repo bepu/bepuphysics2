@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics
 {
@@ -220,10 +219,10 @@ namespace BepuPhysics
             //TODO: For any significant amount of B angular velocity, the resulting bounding boxes can be enormous in local space.
             //You should strongly consider heuristically choosing a world space path. For tree-based compounds, this would require a dedicated slow world space traversal.
             //For a list compound, the world space test is always the right choice. IBoundsQueryableCompound could expose heuristically useful information.
-            Quaternion.Conjugate(orientationB, out var inverseOrientationB);
-            Quaternion.TransformWithoutOverlap(velocityA.Linear - velocityB.Linear * dt, inverseOrientationB, out sweep);
-            Quaternion.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
-            Quaternion.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
+            QuaternionEx.Conjugate(orientationB, out var inverseOrientationB);
+            QuaternionEx.TransformWithoutOverlap(velocityA.Linear - velocityB.Linear * dt, inverseOrientationB, out sweep);
+            QuaternionEx.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
+            QuaternionEx.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
             Compound.GetRotatedChildPose(localPoseA, localOrientationA, out var pose);
 
             shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, pose.Orientation, out var maximumRadiusA, out var maximumAngularExpansionA, out min, out max);
@@ -245,10 +244,10 @@ namespace BepuPhysics
             //TODO: For any significant amount of B angular velocity, the resulting bounding boxes can be enormous in local space.
             //You should strongly consider heuristically choosing a world space path. For tree-based compounds, this would require a dedicated slow world space traversal.
             //For a list compound, the world space test is always the right choice. IBoundsQueryableCompound could expose heuristically useful information.
-            Quaternion.Conjugate(orientationB, out var inverseOrientationB);
-            Quaternion.TransformWithoutOverlap(velocityA.Linear - velocityB.Linear * dt, inverseOrientationB, out sweep);
-            Quaternion.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
-            Quaternion.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
+            QuaternionEx.Conjugate(orientationB, out var inverseOrientationB);
+            QuaternionEx.TransformWithoutOverlap(velocityA.Linear - velocityB.Linear * dt, inverseOrientationB, out sweep);
+            QuaternionEx.TransformWithoutOverlap(offsetB, inverseOrientationB, out var localOffsetB);
+            QuaternionEx.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
 
             shape.ComputeAngularExpansionData(out var maximumRadiusA, out var maximumAngularExpansionA);
             BoundingBoxHelpers.GetAngularBoundsExpansion(velocityA.Angular, dt, maximumRadiusA, maximumAngularExpansionA, out var angularExpansionA);

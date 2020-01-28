@@ -6,13 +6,9 @@ using BepuPhysics.Collidables;
 using System;
 using System.Numerics;
 using System.Diagnostics;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
 using DemoContentLoader;
-using Quaternion = BepuUtilities.Quaternion;
 using DemoRenderer.UI;
 using DemoRenderer.Constraints;
-using System.Runtime.CompilerServices;
 
 namespace Demos.Demos
 {
@@ -160,8 +156,8 @@ namespace Demos.Demos
 
                 PoseIntegration.Integrate(orientationA, velocityA.Angular, t, out var integratedA);
                 PoseIntegration.Integrate(orientationB, velocityB.Angular, t, out var integratedB);
-                var worldRotatedPoint = velocityA.Linear * t - velocityB.Linear * t - offsetB + Quaternion.Transform(localPoseA.Position, integratedA);
-                localPathPoints[i] = Quaternion.Transform(worldRotatedPoint, Quaternion.Conjugate(integratedB));
+                var worldRotatedPoint = velocityA.Linear * t - velocityB.Linear * t - offsetB + QuaternionEx.Transform(localPoseA.Position, integratedA);
+                localPathPoints[i] = QuaternionEx.Transform(worldRotatedPoint, QuaternionEx.Conjugate(integratedB));
             }
             var referenceSweep = localPathPoints[pathPointCount - 1] - localPathPoints[0];
             var sweepMin = Vector3.Min(localPathPoints[pathPointCount - 1], localPathPoints[0]);

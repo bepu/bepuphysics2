@@ -1,16 +1,12 @@
 ﻿using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
-using Quaternion = BepuUtilities.Quaternion;
 
 namespace BepuPhysics
 {
@@ -106,8 +102,8 @@ namespace BepuPhysics
                 Unsafe.As<Quaternion, Vector3>(ref *&q) = angularVelocity * (MathHelper.Sin(halfAngle) / speed);
                 q.W = MathHelper.Cos(halfAngle);
                 //Note that the input and output may overlap.
-                Quaternion.Concatenate(orientation, q, out integratedOrientation);
-                Quaternion.Normalize(ref integratedOrientation);
+                QuaternionEx.Concatenate(orientation, q, out integratedOrientation);
+                QuaternionEx.Normalize(ref integratedOrientation);
             }
             else
             {
