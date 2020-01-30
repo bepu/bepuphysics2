@@ -27,6 +27,7 @@ namespace Demos.Demos
             camera.Pitch = 0;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)));
 
+            //Drop a pyramid on top of the sensor so there are more contacts to look at.
             var boxShape = new Box(1, 1, 1);
             boxShape.ComputeInertia(1, out var boxInertia);
             var boxIndex = Simulation.Shapes.Add(boxShape);
@@ -49,6 +50,7 @@ namespace Demos.Demos
 
             sensorBodyHandle = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 0, 1), 10, Simulation.Shapes, new Box(4, 2, 6)));
 
+            //Put a mesh under the sensor so that nonconvex contacts are shown.
             const int planeWidth = 128;
             const int planeHeight = 128;
             DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
@@ -91,15 +93,16 @@ namespace Demos.Demos
 
         struct Extractor : ISolverContactDataExtractor
         {
-            //We'll pull the solver data into a different form. What you store depends on your application's needs- there's nothing saying you have to use this layout.
-            //The IDirectContactDataExtractor can be thought of as the foundation on which to build other (more convenient) abstractions.
+            //We'll pull the solver data into a different form- just a list of contacts with basic data about each one.
+            //What you store depends on your application's needs- there's nothing saying you have to use this layout.
+            //The ISolverContactDataExtractor can be thought of as the foundation on which to build other (more convenient) abstractions.
             public QuickList<ConstraintContacts> ConstraintContacts;
             public BufferPool Pool;
 
-            public Extractor(BufferPool pool)
+            public Extractor(BufferPool pool, int initialCapacity)
             {
                 Pool = pool;
-                ConstraintContacts = new QuickList<ConstraintContacts>(8, pool);
+                ConstraintContacts = new QuickList<ConstraintContacts>(initialCapacity, pool);
             }
 
             //The callbacks distinguish between convex and nonconvex because the underlying data is different.
@@ -214,9 +217,11 @@ namespace Demos.Demos
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
             var sensorBody = Simulation.Bodies.GetBodyReference(sensorBodyHandle);
-            var extractor = new Extractor(BufferPool);
-            //Enumerate over all the constraints currently affecting the sensor body, attempting to extract contact data from each one.
-            //If there are constraints that aren't contact constraints, the function will just return having done nothing.
+            var extractor = new Extractor(BufferPool, sensorBody.Constraints.Count);
+            //The basic idea behind the contact extractor is to submit it to a narrow phase contact accessor that is able to understand the solver's layout,
+            //which will then call the contact extractor's relevant callbacks for the type of constraint encountered.
+            //Here, we'll enumerate over all the constraints currently affecting the sensor body, attempting to extract contact data from each one.
+            //If there are constraints that aren't contact constraints, they'll just get skipped.
             for (int i = 0; i < sensorBody.Constraints.Count; ++i)
             {
                 Simulation.NarrowPhase.TryExtractSolverContactData(sensorBody.Constraints[i].ConnectingConstraintHandle, ref extractor);
