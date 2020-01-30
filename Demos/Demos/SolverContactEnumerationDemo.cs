@@ -157,7 +157,7 @@ namespace Demos.Demos
             }
 
             public void ConvexTwoBody<TPrestep, TAccumulatedImpulses>(int bodyHandleA, int bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
-                where TPrestep : struct, IConvexContactPrestep<TPrestep>
+                where TPrestep : struct, ITwoBodyConvexContactPrestep<TPrestep>
                 where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
             {
                 ref var constraintContacts = ref ConstraintContacts.Allocate(Pool);
@@ -195,7 +195,7 @@ namespace Demos.Demos
             }
 
             public void NonconvexTwoBody<TPrestep, TAccumulatedImpulses>(int bodyHandleA, int bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
-                where TPrestep : struct, INonconvexContactPrestep<TPrestep>
+                where TPrestep : struct, ITwoBodyNonconvexContactPrestep<TPrestep>
                 where TAccumulatedImpulses : struct, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>
             {
                 ref var constraintContacts = ref ConstraintContacts.Allocate(Pool);

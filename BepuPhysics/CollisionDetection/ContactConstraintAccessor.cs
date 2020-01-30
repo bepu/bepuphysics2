@@ -327,7 +327,7 @@ namespace BepuPhysics.CollisionDetection
             BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
             ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
             ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
-            extractor.Convex(ref prestep, ref impulses);
+            extractor.ConvexOneBody(ref prestep, ref impulses);
         }
     }
 
@@ -396,7 +396,7 @@ namespace BepuPhysics.CollisionDetection
             BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
             ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
             ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
-            extractor.Convex(ref prestep, ref impulses);
+            extractor.ConvexTwoBody(ref prestep, ref impulses);
         }
     }
 
@@ -443,7 +443,7 @@ namespace BepuPhysics.CollisionDetection
             BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
             ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
             ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
-            extractor.Nonconvex(ref prestep, ref impulses);
+            extractor.NonconvexOneBody(ref prestep, ref impulses);
         }
     }
 
@@ -501,7 +501,7 @@ namespace BepuPhysics.CollisionDetection
             BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
             ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
             ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
-            extractor.Nonconvex(ref prestep, ref impulses);
+            extractor.NonconvexTwoBody(ref prestep, ref impulses);
         }
     }
 }

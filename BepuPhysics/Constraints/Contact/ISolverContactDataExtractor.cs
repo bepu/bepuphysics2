@@ -27,7 +27,7 @@
         /// <param name="prestep">Prestep data associated with the constraint.</param>
         /// <param name="impulses">Accumulated impulses associated with the constraint.</param>
         void ConvexTwoBody<TPrestep, TAccumulatedImpulses>(int bodyHandleA, int bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
-            where TPrestep : struct, IConvexContactPrestep<TPrestep>
+            where TPrestep : struct, ITwoBodyConvexContactPrestep<TPrestep>
             where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>;
 
 
@@ -53,7 +53,7 @@
         /// <param name="prestep">Prestep data associated with the constraint.</param>
         /// <param name="impulses">Accumulated impulses associated with the constraint.</param>
         void NonconvexTwoBody<TPrestep, TAccumulatedImpulses>(int bodyHandleA, int bodyHandleB, ref TPrestep prestep, ref TAccumulatedImpulses impulses)
-            where TPrestep : struct, INonconvexContactPrestep<TPrestep>
+            where TPrestep : struct, ITwoBodyNonconvexContactPrestep<TPrestep>
             where TAccumulatedImpulses : struct, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>;
     }
 
@@ -70,9 +70,21 @@
         /// <typeparam name="TAccumulatedImpulses">Type of the accumulated impulses data returned.</typeparam>
         /// <param name="prestep">Prestep data associated with the constraint.</param>
         /// <param name="impulses">Accumulated impulses associated with the constraint.</param>
-        void Convex<TPrestep, TAccumulatedImpulses>(ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+        void ConvexOneBody<TPrestep, TAccumulatedImpulses>(ref TPrestep prestep, ref TAccumulatedImpulses impulses)
             where TPrestep : struct, IConvexContactPrestep<TPrestep>
             where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>;
+
+        /// <summary>
+        /// Provides a reference to a convex two body contact constraint. Constraint data is in the first lane of the direct reference (slot 0 of vectors).
+        /// </summary>
+        /// <typeparam name="TPrestep">Type of the prestep data returned.</typeparam>
+        /// <typeparam name="TAccumulatedImpulses">Type of the accumulated impulses data returned.</typeparam>
+        /// <param name="prestep">Prestep data associated with the constraint.</param>
+        /// <param name="impulses">Accumulated impulses associated with the constraint.</param>
+        void ConvexTwoBody<TPrestep, TAccumulatedImpulses>(ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+            where TPrestep : struct, ITwoBodyConvexContactPrestep<TPrestep>
+            where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>;
+
 
         /// <summary>
         /// Provides a reference to a nonconvex one body contact constraint. Constraint data is in the first lane of the direct reference (slot 0 of vectors).
@@ -81,8 +93,19 @@
         /// <typeparam name="TAccumulatedImpulses">Type of the accumulated impulses data returned.</typeparam>
         /// <param name="prestep">Prestep data associated with the constraint.</param>
         /// <param name="impulses">Accumulated impulses associated with the constraint.</param>
-        void Nonconvex<TPrestep, TAccumulatedImpulses>(ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+        void NonconvexOneBody<TPrestep, TAccumulatedImpulses>(ref TPrestep prestep, ref TAccumulatedImpulses impulses)
             where TPrestep : struct, INonconvexContactPrestep<TPrestep>
+            where TAccumulatedImpulses : struct, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>;
+
+        /// <summary>
+        /// Provides a reference to a nonconvex two body contact constraint. Constraint data is in the first lane of the direct reference (slot 0 of vectors).
+        /// </summary>
+        /// <typeparam name="TPrestep">Type of the prestep data returned.</typeparam>
+        /// <typeparam name="TAccumulatedImpulses">Type of the accumulated impulses data returned.</typeparam>
+        /// <param name="prestep">Prestep data associated with the constraint.</param>
+        /// <param name="impulses">Accumulated impulses associated with the constraint.</param>
+        void NonconvexTwoBody<TPrestep, TAccumulatedImpulses>(ref TPrestep prestep, ref TAccumulatedImpulses impulses)
+            where TPrestep : struct, ITwoBodyNonconvexContactPrestep<TPrestep>
             where TAccumulatedImpulses : struct, INonconvexContactAccumulatedImpulses<TAccumulatedImpulses>;
     }
 
