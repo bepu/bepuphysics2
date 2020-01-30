@@ -60,6 +60,7 @@ namespace Demos
             AddOption<RayCastingDemo>();
             AddOption<SweepDemo>();
             AddOption<ContactEventsDemo>();
+            AddOption<SolverContactEnumerationDemo>();
             AddOption<CustomVoxelCollidableDemo>();
             AddOption<RopeStabilityDemo>();
             AddOption<SubsteppingDemo>();

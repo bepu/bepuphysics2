@@ -617,7 +617,7 @@ namespace BepuPhysics.Collidables
                 reducedFaceIndices.Count = 0;
                 facePoints.Count = 0;
                 ReduceFace(ref rawFaceVertexIndices, faceNormal, ref points, ref facePoints, ref allowVertex, ref reducedFaceIndices);
-                if(reducedFaceIndices.Count < 3)
+                if (reducedFaceIndices.Count < 3)
                 {
                     //Degenerate face found; don't bother creating work for it.
                     continue;
@@ -870,7 +870,9 @@ namespace BepuPhysics.Collidables
         {
             ComputeHull(points, pool, out var hullData);
             CreateShape(points, hullData, pool, out center, out convexHull);
-            hullData.Dispose(pool);
+            //Empty input point sets won't allocate.
+            if (hullData.OriginalVertexMapping.Allocated)
+                hullData.Dispose(pool);
         }
     }
 }

@@ -9,6 +9,7 @@ using BepuPhysics.Constraints;
 using System.Diagnostics;
 using System.Threading;
 using BepuUtilities;
+using BepuPhysics.Constraints.Contact;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -118,13 +119,49 @@ namespace BepuPhysics.CollisionDetection
         /// <returns>True if the constraint type id refers to a registered accessor, false otherwise.</returns>
         public bool TryGetContactConstraintAccessor(int constraintTypeId, out ContactConstraintAccessor accessor)
         {
-            if(IsContactConstraintType(constraintTypeId) && contactConstraintAccessors.Length > constraintTypeId)
+            if (IsContactConstraintType(constraintTypeId) && contactConstraintAccessors.Length > constraintTypeId)
             {
                 accessor = contactConstraintAccessors[constraintTypeId];
                 if (accessor != null)
                     return true;
             }
             accessor = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Tries to extract contact prestep, impulse, and body reference data from the given handle. If it's not a contact constraint, returns false.
+        /// </summary>
+        /// <typeparam name="TExtractor">Type of the extractor used to collect contact data from the solver.</typeparam>
+        /// <param name="constraintHandle">Constraint to try to extract data from.</param>
+        /// <param name="extractor">Extractor used to collect contact data from the solver.</param>
+        /// <returns>True if the constraint was a contact type, false otherwise.</returns>
+        public bool TryExtractSolverContactData<TExtractor>(int constraintHandle, ref TExtractor extractor) where TExtractor : struct, ISolverContactDataExtractor
+        {
+            ref var constraintLocation = ref Solver.HandleToConstraint[constraintHandle];
+            if (TryGetContactConstraintAccessor(constraintLocation.TypeId, out var accessor))
+            {
+                accessor.ExtractContactData(constraintLocation, Solver, ref extractor);
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Tries to extract prestep and impulse contact data from the given handle. If it's not a contact constraint, returns false.
+        /// </summary>
+        /// <typeparam name="TExtractor">Type of the extractor used to collect contact data from the solver.</typeparam>
+        /// <param name="constraintHandle">Constraint to try to extract data from.</param>
+        /// <param name="extractor">Extractor used to collect contact data from the solver.</param>
+        /// <returns>True if the constraint was a contact type, false otherwise.</returns>
+        public bool TryExtractSolverContactPrestepAndImpulses<TExtractor>(int constraintHandle, ref TExtractor extractor) where TExtractor : struct, ISolverContactPrestepAndImpulsesExtractor
+        {
+            ref var constraintLocation = ref Solver.HandleToConstraint[constraintHandle];
+            if (TryGetContactConstraintAccessor(constraintLocation.TypeId, out var accessor))
+            {
+                accessor.ExtractContactPrestepAndImpulses(constraintLocation, Solver, ref extractor);
+                return true;
+            }
             return false;
         }
 
@@ -456,7 +493,7 @@ namespace BepuPhysics.CollisionDetection
                         Simulation.Shapes[aCollidable.Shape.Type].GetShapeData(aCollidable.Shape.Index, out var shapeDataA, out var shapeSizeA);
                         Simulation.Shapes[bCollidable.Shape.Type].GetShapeData(bCollidable.Shape.Index, out var shapeDataB, out var shapeSizeB);
                         float minimumSweepTimestepA, sweepConvergenceThresholdA;
-                        if(aCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous)
+                        if (aCollidable.Continuity.Mode == ContinuousDetectionMode.Continuous)
                         {
                             minimumSweepTimestepA = aCollidable.Continuity.MinimumSweepTimestep;
                             sweepConvergenceThresholdA = aCollidable.Continuity.SweepConvergenceThreshold;

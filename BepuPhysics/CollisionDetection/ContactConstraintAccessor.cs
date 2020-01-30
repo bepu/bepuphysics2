@@ -99,25 +99,48 @@ namespace BepuPhysics.CollisionDetection
             where TCollisionCache : IPairCacheEntry;
 
         /// <summary>
-        /// Extracts data from a contact constraint of the accessor's type.
+        /// Extracts references to data from a contact constraint of the accessor's type.
         /// </summary>
         /// <typeparam name="TExtractor">Type of the extractor to handle the extracted references.</typeparam>
         /// <param name="constraintHandle">Handle of the contact constraint to extract.</param>
         /// <param name="solver">Solver in which the constraint lives.</param>
         /// <param name="extractor">Extractor to handle the extracted references.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ExtractContactData<TExtractor>(int constraintHandle, Solver solver, ref TExtractor extractor) where TExtractor : struct, IDirectContactDataExtractor
+        public void ExtractContactData<TExtractor>(int constraintHandle, Solver solver, ref TExtractor extractor) where TExtractor : struct, ISolverContactDataExtractor
         {
             ExtractContactData(solver.HandleToConstraint[constraintHandle], solver, ref extractor);
         }
         /// <summary>
-        /// Extracts data from a contact constraint of the accessor's type.
+        /// Extracts references to data from a contact constraint of the accessor's type.
         /// </summary>
         /// <typeparam name="TExtractor">Type of the extractor to handle the extracted references.</typeparam>
         /// <param name="constraintLocation">Location of the constraint in the solver.</param>
         /// <param name="solver">Solver in which the constraint lives.</param>
         /// <param name="extractor">Extractor to handle the extracted references.</param>
-        public abstract void ExtractContactData<TExtractor>(in ConstraintLocation constraintLocation, Solver solver, ref TExtractor extractor) where TExtractor : struct, IDirectContactDataExtractor;
+        public abstract void ExtractContactData<TExtractor>(in ConstraintLocation constraintLocation, Solver solver, ref TExtractor extractor) where TExtractor : struct, ISolverContactDataExtractor;
+
+        /// <summary>
+        /// Extracts references to data from a contact constraint of the accessor's type.
+        /// </summary>
+        /// <typeparam name="TExtractor">Type of the extractor to handle the extracted references.</typeparam>
+        /// <param name="constraintHandle">Handle of the contact constraint to extract.</param>
+        /// <param name="solver">Solver in which the constraint lives.</param>
+        /// <param name="extractor">Extractor to handle the extracted references.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ExtractContactPrestepAndImpulses<TExtractor>(int constraintHandle, Solver solver, ref TExtractor extractor) where TExtractor : struct, ISolverContactPrestepAndImpulsesExtractor
+        {
+            ExtractContactPrestepAndImpulses(solver.HandleToConstraint[constraintHandle], solver, ref extractor);
+        }
+        /// <summary>
+        /// Extracts references to data from a contact constraint of the accessor's type.
+        /// </summary>
+        /// <typeparam name="TExtractor">Type of the extractor to handle the extracted references.</typeparam>
+        /// <param name="constraintLocation">Location of the constraint in the solver.</param>
+        /// <param name="solver">Solver in which the constraint lives.</param>
+        /// <param name="extractor">Extractor to handle the extracted references.</param>
+        public abstract void ExtractContactPrestepAndImpulses<TExtractor>(in ConstraintLocation constraintLocation, Solver solver, ref TExtractor extractor) where TExtractor : struct, ISolverContactPrestepAndImpulsesExtractor;
+
+
     }
 
     //Note that the vast majority of the 'work' done by these accessor implementations is just type definitions used to call back into some other functions that need that type knowledge.
@@ -288,21 +311,23 @@ namespace BepuPhysics.CollisionDetection
             ref var batch = ref solver.Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex];
             ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
             BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
-            if (extractor.RequestPrestep)
-            {
-                extractor.ConvexOneBodyPrestep(ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex));
-            }
-            if (extractor.RequestBodyReferences)
-            {
-                //Active constraints store body indices as references; inactive constraints store handles.
-                var bodyReference = Buffer<Vector<int>>.Get(ref typeBatch.BodyReferences, bundleIndex)[innerIndex];
-                var bodyHandle = constraintLocation.SetIndex == 0 ? solver.bodies.ActiveSet.IndexToHandle[bodyReference] : bodyReference;
-                extractor.OneBodyHandle(bodyHandle);
-            }
-            if (extractor.RequestAccumulatedImpulses)
-            {
-                extractor.ConvexAccumulatedImpulses(ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex));
-            }
+            //Active constraints store body indices as references; inactive constraints store handles.
+            var bodyReference = Buffer<Vector<int>>.Get(ref typeBatch.BodyReferences, bundleIndex)[innerIndex];
+            var bodyHandle = constraintLocation.SetIndex == 0 ? solver.bodies.ActiveSet.IndexToHandle[bodyReference] : bodyReference;
+            ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
+            ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
+            extractor.ConvexOneBody(bodyHandle, ref prestep, ref impulses);
+        }
+
+        public override void ExtractContactPrestepAndImpulses<TExtractor>(in ConstraintLocation constraintLocation, Solver solver, ref TExtractor extractor)
+        {
+            Debug.Assert(constraintLocation.TypeId == ConstraintTypeId);
+            ref var batch = ref solver.Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex];
+            ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
+            BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
+            ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
+            ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
+            extractor.Convex(ref prestep, ref impulses);
         }
     }
 
@@ -344,29 +369,34 @@ namespace BepuPhysics.CollisionDetection
             ref var batch = ref solver.Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex];
             ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
             BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
-            if (extractor.RequestPrestep)
+            ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
+            ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
+
+            int bodyHandleA, bodyHandleB;
+            ref var bodyReferences = ref GatherScatter.GetOffsetInstance(ref Buffer<TwoBodyReferences>.Get(ref typeBatch.BodyReferences, bundleIndex), innerIndex);
+            //Active constraints store body indices as references; inactive constraints store handles.
+            if (constraintLocation.SetIndex == 0)
             {
-                extractor.ConvexTwoBodyPrestep(ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex));
+                bodyHandleA = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexA[0]];
+                bodyHandleB = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexB[0]];
             }
-            if (extractor.RequestBodyReferences)
+            else
             {
-                ref var bodyReferences = ref GatherScatter.GetOffsetInstance(ref Buffer<TwoBodyReferences>.Get(ref typeBatch.BodyReferences, bundleIndex), innerIndex);
-                //Active constraints store body indices as references; inactive constraints store handles.
-                if (constraintLocation.SetIndex == 0)
-                {
-                    var bodyHandleA = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexA[0]];
-                    var bodyHandleB = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexB[0]];
-                    extractor.TwoBodyHandles(bodyHandleA, bodyHandleB);
-                }
-                else
-                {
-                    extractor.TwoBodyHandles(bodyReferences.IndexA[0], bodyReferences.IndexB[0]);
-                }
+                bodyHandleA = bodyReferences.IndexA[0];
+                bodyHandleB = bodyReferences.IndexB[0];
             }
-            if (extractor.RequestAccumulatedImpulses)
-            {
-                extractor.ConvexAccumulatedImpulses(ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex));
-            }
+            extractor.ConvexTwoBody(bodyHandleA, bodyHandleB, ref prestep, ref impulses);
+        }
+
+        public override void ExtractContactPrestepAndImpulses<TExtractor>(in ConstraintLocation constraintLocation, Solver solver, ref TExtractor extractor)
+        {
+            Debug.Assert(constraintLocation.TypeId == ConstraintTypeId);
+            ref var batch = ref solver.Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex];
+            ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
+            BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
+            ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
+            ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
+            extractor.Convex(ref prestep, ref impulses);
         }
     }
 
@@ -397,21 +427,23 @@ namespace BepuPhysics.CollisionDetection
             ref var batch = ref solver.Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex];
             ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
             BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
-            if (extractor.RequestPrestep)
-            {
-                extractor.NonconvexOneBodyPrestep(ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex));
-            }
-            if (extractor.RequestBodyReferences)
-            {
-                //Active constraints store body indices as references; inactive constraints store handles.
-                var bodyReference = Buffer<Vector<int>>.Get(ref typeBatch.BodyReferences, bundleIndex)[innerIndex];
-                var bodyHandle = constraintLocation.SetIndex == 0 ? solver.bodies.ActiveSet.IndexToHandle[bodyReference] : bodyReference;
-                extractor.OneBodyHandle(bodyHandle);
-            }
-            if (extractor.RequestAccumulatedImpulses)
-            {
-                extractor.NonconvexAccumulatedImpulses(ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex));
-            }
+            //Active constraints store body indices as references; inactive constraints store handles.
+            var bodyReference = Buffer<Vector<int>>.Get(ref typeBatch.BodyReferences, bundleIndex)[innerIndex];
+            var bodyHandle = constraintLocation.SetIndex == 0 ? solver.bodies.ActiveSet.IndexToHandle[bodyReference] : bodyReference;
+            ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
+            ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
+            extractor.NonconvexOneBody(bodyHandle, ref prestep, ref impulses);
+        }
+
+        public override void ExtractContactPrestepAndImpulses<TExtractor>(in ConstraintLocation constraintLocation, Solver solver, ref TExtractor extractor)
+        {
+            Debug.Assert(constraintLocation.TypeId == ConstraintTypeId);
+            ref var batch = ref solver.Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex];
+            ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
+            BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
+            ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
+            ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
+            extractor.Nonconvex(ref prestep, ref impulses);
         }
     }
 
@@ -442,29 +474,34 @@ namespace BepuPhysics.CollisionDetection
             ref var batch = ref solver.Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex];
             ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
             BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
-            if (extractor.RequestPrestep)
+            ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
+            ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
+
+            int bodyHandleA, bodyHandleB;
+            ref var bodyReferences = ref GatherScatter.GetOffsetInstance(ref Buffer<TwoBodyReferences>.Get(ref typeBatch.BodyReferences, bundleIndex), innerIndex);
+            //Active constraints store body indices as references; inactive constraints store handles.
+            if (constraintLocation.SetIndex == 0)
             {
-                extractor.NonconvexTwoBodyPrestep(ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex));
+                bodyHandleA = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexA[0]];
+                bodyHandleB = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexB[0]];
             }
-            if (extractor.RequestBodyReferences)
+            else
             {
-                ref var bodyReferences = ref GatherScatter.GetOffsetInstance(ref Buffer<TwoBodyReferences>.Get(ref typeBatch.BodyReferences, bundleIndex), innerIndex);
-                //Active constraints store body indices as references; inactive constraints store handles.
-                if (constraintLocation.SetIndex == 0)
-                {
-                    var bodyHandleA = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexA[0]];
-                    var bodyHandleB = solver.bodies.ActiveSet.IndexToHandle[bodyReferences.IndexB[0]];
-                    extractor.TwoBodyHandles(bodyHandleA, bodyHandleB);
-                }
-                else
-                {
-                    extractor.TwoBodyHandles(bodyReferences.IndexA[0], bodyReferences.IndexB[0]);
-                }
+                bodyHandleA = bodyReferences.IndexA[0];
+                bodyHandleB = bodyReferences.IndexB[0];
             }
-            if (extractor.RequestAccumulatedImpulses)
-            {
-                extractor.NonconvexAccumulatedImpulses(ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex));
-            }
+            extractor.NonconvexTwoBody(bodyHandleA, bodyHandleB, ref prestep, ref impulses);
+        }
+
+        public override void ExtractContactPrestepAndImpulses<TExtractor>(in ConstraintLocation constraintLocation, Solver solver, ref TExtractor extractor)
+        {
+            Debug.Assert(constraintLocation.TypeId == ConstraintTypeId);
+            ref var batch = ref solver.Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex];
+            ref var typeBatch = ref batch.TypeBatches[batch.TypeIndexToTypeBatchIndex[constraintLocation.TypeId]];
+            BundleIndexing.GetBundleIndices(constraintLocation.IndexInTypeBatch, out var bundleIndex, out var innerIndex);
+            ref var prestep = ref GatherScatter.GetOffsetInstance(ref Buffer<TPrestepData>.Get(ref typeBatch.PrestepData, bundleIndex), innerIndex);
+            ref var impulses = ref GatherScatter.GetOffsetInstance(ref Buffer<TAccumulatedImpulses>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
+            extractor.Nonconvex(ref prestep, ref impulses);
         }
     }
 }
