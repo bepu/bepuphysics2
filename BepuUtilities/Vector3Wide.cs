@@ -250,6 +250,7 @@ namespace BepuUtilities
         /// <param name="a">First vector to multiply.</param>
         /// <param name="b">Second vector to multiply.</param>
         /// <param name="result">Result of the multiplication.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Multiply(in Vector3Wide a, in Vector3Wide b, out Vector3Wide result)
         {
             result.X = a.X * b.X;
