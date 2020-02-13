@@ -38,7 +38,7 @@ namespace DemoContentBuilder
                 {
                     //We can just used the cached version of this content.
                     newBuildCache.Add(content.Path, cachedContent);
-                    Console.WriteLine($"Content up to date: {content}");
+                    Console.WriteLine($"Content up to date: {content.Path}");
                 }
                 else
                 {
