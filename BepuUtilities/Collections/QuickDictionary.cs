@@ -693,6 +693,18 @@ namespace BepuUtilities.Collections
             Count = 0;
         }
 
+        /// <summary>
+        /// Gets the keys and values wrapped in spans.
+        /// </summary>
+        /// <param name="keys">Keys from the dictionary.</param>
+        /// <param name="values">Values from the dictionary.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe void AsSpans(out Span<TKey> keys, out Span<TValue> values)
+        {
+            keys = new Span<TKey>(Keys.Memory, Count);
+            values = new Span<TValue>(Values.Memory, Count);
+        }
+
         public Enumerator GetEnumerator()
         {
             Validate();

@@ -248,6 +248,12 @@ namespace BepuUtilities.Memory
             Debug.Assert(start >= 0, "The start of a region must be within the buffer's extent.");
             Debug.Assert(start + count <= length, "The end of a region must be within the buffer's extent.");
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator Span<T>(in Buffer<T> buffer)
+        {
+            return new Span<T>(buffer.Memory, buffer.Length);
+        }
     }
 
 }
