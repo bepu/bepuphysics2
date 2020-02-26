@@ -155,7 +155,7 @@ namespace BepuPhysics.Collidables
 #endif
             if (shapesData.Allocated)
             {
-                shapes.CopyTo(0, ref newShapes, 0, oldCopyLength);
+                shapes.CopyTo(0, newShapes, 0, oldCopyLength);
                 pool.Return(ref shapesData);
             }
             else

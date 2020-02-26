@@ -119,59 +119,56 @@ namespace BepuUtilities.Memory
                 type == typeof(float);
         }
 
-        [Conditional("DEBUG")]
-        private static void Validate<T>(ref Buffer<T> source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : unmanaged
-        {
-            Debug.Assert(targetIndex >= 0 && targetIndex + count <= target.Length, "Can't perform a copy that extends beyond the target span.");
-            Debug.Assert(sourceIndex >= 0 && sourceIndex + count <= source.Length, "Can't perform a copy that extends beyond the source span.");
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Copy<T>(ref Buffer<T> source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : unmanaged
-        {
-            Validate(ref source, sourceIndex, ref target, targetIndex, count);
-            var byteCount = count * Unsafe.SizeOf<T>();
-            Buffer.MemoryCopy(
-                source.Memory + sourceIndex,
-                target.Memory + targetIndex,
-                byteCount, byteCount);
-        }
-
-        //Copies between buffers and arrays of different types should be extremely rare in practice. Using a simple fallback is fine.
-        //Note that we assume that the source is not aliased with the target. That's pretty safe.
 
         /// <summary>
-        /// Copies data from a buffer to an array. Assumes the buffer does not overlap the array's memory.
+        /// Copies data from one buffer to another.
         /// </summary>
         /// <typeparam name="T">Type of element being copied.</typeparam>
         /// <param name="source">Source buffer to pull elements from.</param>
         /// <param name="sourceIndex">Index in the buffer to start pulling elements from.</param>
-        /// <param name="target">Target array to set values.</param>
-        /// <param name="targetIndex">Index in the array to start putting elements into.</param>
+        /// <param name="target">Target buffer to set values.</param>
+        /// <param name="targetIndex">Index in the buffer to start putting elements into.</param>
         /// <param name="count">Number of elements to copy.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Copy<T>(ref Buffer<T> source, int sourceIndex, T[] target, int targetIndex, int count) where T : unmanaged
+        public static unsafe void Copy<T>(in Buffer<T> source, int sourceIndex, in Buffer<T> target, int targetIndex, int count) where T : unmanaged
         {
-            for (int i = 0; i < count; ++i)
-            {
-                target[targetIndex + i] = source[sourceIndex + i];
-            }
+            Debug.Assert(targetIndex >= 0 && targetIndex + count <= target.Length, "Can't perform a copy that extends beyond the target span.");
+            Debug.Assert(sourceIndex >= 0 && sourceIndex + count <= source.Length, "Can't perform a copy that extends beyond the source span.");
+            Unsafe.CopyBlockUnaligned(target.Memory + targetIndex, source.Memory + sourceIndex, (uint)(Unsafe.SizeOf<T>() * count));
         }
+
         /// <summary>
-        /// Copies data from an array to a buffer. Assumes the buffer does not overlap the array's memory.
+        /// Copies data from a buffer to a span.
         /// </summary>
         /// <typeparam name="T">Type of element being copied.</typeparam>
-        /// <param name="source">Source array to pull elements from.</param>
-        /// <param name="sourceIndex">Index in the array to start pulling elements from.</param>
+        /// <param name="source">Source buffer to pull elements from.</param>
+        /// <param name="sourceIndex">Index in the buffer to start pulling elements from.</param>
+        /// <param name="target">Target span to set values.</param>
+        /// <param name="targetIndex">Index in the span to start putting elements into.</param>
+        /// <param name="count">Number of elements to copy.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe void Copy<T>(in Buffer<T> source, int sourceIndex, Span<T> target, int targetIndex, int count) where T : unmanaged
+        {
+            Debug.Assert(targetIndex >= 0 && targetIndex + count <= target.Length, "Can't perform a copy that extends beyond the target span.");
+            Debug.Assert(sourceIndex >= 0 && sourceIndex + count <= source.Length, "Can't perform a copy that extends beyond the source span.");
+            Unsafe.CopyBlockUnaligned(ref Unsafe.As<T, byte>(ref target[targetIndex]), ref Unsafe.AsRef<byte>(source.Memory + sourceIndex), (uint)(Unsafe.SizeOf<T>() * count));
+        }
+
+        /// <summary>
+        /// Copies data from a span to a buffer.
+        /// </summary>
+        /// <typeparam name="T">Type of element being copied.</typeparam>
+        /// <param name="source">Source span to pull elements from.</param>
+        /// <param name="sourceIndex">Index in the span to start pulling elements from.</param>
         /// <param name="target">Target buffer to set values into.</param>
         /// <param name="targetIndex">Index in the buffer to start putting elements into.</param>
         /// <param name="count">Number of elements to copy.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Copy<T>(ref T[] source, int sourceIndex, ref Buffer<T> target, int targetIndex, int count) where T : unmanaged
+        public static unsafe void Copy<T>(in Span<T> source, int sourceIndex, in Buffer<T> target, int targetIndex, int count) where T : unmanaged
         {
-            for (int i = 0; i < count; ++i)
-            {
-                target[targetIndex + i] = source[sourceIndex + i];
-            }
+            Debug.Assert(targetIndex >= 0 && targetIndex + count <= target.Length, "Can't perform a copy that extends beyond the target span.");
+            Debug.Assert(sourceIndex >= 0 && sourceIndex + count <= source.Length, "Can't perform a copy that extends beyond the source span.");
+            Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(target.Memory + targetIndex), ref Unsafe.As<T, byte>(ref source[sourceIndex]), (uint)(Unsafe.SizeOf<T>() * count));
         }
     }
 }

@@ -271,8 +271,8 @@ namespace BepuPhysics
                         //Note that the broad phase index associated with a body is not updated here. That's handled in phase 2; this just puts the rest of the data into position.
                         ref var sourceSet = ref bodies.Sets[job.SourceSet];
                         ref var targetSet = ref bodies.ActiveSet;
-                        sourceSet.Collidables.CopyTo(job.SourceStart, ref targetSet.Collidables, job.TargetStart, job.Count);
-                        sourceSet.Constraints.CopyTo(job.SourceStart, ref targetSet.Constraints, job.TargetStart, job.Count);
+                        sourceSet.Collidables.CopyTo(job.SourceStart, targetSet.Collidables, job.TargetStart, job.Count);
+                        sourceSet.Constraints.CopyTo(job.SourceStart, targetSet.Constraints, job.TargetStart, job.Count);
                         //The world inertias must be updated as well. They are stored outside the sets.
                         //Note that we use a manual loop copy for the local inertias and poses since we're accessing them during the world inertia calculation anyway.
                         //This can worsen the copy codegen a little, but it means we only have to scan the memory once.
@@ -291,8 +291,8 @@ namespace BepuPhysics
                             PoseIntegration.RotateInverseInertia(sourceLocalInertia.InverseInertiaTensor, sourcePose.Orientation, out targetWorldInertia.InverseInertiaTensor);
                             targetWorldInertia.InverseMass = sourceLocalInertia.InverseMass;
                         }
-                        sourceSet.Velocities.CopyTo(job.SourceStart, ref targetSet.Velocities, job.TargetStart, job.Count);
-                        sourceSet.Activity.CopyTo(job.SourceStart, ref targetSet.Activity, job.TargetStart, job.Count);
+                        sourceSet.Velocities.CopyTo(job.SourceStart, targetSet.Velocities, job.TargetStart, job.Count);
+                        sourceSet.Activity.CopyTo(job.SourceStart, targetSet.Activity, job.TargetStart, job.Count);
                         if (resetActivityStates)
                         {
                             for (int targetIndex = job.TargetStart + job.Count - 1; targetIndex >= job.TargetStart; --targetIndex)
@@ -302,7 +302,7 @@ namespace BepuPhysics
                                 targetActivity.SleepCandidate = false;
                             }
                         }
-                        sourceSet.IndexToHandle.CopyTo(job.SourceStart, ref targetSet.IndexToHandle, job.TargetStart, job.Count);
+                        sourceSet.IndexToHandle.CopyTo(job.SourceStart, targetSet.IndexToHandle, job.TargetStart, job.Count);
                     }
                     break;
             }

@@ -102,7 +102,7 @@ namespace BepuUtilities.Collections
             Span = newSpan;
             if (Count > Span.Length)
                 Count = Span.Length;
-            oldSpan.CopyTo(0, ref Span, 0, Count);
+            oldSpan.CopyTo(0, Span, 0, Count);
 
         }
 
@@ -168,32 +168,113 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
-        /// Adds the elements of a list to the QuickList without checking capacity.
+        /// Adds the elements of a buffer to the QuickList without checking capacity.
         /// </summary>
         /// <param name="span">Span of elements to add.</param>
         /// <param name="start">Start index of the added range.</param>
         /// <param name="count">Number of elements in the added range.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AddRangeUnsafely(ref Buffer<T> span, int start, int count)
+        public void AddRangeUnsafely(in Buffer<T> span, int start, int count)
         {
             Validate();
-            ValidateUnsafeAdd();
-            span.CopyTo(0, ref Span, Count, count);
+            ValidateUnsafeAdd(count);
+            SpanHelper.Copy(span, start, Span, Count, count);
             Count += count;
         }
 
         /// <summary>
-        /// Adds the elements of a list to the QuickList.
+        /// Adds the elements of a buffer to the QuickList.
         /// </summary>
         /// <param name="span">Span of elements to add.</param>
         /// <param name="start">Start index of the added range.</param>
         /// <param name="count">Number of elements in the added range.</param>
         /// <param name="pool">Pool used to obtain a new span if needed.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AddRange(ref Buffer<T> span, int start, int count, IUnmanagedMemoryPool pool)
+        public void AddRange(in Buffer<T> span, int start, int count, IUnmanagedMemoryPool pool)
         {
             EnsureCapacity(Count + count, pool);
-            AddRangeUnsafely(ref span, start, count);
+            AddRangeUnsafely(span, start, count);
+        }
+
+        /// <summary>
+        /// Adds the elements of a buffer to the QuickList without checking capacity.
+        /// </summary>
+        /// <param name="span">Span of elements to add.</param>
+        /// <param name="start">Start index of the added range.</param>
+        /// <param name="count">Number of elements in the added range.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddRangeUnsafely(in Buffer<T> span)
+        {
+            AddRangeUnsafely(span, 0, span.Length);
+        }
+
+        /// <summary>
+        /// Adds the elements of a buffer to the QuickList.
+        /// </summary>
+        /// <param name="span">Span of elements to add.</param>
+        /// <param name="start">Start index of the added range.</param>
+        /// <param name="count">Number of elements in the added range.</param>
+        /// <param name="pool">Pool used to obtain a new span if needed.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddRange(in Buffer<T> span, IUnmanagedMemoryPool pool)
+        {
+            EnsureCapacity(Count + span.Length, pool);
+            AddRangeUnsafely(span, 0, span.Length);
+        }
+
+        /// <summary>
+        /// Adds the elements of a span to the QuickList without checking capacity.
+        /// </summary>
+        /// <param name="span">Span of elements to add.</param>
+        /// <param name="start">Start index of the added range.</param>
+        /// <param name="count">Number of elements in the added range.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddRangeUnsafely(in Span<T> span, int start, int count)
+        {
+            Validate();
+            ValidateUnsafeAdd(count);
+            SpanHelper.Copy(span, start, Span, Count, count);
+            Count += count;
+        }
+
+        /// <summary>
+        /// Adds the elements of a span to the QuickList.
+        /// </summary>
+        /// <param name="span">Span of elements to add.</param>
+        /// <param name="start">Start index of the added range.</param>
+        /// <param name="count">Number of elements in the added range.</param>
+        /// <param name="pool">Pool used to obtain a new span if needed.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddRange(in Span<T> span, int start, int count, IUnmanagedMemoryPool pool)
+        {
+            EnsureCapacity(Count + count, pool);
+            AddRangeUnsafely(span, start, count);
+        }
+
+        /// <summary>
+        /// Adds the elements of a span to the QuickList without checking capacity.
+        /// </summary>
+        /// <param name="span">Span of elements to add.</param>
+        /// <param name="start">Start index of the added range.</param>
+        /// <param name="count">Number of elements in the added range.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddRangeUnsafely(in Span<T> span)
+        {
+            AddRangeUnsafely(span, 0, span.Length);
+        }
+
+        /// <summary>
+        /// Adds the elements of a span to the QuickList.
+        /// </summary>
+        /// <param name="span">Span of elements to add.</param>
+        /// <param name="start">Start index of the added range.</param>
+        /// <param name="count">Number of elements in the added range.</param>
+        /// <param name="pool">Pool used to obtain a new span if needed.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddRange(in Span<T> span, IUnmanagedMemoryPool pool)
+        {
+            EnsureCapacity(Count + span.Length, pool);
+            AddRangeUnsafely(span, 0, span.Length);
         }
 
         /// <summary>
@@ -279,7 +360,7 @@ namespace BepuUtilities.Collections
                 Resize(Count * 2, pool);
             AddUnsafely(element);
         }
-        
+
         /// <summary>
         /// Gets the index of the element in the list using the default comparer, if present.
         /// </summary>
@@ -317,7 +398,7 @@ namespace BepuUtilities.Collections
             return Span.IndexOf(ref predicate, 0, Count);
         }
 
-                       /// <summary>
+        /// <summary>
         /// Removes an element from the list. Preserves the order of elements.
         /// </summary>
         /// <param name="element">Element to remove from the list.</param>
@@ -364,7 +445,7 @@ namespace BepuUtilities.Collections
             return false;
         }
 
-     
+
 
         /// <summary>
         /// Removes an element from the list. Does not preserve the order of elements.
@@ -426,7 +507,7 @@ namespace BepuUtilities.Collections
             if (index < Count)
             {
                 //Copy everything from the removal point onward backward one slot.
-                Span.CopyTo(index + 1, ref Span, index, Count - index);
+                Span.CopyTo(index + 1, Span, index, Count - index);
             }
             //Clear out the former last slot.
             Span[Count] = default;
@@ -602,6 +683,11 @@ namespace BepuUtilities.Collections
         void ValidateUnsafeAdd()
         {
             Debug.Assert(Count < Span.Length, "Unsafe adders can only be used if the capacity is guaranteed to hold the new size.");
+        }
+        [Conditional("DEBUG")]
+        void ValidateUnsafeAdd(int elementsToAddCount)
+        {
+            Debug.Assert(Count + elementsToAddCount <= Span.Length, "Unsafe adders can only be used if the capacity is guaranteed to hold the new size.");
         }
 
     }

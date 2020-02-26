@@ -503,7 +503,7 @@ namespace BepuUtilities.Memory
                 if (buffer.Length > 0)
                 {
                     //Don't bother copying from or re-pooling empty buffers. They're uninitialized.
-                    buffer.CopyTo(0, ref newBuffer, 0, copyCount);
+                    buffer.CopyTo(0, newBuffer, 0, copyCount);
                     ReturnUnsafely(buffer.Id);
                 }
                 else

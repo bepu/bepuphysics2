@@ -145,14 +145,14 @@ namespace BepuUtilities.Collections
             if (oldQueue.LastIndex >= oldQueue.FirstIndex)
             {
                 //The indices are in order and the queue has at least one element in it, so just do one contiguous copy.
-                oldSpan.CopyTo(oldQueue.FirstIndex, ref Span, 0, Count);
+                oldSpan.CopyTo(oldQueue.FirstIndex, Span, 0, Count);
             }
             else if (Count > 0)
             {
                 //The last index is before the first index, meaning the elements wrap around the end of the span. Do a copy for each contiguous region.
                 var firstToEndLength = oldSpan.Length - oldQueue.FirstIndex;
-                oldSpan.CopyTo(oldQueue.FirstIndex, ref Span, 0, firstToEndLength);
-                oldSpan.CopyTo(0, ref Span, firstToEndLength, oldQueue.LastIndex + 1);
+                oldSpan.CopyTo(oldQueue.FirstIndex, Span, 0, firstToEndLength);
+                oldSpan.CopyTo(0, Span, firstToEndLength, oldQueue.LastIndex + 1);
             }
 
         }
@@ -381,12 +381,12 @@ namespace BepuUtilities.Collections
             if ((FirstIndex > LastIndex && arrayIndex < LastIndex) || //Case 1
                 (FirstIndex < LastIndex && (LastIndex - arrayIndex) < (arrayIndex - FirstIndex))) //Case 3
             {
-                Span.CopyTo(arrayIndex + 1, ref Span, arrayIndex, LastIndex - arrayIndex);
+                Span.CopyTo(arrayIndex + 1, Span, arrayIndex, LastIndex - arrayIndex);
                 DeleteLast();
             }
             else
             {
-                Span.CopyTo(FirstIndex, ref Span, FirstIndex + 1, arrayIndex - FirstIndex);
+                Span.CopyTo(FirstIndex, Span, FirstIndex + 1, arrayIndex - FirstIndex);
                 DeleteFirst();
             }
         }

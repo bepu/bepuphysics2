@@ -438,7 +438,7 @@ namespace BepuPhysics.Constraints
                 Unsafe.Add(ref firstSortKey, i) = sortKeyGenerator.GetSortKey(constraintStart + i, ref bodyReferences);
             }
             var typedBodyReferencesCache = bodyReferencesCache.As<TBodyReferences>();
-            bodyReferences.CopyTo(bundleStart, ref typedBodyReferencesCache, localBundleStart, bundleCount);
+            bodyReferences.CopyTo(bundleStart, typedBodyReferencesCache, localBundleStart, bundleCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -468,7 +468,7 @@ namespace BepuPhysics.Constraints
             int constraintStart, int localConstraintStart, int constraintCount,
             ref Buffer<int> indexToHandleCache, ref RawBuffer prestepCache, ref RawBuffer accumulatedImpulsesCache)
         {
-            typeBatch.IndexToHandle.CopyTo(constraintStart, ref indexToHandleCache, localConstraintStart, constraintCount);
+            typeBatch.IndexToHandle.CopyTo(constraintStart, indexToHandleCache, localConstraintStart, constraintCount);
             Unsafe.CopyBlockUnaligned(
                 prestepCache.Memory + Unsafe.SizeOf<TPrestepData>() * localBundleStart,
                 typeBatch.PrestepData.Memory + Unsafe.SizeOf<TPrestepData>() * bundleStart,
@@ -593,8 +593,8 @@ namespace BepuPhysics.Constraints
                 var targetAccumulatedImpulses = targetTypeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>();
                 var sourceBundleStart = sourceStart >> BundleIndexing.VectorShift;
                 var targetBundleStart = targetStart >> BundleIndexing.VectorShift;
-                sourcePrestepData.CopyTo(sourceBundleStart, ref targetPrestepData, targetBundleStart, bundleCount);
-                sourceAccumulatedImpulses.CopyTo(sourceBundleStart, ref targetAccumulatedImpulses, targetBundleStart, bundleCount);
+                sourcePrestepData.CopyTo(sourceBundleStart, targetPrestepData, targetBundleStart, bundleCount);
+                sourceAccumulatedImpulses.CopyTo(sourceBundleStart, targetAccumulatedImpulses, targetBundleStart, bundleCount);
             }
             else
             {

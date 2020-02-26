@@ -465,9 +465,9 @@ namespace BepuPhysics
             pool.TakeAtLeast(sourceBatch.bodyConstraintReferences.Count, out targetBatch.bodyConstraintReferences.Keys);
             pool.TakeAtLeast(targetBatch.bodyConstraintReferences.Keys.Length, out targetBatch.bodyConstraintReferences.Values);
             pool.TakeAtLeast(sourceBatch.bodyConstraintReferences.TableMask + 1, out targetBatch.bodyConstraintReferences.Table);
-            sourceBatch.bodyConstraintReferences.Keys.CopyTo(0, ref targetBatch.bodyConstraintReferences.Keys, 0, sourceBatch.bodyConstraintReferences.Count);
-            sourceBatch.bodyConstraintReferences.Values.CopyTo(0, ref targetBatch.bodyConstraintReferences.Values, 0, sourceBatch.bodyConstraintReferences.Count);
-            sourceBatch.bodyConstraintReferences.Table.CopyTo(0, ref targetBatch.bodyConstraintReferences.Table, 0, sourceBatch.bodyConstraintReferences.TableMask + 1);
+            sourceBatch.bodyConstraintReferences.Keys.CopyTo(0, targetBatch.bodyConstraintReferences.Keys, 0, sourceBatch.bodyConstraintReferences.Count);
+            sourceBatch.bodyConstraintReferences.Values.CopyTo(0, targetBatch.bodyConstraintReferences.Values, 0, sourceBatch.bodyConstraintReferences.Count);
+            sourceBatch.bodyConstraintReferences.Table.CopyTo(0, targetBatch.bodyConstraintReferences.Table, 0, sourceBatch.bodyConstraintReferences.TableMask + 1);
 
             for (int i = 0; i < sourceBatch.bodyConstraintReferences.Count; ++i)
             {
@@ -476,8 +476,8 @@ namespace BepuPhysics
                 target = source;
                 pool.TakeAtLeast(source.Count, out target.Span);
                 pool.TakeAtLeast(source.TableMask + 1, out target.Table);
-                source.Span.CopyTo(0, ref target.Span, 0, source.Count);
-                source.Table.CopyTo(0, ref target.Table, 0, source.TableMask + 1);
+                source.Span.CopyTo(0, target.Span, 0, source.Count);
+                source.Table.CopyTo(0, target.Table, 0, source.TableMask + 1);
             }
         }
 

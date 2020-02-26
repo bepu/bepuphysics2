@@ -114,7 +114,7 @@ namespace DemoRenderer.ShapeDrawing
             //This executes at the end of the frame. The next frame will read the compacted location, which will be valid because the pending upload will be handled.
             if (allocator.IncrementalCompact(out var compactedId, out var compactedSize, out var oldStart, out var newStart))
             {
-                vertices.CopyTo((int)oldStart, ref vertices, (int)newStart, (int)compactedSize);
+                vertices.CopyTo((int)oldStart, vertices, (int)newStart, (int)compactedSize);
                 pendingUploads.Add(new UploadRequest { Start = (int)newStart, Count = (int)compactedSize }, Pool);
             }
 

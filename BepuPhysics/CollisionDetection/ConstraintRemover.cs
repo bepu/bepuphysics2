@@ -271,8 +271,8 @@ namespace BepuPhysics.CollisionDetection
                     var batchIndex = batches.AllocateSpaceForTargets(typeBatchIndex, workerRemovals.ConstraintHandlesToRemove.Count, workerRemovals.PerBodyRemovalTargets.Count, pool);
 
                     ref var combinedRemovalsForBatch = ref batches.RemovalsForTypeBatches[batchIndex];
-                    combinedRemovalsForBatch.ConstraintHandlesToRemove.AddRangeUnsafely(ref workerRemovals.ConstraintHandlesToRemove.Span, 0, workerRemovals.ConstraintHandlesToRemove.Count);
-                    combinedRemovalsForBatch.PerBodyRemovalTargets.AddRangeUnsafely(ref workerRemovals.PerBodyRemovalTargets.Span, 0, workerRemovals.PerBodyRemovalTargets.Count);
+                    combinedRemovalsForBatch.ConstraintHandlesToRemove.AddRangeUnsafely(workerRemovals.ConstraintHandlesToRemove.Span, 0, workerRemovals.ConstraintHandlesToRemove.Count);
+                    combinedRemovalsForBatch.PerBodyRemovalTargets.AddRangeUnsafely(workerRemovals.PerBodyRemovalTargets.Span, 0, workerRemovals.PerBodyRemovalTargets.Count);
 
                 }
             }

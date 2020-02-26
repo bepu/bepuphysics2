@@ -162,9 +162,35 @@ namespace BepuUtilities.Memory
         /// <param name="targetStart">Start index in the target buffer.</param>
         /// <param name="count">Number of elements to copy from the source buffer into the target buffer.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void CopyTo(int sourceStart, ref Buffer<T> target, int targetStart, int count)
+        public void CopyTo(int sourceStart, in Buffer<T> target, int targetStart, int count)
         {
-            SpanHelper.Copy(ref this, sourceStart, ref target, targetStart, count);
+            SpanHelper.Copy(this, sourceStart, target, targetStart, count);
+        }
+
+        /// <summary>
+        /// Copies buffer data into another buffer.
+        /// </summary>
+        /// <param name="sourceStart">Start index in the source buffer.</param>
+        /// <param name="target">Target buffer to copy into.</param>
+        /// <param name="targetStart">Start index in the target buffer.</param>
+        /// <param name="count">Number of elements to copy from the source buffer into the target buffer.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void CopyTo(int sourceStart, Span<T> target, int targetStart, int count)
+        {
+            SpanHelper.Copy(this, sourceStart, target, targetStart, count);
+        }
+
+        /// <summary>
+        /// Copies span data into this buffer.
+        /// </summary>
+        /// <param name="source">Source span to copy from.</param>
+        /// <param name="sourceStart">Start index in the source buffer.</param>
+        /// <param name="targetStart">Start index in the target buffer.</param>
+        /// <param name="count">Number of elements to copy from the source buffer into the target buffer.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void CopyFrom(Span<T> source, int sourceStart, int targetStart, int count)
+        {
+            SpanHelper.Copy(source, sourceStart, this, targetStart, count);
         }
 
         /// <summary>

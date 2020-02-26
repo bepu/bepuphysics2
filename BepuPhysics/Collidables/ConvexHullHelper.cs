@@ -571,7 +571,7 @@ namespace BepuPhysics.Collidables
                 }
                 //Since an actual face was found, we go ahead and output it into the face set.
                 earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
-                earlyFaceIndices.AddRange(ref reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
+                earlyFaceIndices.AddRange(reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
             }
             else
             {
@@ -627,7 +627,7 @@ namespace BepuPhysics.Collidables
 
                 var newFaceIndex = earlyFaceStartIndices.Count;
                 earlyFaceStartIndices.Allocate(pool) = earlyFaceIndices.Count;
-                earlyFaceIndices.AddRange(ref reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
+                earlyFaceIndices.AddRange(reducedFaceIndices.Span, 0, reducedFaceIndices.Count, pool);
 
                 edgeFaceCounts.EnsureCapacity(edgeFaceCounts.Count + reducedFaceIndices.Count, pool);
                 for (int i = 0; i < reducedFaceIndices.Count; ++i)
@@ -670,7 +670,7 @@ namespace BepuPhysics.Collidables
             //Create a reduced hull point set from the face vertex references.
             pool.Take(earlyFaceStartIndices.Count, out hullData.FaceStartIndices);
             pool.Take(earlyFaceIndices.Count, out hullData.FaceVertexIndices);
-            earlyFaceStartIndices.Span.CopyTo(0, ref hullData.FaceStartIndices, 0, earlyFaceStartIndices.Count);
+            earlyFaceStartIndices.Span.CopyTo(0, hullData.FaceStartIndices, 0, earlyFaceStartIndices.Count);
             pool.Take<int>(points.Length, out var originalToHullIndexMapping);
             var hullToOriginalIndexMapping = new QuickList<int>(points.Length, pool);
             for (int i = 0; i < points.Length; ++i)
@@ -697,7 +697,7 @@ namespace BepuPhysics.Collidables
             }
 
             pool.Take(hullToOriginalIndexMapping.Count, out hullData.OriginalVertexMapping);
-            hullToOriginalIndexMapping.Span.CopyTo(0, ref hullData.OriginalVertexMapping, 0, hullToOriginalIndexMapping.Count);
+            hullToOriginalIndexMapping.Span.CopyTo(0, hullData.OriginalVertexMapping, 0, hullToOriginalIndexMapping.Count);
 
             pool.Return(ref originalToHullIndexMapping);
             hullToOriginalIndexMapping.Dispose(pool);
@@ -767,7 +767,7 @@ namespace BepuPhysics.Collidables
 
             //Create the face->vertex mapping.
             pool.Take(hullData.FaceStartIndices.Length, out hullShape.FaceToVertexIndicesStart);
-            hullData.FaceStartIndices.CopyTo(0, ref hullShape.FaceToVertexIndicesStart, 0, hullShape.FaceToVertexIndicesStart.Length);
+            hullData.FaceStartIndices.CopyTo(0, hullShape.FaceToVertexIndicesStart, 0, hullShape.FaceToVertexIndicesStart.Length);
             pool.Take(hullData.FaceVertexIndices.Length, out hullShape.FaceVertexIndices);
             for (int i = 0; i < hullShape.FaceVertexIndices.Length; ++i)
             {

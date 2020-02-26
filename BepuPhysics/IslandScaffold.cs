@@ -143,7 +143,7 @@ namespace BepuPhysics
             Debug.Assert(bodyIndices.Count > 0, "Don't be tryin' to create islands with no bodies in them! That don't make no sense.");
             //Create a copy of the body indices with just enough space to hold the island's indices. The original list will continue to be reused in the caller.
             BodyIndices = new QuickList<int>(bodyIndices.Count, pool);
-            bodyIndices.Span.CopyTo(0, ref BodyIndices.Span, 0, bodyIndices.Count);
+            bodyIndices.Span.CopyTo(0, BodyIndices.Span, 0, bodyIndices.Count);
             BodyIndices.Count = bodyIndices.Count;
             Protobatches = new QuickList<IslandScaffoldConstraintBatch>(solver.ActiveSet.Batches.Count, pool);
             for (int i = 0; i < constraintHandles.Count; ++i)

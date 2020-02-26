@@ -51,12 +51,12 @@ namespace Demos.SpecializedTests
                     //keys[i] = i;
                     keys[i] = random.Next(elementExclusiveUpperBound);
                 }
-                keys.CopyTo(0, ref keys2, 0, elementCount);
-                keys.CopyTo(0, ref keys3, 0, elementCount);
-                keys.CopyTo(0, ref keys4, 0, elementCount);
-                indexMap.CopyTo(0, ref indexMap2, 0, elementCount);
-                indexMap.CopyTo(0, ref indexMap3, 0, elementCount);
-                indexMap.CopyTo(0, ref indexMap4, 0, elementCount);
+                keys.CopyTo(0, keys2, 0, elementCount);
+                keys.CopyTo(0, keys3, 0, elementCount);
+                keys.CopyTo(0, keys4, 0, elementCount);
+                indexMap.CopyTo(0, indexMap2, 0, elementCount);
+                indexMap.CopyTo(0, indexMap3, 0, elementCount);
+                indexMap.CopyTo(0, indexMap4, 0, elementCount);
                 var timer = Stopwatch.StartNew();
 
                 var keysScratch = new int[elementCount];

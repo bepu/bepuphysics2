@@ -165,7 +165,7 @@ namespace Demos.Demos.Tanks
             ref var barrelPose = ref barrel.Pose;
             RigidPose.Transform(BarrelLocalProjectileSpawn, barrelPose, out var projectileSpawn);
             QuaternionEx.Transform(BarrelLocalDirection, barrelPose.Orientation, out var barrelDirection);
-            var projectileHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(projectileSpawn, new BodyVelocity(barrelDirection * ProjectileSpeed), ProjectileInertia,
+            var projectileHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(projectileSpawn, new BodyVelocity(barrelDirection * ProjectileSpeed + barrel.Velocity.Linear), ProjectileInertia,
                 //The projectile moves pretty fast, so we'll use continuous collision detection.
                 new CollidableDescription(ProjectileShape, 0.1f, ContinuousDetectionSettings.Continuous(1e-3f, 1e-3f)), new BodyActivityDescription(0.01f)));
             ref var projectileProperties = ref bodyProperties.Allocate(projectileHandle);

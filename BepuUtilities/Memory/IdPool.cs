@@ -69,7 +69,7 @@ namespace BepuUtilities.Memory
             {
                 var oldAvailableIds = availableIds;
                 pool.TakeAtLeast(Math.Max(availableIdCount * 2, availableIds.Length), out availableIds);
-                oldAvailableIds.CopyTo(0, ref availableIds, 0, availableIdCount);
+                oldAvailableIds.CopyTo(0, availableIds, 0, availableIdCount);
                 pool.Return(ref oldAvailableIds);
             }
             ReturnUnsafely(id);
@@ -100,7 +100,7 @@ namespace BepuUtilities.Memory
             var oldAvailableIds = availableIds;
             pool.TakeAtLeast(newSize, out availableIds);
             Debug.Assert(oldAvailableIds.Length != availableIds.Length, "Did you really mean to resize this? Nothing changed!");
-            oldAvailableIds.CopyTo(0, ref availableIds, 0, availableIdCount);
+            oldAvailableIds.CopyTo(0, availableIds, 0, availableIdCount);
             pool.Return(ref oldAvailableIds);
         }
 
