@@ -222,8 +222,6 @@ namespace BepuPhysics.Collidables
             //n = Cross[ab, ac] / Length[Cross[ab, ac]];
             //A = { ab, n, ac };
             //result = Integrate[Integrate[f[{ i, 0, k}.A + a], {k, 0, 1-i}], {i, 0, 1}];
-            var ab = b - a;
-            var ac = c - a;
             //Revisiting the determinant, note that:
             //density * abs(determinant) = density * volume * 2 = mass * 2
             //So there's no need to actually compute the determinant/area since we were given the mass directly.

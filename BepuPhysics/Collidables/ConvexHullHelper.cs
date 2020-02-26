@@ -232,7 +232,7 @@ namespace BepuPhysics.Collidables
             return bestIndex;
         }
 
-        static void ReduceFace(ref QuickList<int> faceVertexIndices, in Vector3 faceNormal, ref Buffer<Vector3> points, ref QuickList<Vector2> facePoints, ref Buffer<bool> allowVertex, ref QuickList<int> reducedIndices)
+        static void ReduceFace(ref QuickList<int> faceVertexIndices, in Vector3 faceNormal, ref Span<Vector3> points, ref QuickList<Vector2> facePoints, ref Buffer<bool> allowVertex, ref QuickList<int> reducedIndices)
         {
             Debug.Assert(facePoints.Count == 0 && reducedIndices.Count == 0 && facePoints.Span.Length >= faceVertexIndices.Count && reducedIndices.Span.Length >= faceVertexIndices.Count);
             for (int i = faceVertexIndices.Count - 1; i >= 0; --i)
@@ -427,7 +427,7 @@ namespace BepuPhysics.Collidables
         /// <param name="points">Point set to compute the convex hull of.</param>
         /// <param name="pool">Buffer pool to pull memory from when creating the hull.</param>
         /// <param name="hullData">Convex hull of the input point set.</param>
-        public static void ComputeHull(Buffer<Vector3> points, BufferPool pool, out HullData hullData)
+        public static void ComputeHull(Span<Vector3> points, BufferPool pool, out HullData hullData)
         {
             if (points.Length <= 0)
             {
@@ -705,46 +705,6 @@ namespace BepuPhysics.Collidables
             earlyFaceStartIndices.Dispose(pool);
         }
 
-        public struct RawHullTriangleSource : ITriangleSource
-        {
-            Buffer<Vector3> points;
-            HullData hullData;
-            int faceIndex;
-            int subtriangleIndex;
-
-            public RawHullTriangleSource(in Buffer<Vector3> points, in HullData hullData)
-            {
-                this.points = points;
-                this.hullData = hullData;
-                faceIndex = 0;
-                subtriangleIndex = 2;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool GetNextTriangle(out Vector3 a, out Vector3 b, out Vector3 c)
-            {
-                //This isn't quite as direct or fast as it could be, but it's fairly simple without requiring a redundant implementation.
-                if (faceIndex < hullData.FaceStartIndices.Length)
-                {
-                    hullData.GetFace(faceIndex, out var face);
-                    a = points[face[0]];
-                    b = points[face[subtriangleIndex - 1]];
-                    c = points[face[subtriangleIndex]];
-                    ++subtriangleIndex;
-                    if (subtriangleIndex == face.VertexIndices.Length)
-                    {
-                        subtriangleIndex = 2;
-                        ++faceIndex;
-                    }
-                    return true;
-                }
-                a = default;
-                b = default;
-                c = default;
-                return false;
-            }
-        }
-
         /// <summary>
         /// Processes hull data into a runtime usable convex hull shape. Recenters the convex hull's points around its center of mass.
         /// </summary>
@@ -753,7 +713,7 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Pool used to allocate resources for the hullShape.</param>
         /// <param name="hullShape">Convex hull shape created from the input data.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
-        public static void CreateShape(Buffer<Vector3> points, HullData hullData, BufferPool pool, out Vector3 center, out ConvexHull hullShape)
+        public static void CreateShape(Span<Vector3> points, HullData hullData, BufferPool pool, out Vector3 center, out ConvexHull hullShape)
         {
             hullShape = default;
             if (hullData.OriginalVertexMapping.Length < 3)
@@ -772,8 +732,23 @@ namespace BepuPhysics.Collidables
             var pointBundleCount = BundleIndexing.GetBundleCount(hullData.OriginalVertexMapping.Length);
             pool.Take(pointBundleCount, out hullShape.Points);
 
-            var triangleSource = new RawHullTriangleSource(points, hullData);
-            MeshInertiaHelper.ComputeClosedCenterOfMass(ref triangleSource, out _, out center);
+            float volume = 0;
+            center = default;
+            for (int faceIndex = 0; faceIndex < hullData.FaceStartIndices.Length; ++faceIndex)
+            {
+                hullData.GetFace(faceIndex, out var face);
+                for (int subtriangleIndex = 2; subtriangleIndex < face.VertexCount; ++subtriangleIndex)
+                {
+                    var a = points[face[0]];
+                    var b = points[face[subtriangleIndex - 1]];
+                    var c = points[face[subtriangleIndex]];
+                    var volumeContribution = MeshInertiaHelper.ComputeTetrahedronVolume(a, b, c);
+                    volume += volumeContribution;
+                    center += (a + b + c) * volumeContribution;
+                }
+            }
+            //Division by 4 since we accumulated (a + b + c), rather than the actual tetrahedral center (a + b + c + 0) / 4.
+            center /= volume * 4;
 
             var lastIndex = hullData.OriginalVertexMapping.Length - 1;
             for (int bundleIndex = 0; bundleIndex < hullShape.Points.Length; ++bundleIndex)
@@ -853,7 +828,7 @@ namespace BepuPhysics.Collidables
         /// <param name="hullData">Intermediate hull data that got processed into the convex hull.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
         /// <param name="convexHull">Convex hull shape of the input point set.</param>
-        public static void CreateShape(Buffer<Vector3> points, BufferPool pool, out HullData hullData, out Vector3 center, out ConvexHull convexHull)
+        public static void CreateShape(Span<Vector3> points, BufferPool pool, out HullData hullData, out Vector3 center, out ConvexHull convexHull)
         {
             ComputeHull(points, pool, out hullData);
             CreateShape(points, hullData, pool, out center, out convexHull);
@@ -866,7 +841,7 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Buffer pool used for temporary allocations and the output data structures.</param>
         /// <param name="center">Computed center of mass of the convex hull before its points were recentered onto the origin.</param>
         /// <param name="convexHull">Convex hull shape of the input point set.</param>
-        public static void CreateShape(Buffer<Vector3> points, BufferPool pool, out Vector3 center, out ConvexHull convexHull)
+        public static void CreateShape(Span<Vector3> points, BufferPool pool, out Vector3 center, out ConvexHull convexHull)
         {
             ComputeHull(points, pool, out var hullData);
             CreateShape(points, hullData, pool, out center, out convexHull);
