@@ -194,6 +194,19 @@ namespace BepuUtilities.Memory
         }
 
         /// <summary>
+        /// Copies span data into this buffer.
+        /// </summary>
+        /// <param name="source">Source span to copy from.</param>
+        /// <param name="sourceStart">Start index in the source buffer.</param>
+        /// <param name="targetStart">Start index in the target buffer.</param>
+        /// <param name="count">Number of elements to copy from the source buffer into the target buffer.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void CopyFrom(ReadOnlySpan<T> source, int sourceStart, int targetStart, int count)
+        {
+            SpanHelper.Copy(source, sourceStart, this, targetStart, count);
+        }
+
+        /// <summary>
         /// Gets the index of an element in the buffer using the type's default comparer.
         /// </summary>
         /// <param name="element">Element to look for in the buffer.</param>
@@ -279,6 +292,12 @@ namespace BepuUtilities.Memory
         public static implicit operator Span<T>(in Buffer<T> buffer)
         {
             return new Span<T>(buffer.Memory, buffer.Length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator ReadOnlySpan<T>(in Buffer<T> buffer)
+        {
+            return new ReadOnlySpan<T>(buffer.Memory, buffer.Length);
         }
     }
 

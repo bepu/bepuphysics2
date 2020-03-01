@@ -576,6 +576,11 @@ namespace BepuUtilities.Collections
         {
             return new Span<T>(set.Span.Memory, set.Count);
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static implicit operator ReadOnlySpan<T>(in QuickSet<T, TEqualityComparer> set)
+        {
+            return new ReadOnlySpan<T>(set.Span.Memory, set.Count);
+        }
 
         public Enumerator GetEnumerator()
         {

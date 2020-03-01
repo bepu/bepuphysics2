@@ -278,6 +278,61 @@ namespace BepuUtilities.Collections
         }
 
         /// <summary>
+        /// Adds the elements of a span to the QuickList without checking capacity.
+        /// </summary>
+        /// <param name="span">Span of elements to add.</param>
+        /// <param name="start">Start index of the added range.</param>
+        /// <param name="count">Number of elements in the added range.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddRangeUnsafely(in ReadOnlySpan<T> span, int start, int count)
+        {
+            Validate();
+            ValidateUnsafeAdd(count);
+            SpanHelper.Copy(span, start, Span, Count, count);
+            Count += count;
+        }
+
+        /// <summary>
+        /// Adds the elements of a span to the QuickList.
+        /// </summary>
+        /// <param name="span">Span of elements to add.</param>
+        /// <param name="start">Start index of the added range.</param>
+        /// <param name="count">Number of elements in the added range.</param>
+        /// <param name="pool">Pool used to obtain a new span if needed.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddRange(in ReadOnlySpan<T> span, int start, int count, IUnmanagedMemoryPool pool)
+        {
+            EnsureCapacity(Count + count, pool);
+            AddRangeUnsafely(span, start, count);
+        }
+
+        /// <summary>
+        /// Adds the elements of a span to the QuickList without checking capacity.
+        /// </summary>
+        /// <param name="span">Span of elements to add.</param>
+        /// <param name="start">Start index of the added range.</param>
+        /// <param name="count">Number of elements in the added range.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddRangeUnsafely(in ReadOnlySpan<T> span)
+        {
+            AddRangeUnsafely(span, 0, span.Length);
+        }
+
+        /// <summary>
+        /// Adds the elements of a span to the QuickList.
+        /// </summary>
+        /// <param name="span">Span of elements to add.</param>
+        /// <param name="start">Start index of the added range.</param>
+        /// <param name="count">Number of elements in the added range.</param>
+        /// <param name="pool">Pool used to obtain a new span if needed.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddRange(in ReadOnlySpan<T> span, IUnmanagedMemoryPool pool)
+        {
+            EnsureCapacity(Count + span.Length, pool);
+            AddRangeUnsafely(span, 0, span.Length);
+        }
+
+        /// <summary>
         /// Appends space on the end of the list without checking capacity and returns a reference to it.
         /// </summary>
         /// <returns>Reference to the allocated space.</returns>
@@ -619,6 +674,11 @@ namespace BepuUtilities.Collections
         public unsafe static implicit operator Span<T>(in QuickList<T> list)
         {
             return new Span<T>(list.Span.Memory, list.Count);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static implicit operator ReadOnlySpan<T>(in QuickList<T> list)
+        {
+            return new ReadOnlySpan<T>(list.Span.Memory, list.Count);
         }
 
 
