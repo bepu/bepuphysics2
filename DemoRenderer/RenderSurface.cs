@@ -50,7 +50,7 @@ namespace DemoRenderer
                 IsWindowed = !fullScreen,
                 OutputHandle = windowHandle,
                 SampleDescription = new SampleDescription(1, 0),
-                SwapEffect = SwapEffect.FlipDiscard,
+                SwapEffect = SwapEffect.Discard,
                 Usage = Usage.RenderTargetOutput
             };
 
