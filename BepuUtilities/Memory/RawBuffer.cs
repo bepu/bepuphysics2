@@ -141,5 +141,23 @@ namespace BepuUtilities.Memory
             return false;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator Span<byte>(in RawBuffer buffer)
+        {
+            return new Span<byte>(buffer.Memory, buffer.Length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator ReadOnlySpan<byte>(in RawBuffer buffer)
+        {
+            return new ReadOnlySpan<byte>(buffer.Memory, buffer.Length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator Buffer<byte>(in RawBuffer buffer)
+        {
+            return new Buffer<byte>(buffer.Memory, buffer.Length);
+        }
+
     }
 }

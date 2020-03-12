@@ -58,7 +58,7 @@ namespace BepuPhysics.Collidables
         /// <param name="points">Points to compute the convex hull of.</param>
         /// <param name="pool">Pool in which to allocate the convex hull and any temporary resources needed to compute the hull.</param>
         /// <param name="center">Computed center of the convex hull before the hull was recentered.</param>
-        public ConvexHull(Buffer<Vector3> points, BufferPool pool, out Vector3 center)
+        public ConvexHull(Span<Vector3> points, BufferPool pool, out Vector3 center)
         {
             ConvexHullHelper.CreateShape(points, pool, out center, out this);
         }
