@@ -72,7 +72,7 @@ namespace BepuPhysics.Collidables
         /// <param name="scale">Scale to apply to all vertices at runtime.
         /// Note that the scale is not baked into the triangles or acceleration structure; the same set of triangles and acceleration structure can be used across multiple Mesh instances with different scales.</param>
         /// <param name="pool">Pool used to allocate acceleration structures.</param>
-        public Mesh(Buffer<Triangle> triangles, Vector3 scale, BufferPool pool) : this()
+        public Mesh(Buffer<Triangle> triangles, in Vector3 scale, BufferPool pool) : this()
         {
             Triangles = triangles;
             Tree = new Tree(pool, triangles.Length);
@@ -87,6 +87,53 @@ namespace BepuPhysics.Collidables
             Tree.SweepBuild(pool, boundingBoxes);
             pool.Return(ref boundingBoxes);
             Scale = scale;
+        }
+
+        /// <summary>
+        /// Loads a mesh from data stored in a byte buffer previously stored by the Serialize function.
+        /// </summary>
+        /// <param name="data">Data to load the mesh from.</param>
+        /// <param name="pool">Pool to create the mesh with.</param>
+        public unsafe Mesh(Span<byte> data, BufferPool pool)
+        {
+            if (data.Length < 16)
+                throw new ArgumentException("Data is not large enough to contain a header.");
+            this = default;
+            Scale = Unsafe.As<byte, Vector3>(ref data[0]);
+            var triangleCount = Unsafe.As<byte, int>(ref data[12]);
+            var triangleByteCount = triangleCount * sizeof(Triangle);
+            if (data.Length < 4 + triangleCount * sizeof(Triangle))
+                throw new ArgumentException($"Data is not large enough to contain the number of triangles specified in the header, {triangleCount}.");
+            Tree = new Tree(data.Slice(16 + triangleByteCount, data.Length - 16 - triangleByteCount), pool);
+            pool.Take(triangleCount, out Triangles);
+            Unsafe.CopyBlockUnaligned(ref *(byte*)Triangles.Memory, ref data[16], (uint)triangleByteCount);
+        }
+
+        /// <summary>
+        /// Gets the number of bytes it would take to store the given mesh in a byte buffer.
+        /// </summary>
+        /// <param name="mesh">Mesh to measure.</param>
+        /// <returns>Number of bytes it would take to store the mesh.</returns>
+        public unsafe int GetSerializedByteCount()
+        {
+            return 16 + Triangles.Length * sizeof(Triangle) + Tree.GetSerializedByteCount();
+        }
+
+        /// <summary>
+        /// Writes a mesh's data to a byte buffer.
+        /// </summary>
+        /// <param name="mesh">Mesh to write into the byte buffer.</param>
+        /// <param name="data">Byte buffer to store the mesh in.</param>
+        public unsafe void Serialize(Span<byte> data)
+        {
+            var requiredSizeInBytes = GetSerializedByteCount();
+            if (data.Length < requiredSizeInBytes)
+                throw new ArgumentException($"Target span size {data.Length} is less than the required size of {requiredSizeInBytes}.");
+            Unsafe.As<byte, Vector3>(ref data[0]) = scale;
+            Unsafe.As<byte, int>(ref data[12]) = Triangles.Length;
+            var triangleByteCount = Triangles.Length * sizeof(Triangle);
+            Unsafe.CopyBlockUnaligned(ref data[16], ref *(byte*)Triangles.Memory, (uint)triangleByteCount);
+            Tree.Serialize(data.Slice(16 + triangleByteCount, data.Length - 16 - triangleByteCount));
         }
 
         public int ChildCount => Triangles.Length;

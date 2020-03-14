@@ -63,12 +63,72 @@ namespace BepuPhysics.Trees
         {
             if (initialLeafCapacity <= 0)
                 throw new ArgumentException("Initial leaf capacity must be positive.");
-            
+
             Resize(pool, initialLeafCapacity);
 
         }
 
-        //TODO: Could use a constructor or factory that can make it easy to take deserialized tree data without having to rerun a builder or hack with the backing memory.
+        /// <summary>
+        /// Loads a tree from a byte buffer created by the Serialize function.
+        /// </summary>
+        /// <param name="data">Data to load into the tree.</param>
+        /// <param name="pool">Pool to use to create the tree.</param>
+        public Tree(Span<byte> data, BufferPool pool)
+        {
+            if (data.Length <= 4)
+                throw new ArgumentException($"Data is only {data.Length} bytes long; that's too small for even a header.");
+            leafCount = Unsafe.As<byte, int>(ref data[0]);
+            nodeCount = leafCount - 1;
+            var leafByteCount = leafCount * sizeof(Leaf);
+            var nodeByteCount = nodeCount * sizeof(Node);
+            var metanodeByteCount = nodeCount * sizeof(Metanode);
+            const int leavesStartIndex = 4;
+            var nodesStartIndex = leavesStartIndex + leafByteCount;
+            var metanodesStartIndex = nodesStartIndex + nodeByteCount;
+            if (data.Length < leavesStartIndex + leafByteCount + nodeByteCount + metanodeByteCount)
+                throw new ArgumentException($"Header suggested there were {leafCount} leaves, but there's not enough room in the data for that.");
+            pool.Take(leafCount, out Leaves);
+            pool.Take(nodeCount, out Nodes);
+            pool.Take(nodeCount, out Metanodes);
+            leaves = Leaves.Memory;
+            nodes = Nodes.Memory;
+            metanodes = Metanodes.Memory;
+            Unsafe.CopyBlockUnaligned(ref *(byte*)leaves, ref data[leavesStartIndex], (uint)leafByteCount);
+            Unsafe.CopyBlockUnaligned(ref *(byte*)nodes, ref data[nodesStartIndex], (uint)nodeByteCount);
+            Unsafe.CopyBlockUnaligned(ref *(byte*)metanodes, ref data[metanodesStartIndex], (uint)metanodeByteCount);
+        }
+
+        /// <summary>
+        /// Gets the number of bytes required to store the tree.
+        /// </summary>
+        /// <param name="tree">Tree to measure.</param>
+        /// <returns>Number of bytes required to store the tree.</returns>
+        public int GetSerializedByteCount()
+        {
+            return 4 + sizeof(Leaf) * LeafCount + (sizeof(Node) + sizeof(Metanode)) * NodeCount;
+        }
+
+        /// <summary>
+        /// Writes a tree into a byte buffer.
+        /// </summary>
+        /// <param name="tree">Tree to write into the buffer.</param>
+        /// <param name="bytes">Buffer to hold the tree's data.</param>
+        public void Serialize(Span<byte> bytes)
+        {
+            var requiredSizeInBytes = GetSerializedByteCount();
+            if (bytes.Length < requiredSizeInBytes)
+                throw new ArgumentException($"Target span size {bytes.Length} is less than the required size of {requiredSizeInBytes}.");
+            Unsafe.As<byte, int>(ref bytes[0]) = LeafCount;
+            var leafByteCount = LeafCount * sizeof(Leaf);
+            var nodeByteCount = NodeCount * sizeof(Node);
+            var metanodeByteCount = NodeCount * sizeof(Metanode);
+            const int leavesStartIndex = 4;
+            var nodesStartIndex = leavesStartIndex + leafByteCount;
+            var metanodesStartIndex = nodesStartIndex + nodeByteCount;
+            Unsafe.CopyBlockUnaligned(ref bytes[4], ref *(byte*)leaves, (uint)leafByteCount);
+            Unsafe.CopyBlockUnaligned(ref bytes[nodesStartIndex], ref *(byte*)nodes, (uint)nodeByteCount);
+            Unsafe.CopyBlockUnaligned(ref bytes[metanodesStartIndex], ref *(byte*)metanodes, (uint)metanodeByteCount);
+        }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
