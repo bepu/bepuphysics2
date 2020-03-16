@@ -62,7 +62,7 @@ namespace BepuUtilities.Memory
         public RawBuffer Slice(int start, int count)
         {
             ValidateRegion(start, count);
-            return new RawBuffer(Memory + start, count);
+            return new RawBuffer(Memory + start, count, Id);
         }
 
         /// <summary>
@@ -76,7 +76,7 @@ namespace BepuUtilities.Memory
         public Buffer<T> Slice<T>(int start, int count) where T : unmanaged
         {
             ValidateRegion<T>(start, count);
-            return new Buffer<T>(Memory + start * Unsafe.SizeOf<T>(), count * Unsafe.SizeOf<T>());
+            return new Buffer<T>(Memory + start * Unsafe.SizeOf<T>(), count * Unsafe.SizeOf<T>(), Id);
         }
 
         /// <summary>
