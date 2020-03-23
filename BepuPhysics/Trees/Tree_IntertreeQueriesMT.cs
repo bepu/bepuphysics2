@@ -63,46 +63,46 @@ namespace BepuPhysics.Trees
                 if (treeA.leafCount >= 2 && treeB.leafCount >= 2)
                 {
                     //Both trees have complete nodes; we can use a general case.
-                    GetJobsBetweenDifferentNodes(treeA.nodes, treeB.nodes, ref OverlapHandlers[0]);
+                    GetJobsBetweenDifferentNodes(ref treeA.Nodes[0], ref treeB.Nodes[0], ref OverlapHandlers[0]);
                 }
                 else if (treeA.leafCount == 1 && treeB.leafCount >= 2)
                 {
                     //Tree A is degenerate; needs a special case.
-                    var a = treeA.nodes;
-                    var b = treeB.nodes;
-                    var aaIntersects = Intersects(a->A, b->A);
-                    var abIntersects = Intersects(a->A, b->B);
+                    ref var a = ref treeA.Nodes[0];
+                    ref var b = ref treeB.Nodes[0];
+                    var aaIntersects = Intersects(a.A, b.A);
+                    var abIntersects = Intersects(a.A, b.B);
                     if (aaIntersects)
                     {
-                        DispatchTestForNodes(ref a->A, ref b->A, ref OverlapHandlers[0]);
+                        DispatchTestForNodes(ref a.A, ref b.A, ref OverlapHandlers[0]);
                     }
                     if (abIntersects)
                     {
-                        DispatchTestForNodes(ref a->A, ref b->B, ref OverlapHandlers[0]);
+                        DispatchTestForNodes(ref a.A, ref b.B, ref OverlapHandlers[0]);
                     }
                 }
                 else if (treeA.leafCount >= 2 && treeB.leafCount == 1)
                 {
                     //Tree B is degenerate; needs a special case.
-                    var a = treeA.nodes;
-                    var b = treeB.nodes;
-                    var aaIntersects = Intersects(a->A, b->A);
-                    var baIntersects = Intersects(a->B, b->A);
+                    ref var a = ref treeA.Nodes[0];
+                    ref var b = ref treeB.Nodes[0];
+                    var aaIntersects = Intersects(a.A, b.A);
+                    var baIntersects = Intersects(a.B, b.A);
                     if (aaIntersects)
                     {
-                        DispatchTestForNodes(ref a->A, ref b->A, ref OverlapHandlers[0]);
+                        DispatchTestForNodes(ref a.A, ref b.A, ref OverlapHandlers[0]);
                     }
                     if (baIntersects)
                     {
-                        DispatchTestForNodes(ref a->B, ref b->A, ref OverlapHandlers[0]);
+                        DispatchTestForNodes(ref a.B, ref b.A, ref OverlapHandlers[0]);
                     }
                 }
                 else
                 {
                     Debug.Assert(treeA.leafCount == 1 && treeB.leafCount == 1);
-                    if (Intersects(treeA.nodes->A, treeB.nodes->A))
+                    if (Intersects(treeA.Nodes[0].A, treeB.Nodes[0].A))
                     {
-                        DispatchTestForNodes(ref treeA.nodes->A, ref treeB.nodes->A, ref OverlapHandlers[0]);
+                        DispatchTestForNodes(ref treeA.Nodes[0].A, ref treeB.Nodes[0].A, ref OverlapHandlers[0]);
                     }
                 }
 
@@ -126,14 +126,14 @@ namespace BepuPhysics.Trees
                     if (overlap.B >= 0)
                     {
                         //Different internal nodes.
-                        TreeA.GetOverlapsBetweenDifferentNodes(TreeA.nodes + overlap.A, TreeB.nodes + overlap.B, ref TreeB, ref OverlapHandlers[workerIndex]);
+                        TreeA.GetOverlapsBetweenDifferentNodes(ref TreeA.Nodes[overlap.A], ref TreeB.Nodes[overlap.B], ref TreeB, ref OverlapHandlers[workerIndex]);
                     }
                     else
                     {
                         //A is an internal node, B is a leaf.
                         var leafIndex = Encode(overlap.B);
-                        var leaf = TreeB.leaves + leafIndex;
-                        ref var childOwningLeaf = ref (&TreeB.nodes[leaf->NodeIndex].A)[leaf->ChildIndex];
+                        ref var leaf = ref TreeB.Leaves[leafIndex];
+                        ref var childOwningLeaf = ref Unsafe.Add(ref TreeB.Nodes[leaf.NodeIndex].A, leaf.ChildIndex);
                         TreeA.TestNodeAgainstLeaf(overlap.A, leafIndex, ref childOwningLeaf.Min, ref childOwningLeaf.Max, ref OverlapHandlers[workerIndex]);
                     }
                 }
@@ -141,8 +141,8 @@ namespace BepuPhysics.Trees
                 {
                     //A is a leaf, B is internal.
                     var leafIndex = Encode(overlap.A);
-                    var leaf = TreeA.leaves + leafIndex;
-                    ref var childOwningLeaf = ref (&TreeA.nodes[leaf->NodeIndex].A)[leaf->ChildIndex];
+                    ref var leaf = ref TreeA.Leaves[leafIndex];
+                    ref var childOwningLeaf = ref Unsafe.Add(ref TreeA.Nodes[leaf.NodeIndex].A, leaf.ChildIndex);
                     TreeA.TestLeafAgainstNode(leafIndex, ref childOwningLeaf.Min, ref childOwningLeaf.Max, overlap.B, ref TreeB, ref OverlapHandlers[workerIndex]);
 
                     //NOTE THAT WE DO NOT HANDLE THE CASE THAT BOTH A AND B ARE LEAVES HERE.
@@ -191,9 +191,9 @@ namespace BepuPhysics.Trees
 
             unsafe void TestLeafAgainstNode(ref Tree nodeOwner, int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, ref TOverlapHandler results)
             {
-                var node = nodeOwner.nodes + nodeIndex;
-                ref var a = ref node->A;
-                ref var b = ref node->B;
+                ref var node = ref nodeOwner.Nodes[nodeIndex];
+                ref var a = ref node.A;
+                ref var b = ref node.B;
                 //Despite recursion, leafBounds should remain in L1- it'll be used all the way down the recursion from here.
                 //However, while we likely loaded child B when we loaded child A, there's no guarantee that it will stick around.
                 //Reloading that in the event of eviction would require more work than keeping the derived data on the stack.
@@ -222,7 +222,7 @@ namespace BepuPhysics.Trees
                         if (a.LeafCount + b.LeafCount <= leafThreshold)
                             jobs.Add(new Job { A = a.Index, B = b.Index }, Pool);
                         else
-                            GetJobsBetweenDifferentNodes(TreeA.nodes + a.Index, TreeB.nodes + b.Index, ref results);
+                            GetJobsBetweenDifferentNodes(ref TreeA.Nodes[a.Index], ref TreeB.Nodes[b.Index], ref results);
 
                     }
                     else
@@ -243,14 +243,14 @@ namespace BepuPhysics.Trees
                 }
             }
 
-            unsafe void GetJobsBetweenDifferentNodes(Node* a, Node* b, ref TOverlapHandler results)
+            unsafe void GetJobsBetweenDifferentNodes(ref Node a, ref Node b, ref TOverlapHandler results)
             {
                 //There are no shared children, so test them all.
 
-                ref var aa = ref a->A;
-                ref var ab = ref a->B;
-                ref var ba = ref b->A;
-                ref var bb = ref b->B;
+                ref var aa = ref a.A;
+                ref var ab = ref a.B;
+                ref var ba = ref b.A;
+                ref var bb = ref b.B;
                 var aaIntersects = Intersects(aa, ba);
                 var abIntersects = Intersects(aa, bb);
                 var baIntersects = Intersects(ab, ba);

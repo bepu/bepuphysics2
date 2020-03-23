@@ -13,28 +13,28 @@ namespace BepuPhysics.Trees
         unsafe void Refit(int nodeIndex, out Vector3 min, out Vector3 max)
         {
             Debug.Assert(leafCount >= 2);
-            var node = nodes + nodeIndex;
-            ref var a = ref node->A;
-            if (node->A.Index >= 0)
+            ref var node = ref Nodes[nodeIndex];
+            ref var a = ref node.A;
+            if (node.A.Index >= 0)
             {
                 Refit(a.Index, out a.Min, out a.Max);
             }
-            ref var b = ref node->B;
+            ref var b = ref node.B;
             if (b.Index >= 0)
             {
                 Refit(b.Index, out b.Min, out b.Max);
             }
             BoundingBox.CreateMerged(a.Min, a.Max, b.Min, b.Max, out min, out max);
         }
-        
+
         public unsafe void Refit()
         {
             //No point in refitting a tree with no internal nodes!
             if (leafCount <= 2)
                 return;
             Refit(0, out var rootMin, out var rootMax);
-        }       
-        
+        }
+
 
 
     }

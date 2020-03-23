@@ -1,7 +1,7 @@
 ﻿using BepuUtilities;
 using System;
 using System.Diagnostics;
-
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Trees
 {
@@ -18,27 +18,27 @@ namespace BepuPhysics.Trees
             if (nodeIndex < nodeCount)
             {
                 //Swap last node for removed node.
-                var node = nodes + nodeIndex;
-                *node = nodes[nodeCount];
-                var metanode = metanodes + nodeIndex;
-                *metanode = metanodes[nodeCount];
+                ref var node = ref Nodes[nodeIndex];
+                node = Nodes[nodeCount];
+                ref var metanode = ref Metanodes[nodeIndex];
+                metanode = Metanodes[nodeCount];
 
                 //Update the moved node's pointers:
                 //its parent's child pointer should change, and...
-                (&nodes[metanode->Parent].A)[metanode->IndexInParent].Index = nodeIndex;
+                Unsafe.Add(ref Nodes[metanode.Parent].A, metanode.IndexInParent).Index = nodeIndex;
                 //its children's parent pointers should change.
-                var nodeChildren = &node->A;
+                ref var nodeChildren = ref node.A;
                 for (int i = 0; i < 2; ++i)
                 {
-                    ref var child = ref nodeChildren[i];
+                    ref var child = ref Unsafe.Add(ref nodeChildren, i);
                     if (child.Index >= 0)
                     {
-                        metanodes[child.Index].Parent = nodeIndex;
+                        Metanodes[child.Index].Parent = nodeIndex;
                     }
                     else
                     {
                         //It's a leaf node. It needs to have its pointers updated.
-                        leaves[Encode(child.Index)] = new Leaf(nodeIndex, i);
+                        Leaves[Encode(child.Index)] = new Leaf(nodeIndex, i);
                     }
                 }
 
@@ -51,17 +51,17 @@ namespace BepuPhysics.Trees
         unsafe void RefitForRemoval(int nodeIndex)
         {
             //Note that no attempt is made to refit the root node. Note that the root node is the only node that can have a number of children less than 2.
-            var node = nodes + nodeIndex;
-            var metanode = metanodes + nodeIndex;
-            while (metanode->Parent >= 0)
+            ref var node = ref Nodes[nodeIndex];
+            ref var metanode = ref Metanodes[nodeIndex];
+            while (metanode.Parent >= 0)
             {
                 //Compute the new bounding box for this node.
-                var parent = nodes + metanode->Parent;
-                ref var childInParent = ref (&parent->A)[metanode->IndexInParent];
-                BoundingBox.CreateMerged(node->A.Min, node->A.Max, node->B.Min, node->B.Max, out childInParent.Min, out childInParent.Max);
+                ref var parent = ref Nodes[metanode.Parent];
+                ref var childInParent = ref Unsafe.Add(ref parent.A, metanode.IndexInParent);
+                BoundingBox.CreateMerged(node.A.Min, node.A.Max, node.B.Min, node.B.Max, out childInParent.Min, out childInParent.Max);
                 --childInParent.LeafCount;
-                node = parent;
-                metanode = metanodes + metanode->Parent;
+                node = ref parent;
+                metanode = ref Metanodes[metanode.Parent];
             }
         }
 
@@ -77,7 +77,7 @@ namespace BepuPhysics.Trees
                 throw new ArgumentOutOfRangeException("Leaf index must be a valid index in the tree's leaf array.");
 
             //Cache the leaf being removed.
-            var leaf = leaves[leafIndex];
+            var leaf = Leaves[leafIndex];
             //Delete the leaf from the leaves array.
             --leafCount;
             if (leafIndex < leafCount)
@@ -85,14 +85,14 @@ namespace BepuPhysics.Trees
                 //The removed leaf was not the last leaf, so we should move the last leaf into its slot.
                 //This can result in a form of cache scrambling, but these leaves do not need to be referenced during high performance stages.
                 //It does somewhat reduce the performance of AABB updating, but we shouldn't bother with any form of cache optimization for this unless it becomes a proven issue.
-                ref var lastLeaf = ref leaves[leafCount];
-                leaves[leafIndex] = lastLeaf;
-                (&nodes[lastLeaf.NodeIndex].A)[lastLeaf.ChildIndex].Index = Encode(leafIndex);
+                ref var lastLeaf = ref Leaves[leafCount];
+                Leaves[leafIndex] = lastLeaf;
+                Unsafe.Add(ref Nodes[lastLeaf.NodeIndex].A, lastLeaf.ChildIndex).Index = Encode(leafIndex);
             }
 
-            var node = nodes + leaf.NodeIndex;
-            var metanode = metanodes + leaf.NodeIndex;
-            var nodeChildren = &node->A;
+            ref var node = ref Nodes[leaf.NodeIndex];
+            ref var metanode = ref Metanodes[leaf.NodeIndex];
+            ref var nodeChildren = ref node.A;
 
             //Remove the leaf from this node.
             //Note that the children must remain contiguous. Requires taking the last child of the node and moving into the slot
@@ -101,16 +101,16 @@ namespace BepuPhysics.Trees
             //If a child is moved and it is an internal node, all immediate children of that node must have their parent nodes updated.
 
             var survivingChildIndexInNode = leaf.ChildIndex ^ 1;
-            ref var survivingChild = ref nodeChildren[survivingChildIndexInNode];
+            ref var survivingChild = ref Unsafe.Add(ref nodeChildren, survivingChildIndexInNode);
 
             //Check to see if this node should collapse.
-            if (metanode->Parent >= 0)
+            if (metanode.Parent >= 0)
             {
                 //This is a non-root internal node.
                 //Since there are only two children in the node, then the node containing the removed leaf will collapse.
 
                 //Move the other node into the slot that used to point to the collapsing internal node.
-                ref var childInParent = ref (&nodes[metanode->Parent].A)[metanode->IndexInParent];
+                ref var childInParent = ref Unsafe.Add(ref Nodes[metanode.Parent].A, metanode.IndexInParent);
                 childInParent.Min = survivingChild.Min;
                 childInParent.Max = survivingChild.Max;
                 childInParent.Index = survivingChild.Index;
@@ -120,18 +120,19 @@ namespace BepuPhysics.Trees
                 {
                     //It's a leaf. Update the leaf's reference in the leaves array.
                     var otherLeafIndex = Encode(survivingChild.Index);
-                    leaves[otherLeafIndex] = new Leaf(metanode->Parent, metanode->IndexInParent);
+                    Leaves[otherLeafIndex] = new Leaf(metanode.Parent, metanode.IndexInParent);
                 }
                 else
                 {
                     //It's an internal node. Update its parent node.
-                    metanodes[survivingChild.Index].Parent = metanode->Parent;
-                    metanodes[survivingChild.Index].IndexInParent = metanode->IndexInParent;
+                    ref var survivingMeta = ref Metanodes[survivingChild.Index];
+                    survivingMeta.Parent = metanode.Parent;
+                    survivingMeta.IndexInParent = metanode.IndexInParent;
                 }
 
                 //Work up the chain of parent pointers, refitting bounding boxes and decrementing leaf counts.
                 //Note that this starts at the parent; we've already done the refit for the current level via collapse.
-                RefitForRemoval(metanode->Parent);
+                RefitForRemoval(metanode.Parent);
 
                 //Remove the now dead node.
                 RemoveNodeAt(leaf.NodeIndex);
@@ -142,7 +143,7 @@ namespace BepuPhysics.Trees
             {
                 //This is the root. It cannot collapse, but if the other child is an internal node, then it will overwrite the root node.
                 //This maintains the guarantee that any tree with at least 2 leaf nodes has every single child slot filled with a node or leaf.
-                Debug.Assert(nodes == node, "Only the root should have a negative parent, so only the root should show up here.");
+                Debug.Assert(leaf.NodeIndex == 0, "Only the root should have a negative parent, so only the root should show up here.");
                 if (leafCount > 0)
                 {
                     //The post-removal leafCount is still positive, so there must be at least one child in the root node.
@@ -152,22 +153,22 @@ namespace BepuPhysics.Trees
                         //The surviving child is an internal node and it should replace the root node.
                         var pulledNodeIndex = survivingChild.Index;
                         //TODO: This node movement logic could be unified with other instances of node moving. Nothing too special about the fact that it's the root.
-                        *nodes = nodes[pulledNodeIndex]; //Note that this overwrites the memory pointed to by the otherChild reference.
-                        metanodes->Parent = -1;
-                        metanodes->IndexInParent = -1;
+                        Nodes[0] = Nodes[pulledNodeIndex]; //Note that this overwrites the memory pointed to by the otherChild reference.
+                        Metanodes[0].Parent = -1;
+                        Metanodes[0].IndexInParent = -1;
                         //Update the parent pointers of the children of the moved internal node.
                         for (int i = 0; i < 2; ++i)
                         {
-                            ref var child = ref (&nodes->A)[i];
+                            ref var child = ref Unsafe.Add(ref Nodes[0].A, i);
                             if (child.Index >= 0)
                             {
                                 //Child is an internal node. Note that the index in child doesn't change; we copied the children directly.
-                                metanodes[child.Index].Parent = 0;
+                                Metanodes[child.Index].Parent = 0;
                             }
                             else
                             {
                                 //Child is a leaf node.
-                                leaves[Encode(child.Index)] = new Leaf(0, i);
+                                Leaves[Encode(child.Index)] = new Leaf(0, i);
                             }
                         }
                         RemoveNodeAt(pulledNodeIndex);
@@ -178,9 +179,9 @@ namespace BepuPhysics.Trees
                         if (survivingChildIndexInNode > 0)
                         {
                             //It needs to be moved to keep the lowest slot filled.
-                            nodes->A = nodes->B;
+                            Nodes[0].A = Nodes[0].B;
                             //Update the leaf pointer to reflect the change.
-                            leaves[Encode(survivingChild.Index)] = new Leaf(0, 0);
+                            Leaves[Encode(survivingChild.Index)] = new Leaf(0, 0);
                         }
                     }
                 }

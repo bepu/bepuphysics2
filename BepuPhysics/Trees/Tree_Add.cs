@@ -25,18 +25,18 @@ namespace BepuPhysics.Trees
             //this is the only place where a new level could potentially be created.
 
             var newNodeIndex = AllocateNode();
-            var newNode = nodes + newNodeIndex;
-            var newMetanode = metanodes + newNodeIndex;
-            newMetanode->Parent = parentIndex;
-            newMetanode->IndexInParent = indexInParent;
-            newMetanode->RefineFlag = 0;
+            ref var newNode = ref Nodes[newNodeIndex];
+            ref var newMetanode = ref Metanodes[newNodeIndex];
+            newMetanode.Parent = parentIndex;
+            newMetanode.IndexInParent = indexInParent;
+            newMetanode.RefineFlag = 0;
             //The first child of the new node is the old leaf. Insert its bounding box.
-            var parentNode = nodes + parentIndex;
-            ref var childInParent = ref (&parentNode->A)[indexInParent];
-            newNode->A = childInParent;
+            ref var parentNode = ref Nodes[parentIndex];
+            ref var childInParent = ref Unsafe.Add(ref parentNode.A, indexInParent);
+            newNode.A = childInParent;
 
             //Insert the new leaf into the second child slot.
-            ref var b = ref newNode->B;
+            ref var b = ref newNode.B;
             b.Min = newLeafBounds.Min;
             var leafIndex = AddLeaf(newNodeIndex, 1);
             b.Index = Encode(leafIndex);
@@ -44,8 +44,8 @@ namespace BepuPhysics.Trees
             b.LeafCount = 1;
 
             //Update the old leaf node with the new index information.
-            var oldLeafIndex = Encode(newNode->A.Index);
-            leaves[oldLeafIndex] = new Leaf(newNodeIndex, 0);
+            var oldLeafIndex = Encode(newNode.A.Index);
+            Leaves[oldLeafIndex] = new Leaf(newNodeIndex, 0);
 
             //Update the original node's child pointer and bounding box.
             childInParent.Index = newNodeIndex;
@@ -57,10 +57,10 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe int InsertLeafIntoEmptySlot(ref BoundingBox leafBox, int nodeIndex, int childIndex, Node* node)
+        unsafe int InsertLeafIntoEmptySlot(ref BoundingBox leafBox, int nodeIndex, int childIndex, ref Node node)
         {
             var leafIndex = AddLeaf(nodeIndex, childIndex);
-            ref var child = ref (&node->A)[childIndex];
+            ref var child = ref Unsafe.Add(ref node.A, childIndex);
             child.Min = leafBox.Min;
             child.Index = Encode(leafIndex);
             child.Max = leafBox.Max;
@@ -127,18 +127,18 @@ namespace BepuPhysics.Trees
                 //Which child should the leaf belong to?
 
                 //Give the leaf to whichever node had the least cost change. 
-                var node = nodes + nodeIndex;
+                ref var node = ref Nodes[nodeIndex];
                 //This is a binary tree, so the only time a node can have less than full children is when it's the root node.
                 //By convention, an empty tree still has a root node with no children, so we do have to handle this case.
                 if (leafCount < 2)
                 {
                     //The best slot will, at best, be tied with inserting it in a leaf node because the change in heuristic cost for filling an empty slot is zero.
-                    return InsertLeafIntoEmptySlot(ref bounds, nodeIndex, leafCount, node);
+                    return InsertLeafIntoEmptySlot(ref bounds, nodeIndex, leafCount, ref node);
                 }
                 else
                 {
-                    ref var a = ref node->A;
-                    ref var b = ref node->B;
+                    ref var a = ref node.A;
+                    ref var b = ref node.B;
                     var choiceA = ComputeBestInsertionChoice(ref bounds, newLeafCost, ref a, out var mergedA, out var costChangeA);
                     var choiceB = ComputeBestInsertionChoice(ref bounds, newLeafCost, ref b, out var mergedB, out var costChangeB);
                     if (costChangeA <= costChangeB)

@@ -44,9 +44,9 @@ namespace BepuPhysics.Trees
                 }
                 else
                 {
-                    var node = nodes + nodeIndex;
-                    var aIntersected = Intersects(node->A.Min, node->A.Max, treeRay, out var tA);
-                    var bIntersected = Intersects(node->B.Min, node->B.Max, treeRay, out var tB);
+                    ref var node = ref Nodes[nodeIndex];
+                    var aIntersected = Intersects(node.A.Min, node.A.Max, treeRay, out var tA);
+                    var bIntersected = Intersects(node.B.Min, node.B.Max, treeRay, out var tB);
 
                     if (aIntersected)
                     {
@@ -56,24 +56,24 @@ namespace BepuPhysics.Trees
                             Debug.Assert(stackEnd < TraversalStackCapacity - 1, "At the moment, we use a fixed size stack. Until we have explicitly tracked depths, watch out for excessive depth traversals.");
                             if (tA < tB)
                             {
-                                nodeIndex = node->A.Index;
-                                stack[stackEnd++] = node->B.Index;
+                                nodeIndex = node.A.Index;
+                                stack[stackEnd++] = node.B.Index;
                             }
                             else
                             {
-                                nodeIndex = node->B.Index;
-                                stack[stackEnd++] = node->A.Index;
+                                nodeIndex = node.B.Index;
+                                stack[stackEnd++] = node.A.Index;
                             }
                         }
                         else
                         {
                             //Single intersection cases don't require an explicit stack entry.
-                            nodeIndex = node->A.Index;
+                            nodeIndex = node.A.Index;
                         }
                     }
                     else if (bIntersected)
                     {
-                        nodeIndex = node->B.Index;
+                        nodeIndex = node.B.Index;
                     }
                     else
                     {
@@ -97,7 +97,7 @@ namespace BepuPhysics.Trees
             if (leafCount == 1)
             {
                 //If the first node isn't filled, we have to use a special case.
-                if (Intersects(nodes->A.Min, nodes->A.Max, treeRay, out var tA))
+                if (Intersects(Nodes[0].A.Min, Nodes[0].A.Max, treeRay, out var tA))
                 {
                     leafTester.TestLeaf(0, rayData, &treeRay->MaximumT);
                 }
@@ -118,6 +118,6 @@ namespace BepuPhysics.Trees
             //The maximumT could have been mutated by the leaf tester. Propagate that change. This is important for when we jump between tree traversals and such.
             maximumT = treeRay.MaximumT;
         }
-                
+
     }
 }

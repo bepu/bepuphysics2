@@ -352,7 +352,7 @@ namespace BepuPhysics.Collidables
             }
             for (int i = 0; i < Tree.NodeCount; ++i)
             {
-                ref var node = ref Tree.nodes[i];
+                ref var node = ref Tree.Nodes[i];
                 node.A.Min -= scaledOffset;
                 node.A.Max -= scaledOffset;
                 node.B.Min -= scaledOffset;

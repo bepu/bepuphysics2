@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Trees
 {
@@ -13,19 +14,19 @@ namespace BepuPhysics.Trees
 
         unsafe float RefitAndMeasure(ref NodeChild child)
         {
-            var node = nodes + child.Index;
+            ref var node = ref Nodes[child.Index];
 
             //All nodes are guaranteed to have at least 2 children.
             Debug.Assert(leafCount >= 2);
 
             var premetric = ComputeBoundsMetric(ref child.Min, ref child.Max);
             float childChange = 0;
-            ref var a = ref node->A;
+            ref var a = ref node.A;
             if (a.Index >= 0)
             {
                 childChange += RefitAndMeasure(ref a);
             }
-            ref var b = ref node->B;
+            ref var b = ref node.B;
             if (b.Index >= 0)
             {
                 childChange += RefitAndMeasure(ref b);
@@ -41,15 +42,15 @@ namespace BepuPhysics.Trees
         {
             Debug.Assert(leafCountThreshold > 1);
 
-            var node = nodes + child.Index;
-            Debug.Assert(metanodes[child.Index].RefineFlag == 0);
+            ref var node = ref Nodes[child.Index];
+            Debug.Assert(Metanodes[child.Index].RefineFlag == 0);
             float childChange = 0;
 
             var premetric = ComputeBoundsMetric(ref child.Min, ref child.Max);
             //The wavefront of internal nodes is defined by the transition from more than threshold to less than threshold.
             //Add them to a list of refinement candidates.
             //Note that leaves are not included, since they can't be refinement candidates.
-            ref var a = ref node->A;
+            ref var a = ref node.A;
             if (a.Index >= 0)
             {
                 if (a.LeafCount <= leafCountThreshold)
@@ -62,7 +63,7 @@ namespace BepuPhysics.Trees
                     childChange += RefitAndMark(ref a, leafCountThreshold, ref refinementCandidates, pool);
                 }
             }
-            ref var b = ref node->B;
+            ref var b = ref node.B;
             if (b.Index >= 0)
             {
                 if (b.LeafCount <= leafCountThreshold)
@@ -91,14 +92,14 @@ namespace BepuPhysics.Trees
         {
             Debug.Assert(LeafCount > 2, "There's no reason to refit a tree with 2 or less elements. Nothing would happen.");
 
-            var children = &nodes->A;
+            ref var children = ref Nodes[0].A;
             float childChange = 0;
             BoundingBox merged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
             for (int i = 0; i < 2; ++i)
             {
                 //Note: these conditions mean the root will never be considered a wavefront node. That's acceptable;
                 //it will be included regardless.
-                ref var child = ref children[i];
+                ref var child = ref Unsafe.Add(ref children, i);
                 if (child.Index >= 0)
                 {
                     if (child.LeafCount <= leafCountThreshold)
@@ -135,14 +136,14 @@ namespace BepuPhysics.Trees
 
         unsafe void ValidateRefineFlags(int index)
         {
-            var metanode = metanodes + index;
-            if (metanode->RefineFlag != 0)
+            ref var metanode = ref Metanodes[index];
+            if (metanode.RefineFlag != 0)
                 Console.WriteLine("Bad refine flag");
 
-            var children = &nodes[index].A;
+            ref var children = ref Nodes[index].A;
             for (int i = 0; i < 2; ++i)
             {
-                ref var child = ref children[i];
+                ref var child = ref Unsafe.Add(ref children, i);
                 if (child.Index >= 0)
                 {
                     ValidateRefineFlags(child.Index);
@@ -212,14 +213,14 @@ namespace BepuPhysics.Trees
                 if (index >= refinementCandidates.Count)
                     index -= refinementCandidates.Count;
                 refinementTargets.AddUnsafely(refinementCandidates[index]);
-                Debug.Assert(metanodes[refinementCandidates[index]].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
-                metanodes[refinementCandidates[index]].RefineFlag = 1;
+                Debug.Assert(Metanodes[refinementCandidates[index]].RefineFlag == 0, "Refinement target search shouldn't run into the same node twice!");
+                Metanodes[refinementCandidates[index]].RefineFlag = 1;
             }
             refinementCandidates.Dispose(pool);
-            if (metanodes->RefineFlag == 0)
+            if (Metanodes[0].RefineFlag == 0)
             {
                 refinementTargets.AddUnsafely(0);
-                metanodes->RefineFlag = 1;
+                Metanodes[0].RefineFlag = 1;
             }
 
             //Refine all marked targets.
@@ -238,7 +239,7 @@ namespace BepuPhysics.Trees
                 //TODO: Should this be moved into a post-loop? It could permit some double work, but that's not terrible.
                 //It's not invalid from a multithreading perspective, either- setting the refine flag to zero is essentially an unlock.
                 //If other threads don't see it updated due to cache issues, it doesn't really matter- it's not a signal or anything like that.
-                metanodes[refinementTargets[i]].RefineFlag = 0;
+                Metanodes[refinementTargets[i]].RefineFlag = 0;
 
             }
 

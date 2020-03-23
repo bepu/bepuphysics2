@@ -314,12 +314,12 @@ namespace BepuPhysics.Trees
             }
         }
 
-        unsafe void TestNode<TRaySource>(Node* node, byte depth, ref TRaySource raySource) where TRaySource : struct, ITreeRaySource
+        unsafe void TestNode<TRaySource>(ref Node node, byte depth, ref TRaySource raySource) where TRaySource : struct, ITreeRaySource
         {
             int a0Start = stackPointerA0;
             int bStart = stackPointerB;
             int a1Start = stackPointerA1;
-            BroadcastNode(ref *node, out var wideNode);
+            BroadcastNode(ref node, out var wideNode);
             TreeRayWide rayBundle;
 
             for (int bundleStartIndex = 0; bundleStartIndex < raySource.RayCount; bundleStartIndex += Vector<float>.Count)
@@ -385,7 +385,7 @@ namespace BepuPhysics.Trees
             if (a1Count > 0)
             {
                 ref var newEntry = ref stack[stackPointer++];
-                newEntry.NodeIndex = node->A.Index;
+                newEntry.NodeIndex = node.A.Index;
                 newEntry.RayCount = (ushort)a1Count;
                 newEntry.RayStack = 2;
                 newEntry.Depth = newDepth;
@@ -394,7 +394,7 @@ namespace BepuPhysics.Trees
             if (bCount > 0)
             {
                 ref var newEntry = ref stack[stackPointer++];
-                newEntry.NodeIndex = node->B.Index;
+                newEntry.NodeIndex = node.B.Index;
                 newEntry.RayCount = (ushort)bCount;
                 newEntry.RayStack = 1;
                 newEntry.Depth = newDepth;
@@ -403,7 +403,7 @@ namespace BepuPhysics.Trees
             if (a0Count > 0)
             {
                 ref var newEntry = ref stack[stackPointer++];
-                newEntry.NodeIndex = node->A.Index;
+                newEntry.NodeIndex = node.A.Index;
                 newEntry.RayCount = (ushort)a0Count;
                 newEntry.RayStack = 0;
                 newEntry.Depth = newDepth;
@@ -431,15 +431,15 @@ namespace BepuPhysics.Trees
             if (tree.LeafCount >= 2)
             {
                 var raySource = new RootRaySource(batchRayCount);
-                TestNode(tree.nodes, 0, ref raySource);
+                TestNode(ref tree.Nodes[0], 0, ref raySource);
             }
             else
             {
                 Debug.Assert(tree.LeafCount == 1);
                 //Only one child in the tree. Handle it as a special case.
                 int a0Start = stackPointerA0;
-                var node = tree.nodes;
-                BroadcastNode(ref *node, out var nodeWide);
+                ref var node = ref tree.Nodes[0];
+                BroadcastNode(ref node, out var nodeWide);
                 for (int bundleStartIndex = 0; bundleStartIndex < batchRayCount; bundleStartIndex += Vector<float>.Count)
                 {
                     var bundleStart = batchRays.Memory + bundleStartIndex;
@@ -466,7 +466,7 @@ namespace BepuPhysics.Trees
                 if (a0Count > 0)
                 {
                     ref var entry = ref stack[stackPointer++];
-                    entry.NodeIndex = node->A.Index;
+                    entry.NodeIndex = node.A.Index;
                     entry.RayCount = (ushort)a0Count;
                     entry.RayStack = 0;
                     entry.Depth = 1;
@@ -500,7 +500,7 @@ namespace BepuPhysics.Trees
                     if (entry.NodeIndex >= 0)
                     {
                         var rayStackSource = new TreeRaySource(rayStackStart, entry.RayCount);
-                        TestNode(tree.nodes + entry.NodeIndex, entry.Depth, ref rayStackSource);
+                        TestNode(ref tree.Nodes[entry.NodeIndex], entry.Depth, ref rayStackSource);
                     }
                     else
                     {

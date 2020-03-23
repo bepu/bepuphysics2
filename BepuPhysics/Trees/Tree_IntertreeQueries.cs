@@ -22,9 +22,9 @@ namespace BepuPhysics.Trees
         }
         private unsafe void TestNodeAgainstLeaf<TOverlapHandler>(int nodeIndex, int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
-            var node = nodes + nodeIndex;
-            ref var a = ref node->A;
-            ref var b = ref node->B;
+            ref var node = ref Nodes[nodeIndex];
+            ref var a = ref node.A;
+            ref var b = ref node.B;
             //Despite recursion, leafBounds should remain in L1- it'll be used all the way down the recursion from here.
             //However, while we likely loaded child B when we loaded child A, there's no guarantee that it will stick around.
             //Reloading that in the event of eviction would require more work than keeping the derived data on the stack.
@@ -56,9 +56,9 @@ namespace BepuPhysics.Trees
         unsafe void TestLeafAgainstNode<TOverlapHandler>(int leafIndex, ref Vector3 leafMin, ref Vector3 leafMax, int nodeIndex, ref Tree treeB, ref TOverlapHandler results)
             where TOverlapHandler : IOverlapHandler
         {
-            var node = treeB.nodes + nodeIndex;
-            ref var a = ref node->A;
-            ref var b = ref node->B;
+            ref var node = ref treeB.Nodes[nodeIndex];
+            ref var a = ref node.A;
+            ref var b = ref node.B;
             //Despite recursion, leafBounds should remain in L1- it'll be used all the way down the recursion from here.
             //However, while we likely loaded child B when we loaded child A, there's no guarantee that it will stick around.
             //Reloading that in the event of eviction would require more work than keeping the derived data on the stack.
@@ -83,7 +83,7 @@ namespace BepuPhysics.Trees
             {
                 if (b.Index >= 0)
                 {
-                    GetOverlapsBetweenDifferentNodes(nodes + a.Index, treeB.nodes + b.Index, ref treeB, ref results);
+                    GetOverlapsBetweenDifferentNodes(ref Nodes[a.Index], ref treeB.Nodes[b.Index], ref treeB, ref results);
                 }
                 else
                 {
@@ -103,12 +103,12 @@ namespace BepuPhysics.Trees
             }
         }
 
-        private unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(Node* a, Node* b, ref Tree treeB, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
+        private unsafe void GetOverlapsBetweenDifferentNodes<TOverlapHandler>(ref Node a, ref Node b, ref Tree treeB, ref TOverlapHandler results) where TOverlapHandler : IOverlapHandler
         {
-            ref var aa = ref a->A;
-            ref var ab = ref a->B;
-            ref var ba = ref b->A;
-            ref var bb = ref b->B;
+            ref var aa = ref a.A;
+            ref var ab = ref a.B;
+            ref var ba = ref b.A;
+            ref var bb = ref b.B;
             var aaIntersects = Intersects(aa, ba);
             var abIntersects = Intersects(aa, bb);
             var baIntersects = Intersects(ab, ba);
@@ -140,46 +140,46 @@ namespace BepuPhysics.Trees
             if (leafCount >= 2 && treeB.leafCount >= 2)
             {
                 //Both trees have complete nodes; we can use a general case.
-                GetOverlapsBetweenDifferentNodes(nodes, treeB.nodes, ref treeB, ref overlapHandler);
+                GetOverlapsBetweenDifferentNodes(ref Nodes[0], ref treeB.Nodes[0], ref treeB, ref overlapHandler);
             }
             else if (leafCount == 1 && treeB.leafCount >= 2)
             {
                 //Tree A is degenerate; needs a special case.
-                var a = nodes;
-                var b = treeB.nodes;
-                var aaIntersects = Intersects(a->A, b->A);
-                var abIntersects = Intersects(a->A, b->B);
+                ref var a = ref Nodes[0];
+                ref var b = ref treeB.Nodes[0];
+                var aaIntersects = Intersects(a.A, b.A);
+                var abIntersects = Intersects(a.A, b.B);
                 if (aaIntersects)
                 {
-                    DispatchTestForNodes(ref a->A, ref b->A, ref treeB, ref overlapHandler);
+                    DispatchTestForNodes(ref a.A, ref b.A, ref treeB, ref overlapHandler);
                 }
                 if (abIntersects)
                 {
-                    DispatchTestForNodes(ref a->A, ref b->B, ref treeB, ref overlapHandler);
+                    DispatchTestForNodes(ref a.A, ref b.B, ref treeB, ref overlapHandler);
                 }
             }
             else if (leafCount >= 2 && treeB.leafCount == 1)
             {
                 //Tree B is degenerate; needs a special case.
-                var a = nodes;
-                var b = treeB.nodes;
-                var aaIntersects = Intersects(a->A, b->A);
-                var baIntersects = Intersects(a->B, b->A);
+                ref var a = ref Nodes[0];
+                ref var b = ref treeB.Nodes[0];
+                var aaIntersects = Intersects(a.A, b.A);
+                var baIntersects = Intersects(a.B, b.A);
                 if (aaIntersects)
                 {
-                    DispatchTestForNodes(ref a->A, ref b->A, ref treeB, ref overlapHandler);
+                    DispatchTestForNodes(ref a.A, ref b.A, ref treeB, ref overlapHandler);
                 }
                 if (baIntersects)
                 {
-                    DispatchTestForNodes(ref a->B, ref b->A, ref treeB, ref overlapHandler);
+                    DispatchTestForNodes(ref a.B, ref b.A, ref treeB, ref overlapHandler);
                 }
             }
             else
             {
                 Debug.Assert(leafCount == 1 && treeB.leafCount == 1);
-                if (Intersects(nodes->A, treeB.nodes->A))
+                if (Intersects(Nodes[0].A, treeB.Nodes[0].A))
                 {
-                    DispatchTestForNodes(ref nodes->A, ref treeB.nodes->A, ref treeB, ref overlapHandler);
+                    DispatchTestForNodes(ref Nodes[0].A, ref treeB.Nodes[0].A, ref treeB, ref overlapHandler);
                 }
             }
         }

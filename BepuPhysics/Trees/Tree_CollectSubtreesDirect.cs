@@ -1,6 +1,7 @@
 ﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Trees
 {
@@ -8,21 +9,21 @@ namespace BepuPhysics.Trees
 
     partial struct Tree
     {
-        unsafe void CollectSubtreesForNodeDirect(int nodeIndex, int remainingDepth, 
+        unsafe void CollectSubtreesForNodeDirect(int nodeIndex, int remainingDepth,
             ref QuickList<int> subtrees, ref QuickQueue<int> internalNodes, out float treeletCost)
         {
             internalNodes.EnqueueUnsafely(nodeIndex);
 
             treeletCost = 0;
-            var node = nodes + nodeIndex;
-            var children = &node->A;
+            ref var node = ref Nodes[nodeIndex];
+            ref var children = ref node.A;
 
             --remainingDepth;
             if (remainingDepth >= 0)
             {
                 for (int i = 0; i < 2; ++i)
                 {
-                    ref var child = ref children[i];
+                    ref var child = ref Unsafe.Add(ref children, i);
                     if (child.Index >= 0)
                     {
                         treeletCost += ComputeBoundsMetric(ref child.Min, ref child.Max);
@@ -44,7 +45,7 @@ namespace BepuPhysics.Trees
                 //That's because the subtree internal nodes cannot change size due to the refinement.
                 for (int i = 0; i < 2; ++i)
                 {
-                    subtrees.AddUnsafely(children[i].Index);
+                    subtrees.AddUnsafely(Unsafe.Add(ref children, i).Index);
                 }
             }
         }
