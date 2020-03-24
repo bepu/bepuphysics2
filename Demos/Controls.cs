@@ -1,4 +1,5 @@
 ﻿using DemoUtilities;
+using OpenTK.Audio.OpenAL;
 using OpenTK.Input;
 using System;
 using System.Collections.Generic;
@@ -58,6 +59,7 @@ namespace Demos
 
     public enum HoldableControlType
     {
+        None,
         Key,
         MouseButton,
     }
@@ -74,11 +76,34 @@ namespace Demos
         [FieldOffset(4)]
         public HoldableControlType Type;
 
+        [FieldOffset(8)]
+        public Key AlternativeKey;
+        [FieldOffset(8)]
+        public MouseButton AlternativeButton;
+        [FieldOffset(12)]
+        public HoldableControlType AlternativeType;
+
         public HoldableBind(Key key)
             : this()
         {
             Key = key;
             Type = HoldableControlType.Key;
+        }
+        public HoldableBind(Key key, Key alternativeKey)
+            : this()
+        {
+            Key = key;
+            Type = HoldableControlType.Key;
+            AlternativeKey = alternativeKey;
+            AlternativeType = HoldableControlType.Key;
+        }
+        public HoldableBind(Key key, MouseButton alternativeButton)
+            : this()
+        {
+            Key = key;
+            Type = HoldableControlType.Key;
+            AlternativeButton = alternativeButton;
+            AlternativeType = HoldableControlType.MouseButton;
         }
         public HoldableBind(MouseButton button)
             : this()
@@ -86,40 +111,96 @@ namespace Demos
             Button = button;
             Type = HoldableControlType.MouseButton;
         }
+        public HoldableBind(MouseButton button, Key alternativeKey)
+            : this()
+        {
+            Button = button;
+            Type = HoldableControlType.MouseButton;
+            AlternativeKey = alternativeKey;
+            AlternativeType = HoldableControlType.Key;
+        }
+        public HoldableBind(MouseButton button, MouseButton alternativeButton)
+            : this()
+        {
+            Button = button;
+            Type = HoldableControlType.MouseButton;
+            AlternativeButton = alternativeButton;
+            AlternativeType = HoldableControlType.MouseButton;
+        }
 
         public static implicit operator HoldableBind(Key key)
         {
             return new HoldableBind(key);
         }
+        public static implicit operator HoldableBind((Key, Key) binds)
+        {
+            return new HoldableBind(binds.Item1, binds.Item2);
+        }
+        public static implicit operator HoldableBind((Key, MouseButton) binds)
+        {
+            return new HoldableBind(binds.Item1, binds.Item2);
+        }
         public static implicit operator HoldableBind(MouseButton button)
         {
             return new HoldableBind(button);
         }
+        public static implicit operator HoldableBind((MouseButton, Key) binds)
+        {
+            return new HoldableBind(binds.Item1, binds.Item2);
+        }
+        public static implicit operator HoldableBind((MouseButton, MouseButton) binds)
+        {
+            return new HoldableBind(binds.Item1, binds.Item2);
+        }
         public bool IsDown(Input input)
         {
-            if (Type == HoldableControlType.Key)
-                return input.IsDown(Key);
-            return input.IsDown(Button);
+            if (Type == HoldableControlType.Key && input.IsDown(Key))
+                return true;
+            if (Type == HoldableControlType.MouseButton && input.IsDown(Button))
+                return true;
+            if (AlternativeType == HoldableControlType.Key && input.IsDown(AlternativeKey))
+                return true;
+            if (AlternativeType == HoldableControlType.MouseButton && input.IsDown(AlternativeButton))
+                return true;
+            return false;
         }
 
         public bool WasPushed(Input input)
         {
-            if (Type == HoldableControlType.Key)
-                return input.WasPushed(Key);
-            return input.WasPushed(Button);
+            if (Type == HoldableControlType.Key && input.WasPushed(Key))
+                return true;
+            if (Type == HoldableControlType.MouseButton && input.WasPushed(Button))
+                return true;
+            if (AlternativeType == HoldableControlType.Key && input.WasPushed(AlternativeKey))
+                return true;
+            if (AlternativeType == HoldableControlType.MouseButton && input.WasPushed(AlternativeButton))
+                return true;
+            return false;
         }
 
-        public override string ToString()
+        public TextBuilder AppendString(TextBuilder text)
         {
             if (Type == HoldableControlType.Key)
-                return ControlStrings.GetName(Key);
-            return ControlStrings.GetName(Button);
+                text.Append(ControlStrings.GetName(Key));
+            else if (Type == HoldableControlType.MouseButton)
+                text.Append(ControlStrings.GetName(Button));
+            if (AlternativeType != HoldableControlType.None)
+            {
+                if (Type != HoldableControlType.None)
+                    text.Append(" or ");
+                if (AlternativeType == HoldableControlType.Key)
+                    text.Append(ControlStrings.GetName(AlternativeKey));
+                else if (AlternativeType == HoldableControlType.MouseButton)
+                    text.Append(ControlStrings.GetName(Button));
+            }
+            return text;
         }
 
     }
 
     public enum InstantControlType
     {
+        None,
         Key,
         MouseButton,
         MouseWheel,
@@ -144,36 +225,157 @@ namespace Demos
         [FieldOffset(4)]
         public InstantControlType Type;
 
+        [FieldOffset(8)]
+        public Key AlternativeKey;
+        [FieldOffset(8)]
+        public MouseButton AlternativeButton;
+        [FieldOffset(8)]
+        public MouseWheelAction AlternativeWheel;
+        [FieldOffset(12)]
+        public InstantControlType AlternativeType;
+
         public InstantBind(Key key)
             : this()
         {
             Key = key;
             Type = InstantControlType.Key;
         }
+        public InstantBind(Key key, Key alternativeKey)
+            : this()
+        {
+            Key = key;
+            Type = InstantControlType.Key;
+            AlternativeKey = alternativeKey;
+            AlternativeType = InstantControlType.Key;
+        }
+        public InstantBind(Key key, MouseButton button)
+            : this()
+        {
+            Key = key;
+            Type = InstantControlType.Key;
+            AlternativeButton = button;
+            AlternativeType = InstantControlType.MouseButton;
+        }
+        public InstantBind(Key key, MouseWheelAction wheelAction)
+            : this()
+        {
+            Key = key;
+            Type = InstantControlType.Key;
+            AlternativeWheel = wheelAction;
+            AlternativeType = InstantControlType.MouseWheel;
+        }
+
         public InstantBind(MouseButton button)
             : this()
         {
             Button = button;
             Type = InstantControlType.MouseButton;
         }
-        public InstantBind(MouseWheelAction wheelAction)
+        public InstantBind(MouseButton button, Key alternativeKey)
             : this()
         {
-            Wheel = wheelAction;
+            Button = button;
+            Type = InstantControlType.MouseButton;
+            AlternativeKey = alternativeKey;
+            AlternativeType = InstantControlType.Key;
+        }
+        public InstantBind(MouseButton button, MouseButton alternativeButton)
+            : this()
+        {
+            Button = button;
+            Type = InstantControlType.MouseButton;
+            AlternativeButton = alternativeButton;
+            AlternativeType = InstantControlType.MouseButton;
+        }
+        public InstantBind(MouseButton button, MouseWheelAction alternativeWheel)
+            : this()
+        {
+            Button = button;
+            Type = InstantControlType.MouseButton;
+            AlternativeWheel = alternativeWheel;
+            AlternativeType = InstantControlType.MouseWheel;
+        }
+
+        public InstantBind(MouseWheelAction wheel)
+            : this()
+        {
+            Wheel = wheel;
             Type = InstantControlType.MouseWheel;
+        }
+        public InstantBind(MouseWheelAction wheel, Key alternativeKey)
+            : this()
+        {
+            Wheel = wheel;
+            Type = InstantControlType.MouseWheel;
+            AlternativeKey = alternativeKey;
+            AlternativeType = InstantControlType.Key;
+        }
+        public InstantBind(MouseWheelAction wheel, MouseButton alternativeButton)
+            : this()
+        {
+            Wheel = wheel;
+            Type = InstantControlType.MouseWheel;
+            AlternativeButton = alternativeButton;
+            AlternativeType = InstantControlType.MouseButton;
+        }
+        public InstantBind(MouseWheelAction wheel, MouseWheelAction alternativeWheel)
+            : this()
+        {
+            Wheel = wheel;
+            Type = InstantControlType.MouseWheel;
+            AlternativeWheel = alternativeWheel;
+            AlternativeType = InstantControlType.MouseWheel;
         }
 
         public static implicit operator InstantBind(Key key)
         {
             return new InstantBind(key);
         }
+        public static implicit operator InstantBind((Key, Key) binds)
+        {
+            return new InstantBind(binds.Item1, binds.Item2);
+        }
+        public static implicit operator InstantBind((Key, MouseButton) binds)
+        {
+            return new InstantBind(binds.Item1, binds.Item2);
+        }
+        public static implicit operator InstantBind((Key, MouseWheelAction) binds)
+        {
+            return new InstantBind(binds.Item1, binds.Item2);
+        }
+
         public static implicit operator InstantBind(MouseButton button)
         {
             return new InstantBind(button);
         }
-        public static implicit operator InstantBind(MouseWheelAction wheelAction)
+        public static implicit operator InstantBind((MouseButton, Key) binds)
         {
-            return new InstantBind(wheelAction);
+            return new InstantBind(binds.Item1, binds.Item2);
+        }
+        public static implicit operator InstantBind((MouseButton, MouseButton) binds)
+        {
+            return new InstantBind(binds.Item1, binds.Item2);
+        }
+        public static implicit operator InstantBind((MouseButton, MouseWheelAction) binds)
+        {
+            return new InstantBind(binds.Item1, binds.Item2);
+        }
+
+        public static implicit operator InstantBind(MouseWheelAction wheel)
+        {
+            return new InstantBind(wheel);
+        }
+        public static implicit operator InstantBind((MouseWheelAction, Key) binds)
+        {
+            return new InstantBind(binds.Item1, binds.Item2);
+        }
+        public static implicit operator InstantBind((MouseWheelAction, MouseButton) binds)
+        {
+            return new InstantBind(binds.Item1, binds.Item2);
+        }
+        public static implicit operator InstantBind((MouseWheelAction, MouseWheelAction) binds)
+        {
+            return new InstantBind(binds.Item1, binds.Item2);
         }
 
         public bool WasTriggered(Input input)
@@ -181,27 +383,63 @@ namespace Demos
             switch (Type)
             {
                 case InstantControlType.Key:
-                    return input.WasPushed(Key);
+                    if (input.WasPushed(Key)) return true;
+                    break;
                 case InstantControlType.MouseButton:
-                    return input.WasPushed(Button);
+                    if (input.WasPushed(Button)) return true;
+                    break;
                 case InstantControlType.MouseWheel:
-                    return Wheel == MouseWheelAction.ScrollUp ? input.ScrolledUp > 0 : input.ScrolledDown < 0;
+                    if (Wheel == MouseWheelAction.ScrollUp ? input.ScrolledUp > 0 : input.ScrolledDown < 0) return true;
+                    break;
+            }
+            switch (AlternativeType)
+            {
+                case InstantControlType.Key:
+                    return input.WasPushed(AlternativeKey);
+                case InstantControlType.MouseButton:
+                    return input.WasPushed(AlternativeButton);
+                case InstantControlType.MouseWheel:
+                    return AlternativeWheel == MouseWheelAction.ScrollUp ? input.ScrolledUp > 0 : input.ScrolledDown < 0;
             }
             return false;
         }
 
-        public override string ToString()
+        public TextBuilder AppendString(TextBuilder text)
         {
+            if (Type == InstantControlType.None && AlternativeType == InstantControlType.None)
+                text.Append("(no bind)");
             switch (Type)
             {
                 case InstantControlType.Key:
-                    return ControlStrings.GetName(Key);
+                    text.Append(ControlStrings.GetName(Key));
+                    break;
                 case InstantControlType.MouseButton:
-                    return ControlStrings.GetName(Button);
+                    text.Append(ControlStrings.GetName(Button));
+                    break;
                 case InstantControlType.MouseWheel:
-                    return ControlStrings.GetName(Wheel);
+                    text.Append(ControlStrings.GetName(Wheel));
+                    break;
             }
-            return "";
+            if (AlternativeType != InstantControlType.None)
+            {
+                if (Type != InstantControlType.None)
+                {
+                    text.Append(" or ");
+                }
+                switch (AlternativeType)
+                {
+                    case InstantControlType.Key:
+                        text.Append(ControlStrings.GetName(AlternativeKey));
+                        break;
+                    case InstantControlType.MouseButton:
+                        text.Append(ControlStrings.GetName(AlternativeButton));
+                        break;
+                    case InstantControlType.MouseWheel:
+                        text.Append(ControlStrings.GetName(AlternativeWheel));
+                        break;
+                }
+            }
+            return text;
         }
     }
 
@@ -244,15 +482,15 @@ namespace Demos
                     MoveRight = Key.D,
                     MoveDown = Key.ControlLeft,
                     MoveUp = Key.ShiftLeft,
-                    MoveSlower = MouseWheelAction.ScrollDown,
-                    MoveFaster = MouseWheelAction.ScrollUp,
+                    MoveSlower = (MouseWheelAction.ScrollDown, Key.Y),
+                    MoveFaster = (MouseWheelAction.ScrollUp, Key.U),
                     Grab = MouseButton.Right,
                     GrabRotate = Key.Q,
                     MouseSensitivity = 3e-3f,
                     CameraSlowMoveSpeed = 0.5f,
                     CameraMoveSpeed = 5,
                     CameraFastMoveSpeed = 50,
-                    SlowTimesteps = MouseButton.Middle,
+                    SlowTimesteps = (MouseButton.Middle, Key.O),
 
                     LockMouse = Key.Tab,
                     Exit = Key.Escape,
@@ -260,7 +498,7 @@ namespace Demos
                     ShowContacts = Key.K,
                     ShowBoundingBoxes = Key.L,
                     ChangeTimingDisplayMode = Key.F2,
-                    ChangeDemo = Key.Tilde,
+                    ChangeDemo = (Key.Tilde, Key.F3),
                     ShowControls = Key.F1,
                 };
             }

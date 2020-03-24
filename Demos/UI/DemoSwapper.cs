@@ -15,7 +15,7 @@ namespace Demos.UI
 
         public void CheckForDemoSwap(DemoHarness harness)
         {
-            if (harness.loop.Input.WasPushed(harness.controls.ChangeDemo.Key))
+            if (harness.controls.ChangeDemo.WasTriggered(harness.loop.Input))
             {
                 TrackingInput = !TrackingInput;
                 TargetDemoIndex = -1;

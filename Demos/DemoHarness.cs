@@ -337,41 +337,52 @@ namespace Demos
                 var controlPosition = penPosition;
                 controlPosition.X += textHeight * 0.5f;
 
-                void WriteName(string controlName, string control)
+                void WriteInstantName(string controlName, InstantBind control)
                 {
                     uiText.Clear().Append(controlName).Append(":");
                     renderer.TextBatcher.Write(uiText, penPosition - new Vector2(GlyphBatch.MeasureLength(uiText, font, textHeight), 0), textHeight, textColor, font);
                     penPosition.Y += lineSpacing;
 
-                    uiText.Clear().Append(control);
+                    control.AppendString(uiText.Clear());
+                    renderer.TextBatcher.Write(uiText, controlPosition, textHeight, textColor, font);
+                    controlPosition.Y += lineSpacing;
+                }
+
+                void WriteHoldableName(string controlName, HoldableBind control)
+                {
+                    uiText.Clear().Append(controlName).Append(":");
+                    renderer.TextBatcher.Write(uiText, penPosition - new Vector2(GlyphBatch.MeasureLength(uiText, font, textHeight), 0), textHeight, textColor, font);
+                    penPosition.Y += lineSpacing;
+
+                    control.AppendString(uiText.Clear());
                     renderer.TextBatcher.Write(uiText, controlPosition, textHeight, textColor, font);
                     controlPosition.Y += lineSpacing;
                 }
 
                 //Conveniently, enum strings are cached. Every (Key).ToString() returns the same reference for the same key, so no garbage worries.
-                WriteName(nameof(controls.LockMouse), controls.LockMouse.ToString());
-                WriteName(nameof(controls.Grab), controls.Grab.ToString());
-                WriteName(nameof(controls.GrabRotate), controls.GrabRotate.ToString());
-                WriteName(nameof(controls.MoveForward), controls.MoveForward.ToString());
-                WriteName(nameof(controls.MoveBackward), controls.MoveBackward.ToString());
-                WriteName(nameof(controls.MoveLeft), controls.MoveLeft.ToString());
-                WriteName(nameof(controls.MoveRight), controls.MoveRight.ToString());
-                WriteName(nameof(controls.MoveUp), controls.MoveUp.ToString());
-                WriteName(nameof(controls.MoveDown), controls.MoveDown.ToString());
-                WriteName(nameof(controls.MoveSlower), controls.MoveSlower.ToString());
-                WriteName(nameof(controls.MoveFaster), controls.MoveFaster.ToString());
-                WriteName(nameof(controls.SlowTimesteps), controls.SlowTimesteps.ToString());
-                WriteName(nameof(controls.Exit), controls.Exit.ToString());
-                WriteName(nameof(controls.ShowConstraints), controls.ShowConstraints.ToString());
-                WriteName(nameof(controls.ShowContacts), controls.ShowContacts.ToString());
-                WriteName(nameof(controls.ShowBoundingBoxes), controls.ShowBoundingBoxes.ToString());
-                WriteName(nameof(controls.ChangeTimingDisplayMode), controls.ChangeTimingDisplayMode.ToString());
-                WriteName(nameof(controls.ChangeDemo), controls.ChangeDemo.ToString());
-                WriteName(nameof(controls.ShowControls), controls.ShowControls.ToString());
+                WriteInstantName(nameof(controls.LockMouse), controls.LockMouse);
+                WriteHoldableName(nameof(controls.Grab), controls.Grab);
+                WriteHoldableName(nameof(controls.GrabRotate), controls.GrabRotate);
+                WriteHoldableName(nameof(controls.MoveForward), controls.MoveForward);
+                WriteHoldableName(nameof(controls.MoveBackward), controls.MoveBackward);
+                WriteHoldableName(nameof(controls.MoveLeft), controls.MoveLeft);
+                WriteHoldableName(nameof(controls.MoveRight), controls.MoveRight);
+                WriteHoldableName(nameof(controls.MoveUp), controls.MoveUp);
+                WriteHoldableName(nameof(controls.MoveDown), controls.MoveDown);
+                WriteInstantName(nameof(controls.MoveSlower), controls.MoveSlower);
+                WriteInstantName(nameof(controls.MoveFaster), controls.MoveFaster);
+                WriteHoldableName(nameof(controls.SlowTimesteps), controls.SlowTimesteps);
+                WriteInstantName(nameof(controls.Exit), controls.Exit);
+                WriteInstantName(nameof(controls.ShowConstraints), controls.ShowConstraints);
+                WriteInstantName(nameof(controls.ShowContacts), controls.ShowContacts);
+                WriteInstantName(nameof(controls.ShowBoundingBoxes), controls.ShowBoundingBoxes);
+                WriteInstantName(nameof(controls.ChangeTimingDisplayMode), controls.ChangeTimingDisplayMode);
+                WriteInstantName(nameof(controls.ChangeDemo), controls.ChangeDemo);
+                WriteInstantName(nameof(controls.ShowControls), controls.ShowControls);
             }
             else
             {
-                uiText.Clear().Append("Press ").Append(controls.ShowControls.ToString()).Append(" for controls.");
+                controls.ShowControls.AppendString(uiText.Clear().Append("Press ")).Append(" for controls.");
                 const float inset = 25;
                 renderer.TextBatcher.Write(uiText,
                     new Vector2(loop.Window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, textHeight), loop.Window.Resolution.Y - inset),
