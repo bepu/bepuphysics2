@@ -110,6 +110,7 @@ namespace Demos.Demos.Characters
             characters = new QuickList<CharacterController>(initialCharacterCapacity, pool);
             ResizeBodyHandleCapacity(initialBodyHandleCapacity);
             analyzeContactsWorker = AnalyzeContactsWorker;
+            expandBoundingBoxesWorker = ExpandBoundingBoxesWorker;
         }
 
         /// <summary>
@@ -410,6 +411,44 @@ namespace Demos.Demos.Characters
             return false;
         }
 
+        Buffer<(int Start, int Count)> boundingBoxExpansionJobs;
+        unsafe void ExpandBoundingBoxes(int start, int count)
+        {
+            var end = start + count;
+            for (int i = start; i < end; ++i)
+            {
+                ref var character = ref characters[i];
+                var characterBody = Simulation.Bodies.GetBodyReference(character.BodyHandle);
+                if (characterBody.Awake)
+                {
+                    Simulation.BroadPhase.GetActiveBoundsPointers(characterBody.Collidable.BroadPhaseIndex, out var min, out var max);
+                    QuaternionEx.Transform(character.LocalUp, characterBody.Pose.Orientation, out var characterUp);
+                    var supportExpansion = character.MinimumSupportContinuationDepth * characterUp;
+                    *min += Vector3.Min(Vector3.Zero, supportExpansion);
+                    *max += Vector3.Max(Vector3.Zero, supportExpansion);
+                }
+            }
+        }
+
+        int boundingBoxExpansionJobIndex;
+        Action<int> expandBoundingBoxesWorker;
+        void ExpandBoundingBoxesWorker(int workerIndex)
+        {
+            while (true)
+            {
+                var jobIndex = Interlocked.Increment(ref boundingBoxExpansionJobIndex);
+                if (jobIndex < boundingBoxExpansionJobs.Length)
+                {
+                    ref var job = ref boundingBoxExpansionJobs[jobIndex];
+                    ExpandBoundingBoxes(job.Start, job.Count);
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
         /// <summary>
         /// Preallocates space for support data collected during the narrow phase. Should be called before the narrow phase executes.
         /// </summary>
@@ -422,9 +461,35 @@ namespace Demos.Demos.Characters
             {
                 contactCollectionWorkerCaches[i] = new ContactCollectionWorkerCache(characters.Count, pool);
             }
-            //If you wanted additional control during downstepping, you could introduce a bounding box resize here- 
-            //extend the bounding box in the direction of the character's local down direction by MinimumSupportContinuationDepth.
-            //If it walks off a step with height less than MinimumSupportContinuationDepth, it would retain constraint-based control.
+            //While the character will retain support with contacts with depths above the MinimumSupportContinuationDepth if there was support in the previous frame,
+            //it's possible for the contacts to be lost because the bounding box isn't expanded by MinimumSupportContinuationDepth and the broad phase doesn't see the support collidable.
+            //Here, we expand the bounding boxes to compensate.
+            if (threadCount == 1 || characters.Count < 256)
+            {
+                ExpandBoundingBoxes(0, characters.Count);
+            }
+            else
+            {
+                var jobCount = Math.Min(characters.Count, threadCount);
+                var charactersPerJob = characters.Count / jobCount;
+                var baseCharacterCount = charactersPerJob * jobCount;
+                var remainder = characters.Count - baseCharacterCount;
+                pool.Take(jobCount, out boundingBoxExpansionJobs);
+                var previousEnd = 0;
+                for (int jobIndex = 0; jobIndex < jobCount; ++jobIndex)
+                {
+                    var charactersForJob = jobIndex < remainder ? charactersPerJob + 1 : charactersPerJob;
+                    ref var job = ref boundingBoxExpansionJobs[jobIndex];
+                    job.Start = previousEnd;
+                    job.Count = charactersForJob;
+                    previousEnd += job.Count;
+                }
+
+                boundingBoxExpansionJobIndex = -1;
+                threadDispatcher.DispatchWorkers(expandBoundingBoxesWorker);
+                pool.Return(ref boundingBoxExpansionJobs);
+
+            }
         }
 
         struct PendingDynamicConstraint
