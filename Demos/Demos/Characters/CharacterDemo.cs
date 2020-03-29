@@ -140,6 +140,18 @@ namespace Demos.Demos.Characters
             {
                 movingPlatforms[i] = new MovingPlatform(platformCollidable, i * 3559, 1f / 60f, Simulation, poseCreator);
             }
+            var box = new Box(4, 1, 4);
+            box.ComputeInertia(1, out var boxInertia);
+            var boxCollidable = new CollidableDescription(Simulation.Shapes.Add(box), 0.1f);
+            const int width = 8;
+            for (int i = 0; i < width; ++i)
+            {
+                for (int j = 0; j < width; ++j)
+                {
+                    Simulation.Statics.Add(new StaticDescription(new Vector3(box.Width, 0, box.Length) * new Vector3(i, 0, j) + new Vector3(32f, 1, 0), boxCollidable));
+                }
+
+            }
 
             //Prevent the character from falling into the void.
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), new CollidableDescription(Simulation.Shapes.Add(new Box(200, 1, 200)), 0.1f)));
