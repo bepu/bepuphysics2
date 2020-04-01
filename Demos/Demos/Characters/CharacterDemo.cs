@@ -213,6 +213,7 @@ namespace Demos.Demos.Characters
             }
             if (characterActive)
             {
+                //Console.WriteLine($"Supported: {characters.GetCharacterByBodyHandle(character.BodyHandle).Supported}");
                 character.UpdateCharacterGoals(input, camera, simulationDt);
             }
             //Using a fixed time per update to match the demos simulation update rate.

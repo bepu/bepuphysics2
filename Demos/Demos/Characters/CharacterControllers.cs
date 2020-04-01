@@ -385,18 +385,20 @@ namespace Demos.Demos.Characters
 
 
         /// <summary>
-        /// Reports contacts about a collision to the character system. If the pair does not involve a character, does nothing and returns false.
+        /// Reports contacts about a collision to the character system. If the pair does not involve a character or there are no contacts, does nothing and returns false.
         /// </summary>
         /// <param name="pair">Pair of objects associated with the contact manifold.</param>
         /// <param name="manifold">Contact manifold between the colliding objects.</param>
         /// <param name="workerIndex">Index of the currently executing worker thread.</param>
         /// <param name="materialProperties">Material properties for this pair. Will be modified if the pair involves a character.</param>
-        /// <returns>True if the pair involved a character pair, false otherwise.</returns>
+        /// <returns>True if the pair involved a character pair and has contacts, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryReportContacts<TManifold>(in CollidablePair pair, ref TManifold manifold, int workerIndex, ref PairMaterialProperties materialProperties) where TManifold : struct, IContactManifold<TManifold>
         {
             Debug.Assert(contactCollectionWorkerCaches.Allocated && workerIndex < contactCollectionWorkerCaches.Length && contactCollectionWorkerCaches[workerIndex].SupportCandidates.Allocated,
                 "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");
+            if (manifold.Count == 0)
+                return false;
             //It's possible for neither, one, or both collidables to be a character. Check each one, treating the other as a potential support.
             var aIsCharacter = TryReportContacts(pair.A, pair.B, pair, ref manifold, workerIndex);
             var bIsCharacter = TryReportContacts(pair.B, pair.A, pair, ref manifold, workerIndex);
