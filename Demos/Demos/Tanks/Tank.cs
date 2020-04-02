@@ -243,7 +243,7 @@ namespace Demos.Demos.Tanks
 
         static ref SubgroupCollisionFilter CreatePart(Simulation simulation, in TankPartDescription part, RigidPose pose, BodyProperty<TankDemoBodyProperties> properties, out int handle)
         {
-            RigidPose.Multiply(part.Pose, pose, out var bodyPose);
+            RigidPose.MultiplyWithoutOverlap(part.Pose, pose, out var bodyPose);
             handle = simulation.Bodies.Add(BodyDescription.CreateDynamic(bodyPose, part.Inertia, new CollidableDescription(part.Shape, 0.1f), new BodyActivityDescription(0.01f)));
             ref var partProperties = ref properties.Allocate(handle);
             partProperties = new TankDemoBodyProperties { Friction = part.Friction, TankPart = true };

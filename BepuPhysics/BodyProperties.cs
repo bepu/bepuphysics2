@@ -81,7 +81,7 @@ namespace BepuPhysics
         /// <param name="b">Second transform to concatenate.</param>
         /// <param name="result">Result of the concatenation.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Multiply(in RigidPose a, in RigidPose b, out RigidPose result)
+        public static void MultiplyWithoutOverlap(in RigidPose a, in RigidPose b, out RigidPose result)
         {
             QuaternionEx.ConcatenateWithoutOverlap(a.Orientation, b.Orientation, out result.Orientation);
             QuaternionEx.Transform(a.Position, b.Orientation, out var rotatedTranslationA);
