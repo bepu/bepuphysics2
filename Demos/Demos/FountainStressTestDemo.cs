@@ -179,6 +179,73 @@ namespace Demos.Demos
             }
         }
 
+        public void CreateBodyDescription(Random random, in RigidPose pose, in BodyVelocity velocity, out BodyDescription description)
+        {
+            //For the sake of the stress test, every single body has its own shape that gets removed when the body is removed.
+            TypedIndex shapeIndex;
+            BodyInertia inertia;
+            switch (random.Next(0, 7))
+            {
+                default:
+                    {
+                        AddConvexShape(new Sphere(0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                    }
+                    break;
+                case 1:
+                    {
+                        AddConvexShape(new Capsule(
+                            0.35f + 0.35f * (float)random.NextDouble(),
+                            0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                    }
+                    break;
+                case 2:
+                    {
+                        AddConvexShape(new Box(
+                            0.35f + 0.6f * (float)random.NextDouble(),
+                            0.35f + 0.6f * (float)random.NextDouble(),
+                            0.35f + 0.6f * (float)random.NextDouble()), out shapeIndex, out inertia);
+                    }
+                    break;
+                case 3:
+                    {
+                        AddConvexShape(new Cylinder(0.1f + 0.5f * (float)random.NextDouble(), 0.2f + (float)random.NextDouble()), out shapeIndex, out inertia);
+                    }
+                    break;
+                case 4:
+                    {
+                        AddConvexShape(CreateRandomHull(), out shapeIndex, out inertia);
+                    }
+                    break;
+                case 5:
+                    {
+                        CreateRandomCompound(out var children, out inertia);
+                        shapeIndex = Simulation.Shapes.Add(new Compound(children));
+                    }
+                    break;
+                case 6:
+                    {
+                        CreateRandomCompound(out var children, out inertia);
+                        shapeIndex = Simulation.Shapes.Add(new BigCompound(children, Simulation.Shapes, BufferPool));
+                    }
+                    break;
+            }
+
+            description = new BodyDescription
+            {
+                Pose = pose,
+                LocalInertia = inertia,
+                Collidable = new CollidableDescription(shapeIndex, 5f),
+                Activity = new BodyActivityDescription(0.1f),
+                Velocity = velocity
+            };
+            switch (random.Next(3))
+            {
+                case 0: description.Collidable.Continuity = ContinuousDetectionSettings.Discrete; break;
+                case 1: description.Collidable.Continuity = ContinuousDetectionSettings.Passive; break;
+                case 2: description.Collidable.Continuity = ContinuousDetectionSettings.Continuous(1e-3f, 1e-3f); break;
+            }
+        }
+
         public override void Update(Window window, Camera camera, Input input, float dt)
         {
             var timestepDuration = 1f / 60f;
@@ -244,6 +311,20 @@ namespace Demos.Demos
                 removedStatics.Enqueue(staticDescription, BufferPool);
             }
 
+            var staticApplyDescriptionsPerFrame = 8;
+            for (int i = 0; i < staticApplyDescriptionsPerFrame; ++i)
+            {
+                var indexToReapply = random.Next(Simulation.Statics.Count);
+                var handleToReapply = Simulation.Statics.IndexToHandle[indexToReapply];
+                Simulation.Statics.GetDescription(handleToReapply, out var staticDescription);
+                //Statics don't have as much in the way of transitions. They can't be shapeless, and going from one shape to another doesn't anything that a pose change doesn't. For now, we'll just test the application of descriptions with different poses.
+                var mutatedDescription = staticDescription;
+                mutatedDescription.Pose.Position.Y += 50;
+                QuaternionEx.Concatenate(mutatedDescription.Pose.Orientation, QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)random.NextDouble() * MathF.PI), out mutatedDescription.Pose.Orientation);
+                Simulation.Statics.ApplyDescription(handleToReapply, mutatedDescription);
+                Simulation.Statics.ApplyDescription(handleToReapply, staticDescription);
+            }
+
 
             //Add some of the missing static bodies back into the simulation.
             var staticAddCount = removedStatics.Count * (staticRemovalsPerFrame / (float)missingStaticsAsymptote);
@@ -257,74 +338,11 @@ namespace Demos.Demos
 
             //Spray some shapes!
             int newShapeCount = 8;
-            var spawnLocation = new Vector3(0, 10, 0);
+            var spawnPose = new RigidPose(new Vector3(0, 10, 0));
             for (int i = 0; i < newShapeCount; ++i)
             {
-                //For the sake of the stress test, every single body has its own shape that gets removed when the body is removed.
-                TypedIndex shapeIndex;
-                BodyInertia inertia;
-                switch (random.Next(0, 7))
-                {
-                    default:
-                        {
-                            AddConvexShape(new Sphere(0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
-                        }
-                        break;
-                    case 1:
-                        {
-                            AddConvexShape(new Capsule(
-                                0.35f + 0.35f * (float)random.NextDouble(),
-                                0.35f + 0.35f * (float)random.NextDouble()), out shapeIndex, out inertia);
-                        }
-                        break;
-                    case 2:
-                        {
-                            AddConvexShape(new Box(
-                                0.35f + 0.6f * (float)random.NextDouble(),
-                                0.35f + 0.6f * (float)random.NextDouble(),
-                                0.35f + 0.6f * (float)random.NextDouble()), out shapeIndex, out inertia);
-                        }
-                        break;
-                    case 3:
-                        {
-                            AddConvexShape(new Cylinder(0.1f + 0.5f * (float)random.NextDouble(), 0.2f + (float)random.NextDouble()), out shapeIndex, out inertia);
-                        }
-                        break;
-                    case 4:
-                        {
-                            AddConvexShape(CreateRandomHull(), out shapeIndex, out inertia);
-                        }
-                        break;
-                    case 5:
-                        {
-                            CreateRandomCompound(out var children, out inertia);
-                            shapeIndex = Simulation.Shapes.Add(new Compound(children));
-                        }
-                        break;
-                    case 6:
-                        {
-                            CreateRandomCompound(out var children, out inertia);
-                            shapeIndex = Simulation.Shapes.Add(new BigCompound(children, Simulation.Shapes, BufferPool));
-                        }
-                        break;
-                }
-
-                var description = new BodyDescription
-                {
-                    Pose = new RigidPose(spawnLocation),
-                    LocalInertia = inertia,
-                    Collidable = new CollidableDescription(shapeIndex, 5f),
-                    Activity = new BodyActivityDescription(0.1f),
-                    Velocity = new BodyVelocity(new Vector3(-30 + 60 * (float)random.NextDouble(), 75, -30 + 60 * (float)random.NextDouble()), default)
-                };
-                switch (random.Next(3))
-                {
-                    case 0: description.Collidable.Continuity = ContinuousDetectionSettings.Discrete; break;
-                    case 1: description.Collidable.Continuity = ContinuousDetectionSettings.Passive; break;
-                    case 2: description.Collidable.Continuity = ContinuousDetectionSettings.Continuous(1e-3f, 1e-3f); break;
-                }
-                dynamicHandles.Enqueue(Simulation.Bodies.Add(description), BufferPool);
-
+                CreateBodyDescription(random, spawnPose, new BodyVelocity(new Vector3(-30 + 60 * (float)random.NextDouble(), 75, -30 + 60 * (float)random.NextDouble()), default), out var bodyDescription);
+                dynamicHandles.Enqueue(Simulation.Bodies.Add(bodyDescription), BufferPool);
             }
             int targetAsymptote = 65536;
             var removalCount = (int)(dynamicHandles.Count * (newShapeCount / (float)targetAsymptote));
@@ -343,6 +361,23 @@ namespace Demos.Demos
                     break;
                 }
             }
+
+            //Change some dynamic objects without adding/removing them to make sure all the state transition stuff works reasonably well.
+            var dynamicApplyDescriptionsPerFrame = 8;
+            for (int i = 0; i < dynamicApplyDescriptionsPerFrame; ++i)
+            {
+                var handle = dynamicHandles[random.Next(dynamicHandles.Count)];
+                Simulation.Bodies.GetDescription(handle, out var description);
+                Simulation.Shapes.RecursivelyRemoveAndDispose(description.Collidable.Shape, BufferPool);
+                CreateBodyDescription(random, description.Pose, description.Velocity, out var newDescription);
+                if(random.NextDouble() < 0.1f)
+                {
+                    //Occasionally make a dynamic kinematic.
+                    newDescription.LocalInertia = default;
+                }
+                Simulation.Bodies.ApplyDescription(handle, newDescription);                
+            }
+
             base.Update(window, camera, input, dt);
 
             if (input != null && input.WasPushed(OpenTK.Input.Key.P))
