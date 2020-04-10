@@ -147,14 +147,6 @@ namespace BepuPhysics
             AwakenBodiesInBounds(ref oldBounds);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void UpdateBounds(in RigidPose pose, TypedIndex shapeIndex, out BoundingBox bounds)
-        {
-            //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
-            shapes[shapeIndex.Type].ComputeBounds(shapeIndex.Index, pose, out bounds.Min, out bounds.Max);
-            AwakenBodiesInBounds(ref bounds);
-        }
-
         /// <summary>
         /// Removes a static from the set by index. Any inactive bodies with bounding boxes overlapping the removed static's bounding box will be forced active.
         /// </summary>
@@ -224,9 +216,8 @@ namespace BepuPhysics
         }
 
 
-        internal void ApplyDescriptionByIndex(int index, int handle, in StaticDescription description)
+        internal void ApplyDescriptionByIndexWithoutBroadPhaseModification(int index, in StaticDescription description, out BoundingBox bounds)
         {
-            BundleIndexing.GetBundleIndices(index, out var bundleIndex, out var innerIndex);
             Poses[index] = description.Pose;
             ref var collidable = ref Collidables[index];
             Debug.Assert(description.Collidable.Shape.Exists, "Static collidables must have a shape. Their only purpose is colliding.");
@@ -234,12 +225,9 @@ namespace BepuPhysics
             collidable.SpeculativeMargin = description.Collidable.SpeculativeMargin;
             collidable.Shape = description.Collidable.Shape;
 
-            //Note that we have to calculate an initial bounding box for the broad phase to be able to insert it efficiently.
-            //(In the event of batch adds, you'll want to use batched AABB calculations or just use cached values.)
             //Note: the min and max here are in absolute coordinates, which means this is a spot that has to be updated in the event that positions use a higher precision representation.
-            UpdateBounds(description.Pose, description.Collidable.Shape, out var bounds);
-            Collidables[index].BroadPhaseIndex =
-                broadPhase.AddStatic(new CollidableReference(CollidableMobility.Static, handle), ref bounds);
+            shapes[description.Collidable.Shape.Type].ComputeBounds(description.Collidable.Shape.Index, description.Pose, out bounds.Min, out bounds.Max);
+            AwakenBodiesInBounds(ref bounds);
         }
 
         /// <summary>
@@ -261,7 +249,9 @@ namespace BepuPhysics
             var index = Count++;
             HandleToIndex[handle] = index;
             IndexToHandle[index] = handle;
-            ApplyDescriptionByIndex(index, handle, description);
+            ApplyDescriptionByIndexWithoutBroadPhaseModification(index, description, out var bounds);
+            //This is a new add, so we need to add it to the broad phase.
+            Collidables[index].BroadPhaseIndex = broadPhase.AddStatic(new CollidableReference(CollidableMobility.Static, handle), ref bounds);
             return handle;
         }
 
@@ -270,14 +260,16 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="handle">Handle of the static to apply the description to.</param>
         /// <param name="description">Description to apply to the static.</param>
-        public void ApplyDescription(int handle, in StaticDescription description)
+        public unsafe void ApplyDescription(int handle, in StaticDescription description)
         {
             ValidateExistingHandle(handle);
             var index = HandleToIndex[handle];
             Debug.Assert(description.Collidable.Shape.Exists, "Static collidables cannot lack a shape. Their only purpose is colliding.");
             //Wake all bodies up in the old bounds AND the new bounds. Inactive bodies that may have been resting on the old static need to be aware of the new environment.
             AwakenBodiesInExistingBounds(ref Collidables[index]);
-            ApplyDescriptionByIndex(index, handle, description);
+            ApplyDescriptionByIndexWithoutBroadPhaseModification(index, description, out var bounds);
+            //This applies to an existing static, so we should modify the static's bounds in the broad phase.
+            broadPhase.UpdateStaticBounds(Collidables[index].BroadPhaseIndex, bounds.Min, bounds.Max);
 
         }
 

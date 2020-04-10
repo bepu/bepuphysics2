@@ -100,6 +100,42 @@ namespace BepuPhysics.CollisionDetection
             GetBoundsPointers(index, ref StaticTree, out minPointer, out maxPointer);
         }
 
+        /// <summary>
+        /// Applies updated bounds to the given leaf index in the given tree, refitting the tree to match.
+        /// </summary>
+        /// <param name="broadPhaseIndex">Index of the leaf in the tree to update.</param>
+        /// <param name="tree">Tree containing the leaf to update.</param>
+        /// <param name="min">New minimum bounds for the leaf.</param>
+        /// <param name="max">New maximum bounds for the leaf.</param>
+        public unsafe static void UpdateBounds(int broadPhaseIndex, ref Tree tree, in Vector3 min, in Vector3 max)
+        {
+            GetBoundsPointers(broadPhaseIndex, ref tree, out var minPointer, out var maxPointer);
+            *minPointer = min;
+            *maxPointer = max;
+            tree.RefitForNodeBoundsChange(tree.Leaves[broadPhaseIndex].NodeIndex);
+        }
+
+        /// <summary>
+        /// Applies updated bounds to the given active leaf index, refitting the tree to match.
+        /// </summary>
+        /// <param name="broadPhaseIndex">Index of the leaf to update.</param>
+        /// <param name="min">New minimum bounds for the leaf.</param>
+        /// <param name="max">New maximum bounds for the leaf.</param>
+        public void UpdateActiveBounds(int broadPhaseIndex, in Vector3 min, in Vector3 max)
+        {
+            UpdateBounds(broadPhaseIndex, ref ActiveTree, min, max);
+        }
+        /// <summary>
+        /// Applies updated bounds to the given active leaf index, refitting the tree to match.
+        /// </summary>
+        /// <param name="broadPhaseIndex">Index of the leaf to update.</param>
+        /// <param name="min">New minimum bounds for the leaf.</param>
+        /// <param name="max">New maximum bounds for the leaf.</param>
+        public void UpdateStaticBounds(int broadPhaseIndex, in Vector3 min, in Vector3 max)
+        {
+            UpdateBounds(broadPhaseIndex, ref StaticTree, min, max);
+        }
+
         int frameIndex;
         public void Update(IThreadDispatcher threadDispatcher = null)
         {
